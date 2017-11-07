@@ -25,7 +25,9 @@ SECRET_KEY = '9944wfl7gnp_k(lyps5a$lx+!!=(l-993@9&n33dc6pqaa0yvy'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '192.168.99.100'
+]
 
 
 # Application definition
