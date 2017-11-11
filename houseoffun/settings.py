@@ -88,6 +88,9 @@ DATABASES = {
         'PASSWORD': 'docker', 
         'HOST': 'db',
         'PORT': 3306,
+        'OPTIONS': {
+            'init_command': 'SET storage_engine=InnoDB',
+        }
     }
 }
 
