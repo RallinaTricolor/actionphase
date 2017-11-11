@@ -34,11 +34,13 @@ ALLOWED_HOSTS = [
 
 INSTALLED_APPS = [
     'registration',
+    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.core.mail',
     'houseoffun',
 ]
 
@@ -80,11 +82,12 @@ WSGI_APPLICATION = 'houseoffun.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',
-        'USER': 'postgres',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'docker',
+        'USER': 'docker',
+        'PASSWORD': 'docker', 
         'HOST': 'db',
-        'PORT': 5432,
+        'PORT': 3306,
     }
 }
 
@@ -128,3 +131,7 @@ STATIC_URL = '/static/'
 
 # Registration Settings
 ACCOUNT_ACTIVATION_DAYS = 7
+
+# Email Settings
+EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+EMAIL_FILE_PATH = '/tmp/app-messages' # change this to a proper location
