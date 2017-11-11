@@ -135,6 +135,7 @@ STATIC_URL = '/static/'
 # Registration Settings
 ACCOUNT_ACTIVATION_DAYS = 7
 LOGIN_REDIRECT_URL = '/hof'
+SIMPLE_BACKEND_REDIRECT_URL = '/hof'
 
 # Email Settings
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
