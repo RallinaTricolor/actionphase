@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.core.mail',
-    'houseoffun',
+    'houseoffun.houseoffun',
 ]
 
 MIDDLEWARE = [
