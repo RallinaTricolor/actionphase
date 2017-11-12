@@ -11,7 +11,7 @@ def index(request):
 class GameForm(ModelForm):
     class Meta:
         model = Game
-        fields = ['name', 'abbreviation', 'description']
+        exclude = ['game_master']
 
 def game_list(request, template_name='games/list.html'):
     games = Game.objects.defer('description')
@@ -22,7 +22,9 @@ def game_list(request, template_name='games/list.html'):
 def game_create(request, template_name='games/form.html'):
     form = GameForm(request.POST or None)
     if form.is_valid():
-        form.save()
+        game = form.save(commit=False)
+        game.game_master = request.user
+        game.save()
         return redirect('game_list')
     return render(request, template_name, {'form':form})
 
