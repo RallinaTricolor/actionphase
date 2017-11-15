@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.core.mail',
-    'houseoffun',
+    'houseoffun.houseoffun',
 ]
 
 MIDDLEWARE = [
@@ -134,8 +134,8 @@ STATIC_URL = '/static/'
 
 # Registration Settings
 ACCOUNT_ACTIVATION_DAYS = 7
-LOGIN_REDIRECT_URL = '/hof'
-SIMPLE_BACKEND_REDIRECT_URL = '/hof'
+LOGIN_REDIRECT_URL = '/'
+SIMPLE_BACKEND_REDIRECT_URL = '/'
 
 # Email Settings
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'

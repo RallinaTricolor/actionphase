@@ -1,0 +1,11 @@
+<h1>Games</h1>
+<ul>
+    {% for game in object_list %}
+    <li>{{ game.name }}  :  
+    <a href="{% url "game_edit" game.id %}">{{ game.abbreviation }}</a>
+    <a href="{% url "game_delete" game.id %}">delete</a>
+    </li>
+    {% endfor %}
+</ul>
+
+<a href="{% url "game_new" %}">New</a>
