@@ -26,6 +26,8 @@ def game_create(request, template_name='games/form.html'):
         game = form.save(commit=False)
         game.game_master = request.user
         game.save()
+        for plugin in request.POST.getlist('plugins'):
+            game.plugins.add(plugin)
         return redirect('game_list')
     return render(request, template_name, {'form': form})
 
