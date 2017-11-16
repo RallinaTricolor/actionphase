@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.forms import ModelForm
+from django.forms import ModelForm, ModelMultipleChoiceField, CheckboxSelectMultiple
 from django.http import HttpResponse
 
-from houseoffun.houseoffun.models import Game
+from houseoffun.houseoffun.models import Game, Plugin
 
 def index(request):
     name =  request.user.email if request.user.is_authenticated() else 'world'
@@ -12,6 +12,7 @@ class GameForm(ModelForm):
     class Meta:
         model = Game
         exclude = ['game_master']
+    plugins = ModelMultipleChoiceField(queryset=Plugin.objects.all(), widget=CheckboxSelectMultiple, required=False)
 
 def game_list(request, template_name='games/list.html'):
     games = Game.objects.defer('description')
@@ -26,7 +27,7 @@ def game_create(request, template_name='games/form.html'):
         game.game_master = request.user
         game.save()
         return redirect('game_list')
-    return render(request, template_name, {'form':form})
+    return render(request, template_name, {'form': form})
 
 def game_update(request, pk, template_name='games/form.html'):
     game = get_object_or_404(Game, pk=pk)
@@ -34,7 +35,7 @@ def game_update(request, pk, template_name='games/form.html'):
     if form.is_valid():
         form.save()
         return redirect('game_list')
-    return render(request, template_name, {'form':form})
+    return render(request, template_name, {'form': form})
 
 def game_delete(request, pk, template_name='games/confirm_delete.html'):
     game = get_object_or_404(Game, pk=pk)    
