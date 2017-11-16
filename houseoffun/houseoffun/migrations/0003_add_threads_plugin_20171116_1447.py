@@ -9,10 +9,10 @@ def insert_threads_plugin(apps, schema_editor):
     """
     """
     plugin_name = "Threads"
-    plugin_description = """
-    Reddit-style comment threads which allow for branching
-     discussions. Only disable this if you don't want to have public common rooms.
-    """
+    plugin_description = (
+    "Reddit-style comment threads which allow for branching"
+    " discussions. Only disable this if you don't want to have public common rooms."
+    )
     plugin = Plugin()
     plugin.name = plugin_name
     plugin.description = plugin_description
