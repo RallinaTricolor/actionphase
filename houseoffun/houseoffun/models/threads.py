@@ -12,5 +12,5 @@ class Thread(models.Model):
         Game,
         on_delete = models.CASCADE
     )
-    created_at = models.DateField(auto_now_add = True)
+    created_at = models.DateTimeField(auto_now_add = True)
     text = models.TextField()
