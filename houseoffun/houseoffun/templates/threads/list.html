@@ -5,4 +5,6 @@
     {% endfor %}
 </ul>
 
-<a href="{% url "thread_new" game.id %}">New</a>
+{% if request.user.id == game.game_master.id %}
+    <a href="{% url "thread_new" game.id %}">New</a>
+{% endif %}
