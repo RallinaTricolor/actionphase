@@ -1,7 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.forms import ModelForm, ModelMultipleChoiceField, CheckboxSelectMultiple
 from django.http import HttpResponse
-from django.core.exceptions import PermissionDenied
 
 from houseoffun.houseoffun.models import Game, Plugin, Thread
 
@@ -46,8 +45,7 @@ def game_update(request, pk, template_name='games/form.html'):
 
 def game_delete(request, pk, template_name='games/confirm_delete.html'):
     game = get_object_or_404(Game, pk=pk)    
-    if game.game_master.id != request.user.id:
-        raise PermissionDenied
+    game.can_edit_or_403(request.user)
     if request.method=='POST':
         game.delete()
         return redirect('game_list')

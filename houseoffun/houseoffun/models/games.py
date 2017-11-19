@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from houseoffun.houseoffun.models.core import Plugin
+from django.core.exceptions import PermissionDenied
 
 class Game(models.Model):
     name = models.CharField(max_length = 100, unique = True)
@@ -24,7 +25,7 @@ class Game(models.Model):
         Throws a 403 error if a user is not allowed to edit a game
         """
         if user.id != self.game_master.id:
-            raise PermissionError
+            raise PermissionDenied
         return True
     
 class Character(models.Model):
