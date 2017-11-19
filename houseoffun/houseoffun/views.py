@@ -32,6 +32,10 @@ def game_create(request, template_name='games/form.html'):
         return redirect('game_list')
     return render(request, template_name, {'form': form})
 
+def game_view(request, pk, template_name='games/view.html'):
+    game = get_object_or_404(Game, pk=pk)
+    return render(request, template_name, {'game': game})
+
 def game_update(request, pk, template_name='games/form.html'):
     game = get_object_or_404(Game, pk=pk)
     if game.game_master.id != request.user.id:
