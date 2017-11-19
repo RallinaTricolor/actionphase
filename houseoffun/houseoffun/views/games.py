@@ -5,10 +5,6 @@ from django.core.exceptions import PermissionDenied
 
 from houseoffun.houseoffun.models import Game, Plugin, Thread
 
-def index(request):
-    name =  request.user.email if request.user.is_authenticated() else 'world'
-    return HttpResponse("Hello, " + name + ". You're at the House of Fun index.")
-
 class GameForm(ModelForm):
     class Meta:
         model = Game
