@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.forms import ModelForm
 from django.http import HttpResponse
+from django.core.exceptions import PermissionDenied
 
 from houseoffun.houseoffun.models import Game
 
@@ -30,6 +31,8 @@ def game_create(request, template_name='games/form.html'):
 
 def game_update(request, pk, template_name='games/form.html'):
     game = get_object_or_404(Game, pk=pk)
+    if game.game_master.id != request.user.id:
+        raise PermissionDenied
     form = GameForm(request.POST or None, instance=game)
     if form.is_valid():
         form.save()
@@ -38,6 +41,8 @@ def game_update(request, pk, template_name='games/form.html'):
 
 def game_delete(request, pk, template_name='games/confirm_delete.html'):
     game = get_object_or_404(Game, pk=pk)    
+    if game.game_master.id != request.user.id:
+        raise PermissionDenied
     if request.method=='POST':
         game.delete()
         return redirect('game_list')
