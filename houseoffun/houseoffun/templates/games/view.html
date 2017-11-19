@@ -1,5 +1,5 @@
 <h1>{{ game.name }}</h1>
 
-{% if threads|length > 0 %}
+{% if threads is not False %}
     {% include "threads/list.html" %}
 {% endif %}
