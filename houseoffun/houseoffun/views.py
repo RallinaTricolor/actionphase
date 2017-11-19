@@ -3,7 +3,7 @@ from django.forms import ModelForm, ModelMultipleChoiceField, CheckboxSelectMult
 from django.http import HttpResponse
 from django.core.exceptions import PermissionDenied
 
-from houseoffun.houseoffun.models import Game, Plugin
+from houseoffun.houseoffun.models import Game, Plugin, Thread
 
 def index(request):
     name =  request.user.email if request.user.is_authenticated() else 'world'
@@ -34,7 +34,10 @@ def game_create(request, template_name='games/form.html'):
 
 def game_view(request, pk, template_name='games/view.html'):
     game = get_object_or_404(Game, pk=pk)
-    return render(request, template_name, {'game': game})
+    threads = []
+    if game.has_plugin('Threads'):
+        threads = Thread.objects.filter(game=game.id).defer('text')
+    return render(request, template_name, {'game': game, 'threads': threads})
 
 def game_update(request, pk, template_name='games/form.html'):
     game = get_object_or_404(Game, pk=pk)
