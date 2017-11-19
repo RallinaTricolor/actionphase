@@ -1,0 +1,1 @@
+from houseoffun.houseoffun.views.games import *
