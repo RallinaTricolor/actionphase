@@ -1,6 +1,6 @@
 <h2>Threads</h2>
 <ul>
     {% for thread in threads %}
-        <li>{{ thread.name }}</li>
+        <li><a href="{% url "thread_view" thread.id %}">{{ thread.name }}</a></li>
     {% endfor %}
 </ul>

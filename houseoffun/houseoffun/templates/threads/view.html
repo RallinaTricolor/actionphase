@@ -1,0 +1,5 @@
+<h1>{{ thread.name }}</h1>
+<a href="{% url "game_view" thread.game.id %}">Back to Game</a>
+<p>
+    {{ thread.text }}
+</p>
