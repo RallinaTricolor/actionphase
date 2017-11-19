@@ -5,6 +5,25 @@ from django.core.exceptions import PermissionDenied
 
 from houseoffun.houseoffun.models import Game, Plugin, Thread
 
+class ThreadForm(ModelForm):
+    class Meta:
+        model = Thread
+        exclude = ['author', 'game']
+
+
+def thread_create(request, game_id, template_name='threads/form.html'):
+    game = get_object_or_404(Game, pk=game_id)
+    if game.game_master.id != request.user.id:
+        raise PermissionDenied
+    form = ThreadForm(request.POST or None)
+    if form.is_valid():
+        thread = form.save(commit=False)
+        thread.author = request.user
+        thread.game = game
+        thread.save()
+        return redirect('game_view', game_id)
+    return render(request, template_name, {'form': form})
+
 def thread_view(request, pk, template_name='threads/view.html'):
     thread = get_object_or_404(Thread, pk=pk)
     return render(request, template_name, {'thread': thread})

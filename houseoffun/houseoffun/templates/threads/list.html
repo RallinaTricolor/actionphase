@@ -4,3 +4,5 @@
         <li><a href="{% url "thread_view" thread.id %}">{{ thread.name }}</a></li>
     {% endfor %}
 </ul>
+
+<a href="{% url "thread_new" game.id %}">New</a>
