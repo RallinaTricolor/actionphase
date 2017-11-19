@@ -52,6 +52,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'houseoffun.houseoffun.middleware.LoginRequiredMiddleware',
 ]
 
 ROOT_URLCONF = 'houseoffun.urls'
@@ -136,6 +137,11 @@ STATIC_URL = '/static/'
 ACCOUNT_ACTIVATION_DAYS = 7
 LOGIN_REDIRECT_URL = '/'
 SIMPLE_BACKEND_REDIRECT_URL = '/'
+LOGIN_EXEMPT_URLS = (
+    r'^accounts/register',
+    r'^accounts/login',
+    r'^accounts/password/reset',
+)
 
 # Email Settings
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
