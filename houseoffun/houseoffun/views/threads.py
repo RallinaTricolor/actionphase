@@ -39,4 +39,13 @@ def thread_update(request, pk, template_name='threads/form.html'):
         thread.save()
         return redirect('thread_view', thread.id)
     return render(request, template_name, {'form': form})
+
+def thread_delete(request, pk, template_name='threads/confirm_delete.html'):
+    thread = get_object_or_404(Thread, pk=pk)
+    game = get_object_or_404(Game, pk = thread.game.id)
+    game.can_edit_or_403(request.user)
+    if request.method=='POST':
+        thread.delete()
+        return redirect('game_view', game.id)
+    return render(request, template_name, {'object': thread})
     
