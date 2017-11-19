@@ -14,4 +14,5 @@ urlpatterns = [
     # Threads
     url(r'^threads/new/(?P<game_id>\d+)$', views.thread_create, name='thread_new'),
     url(r'^threads/view/(?P<pk>\d+)$', views.thread_view, name='thread_view'),
+    url(r'^threads/edit/(?P<pk>\d+)$', views.thread_update, name='thread_edit'),
 ]
