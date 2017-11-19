@@ -37,8 +37,7 @@ def game_view(request, pk, template_name='games/view.html'):
 
 def game_update(request, pk, template_name='games/form.html'):
     game = get_object_or_404(Game, pk=pk)
-    if game.game_master.id != request.user.id:
-        raise PermissionDenied
+    game.can_edit_or_403(request.user)
     form = GameForm(request.POST or None, instance=game)
     if form.is_valid():
         form.save()

@@ -19,6 +19,14 @@ class Game(models.Model):
         """
         return plugin_name in self.plugins.values_list('name', flat = True)
     
+    def can_edit_or_403(self, user):
+        """
+        Throws a 403 error if a user is not allowed to edit a game
+        """
+        if user.id != self.game_master.id:
+            raise PermissionError
+        return True
+    
 class Character(models.Model):
     name = models.CharField(max_length = 100)
     game = models.ForeignKey(

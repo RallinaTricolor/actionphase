@@ -13,8 +13,7 @@ class ThreadForm(ModelForm):
 
 def thread_create(request, game_id, template_name='threads/form.html'):
     game = get_object_or_404(Game, pk=game_id)
-    if game.game_master.id != request.user.id:
-        raise PermissionDenied
+    game.can_edit_or_403(request.user)
     form = ThreadForm(request.POST or None)
     if form.is_valid():
         thread = form.save(commit=False)
