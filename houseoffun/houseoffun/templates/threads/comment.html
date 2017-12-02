@@ -3,7 +3,7 @@
 {% recursetree comments %}
     <div class="comment">
         <div class="comment-body">
-            <a href="/character/{{ node.author }}">{{ node.author }}</a>
+            <a href="/character/{{ node.author.id }}">{{ node.author.name }}</a>
             {{ node.text|safe }}
             
             {% if not node.is_leaf_node %}
