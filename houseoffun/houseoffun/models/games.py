@@ -1,15 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
-
-class Plugin(models.Model):
-    def __str__(self):
-        """
-        Returns the string representation of the object
-        """
-        return self.name
-        
-    name = models.CharField(max_length = 100, unique = True)
-    description = models.TextField()
+from houseoffun.houseoffun.models.core import Plugin
+from django.core.exceptions import PermissionDenied
 
 class Game(models.Model):
     name = models.CharField(max_length = 100, unique = True)
@@ -19,9 +11,23 @@ class Game(models.Model):
         User,
         on_delete = models.CASCADE
     )
-    created_at = models.DateField(auto_now_add = True)
+    created_at = models.DateTimeField(auto_now_add = True)
     plugins = models.ManyToManyField(Plugin)
-
+    
+    def has_plugin(self, plugin_name):
+        """
+        Returns true if a game has a particular plugin
+        """
+        return plugin_name in self.plugins.values_list('name', flat = True)
+    
+    def can_edit_or_403(self, user):
+        """
+        Throws a 403 error if a user is not allowed to edit a game
+        """
+        if user.id != self.game_master.id:
+            raise PermissionDenied
+        return True
+    
 class Character(models.Model):
     name = models.CharField(max_length = 100)
     game = models.ForeignKey(
@@ -33,4 +39,4 @@ class Character(models.Model):
         User,
         on_delete = models.CASCADE
     )
-    created_at = models.DateField(auto_now_add = True)
+    created_at = models.DateTimeField(auto_now_add = True)

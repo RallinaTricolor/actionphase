@@ -1,0 +1,9 @@
+<h1>{{ thread.name }}</h1>
+<a href="{% url "game_view" thread.game.id %}">Back to Game</a>
+<p>
+    {{ thread.text }}
+</p>
+{% if thread.author.id == request.user.id %}
+    <a href="{% url "thread_edit" thread.id %}">Edit</a>
+    <a href="{% url "thread_delete" thread.id %}">Delete</a>
+{% endif %}
