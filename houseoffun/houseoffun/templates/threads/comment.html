@@ -7,7 +7,9 @@
             {{ node.text|safe }}
             
             {% if not node.is_leaf_node %}
-                {{ children }}
+                <ul class="children">
+                    {{ children }}
+                </ul>
             {% endif %}
 
         </div>
