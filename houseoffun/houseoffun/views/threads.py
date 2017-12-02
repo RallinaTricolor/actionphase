@@ -3,7 +3,7 @@ from django.forms import ModelForm, ModelMultipleChoiceField, CheckboxSelectMult
 from django.http import HttpResponse
 from django.core.exceptions import PermissionDenied
 
-from houseoffun.houseoffun.models import Game, Plugin, Thread
+from houseoffun.houseoffun.models import Game, Plugin, Thread, Comment
 
 class ThreadForm(ModelForm):
     class Meta:
@@ -25,7 +25,8 @@ def thread_create(request, game_id, template_name='threads/form.html'):
 
 def thread_view(request, pk, template_name='threads/view.html'):
     thread = get_object_or_404(Thread, pk=pk)
-    return render(request, template_name, {'thread': thread})
+    comments = Comment.objects.filter(thread = thread)
+    return render(request, template_name, {'thread': thread, 'comments': comments})
 
 def thread_update(request, pk, template_name='threads/form.html'):
     thread = get_object_or_404(Thread, pk=pk)
