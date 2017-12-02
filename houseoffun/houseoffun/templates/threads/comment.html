@@ -1,0 +1,15 @@
+{% load mptt_tags %}
+
+{% recursetree comments %}
+    <div class="comment">
+        <div class="comment-body">
+            <a href="/character/{{ node.author }}">{{ node.author }}</a>
+            {{ node.text|safe }}
+            
+            {% if not node.is_leaf_node %}
+                {{ children }}
+            {% endif %}
+
+        </div>
+    </div>
+{% endrecursetree %}
