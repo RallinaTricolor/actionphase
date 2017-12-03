@@ -158,8 +158,8 @@ STATIC_URL = '/static/'
 
 # Registration Settings
 ACCOUNT_ACTIVATION_DAYS = 7
-LOGIN_REDIRECT_URL = '/'
-SIMPLE_BACKEND_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/games'
+SIMPLE_BACKEND_REDIRECT_URL = '/games'
 LOGIN_EXEMPT_URLS = (
     r'^accounts/register',
     r'^accounts/login',
@@ -193,6 +193,7 @@ PIPELINE = {
         'main': {
             'source_filenames': (
               'js/jquery.js',
+              'js/popper.js',
               'js/bootstrap.js'
             ),
             'output_filename': 'js/min.js',
