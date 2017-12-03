@@ -1,4 +1,6 @@
-<h1>{{ thread.name }}</h1>
+{% extends 'authenticated.html' %}
+{% block content %}
+<h2>{{ thread.name }}</h2>
 <a href="{% url "game_view" thread.game.id %}">Back to Game</a>
 <p>
     {{ thread.text }}
@@ -11,3 +13,4 @@
 {% if comments %}
     {% include 'threads/comment.html' %}
 {% endif %}
+{% endblock %}

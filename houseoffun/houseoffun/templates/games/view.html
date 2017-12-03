@@ -1,5 +1,8 @@
-<h1>{{ game.name }}</h1>
+{% extends 'authenticated.html' %}
+{% block content %}
+<h2>{{ game.name }}</h2>
 
 {% if threads is not False %}
     {% include "threads/list.html" %}
 {% endif %}
+{% endblock %}
