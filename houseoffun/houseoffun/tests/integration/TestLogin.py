@@ -6,7 +6,6 @@ class LoginTest(StaticLiveServerTestCase):
     def setUpClass(cls):
         super(LoginTest, cls).setUpClass()
         cls.selenium = WebDriver()
-        cls.selenium.implicitly_wait(10)
 
     @classmethod
     def tearDownClass(cls):
