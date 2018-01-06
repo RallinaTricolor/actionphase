@@ -1,13 +1,11 @@
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium.webdriver.firefox.webdriver import WebDriver
-from django.conf import settings
 
 class LoginTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super(LoginTest, cls).setUpClass()
         cls.selenium = WebDriver()
-        #settings.DEBUG = True
 
     @classmethod
     def tearDownClass(cls):
@@ -22,3 +20,4 @@ class LoginTest(StaticLiveServerTestCase):
         password_input = self.selenium.find_element_by_name("password")
         password_input.send_keys('test_password')
         self.selenium.find_element_by_xpath('//input[@value="Log in"]').click()
+        assert self.selenium.find_element_by_link_text('Logout')
