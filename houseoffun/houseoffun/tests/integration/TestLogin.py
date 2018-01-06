@@ -1,5 +1,7 @@
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium.webdriver.firefox.webdriver import WebDriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 class LoginTest(StaticLiveServerTestCase):
     fixtures = ['user-data.json']
@@ -8,6 +10,7 @@ class LoginTest(StaticLiveServerTestCase):
     def setUpClass(cls):
         super(LoginTest, cls).setUpClass()
         cls.selenium = WebDriver()
+        cls.wait = WebDriverWait(cls.selenium, 10)
 
     @classmethod
     def tearDownClass(cls):
@@ -21,4 +24,4 @@ class LoginTest(StaticLiveServerTestCase):
         password_input = self.selenium.find_element_by_name("password")
         password_input.send_keys('test_password')
         self.selenium.find_element_by_xpath('//input[@value="Log in"]').click()
-        self.selenium.find_element_by_link_text('Logout')
+        self.wait.until(EC.url_to_be('%s%s' % (self.live_server_url, '/games/')))
