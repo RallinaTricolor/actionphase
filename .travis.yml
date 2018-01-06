@@ -5,7 +5,8 @@
   # command to install dependencies
   install:
     - pip install -r requirements.txt
-    - pip install mysql-python
+    - pip install pep8 --use-mirrors
+    - pip install mysql-python --use-mirrors
   before_script:
     - mysql -e 'create database houseoffun_test_db;'
     - python manage.py syncdb --noinput
