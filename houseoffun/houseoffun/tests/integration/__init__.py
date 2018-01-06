@@ -1,1 +1,1 @@
-from TestLogin import *
+from houseoffun.houseoffun.tests.integration.TestLogin import *
