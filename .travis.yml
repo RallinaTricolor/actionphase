@@ -7,6 +7,6 @@
     - pip install -r requirements.txt
   before_script:
     - mysql -e 'create database houseoffun_test_db;'
-    - python manage.py syncdb --noinput
+    - python manage.py migrate
   script:
     - python manage.py test
