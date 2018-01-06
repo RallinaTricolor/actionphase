@@ -1,8 +1,8 @@
-from django.contrib.staticfiles.testing import LiveServerTestCase
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium.webdriver.firefox.webdriver import WebDriver
 from django.conf import settings
 
-class LoginTest(LiveServerTestCase):
+class LoginTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super(LoginTest, cls).setUpClass()
