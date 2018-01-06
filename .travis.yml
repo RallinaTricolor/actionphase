@@ -1,8 +1,13 @@
   language: python
   python:
     - "3.6"
+  services: mysql
   # command to install dependencies
   install:
     - pip install -r requirements.txt
+    - pip install mysql-python
+  before_script:
+    - mysql -e 'create database houseoffun_test_db;'
+    - python manage.py syncdb --noinput
   script:
     - python manage.py test
