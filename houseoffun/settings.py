@@ -156,10 +156,6 @@ LOGGING = {
             'class': 'logging.FileHandler',
             'filename': '/tmp/debug.log',
         },
-        'console':{
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-        },
     },
     'loggers': {
         'django': {
@@ -192,7 +188,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = '/tmp/app-messages' # change this to a proper location
 
 # CSS & JS Settings
-STATIC_ROOT = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
 MEDIA_ROOT = '/media/'
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
