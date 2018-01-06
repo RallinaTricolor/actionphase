@@ -82,20 +82,36 @@ WSGI_APPLICATION = 'houseoffun.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'docker',
-        'USER': 'docker',
-        'PASSWORD': 'docker', 
-        'HOST': 'db',
-        'PORT': 3306,
-        'OPTIONS': {
-            'init_command': 'SET default_storage_engine=InnoDB',
+if os.getenv('TRAVIS', None):
+    #Travis DB configuration goes here
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'houseoffun_test_db',
+            'USER': 'travis',
+            'PASSWORD': '',
+            'HOST': '127.0.0.1',
+            'PORT': 3306,
+            'OPTIONS': {
+                'init_command': 'SET default_storage_engine=InnoDB',
+            }
         }
     }
-}
+else:
+    #Non-Travis DB configuration goes here
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'docker',
+            'USER': 'docker',
+            'PASSWORD': 'docker',
+            'HOST': 'db',
+            'PORT': 3306,
+            'OPTIONS': {
+                'init_command': 'SET default_storage_engine=InnoDB',
+            }
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
