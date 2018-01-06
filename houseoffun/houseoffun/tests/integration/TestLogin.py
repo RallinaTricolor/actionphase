@@ -1,5 +1,6 @@
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium.webdriver.firefox.webdriver import WebDriver
+from django.conf import settings
 
 class LoginTest(StaticLiveServerTestCase):
     @classmethod
