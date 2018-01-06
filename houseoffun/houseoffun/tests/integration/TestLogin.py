@@ -1,5 +1,6 @@
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium.webdriver.firefox.webdriver import WebDriver
+from urllib.parse import urljoin
 
 class LoginTest(StaticLiveServerTestCase):
     @classmethod
@@ -13,7 +14,8 @@ class LoginTest(StaticLiveServerTestCase):
         super(LoginTest, cls).tearDownClass()
 
     def test_login(self):
-        self.selenium.get('%s%s' % (self.live_server_url, '/accounts/login/'))
+        url = urljoin(self.live_server_url, '/accounts/login')
+        self.selenium.get(url)
         username_input = self.selenium.find_element_by_name("username")
         username_input.send_keys('test_user')
         password_input = self.selenium.find_element_by_name("password")
