@@ -25,3 +25,4 @@ class LoginTest(StaticLiveServerTestCase):
         password_input.send_keys('testpassword')
         self.selenium.find_element_by_xpath('//input[@value="Log in"]').click()
         self.wait.until(EC.url_changes('%s%s' % (self.live_server_url, '/accounts/login/')))
+        self.selenium.find_element_by_link_text('Logout')
