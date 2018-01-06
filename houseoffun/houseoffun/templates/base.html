@@ -1,8 +1,25 @@
-<html>
-<head>
-    <title>{% block title %}{% endblock %}</title>
-</head>
-<body>
-    {% block content %}{% endblock %}
-</body>
+{% load pipeline %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        {% stylesheet 'main' %}
+        <title>{% block title %}{% endblock %}</title>
+    </head>
+    <body>
+        <div class="container-fluid">
+            {% include "header.html" %}
+            <div class="row">
+                <div id="sidebar" class="col-2">
+                    {% block sidebar %}{% endblock %}
+                </div>
+                <div id="content" class="col-10">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+            <div id="footer" class="row justify-content-center">{% include "footer.html" %}</div>
+        </div>
+        {% javascript 'main' %}
+    </body>
 </html>

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.core.mail',
     'mptt',
+    'pipeline',
     'houseoffun.houseoffun',
 ]
 
@@ -128,6 +129,27 @@ USE_L10N = True
 
 USE_TZ = True
 
+#Logging
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '/tmp/debug.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
@@ -136,8 +158,8 @@ STATIC_URL = '/static/'
 
 # Registration Settings
 ACCOUNT_ACTIVATION_DAYS = 7
-LOGIN_REDIRECT_URL = '/'
-SIMPLE_BACKEND_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/games'
+SIMPLE_BACKEND_REDIRECT_URL = '/games'
 LOGIN_EXEMPT_URLS = (
     r'^accounts/register',
     r'^accounts/login',
@@ -147,3 +169,36 @@ LOGIN_EXEMPT_URLS = (
 # Email Settings
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = '/tmp/app-messages' # change this to a proper location
+
+# CSS & JS Settings
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
+STATICFILES_FINDERS = (
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'pipeline.finders.PipelineFinder',
+)
+
+PIPELINE = {
+    #'PIPELINE_ENABLED': True,
+    'STYLESHEETS': {
+        'main': {
+            'source_filenames': (
+              'css/bootstrap.css',
+            ),
+            'output_filename': 'css/min.css'
+        },
+    },
+    'JAVASCRIPT': {
+        'main': {
+            'source_filenames': (
+              'js/jquery.js',
+              'js/popper.js',
+              'js/bootstrap.js'
+            ),
+            'output_filename': 'js/min.js',
+        }
+    }
+}
+
+PIPELINE['YUGLIFY_BINARY'] = '/code/node_modules/yuglify/bin/yuglify'
