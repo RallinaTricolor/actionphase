@@ -4,6 +4,5 @@
   # command to install dependencies
   install:
     - pip install -r requirements.txt
-    - python setup.py -q install
   script:
     - python manage.py test
