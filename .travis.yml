@@ -21,6 +21,7 @@
     - sleep 3 # give xvfb some time to start
     - mysql -e 'create database travis_ci;'
     - python manage.py migrate
+    - python manage.py collectstatic
   script:
     - python manage.py test
   notifications:
