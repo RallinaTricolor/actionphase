@@ -220,4 +220,4 @@ PIPELINE = {
     }
 }
 
-PIPELINE['YUGLIFY_BINARY'] = '/code/node_modules/yuglify/bin/yuglify'
+PIPELINE['YUGLIFY_BINARY'] = os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify')
