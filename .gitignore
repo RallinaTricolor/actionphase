@@ -141,3 +141,4 @@ $RECYCLE.BIN/
 *.pydevproject
 .settings/org.eclipse.core.resources.prefs
 /static/
+.idea/
