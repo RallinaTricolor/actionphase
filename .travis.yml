@@ -24,3 +24,5 @@
     - python manage.py test
   notifications:
     email: false
+  after_failure:
+    - cat /tmp/debug.log
