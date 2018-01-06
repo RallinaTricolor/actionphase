@@ -14,7 +14,7 @@ class LoginTest(StaticLiveServerTestCase):
 
 
     def test_login(self):
-        self.selenium.get('%s %s' % (self.live_server_url, '/accounts/login/'))
+        self.selenium.get('http://localhost/accounts/login/'))
         username_input = self.selenium.find_element_by_name("username")
         username_input.send_keys('test_user')
         password_input = self.selenium.find_element_by_name("password")
