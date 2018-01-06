@@ -10,3 +10,5 @@
     - python manage.py migrate
   script:
     - python manage.py test
+  notifications:
+    email: false
