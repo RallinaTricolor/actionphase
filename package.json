@@ -1,0 +1,23 @@
+{
+  "name": "houseoffun",
+  "version": "0.0.1",
+  "description": "House of Fun",
+  "main": "index.js",
+  "dependencies": {
+    "yuglify": "^1.0.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhouser/houseoffun.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jhouser/houseoffun/issues"
+  },
+  "homepage": "https://github.com/jhouser/houseoffun#readme"
+}
