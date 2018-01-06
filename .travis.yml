@@ -7,7 +7,7 @@
   services: mysql
   # command to install dependencies
   before_install:
-    - google-chrome-stable --headless --disable-gpu --remote-debugging-port=9222 http://localhost &
+    - google-chrome-stable --headless --disable-gpu --remote-debugging-port=9222 http://localhost:8081 &
   install:
     - wget -N http://chromedriver.storage.googleapis.com/2.30/chromedriver_linux64.zip -P ~/
     - unzip ~/chromedriver_linux64.zip -d ~/
