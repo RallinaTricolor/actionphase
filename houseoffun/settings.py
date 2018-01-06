@@ -188,6 +188,7 @@ EMAIL_FILE_PATH = '/tmp/app-messages' # change this to a proper location
 
 # CSS & JS Settings
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+MEDIA_ROOT = '/media/'
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',

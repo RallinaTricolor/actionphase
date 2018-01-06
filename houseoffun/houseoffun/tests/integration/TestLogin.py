@@ -7,7 +7,7 @@ class LoginTest(StaticLiveServerTestCase):
     def setUpClass(cls):
         super(LoginTest, cls).setUpClass()
         cls.selenium = WebDriver()
-        settings.DEBUG = True
+        #settings.DEBUG = True
 
     @classmethod
     def tearDownClass(cls):
