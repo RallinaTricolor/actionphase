@@ -2,6 +2,8 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium.webdriver.firefox.webdriver import WebDriver
 
 class LoginTest(StaticLiveServerTestCase):
+    fixtures = ['user-data.json']
+
     @classmethod
     def setUpClass(cls):
         super(LoginTest, cls).setUpClass()
@@ -19,4 +21,4 @@ class LoginTest(StaticLiveServerTestCase):
         password_input = self.selenium.find_element_by_name("password")
         password_input.send_keys('test_password')
         self.selenium.find_element_by_xpath('//input[@value="Log in"]').click()
-        assert self.selenium.find_element_by_link_text('Logout')
+        self.selenium.find_element_by_link_text('Logout')
