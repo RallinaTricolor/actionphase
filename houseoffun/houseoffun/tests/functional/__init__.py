@@ -1,1 +1,1 @@
-from houseoffun.houseoffun.tests.functional.TestAuthentication import *
+from houseoffun.houseoffun.tests.functional.user import *
