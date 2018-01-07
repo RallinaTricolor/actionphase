@@ -1,0 +1,1 @@
+from houseoffun.houseoffun.tests.util.BaseStaticLiveServerTestCase import *
