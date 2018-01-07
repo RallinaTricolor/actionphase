@@ -1,6 +1,5 @@
 #!/bin/bash
 set -ev
-export DISPLAY=:99.0
 mysql -e 'create database travis_ci;'
 python manage.py migrate
 if [[ "${TESTFOLDER}" == *"functional"* ]]; then
