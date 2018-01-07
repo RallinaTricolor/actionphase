@@ -5,7 +5,8 @@
     matrix:
       - TESTFOLDER=unit
       - TESTFOLDER=integration
-      - TESTFOLDER=functional
+      - TESTFOLDER=functional.user
+      - TESTFOLDER=functional.games
   addons:
     firefox: latest
   language: python
