@@ -26,7 +26,7 @@ class BaseStaticLiveServerTestCase(StaticLiveServerTestCase):
         """
         Authenticates a test user for tests which require login
         """
-        user_session = Session.objects().first()
+        user_session = Session.objects.first()
         cookie = {
             "name": "sessionid",
             "value": user_session.session_key
