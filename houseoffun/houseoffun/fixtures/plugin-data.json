@@ -1,0 +1,1 @@
+[{"model": "houseoffun.plugin", "pk": 1, "fields": {"name": "Threads", "description": "Reddit-style comment threads which allow for branching discussions. Only disable this if you don't want to have public common rooms."}}]
