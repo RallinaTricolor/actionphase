@@ -1,8 +1,24 @@
 from houseoffun.houseoffun.tests.util import BaseStaticLiveServerTestCase
+from houseoffun.houseoffun.tests.util import TestHelper
 from selenium.webdriver.support import expected_conditions as EC
 
 
 class AuthenticationTests(BaseStaticLiveServerTestCase):
+
+    def test_registration(self):
+        self.selenium.get('%s%s' % (self.live_server_url, '/accounts/register/'))
+        username_input = self.selenium.find_element_by_name("username")
+        username_input.send_keys(TestHelper.random_string(8))
+        email_input = self.selenium.find_element_by_name("email")
+        email_input.send_keys(TestHelper.random_string(8) + '@' + TestHelper.random_string(8) + '.com')
+        password = TestHelper.random_string(10)
+        password_input = self.selenium.find_element_by_name("password1")
+        password_input.send_keys(password)
+        password_confirm = self.selenium.find_element_by_name("password2")
+        password_confirm.send_keys(password)
+        self.selenium.find_element_by_xpath('//input[@value="Submit"]').click()
+        self.wait.until(EC.url_changes('%s%s' % (self.live_server_url, '/accounts/register/')))
+        self.selenium.find_element_by_link_text('Logout')
 
     def test_login(self):
         self.selenium.get('%s%s' % (self.live_server_url, '/accounts/login/'))
