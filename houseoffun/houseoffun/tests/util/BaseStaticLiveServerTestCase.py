@@ -1,8 +1,8 @@
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import Client
-
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.support.ui import WebDriverWait
+
 
 class BaseStaticLiveServerTestCase(StaticLiveServerTestCase):
     """

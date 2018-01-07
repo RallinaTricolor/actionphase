@@ -1,6 +1,7 @@
 from houseoffun.houseoffun.tests.util import BaseStaticLiveServerTestCase
 from selenium.webdriver.support import expected_conditions as EC
 
+
 class AuthenticationTests(BaseStaticLiveServerTestCase):
 
     def test_login(self):
