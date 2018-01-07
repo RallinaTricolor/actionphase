@@ -38,7 +38,7 @@ class GamesTest(BaseStaticLiveServerTestCase):
         self.authenticate()
         self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
         game_name = self.selenium.find_element_by_class_name('game-view-link').text
-        self.selenium.find_element_by_class_name('game-edit-link').click()
+        self.selenium.find_element_by_class_name('game-delete-link').click()
         self.wait.until(EC.url_changes('%s%s' % (self.live_server_url, '/games/')))
         self.selenium.find_element_by_class_name('game-confirm-delete-button').click()
         self.wait.until(EC.url_to_be('%s%s' % (self.live_server_url, '/games/')))
