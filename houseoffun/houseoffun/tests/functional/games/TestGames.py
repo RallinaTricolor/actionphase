@@ -25,7 +25,7 @@ class GamesTest(BaseStaticLiveServerTestCase):
     def test_game_update(self):
         self.authenticate()
         self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
-        self.selenium.find_element_by_link_text('Edit').click()
+        self.selenium.find_element_by_link_text('edit').click()
         game_name = TestHelper.random_string(8)
         name_input = self.selenium.find_element_by_name("name")
         name_input.send_keys(game_name)
