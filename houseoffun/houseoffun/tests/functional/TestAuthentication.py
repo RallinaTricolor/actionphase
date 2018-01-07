@@ -33,8 +33,7 @@ class AuthenticationTests(BaseStaticLiveServerTestCase):
     def test_logout(self):
         self.authenticate()
         self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
-        logout_button = self.selenium.find_element_by_link_text('Logout')
-        logout_button.click()
+        self.selenium.find_element_by_link_text('Logout').click()
         self.wait.until(EC.url_to_be('%s%s' % (self.live_server_url, '/accounts/login/')))
 
     def test_forgot_password(self):
