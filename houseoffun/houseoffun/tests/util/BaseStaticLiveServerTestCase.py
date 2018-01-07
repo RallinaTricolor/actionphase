@@ -1,4 +1,6 @@
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.test import Client
+
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -19,3 +21,10 @@ class BaseStaticLiveServerTestCase(StaticLiveServerTestCase):
     def tearDownClass(cls):
         cls.selenium.quit()
         super(BaseStaticLiveServerTestCase, cls).tearDownClass()
+
+    def authenticate(self):
+        """
+        Authenticates a test user for tests which require login
+        """
+        c = Client()
+        c.login(username="test_authenticated_user", password="test_auth")
