@@ -1,1 +1,1 @@
-from houseoffun.houseoffun.tests.integration import *
+from houseoffun.houseoffun.tests.functional import *
