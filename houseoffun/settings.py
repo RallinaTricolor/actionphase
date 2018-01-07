@@ -26,9 +26,10 @@ SECRET_KEY = '9944wfl7gnp_k(lyps5a$lx+!!=(l-993@9&n33dc6pqaa0yvy'
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    '192.168.99.100'
+    '192.168.99.100',
+    '127.0.0.1',
+    'localhost'
 ]
-
 
 # Application definition
 
@@ -82,20 +83,36 @@ WSGI_APPLICATION = 'houseoffun.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'docker',
-        'USER': 'docker',
-        'PASSWORD': 'docker', 
-        'HOST': 'db',
-        'PORT': 3306,
-        'OPTIONS': {
-            'init_command': 'SET default_storage_engine=InnoDB',
+if os.getenv('TRAVIS', None):
+    #Travis DB configuration goes here
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'travis_ci',
+            'USER': 'travis',
+            'PASSWORD': '',
+            'HOST': '127.0.0.1',
+            'PORT': 3306,
+            'OPTIONS': {
+                'init_command': 'SET default_storage_engine=InnoDB',
+            }
         }
     }
-}
+else:
+    #Non-Travis DB configuration goes here
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'docker',
+            'USER': 'docker',
+            'PASSWORD': 'docker',
+            'HOST': 'db',
+            'PORT': 3306,
+            'OPTIONS': {
+                'init_command': 'SET default_storage_engine=InnoDB',
+            }
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
@@ -154,7 +171,7 @@ LOGGING = {
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
-STATIC_URL = '/static/'
+
 
 # Registration Settings
 ACCOUNT_ACTIVATION_DAYS = 7
@@ -164,6 +181,7 @@ LOGIN_EXEMPT_URLS = (
     r'^accounts/register',
     r'^accounts/login',
     r'^accounts/password/reset',
+    r'^static/'
 )
 
 # Email Settings
@@ -172,6 +190,8 @@ EMAIL_FILE_PATH = '/tmp/app-messages' # change this to a proper location
 
 # CSS & JS Settings
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_URL = '/static/'
+MEDIA_ROOT = '/media/'
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
@@ -201,4 +221,4 @@ PIPELINE = {
     }
 }
 
-PIPELINE['YUGLIFY_BINARY'] = '/code/node_modules/yuglify/bin/yuglify'
+PIPELINE['YUGLIFY_BINARY'] = os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify')
