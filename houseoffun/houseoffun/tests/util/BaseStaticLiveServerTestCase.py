@@ -26,6 +26,7 @@ class BaseStaticLiveServerTestCase(StaticLiveServerTestCase):
         """
         Authenticates a test user for tests which require login
         """
+        self.selenium.get(self.live_server_url)
         user_session = Session.objects.first()
         cookie = {
             "name": "sessionid",
