@@ -1,13 +1,11 @@
   dist: trusty
   env:
-    - MOZ_HEADLESS=1
-  jobs:
-    include:
-      if: type = pull_request
-      env: TESTFOLDER = functional
-      if: type = push
-      env: TESTFOLDER = unit
-      env: TESTFOLDER = integration
+    global:
+      - MOZ_HEADLESS=1
+    matrix:
+      - TESTFOLDER=unit
+      - TESTFOLDER=integration
+      - TESTFOLDER=functional
   addons:
     firefox: latest
   language: python
