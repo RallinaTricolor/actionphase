@@ -1,6 +1,13 @@
   dist: trusty
   env:
     - MOZ_HEADLESS=1
+  jobs:
+    include:
+      if: type = pull_request
+      env: TESTFOLDER = functional
+      if: type = push
+      env: TESTFOLDER = unit
+      env: TESTFOLDER = integration
   addons:
     firefox: latest
   language: python
@@ -23,7 +30,7 @@
     - python manage.py migrate
     - python manage.py collectstatic
   script:
-    - python manage.py test
+    - python manage.py test $TESTFOLDER
   notifications:
     email: false
   after_failure:
