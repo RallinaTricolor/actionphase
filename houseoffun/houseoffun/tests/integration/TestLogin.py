@@ -1,21 +1,7 @@
-from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-from selenium.webdriver.firefox.webdriver import WebDriver
-from selenium.webdriver.support.ui import WebDriverWait
+from houseoffun.houseoffun.tests.util import BaseStaticLiveServerTestCase
 from selenium.webdriver.support import expected_conditions as EC
 
-class LoginTest(StaticLiveServerTestCase):
-    fixtures = ['user-data.json']
-
-    @classmethod
-    def setUpClass(cls):
-        super(LoginTest, cls).setUpClass()
-        cls.selenium = WebDriver()
-        cls.wait = WebDriverWait(cls.selenium, 10)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.selenium.quit()
-        super(LoginTest, cls).tearDownClass()
+class LoginTest(BaseStaticLiveServerTestCase):
 
     def test_login(self):
         self.selenium.get('%s%s' % (self.live_server_url, '/accounts/login/'))
