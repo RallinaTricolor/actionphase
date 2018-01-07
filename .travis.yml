@@ -27,7 +27,7 @@
     - mysql -e 'create database travis_ci;'
     - python manage.py migrate
     - python manage.py collectstatic
-  script: "python manage.py test $TESTFOLDER"
+  script: "python manage.py test houseoffun.tests.$TESTFOLDER"
   notifications:
     email: false
   after_failure:
