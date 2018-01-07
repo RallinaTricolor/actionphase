@@ -18,7 +18,7 @@ class GamesTest(BaseStaticLiveServerTestCase):
         abbreviation_input.send_keys(TestHelper.random_string(3))
         description_input = self.selenium.find_element_by_name("description")
         description_input.send_keys(TestHelper.random_string(128))
-        self.selenium.find_element_by_xpath('//input[@value="Submit"]').click()
+        self.selenium.find_element_by_class_name('game-submit-button').click()
         self.wait.until(EC.url_changes('%s%s' % (self.live_server_url, '/games/new/')))
         self.selenium.find_element_by_link_text(game_name)
 
@@ -30,6 +30,6 @@ class GamesTest(BaseStaticLiveServerTestCase):
         name_input = self.selenium.find_element_by_name("name")
         name_input.clear()
         name_input.send_keys(game_name)
-        self.selenium.find_element_by_xpath('//input[@value="Submit"]').click()
+        self.selenium.find_element_by_class_name('game-submit-button').click()
         self.wait.until(EC.url_to_be('%s%s' % (self.live_server_url, '/games/')))
         self.selenium.find_element_by_link_text(game_name)
