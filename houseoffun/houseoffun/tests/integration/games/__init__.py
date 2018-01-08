@@ -1,0 +1,1 @@
+from houseoffun.houseoffun.tests.integration.games.TestGames import *
