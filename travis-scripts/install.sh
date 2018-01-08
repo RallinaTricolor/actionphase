@@ -1,4 +1,6 @@
 #!/bin/bash
 set -ev
 pip install -r requirements.txt
-npm install
+if [[ "${TESTFOLDER}" != *"unit"* ]]; then
+    npm install
+fi
