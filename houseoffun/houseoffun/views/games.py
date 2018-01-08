@@ -4,17 +4,19 @@ from django.http import HttpResponse
 
 from houseoffun.houseoffun.models import Game, Plugin, Thread
 
+
 class GameForm(ModelForm):
     class Meta:
         model = Game
         exclude = ['game_master']
     plugins = ModelMultipleChoiceField(queryset=Plugin.objects.all(), widget=CheckboxSelectMultiple, required=False)
 
+
 def game_list(request, template_name='games/list.html'):
     games = Game.objects.defer('description')
-    data = {}
-    data['object_list'] = games
+    data = {'object_list': games}
     return render(request, template_name, data)
+
 
 def game_create(request, template_name='games/form.html'):
     form = GameForm(request.POST or None)
@@ -27,12 +29,14 @@ def game_create(request, template_name='games/form.html'):
         return redirect('game_list')
     return render(request, template_name, {'form': form})
 
+
 def game_view(request, pk, template_name='games/view.html'):
     game = get_object_or_404(Game, pk=pk)
     threads = False
     if game.has_plugin('Threads'):
         threads = Thread.objects.filter(game=game.id).defer('text')
     return render(request, template_name, {'game': game, 'threads': threads})
+
 
 def game_update(request, pk, template_name='games/form.html'):
     game = get_object_or_404(Game, pk=pk)
@@ -42,6 +46,7 @@ def game_update(request, pk, template_name='games/form.html'):
         form.save()
         return redirect('game_list')
     return render(request, template_name, {'form': form})
+
 
 def game_delete(request, pk, template_name='games/confirm_delete.html'):
     game = get_object_or_404(Game, pk=pk)    
