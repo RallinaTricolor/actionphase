@@ -3,6 +3,7 @@
 <h2>{{ game.name }}</h2>
 <div class="game-status game-status-{{ game.status }}">
     {{ game.get_status_display }}
+    <a href="{% url "game_next_status" game.id %}">Next Status</a>
 </div>
 
 {% if threads is not False and game.show_threads %}

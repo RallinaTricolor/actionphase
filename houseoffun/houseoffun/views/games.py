@@ -55,3 +55,10 @@ def game_delete(request, pk, template_name='games/confirm_delete.html'):
         game.delete()
         return redirect('game_list')
     return render(request, template_name, {'object':game})
+
+
+def game_next_status(request, pk):
+    game = get_object_or_404(Game, pk=pk)
+    game.can_edit_or_403(request.user)
+    game.next_status()
+    return redirect('game_view', pk)
