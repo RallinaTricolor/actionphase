@@ -3,6 +3,24 @@ from django.contrib.auth.models import User
 from houseoffun.houseoffun.models.core import Plugin
 from django.core.exceptions import PermissionDenied
 
+# Game Status Codes
+DRAFT = 'DR'
+REGISTRATION = 'RG'
+PENDING = 'PD'
+RUNNING = 'RN'
+FINISHED = 'FN'
+ARCHIVED = 'AR'
+
+GAME_STATUS_CHOICES = (
+    (DRAFT, 'Draft'),
+    (REGISTRATION, 'Recruiting'),
+    (PENDING, 'Pending'),
+    (RUNNING, 'Running'),
+    (FINISHED, 'Finished'),
+    (ARCHIVED, 'Archived'),
+)
+
+
 class Game(models.Model):
     name = models.CharField(max_length = 100, unique = True)
     abbreviation = models.CharField(max_length = 10)
@@ -13,7 +31,12 @@ class Game(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add = True)
     plugins = models.ManyToManyField(Plugin)
-    
+    status = models.CharField(
+        max_length=2,
+        choices=GAME_STATUS_CHOICES,
+        default=DRAFT,
+    )
+
     def has_plugin(self, plugin_name):
         """
         Returns true if a game has a particular plugin
