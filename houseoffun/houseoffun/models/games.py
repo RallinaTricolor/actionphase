@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from houseoffun.houseoffun.models.core import Plugin
 from django.core.exceptions import PermissionDenied
+from django.db import transaction, DatabaseError
 
 
 class Game(models.Model):
@@ -64,13 +65,28 @@ class Game(models.Model):
         """
         Moves the game backwards in status (if possible), performing any necessary state changes
         """
+        if self.status == self.REGISTRATION
+            self._revert_draft()
 
     def _advance_draft(self):
         """
-        Moves a draft to the registration step
+        Moves a draft to the registration step. Should not be called directly
         """
         self.status = self.REGISTRATION
         self.save()
+
+    def _revert_draft(self):
+        """
+        Moves a game back to the draft status. Should not be called directly
+        """
+        self.status = self.DRAFT
+        try:
+            with transaction.atomic():
+                for signup in self.game_signup_set:
+                    signup.delete()
+                self.save()
+        except DatabaseError:
+            self.status = self.REGISTRATION
 
 
 class Character(models.Model):
