@@ -22,14 +22,14 @@ GAME_STATUS_CHOICES = (
 
 
 class Game(models.Model):
-    name = models.CharField(max_length = 100, unique = True)
-    abbreviation = models.CharField(max_length = 10)
+    name = models.CharField(max_length=100, unique=True)
+    abbreviation = models.CharField(max_length=10)
     description = models.TextField()
     game_master = models.ForeignKey(
         User,
-        on_delete = models.CASCADE
+        on_delete=models.CASCADE
     )
-    created_at = models.DateTimeField(auto_now_add = True)
+    created_at = models.DateTimeField(auto_now_add=True)
     plugins = models.ManyToManyField(Plugin)
     status = models.CharField(
         max_length=2,
@@ -41,8 +41,8 @@ class Game(models.Model):
         """
         Returns true if a game has a particular plugin
         """
-        return plugin_name in self.plugins.values_list('name', flat = True)
-    
+        return plugin_name in self.plugins.values_list('name', flat=True)
+
     def can_edit_or_403(self, user):
         """
         Throws a 403 error if a user is not allowed to edit a game
@@ -50,16 +50,17 @@ class Game(models.Model):
         if user.id != self.game_master.id:
             raise PermissionDenied
         return True
-    
+
+
 class Character(models.Model):
-    name = models.CharField(max_length = 100)
+    name = models.CharField(max_length=100)
     game = models.ForeignKey(
         Game,
-        null = True,
-        on_delete = models.SET_NULL
+        null=True,
+        on_delete=models.SET_NULL
     )
     owner = models.ForeignKey(
         User,
-        on_delete = models.CASCADE
+        on_delete=models.CASCADE
     )
-    created_at = models.DateTimeField(auto_now_add = True)
+    created_at = models.DateTimeField(auto_now_add=True)
