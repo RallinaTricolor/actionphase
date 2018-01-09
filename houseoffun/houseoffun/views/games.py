@@ -8,7 +8,7 @@ from houseoffun.houseoffun.models import Game, Plugin, Thread
 class GameForm(ModelForm):
     class Meta:
         model = Game
-        exclude = ['game_master']
+        exclude = ['game_master', 'status']
     plugins = ModelMultipleChoiceField(queryset=Plugin.objects.all(), widget=CheckboxSelectMultiple, required=False)
 
 
