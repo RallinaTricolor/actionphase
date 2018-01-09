@@ -58,6 +58,7 @@ def game_delete(request, pk, template_name='games/confirm_delete.html'):
 
 
 def game_next_status(request, pk):
+    # TODO: Add javascript confirm button to template file
     game = get_object_or_404(Game, pk=pk)
     game.can_edit_or_403(request.user)
     game.next_status()
