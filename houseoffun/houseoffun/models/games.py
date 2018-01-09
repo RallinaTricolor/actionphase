@@ -65,7 +65,7 @@ class Game(models.Model):
         """
         Moves the game backwards in status (if possible), performing any necessary state changes
         """
-        if self.status == self.REGISTRATION
+        if self.status == self.REGISTRATION:
             self._revert_draft()
 
     def _advance_draft(self):
