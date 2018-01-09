@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>{{ game.name }}</h2>
+<div class="game-status game-status-{{ game.status }}">
+    {{ game.get_status_display }}
+</div>
 
 {% if threads is not False %}
     {% include "threads/list.html" %}
