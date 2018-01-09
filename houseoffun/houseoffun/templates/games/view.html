@@ -5,7 +5,7 @@
     {{ game.get_status_display }}
 </div>
 
-{% if threads is not False %}
+{% if threads is not False and game.show_threads %}
     {% include "threads/list.html" %}
 {% endif %}
 {% endblock %}

@@ -88,6 +88,18 @@ class Game(models.Model):
         except DatabaseError:
             self.status = self.REGISTRATION
 
+    # Functions related to showing things on the page
+    def show_threads(self):
+        return self.has_plugin('Threads') and self.status not in [
+            self.DRAFT,
+            self.REGISTRATION,
+            self.PENDING,
+            self.DELETED
+        ]
+
+    def show_new_threads_link(self):
+        return self.has_plugin('Threads') and self.status == self.RUNNING
+
 
 class Character(models.Model):
     name = models.CharField(max_length=100)
