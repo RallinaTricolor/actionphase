@@ -3,27 +3,27 @@ from django.contrib.auth.models import User
 from houseoffun.houseoffun.models.core import Plugin
 from django.core.exceptions import PermissionDenied
 
-# Game Status Codes
-DRAFT = 'DR'
-REGISTRATION = 'RG'
-PENDING = 'PD'
-RUNNING = 'RN'
-FINISHED = 'FN'
-ARCHIVED = 'AR'
-DELETED = 'DL'
-
-GAME_STATUS_CHOICES = (
-    (DRAFT, 'Draft'),
-    (REGISTRATION, 'Recruiting'),
-    (PENDING, 'Pending'),
-    (RUNNING, 'Running'),
-    (FINISHED, 'Finished'),
-    (ARCHIVED, 'Archived'),
-    (DELETED, 'Deleted'),
-)
-
 
 class Game(models.Model):
+    # Game Status Codes
+    DRAFT = 'DR'
+    REGISTRATION = 'RG'
+    PENDING = 'PD'
+    RUNNING = 'RN'
+    FINISHED = 'FN'
+    ARCHIVED = 'AR'
+    DELETED = 'DL'
+
+    GAME_STATUS_CHOICES = (
+        (DRAFT, 'Draft'),
+        (REGISTRATION, 'Recruiting'),
+        (PENDING, 'Pending'),
+        (RUNNING, 'Running'),
+        (FINISHED, 'Finished'),
+        (ARCHIVED, 'Archived'),
+        (DELETED, 'Deleted'),
+    )
+    
     name = models.CharField(max_length=100, unique=True)
     abbreviation = models.CharField(max_length=10)
     description = models.TextField()
