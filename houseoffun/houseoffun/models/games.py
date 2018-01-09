@@ -85,3 +85,30 @@ class Character(models.Model):
         on_delete=models.CASCADE
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class GameSignup(models.Model):
+    REGISTERED = 'RG'
+    ACCEPTED = 'AC'
+    REJECTED = 'RJ'
+    WITHDRAWN = 'WD'
+    REGISTRATION_STATUS_CHOICES = (
+        (REGISTERED, 'Registered'),
+        (ACCEPTED, 'Accepted'),
+        (REJECTED, 'Rejected'),
+        (WITHDRAWN, 'Withdrawn')
+    )
+
+    game = models.ForeignKey(
+        Game,
+        on_delete=models.CASCADE
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+    status = models.CharField(
+        max_length=2,
+        choices=REGISTRATION_STATUS_CHOICES,
+        default=REGISTERED,
+    )
