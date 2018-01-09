@@ -10,6 +10,7 @@ PENDING = 'PD'
 RUNNING = 'RN'
 FINISHED = 'FN'
 ARCHIVED = 'AR'
+DELETED = 'DL'
 
 GAME_STATUS_CHOICES = (
     (DRAFT, 'Draft'),
@@ -18,6 +19,7 @@ GAME_STATUS_CHOICES = (
     (RUNNING, 'Running'),
     (FINISHED, 'Finished'),
     (ARCHIVED, 'Archived'),
+    (DELETED, 'Deleted'),
 )
 
 
@@ -50,6 +52,25 @@ class Game(models.Model):
         if user.id != self.game_master.id:
             raise PermissionDenied
         return True
+
+    def next_status(self):
+        """
+        Advances the game to the next status in the list, performing any necessary state changes
+        """
+        if self.status == DRAFT:
+            self._publish_draft()
+
+    def previous_status(self):
+        """
+        Moves the game backwards in status (if possible), performing any necessary state changes
+        """
+
+    def _publish_draft(self):
+        """
+        Moves a draft
+        """
+        self.status = REGISTRATION
+        self.save()
 
 
 class Character(models.Model):

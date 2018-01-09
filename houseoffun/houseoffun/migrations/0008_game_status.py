@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='game',
             name='status',
-            field=models.CharField(choices=[('DR', 'Draft'), ('RG', 'Recruiting'), ('PD', 'Pending'), ('RN', 'Running'), ('FN', 'Finished'), ('AR', 'Archived')], default='DR', max_length=2),
+            field=models.CharField(choices=[('DR', 'Draft'), ('RG', 'Recruiting'), ('PD', 'Pending'), ('RN', 'Running'), ('FN', 'Finished'), ('AR', 'Archived'), ('DL', 'Deleted')], default='DR', max_length=2),
         ),
     ]
