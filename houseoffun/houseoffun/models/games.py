@@ -57,7 +57,7 @@ class Game(models.Model):
         """
         Advances the game to the next status in the list, performing any necessary state changes
         """
-        if self.status == DRAFT:
+        if self.status == self.DRAFT:
             self._advance_draft()
 
     def previous_status(self):
@@ -69,7 +69,7 @@ class Game(models.Model):
         """
         Moves a draft to the registration step
         """
-        self.status = REGISTRATION
+        self.status = self.REGISTRATION
         self.save()
 
 
