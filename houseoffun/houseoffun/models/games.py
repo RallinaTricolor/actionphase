@@ -24,7 +24,7 @@ class Game(models.Model):
         (ARCHIVED, 'Archived'),
         (DELETED, 'Deleted'),
     )
-    
+
     name = models.CharField(max_length=100, unique=True)
     abbreviation = models.CharField(max_length=10)
     description = models.TextField()
@@ -157,13 +157,7 @@ class GameSignup(models.Model):
         return self.game.status in [Game.REGISTRATION, Game.PENDING] and self.status != self.WITHDRAWN
 
     def can_accept(self):
-        return self.game.status in [Game.REGISTRATION, Game.PENDING] and self.status in [
-            self.REGISTERED,
-            self.REJECTED
-        ]
+        return self.game.status in [Game.REGISTRATION, Game.PENDING] and self.status in [self.REGISTERED, self.REJECTED]
 
     def can_reject(self):
-        return self.game.status in [Game.REGISTRATION, Game.PENDING] and self.status in [
-            self.REGISTERED,
-            self.ACCEPTED
-        ]
+        return self.game.status in [Game.REGISTRATION, Game.PENDING] and self.status in [self.REGISTERED, self.ACCEPTED]
