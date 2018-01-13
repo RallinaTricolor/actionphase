@@ -5,6 +5,7 @@
     {{ game.get_status_display }}
     {% if request.user == game.game_master %}
         <a href="{% url "game_next_status" game.id %}">Next Status</a>
+        <a href="{% url "game_previous_status" game.id %}">Previous Status</a>
     {% endif %}
 </div>
 

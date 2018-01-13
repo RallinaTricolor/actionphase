@@ -66,6 +66,14 @@ def game_next_status(request, pk):
     return redirect('game_view', pk)
 
 
+def game_previous_status(request, pk):
+    # TODO: Add javascript confirm button to template file
+    game = get_object_or_404(Game, pk=pk)
+    game.can_edit_or_403(request.user)
+    game.previous_status()
+    return redirect('game_view', pk)
+
+
 def game_signup(request, pk):
     game = get_object_or_404(Game, pk=pk)
     signup = GameSignup.objects.filter(game=game, user=request.user).first()
