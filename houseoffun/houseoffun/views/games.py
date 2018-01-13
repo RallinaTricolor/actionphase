@@ -68,9 +68,12 @@ def game_next_status(request, pk):
 
 def game_signup(request, pk):
     game = get_object_or_404(Game, pk=pk)
-    signup = GameSignup()
+    signup = GameSignup.objects.filter(game=game, user=request.user).first()
+    if signup is None:
+        signup = GameSignup()
     signup.game = game
     signup.user = request.user
+    signup.status = signup.REGISTERED
     try:
         signup.save()
         game.signups.add(signup)

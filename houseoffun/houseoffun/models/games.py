@@ -150,6 +150,12 @@ class GameSignup(models.Model):
         default=REGISTERED,
     )
 
+    def can_signup(self):
+        return self.status == self.WITHDRAWN
+
+    def can_withdraw(self):
+        return self.status != self.WITHDRAWN
+
     def can_accept(self):
         return self.status in [
             self.REGISTERED,

@@ -5,7 +5,12 @@
             <span class="signup-user">{{ user_signup.user.username }}</span>
             <span class="signup-status signup-status-{{ user_signup.status }}">{{ user_signup.get_status_display }}</span>
             <span class="signup-actions">
-                <a class="signup-button signup-button-withdraw" href="{% url "game_withdraw" game.id %}">Withdraw</a>
+                {% if user_signup.can_withdraw %}
+                    <a class="signup-button signup-button-withdraw" href="{% url "game_withdraw" game.id %}">Withdraw</a>
+                {% endif %}
+                {% if user_signup.can_signup %}
+                    <a class="signup-button signup-button-signup" href="{% url "game_signup" game.id %}">Re-Register</a>
+                {% endif %}
             </span>
         </div>
     {% else %}
