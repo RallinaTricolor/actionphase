@@ -90,11 +90,10 @@ class Game(models.Model):
 
     # Functions related to showing things on the page
     def show_threads(self):
-        return self.has_plugin('Threads') and self.status not in [
-            self.DRAFT,
-            self.REGISTRATION,
-            self.PENDING,
-            self.DELETED
+        return self.has_plugin('Threads') and self.status in [
+            self.RUNNING,
+            self.FINISHED,
+            self.ARCHIVED
         ]
 
     def show_new_threads_link(self):
