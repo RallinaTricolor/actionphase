@@ -82,7 +82,7 @@ class Game(models.Model):
         self.status = self.DRAFT
         try:
             with transaction.atomic():
-                for signup in self.game_signup_set:
+                for signup in self.signups.all():
                     signup.delete()
                 self.save()
         except DatabaseError:
