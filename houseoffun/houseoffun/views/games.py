@@ -73,18 +73,20 @@ def game_signup(request, pk):
         signup = GameSignup()
     signup.game = game
     signup.user = request.user
-    signup.status = signup.REGISTERED
-    try:
-        signup.save()
-        game.signups.add(signup)
-    except IntegrityError:
-        pass
+    if signup.can_signup():
+        try:
+            signup.status = signup.REGISTERED
+            signup.save()
+            game.signups.add(signup)
+        except IntegrityError:
+            pass
     return redirect('game_view', pk)
 
 
 def game_withdraw(request, pk):
     game = get_object_or_404(Game, pk=pk)
     signup = get_object_or_404(GameSignup, game=game, user=request.user)
-    signup.status = signup.WITHDRAWN
-    signup.save()
+    if signup.can_withdraw():
+        signup.status = signup.WITHDRAWN
+        signup.save()
     return redirect('game_view', pk)
