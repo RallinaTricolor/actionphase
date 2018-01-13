@@ -35,7 +35,8 @@ def game_view(request, pk, template_name='games/view.html'):
     threads = False
     if game.has_plugin('Threads'):
         threads = game.thread_set.defer('text')
-    return render(request, template_name, {'game': game, 'threads': threads})
+    user_signup = game.signups.filter(user=request.user).first()
+    return render(request, template_name, {'game': game, 'threads': threads, 'user_signup': user_signup})
 
 
 def game_update(request, pk, template_name='games/form.html'):
