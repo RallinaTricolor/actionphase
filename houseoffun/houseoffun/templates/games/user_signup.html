@@ -10,6 +10,6 @@
         </div>
     {% else %}
         Interested in playing?
-        <a class="signup-button signup-button-signup" href="#">Sign Up!</a>
+        <a class="signup-button signup-button-signup" href="{% url "game_signup" game.id %}">Sign Up!</a>
     {% endif %}
 </div>
