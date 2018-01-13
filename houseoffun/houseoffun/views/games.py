@@ -99,3 +99,12 @@ def game_signup_accept(request, pk):
         signup.status = signup.ACCEPTED
         signup.save()
     return redirect('game_view', signup.game.id)
+
+
+def game_signup_reject(request, pk):
+    signup = get_object_or_404(GameSignup, pk=pk)
+    signup.game.can_edit_or_403(request.user)
+    if signup.can_reject():
+        signup.status = signup.REJECTED
+        signup.save()
+    return redirect('game_view', signup.game.id)

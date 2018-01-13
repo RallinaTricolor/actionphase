@@ -9,7 +9,7 @@
                     <a class="signup-button signup-button-accept" href="{% url "game_signup_accept" signup.id %}">Accept</a>
                 {% endif %}
                 {% if signup.can_reject %}
-                    <a class="signup-button signup-button-reject" href="#">Reject</a>
+                    <a class="signup-button signup-button-reject" href="{% url "game_signup_reject" signup.id %}">Reject</a>
                 {% endif %}
             </span>
         </div>
