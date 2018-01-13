@@ -90,3 +90,12 @@ def game_withdraw(request, pk):
         signup.status = signup.WITHDRAWN
         signup.save()
     return redirect('game_view', pk)
+
+
+def game_signup_accept(request, pk):
+    signup = get_object_or_404(GameSignup, pk=pk)
+    signup.game.can_edit_or_403(request.user)
+    if signup.can_accept():
+        signup.status = signup.ACCEPTED
+        signup.save()
+    return redirect('game_view', signup.game.id)

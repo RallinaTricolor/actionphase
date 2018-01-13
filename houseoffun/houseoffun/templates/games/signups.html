@@ -6,7 +6,7 @@
             <span class="signup-status signup-status-{{ signup.status }}">{{ signup.get_status_display }}</span>
             <span class="signup-actions">
                 {% if signup.can_accept %}
-                    <a class="signup-button signup-button-accept" href="#">Accept</a>
+                    <a class="signup-button signup-button-accept" href="{% url "game_signup_accept" signup.id %}">Accept</a>
                 {% endif %}
                 {% if signup.can_reject %}
                     <a class="signup-button signup-button-reject" href="#">Reject</a>
