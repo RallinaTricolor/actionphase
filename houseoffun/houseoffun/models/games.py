@@ -151,7 +151,7 @@ class GameSignup(models.Model):
     )
 
     def can_signup(self):
-        return self.game.status == Game.REGISTRATION and (self.status is None or self.status == self.WITHDRAWN)
+        return self.game.status == Game.REGISTRATION and (self.pk is None or self.status == self.WITHDRAWN)
 
     def can_withdraw(self):
         return self.game.status in [Game.REGISTRATION, Game.PENDING] and self.status != self.WITHDRAWN
