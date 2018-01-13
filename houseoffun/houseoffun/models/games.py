@@ -99,6 +99,12 @@ class Game(models.Model):
     def show_new_threads_link(self):
         return self.has_plugin('Threads') and self.status == self.RUNNING
 
+    def show_registrations(self):
+        return self.status in [
+            self.REGISTRATION,
+            self.PENDING
+        ]
+
 
 class Character(models.Model):
     name = models.CharField(max_length=100)
@@ -128,7 +134,8 @@ class GameSignup(models.Model):
 
     game = models.ForeignKey(
         Game,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='signups'
     )
     user = models.ForeignKey(
         User,
@@ -139,3 +146,15 @@ class GameSignup(models.Model):
         choices=REGISTRATION_STATUS_CHOICES,
         default=REGISTERED,
     )
+
+    def can_accept(self):
+        return self.status in [
+            self.REGISTERED,
+            self.REJECTED
+        ]
+
+    def can_reject(self):
+        return self.status in [
+            self.REGISTERED,
+            self.ACCEPTED
+        ]
