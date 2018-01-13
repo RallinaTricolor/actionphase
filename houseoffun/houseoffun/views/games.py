@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.forms import ModelForm, ModelMultipleChoiceField, CheckboxSelectMultiple
-from django.http import HttpResponse
+from django.db import IntegrityError
 
 from houseoffun.houseoffun.models import Game, GameSignup, Plugin, Thread
 
@@ -71,6 +71,9 @@ def game_signup(request, pk):
     signup = GameSignup()
     signup.game = game
     signup.user = request.user
-    if signup.save():
+    try:
+        signup.save()
         game.signups.add(signup)
+    except IntegrityError:
+        pass
     return redirect('game_view', pk)

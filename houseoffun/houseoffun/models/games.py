@@ -121,6 +121,9 @@ class Character(models.Model):
 
 
 class GameSignup(models.Model):
+    class Meta:
+        unique_together = ('game', 'user',)
+
     REGISTERED = 'RG'
     ACCEPTED = 'AC'
     REJECTED = 'RJ'
