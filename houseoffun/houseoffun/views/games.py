@@ -77,3 +77,11 @@ def game_signup(request, pk):
     except IntegrityError:
         pass
     return redirect('game_view', pk)
+
+
+def game_withdraw(request, pk):
+    game = get_object_or_404(Game, pk=pk)
+    signup = get_object_or_404(GameSignup, game=game, user=request.user)
+    signup.status = signup.WITHDRAWN
+    signup.save()
+    return redirect('game_view', pk)
