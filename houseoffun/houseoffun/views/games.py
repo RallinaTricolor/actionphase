@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.forms import ModelForm, ModelMultipleChoiceField, CheckboxSelectMultiple
 from django.db import IntegrityError
+from django.db.models import Q
 
 from houseoffun.houseoffun.models import Game, GameSignup, Plugin, Thread
 
@@ -13,7 +14,9 @@ class GameForm(ModelForm):
 
 
 def game_list(request, template_name='games/list.html'):
-    games = Game.objects.defer('description')
+    games = Game.objects.filter(
+        Q(game_master=request.user) | Q(status__in=[Game.REGISTRATION, Game.PENDING, Game.RUNNING])
+    ).defer('description')
     data = {'object_list': games}
     return render(request, template_name, data)
 
