@@ -34,7 +34,7 @@ def game_view(request, pk, template_name='games/view.html'):
     game = get_object_or_404(Game, pk=pk)
     threads = False
     if game.has_plugin('Threads'):
-        threads = Thread.objects.filter(game=game.id).defer('text')
+        threads = game.thread_set.defer('text')
     return render(request, template_name, {'game': game, 'threads': threads})
 
 
