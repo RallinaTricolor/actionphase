@@ -83,3 +83,20 @@ class GamesTest(TestCase):
         self.assertEquals(response.status_code, 302)
         game = Game.objects.filter(pk=game_id).first()
         self.assertIsNone(game)
+
+    def test_get_next_status(self):
+        request = self.factory.get('/games/nextStatus/', follow=True)
+        request.user = self.user
+        response = game_next_status(request, self.game.id)
+        self.assertEqual(response.status_code, 302)
+        self.game.refresh_from_db()
+        self.assertEquals(Game.REGISTRATION, self.game.status)
+
+    def test_get_prev_status(self):
+        self.game.next_status()
+        request = self.factory.get('/games/prevStatus/', follow=True)
+        request.user = self.user
+        response = game_previous_status(request, self.game.id)
+        self.assertEqual(response.status_code, 302)
+        self.game.refresh_from_db()
+        self.assertEquals(Game.DRAFT, self.game.status)
