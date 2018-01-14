@@ -25,3 +25,23 @@ class SignupsTest(BaseStaticLiveServerTestCase):
         self.wait.until(EC.url_contains('%s%s' % (self.live_server_url, '/games/view/')))
         self.selenium.find_element_by_class_name('signup-status')
         assert 'Withdrawn' in self.selenium.page_source
+
+    def test_game_accept(self):
+        self.authenticate()
+        self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
+        self.selenium.find_element_by_class_name('game-view-link-1').click()
+        self.wait.until(EC.url_changes('%s%s' % (self.live_server_url, '/games/')))
+        self.selenium.find_element_by_class_name('signup-button-accept').click()
+        self.wait.until(EC.url_contains('%s%s' % (self.live_server_url, '/games/view/')))
+        self.selenium.find_element_by_class_name('signup-status')
+        assert 'Accepted' in self.selenium.page_source
+
+    def test_game_reject(self):
+        self.authenticate()
+        self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
+        self.selenium.find_element_by_class_name('game-view-link-1').click()
+        self.wait.until(EC.url_changes('%s%s' % (self.live_server_url, '/games/')))
+        self.selenium.find_element_by_class_name('signup-button-reject').click()
+        self.wait.until(EC.url_contains('%s%s' % (self.live_server_url, '/games/view/')))
+        self.selenium.find_element_by_class_name('signup-status')
+        assert 'Rejected' in self.selenium.page_source
