@@ -4,10 +4,11 @@ from django.contrib.auth.models import User
 from houseoffun.houseoffun.models import Plugin, Game, Character, Thread, Comment
 from django.shortcuts import get_object_or_404
 
+
 class Command(BaseCommand):
     args = ''
     help = ''
-    
+
     def handle(self, *args, **options):
         self._create_plugins()
         users = self._create_users()
@@ -17,19 +18,17 @@ class Command(BaseCommand):
         self._create_comments(threads, characters)
         print("You ran the command!")
 
-    
     def _create_plugins(self):
         plugin_name = "Threads"
         plugin_description = (
-        "Reddit-style comment threads which allow for branching"
-        " discussions. Only disable this if you don't want to have public common rooms."
+            "Reddit-style comment threads which allow for branching"
+            " discussions. Only disable this if you don't want to have public common rooms."
         )
         plugin = Plugin()
         plugin.name = plugin_name
         plugin.description = plugin_description
         plugin.save()
 
-    
     def _create_users(self):
         users = ['admin', 'test']
         # Password is 'houseoffun'
@@ -45,10 +44,10 @@ class Command(BaseCommand):
             user_obj.save()
             ret.append(user_obj)
         return ret
-    
+
     def _create_games(self, users):
         games = ['House of Fun', 'Game of Fun', 'Game Academy']
-        thread_plugin = get_object_or_404(Plugin, pk = 1)
+        thread_plugin = get_object_or_404(Plugin, pk=1)
         ret = []
         for game in games:
             game_obj = Game()
@@ -60,10 +59,10 @@ class Command(BaseCommand):
             game_obj.plugins.add(thread_plugin)
             ret.append(game_obj)
         return ret
-            
+
     def _create_characters(self, users, games):
         character_names = ['John Smith', 'Bones McKenzie', 'Classic Taka', 'Frank Did Nothing Wrong', 'Secret Zysta']
-        ret =[]
+        ret = []
         for game in games:
             for user in users:
                 character = Character()
@@ -73,7 +72,7 @@ class Command(BaseCommand):
                 character.save()
                 ret.append(character)
         return ret
-    
+
     def _create_threads(self, games):
         threads = ['Day 1', 'Day 2', 'Day 3']
         thread_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent molestie sagittis nisl quis aliquam. Phasellus elementum mattis ante, a sagittis risus blandit nec. Ut volutpat orci eu metus fringilla condimentum. Etiam vitae varius sapien, a sagittis dolor. Vestibulum vel quam erat. Integer scelerisque a neque at suscipit. Vestibulum vitae dapibus mi, non auctor erat. Morbi quis erat eleifend, egestas nibh sed, elementum enim. Mauris finibus libero a elit convallis, eu suscipit libero euismod."
@@ -88,7 +87,7 @@ class Command(BaseCommand):
                 thread.save()
                 ret.append(thread)
         return ret
-    
+
     def _create_comments(self, threads, characters):
         comment_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent molestie sagittis nisl quis aliquam. Phasellus elementum mattis ante, a sagittis risus blandit nec. Ut volutpat orci eu metus fringilla condimentum. Etiam vitae varius sapien, a sagittis dolor. Vestibulum vel quam erat. Integer scelerisque a neque at suscipit. Vestibulum vitae dapibus mi, non auctor erat. Morbi quis erat eleifend, egestas nibh sed, elementum enim. Mauris finibus libero a elit convallis, eu suscipit libero euismod."
         for thread in threads:

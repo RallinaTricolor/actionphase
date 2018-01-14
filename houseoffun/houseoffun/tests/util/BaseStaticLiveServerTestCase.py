@@ -9,7 +9,7 @@ class BaseStaticLiveServerTestCase(StaticLiveServerTestCase):
     Extends the default Django Static Live Server Test Case to
     provide common functionality for all tests
     """
-    fixtures = ['user-data.json']
+    fixtures = ['01-user-data.json']
 
     @classmethod
     def setUpClass(cls):

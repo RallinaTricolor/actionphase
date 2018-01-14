@@ -5,7 +5,8 @@ from re import compile
 EXEMPT_URLS = [compile(settings.LOGIN_URL.lstrip('/'))]
 if hasattr(settings, 'LOGIN_EXEMPT_URLS'):
     EXEMPT_URLS += [compile(expr) for expr in settings.LOGIN_EXEMPT_URLS]
-    
+
+
 def LoginRequiredMiddleware(get_response):
     """
     Middleware that requires a user to be authenticated to view any page other
@@ -16,7 +17,7 @@ def LoginRequiredMiddleware(get_response):
     loaded. You’ll get an error if they aren’t.
     Taken from: https://python-programming.com/recipes/django-require-authentication-pages/#comment-791
     """
-    
+
     # One-time configuration and initialization.
     def middleware(request):
         # Code to be executed for each request before
@@ -29,5 +30,5 @@ def LoginRequiredMiddleware(get_response):
         # Code to be executed for each request/response after
         # the view is called.
         return response
-    
+
     return middleware
