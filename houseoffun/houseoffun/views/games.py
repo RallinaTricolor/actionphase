@@ -79,6 +79,9 @@ def game_previous_status(request, pk):
 
 def game_signup(request, pk):
     game = get_object_or_404(Game, pk=pk)
+    if request.user == game.game_master:
+        # Don't let game master register for their own game...
+        return redirect('game_view', pk)
     signup = GameSignup.objects.filter(game=game, user=request.user).first()
     if signup is None:
         signup = GameSignup()
