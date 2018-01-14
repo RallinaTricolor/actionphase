@@ -15,7 +15,6 @@ import os
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
@@ -80,11 +79,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'houseoffun.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
 if os.getenv('TRAVIS', None):
-    #Travis DB configuration goes here
+    # Travis DB configuration goes here
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -99,7 +97,7 @@ if os.getenv('TRAVIS', None):
         }
     }
 else:
-    #Non-Travis DB configuration goes here
+    # Non-Travis DB configuration goes here
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -132,7 +130,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
 
@@ -146,7 +143,7 @@ USE_L10N = True
 
 USE_TZ = True
 
-#Logging
+# Logging
 
 LOGGING = {
     'version': 1,
@@ -167,10 +164,8 @@ LOGGING = {
     },
 }
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
-
 
 
 # Registration Settings
@@ -186,7 +181,7 @@ LOGIN_EXEMPT_URLS = (
 
 # Email Settings
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-EMAIL_FILE_PATH = '/tmp/app-messages' # change this to a proper location
+EMAIL_FILE_PATH = '/tmp/app-messages'  # change this to a proper location
 
 # CSS & JS Settings
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
@@ -199,26 +194,20 @@ STATICFILES_FINDERS = (
     'pipeline.finders.PipelineFinder',
 )
 
-PIPELINE = {
-    #'PIPELINE_ENABLED': True,
-    'STYLESHEETS': {
-        'main': {
-            'source_filenames': (
-              'css/bootstrap.css',
-            ),
-            'output_filename': 'css/min.css'
-        },
+PIPELINE = {'STYLESHEETS': {
+    'main': {
+        'source_filenames': (
+            'css/bootstrap.css',
+        ),
+        'output_filename': 'css/min.css'
     },
-    'JAVASCRIPT': {
-        'main': {
-            'source_filenames': (
-              'js/jquery.js',
-              'js/popper.js',
-              'js/bootstrap.js'
-            ),
-            'output_filename': 'js/min.js',
-        }
+}, 'JAVASCRIPT': {
+    'main': {
+        'source_filenames': (
+            'js/jquery.js',
+            'js/popper.js',
+            'js/bootstrap.js'
+        ),
+        'output_filename': 'js/min.js',
     }
-}
-
-PIPELINE['YUGLIFY_BINARY'] = os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify')
+}, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify')}
