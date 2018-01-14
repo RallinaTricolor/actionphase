@@ -4,7 +4,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 class GamesTest(BaseStaticLiveServerTestCase):
-    fixtures = ['01-user-data.json', 'game-data.json', '02-plugin-data.json']
+    fixtures = ['01-user-data.json', '03-game-data.json', '02-plugin-data.json']
 
     def test_game_list(self):
         self.authenticate()
