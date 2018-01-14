@@ -41,4 +41,3 @@ class GamesTest(TestCase):
         self.assertEquals(Game.DRAFT, self.game.status)
         signup = GameSignup.objects.filter(pk=signup.id).first()
         self.assertIsNone(signup)
-
