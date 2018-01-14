@@ -6,6 +6,18 @@ from selenium.webdriver.support import expected_conditions as EC
 class GamesTest(BaseStaticLiveServerTestCase):
     fixtures = ['01-user-data.json', 'game-data.json', '02-plugin-data.json']
 
+    def test_game_list(self):
+        self.authenticate()
+        self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
+        self.selenium.find_element_by_class_name('game-view-link')
+
+    def test_game_view(self):
+        self.authenticate()
+        self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
+        self.selenium.find_element_by_class_name('game-view-link').click()
+        self.wait.until(EC.url_changes('%s%s' % (self.live_server_url, '/games/')))
+        self.selenium.find_element_by_class_name('game-status')
+
     def test_game_create(self):
         self.authenticate()
         self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
