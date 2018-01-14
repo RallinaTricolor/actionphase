@@ -1,15 +1,16 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.forms import ModelForm, ModelMultipleChoiceField, CheckboxSelectMultiple
 from django.db import IntegrityError
 from django.db.models import Q
+from django.forms import ModelForm, ModelMultipleChoiceField, CheckboxSelectMultiple
+from django.shortcuts import render, redirect, get_object_or_404
 
-from houseoffun.houseoffun.models import Game, GameSignup, Plugin, Thread
+from houseoffun.houseoffun.models import Game, GameSignup, Plugin
 
 
 class GameForm(ModelForm):
     class Meta:
         model = Game
         exclude = ['game_master', 'status']
+
     plugins = ModelMultipleChoiceField(queryset=Plugin.objects.all(), widget=CheckboxSelectMultiple, required=False)
 
 
@@ -53,12 +54,12 @@ def game_update(request, pk, template_name='games/form.html'):
 
 
 def game_delete(request, pk, template_name='games/confirm_delete.html'):
-    game = get_object_or_404(Game, pk=pk)    
+    game = get_object_or_404(Game, pk=pk)
     game.can_edit_or_403(request.user)
-    if request.method=='POST':
+    if request.method == 'POST':
         game.delete()
         return redirect('game_list')
-    return render(request, template_name, {'object':game})
+    return render(request, template_name, {'object': game})
 
 
 def game_next_status(request, pk):

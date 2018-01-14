@@ -8,7 +8,8 @@ class SignupsTest(TestCase):
     """
 
     def setUp(self):
-        self.game_master = User.objects.create_user(username='game_master', email='gm@example.com', password='test_pass')
+        self.game_master = User.objects.create_user(username='game_master', email='gm@example.com',
+                                                    password='test_pass')
         self.user = User.objects.create_user(username='test_user', email='test@example.com', password='test_pass')
         self.game = Game.objects.create(
             name='Sample of Fun',

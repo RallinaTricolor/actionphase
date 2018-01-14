@@ -1,7 +1,7 @@
-from django.contrib.auth.models import AnonymousUser, User
 from django.test import TestCase, RequestFactory
-from houseoffun.houseoffun.views.games import *
+
 from houseoffun.houseoffun.models.games import *
+from houseoffun.houseoffun.views.games import *
 
 
 class SignupsTest(TestCase):
