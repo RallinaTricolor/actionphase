@@ -1,15 +1,13 @@
-<div id="header" class="row align-items-center">
-    <div class="col-2"></div>
-    <div class="col-2">
-        <h1>House of Fun</h1>
-    </div>
-    
-    {% if user.is_authenticated %}
-        <div class="col-1">
-            <a href="{% url "game_list" %}">Games</a>
-        </div>
-        <div class="col-1">
-            <a href="{% url "auth_logout" %}">Logout</a>
-        </div>
-    {% endif %}
+<div class="col-2"></div>
+<div class="col-2">
+    <h1>House of Fun</h1>
 </div>
+
+{% if user.is_authenticated %}
+    <div class="col-1">
+        <a href="{% url "game_list" %}">Games</a>
+    </div>
+    <div class="col-1">
+        <a href="{% url "auth_logout" %}">Logout</a>
+    </div>
+{% endif %}
