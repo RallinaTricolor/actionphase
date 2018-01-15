@@ -1,8 +1,9 @@
-from django.db import models
 from django.contrib.auth.models import User
-from houseoffun.houseoffun.models.core import Plugin
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import models
 from django.db import transaction, DatabaseError
+
+from houseoffun.houseoffun.models.core import Plugin
 
 
 class Game(models.Model):
@@ -99,6 +100,8 @@ class Game(models.Model):
         if all(signup.status != GameSignup.REGISTERED for signup in self.signups.all()):
             self.status = self.PENDING
             self.save()
+        else:
+            raise ValidationError('All user signups must be accepted, rejected, or withdrawn before continuing.')
 
     def _revert_to_registration(self):
         """
