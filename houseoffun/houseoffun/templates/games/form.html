@@ -2,6 +2,6 @@
 {% block content %}
 <form method="post">{% csrf_token %}
     {{ form.as_p }}
-    <input class="game-submit-button" type="submit" value="Submit" />
+    <input class="submit-button game-submit-button" type="submit" value="Submit" />
 </form>
 {% endblock %}
