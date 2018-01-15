@@ -196,6 +196,11 @@ class GameSignup(models.Model):
         default=REGISTERED,
     )
 
+    def get_status_text(self):
+        if self.game.status != Game.PENDING and self.status != self.WITHDRAWN:
+            self.status = self.REGISTERED
+        return self.get_status_display()
+
     def can_signup(self):
         return self.game.status == Game.REGISTRATION and (self.pk is None or self.status == self.WITHDRAWN)
 
