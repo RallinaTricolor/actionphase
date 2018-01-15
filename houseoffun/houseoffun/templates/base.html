@@ -15,6 +15,7 @@
                     {% block sidebar %}{% endblock %}
                 </div>
                 <div id="content" class="col-10">
+                    <div id="messages" class="row align-items-center">{% include "messages.html" %}</div>
                     {% block content %}{% endblock %}
                 </div>
             </div>
