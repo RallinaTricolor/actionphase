@@ -2,7 +2,7 @@
     <h3>Sign Ups</h3>
     {% for signup in game.signups.all %}
         <div class="user-signup">
-            <span class="signup-user">{{ signup.user.username }}</span>
+            <span class="signup-username">{{ signup.user.username }}</span>
             <span class="signup-status signup-status-{{ signup.status }}">{{ signup.get_status_display }}</span>
             <span class="signup-actions">
                 {% if signup.can_accept %}
