@@ -60,6 +60,8 @@ class Game(models.Model):
         """
         if self.status == self.DRAFT:
             self._advance_draft()
+        elif self.status == self.REGISTRATION:
+            self._advance_registration()
 
     def previous_status(self):
         """
@@ -67,6 +69,8 @@ class Game(models.Model):
         """
         if self.status == self.REGISTRATION:
             self._revert_draft()
+        elif self.status == self.PENDING:
+            self._revert_registration()
 
     def _advance_draft(self):
         """
@@ -87,6 +91,21 @@ class Game(models.Model):
                 self.save()
         except DatabaseError:
             self.status = self.REGISTRATION
+
+    def _advance_registration(self):
+        """
+        Moves a game tpo the pending status. All registrations must be handled before this can be performed
+        """
+        if all(signup.status != GameSignup.REGISTERED for signup in self.signups.all()):
+            self.status = self.PENDING
+            self.save()
+
+    def _revert_registration(self):
+        """
+        Moves a game back to the registration status
+        """
+        self.status = self.REGISTRATION
+        self.save()
 
     # Functions related to showing things on the page
     def show_threads(self):
