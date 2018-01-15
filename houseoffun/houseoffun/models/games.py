@@ -59,27 +59,27 @@ class Game(models.Model):
         Advances the game to the next status in the list, performing any necessary state changes
         """
         if self.status == self.DRAFT:
-            self._advance_draft()
+            self._advance_to_registration()
         elif self.status == self.REGISTRATION:
-            self._advance_registration()
+            self._advance_to_pending()
 
     def previous_status(self):
         """
         Moves the game backwards in status (if possible), performing any necessary state changes
         """
         if self.status == self.REGISTRATION:
-            self._revert_draft()
+            self._revert_to_draft()
         elif self.status == self.PENDING:
-            self._revert_registration()
+            self._revert_to_registration()
 
-    def _advance_draft(self):
+    def _advance_to_registration(self):
         """
         Moves a draft to the registration step. Should not be called directly
         """
         self.status = self.REGISTRATION
         self.save()
 
-    def _revert_draft(self):
+    def _revert_to_draft(self):
         """
         Moves a game back to the draft status. Should not be called directly
         """
@@ -92,7 +92,7 @@ class Game(models.Model):
         except DatabaseError:
             self.status = self.REGISTRATION
 
-    def _advance_registration(self):
+    def _advance_to_pending(self):
         """
         Moves a game tpo the pending status. All registrations must be handled before this can be performed
         """
@@ -100,7 +100,7 @@ class Game(models.Model):
             self.status = self.PENDING
             self.save()
 
-    def _revert_registration(self):
+    def _revert_to_registration(self):
         """
         Moves a game back to the registration status
         """
