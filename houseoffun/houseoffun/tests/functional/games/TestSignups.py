@@ -9,7 +9,7 @@ class SignupsTest(BaseStaticLiveServerTestCase):
     def test_game_signup(self):
         self.authenticate()
         self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
-        self.selenium.find_element_by_class_name('game-view-link-2').click()
+        self.selenium.find_element_by_id('game-view-link-2').click()
         self.wait.until(ec.url_changes('%s%s' % (self.live_server_url, '/games/')))
         self.selenium.find_element_by_class_name('signup-button-signup').click()
         self.wait.until(ec.url_contains('%s%s' % (self.live_server_url, '/games/view/')))
@@ -19,7 +19,7 @@ class SignupsTest(BaseStaticLiveServerTestCase):
     def test_game_withdraw(self):
         self.authenticate()
         self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
-        self.selenium.find_element_by_class_name('game-view-link-3').click()
+        self.selenium.find_element_by_id('game-view-link-3').click()
         self.wait.until(ec.url_changes('%s%s' % (self.live_server_url, '/games/')))
         self.selenium.find_element_by_class_name('signup-button-withdraw').click()
         self.wait.until(ec.url_contains('%s%s' % (self.live_server_url, '/games/view/')))
@@ -29,7 +29,7 @@ class SignupsTest(BaseStaticLiveServerTestCase):
     def test_game_accept(self):
         self.authenticate()
         self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
-        self.selenium.find_element_by_class_name('game-view-link-1').click()
+        self.selenium.find_element_by_id('game-view-link-1').click()
         self.wait.until(ec.url_changes('%s%s' % (self.live_server_url, '/games/')))
         self.selenium.find_element_by_class_name('signup-button-accept').click()
         self.wait.until(ec.url_contains('%s%s' % (self.live_server_url, '/games/view/')))
@@ -39,7 +39,7 @@ class SignupsTest(BaseStaticLiveServerTestCase):
     def test_game_reject(self):
         self.authenticate()
         self.selenium.get('%s%s' % (self.live_server_url, '/games/'))
-        self.selenium.find_element_by_class_name('game-view-link-1').click()
+        self.selenium.find_element_by_id('game-view-link-1').click()
         self.wait.until(ec.url_changes('%s%s' % (self.live_server_url, '/games/')))
         self.selenium.find_element_by_class_name('signup-button-reject').click()
         self.wait.until(ec.url_contains('%s%s' % (self.live_server_url, '/games/view/')))
