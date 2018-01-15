@@ -98,8 +98,13 @@ class Game(models.Model):
         Moves a game tpo the pending status. All registrations must be handled before this can be performed
         """
         if all(signup.status != GameSignup.REGISTERED for signup in self.signups.all()):
-            self.status = self.PENDING
-            self.save()
+            try:
+                with transaction.atomic():
+                    self.status = self.PENDING
+                    self._create_characters()
+                    self.save()
+            except DatabaseError:
+                pass
         else:
             raise ValidationError('All user signups must be accepted, rejected, or withdrawn before continuing.')
 
@@ -109,6 +114,25 @@ class Game(models.Model):
         """
         self.status = self.REGISTRATION
         self.save()
+
+    def _create_characters(self):
+        """
+        Creates all characters for the game
+        """
+        signups = self.signups.filter(status=GameSignup.ACCEPTED)
+        for signup in signups:
+            self._create_character(signup)
+
+    def _create_character(self, signup):
+        """
+        Create a character for a user
+        :param GameSignup signup:
+        """
+        character = Character()
+        character.game = self
+        character.owner = signup.user
+        character.name = ""
+        character.save()
 
     # Functions related to showing things on the page
     def show_threads(self):
