@@ -4,8 +4,8 @@
 <div class="game-status game-status-{{ game.status }}">
     {{ game.get_status_display }}
     {% if request.user == game.game_master %}
-        <a href="{% url "game_next_status" game.id %}">Next Status</a>
-        <a href="{% url "game_previous_status" game.id %}">Previous Status</a>
+        <a class="status-link next-status-link" href="{% url "game_next_status" game.id %}">Next Status</a>
+        <a class="status-link prev-status-link" href="{% url "game_previous_status" game.id %}">Previous Status</a>
     {% endif %}
 </div>
 
