@@ -222,9 +222,12 @@ class GameSignup(models.Model):
     )
 
     def get_status_text(self):
+        old_status = self.status
         if self.game.status != Game.PENDING and self.status != self.WITHDRAWN:
             self.status = self.REGISTERED
-        return self.get_status_display()
+        status_text = self.get_status_display()
+        self.status = old_status
+        return status_text
 
     def can_signup(self):
         return self.game.status == Game.REGISTRATION and (self.pk is None or self.status == self.WITHDRAWN)
