@@ -124,7 +124,12 @@ class Game(models.Model):
         """
         signups = self.signups.filter(status=GameSignup.ACCEPTED)
         for signup in signups:
-            self._create_character(signup)
+            character = Character.objects.filter(game=self, owner=signup.user).first()
+            if character is not None:
+                character.status = Character.PROGRESS
+                character.save()
+            else:
+                self._create_character(signup)
 
     def _create_character(self, signup):
         """
