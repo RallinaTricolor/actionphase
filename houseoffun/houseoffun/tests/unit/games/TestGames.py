@@ -39,5 +39,13 @@ class GamesTest(TestCase):
         self.assertIsNone(signup)
 
     def test_advance_to_pending(self):
-        # TODO: Once registration can be completed
-        self.skipTest("Gamemaster must be able to close registration before this test can be written")
+        # Advance to pending should only work if all registrations have been handled and should create characters
+        self.game.status = Game.REGISTRATION
+        signup = GameSignup.objects.create(user=self.user, game=self.game)
+        with self.assertRaises(ValidationError):
+            self.game.next_status()
+        signup.status = GameSignup.ACCEPTED
+        signup.save()
+        self.game.next_status()
+        character = Character.objects.filter(game=self.game, owner=self.user).first()
+        self.assertIsNotNone(character)
