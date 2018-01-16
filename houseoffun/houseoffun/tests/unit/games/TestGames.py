@@ -47,5 +47,15 @@ class GamesTest(TestCase):
         signup.status = GameSignup.ACCEPTED
         signup.save()
         self.game.next_status()
+        self.assertEquals(Game.PENDING, self.game.status)
         character = Character.objects.filter(game=self.game, owner=self.user).first()
         self.assertIsNotNone(character)
+
+    def test_revert_to_registration(self):
+        # Reverting to registration should mark all characters deleted
+        self.game.status = Game.PENDING
+        character = Character.objects.create(game=self.game, owner=self.user)
+        self.game.previous_status()
+        character.refresh_from_db()
+        self.assertEquals(Game.REGISTRATION, self.game.status)
+        self.assertEquals(Character.DELETED,  character.status)
