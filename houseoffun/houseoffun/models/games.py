@@ -153,6 +153,17 @@ class Game(models.Model):
 
 
 class Character(models.Model):
+    PROGRESS = 'IP'
+    REVIEW = 'RV'
+    FINISHED = 'FN'
+    DELETED = 'DL'
+    CHARACTER_STATUS_CHOICES = (
+        (PROGRESS, 'In Progress'),
+        (REVIEW, 'Ready for Review'),
+        (FINISHED, 'Finished'),
+        (DELETED, 'Deleted')
+    )
+
     name = models.CharField(max_length=100)
     game = models.ForeignKey(
         Game,
@@ -163,6 +174,12 @@ class Character(models.Model):
         User,
         on_delete=models.CASCADE
     )
+    status = models.CharField(
+        max_length=2,
+        choices=CHARACTER_STATUS_CHOICES,
+        default=PROGRESS,
+    )
+    details = models.TextField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
