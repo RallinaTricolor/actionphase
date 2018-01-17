@@ -1,8 +1,9 @@
-from django.db import models
 from django.contrib.auth.models import User
-from houseoffun.houseoffun.models.core import Plugin
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import models
 from django.db import transaction, DatabaseError
+
+from houseoffun.houseoffun.models.core import Plugin
 
 
 class Game(models.Model):
@@ -59,23 +60,27 @@ class Game(models.Model):
         Advances the game to the next status in the list, performing any necessary state changes
         """
         if self.status == self.DRAFT:
-            self._advance_draft()
+            self._advance_to_registration()
+        elif self.status == self.REGISTRATION:
+            self._advance_to_pending()
 
     def previous_status(self):
         """
         Moves the game backwards in status (if possible), performing any necessary state changes
         """
         if self.status == self.REGISTRATION:
-            self._revert_draft()
+            self._revert_to_draft()
+        elif self.status == self.PENDING:
+            self._revert_to_registration()
 
-    def _advance_draft(self):
+    def _advance_to_registration(self):
         """
         Moves a draft to the registration step. Should not be called directly
         """
         self.status = self.REGISTRATION
         self.save()
 
-    def _revert_draft(self):
+    def _revert_to_draft(self):
         """
         Moves a game back to the draft status. Should not be called directly
         """
@@ -87,6 +92,55 @@ class Game(models.Model):
                 self.save()
         except DatabaseError:
             self.status = self.REGISTRATION
+
+    def _advance_to_pending(self):
+        """
+        Moves a game tpo the pending status. All registrations must be handled before this can be performed
+        """
+        if all(signup.status != GameSignup.REGISTERED for signup in self.signups.all()):
+            try:
+                with transaction.atomic():
+                    self.status = self.PENDING
+                    self._create_characters()
+                    self.save()
+            except DatabaseError:
+                pass
+        else:
+            raise ValidationError('All user signups must be accepted, rejected, or withdrawn before continuing.')
+
+    def _revert_to_registration(self):
+        """
+        Moves a game back to the registration status
+        """
+        self.status = self.REGISTRATION
+        for character in self.character_set.all():
+            character.status = Character.DELETED
+            character.save()
+        self.save()
+
+    def _create_characters(self):
+        """
+        Creates all characters for the game
+        """
+        signups = self.signups.filter(status=GameSignup.ACCEPTED)
+        for signup in signups:
+            character = Character.objects.filter(game=self, owner=signup.user).first()
+            if character is not None:
+                character.status = Character.PROGRESS
+                character.save()
+            else:
+                self._create_character(signup)
+
+    def _create_character(self, signup):
+        """
+        Create a character for a user
+        :param GameSignup signup:
+        """
+        character = Character()
+        character.game = self
+        character.owner = signup.user
+        character.name = ""
+        character.save()
 
     # Functions related to showing things on the page
     def show_threads(self):
@@ -107,6 +161,17 @@ class Game(models.Model):
 
 
 class Character(models.Model):
+    PROGRESS = 'IP'
+    REVIEW = 'RV'
+    FINISHED = 'FN'
+    DELETED = 'DL'
+    CHARACTER_STATUS_CHOICES = (
+        (PROGRESS, 'In Progress'),
+        (REVIEW, 'Ready for Review'),
+        (FINISHED, 'Finished'),
+        (DELETED, 'Deleted')
+    )
+
     name = models.CharField(max_length=100)
     game = models.ForeignKey(
         Game,
@@ -117,6 +182,12 @@ class Character(models.Model):
         User,
         on_delete=models.CASCADE
     )
+    status = models.CharField(
+        max_length=2,
+        choices=CHARACTER_STATUS_CHOICES,
+        default=PROGRESS,
+    )
+    details = models.TextField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -150,6 +221,14 @@ class GameSignup(models.Model):
         default=REGISTERED,
     )
 
+    def get_status_text(self):
+        old_status = self.status
+        if self.game.status != Game.PENDING and self.status != self.WITHDRAWN:
+            self.status = self.REGISTERED
+        status_text = self.get_status_display()
+        self.status = old_status
+        return status_text
+
     def can_signup(self):
         return self.game.status == Game.REGISTRATION and (self.pk is None or self.status == self.WITHDRAWN)
 
@@ -157,7 +236,7 @@ class GameSignup(models.Model):
         return self.game.status in [Game.REGISTRATION, Game.PENDING] and self.status != self.WITHDRAWN
 
     def can_accept(self):
-        return self.game.status in [Game.REGISTRATION, Game.PENDING] and self.status in [self.REGISTERED, self.REJECTED]
+        return self.game.status in [Game.REGISTRATION] and self.status in [self.REGISTERED, self.REJECTED]
 
     def can_reject(self):
-        return self.game.status in [Game.REGISTRATION, Game.PENDING] and self.status in [self.REGISTERED, self.ACCEPTED]
+        return self.game.status in [Game.REGISTRATION] and self.status in [self.REGISTERED, self.ACCEPTED]

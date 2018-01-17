@@ -2,6 +2,9 @@ from django.db import IntegrityError
 from django.db.models import Q
 from django.forms import ModelForm, ModelMultipleChoiceField, CheckboxSelectMultiple
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.exceptions import ValidationError
+from django.contrib import messages
+
 
 from houseoffun.houseoffun.models import Game, GameSignup, Plugin
 
@@ -66,7 +69,10 @@ def game_next_status(request, pk):
     # TODO: Add javascript confirm button to template file
     game = get_object_or_404(Game, pk=pk)
     game.can_edit_or_403(request.user)
-    game.next_status()
+    try:
+        game.next_status()
+    except ValidationError as e:
+        messages.error(request, e.message)
     return redirect('game_view', pk)
 
 

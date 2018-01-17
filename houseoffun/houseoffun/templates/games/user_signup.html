@@ -3,7 +3,7 @@
     {% if user_signup is not None %}
         <div class="user-signup">
             <span class="signup-username">{{ user_signup.user.username }}</span>
-            <span class="signup-status signup-status-{{ user_signup.status }}">{{ user_signup.get_status_display }}</span>
+            <span class="signup-status signup-status-{{ user_signup.status }}">{{ user_signup.get_status_text }}</span>
             <span class="signup-actions">
                 {% if user_signup.can_withdraw %}
                     <a class="signup-button signup-button-withdraw" href="{% url "game_withdraw" game.id %}">Withdraw</a>
