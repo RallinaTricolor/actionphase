@@ -40,6 +40,7 @@ class Game(models.Model):
         choices=GAME_STATUS_CHOICES,
         default=DRAFT,
     )
+    character_guidelines = models.TextField(null=True)
 
     def has_plugin(self, plugin_name):
         """

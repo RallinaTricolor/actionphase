@@ -20,7 +20,7 @@ class GameForm(ModelForm):
 def game_list(request, template_name='games/list.html'):
     games = Game.objects.filter(
         Q(game_master=request.user) | Q(status__in=[Game.REGISTRATION, Game.PENDING, Game.RUNNING])
-    ).defer('description')
+    ).defer('description', 'character_guidelines')
     data = {'object_list': games}
     return render(request, template_name, data)
 
