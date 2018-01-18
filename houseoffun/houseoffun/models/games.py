@@ -114,7 +114,7 @@ class Game(models.Model):
         Moves a game back to the registration status
         """
         self.status = self.REGISTRATION
-        for character in self.character_set.all():
+        for character in self.characters.all():
             character.status = Character.DELETED
             character.save()
         self.save()
