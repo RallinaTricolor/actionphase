@@ -160,6 +160,13 @@ class Game(models.Model):
             self.PENDING
         ]
 
+    def show_characters(self):
+        return self.status not in [
+            self.DRAFT,
+            self.REGISTRATION,
+            self.DELETED
+        ]
+
 
 class Character(models.Model):
     PROGRESS = 'IP'
@@ -177,7 +184,8 @@ class Character(models.Model):
     game = models.ForeignKey(
         Game,
         null=True,
-        on_delete=models.SET_NULL
+        on_delete=models.SET_NULL,
+        related_name='characters'
     )
     owner = models.ForeignKey(
         User,

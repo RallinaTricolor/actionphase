@@ -1,0 +1,6 @@
+<div id="characters">
+    <h3>Characters</h3>
+    {% for character in game.characters.all %}
+        <a id="character-link-{{ character.id }}" class="character-link" href="#">{{ character.name }}</a>
+    {% endfor %}
+</div>
