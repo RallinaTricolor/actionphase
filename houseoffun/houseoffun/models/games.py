@@ -140,7 +140,7 @@ class Game(models.Model):
         character = Character()
         character.game = self
         character.owner = signup.user
-        character.name = ""
+        character.name = signup.user.username
         character.save()
 
     # Functions related to showing things on the page
