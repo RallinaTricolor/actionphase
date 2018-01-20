@@ -1,11 +1,7 @@
-from django.db import IntegrityError
-from django.db.models import Q
-from django.forms import ModelForm, ModelMultipleChoiceField, CheckboxSelectMultiple
+from django.forms import ModelForm
 from django.shortcuts import render, redirect, get_object_or_404
-from django.core.exceptions import ValidationError
-from django.contrib import messages
 
-from houseoffun.houseoffun.models import Game, Character
+from houseoffun.houseoffun.models import Character
 
 
 class CharacterForm(ModelForm):
