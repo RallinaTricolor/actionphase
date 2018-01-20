@@ -27,3 +27,11 @@ def character_update(request, pk, template_name='characters/form.html'):
         form.save()
         return redirect('character_view', pk=pk)
     return render(request, template_name, {'form': form})
+
+
+def character_review(request, pk):
+    character = get_object_or_404(Character, pk=pk)
+    character.can_edit_or_403(request.user)
+    character.status = Character.REVIEW
+    character.save()
+    return redirect('character_view', pk=pk)

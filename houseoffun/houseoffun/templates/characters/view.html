@@ -4,6 +4,10 @@
 <div id="character-attributes">
     <div id="character-game"><a class="game-view-link" href="{% url "game_view" character.game.id %}">{{ character.game.name }}</a></div>
     <div id="character-owner">{{ character.owner.username }}</div>
+    <div id="character-status">
+        {{ character.get_status_display }}
+        <a id="character-review-button" href="{% url "character_review" character.id %}">Submit for Review</a>
+    </div>
     <div id="character-public-profile">{{ character.public_profile }}</div>
     <div id="character-private-profile">{{ character.private_profile }}</div>
     <div id="character-edit"><a id="character-edit-link" href="{% url "character_update" character.id %}">Edit</a></div>

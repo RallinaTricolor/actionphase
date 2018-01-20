@@ -20,6 +20,7 @@ urlpatterns = [
     # Characters
     url(r'^characters/view/(?P<pk>\d+)/$', views.character_view, name='character_view'),
     url(r'^characters/edit/(?P<pk>\d+)/$', views.character_update, name='character_update'),
+    url(r'^characters/review/(?P<pk>\d+)/$', views.character_review, name='character_review'),
     # Threads
     url(r'^threads/new/(?P<game_id>\d+)/$', views.thread_create, name='thread_new'),
     url(r'^threads/view/(?P<pk>\d+)/$', views.thread_view, name='thread_view'),
