@@ -17,6 +17,8 @@ urlpatterns = [
     url(r'^games/withdraw/(?P<pk>\d+)/$', views.game_withdraw, name='game_withdraw'),
     url(r'^games/accept/(?P<pk>\d+)/$', views.game_signup_accept, name='game_signup_accept'),
     url(r'^games/reject/(?P<pk>\d+)/$', views.game_signup_reject, name='game_signup_reject'),
+    # Characters
+    url(r'^characters/view/(?P<pk>\d+)/$', views.character_view, name='character_view'),
     # Threads
     url(r'^threads/new/(?P<game_id>\d+)/$', views.thread_create, name='thread_new'),
     url(r'^threads/view/(?P<pk>\d+)/$', views.thread_view, name='thread_view'),

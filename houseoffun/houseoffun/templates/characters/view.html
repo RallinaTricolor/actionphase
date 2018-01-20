@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{{ character.name }}</h2>
+<div id="character-attributes">
+    <div id="character-owner">{{ character.owner.username }}</div>
+    <div id="character-details">{{ character.details }}</div>
+</div>
+{% endblock %}
