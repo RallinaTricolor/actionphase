@@ -32,14 +32,15 @@ def character_update(request, pk, template_name='characters/form.html'):
 def character_review(request, pk):
     character = get_object_or_404(Character, pk=pk)
     character.can_edit_or_403(request.user)
-    character.status = Character.REVIEW
-    character.save()
+    if character.can_submit_for_review():
+        character.status = Character.REVIEW
+        character.save()
     return redirect('character_view', pk=pk)
 
 
 def character_approve(request, pk):
     character = get_object_or_404(Character, pk=pk)
-    if request.user == character.game.game_master:
+    if request.user == character.game.game_master and character.can_approve():
         character.status = Character.FINISHED
         character.save()
     return redirect('character_view', pk=pk)
@@ -47,7 +48,7 @@ def character_approve(request, pk):
 
 def character_reject(request, pk):
     character = get_object_or_404(Character, pk=pk)
-    if request.user == character.game.game_master:
+    if request.user == character.game.game_master and character.can_approve():
         character.status = Character.PROGRESS
         character.save()
     return redirect('character_view', pk=pk)

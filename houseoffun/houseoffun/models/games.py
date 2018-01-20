@@ -208,6 +208,12 @@ class Character(models.Model):
             raise PermissionDenied
         return True
 
+    def can_submit_for_review(self):
+        return self.status == self.PROGRESS
+
+    def can_approve(self):
+        return self.status == self.REVIEW
+
 
 class GameSignup(models.Model):
     class Meta:
