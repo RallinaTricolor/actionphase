@@ -196,7 +196,8 @@ class Character(models.Model):
         choices=CHARACTER_STATUS_CHOICES,
         default=PROGRESS,
     )
-    details = models.TextField(null=True)
+    public_profile = models.TextField(null=True)
+    private_profile = models.TextField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def can_edit_or_403(self, user):
