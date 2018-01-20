@@ -199,6 +199,14 @@ class Character(models.Model):
     details = models.TextField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def can_edit_or_403(self, user):
+        """
+        Throws a 403 error if a user is not allowed to edit a game
+        """
+        if user.id not in [self.owner.id, self.game.game_master.id]:
+            raise PermissionDenied
+        return True
+
 
 class GameSignup(models.Model):
     class Meta:
