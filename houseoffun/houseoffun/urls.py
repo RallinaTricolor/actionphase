@@ -21,6 +21,8 @@ urlpatterns = [
     url(r'^characters/view/(?P<pk>\d+)/$', views.character_view, name='character_view'),
     url(r'^characters/edit/(?P<pk>\d+)/$', views.character_update, name='character_update'),
     url(r'^characters/review/(?P<pk>\d+)/$', views.character_review, name='character_review'),
+    url(r'^characters/approve/(?P<pk>\d+)/$', views.character_approve, name='character_approve'),
+    url(r'^characters/reject/(?P<pk>\d+)/$', views.character_reject, name='character_reject'),
     # Threads
     url(r'^threads/new/(?P<game_id>\d+)/$', views.thread_create, name='thread_new'),
     url(r'^threads/view/(?P<pk>\d+)/$', views.thread_view, name='thread_view'),

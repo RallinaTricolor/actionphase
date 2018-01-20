@@ -7,6 +7,8 @@
     <div id="character-status">
         {{ character.get_status_display }}
         <a id="character-review-button" href="{% url "character_review" character.id %}">Submit for Review</a>
+        <a id="character-approve-button" href="{% url "character_approve" character.id %}">Approve</a>
+        <a id="character-reject-button" href="{% url "character_reject" character.id %}">Reject</a>
     </div>
     <div id="character-public-profile">{{ character.public_profile }}</div>
     <div id="character-private-profile">{{ character.private_profile }}</div>

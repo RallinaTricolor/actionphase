@@ -35,3 +35,19 @@ def character_review(request, pk):
     character.status = Character.REVIEW
     character.save()
     return redirect('character_view', pk=pk)
+
+
+def character_approve(request, pk):
+    character = get_object_or_404(Character, pk=pk)
+    if request.user == character.game.game_master:
+        character.status = Character.FINISHED
+        character.save()
+    return redirect('character_view', pk=pk)
+
+
+def character_reject(request, pk):
+    character = get_object_or_404(Character, pk=pk)
+    if request.user == character.game.game_master:
+        character.status = Character.PROGRESS
+        character.save()
+    return redirect('character_view', pk=pk)
