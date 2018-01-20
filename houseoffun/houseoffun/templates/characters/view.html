@@ -2,6 +2,7 @@
 {% block content %}
 <h2>{{ character.name }}</h2>
 <div id="character-attributes">
+    <div id="character-game"><a class="game-view-link" href="{% url "game_view" character.game.id %}">{{ character.game.name }}</a></div>
     <div id="character-owner">{{ character.owner.username }}</div>
     <div id="character-details">{{ character.details }}</div>
 </div>
