@@ -2,10 +2,9 @@ from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
 from django.db import transaction, DatabaseError
-import os
-from uuid import uuid4
 
 from houseoffun.houseoffun.models.core import Plugin
+from houseoffun.houseoffun.util.ImageUtil import *
 
 
 class Game(models.Model):
@@ -170,20 +169,6 @@ class Game(models.Model):
         ]
 
 
-def handle_image_upload(path):
-    # Taken from: https://stackoverflow.com/questions/15140942/django-imagefield-change-file-name-on-upload
-    def wrapper(instance, filename):
-        # get filename
-        if instance.pk:
-            filename = '{}'.format(instance.pk)
-        else:
-            # set filename as random string
-            filename = '{}'.format(uuid4().hex)
-        # return the whole path to the file
-        return os.path.join(path, filename)
-    return wrapper
-
-
 class Character(models.Model):
     PROGRESS = 'IP'
     REVIEW = 'RV'
@@ -214,7 +199,7 @@ class Character(models.Model):
     )
     public_profile = models.TextField(null=True)
     private_profile = models.TextField(null=True)
-    image = models.ImageField(upload_to=handle_image_upload('characters'), null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def can_edit_or_403(self, user):
@@ -230,6 +215,10 @@ class Character(models.Model):
 
     def can_approve(self):
         return self.status == self.REVIEW
+
+    # Image Functions
+    image = models.ImageField(upload_to=ImageUtil.handle_image_upload('characters'), null=True, blank=True)
+    image_version = models.IntegerField(null=True, blank=True)
 
 
 class GameSignup(models.Model):

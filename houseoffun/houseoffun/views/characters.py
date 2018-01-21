@@ -7,7 +7,7 @@ from houseoffun.houseoffun.models import Character
 class CharacterForm(ModelForm):
     class Meta:
         model = Character
-        exclude = ['owner', 'game', 'status']
+        exclude = ['owner', 'game', 'status', 'image_version']
 
 
 def character_view(request, pk, template_name='characters/view.html'):
