@@ -33,16 +33,23 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
+    # Registration and login management
     'registration',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    # Faster collectstatic for S3 backend
+    'collectfast',
     'django.contrib.staticfiles',
     'django.core.mail',
+    # Tree based models for comments
     'mptt',
+    # Asset pipeline
     'pipeline',
+    # S3 file storage
+    'storages',
     'houseoffun.houseoffun',
 ]
 
@@ -184,10 +191,16 @@ EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = '/tmp/app-messages'  # change this to a proper location
 
 # CSS & JS Settings
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = '/static/'
-MEDIA_ROOT = '/media/'
-STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
+AWS_ACCESS_KEY_ID = ''
+AWS_SECRET_ACCESS_KEY = ''
+AWS_STORAGE_BUCKET_NAME = ''
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+AWS_PRELOAD_METADATA = True
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'houseoffun', 'houseoffun', 'static'),
+]
+STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
+STATICFILES_STORAGE = 'houseoffun.storage_backends.S3PipelineStorage'
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -211,3 +224,6 @@ PIPELINE = {'STYLESHEETS': {
         'output_filename': 'js/min.js',
     }
 }, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify')}
+
+# User Media Settings
+DEFAULT_FILE_STORAGE = 'houseoffun.storage_backends.S3MediaStorage'
