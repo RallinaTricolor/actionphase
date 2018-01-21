@@ -18,7 +18,7 @@ def character_view(request, pk, template_name='characters/view.html'):
 def character_update(request, pk, template_name='characters/form.html'):
     character = get_object_or_404(Character, pk=pk)
     character.can_edit_or_403(request.user)
-    form = CharacterForm(request.POST or None, instance=character)
+    form = CharacterForm(request.POST or None, request.FILES or None, instance=character)
     if form.is_valid():
         form.save()
         return redirect('character_view', pk=pk)
