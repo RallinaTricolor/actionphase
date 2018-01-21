@@ -173,13 +173,12 @@ class Game(models.Model):
 def handle_image_upload(path):
     # Taken from: https://stackoverflow.com/questions/15140942/django-imagefield-change-file-name-on-upload
     def wrapper(instance, filename):
-        ext = filename.split('.')[-1]
         # get filename
         if instance.pk:
-            filename = '{}.{}'.format(instance.pk, ext)
+            filename = '{}'.format(instance.pk)
         else:
             # set filename as random string
-            filename = '{}.{}'.format(uuid4().hex, ext)
+            filename = '{}'.format(uuid4().hex)
         # return the whole path to the file
         return os.path.join(path, filename)
     return wrapper

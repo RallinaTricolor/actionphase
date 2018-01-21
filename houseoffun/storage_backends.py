@@ -13,4 +13,4 @@ class S3PipelineStorage(PipelineMixin, CachedFilesMixin, S3Boto3Storage):
 
 class S3MediaStorage(S3Boto3Storage):
     location = 'media'
-    file_overwrite = False
+    file_overwrite = True
