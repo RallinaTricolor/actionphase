@@ -59,3 +59,28 @@ class GamesTest(TestCase):
         character.refresh_from_db()
         self.assertEquals(Game.REGISTRATION, self.game.status)
         self.assertEquals(Character.DELETED,  character.status)
+
+    def test_advance_to_running(self):
+        # Advancing to running should only work if all player characters have been approved
+        self.game.status = Game.PENDING
+        signup = GameSignup.objects.create(user=self.user, game=self.game)
+        signup.status = GameSignup.ACCEPTED
+        signup.save()
+        character = Character.objects.create(game=self.game, owner=self.user)
+        with self.assertRaises(ValidationError):
+            self.game.next_status()
+        character.status = Character.FINISHED
+        character.save()
+        self.game.next_status()
+        self.assertEquals(Game.RUNNING, self.game.status)
+
+    def test_get_players(self):
+        # Get players should return any user who signed up and was accepted
+        self.assertFalse(self.game.get_players())
+        signup = GameSignup.objects.create(user=self.user, game=self.game)
+        signup.status = GameSignup.REJECTED
+        signup.save()
+        self.assertFalse(self.game.get_players())
+        signup.status = GameSignup.ACCEPTED
+        signup.save()
+        self.assertIn(signup.user.id, self.game.get_players())
