@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
 from django.db import transaction, DatabaseError
+from django.db.models import Q
 
 from houseoffun.houseoffun.models.core import Plugin
 from houseoffun.houseoffun.util.ImageUtil import *
@@ -65,6 +66,8 @@ class Game(models.Model):
             self._advance_to_registration()
         elif self.status == self.REGISTRATION:
             self._advance_to_pending()
+        elif self.status == self.PENDING:
+            self._advance_to_running()
 
     def previous_status(self):
         """
@@ -119,6 +122,20 @@ class Game(models.Model):
             character.status = Character.DELETED
             character.save()
         self.save()
+
+    def _advance_to_running(self):
+        """
+        Moves a game to the running status, which is only possible if all characters are approved
+        """
+        if all(character.status == Character.FINISHED for character in self.characters.filter(Q(owner__in=self.get_players()))):
+            self.status = Game.RUNNING
+            self.save()
+        else:
+            raise ValidationError('All player characters must be approved before continuing.')
+
+    # Helper Functions
+    def get_players(self):
+        return [user for user in self.signups.values_list('user', flat=True).filter(status=GameSignup.ACCEPTED)]
 
     def _create_characters(self):
         """
