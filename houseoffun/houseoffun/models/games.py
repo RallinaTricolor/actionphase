@@ -199,7 +199,8 @@ class Character(models.Model):
     )
     public_profile = models.TextField(null=True)
     private_profile = models.TextField(null=True)
-
+    image = models.ImageField(upload_to=ImageUtil.handle_image_upload('characters'), null=True, blank=True)
+    image_version = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def can_edit_or_403(self, user):
@@ -215,10 +216,6 @@ class Character(models.Model):
 
     def can_approve(self):
         return self.status == self.REVIEW
-
-    # Image Functions
-    image = models.ImageField(upload_to=ImageUtil.handle_image_upload('characters'), null=True, blank=True)
-    image_version = models.IntegerField(null=True, blank=True)
 
 
 class GameSignup(models.Model):
