@@ -214,8 +214,8 @@ class Character(models.Model):
         choices=CHARACTER_STATUS_CHOICES,
         default=PROGRESS,
     )
-    public_profile = models.TextField(null=True)
-    private_profile = models.TextField(null=True)
+    public_profile = models.TextField(null=True, blank=True)
+    private_profile = models.TextField(null=True, blank=True)
     image = models.ImageField(upload_to=ImageUtil.handle_image_upload('characters'), null=True, blank=True)
     image_version = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
