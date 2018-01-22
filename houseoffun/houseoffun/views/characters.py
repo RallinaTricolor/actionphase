@@ -1,13 +1,26 @@
-from django.forms import ModelForm
+from django.forms import ModelForm, ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.files.images import get_image_dimensions
 
 from houseoffun.houseoffun.models import Character
 
 
 class CharacterForm(ModelForm):
+    VALID_IMAGE_WIDTH = 100
+    VALID_IMAGE_HEIGHT = 100
+
     class Meta:
         model = Character
         exclude = ['owner', 'game', 'status', 'image_version']
+
+    def clean_image(self):
+        # Validate image dimensions
+        image = self.cleaned_data['image']
+        if image:
+            width, height = get_image_dimensions(image)
+            if width != self.VALID_IMAGE_WIDTH or height != self.VALID_IMAGE_HEIGHT:
+                raise ValidationError('Image must be %spx by %spx' % (self.VALID_IMAGE_WIDTH, self.VALID_IMAGE_HEIGHT))
+        return image
 
 
 def character_view(request, pk, template_name='characters/view.html'):
