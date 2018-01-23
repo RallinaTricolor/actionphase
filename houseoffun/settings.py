@@ -41,8 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    # Faster collectstatic for S3 backend
-    'collectfast',
+    # Faster collectstatic for S3 backend. Temporarily removed due to a bug
+    #'collectfast', TODO: Check this before going live
     'django.contrib.staticfiles',
     'django.core.mail',
     # Tree based models for comments
