@@ -11,6 +11,7 @@ GAME_DELETE_LINK_CLASS = "game-delete-link"
 SIGNUP_GAME_LINK_ID = "game-view-link-4"
 WITHDRAW_GAME_LINK_ID = "game-view-link-2"
 PROCESS_SIGNUPS_GAME_LINK_ID = "game-view-link-1"
+PENDING_GAME_LINK = "game-view-link-3"
 
 # Game Elements
 GAME_STATUS_TEXT_CLASS = "game-status"
@@ -22,3 +23,6 @@ ACCEPT_BUTTON_CLASS = "signup-button-accept"
 REJECT_BUTTON_CLASS = "signup-button-reject"
 SIGNUP_STATUS_TEXT_CLASS = "signup-status"
 
+# Character Elements
+CHARACTER_LINK_CLASS = "character-link"
+CHARACTER_ATTRIBUTES_CLASS = "character-attributes"
