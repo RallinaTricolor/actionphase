@@ -25,4 +25,4 @@ SIGNUP_STATUS_TEXT_CLASS = "signup-status"
 
 # Character Elements
 CHARACTER_LINK_CLASS = "character-link"
-CHARACTER_ATTRIBUTES_CLASS = "character-attributes"
+CHARACTER_ATTRIBUTES_ID = "character-attributes"

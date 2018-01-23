@@ -14,5 +14,5 @@ class CharactersTest(BaseStaticLiveServerTestCase):
         self.wait.until(ec.url_changes('%s%s' % (self.live_server_url, '/games/')))
         self.selenium.find_element_by_class_name(css.CHARACTER_LINK_CLASS).click()
         self.wait.until(ec.url_contains('%s%s' % (self.live_server_url, '/characters/view/')))
-        self.selenium.find_element_by_class_name(css.CHARACTER_ATTRIBUTES_CLASS)
+        self.selenium.find_element_by_id(css.CHARACTER_ATTRIBUTES_ID)
         assert 'In Progress' in self.selenium.page_source
