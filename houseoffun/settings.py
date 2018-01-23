@@ -183,15 +183,15 @@ AWS_PRELOAD_METADATA = True
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'public, max-age=31536000',
 }
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'houseoffun', 'houseoffun', 'static'),
-]
 if DEBUG:
-    STATIC_ROOT = '/static/'
+    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
     STATIC_URL = '/static/'
     STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 else:
     STATICFILES_STORAGE = 'houseoffun.storage_backends.S3PipelineStorage'
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'houseoffun', 'houseoffun', 'static'),
+    ]
     STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
