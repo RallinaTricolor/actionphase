@@ -58,7 +58,7 @@ class GamesTest(TestCase):
 
     def test_post_update(self):
         new_name = 'Sample of Fun 2'
-        request = self.factory.post('/games/view/', {
+        request = self.factory.post('/games/edit/', {
             'name': new_name,
             'abbreviation': self.game.abbreviation,
             'description': self.game.description

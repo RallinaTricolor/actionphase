@@ -17,6 +17,10 @@
     {% endif %}
 {% endif %}
 
+{% if game.show_characters %}
+    {% include "characters/list.html" %}
+{% endif %}
+
 {% if threads is not False and game.show_threads %}
     {% include "threads/list.html" %}
 {% endif %}

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 
 import os
+from decouple import config
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,10 +20,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '9944wfl7gnp_k(lyps5a$lx+!!=(l-993@9&n33dc6pqaa0yvy'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', cast=bool)
 
 ALLOWED_HOSTS = [
     '192.168.99.100',
@@ -33,16 +34,23 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
+    # Registration and login management
     'registration',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    # Faster collectstatic for S3 backend
+    'collectfast',
     'django.contrib.staticfiles',
     'django.core.mail',
+    # Tree based models for comments
     'mptt',
+    # Asset pipeline
     'pipeline',
+    # S3 file storage
+    'storages',
     'houseoffun.houseoffun',
 ]
 
@@ -81,36 +89,19 @@ WSGI_APPLICATION = 'houseoffun.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
-if os.getenv('TRAVIS', None):
-    # Travis DB configuration goes here
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'travis_ci',
-            'USER': 'travis',
-            'PASSWORD': '',
-            'HOST': '127.0.0.1',
-            'PORT': 3306,
-            'OPTIONS': {
-                'init_command': 'SET default_storage_engine=InnoDB',
-            }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': 3306,
+        'OPTIONS': {
+            'init_command': 'SET default_storage_engine=InnoDB',
         }
     }
-else:
-    # Non-Travis DB configuration goes here
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'docker',
-            'USER': 'docker',
-            'PASSWORD': 'docker',
-            'HOST': 'db',
-            'PORT': 3306,
-            'OPTIONS': {
-                'init_command': 'SET default_storage_engine=InnoDB',
-            }
-        }
-    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
@@ -184,10 +175,19 @@ EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = '/tmp/app-messages'  # change this to a proper location
 
 # CSS & JS Settings
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = '/static/'
-MEDIA_ROOT = '/media/'
-STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+AWS_PRELOAD_METADATA = True
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'public, max-age=31536000',
+}
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'houseoffun', 'houseoffun', 'static'),
+]
+STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
+STATICFILES_STORAGE = 'houseoffun.storage_backends.S3PipelineStorage'
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -211,3 +211,6 @@ PIPELINE = {'STYLESHEETS': {
         'output_filename': 'js/min.js',
     }
 }, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify')}
+
+# User Media Settings
+DEFAULT_FILE_STORAGE = 'houseoffun.storage_backends.S3MediaStorage'

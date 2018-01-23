@@ -2,8 +2,10 @@ from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
 from django.db import transaction, DatabaseError
+from django.db.models import Q
 
 from houseoffun.houseoffun.models.core import Plugin
+from houseoffun.houseoffun.util.ImageUtil import *
 
 
 class Game(models.Model):
@@ -40,6 +42,7 @@ class Game(models.Model):
         choices=GAME_STATUS_CHOICES,
         default=DRAFT,
     )
+    character_guidelines = models.TextField(null=True, blank=True)
 
     def has_plugin(self, plugin_name):
         """
@@ -63,6 +66,8 @@ class Game(models.Model):
             self._advance_to_registration()
         elif self.status == self.REGISTRATION:
             self._advance_to_pending()
+        elif self.status == self.PENDING:
+            self._advance_to_running()
 
     def previous_status(self):
         """
@@ -113,10 +118,24 @@ class Game(models.Model):
         Moves a game back to the registration status
         """
         self.status = self.REGISTRATION
-        for character in self.character_set.all():
+        for character in self.characters.all():
             character.status = Character.DELETED
             character.save()
         self.save()
+
+    def _advance_to_running(self):
+        """
+        Moves a game to the running status, which is only possible if all characters are approved
+        """
+        if all(character.status == Character.FINISHED for character in self.characters.filter(Q(owner__in=self.get_players()))):
+            self.status = Game.RUNNING
+            self.save()
+        else:
+            raise ValidationError('All player characters must be approved before continuing.')
+
+    # Helper Functions
+    def get_players(self):
+        return [user for user in self.signups.values_list('user', flat=True).filter(status=GameSignup.ACCEPTED)]
 
     def _create_characters(self):
         """
@@ -139,7 +158,7 @@ class Game(models.Model):
         character = Character()
         character.game = self
         character.owner = signup.user
-        character.name = ""
+        character.name = signup.user.username
         character.save()
 
     # Functions related to showing things on the page
@@ -159,6 +178,13 @@ class Game(models.Model):
             self.PENDING
         ]
 
+    def show_characters(self):
+        return self.status not in [
+            self.DRAFT,
+            self.REGISTRATION,
+            self.DELETED
+        ]
+
 
 class Character(models.Model):
     PROGRESS = 'IP'
@@ -176,7 +202,8 @@ class Character(models.Model):
     game = models.ForeignKey(
         Game,
         null=True,
-        on_delete=models.SET_NULL
+        on_delete=models.SET_NULL,
+        related_name='characters'
     )
     owner = models.ForeignKey(
         User,
@@ -187,8 +214,25 @@ class Character(models.Model):
         choices=CHARACTER_STATUS_CHOICES,
         default=PROGRESS,
     )
-    details = models.TextField(null=True)
+    public_profile = models.TextField(null=True, blank=True)
+    private_profile = models.TextField(null=True, blank=True)
+    image = models.ImageField(upload_to=ImageUtil.handle_image_upload('characters'), null=True, blank=True)
+    image_version = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def can_edit_or_403(self, user):
+        """
+        Throws a 403 error if a user is not allowed to edit a game
+        """
+        if user.id not in [self.owner.id, self.game.game_master.id]:
+            raise PermissionDenied
+        return True
+
+    def can_submit_for_review(self):
+        return self.status == self.PROGRESS
+
+    def can_approve(self):
+        return self.status == self.REVIEW
 
 
 class GameSignup(models.Model):
