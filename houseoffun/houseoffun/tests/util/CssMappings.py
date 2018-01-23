@@ -26,3 +26,5 @@ SIGNUP_STATUS_TEXT_CLASS = "signup-status"
 # Character Elements
 CHARACTER_LINK_CLASS = "character-link"
 CHARACTER_ATTRIBUTES_ID = "character-attributes"
+EDIT_CHARACTER_LINK_ID = "character-edit-link"
+CHARACTER_SUBMIT_BUTTON_CLASS = "character-submit-button"
