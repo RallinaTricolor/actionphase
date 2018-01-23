@@ -28,3 +28,10 @@ class CharactersTest(BaseStaticLiveServerTestCase):
         self.selenium.find_element_by_class_name(css.CHARACTER_SUBMIT_BUTTON_CLASS).click()
         self.wait.until(ec.url_contains('%s%s' % (self.live_server_url, '/characters/view/')))
         assert new_character_name in self.selenium.page_source
+
+    def test_character_review(self):
+        self.authenticate()
+        self.selenium.get('%s%s%s' % (self.live_server_url, '/characters/view/', urls.EDITABLE_CHARACTER_ID))
+        self.selenium.find_element_by_id(css.CHARACTER_REVIEW_BUTTON_ID).click()
+        self.wait.until(ec.url_contains('%s%s' % (self.live_server_url, '/characters/view/')))
+        assert 'Ready for Review' in self.selenium.page_source
