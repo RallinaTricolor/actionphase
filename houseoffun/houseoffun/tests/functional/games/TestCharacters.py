@@ -11,7 +11,7 @@ class CharactersTest(BaseStaticLiveServerTestCase):
 
     def test_character_view(self):
         self.authenticate()
-        self.selenium.get('%s%s%s' % (self.live_server_url, '/games/view', urls.PENDING_GAME_ID))
+        self.selenium.get('%s%s%s' % (self.live_server_url, '/games/view/', urls.PENDING_GAME_ID))
         self.selenium.find_element_by_class_name(css.CHARACTER_LINK_CLASS).click()
         self.wait.until(ec.url_contains('%s%s' % (self.live_server_url, '/characters/view/')))
         self.selenium.find_element_by_id(css.CHARACTER_ATTRIBUTES_ID)
