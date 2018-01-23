@@ -2,7 +2,7 @@
 Constants to use for URLs
 """
 
-# Game URLs
+# Game IDs
 
-# Character URLs
+# Character IDs
 EDITABLE_CHARACTER_ID = "1"
