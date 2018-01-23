@@ -186,8 +186,13 @@ AWS_S3_OBJECT_PARAMETERS = {
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'houseoffun', 'houseoffun', 'static'),
 ]
-STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
-STATICFILES_STORAGE = 'houseoffun.storage_backends.S3PipelineStorage'
+if DEBUG:
+    STATIC_ROOT = '/static/'
+    STATIC_URL = '/static/'
+    STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
+else:
+    STATICFILES_STORAGE = 'houseoffun.storage_backends.S3PipelineStorage'
+    STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
