@@ -190,7 +190,7 @@ if DEBUG:
 else:
     STATICFILES_STORAGE = 'actionphase.storage_backends.S3PipelineStorage'
     STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'actionphase', 'actionphase', 'static'),
+        os.path.join(BASE_DIR, 'actionphase', 'app', 'static'),
     ]
     STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
 STATICFILES_FINDERS = (
