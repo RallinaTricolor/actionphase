@@ -21,7 +21,7 @@
   before_script:
     - export DISPLAY=:99.0
     - ./travis-scripts/before_script.sh
-  script: "python manage.py test houseoffun.houseoffun.tests.$TESTFOLDER"
+  script: "python manage.py test actionphase.app.tests.$TESTFOLDER"
   notifications:
     email: false
   after_failure:

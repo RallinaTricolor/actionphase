@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/jhouser/houseoffun.svg?branch=master)](https://travis-ci.org/jhouser/houseoffun)
+[![Build Status](https://travis-ci.org/jhouser/actionphase.svg?branch=master)](https://travis-ci.org/jhouser/actionphase)
 
 [Issue Tracker](https://tree.taiga.io/project/rallina-house-of-fun/)
 

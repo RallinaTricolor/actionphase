@@ -1,7 +1,7 @@
 {
-  "name": "houseoffun",
+  "name": "actionphase",
   "version": "0.0.1",
-  "description": "House of Fun",
+  "description": "Action Phase",
   "main": "index.js",
   "dependencies": {
     "yuglify": "^1.0.1"
@@ -12,12 +12,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jhouser/houseoffun.git"
+    "url": "git+https://github.com/jhouser/actionphase.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jhouser/houseoffun/issues"
+    "url": "https://github.com/jhouser/actionphase/issues"
   },
-  "homepage": "https://github.com/jhouser/houseoffun#readme"
+  "homepage": "https://github.com/jhouser/actionphase#readme"
 }
