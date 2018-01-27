@@ -47,7 +47,7 @@ class CharactersTest(TestCase):
         response = character_update(request, self.character.id)
         self.assertEqual(response.status_code, 302)
         self.character.refresh_from_db()
-        self.assertEquals(self.character.name, new_name)
+        self.assertEqual(self.character.name, new_name)
 
     def test_get_character_review(self):
         # Test submitting a character for review
@@ -56,7 +56,7 @@ class CharactersTest(TestCase):
         response = character_review(request, self.character.id)
         self.assertEqual(response.status_code, 302)
         self.character.refresh_from_db()
-        self.assertEquals(self.character.status, Character.REVIEW)
+        self.assertEqual(self.character.status, Character.REVIEW)
 
     def test_get_character_approve(self):
         # Test submitting a character for review
@@ -67,7 +67,7 @@ class CharactersTest(TestCase):
         response = character_approve(request, self.character.id)
         self.assertEqual(response.status_code, 302)
         self.character.refresh_from_db()
-        self.assertEquals(self.character.status, Character.FINISHED)
+        self.assertEqual(self.character.status, Character.FINISHED)
 
     def test_get_character_reject(self):
         # Test submitting a character for review
@@ -78,4 +78,4 @@ class CharactersTest(TestCase):
         response = character_reject(request, self.character.id)
         self.assertEqual(response.status_code, 302)
         self.character.refresh_from_db()
-        self.assertEquals(self.character.status, Character.PROGRESS)
+        self.assertEqual(self.character.status, Character.PROGRESS)

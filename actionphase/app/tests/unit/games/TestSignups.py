@@ -74,26 +74,26 @@ class SignupsTest(TestCase):
         self.game.status = Game.REGISTRATION
         self.signup.status = GameSignup.REGISTERED
         registration_text = self.signup.get_status_display()
-        self.assertEquals(registration_text, self.signup.get_status_text())
+        self.assertEqual(registration_text, self.signup.get_status_text())
 
         self.signup.status = GameSignup.WITHDRAWN
         withdrawal_text = self.signup.get_status_display()
-        self.assertEquals(withdrawal_text, self.signup.get_status_text())
+        self.assertEqual(withdrawal_text, self.signup.get_status_text())
 
         self.signup.status = GameSignup.ACCEPTED
-        self.assertEquals(registration_text, self.signup.get_status_text())
+        self.assertEqual(registration_text, self.signup.get_status_text())
 
         self.signup.status = GameSignup.REJECTED
-        self.assertEquals(registration_text, self.signup.get_status_text())
+        self.assertEqual(registration_text, self.signup.get_status_text())
 
         self.game.status = Game.PENDING
         self.signup.status = GameSignup.WITHDRAWN
-        self.assertEquals(withdrawal_text, self.signup.get_status_text())
+        self.assertEqual(withdrawal_text, self.signup.get_status_text())
 
         self.signup.status = GameSignup.ACCEPTED
         accepted_text = self.signup.get_status_display()
-        self.assertEquals(accepted_text, self.signup.get_status_text())
+        self.assertEqual(accepted_text, self.signup.get_status_text())
 
         self.signup.status = GameSignup.REJECTED
         rejected_text = self.signup.get_status_display()
-        self.assertEquals(rejected_text, self.signup.get_status_text())
+        self.assertEqual(rejected_text, self.signup.get_status_text())

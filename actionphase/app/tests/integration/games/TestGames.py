@@ -67,20 +67,20 @@ class GamesTest(TestCase):
         response = game_update(request, self.game.id)
         self.assertEqual(response.status_code, 302)
         self.game.refresh_from_db()
-        self.assertEquals(self.game.name, new_name)
+        self.assertEqual(self.game.name, new_name)
 
     def test_get_delete(self):
         request = self.factory.get('/games/delete/')
         request.user = self.user
         response = game_delete(request, self.game.id)
-        self.assertEquals(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)
 
     def test_post_delete(self):
         game_id = self.game.id
         request = self.factory.post('/games/delete/')
         request.user = self.user
         response = game_delete(request, game_id)
-        self.assertEquals(response.status_code, 302)
+        self.assertEqual(response.status_code, 302)
         game = Game.objects.filter(pk=game_id).first()
         self.assertIsNone(game)
 
@@ -90,7 +90,7 @@ class GamesTest(TestCase):
         response = game_next_status(request, self.game.id)
         self.assertEqual(response.status_code, 302)
         self.game.refresh_from_db()
-        self.assertEquals(Game.REGISTRATION, self.game.status)
+        self.assertEqual(Game.REGISTRATION, self.game.status)
 
     def test_get_prev_status(self):
         self.game.next_status()
@@ -99,4 +99,4 @@ class GamesTest(TestCase):
         response = game_previous_status(request, self.game.id)
         self.assertEqual(response.status_code, 302)
         self.game.refresh_from_db()
-        self.assertEquals(Game.DRAFT, self.game.status)
+        self.assertEqual(Game.DRAFT, self.game.status)
