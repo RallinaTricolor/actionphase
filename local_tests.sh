@@ -1,1 +1,1 @@
-python manage.py test houseoffun.houseoffun.tests.unit && python manage.py test houseoffun.houseoffun.tests.integration
+python manage.py test actionphase.app.tests.unit && python manage.py test actionphase.app.tests.integration
