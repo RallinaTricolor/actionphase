@@ -1,31 +1,31 @@
-from django.conf.urls import url
+from django.urls import path
 
 from actionphase.app import views
 
 urlpatterns = [
     # Index
-    url(r'^$', views.index, name='index'),
+    path('', views.index, name='index'),
     # Games
-    url(r'^games/$', views.game_list, name='game_list'),
-    url(r'^games/new/$', views.game_create, name='game_new'),
-    url(r'^games/view/(?P<pk>\d+)/$', views.game_view, name='game_view'),
-    url(r'^games/edit/(?P<pk>\d+)/$', views.game_update, name='game_edit'),
-    url(r'^games/delete/(?P<pk>\d+)/$', views.game_delete, name='game_delete'),
-    url(r'^games/nextStatus/(?P<pk>\d+)/$', views.game_next_status, name='game_next_status'),
-    url(r'^games/prevStatus/(?P<pk>\d+)/$', views.game_previous_status, name='game_previous_status'),
-    url(r'^games/signup/(?P<pk>\d+)/$', views.game_signup, name='game_signup'),
-    url(r'^games/withdraw/(?P<pk>\d+)/$', views.game_withdraw, name='game_withdraw'),
-    url(r'^games/accept/(?P<pk>\d+)/$', views.game_signup_accept, name='game_signup_accept'),
-    url(r'^games/reject/(?P<pk>\d+)/$', views.game_signup_reject, name='game_signup_reject'),
+    path('games/', views.game_list, name='game_list'),
+    path('games/new/', views.game_create, name='game_new'),
+    path('games/view/<int:pk>/', views.game_view, name='game_view'),
+    path('games/edit/<int:pk>/', views.game_update, name='game_edit'),
+    path('games/delete/<int:pk>/', views.game_delete, name='game_delete'),
+    path('games/nextStatus/<int:pk>/', views.game_next_status, name='game_next_status'),
+    path('games/prevStatus/<int:pk>/', views.game_previous_status, name='game_previous_status'),
+    path('games/signup/<int:pk>/', views.game_signup, name='game_signup'),
+    path('games/withdraw/<int:pk>/', views.game_withdraw, name='game_withdraw'),
+    path('games/accept/<int:pk>/', views.game_signup_accept, name='game_signup_accept'),
+    path('games/reject/<int:pk>/', views.game_signup_reject, name='game_signup_reject'),
     # Characters
-    url(r'^characters/view/(?P<pk>\d+)/$', views.character_view, name='character_view'),
-    url(r'^characters/edit/(?P<pk>\d+)/$', views.character_update, name='character_update'),
-    url(r'^characters/review/(?P<pk>\d+)/$', views.character_review, name='character_review'),
-    url(r'^characters/approve/(?P<pk>\d+)/$', views.character_approve, name='character_approve'),
-    url(r'^characters/reject/(?P<pk>\d+)/$', views.character_reject, name='character_reject'),
+    path('characters/view/<int:pk>/', views.character_view, name='character_view'),
+    path('characters/edit/<int:pk>/', views.character_update, name='character_update'),
+    path('characters/review/<int:pk>/', views.character_review, name='character_review'),
+    path('characters/approve/<int:pk>/', views.character_approve, name='character_approve'),
+    path('characters/reject/<int:pk>/', views.character_reject, name='character_reject'),
     # Threads
-    url(r'^threads/new/(?P<game_id>\d+)/$', views.thread_create, name='thread_new'),
-    url(r'^threads/view/(?P<pk>\d+)/$', views.thread_view, name='thread_view'),
-    url(r'^threads/edit/(?P<pk>\d+)/$', views.thread_update, name='thread_edit'),
-    url(r'^threads/delete/(?P<pk>\d+)/$', views.thread_delete, name='thread_delete'),
+    path('threads/new/<int:game_id>/', views.thread_create, name='thread_new'),
+    path('threads/view/<int:pk>/', views.thread_view, name='thread_view'),
+    path('threads/edit/<int:pk>/', views.thread_update, name='thread_edit'),
+    path('threads/delete/<int:pk>/', views.thread_delete, name='thread_delete'),
 ]

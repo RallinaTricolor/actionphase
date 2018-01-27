@@ -47,7 +47,7 @@ class SignupsTest(TestCase):
         response = game_withdraw(request, self.game.id)
         self.assertEqual(response.status_code, 302)
         signup.refresh_from_db()
-        self.assertEquals(GameSignup.WITHDRAWN, signup.status)
+        self.assertEqual(GameSignup.WITHDRAWN, signup.status)
 
     def test_game_accept(self):
         signup = GameSignup.objects.create(user=self.user, game=self.game)
@@ -56,7 +56,7 @@ class SignupsTest(TestCase):
         response = game_signup_accept(request, signup.id)
         self.assertEqual(response.status_code, 302)
         signup.refresh_from_db()
-        self.assertEquals(GameSignup.ACCEPTED, signup.status)
+        self.assertEqual(GameSignup.ACCEPTED, signup.status)
 
     def test_game_reject(self):
         signup = GameSignup.objects.create(user=self.user, game=self.game)
@@ -65,4 +65,4 @@ class SignupsTest(TestCase):
         response = game_signup_reject(request, signup.id)
         self.assertEqual(response.status_code, 302)
         signup.refresh_from_db()
-        self.assertEquals(GameSignup.REJECTED, signup.status)
+        self.assertEqual(GameSignup.REJECTED, signup.status)

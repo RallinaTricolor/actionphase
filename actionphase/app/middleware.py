@@ -23,7 +23,7 @@ def LoginRequiredMiddleware(get_response):
         # Code to be executed for each request before
         # the view (and later middleware) are called.
         response = get_response(request)
-        if not request.user.is_authenticated():
+        if not request.user.is_authenticated:
             path = request.path_info.lstrip('/')
             if not any(m.match(path) for m in EXEMPT_URLS):
                 return HttpResponseRedirect(settings.LOGIN_URL)

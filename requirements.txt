@@ -1,4 +1,4 @@
- Django>=1.8,<2.0
+ Django>=2.0
  mysqlclient
  django-registration-redux
  django-mptt

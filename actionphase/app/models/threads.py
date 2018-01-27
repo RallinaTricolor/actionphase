@@ -27,6 +27,6 @@ class Comment(MPTTModel):
         Thread,
         on_delete=models.CASCADE
     )
-    parent = TreeForeignKey('self', related_name='children', null=True, db_index=True)
+    parent = TreeForeignKey('self', related_name='children', null=True, db_index=True, on_delete=models.DO_NOTHING)
     created_at = models.DateTimeField(auto_now_add=True)
     text = models.TextField(blank=True)
