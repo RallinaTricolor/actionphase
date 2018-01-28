@@ -42,12 +42,13 @@ class SignupsTest(TestCase):
 
     def test_game_withdraw(self):
         signup = GameSignup.objects.create(user=self.user, game=self.game)
+        signup_id = signup.id
         request = self.factory.get('/games/withdraw/')
         request.user = self.user
         response = game_withdraw(request, self.game.id)
         self.assertEqual(response.status_code, 302)
-        signup.refresh_from_db()
-        self.assertEqual(GameSignup.WITHDRAWN, signup.status)
+        signup = GameSignup.objects.filter(pk=signup_id).first()
+        self.assertIsNone(signup)
 
     def test_game_accept(self):
         signup = GameSignup.objects.create(user=self.user, game=self.game)
