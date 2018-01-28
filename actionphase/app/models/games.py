@@ -172,6 +172,9 @@ class Game(models.Model):
     def show_new_threads_link(self):
         return self.has_plugin('Threads') and self.status == self.RUNNING
 
+    def show_registration_link(self):
+        return self.status == self.REGISTRATION
+
     def show_registrations(self):
         return self.status in [
             self.REGISTRATION,

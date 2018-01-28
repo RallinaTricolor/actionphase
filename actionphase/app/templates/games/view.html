@@ -10,11 +10,7 @@
 </div>
 
 {% if game.show_registrations %}
-    {% if request.user == game.game_master %}
-        {% include "games/signups.html" %}
-    {% else %}
-        {% include "games/user_signup.html" %}
-    {% endif %}
+    {% include "games/signups.html" %}
 {% endif %}
 
 {% if game.show_characters %}

@@ -1,4 +1,5 @@
-<div id="signups">
+{% if user_signup is not None or game.show_registration_link %}
+<div id="user-signup">
     <h3>Your Status</h3>
     {% if user_signup is not None %}
         <div class="user-signup">
@@ -17,12 +18,5 @@
         Interested in playing?
         <a class="signup-button signup-button-signup" href="{% url "game_signup" game.id %}">Sign Up!</a>
     {% endif %}
-    <h3>Sign Ups</h3>
-    {% for signup in game.signups.all %}
-        {% if signup.user != request.user and signup.status != signup.WITHDRAWN %}
-        <div class="user-signup">
-            <span class="signup-user">{{ signup.user.username }}</span>
-        </div>
-        {% endif %}
-    {% endfor %}
 </div>
+{% endif %}
