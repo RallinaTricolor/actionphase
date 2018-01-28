@@ -22,8 +22,6 @@ class SignupsTest(TestCase):
     def test_can_signup(self):
         # Already created signup shouldn't be able to signup again
         self.assertFalse(self.signup.can_signup())
-        self.signup.status = GameSignup.WITHDRAWN
-        # Game is a draft so new signups shouldn't be possible
         self.assertFalse(self.signup.can_signup())
         self.game.status = Game.REGISTRATION
         # Withdrawn signups should be able to re-register
@@ -39,9 +37,6 @@ class SignupsTest(TestCase):
         self.game.status = Game.REGISTRATION
         # Signed up users should be able to withdraw
         self.assertTrue(self.signup.can_withdraw())
-        self.signup.status = GameSignup.WITHDRAWN
-        # Already withdrawn signups can't withdraw again
-        self.assertFalse(self.signup.can_withdraw())
 
     def test_can_accept(self):
         # Game is a draft so new signups shouldn't be possible
@@ -51,9 +46,6 @@ class SignupsTest(TestCase):
         self.assertTrue(self.signup.can_accept())
         self.signup.status = GameSignup.ACCEPTED
         # Already accepted users can't be accepted again
-        self.assertFalse(self.signup.can_accept())
-        self.signup.status = GameSignup.WITHDRAWN
-        # Users who withdraw can't be accepted
         self.assertFalse(self.signup.can_accept())
 
     def test_can_reject(self):
@@ -65,9 +57,6 @@ class SignupsTest(TestCase):
         self.signup.status = GameSignup.REJECTED
         # Already rejected users can't be rejected again
         self.assertFalse(self.signup.can_reject())
-        self.signup.status = GameSignup.WITHDRAWN
-        # Users who withdraw can't be rejected
-        self.assertFalse(self.signup.can_reject())
 
     def test_get_status_text(self):
         # Verify that users only see registered/withdrawn before game is marked as pending
@@ -76,19 +65,14 @@ class SignupsTest(TestCase):
         registration_text = self.signup.get_status_display()
         self.assertEqual(registration_text, self.signup.get_status_text())
 
-        self.signup.status = GameSignup.WITHDRAWN
-        withdrawal_text = self.signup.get_status_display()
-        self.assertEqual(withdrawal_text, self.signup.get_status_text())
-
         self.signup.status = GameSignup.ACCEPTED
         self.assertEqual(registration_text, self.signup.get_status_text())
 
         self.signup.status = GameSignup.REJECTED
         self.assertEqual(registration_text, self.signup.get_status_text())
 
+        # Changing status to pending should show true status now
         self.game.status = Game.PENDING
-        self.signup.status = GameSignup.WITHDRAWN
-        self.assertEqual(withdrawal_text, self.signup.get_status_text())
 
         self.signup.status = GameSignup.ACCEPTED
         accepted_text = self.signup.get_status_display()
