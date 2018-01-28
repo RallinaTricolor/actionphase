@@ -28,16 +28,16 @@
     - cat /tmp/debug.log
 
   jobs:
-  include:
-    - stage: CodeDeploy Stage
-      script: echo "Deploying to Stage Server..."
-      deploy:
-        on:
-          branch: master
-        provider: codedeploy
-        revision_type: github
-        access_key_id: $TRAVIS_AWS_ACCESS_KEY_ID
-        secret_access_key: $TRAVIS_AWS_SECRET_ACCESS_KEY
-        application: "ActionPhaseStage"
-        deployment_group: "ActionPhaseStage"
-        region: "us-east-2"
+    include:
+      - stage: CodeDeploy Stage
+        script: echo "Deploying to Stage Server..."
+        deploy:
+          on:
+            branch: master
+          provider: codedeploy
+          revision_type: github
+          access_key_id: $TRAVIS_AWS_ACCESS_KEY_ID
+          secret_access_key: $TRAVIS_AWS_SECRET_ACCESS_KEY
+          application: "ActionPhaseStage"
+          deployment_group: "ActionPhaseStage"
+          region: "us-east-2"
