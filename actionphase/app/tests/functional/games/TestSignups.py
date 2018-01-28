@@ -24,8 +24,7 @@ class SignupsTest(BaseStaticLiveServerTestCase):
         self.wait.until(ec.url_changes('%s%s' % (self.live_server_url, '/games/')))
         self.selenium.find_element_by_class_name(css.WITHDRAW_BUTTON_CLASS).click()
         self.wait.until(ec.url_contains('%s%s' % (self.live_server_url, '/games/view/')))
-        self.selenium.find_element_by_class_name(css.SIGNUP_STATUS_TEXT_CLASS)
-        assert 'Withdrawn' in self.selenium.page_source
+        assert css.SIGNUP_STATUS_TEXT_CLASS not in self.selenium.page_source
 
     def test_game_accept(self):
         self.authenticate()
