@@ -187,12 +187,15 @@ if DEBUG:
     STATIC_ROOT = os.path.join(BASE_DIR, 'static')
     STATIC_URL = '/static/'
     STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
+    MEDIA_ROOT = '/media/'
+    MEDIA_URL = '/media/'
 else:
     STATICFILES_STORAGE = 'actionphase.storage_backends.S3PipelineStorage'
     STATICFILES_DIRS = [
         os.path.join(BASE_DIR, 'actionphase', 'app', 'static'),
     ]
     STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
+    DEFAULT_FILE_STORAGE = 'actionphase.storage_backends.S3MediaStorage'
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -217,5 +220,3 @@ PIPELINE = {'STYLESHEETS': {
     }
 }, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify')}
 
-# User Media Settings
-DEFAULT_FILE_STORAGE = 'actionphase.storage_backends.S3MediaStorage'
