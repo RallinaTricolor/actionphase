@@ -9,16 +9,20 @@
     <div id="character-owner">{{ character.owner.username }}</div>
     <div id="character-status">
         {{ character.get_status_display }}
-        {% if character.can_submit_for_review %}
+        {% if permission_level >= character.OWNER_PERMISSION and character.can_submit_for_review %}
             <a id="character-review-button" href="{% url "character_review" character.id %}">Submit for Review</a>
         {% endif %}
-        {% if request.user == character.game.game_master and character.can_approve %}
+        {% if permission_level == character.GM_PERMISSION and character.can_approve %}
             <a id="character-approve-button" href="{% url "character_approve" character.id %}">Approve</a>
             <a id="character-reject-button" href="{% url "character_reject" character.id %}">Reject</a>
         {% endif %}
     </div>
     <div id="character-public-profile">{{ character.public_profile }}</div>
-    <div id="character-private-profile">{{ character.private_profile }}</div>
-    <div id="character-edit"><a id="character-edit-link" href="{% url "character_update" character.id %}">Edit</a></div>
+    {% if permission_level >= character.AUDIENCE_PERMISSION %}
+        <div id="character-private-profile">{{ character.private_profile }}</div>
+    {% endif %}
+    {% if permission_level >= character.OWNER_PERMISSION %}
+        <div id="character-edit"><a id="character-edit-link" href="{% url "character_update" character.id %}">Edit</a></div>
+    {% endif %}
 </div>
 {% endblock %}

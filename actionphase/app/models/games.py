@@ -197,6 +197,15 @@ class Character(models.Model):
         (FINISHED, 'Finished'),
         (DELETED, 'Deleted')
     )
+    # Permission levels for characters
+    # Other players in the game should only be able to see public data
+    OTHER_PLAYER_PERMISSION = 1
+    # Audience members should be able to see everything but not edit
+    AUDIENCE_PERMISSION = 2
+    # The owner should be able to see and edit
+    OWNER_PERMISSION = 3
+    # The GM should be able to approve/reject
+    GM_PERMISSION = 4
 
     name = models.CharField(max_length=100)
     game = models.ForeignKey(
@@ -224,7 +233,7 @@ class Character(models.Model):
         """
         Throws a 403 error if a user is not allowed to edit a game
         """
-        if user.id not in [self.owner.id, self.game.game_master.id]:
+        if self.get_permission_level(user) < self.OWNER_PERMISSION:
             raise PermissionDenied
         return True
 
@@ -233,6 +242,17 @@ class Character(models.Model):
 
     def can_approve(self):
         return self.status == self.REVIEW
+
+    def get_permission_level(self, user):
+        other_players = self.game.get_players()
+        if user == self.game.game_master:
+            return self.GM_PERMISSION
+        elif user == self.owner:
+            return self.OWNER_PERMISSION
+        elif user.id in other_players:
+            return self.OTHER_PLAYER_PERMISSION
+        else:
+            return self.AUDIENCE_PERMISSION
 
 
 class GameSignup(models.Model):
