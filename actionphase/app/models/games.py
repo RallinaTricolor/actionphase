@@ -172,6 +172,9 @@ class Game(models.Model):
     def show_new_threads_link(self):
         return self.has_plugin('Threads') and self.status == self.RUNNING
 
+    def show_registration_link(self):
+        return self.status == self.REGISTRATION
+
     def show_registrations(self):
         return self.status in [
             self.REGISTRATION,
@@ -262,12 +265,10 @@ class GameSignup(models.Model):
     REGISTERED = 'RG'
     ACCEPTED = 'AC'
     REJECTED = 'RJ'
-    WITHDRAWN = 'WD'
     REGISTRATION_STATUS_CHOICES = (
         (REGISTERED, 'Registered'),
         (ACCEPTED, 'Accepted'),
-        (REJECTED, 'Rejected'),
-        (WITHDRAWN, 'Withdrawn')
+        (REJECTED, 'Rejected')
     )
 
     game = models.ForeignKey(
@@ -287,17 +288,17 @@ class GameSignup(models.Model):
 
     def get_status_text(self):
         old_status = self.status
-        if self.game.status != Game.PENDING and self.status != self.WITHDRAWN:
+        if self.game.status != Game.PENDING:
             self.status = self.REGISTERED
         status_text = self.get_status_display()
         self.status = old_status
         return status_text
 
     def can_signup(self):
-        return self.game.status == Game.REGISTRATION and (self.pk is None or self.status == self.WITHDRAWN)
+        return self.game.status == Game.REGISTRATION
 
     def can_withdraw(self):
-        return self.game.status in [Game.REGISTRATION, Game.PENDING] and self.status != self.WITHDRAWN
+        return self.game.status in [Game.REGISTRATION, Game.PENDING]
 
     def can_accept(self):
         return self.game.status in [Game.REGISTRATION] and self.status in [self.REGISTERED, self.REJECTED]

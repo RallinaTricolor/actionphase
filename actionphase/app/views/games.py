@@ -90,8 +90,10 @@ def game_signup(request, pk):
         # Don't let game master register for their own game...
         return redirect('game_view', pk)
     signup = GameSignup.objects.filter(game=game, user=request.user).first()
-    if signup is None:
-        signup = GameSignup()
+    if signup is not None:
+        # Don't allow multiple signups from the same user
+        return redirect('game_view', pk)
+    signup = GameSignup()
     signup.game = game
     signup.user = request.user
     if signup.can_signup():
@@ -108,8 +110,7 @@ def game_withdraw(request, pk):
     game = get_object_or_404(Game, pk=pk)
     signup = get_object_or_404(GameSignup, game=game, user=request.user)
     if signup.can_withdraw():
-        signup.status = signup.WITHDRAWN
-        signup.save()
+        signup.delete()
     return redirect('game_view', pk)
 
 
