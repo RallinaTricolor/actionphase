@@ -26,3 +26,14 @@
     email: false
   after_failure:
     - cat /tmp/debug.log
+
+  deploy:
+    on:
+      branch: master
+    provider: codedeploy
+    revision_type: github
+    access_key_id: $TRAVIS_AWS_ACCESS_KEY_ID
+    secret_access_key: $TRAVIS_AWS_SECRET_ACCESS_KEY
+    application: "ActionPhaseStage"
+    deployment_group: "ActionPhaseStage"
+    region: "us-east-2"
