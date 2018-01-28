@@ -25,7 +25,8 @@ class CharacterForm(ModelForm):
 
 def character_view(request, pk, template_name='characters/view.html'):
     character = get_object_or_404(Character, pk=pk)
-    return render(request, template_name, {'character': character})
+    permission_level = character.get_permission_level(request.user)
+    return render(request, template_name, {'character': character, 'permission_level': permission_level})
 
 
 def character_update(request, pk, template_name='characters/form.html'):
