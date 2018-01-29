@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 cd /code
+mv actionphase/.env.example actionphase/.env
 docker-compose build
 docker-compose run --rm web pip install -r requirements.txt >/dev/null
 docker-compose up -d
