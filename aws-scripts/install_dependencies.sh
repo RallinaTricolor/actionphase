@@ -6,5 +6,3 @@ curl -L https://github.com/docker/compose/releases/download/1.9.0/docker-compose
 chmod +x /usr/local/bin/docker-compose
 service docker start
 chkconfig docker on
-curl --silent --location https://rpm.nodesource.com/setup_8.x | bash -
-yum -y install nodejs
