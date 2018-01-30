@@ -1,7 +1,7 @@
 from django.forms import ModelForm
 from django.shortcuts import render, redirect, get_object_or_404
 
-from actionphase.app.models import Game, Thread, Comment
+from actionphase.app.models import Game, Thread, Comment, Character
 
 
 class ThreadForm(ModelForm):
@@ -26,7 +26,8 @@ def thread_create(request, game_id, template_name='threads/form.html'):
 def thread_view(request, pk, template_name='threads/view.html'):
     thread = get_object_or_404(Thread, pk=pk)
     comments = Comment.objects.filter(thread=thread)
-    return render(request, template_name, {'thread': thread, 'comments': comments})
+    character = Character.objects.filter(owner=request.user, game=thread.game).first()
+    return render(request, template_name, {'thread': thread, 'comments': comments, 'character': character})
 
 
 def thread_update(request, pk, template_name='threads/form.html'):

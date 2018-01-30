@@ -2,13 +2,17 @@
 {% block content %}
 <h2>{{ thread.name }}</h2>
 <a id="game-view-link-{{ thread.game.id }}" class="game-view-link" href="{% url "game_view" thread.game.id %}">Back to Game</a>
-<p>
+<div id="thread-text-{{ thread.id }}" class="thread-text">
     {{ thread.text }}
-</p>
+</div>
 {% if thread.author.id == request.user.id %}
     <a href="{% url "thread_edit" thread.id %}">Edit</a>
     <a href="{% url "thread_delete" thread.id %}">Delete</a>
 {% endif %}
+
+<div>
+    Replying as {{ character.name }}
+</div>
 
 {% if comments %}
     {% include 'threads/comment.html' %}
