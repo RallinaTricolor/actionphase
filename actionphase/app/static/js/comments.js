@@ -1,5 +1,16 @@
-// Submit post on submit
+
 $('#thread-form').on('submit', function(event){
     event.preventDefault();
-    console.log("form submitted!")  // sanity check
+    submitForm(event, $(this))
 });
+
+var submitForm = function(event, form) {
+    var $form = form;
+    var data = $form.data();
+    var url =  $form.attr('action')
+    console.log($form.attr('action'));
+    $.ajax({
+        url: url,
+        data: data
+    });
+};
