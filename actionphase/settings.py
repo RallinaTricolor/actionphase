@@ -218,6 +218,12 @@ PIPELINE = {'STYLESHEETS': {
             'js/bootstrap.js'
         ),
         'output_filename': 'js/min.js',
+    },
+    'comments': {
+        'source_filenames': (
+            'js/comments.js',
+        ),
+        'output_filename': 'js/comments.min.js'
     }
 }, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify')}
 

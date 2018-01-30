@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load pipeline %}
 {% block content %}
 <h2>{{ thread.name }}</h2>
 <a id="game-view-link-{{ thread.game.id }}" class="game-view-link" href="{% url "game_view" thread.game.id %}">Back to Game</a>
@@ -17,4 +18,8 @@
 {% if comments %}
     {% include 'threads/comment.html' %}
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+    {% javascript 'comments' %}
 {% endblock %}
