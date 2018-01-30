@@ -30,6 +30,9 @@
   jobs:
     include:
       - stage: CodeDeploy Stage
+        before_install: skip
+        install: skip
+        before_script: skip
         script: echo "Deploying to Stage Server..."
         deploy:
           on:
