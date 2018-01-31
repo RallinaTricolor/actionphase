@@ -1,5 +1,5 @@
 docker-compose run --rm web pip install -r requirements.txt && \
 docker-compose up -d && \
 docker exec code_web_1 npm install && \
-docker exec code_web_1  python manage.py migrate && \
-docker exec code_web_1  python manage.py collectstatic --noinput
+docker exec code_web_1 python manage.py migrate && \
+docker exec code_web_1 python manage.py collectstatic --noinput
