@@ -9,10 +9,9 @@ $('#thread-form').on('submit', function(event){
     submitForm(event, $(this))
 });
 
-var submitForm = function(event, form) {
+function submitForm(event, form) {
     var $form = form;
     var data = $form.data();
-    console.log(data);
     var url =  $form.attr('action');
 
     var parent_id = data.parentId;
