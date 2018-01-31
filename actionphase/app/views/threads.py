@@ -1,5 +1,6 @@
 from django.forms import ModelForm
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 
 from actionphase.app.models import Game, Thread, Comment, Character
 
@@ -52,3 +53,11 @@ def thread_delete(request, pk, template_name='threads/confirm_delete.html'):
         thread.delete()
         return redirect('game_view', game.id)
     return render(request, template_name, {'object': thread})
+
+
+def thread_comment(request, pk):
+    data = request.POST
+    if request.is_ajax():
+        return JsonResponse({"data": data})
+    else:
+        return redirect('thread_view', pk)
