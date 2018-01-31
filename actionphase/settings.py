@@ -214,6 +214,7 @@ PIPELINE = {'STYLESHEETS': {
     'main': {
         'source_filenames': (
             'js/jquery.js',
+            'js/jquery.cookie.js',
             'js/popper.js',
             'js/bootstrap.js'
         ),
