@@ -1,6 +1,7 @@
 from django.forms import ModelForm
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
+from django.core import serializers
 
 from actionphase.app.models import Game, Thread, Comment, Character
 
@@ -9,6 +10,12 @@ class ThreadForm(ModelForm):
     class Meta:
         model = Thread
         exclude = ['author', 'game']
+
+
+class CommentForm(ModelForm):
+    class Meta:
+        model = Comment
+        fields = ['text', 'author', 'thread']
 
 
 def thread_create(request, game_id, template_name='threads/form.html'):
@@ -56,8 +63,20 @@ def thread_delete(request, pk, template_name='threads/confirm_delete.html'):
 
 
 def thread_comment(request, pk):
-    data = request.POST
+    form = CommentForm(request.POST or None)
+    if form.is_valid():
+        comment = form.save(commit=False)
+        comment.save()
+        response_data = {
+            "success": True,
+            "data": serializers.serialize('json', [comment, ])
+        }
+    else:
+        response_data = {
+            "success": False,
+            "errors": form.errors
+        }
     if request.is_ajax():
-        return JsonResponse({"data": data})
+        return JsonResponse(response_data)
     else:
         return redirect('thread_view', pk)

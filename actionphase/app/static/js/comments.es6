@@ -24,12 +24,11 @@ const form_html = `
 
 let data = {
     text: 'Enter a comment...',
-    parent_id: null
 };
 
 Vue.component('comment-form', {
     template: form_html,
-    props: ['threadId', 'characterName'],
+    props: ['threadId', 'characterName', 'characterId', 'parentId'],
     data: function() {
         return data;
     },
@@ -48,7 +47,9 @@ Vue.component('comment-form', {
                 url: url,
                 data: {
                     'text': this.text,
-                    'parent_id': this.parent_id
+                    'parent': this.parentId,
+                    'thread': this.threadId,
+                    'author': this.characterId
                 }
             });
         }

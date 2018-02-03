@@ -12,7 +12,7 @@
 {% endif %}
 
 <div id="thread-form">
-    <comment-form character-name="{{ character.name }}" thread-id="{{thread.id}}"></comment-form>
+    <comment-form character-id="{{ character.id }}" character-name="{{ character.name }}" thread-id="{{thread.id}}"></comment-form>
 </div>
 
 {% if comments %}
