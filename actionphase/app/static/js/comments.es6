@@ -10,14 +10,14 @@ $('#thread-form').on('submit', function(event){
 });
 
 function submitForm(event, form) {
-    var $form = form;
-    var data = $form.data();
-    var url =  $form.attr('action');
+    let $form = form;
+    let data = $form.data();
+    let url =  $form.attr('action');
 
-    var parent_id = data.parentId;
-    var text = $form.find("textarea[name=text]").val();
+    let parent_id = data.parentId;
+    let text = $form.find("textarea[name=text]").val();
 
-    var csrftoken = $.cookie('csrftoken');
+    let csrftoken = $.cookie('csrftoken');
     $.ajaxSetup({
         beforeSend: function(xhr, settings) {
             if (!csrfSafeMethod(settings.type) && !this.crossDomain) {

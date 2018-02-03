@@ -228,7 +228,7 @@ PIPELINE = {'STYLESHEETS': {
     },
     'comments': {
         'source_filenames': (
-            'js/comments.js',
+            'js/comments.es6',
         ),
         'output_filename': 'js/comments.min.js'
     }
