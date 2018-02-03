@@ -185,7 +185,7 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'public, max-age=31536000',
 }
 if DEBUG:
-    os.path.join(BASE_DIR, 'static')
+    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
     STATICFILES_DIRS = [
         os.path.join(BASE_DIR, 'actionphase', 'app', 'static'),
         os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
