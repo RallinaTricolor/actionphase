@@ -236,4 +236,6 @@ PIPELINE = {'STYLESHEETS': {
     'COMPILERS': (
         'pipeline.compilers.es6.ES6Compiler',
         'pipeline.compilers.sass.SASSCompiler',
-    )}
+    ),
+    'BABEL_ARGUMENTS': '--presets es2015'
+}
