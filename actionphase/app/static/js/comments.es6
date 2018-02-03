@@ -4,7 +4,7 @@
 }
 
 const form_html = `
-    <form  class="comment-form" action="/threads/comment/" :data-thread-id="threadId" method="post" @submit.prevent="submitForm">
+    <form  class="comment-form" action="/threads/comment/" method="post" @submit.prevent="submitForm">
         <fieldset>
             <div class="form-group">
                 <label class="col-lg-3">Replying as <b>{{ characterName }}</b></label>
@@ -35,8 +35,7 @@ Vue.component('comment-form', {
     },
     methods: {
         submitForm: function(event) {
-            console.log(event.target.dataset);
-            let url =  event.target.action + event.target.dataset.threadId + '/';
+            let url =  event.target.action + this.threadId + '/';
             let csrftoken = $.cookie('csrftoken');
             $.ajaxSetup({
                 beforeSend: function(xhr, settings) {
