@@ -62,7 +62,7 @@ def thread_delete(request, pk, template_name='threads/confirm_delete.html'):
     return render(request, template_name, {'object': thread})
 
 
-def thread_comment(request, pk):
+def thread_comment(request):
     form = CommentForm(request.POST or None)
     if form.is_valid():
         comment = form.save(commit=False)

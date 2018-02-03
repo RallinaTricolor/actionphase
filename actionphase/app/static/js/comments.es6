@@ -45,7 +45,7 @@ Vue.component('comment-form', {
     methods: {
         submitForm: function(event) {
             let that = this;
-            let url =  event.target.action + this.threadId + '/';
+            let url =  event.target.action;
             let csrftoken = $.cookie('csrftoken');
             $.ajaxSetup({
                 beforeSend: function(xhr, settings) {

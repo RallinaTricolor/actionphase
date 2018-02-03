@@ -28,5 +28,5 @@ urlpatterns = [
     path('threads/view/<int:pk>/', views.thread_view, name='thread_view'),
     path('threads/edit/<int:pk>/', views.thread_update, name='thread_edit'),
     path('threads/delete/<int:pk>/', views.thread_delete, name='thread_delete'),
-    path('threads/comment/<int:pk>/', views.thread_comment, name='thread_comment'),
+    path('threads/comment/', views.thread_comment, name='thread_comment'),
 ]
