@@ -8,4 +8,4 @@ ADD . /code/
 RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
     apt-get update -yq && apt-get upgrade -yq && \
     apt-get install -yq g++ libssl-dev apache2-utils curl git python make nano mysql-client ruby ruby-dev nodejs && \
-    gem install sass
+    gem install sass && npm install --global babel-cli

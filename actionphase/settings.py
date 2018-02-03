@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     # Faster collectstatic for S3 backend. Temporarily removed due to a bug
-    #'collectfast', TODO: Check this before going live
+    # 'collectfast', TODO: Check this before going live
     'django.contrib.staticfiles',
     'django.core.mail',
     # Tree based models for comments
@@ -221,9 +221,12 @@ PIPELINE = {'STYLESHEETS': {
             'js/jquery.js',
             'js/popper.js',
             'js/bootstrap.js',
-            'vue.js'
+            'vue.js',
+            'js/test.es6'
         ),
         'output_filename': 'js/min.js',
     }
-}, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify')}
-
+}, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify'),
+    'COMPILERS': (
+        'pipeline.compilers.es6.ES6Compiler',
+    )}
