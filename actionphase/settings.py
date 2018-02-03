@@ -228,4 +228,5 @@ PIPELINE = {'STYLESHEETS': {
 }, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify'),
     'COMPILERS': (
         'pipeline.compilers.es6.ES6Compiler',
+        'pipeline.compilers.sass.SASSCompiler',
     )}
