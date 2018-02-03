@@ -4,7 +4,8 @@
   "description": "Action Phase",
   "main": "index.js",
   "dependencies": {
-    "yuglify": "^1.0.1"
+    "yuglify": "^1.0.1",
+    "vue": "^2.0.0"
   },
   "devDependencies": {},
   "scripts": {

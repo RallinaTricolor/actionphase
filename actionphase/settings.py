@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     # Faster collectstatic for S3 backend. Temporarily removed due to a bug
-    #'collectfast', TODO: Check this before going live
+    # 'collectfast', TODO: Check this before going live
     'django.contrib.staticfiles',
     'django.core.mail',
     # Tree based models for comments
@@ -186,6 +186,10 @@ AWS_S3_OBJECT_PARAMETERS = {
 }
 if DEBUG:
     STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'actionphase', 'app', 'static'),
+        os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
+    ]
     STATIC_URL = '/static/'
     STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
     MEDIA_ROOT = '/media/'
@@ -194,6 +198,7 @@ else:
     STATICFILES_STORAGE = 'actionphase.storage_backends.S3PipelineStorage'
     STATICFILES_DIRS = [
         os.path.join(BASE_DIR, 'actionphase', 'app', 'static'),
+        os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
     ]
     STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
     DEFAULT_FILE_STORAGE = 'actionphase.storage_backends.S3MediaStorage'
@@ -215,9 +220,13 @@ PIPELINE = {'STYLESHEETS': {
         'source_filenames': (
             'js/jquery.js',
             'js/popper.js',
-            'js/bootstrap.js'
+            'js/bootstrap.js',
+            'vue.js',
         ),
         'output_filename': 'js/min.js',
     }
-}, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify')}
-
+}, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify'),
+    'COMPILERS': (
+        'pipeline.compilers.es6.ES6Compiler',
+        'pipeline.compilers.sass.SASSCompiler',
+    )}
