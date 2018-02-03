@@ -222,7 +222,6 @@ PIPELINE = {'STYLESHEETS': {
             'js/popper.js',
             'js/bootstrap.js',
             'vue.js',
-            'js/test.es6'
         ),
         'output_filename': 'js/min.js',
     }
