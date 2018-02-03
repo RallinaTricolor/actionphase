@@ -185,7 +185,11 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'public, max-age=31536000',
 }
 if DEBUG:
-    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+    STATIC_ROOT = '/static/'
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'actionphase', 'app', 'static'),
+        os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
+    ]
     STATIC_URL = '/static/'
     STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
     MEDIA_ROOT = '/media/'
@@ -194,6 +198,7 @@ else:
     STATICFILES_STORAGE = 'actionphase.storage_backends.S3PipelineStorage'
     STATICFILES_DIRS = [
         os.path.join(BASE_DIR, 'actionphase', 'app', 'static'),
+        os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
     ]
     STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
     DEFAULT_FILE_STORAGE = 'actionphase.storage_backends.S3MediaStorage'
@@ -215,7 +220,8 @@ PIPELINE = {'STYLESHEETS': {
         'source_filenames': (
             'js/jquery.js',
             'js/popper.js',
-            'js/bootstrap.js'
+            'js/bootstrap.js',
+            'vue.js'
         ),
         'output_filename': 'js/min.js',
     }
