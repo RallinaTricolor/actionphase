@@ -11,8 +11,8 @@
     <a href="{% url "thread_delete" thread.id %}">Delete</a>
 {% endif %}
 
-<div>
-    {% include 'threads/comment_form.html' %}
+<div id="thread-form">
+    <comment-form character-name="{{ character.name }}" thread-id="{{thread.id}}"></comment-form>
 </div>
 
 {% if comments %}

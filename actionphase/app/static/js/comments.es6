@@ -3,33 +3,60 @@
     return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
 }
 
+const form_html = `
+    <form  class="comment-form" action="/threads/comment/" :data-thread-id="threadId" method="post" @submit.prevent="submitForm">
+        <fieldset>
+            <div class="form-group">
+                <label class="col-lg-3">Replying as <b>{{ characterName }}</b></label>
+                <div class="col-lg-10">
+                    <textarea class="form-control" rows="3" name="text" v-model="text"></textarea>
+                    <span class="text-success" style="display: none"></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-lg-10 col-lg-offset-2">
+                    <button type="submit" class="submit-button btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </fieldset>
+    </form>
+`;
 
-$('#thread-form').on('submit', function(event){
-    event.preventDefault();
-    submitForm(event, $(this))
+let data = {
+    text: 'Enter a comment...',
+    parent_id: null
+};
+
+Vue.component('comment-form', {
+    template: form_html,
+    props: ['threadId', 'characterName'],
+    data: function() {
+        return data;
+    },
+    methods: {
+        submitForm: function(event) {
+            console.log(event.target.dataset);
+            let url =  event.target.action + event.target.dataset.threadId + '/';
+            let csrftoken = $.cookie('csrftoken');
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            });
+            $.post({
+                url: url,
+                data: {
+                    'text': this.text,
+                    'parent_id': this.parent_id
+                }
+            });
+        }
+    }
 });
 
-function submitForm(event, form) {
-    let $form = form;
-    let data = $form.data();
-    let url =  $form.attr('action');
-
-    let parent_id = data.parentId;
-    let text = $form.find("textarea[name=text]").val();
-
-    let csrftoken = $.cookie('csrftoken');
-    $.ajaxSetup({
-        beforeSend: function(xhr, settings) {
-            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
-            }
-        }
-    });
-    $.post({
-        url: url,
-        data: {
-            'text': text,
-            'parent_id': parent_id
-        }
-    });
-};
+let vm = new Vue({
+    el: '#thread-form',
+    delimiters: ["[[","]]"]
+});
