@@ -16,7 +16,9 @@
 </div>
 
 {% if comments %}
-    {% include 'threads/comment.html' %}
+    <div id="comments">
+        {% include 'threads/comment.html' %}
+    </div>
 {% endif %}
 {% endblock %}
 

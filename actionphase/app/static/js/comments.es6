@@ -130,18 +130,17 @@ let vm = new Vue({
     el: '#thread-form'
 });
 
-$(document).ready(function() {
-    let vm2 = new Vue({
-        el: '.comment',
-        methods: {
-            createReplyForm: function(event) {
-                let commentId = event.target.dataset.commentId;
-                new CommentForm({propsData: {
-                    characterId: data.characterId,
-                    characterName: data.characterName,
-                    threadId: data.threadId
-                }}).$mount('#reply-form-' + commentId)
-            }
+let vm2 = new Vue({
+    el: '#comments',
+    methods: {
+        createReplyForm: function(event) {
+            let commentId = event.target.dataset.commentId;
+            new CommentForm({propsData: {
+                parentId: commentId,
+                characterId: characterId,
+                characterName: characterName,
+                threadId: threadId
+            }}).$mount('#reply-form-' + commentId)
         }
-    });
+    }
 });
