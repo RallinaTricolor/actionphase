@@ -5,7 +5,8 @@
         <div class="comment-body">
             <a class="comment-author" href="/character/{{ node.author.id }}">{{ node.author.name }}</a>
             {{ node.text|safe }}
-            
+            <a id="reply-link-{{node.id}}" data-comment-id="{{node.id}}" href="#" @click.prevent="createReplyForm">Reply</a>
+            <div id="reply-form-{{node.id}}"></div>
             {% if not node.is_leaf_node %}
                 <ul class="children">
                     {{ children }}

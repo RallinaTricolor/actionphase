@@ -15,7 +15,7 @@ class ThreadForm(ModelForm):
 class CommentForm(ModelForm):
     class Meta:
         model = Comment
-        fields = ['text', 'author', 'thread']
+        fields = ['text', 'parent', 'author', 'thread']
         error_messages = {
             'text': {
                 'required': 'Please put some text in your comment!'

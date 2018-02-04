@@ -40,36 +40,43 @@ const comment_form_html = `
                 </div>
             </fieldset>
         </form>
-        <comment-errors></comment-errors>
-        <comment-reply :character-id="characterId" :character-name="characterName"></comment-reply>
+        <div :id="'comment-errors' + parentId"></div>
+        <div :id="'comment-reply' + parentId"></div>
     </div>
 `;
 
 let data = {
-    text: null,
     replied: false,
     errors: false,
-    replyText: null
+    replyText: null,
+    characterId: characterId,
+    threadId: threadId,
+    characterName: characterName
 };
 
-Vue.component('comment-errors', {
+let CommentErrors = Vue.extend({
     template: comment_errors_html,
     data: function() {
-        return data;
+        return {
+            errors: data['errors']
+        };
     }
 });
 
-Vue.component('comment-reply', {
+let CommentReply = Vue.extend({
     template: comment_reply_html,
     props: ['characterName', 'characterId'],
     data: function() {
-        return data;
+        return {
+            replied: data['replied'],
+            replyText: data['replyText']
+        };
     }
 });
 
-Vue.component('comment-form', {
+let CommentFormConfiguration = {
     template: comment_form_html,
-    props: ['threadId', 'characterName', 'characterId', 'parentId'],
+    props: ['text', 'parentId'],
     data: function() {
         return data;
     },
@@ -100,6 +107,7 @@ Vue.component('comment-form', {
                     let commentData = comment.fields;
                     that.replied = true;
                     that.replyText = commentData.text;
+                    new CommentReply({propsData: {characterId: that.characterId, characterName: that.characterName}}).$mount('#comment-reply' + that.parentId);
                 } else {
                     let errors = response.errors;
                     that.errors = [];
@@ -108,12 +116,32 @@ Vue.component('comment-form', {
                             that.errors.push(errors[field][error]);
                         }
                     }
+                    new CommentErrors().$mount('#comment-errors' + that.parentId);
                 }
             });
         }
     }
-});
+};
+
+let CommentForm = Vue.extend(CommentFormConfiguration);
+Vue.component('comment-form', CommentFormConfiguration);
 
 let vm = new Vue({
     el: '#thread-form'
+});
+
+$(document).ready(function() {
+    let vm2 = new Vue({
+        el: '.comment',
+        methods: {
+            createReplyForm: function(event) {
+                let commentId = event.target.dataset.commentId;
+                new CommentForm({propsData: {
+                    characterId: data.characterId,
+                    characterName: data.characterName,
+                    threadId: data.threadId
+                }}).$mount('#reply-form-' + commentId)
+            }
+        }
+    });
 });
