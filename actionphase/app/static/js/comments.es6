@@ -3,6 +3,25 @@
     return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
 }
 
+const comment_errors_html = `
+    <div class="comment-errors" v-show="errors">
+        <ul class="comment-error-list">
+            <li v-for="error in errors">
+                {{error}}
+            </li>
+        </ul>
+    </div>
+`;
+
+const comment_reply_html = `
+    <div class="comment-body" v-show="replied">
+        <a class="comment-author" :href="'/character/' + characterId">{{ characterName }}</a>
+        <div class="comment-text">
+            {{ replyText }}
+        </div>
+    </div>
+`;
+
 const form_html = `
     <div>
         <form  class="comment-form" action="/threads/comment/" method="post" @submit.prevent="submitForm">
@@ -21,28 +40,32 @@ const form_html = `
                 </div>
             </fieldset>
         </form>
-        <div class="comment-errors" v-show="errors">
-            <ul class="comment-error-list">
-                <li v-for="error in errors">
-                    {{error}}
-                </li>
-            </ul>
-        </div>
-        <div class="comment-body" v-show="replied">
-            <a class="comment-author" :href="'/character/' + characterId">{{ characterName }}</a>
-            <div class="comment-text">
-                {{ replyText }}
-            </div>
-        </div>
+        <comment-errors></comment-errors>
+        <comment-reply :character-id="characterId" :character-name="characterName"></comment-reply>
     </div>
 `;
 
 let data = {
-    text: 'Enter a comment...',
+    text: null,
     replied: false,
     errors: false,
     replyText: null
 };
+
+Vue.component('comment-errors', {
+    template: comment_errors_html,
+    data: function() {
+        return data;
+    }
+});
+
+Vue.component('comment-reply', {
+    template: comment_reply_html,
+    props: ['characterName', 'characterId'],
+    data: function() {
+        return data;
+    }
+});
 
 Vue.component('comment-form', {
     template: form_html,
@@ -81,7 +104,6 @@ Vue.component('comment-form', {
                     let errors = response.errors;
                     that.errors = [];
                     for (let field in errors) {
-                        console.log(errors);
                         for (let error in errors[field]) {
                             that.errors.push(errors[field][error]);
                         }
