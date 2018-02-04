@@ -16,6 +16,14 @@ class CommentForm(ModelForm):
     class Meta:
         model = Comment
         fields = ['text', 'author', 'thread']
+        error_messages = {
+            'text': {
+                'required': 'Please put some text in your comment!'
+            },
+            'author': {
+                'required': 'A character is required to reply to this thread!'
+            }
+        }
 
 
 def thread_create(request, game_id, template_name='threads/form.html'):

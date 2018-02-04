@@ -21,6 +21,13 @@ const form_html = `
                 </div>
             </fieldset>
         </form>
+        <div class="comment-errors" v-show="errors">
+            <ul class="comment-error-list">
+                <li v-for="error in errors">
+                    {{error}}
+                </li>
+            </ul>
+        </div>
         <div class="comment-body" v-show="replied">
             <a class="comment-author" :href="'/character/' + characterId">{{ characterName }}</a>
             <div class="comment-text">
@@ -33,6 +40,7 @@ const form_html = `
 let data = {
     text: 'Enter a comment...',
     replied: false,
+    errors: false,
     replyText: null
 };
 
@@ -69,6 +77,15 @@ Vue.component('comment-form', {
                     let commentData = comment.fields;
                     that.replied = true;
                     that.replyText = commentData.text;
+                } else {
+                    let errors = response.errors;
+                    that.errors = [];
+                    for (let field in errors) {
+                        console.log(errors);
+                        for (let error in errors[field]) {
+                            that.errors.push(errors[field][error]);
+                        }
+                    }
                 }
             });
         }
