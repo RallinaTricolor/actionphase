@@ -22,7 +22,7 @@ const comment_reply_html = `
     </div>
 `;
 
-const form_html = `
+const comment_form_html = `
     <div>
         <form  class="comment-form" action="/threads/comment/" method="post" @submit.prevent="submitForm">
             <fieldset>
@@ -68,7 +68,7 @@ Vue.component('comment-reply', {
 });
 
 Vue.component('comment-form', {
-    template: form_html,
+    template: comment_form_html,
     props: ['threadId', 'characterName', 'characterId', 'parentId'],
     data: function() {
         return data;
