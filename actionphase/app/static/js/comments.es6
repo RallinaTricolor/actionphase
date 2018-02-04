@@ -127,11 +127,7 @@ let CommentForm = Vue.extend(CommentFormConfiguration);
 Vue.component('comment-form', CommentFormConfiguration);
 
 let vm = new Vue({
-    el: '#thread-form'
-});
-
-let vm2 = new Vue({
-    el: '#comments',
+    el: '#thread',
     methods: {
         createReplyForm: function(event) {
             let commentId = event.target.dataset.commentId;

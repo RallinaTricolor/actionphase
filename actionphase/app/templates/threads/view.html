@@ -2,24 +2,26 @@
 {% load pipeline %}
 {% block content %}
 <h2>{{ thread.name }}</h2>
-<a id="game-view-link-{{ thread.game.id }}" class="game-view-link" href="{% url "game_view" thread.game.id %}">Back to Game</a>
-<div id="thread-text-{{ thread.id }}" class="thread-text">
-    {{ thread.text }}
-</div>
-{% if thread.author.id == request.user.id %}
-    <a href="{% url "thread_edit" thread.id %}">Edit</a>
-    <a href="{% url "thread_delete" thread.id %}">Delete</a>
-{% endif %}
-
-<div id="thread-form">
-    <comment-form parent-id="" text=""></comment-form>
-</div>
-
-{% if comments %}
-    <div id="comments">
-        {% include 'threads/comment.html' %}
+<div id="thread">
+    <a id="game-view-link-{{ thread.game.id }}" class="game-view-link" href="{% url "game_view" thread.game.id %}">Back to Game</a>
+    <div id="thread-text-{{ thread.id }}" class="thread-text">
+        {{ thread.text }}
     </div>
-{% endif %}
+    {% if thread.author.id == request.user.id %}
+        <a href="{% url "thread_edit" thread.id %}">Edit</a>
+        <a href="{% url "thread_delete" thread.id %}">Delete</a>
+    {% endif %}
+
+    <div id="thread-form">
+        <comment-form parent-id="" text=""></comment-form>
+    </div>
+
+    {% if comments %}
+        <div id="comments">
+            {% include 'threads/comment.html' %}
+        </div>
+    {% endif %}
+</div>
 {% endblock %}
 
 {% block scripts %}
