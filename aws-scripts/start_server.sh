@@ -8,4 +8,5 @@ sleep 15
 docker exec code_web_1 npm install --silent
 docker exec code_web_1 python manage.py migrate
 docker exec code_web_1 python manage.py collectstatic --noinput
+docker exec code_web_1 load_fixtures.sh
 docker exec code_web_1 python manage.py runserver 0.0.0.0:8000
