@@ -1,13 +1,29 @@
 from django.forms import ModelForm
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
+from django.core import serializers
 
-from actionphase.app.models import Game, Thread, Comment
+from actionphase.app.models import Game, Thread, Comment, Character
 
 
 class ThreadForm(ModelForm):
     class Meta:
         model = Thread
         exclude = ['author', 'game']
+
+
+class CommentForm(ModelForm):
+    class Meta:
+        model = Comment
+        fields = ['text', 'parent', 'author', 'thread']
+        error_messages = {
+            'text': {
+                'required': 'Please put some text in your comment!'
+            },
+            'author': {
+                'required': 'A character is required to reply to this thread!'
+            }
+        }
 
 
 def thread_create(request, game_id, template_name='threads/form.html'):
@@ -23,10 +39,17 @@ def thread_create(request, game_id, template_name='threads/form.html'):
     return render(request, template_name, {'form': form})
 
 
-def thread_view(request, pk, template_name='threads/view.html'):
+def thread_view(request, pk, comment_id=None, template_name='threads/view.html'):
     thread = get_object_or_404(Thread, pk=pk)
-    comments = Comment.objects.filter(thread=thread)
-    return render(request, template_name, {'thread': thread, 'comments': comments})
+    depth = 0
+    if comment_id is None:
+        comments = Comment.objects.filter(thread=thread, level__lte=5)
+    else:
+        parent = Comment.objects.get(pk=comment_id)
+        comments = parent.get_descendants(include_self=True).filter(level__lte=parent.level + 5)
+        depth = parent.level
+    character = Character.objects.filter(owner=request.user, game=thread.game).first()
+    return render(request, template_name, {'thread': thread, 'comments': comments, 'character': character, 'depth': depth})
 
 
 def thread_update(request, pk, template_name='threads/form.html'):
@@ -51,3 +74,23 @@ def thread_delete(request, pk, template_name='threads/confirm_delete.html'):
         thread.delete()
         return redirect('game_view', game.id)
     return render(request, template_name, {'object': thread})
+
+
+def thread_comment(request):
+    form = CommentForm(request.POST or None)
+    if form.is_valid():
+        comment = form.save(commit=False)
+        comment.save()
+        response_data = {
+            "success": True,
+            "data": serializers.serialize('json', [comment, ])
+        }
+    else:
+        response_data = {
+            "success": False,
+            "errors": form.errors
+        }
+    if request.is_ajax():
+        return JsonResponse(response_data)
+    else:
+        return redirect('thread_view', form.threadId)

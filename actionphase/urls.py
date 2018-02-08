@@ -22,4 +22,5 @@ urlpatterns = [
     path('', include('actionphase.app.urls')),
     path('accounts/', include('registration.backends.simple.urls')),
     path('admin/', admin.site.urls),
+    path('markdownx/', include('markdownx.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
