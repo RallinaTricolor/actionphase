@@ -3,6 +3,10 @@
     return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
 }
 
+const reply_link_html = `
+    <a v-show="unreplied" :id="'reply-link-' + parentId" :data-comment-id="parentId" href="#" @click.prevent="createReplyForm">Reply</a>
+`;
+
 const comment_errors_html = `
     <div class="comment-errors" v-show="errors">
         <ul class="comment-error-list">
@@ -55,6 +59,29 @@ let data = {
     threadId: threadId,
     characterName: characterName
 };
+
+Vue.component('comment-reply-link', {
+    template: reply_link_html,
+    props: ['parentId'],
+    data: function() {
+        return {
+            unreplied: true
+        };
+    },
+    methods: {
+        createReplyForm: function(event) {
+            let commentId = this.parentId;
+            new CommentForm({propsData: {
+                parentId: commentId,
+                characterId: characterId,
+                characterName: characterName,
+                threadId: threadId,
+                unsubmitted: true
+            }}).$mount('#reply-form-' + commentId);
+            this.unreplied = false;
+        }
+    }
+});
 
 let CommentErrors = Vue.extend({
     template: comment_errors_html,
@@ -130,17 +157,5 @@ let CommentForm = Vue.extend(CommentFormConfiguration);
 Vue.component('comment-form', CommentFormConfiguration);
 
 let vm = new Vue({
-    el: '#thread',
-    methods: {
-        createReplyForm: function(event) {
-            let commentId = event.target.dataset.commentId;
-            new CommentForm({propsData: {
-                parentId: commentId,
-                characterId: characterId,
-                characterName: characterName,
-                threadId: threadId,
-                unsubmitted: true
-            }}).$mount('#reply-form-' + commentId)
-        }
-    }
+    el: '#thread'
 });
