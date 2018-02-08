@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from mptt.models import MPTTModel, TreeForeignKey
 from actionphase.app.models.games import Game, Character
+from markdownx.models import MarkdownxField
+from markdownx.utils import markdownify
 
 
 class Thread(models.Model):
@@ -15,7 +17,11 @@ class Thread(models.Model):
         on_delete=models.CASCADE
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    text = models.TextField()
+    text = MarkdownxField()
+
+    @property
+    def formatted_markdown(self):
+        return markdownify(self.text)
 
 
 class Comment(MPTTModel):
@@ -29,4 +35,8 @@ class Comment(MPTTModel):
     )
     parent = TreeForeignKey('self', related_name='children', null=True, blank=True, db_index=True, on_delete=models.DO_NOTHING)
     created_at = models.DateTimeField(auto_now_add=True)
-    text = models.TextField()
+    text = MarkdownxField()
+
+    @property
+    def formatted_markdown(self):
+        return markdownify(self.text)

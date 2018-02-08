@@ -4,7 +4,7 @@
     <div class="comment">
         <div class="comment-body">
             <a class="comment-author" href="/character/{{ node.author.id }}">{{ node.author.name }}</a>
-            <comment-text text="{{node.text|safe}}"></comment-text>
+            <comment-text text="{{node.formatted_markdown}}"></comment-text>
             <comment-reply-link parent-id="{{node.id}}"></comment-reply-link>
             <div id="reply-form-{{node.id}}"></div>
             {% if not node.is_leaf_node %}

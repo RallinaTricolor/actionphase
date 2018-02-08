@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'pipeline',
     # S3 file storage
     'storages',
+    # Markdown Support
+    'markdownx',
     'actionphase.app',
 ]
 
