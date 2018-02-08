@@ -91,4 +91,4 @@ def thread_comment(request):
     if request.is_ajax():
         return JsonResponse(response_data)
     else:
-        return redirect('thread_view', pk)
+        return redirect('thread_view', form.threadId)
