@@ -102,9 +102,14 @@ Vue.component('comment-text', CommentReplyConfiguration);
 
 let CommentFormConfiguration = {
     template: comment_form_html,
-    props: ['text', 'parentId', 'unsubmitted'],
+    props: ['parentId', 'unsubmitted'],
     data: function() {
-        return data;
+        return {
+            threadId: data['threadId'],
+            characterId: data['characterId'],
+            characterName: data['characterName'],
+            text: ""
+        };
     },
     methods: {
         submitForm: function(event) {
@@ -135,13 +140,14 @@ let CommentFormConfiguration = {
                     that.unsubmitted = false;
                 } else {
                     let errors = response.errors;
-                    that.errors = [];
+                    let errorList = [];
                     for (let field in errors) {
                         for (let error in errors[field]) {
-                            that.errors.push(errors[field][error]);
+                            errorList.push(errors[field][error]);
                         }
                     }
-                    new CommentErrors().$mount('#comment-errors' + that.parentId);
+                    console.log(that.errors);
+                    new CommentErrors({data: {errors: errorList}}).$mount('#comment-errors' + that.parentId);
                 }
             });
         }
