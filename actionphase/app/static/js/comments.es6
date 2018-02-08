@@ -52,9 +52,6 @@ const comment_form_html = `
 `;
 
 let data = {
-    replied: false,
-    errors: false,
-    replyText: null,
     characterId: characterId,
     threadId: threadId,
     characterName: characterName
@@ -87,7 +84,7 @@ let CommentErrors = Vue.extend({
     template: comment_errors_html,
     data: function() {
         return {
-            errors: data['errors']
+            errors: []
         };
     }
 });
@@ -97,8 +94,8 @@ let CommentReply = Vue.extend({
     props: ['characterName', 'characterId'],
     data: function() {
         return {
-            replied: data['replied'],
-            replyText: data['replyText']
+            replied: false,
+            replyText: ""
         };
     }
 });
@@ -134,9 +131,7 @@ let CommentFormConfiguration = {
                     let comments = JSON.parse(response.data);
                     let comment = comments[0];
                     let commentData = comment.fields;
-                    that.replied = true;
-                    that.replyText = commentData.text;
-                    new CommentReply({propsData: {characterId: that.characterId, characterName: that.characterName}}).$mount('#comment-reply' + that.parentId);
+                    new CommentReply({data: {replied: true, replyText: commentData.text}, propsData: {characterId: that.characterId, characterName: that.characterName}}).$mount('#comment-reply' + that.parentId);
                     that.unsubmitted = false;
                 } else {
                     let errors = response.errors;
