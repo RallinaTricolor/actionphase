@@ -6,6 +6,7 @@
             <a class="comment-author" href="/character/{{ node.author.id }}">{{ node.author.name }}</a>
             <comment-text text="{{node.formatted_markdown}}"></comment-text>
             <comment-reply-link parent-id="{{node.id}}"></comment-reply-link>
+            <a href="{% url "thread_view" thread.id node.id %}">Permalink</a>
             <div id="reply-form-{{node.id}}"></div>
             {% if not node.is_leaf_node %}
                 <ul class="children">
