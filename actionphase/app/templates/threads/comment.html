@@ -7,6 +7,9 @@
             <comment-text text="{{node.formatted_markdown}}"></comment-text>
             <comment-reply-link parent-id="{{node.id}}"></comment-reply-link>
             <a href="{% url "thread_view" thread.id node.id %}">Permalink</a>
+            {% if depth|add:"5" == node.level and not node.is_leaf_node %}
+                <a href="{% url "thread_view" thread.id node.id %}">View more...</a>
+            {% endif %}
             <div id="reply-form-{{node.id}}"></div>
             {% if not node.is_leaf_node %}
                 <ul class="children">

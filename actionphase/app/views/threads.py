@@ -39,15 +39,17 @@ def thread_create(request, game_id, template_name='threads/form.html'):
     return render(request, template_name, {'form': form})
 
 
-def thread_view(request, pk, comment_id = None, template_name='threads/view.html'):
+def thread_view(request, pk, comment_id=None, template_name='threads/view.html'):
     thread = get_object_or_404(Thread, pk=pk)
+    depth = 0
     if comment_id is None:
-        comments = Comment.objects.filter(thread=thread)
+        comments = Comment.objects.filter(thread=thread, level__lte=5)
     else:
         parent = Comment.objects.get(pk=comment_id)
-        comments = parent.get_descendants(include_self=True)
+        comments = parent.get_descendants(include_self=True).filter(level__lte=parent.level + 5)
+        depth = parent.level
     character = Character.objects.filter(owner=request.user, game=thread.game).first()
-    return render(request, template_name, {'thread': thread, 'comments': comments, 'character': character})
+    return render(request, template_name, {'thread': thread, 'comments': comments, 'character': character, 'depth': depth})
 
 
 def thread_update(request, pk, template_name='threads/form.html'):
