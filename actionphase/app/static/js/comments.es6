@@ -17,12 +17,12 @@ const comment_errors_html = `
     </div>
 `;
 
-const comment_reply_html = `
+const comment_text_html = `
     <ul class="children">
-        <div class="comment-body" v-show="replied">
+        <div class="comment-body">
             <a class="comment-author" :href="'/character/' + characterId">{{ characterName }}</a>
             <div class="comment-text">
-                {{ replyText }}
+                {{ text }}
             </div>
         </div>
     </ul>
@@ -89,16 +89,16 @@ let CommentErrors = Vue.extend({
     }
 });
 
-let CommentReply = Vue.extend({
-    template: comment_reply_html,
-    props: ['characterName', 'characterId'],
+let CommentReplyConfiguration = {
+    template: comment_text_html,
+    props: ['characterName', 'characterId', 'text'],
     data: function() {
-        return {
-            replied: false,
-            replyText: ""
-        };
+        return {};
     }
-});
+};
+
+let CommentReply = Vue.extend(CommentReplyConfiguration);
+Vue.component('comment-text', CommentReplyConfiguration);
 
 let CommentFormConfiguration = {
     template: comment_form_html,
@@ -131,7 +131,7 @@ let CommentFormConfiguration = {
                     let comments = JSON.parse(response.data);
                     let comment = comments[0];
                     let commentData = comment.fields;
-                    new CommentReply({data: {replied: true, replyText: commentData.text}, propsData: {characterId: that.characterId, characterName: that.characterName}}).$mount('#comment-reply' + that.parentId);
+                    new CommentReply({propsData: {characterId: that.characterId, characterName: that.characterName, text: commentData.text}}).$mount('#comment-reply' + that.parentId);
                     that.unsubmitted = false;
                 } else {
                     let errors = response.errors;
