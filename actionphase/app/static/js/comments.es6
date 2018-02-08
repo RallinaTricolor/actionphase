@@ -22,7 +22,7 @@ const comment_text_html = `
         <div class="comment-body">
             <a class="comment-author" :href="'/character/' + characterId">{{ characterName }}</a>
             <div class="comment-text">
-                {{ text }}
+                <span v-html="text"></span>
             </div>
         </div>
     </ul>
