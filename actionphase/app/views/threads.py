@@ -39,9 +39,13 @@ def thread_create(request, game_id, template_name='threads/form.html'):
     return render(request, template_name, {'form': form})
 
 
-def thread_view(request, pk, template_name='threads/view.html'):
+def thread_view(request, pk, comment_id = None, template_name='threads/view.html'):
     thread = get_object_or_404(Thread, pk=pk)
-    comments = Comment.objects.filter(thread=thread)
+    if comment_id is None:
+        comments = Comment.objects.filter(thread=thread)
+    else:
+        parent = Comment.objects.get(pk=comment_id)
+        comments = parent.get_descendants(include_self=True)
     character = Character.objects.filter(owner=request.user, game=thread.game).first()
     return render(request, template_name, {'thread': thread, 'comments': comments, 'character': character})
 

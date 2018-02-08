@@ -26,6 +26,7 @@ urlpatterns = [
     # Threads
     path('threads/new/<int:game_id>/', views.thread_create, name='thread_new'),
     path('threads/view/<int:pk>/', views.thread_view, name='thread_view'),
+    path('threads/view/<int:pk>/comment/<int:comment_id>/', views.thread_view, name='thread_view'),
     path('threads/edit/<int:pk>/', views.thread_update, name='thread_edit'),
     path('threads/delete/<int:pk>/', views.thread_delete, name='thread_delete'),
     path('threads/comment/', views.thread_comment, name='thread_comment'),
