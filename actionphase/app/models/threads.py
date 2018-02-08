@@ -37,6 +37,9 @@ class Comment(MPTTModel):
     created_at = models.DateTimeField(auto_now_add=True)
     text = MarkdownxField()
 
+    class MPTTMeta:
+        order_insertion_by = ['-created_at']
+
     @property
     def formatted_markdown(self):
         return markdownify(self.text)
