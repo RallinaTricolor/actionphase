@@ -14,17 +14,19 @@ const comment_errors_html = `
 `;
 
 const comment_reply_html = `
-    <div class="comment-body" v-show="replied">
-        <a class="comment-author" :href="'/character/' + characterId">{{ characterName }}</a>
-        <div class="comment-text">
-            {{ replyText }}
+    <ul class="children">
+        <div class="comment-body" v-show="replied">
+            <a class="comment-author" :href="'/character/' + characterId">{{ characterName }}</a>
+            <div class="comment-text">
+                {{ replyText }}
+            </div>
         </div>
-    </div>
+    </ul>
 `;
 
 const comment_form_html = `
     <div>
-        <form  class="comment-form" action="/threads/comment/" method="post" @submit.prevent="submitForm">
+        <form v-show="unsubmitted" class="comment-form" action="/threads/comment/" method="post" @submit.prevent="submitForm">
             <fieldset>
                 <div class="form-group">
                     <label class="col-lg-3">Replying as <b>{{ characterName }}</b></label>
@@ -76,7 +78,7 @@ let CommentReply = Vue.extend({
 
 let CommentFormConfiguration = {
     template: comment_form_html,
-    props: ['text', 'parentId'],
+    props: ['text', 'parentId', 'unsubmitted'],
     data: function() {
         return data;
     },
@@ -108,6 +110,7 @@ let CommentFormConfiguration = {
                     that.replied = true;
                     that.replyText = commentData.text;
                     new CommentReply({propsData: {characterId: that.characterId, characterName: that.characterName}}).$mount('#comment-reply' + that.parentId);
+                    that.unsubmitted = false;
                 } else {
                     let errors = response.errors;
                     that.errors = [];
@@ -135,7 +138,8 @@ let vm = new Vue({
                 parentId: commentId,
                 characterId: characterId,
                 characterName: characterName,
-                threadId: threadId
+                threadId: threadId,
+                unsubmitted: true
             }}).$mount('#reply-form-' + commentId)
         }
     }
