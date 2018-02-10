@@ -18,4 +18,5 @@ exclude_lines =
     raise AssertionError
     raise NotImplementedError
     raise ValidationError
+    raise PermissionDenied
     except DatabaseError:
