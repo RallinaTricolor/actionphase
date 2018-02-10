@@ -25,6 +25,7 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', cast=bool)
 USE_AWS = config('USE_AWS', cast=bool, default=False)
+USE_PIPELINE = config('USE_PIPELINE', cast=bool, default=True)
 
 ALLOWED_HOSTS = [
     'stage.actionpha.se',
@@ -202,7 +203,8 @@ else:
         os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
     ]
     STATIC_URL = '/static/'
-    STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
+    STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage' if USE_PIPELINE else 'pipeline.storage' \
+                                                                                        '.NonPackagingPipelineStorage '
     MEDIA_ROOT = '/media/'
     MEDIA_URL = '/media/'
 STATICFILES_FINDERS = (
@@ -211,7 +213,7 @@ STATICFILES_FINDERS = (
     'pipeline.finders.PipelineFinder',
 )
 
-PIPELINE = {'PIPELINE_ENABLED': config('USE_PIPELINE', cast=bool, default=True),
+PIPELINE = {'PIPELINE_ENABLED': USE_PIPELINE,
             'STYLESHEETS': {
                 'main': {
                     'source_filenames': (
