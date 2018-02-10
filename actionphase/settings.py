@@ -211,7 +211,8 @@ STATICFILES_FINDERS = (
     'pipeline.finders.PipelineFinder',
 )
 
-PIPELINE = {'STYLESHEETS': {
+PIPELINE = {'PIPELINE_ENABLED': config('USE_PIPELINE', cast=bool, default=True),
+    'STYLESHEETS': {
     'main': {
         'source_filenames': (
             'css/bootstrap.css',
@@ -242,5 +243,3 @@ PIPELINE = {'STYLESHEETS': {
     ),
     'BABEL_ARGUMENTS': '--presets es2015'
 }
-
-PIPELINE_ENABLED = config('USE_PIPELINE', cast=bool, default=True)
