@@ -33,3 +33,6 @@ CHARACTER_SUBMIT_BUTTON_CLASS = "character-submit-button"
 CHARACTER_REVIEW_BUTTON_ID = "character-review-button"
 CHARACTER_APPROVE_BUTTON_ID = "character-approve-button"
 CHARACTER_REJECT_BUTTON_ID = "character-reject-button"
+
+# Thread Elements
+THREAD_CONTENT_ID = "thread"

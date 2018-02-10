@@ -7,6 +7,7 @@
       - TESTFOLDER=integration
       - TESTFOLDER=functional.user
       - TESTFOLDER=functional.games
+      - TESTFOLDER=functional.plugins
   addons:
     firefox: latest
   language: python
