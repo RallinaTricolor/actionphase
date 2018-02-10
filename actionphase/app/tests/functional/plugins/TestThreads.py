@@ -24,12 +24,6 @@ class ThreadsTest(BaseStaticLiveServerTestCase):
     def test_thread_comment(self):
         self.authenticate()
         self.selenium.get('%s%s%s' % (self.live_server_url, '/threads/view/', url.REPLYABLE_THREAD_ID))
-        page = self.selenium.find_elements(By.TAG_NAME, 'script')
-        for i in page:
-            self.selenium.get((i.get_attribute('src')))
-            print(self.selenium.page_source)
-        exit()
-
         self.wait.until(ec.element_to_be_clickable((By.CLASS_NAME, css.THREAD_SUBMIT_BUTTON_CLASS)))
         reply_text = TestHelper.random_string(32)
         text_input = self.selenium.find_element_by_name("text")
