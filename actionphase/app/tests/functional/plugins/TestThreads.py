@@ -17,5 +17,5 @@ class ThreadsTest(BaseStaticLiveServerTestCase):
 
     def test_thread_view(self):
         self.authenticate()
-        self.selenium.get('%s%s%s' % (self.live_server_url, '/thrads/', url.REPLYABLE_THREAD_ID))
+        self.selenium.get('%s%s%s' % (self.live_server_url, '/threads/view/', url.REPLYABLE_THREAD_ID))
         self.selenium.find_element_by_id(css.THREAD_CONTENT_ID)
