@@ -242,3 +242,5 @@ PIPELINE = {'STYLESHEETS': {
     ),
     'BABEL_ARGUMENTS': '--presets es2015'
 }
+
+PIPELINE_ENABLED = config('USE_PIPELINE', cast=bool, default=True)
