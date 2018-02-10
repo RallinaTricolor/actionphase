@@ -29,5 +29,5 @@ class ThreadsTest(BaseStaticLiveServerTestCase):
         text_input = self.selenium.find_element_by_name("text")
         text_input.send_keys(reply_text)
         self.selenium.find_element_by_class_name(css.THREAD_SUBMIT_BUTTON_CLASS).click()
-        self.wait.until(ec.visibility_of((By.CLASS_NAME, css.COMMENT_BODY_CLASS)))
+        self.wait.until(ec.visibility_of_element_located((By.CLASS_NAME, css.COMMENT_BODY_CLASS)))
         assert reply_text in self.selenium.page_source
