@@ -36,3 +36,5 @@ CHARACTER_REJECT_BUTTON_ID = "character-reject-button"
 
 # Thread Elements
 THREAD_CONTENT_ID = "thread"
+THREAD_SUBMIT_BUTTON_CLASS = "submit-button"
+COMMENT_BODY_CLASS = "comment-body"
