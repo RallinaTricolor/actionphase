@@ -1,11 +1,10 @@
-from django.test import RequestFactory
+from django.test import TestCase, RequestFactory
 
 from actionphase.app.models.games import *
-from actionphase.app.tests.util import BaseTest
 from actionphase.app.views.characters import *
 
 
-class CharactersTest(BaseTest):
+class CharactersTest(TestCase):
     """
     Test view functionality for basic game functions
     """
