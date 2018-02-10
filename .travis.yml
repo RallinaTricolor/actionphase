@@ -22,7 +22,7 @@
   before_script:
     - export DISPLAY=:99.0
     - ./travis-scripts/before_script.sh
-  script: "coverage run --source=actionphase/app manage.py test actionphase.app.tests.$TESTFOLDER"
+  script: "coverage run manage.py test actionphase.app.tests.$TESTFOLDER"
   notifications:
     email: false
   after_failure:
