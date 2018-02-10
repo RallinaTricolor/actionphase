@@ -7,5 +7,4 @@ if [[ "${TESTFOLDER}" != *"unit"* ]]; then
     sh -e /etc/init.d/xvfb start
     sleep 3 # give xvfb some time to start
     python manage.py collectstatic --noinput
-    ls static/js
 fi
