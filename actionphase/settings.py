@@ -212,34 +212,34 @@ STATICFILES_FINDERS = (
 )
 
 PIPELINE = {'PIPELINE_ENABLED': config('USE_PIPELINE', cast=bool, default=True),
-    'STYLESHEETS': {
-    'main': {
-        'source_filenames': (
-            'css/bootstrap.css',
-        ),
-        'output_filename': 'css/min.css'
-    },
-}, 'JAVASCRIPT': {
-    'main': {
-        'source_filenames': (
-            'js/jquery.js',
-            'js/jquery.cookie.js',
-            'js/popper.js',
-            'js/bootstrap.js',
-            'vue.js',
-        ),
-        'output_filename': 'js/min.js',
-    },
-    'comments': {
-        'source_filenames': (
-            'js/comments.es6',
-        ),
-        'output_filename': 'js/comments.min.js'
-    }
-}, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify'),
-    'COMPILERS': (
-        'pipeline.compilers.es6.ES6Compiler',
-        'pipeline.compilers.sass.SASSCompiler',
-    ),
-    'BABEL_ARGUMENTS': '--presets es2015'
-}
+            'STYLESHEETS': {
+                'main': {
+                    'source_filenames': (
+                        'css/bootstrap.css',
+                    ),
+                    'output_filename': 'css/min.css'
+                },
+            }, 'JAVASCRIPT': {
+        'main': {
+            'source_filenames': (
+                'js/jquery.js',
+                'js/jquery.cookie.js',
+                'js/popper.js',
+                'js/bootstrap.js',
+                'vue.js',
+            ),
+            'output_filename': 'js/min.js',
+        },
+        'comments': {
+            'source_filenames': (
+                'js/comments.es6',
+            ),
+            'output_filename': 'js/comments.min.js'
+        }
+    }, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify'),
+            'COMPILERS': (
+                'pipeline.compilers.es6.ES6Compiler',
+                'pipeline.compilers.sass.SASSCompiler',
+            ),
+            'BABEL_ARGUMENTS': '--presets es2015'
+            }
