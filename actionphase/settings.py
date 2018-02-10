@@ -204,7 +204,7 @@ else:
     ]
     STATIC_URL = '/static/'
     STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage' if USE_PIPELINE else 'pipeline.storage' \
-                                                                                        '.NonPackagingPipelineStorage '
+                                                                                        '.NonPackagingPipelineStorage'
     MEDIA_ROOT = '/media/'
     MEDIA_URL = '/media/'
 STATICFILES_FINDERS = (
@@ -213,7 +213,7 @@ STATICFILES_FINDERS = (
     'pipeline.finders.PipelineFinder',
 )
 
-PIPELINE = {'PIPELINE_ENABLED': USE_PIPELINE,
+PIPELINE = {'PIPELINE_ENABLED': USE_PIPELINE and not DEBUG,
             'STYLESHEETS': {
                 'main': {
                     'source_filenames': (
