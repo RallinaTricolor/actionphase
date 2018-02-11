@@ -93,3 +93,16 @@ class ThreadsTest(TestCase):
         self.assertEqual(response.status_code, 302)
         comment = Comment.objects.filter(text='Test Comment').first()
         self.assertIsNotNone(comment)
+
+    def test_post_comment_ajax(self):
+        request = self.factory.post('/threads/comment/', {
+            'author': self.character.id,
+            'game': self.game.id,
+            'thread': self.thread.id,
+            'text': 'Test Comment'
+        }, follow=True, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        request.user = self.user
+        response = thread_comment(request)
+        self.assertEqual(response.status_code, 200)
+        comment = Comment.objects.filter(text='Test Comment').first()
+        self.assertIsNotNone(comment)
