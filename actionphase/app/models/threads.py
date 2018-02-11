@@ -42,4 +42,4 @@ class Comment(MPTTModel):
 
     @property
     def formatted_markdown(self):
-        return markdownify(self.text)
+        return markdownify(self.text)  # pragma: no cover
