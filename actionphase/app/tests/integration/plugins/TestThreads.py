@@ -1,10 +1,11 @@
 from django.test import TestCase, RequestFactory
-
+from django.test.utils import override_settings
 from actionphase.app.models.games import *
 from actionphase.app.models.threads import *
 from actionphase.app.views.threads import *
 
 
+@override_settings(STATICFILES_STORAGE='pipeline.storage.NonPackagingPipelineStorage')
 class ThreadsTest(TestCase):
     """
     Test view functionality for basic thread/comment functions
@@ -41,3 +42,9 @@ class ThreadsTest(TestCase):
         self.assertEqual(response.status_code, 302)
         thread = Thread.objects.filter(name='Brand New Thread').first()
         self.assertIsNotNone(thread)
+
+    def test_get_view(self):
+        request = self.factory.get('/threads/view/')
+        request.user = self.user
+        response = thread_view(request, self.thread.id)
+        self.assertEqual(response.status_code, 200)
