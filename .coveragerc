@@ -1,0 +1,22 @@
+[run]
+branch = True
+source =
+    .
+omit =
+    manage.py
+    actionphase/app/management/*
+    actionphase/app/apps.py
+    actionphase/settings.py
+    actionphase/storage_backends.py
+    actionphase/wsgi.py
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError
+    raise ValidationError
+    raise PermissionDenied
+    except DatabaseError:

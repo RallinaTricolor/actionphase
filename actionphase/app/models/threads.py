@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from mptt.models import MPTTModel, TreeForeignKey
 from actionphase.app.models.games import Game, Character
 from markdownx.models import MarkdownxField
-from markdownx.utils import markdownify
+from markdownx.utils import markdown
 
 
 class Thread(models.Model):
@@ -21,7 +21,7 @@ class Thread(models.Model):
 
     @property
     def formatted_markdown(self):
-        return markdownify(self.text)
+        return markdown(self.text, safe_mode='escape')  # pragma: no cover
 
 
 class Comment(MPTTModel):
@@ -42,4 +42,4 @@ class Comment(MPTTModel):
 
     @property
     def formatted_markdown(self):
-        return markdownify(self.text)
+        return markdown(self.text, safe_mode='escape')  # pragma: no cover

@@ -24,6 +24,8 @@ SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', cast=bool)
+USE_AWS = config('USE_AWS', cast=bool, default=False)
+USE_PIPELINE = config('USE_PIPELINE', cast=bool, default=True)
 
 ALLOWED_HOSTS = [
     'stage.actionpha.se',
@@ -186,17 +188,7 @@ AWS_PRELOAD_METADATA = True
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'public, max-age=31536000',
 }
-if DEBUG:
-    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-    STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'actionphase', 'app', 'static'),
-        os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
-    ]
-    STATIC_URL = '/static/'
-    STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
-    MEDIA_ROOT = '/media/'
-    MEDIA_URL = '/media/'
-else:
+if USE_AWS:
     STATICFILES_STORAGE = 'actionphase.storage_backends.S3PipelineStorage'
     STATICFILES_DIRS = [
         os.path.join(BASE_DIR, 'actionphase', 'app', 'static'),
@@ -204,40 +196,52 @@ else:
     ]
     STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
     DEFAULT_FILE_STORAGE = 'actionphase.storage_backends.S3MediaStorage'
+else:
+    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'actionphase', 'app', 'static'),
+        os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
+    ]
+    STATIC_URL = '/static/'
+    STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage' if USE_PIPELINE else 'pipeline.storage' \
+                                                                                        '.NonPackagingPipelineStorage'
+    MEDIA_ROOT = '/media/'
+    MEDIA_URL = '/media/'
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
     'pipeline.finders.PipelineFinder',
 )
 
-PIPELINE = {'STYLESHEETS': {
-    'main': {
-        'source_filenames': (
-            'css/bootstrap.css',
-        ),
-        'output_filename': 'css/min.css'
-    },
-}, 'JAVASCRIPT': {
-    'main': {
-        'source_filenames': (
-            'js/jquery.js',
-            'js/jquery.cookie.js',
-            'js/popper.js',
-            'js/bootstrap.js',
-            'vue.js',
-        ),
-        'output_filename': 'js/min.js',
-    },
-    'comments': {
-        'source_filenames': (
-            'js/comments.es6',
-        ),
-        'output_filename': 'js/comments.min.js'
-    }
-}, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify'),
-    'COMPILERS': (
-        'pipeline.compilers.es6.ES6Compiler',
-        'pipeline.compilers.sass.SASSCompiler',
-    ),
-    'BABEL_ARGUMENTS': '--presets es2015'
-}
+PIPELINE = {'PIPELINE_ENABLED': USE_PIPELINE and not DEBUG,
+            'STYLESHEETS': {
+                'main': {
+                    'source_filenames': (
+                        'css/bootstrap.css',
+                    ),
+                    'output_filename': 'css/min.css'
+                },
+            }, 'JAVASCRIPT': {
+        'main': {
+            'source_filenames': (
+                'js/jquery.js',
+                'js/jquery.cookie.js',
+                'js/popper.js',
+                'js/bootstrap.js',
+                'vue.js',
+            ),
+            'output_filename': 'js/min.js',
+        },
+        'comments': {
+            'source_filenames': (
+                'js/comments.es6',
+            ),
+            'output_filename': 'js/comments.min.js'
+        }
+    }, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify'),
+            'COMPILERS': (
+                'pipeline.compilers.es6.ES6Compiler',
+                'pipeline.compilers.sass.SASSCompiler',
+            ),
+            'BABEL_ARGUMENTS': '--presets es2015'
+            }

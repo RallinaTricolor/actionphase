@@ -35,13 +35,13 @@ const comment_form_html = `
                 <div class="form-group">
                     <label class="col-lg-3">Replying as <b>{{ characterName }}</b></label>
                     <div class="col-lg-10">
-                        <textarea class="form-control" rows="3" name="text" v-model="text"></textarea>
+                        <textarea :id="'comment-reply-text' + parentId" class="form-control" rows="3" name="text" v-model="text"></textarea>
                         <span class="text-success" style="display: none"></span>
                     </div>
                 </div>
                 <div class="form-group">
                     <div class="col-lg-10 col-lg-offset-2">
-                        <button type="submit" class="submit-button btn btn-primary">Submit</button>
+                        <button :id="'comment-reply-submit' + parentId" type="submit" class="submit-button btn btn-primary">Submit</button>
                     </div>
                 </div>
             </fieldset>
