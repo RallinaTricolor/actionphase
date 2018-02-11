@@ -45,3 +45,9 @@ class ThreadsTest(BaseStaticLiveServerTestCase):
         self.selenium.find_element_by_id('%s%s' % (css.REPLY_SUBMIT_BUTTON_ID, url.TEST_COMMENT_ID)).click()
         self.selenium.wait.until(ec.text_to_be_present_in_element((By.ID, 'thread'), reply_text))
 
+    def test_comment_view(self):
+        self.authenticate()
+        self.selenium.get('%s%s%s' % (self.live_server_url, '/threads/view/', url.REPLYABLE_THREAD_ID))
+        self.wait.until(ec.element_to_be_clickable((By.ID, '%s%s' % (css.PERMALINK_ID, url.TEST_COMMENT_ID))))
+        self.selenium.find_element_by_id('%s%s' % (css.PERMALINK_ID, url.TEST_COMMENT_ID)).click()
+        self.selenium.wait.until(ec.url_contains('/comment/' + url.TEST_COMMENT_ID))
