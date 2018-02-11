@@ -81,6 +81,7 @@ def thread_comment(request):
     if form.is_valid():
         comment = form.save(commit=False)
         comment.save()
+        comment.text = comment.formatted_markdown
         response_data = {
             "success": True,
             "data": serializers.serialize('json', [comment, ])
