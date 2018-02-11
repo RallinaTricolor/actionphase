@@ -65,3 +65,18 @@ class ThreadsTest(TestCase):
         self.assertEqual(response.status_code, 302)
         thread = Thread.objects.filter(name='Updated Thread Name').first()
         self.assertIsNotNone(thread)
+
+    def test_get_delete(self):
+        request = self.factory.get('/threads/delete/')
+        request.user = self.user
+        response = thread_delete(request, self.thread.id)
+        self.assertEqual(response.status_code, 200)
+
+    def test_post_delete(self):
+        request = self.factory.post('/threads/delete/')
+        request.user = self.user
+        thread_id = self.thread.id
+        response = thread_delete(request, thread_id)
+        self.assertEqual(response.status_code, 302)
+        thread = Thread.objects.filter(pk=thread_id).first()
+        self.assertIsNone(thread)
