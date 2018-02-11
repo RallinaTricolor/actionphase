@@ -48,3 +48,20 @@ class ThreadsTest(TestCase):
         request.user = self.user
         response = thread_view(request, self.thread.id)
         self.assertEqual(response.status_code, 200)
+
+    def test_get_update(self):
+        request = self.factory.get('/threads/edit/')
+        request.user = self.user
+        response = thread_update(request, self.thread.id)
+        self.assertEqual(response.status_code, 200)
+
+    def test_post_update(self):
+        request = self.factory.post('/threads/edit/', {
+            'name': 'Updated Thread Name',
+            'text': 'Updated Thread Text'
+        })
+        request.user = self.user
+        response = thread_update(request, self.thread.id)
+        self.assertEqual(response.status_code, 302)
+        thread = Thread.objects.filter(name='Updated Thread Name').first()
+        self.assertIsNotNone(thread)
