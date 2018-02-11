@@ -80,3 +80,16 @@ class ThreadsTest(TestCase):
         self.assertEqual(response.status_code, 302)
         thread = Thread.objects.filter(pk=thread_id).first()
         self.assertIsNone(thread)
+
+    def test_post_comment(self):
+        request = self.factory.post('/threads/comment/', {
+            'author': self.character.id,
+            'game': self.game.id,
+            'thread': self.thread.id,
+            'text': 'Test Comment'
+        }, follow=True)
+        request.user = self.user
+        response = thread_comment(request)
+        self.assertEqual(response.status_code, 302)
+        comment = Comment.objects.filter(text='Test Comment').first()
+        self.assertIsNotNone(comment)

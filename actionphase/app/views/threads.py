@@ -79,8 +79,7 @@ def thread_delete(request, pk, template_name='threads/confirm_delete.html'):
 def thread_comment(request):
     form = CommentForm(request.POST or None)
     if form.is_valid():
-        comment = form.save(commit=False)
-        comment.save()
+        comment = form.save()
         comment.text = comment.formatted_markdown
         response_data = {
             "success": True,
@@ -94,4 +93,4 @@ def thread_comment(request):
     if request.is_ajax():
         return JsonResponse(response_data)
     else:
-        return redirect('thread_view', form.threadId)
+        return redirect('thread_view', form.data['thread'])
