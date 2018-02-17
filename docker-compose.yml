@@ -21,7 +21,7 @@ services:
       - db
   ui:
     build: ./frontend
-    command: ["npm", "run", "start"]
+    command: ["npm", "start"]
     volumes:
       - ./frontend:/code
       - /code/node_modules
