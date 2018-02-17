@@ -1,5 +1,5 @@
 python manage.py sqlflush | python manage.py dbshell
-directory="actionphase/app/fixtures/*"
+directory="backend/app/fixtures/*"
 for file in $directory
 do
 	python manage.py loaddata $file
