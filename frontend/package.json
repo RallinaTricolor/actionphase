@@ -56,7 +56,7 @@
     "test": "node scripts/test.js --env=jsdom"
   },
   "devDependencies": {
-    "babel-preset-es2015": "^6.24.1"
+    "babel-preset-env": "^1.6.1"
   },
   "jest": {
     "collectCoverageFrom": [
