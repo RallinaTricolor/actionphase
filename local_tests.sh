@@ -1,1 +1,1 @@
-python manage.py test backend.app.tests.unit && python manage.py test backend.app.tests.integration
+python manage.py test backend.api.tests.unit && python manage.py test backend.api.tests.integration

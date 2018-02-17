@@ -19,7 +19,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('', include('backend.app.urls')),
+    path('', include('backend.api.urls')),
     path('accounts/', include('registration.backends.simple.urls')),
     path('admin/', admin.site.urls),
     path('markdownx/', include('markdownx.urls')),

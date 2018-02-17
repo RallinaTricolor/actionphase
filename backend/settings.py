@@ -56,7 +56,7 @@ INSTALLED_APPS = [
     'storages',
     # Markdown Support
     'markdownx',
-    'backend.app',
+    'backend.api',
 ]
 
 MIDDLEWARE = [
@@ -67,7 +67,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'backend.app.middleware.LoginRequiredMiddleware',
+    'backend.api.middleware.LoginRequiredMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -177,7 +177,7 @@ LOGIN_EXEMPT_URLS = (
 
 # Email Settings
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-EMAIL_FILE_PATH = '/tmp/app-messages'  # change this to a proper location
+EMAIL_FILE_PATH = '/tmp/api-messages'  # change this to a proper location
 
 # CSS & JS Settings
 AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
@@ -191,7 +191,7 @@ AWS_S3_OBJECT_PARAMETERS = {
 if USE_AWS:
     STATICFILES_STORAGE = 'backend.storage_backends.S3PipelineStorage'
     STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'backend', 'app', 'static'),
+        os.path.join(BASE_DIR, 'backend', 'api', 'static'),
         os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
     ]
     STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
@@ -199,7 +199,7 @@ if USE_AWS:
 else:
     STATIC_ROOT = os.path.join(BASE_DIR, 'static')
     STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'backend', 'app', 'static'),
+        os.path.join(BASE_DIR, 'backend', 'api', 'static'),
         os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
     ]
     STATIC_URL = '/static/'
