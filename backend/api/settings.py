@@ -41,6 +41,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_auth',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
     'rest_auth.registration',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -55,6 +58,9 @@ INSTALLED_APPS = [
     'markdownx',
     'api.app',
 ]
+
+SITE_ID = 1
+REST_USE_JWT = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
