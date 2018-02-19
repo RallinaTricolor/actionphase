@@ -45,8 +45,6 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
     'django.core.mail',
     # Tree based models for comments
     'mptt',
@@ -65,7 +63,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'api.app.middleware.LoginRequiredMiddleware',
 ]
 
 ROOT_URLCONF = 'api.urls'
@@ -175,25 +172,7 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'public, max-age=31536000',
 }
 if USE_AWS:
-    STATICFILES_STORAGE = 'api.storage_backends.S3PipelineStorage'
-    STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'api', 'app', 'static'),
-        os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
-    ]
-    STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, 'static')
     DEFAULT_FILE_STORAGE = 'api.storage_backends.S3MediaStorage'
 else:
-    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-    STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'api', 'app', 'static'),
-        os.path.join(BASE_DIR, 'node_modules', 'vue', 'dist'),
-    ]
-    STATIC_URL = '/static/'
-    STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage' if USE_PIPELINE else 'pipeline.storage' \
-                                                                                        '.NonPackagingPipelineStorage'
     MEDIA_ROOT = '/media/'
     MEDIA_URL = '/media/'
-STATICFILES_FINDERS = (
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-)
