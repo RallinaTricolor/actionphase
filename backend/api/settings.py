@@ -37,8 +37,10 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
-    # Registration and login management
-    'registration',
+    # REST API
+    'rest_framework',
+    'rest_framework.authtoken',
+    'rest_auth',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -48,7 +50,6 @@ INSTALLED_APPS = [
     'django.core.mail',
     # Tree based models for comments
     'mptt',
-    # Asset pipeline
     # S3 file storage
     'storages',
     # Markdown Support

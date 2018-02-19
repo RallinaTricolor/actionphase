@@ -3,6 +3,7 @@
  django-registration-redux
  django-mptt
  djangorestframework
+ django-rest-auth
  selenium
  boto3==1.5.0
  django-storages==1.6.3
