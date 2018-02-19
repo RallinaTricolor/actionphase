@@ -2,11 +2,10 @@
  mysqlclient
  django-registration-redux
  django-mptt
- django-pipeline
+ djangorestframework
  selenium
  boto3==1.5.0
  django-storages==1.6.3
- Collectfast
  python-decouple
  Pillow
  django-markdownx
