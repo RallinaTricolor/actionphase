@@ -44,14 +44,11 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    # Faster collectstatic for S3 backend. Temporarily removed due to a bug
-    # 'collectfast', TODO: Check this before going live
     'django.contrib.staticfiles',
     'django.core.mail',
     # Tree based models for comments
     'mptt',
     # Asset pipeline
-    'pipeline',
     # S3 file storage
     'storages',
     # Markdown Support
@@ -210,38 +207,4 @@ else:
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-    'pipeline.finders.PipelineFinder',
 )
-
-PIPELINE = {'PIPELINE_ENABLED': USE_PIPELINE and not DEBUG,
-            'STYLESHEETS': {
-                'main': {
-                    'source_filenames': (
-                        'css/bootstrap.css',
-                    ),
-                    'output_filename': 'css/min.css'
-                },
-            }, 'JAVASCRIPT': {
-        'main': {
-            'source_filenames': (
-                'js/jquery.js',
-                'js/jquery.cookie.js',
-                'js/popper.js',
-                'js/bootstrap.js',
-                'vue.js',
-            ),
-            'output_filename': 'js/min.js',
-        },
-        'comments': {
-            'source_filenames': (
-                'js/comments.es6',
-            ),
-            'output_filename': 'js/comments.min.js'
-        }
-    }, 'YUGLIFY_BINARY': os.path.join(BASE_DIR, 'node_modules', 'yuglify', 'bin', 'yuglify'),
-            'COMPILERS': (
-                'pipeline.compilers.es6.ES6Compiler',
-                'pipeline.compilers.sass.SASSCompiler',
-            ),
-            'BABEL_ARGUMENTS': '--presets es2015'
-            }

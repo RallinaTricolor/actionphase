@@ -1,10 +1,8 @@
-{% load pipeline %}
 <!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        {% stylesheet 'main' %}
         <title>{% block title %}{% endblock %}</title>
     </head>
     <body>
@@ -21,7 +19,5 @@
             </div>
             <div id="footer" class="row justify-content-center">{% include "footer.html" %}</div>
         </div>
-        {% javascript 'main' %}
-        {% block scripts %}{% endblock %}
     </body>
 </html>
