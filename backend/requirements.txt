@@ -1,6 +1,5 @@
  Django>=2.0
  mysqlclient
- django-registration-redux
  django-mptt
  djangorestframework
  django-rest-auth

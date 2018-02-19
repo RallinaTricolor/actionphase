@@ -161,18 +161,6 @@ LOGGING = {
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
-
-# Registration Settings
-ACCOUNT_ACTIVATION_DAYS = 7
-LOGIN_REDIRECT_URL = '/games'
-SIMPLE_BACKEND_REDIRECT_URL = '/games'
-LOGIN_EXEMPT_URLS = (
-    r'^accounts/register',
-    r'^accounts/login',
-    r'^accounts/password/reset',
-    r'^static/'
-)
-
 # Email Settings
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = '/tmp/app-messages'  # change this to a proper location
