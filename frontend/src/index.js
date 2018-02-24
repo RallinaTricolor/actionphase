@@ -1,17 +1,17 @@
 import React from 'react';
 import { Provider } from 'react-redux';
-import { createStore } from 'redux';
 import ReactDOM from 'react-dom';
+import { PersistGate } from 'redux-persist/integration/react';
 import './index.css';
-import actionPhaseApp from './reducers/';
+import { store, persistor } from './configureStore';
 import App from './App';
 import registerServiceWorker from './registerServiceWorker';
 
-let store = createStore(actionPhaseApp);
-
 ReactDOM.render(
     <Provider store={store}>
-        <App />
+        <PersistGate loading={null} persistor={persistor}>
+            <App />
+        </PersistGate>
     </Provider>
     , document.getElementById('root'));
 registerServiceWorker();
