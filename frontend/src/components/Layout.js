@@ -5,7 +5,10 @@ class Layout extends Component {
   render() {
     return (
       <div id="layout">
-          Hello, World!
+          <header>Header</header>
+          <sidebar>Sidebar</sidebar>
+          <content>Content</content>
+          <footer>Footer</footer>
       </div>
     );
   }
