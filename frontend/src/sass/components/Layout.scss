@@ -1,3 +1,5 @@
+@import '../mixins/layout';
+
 #layout {
   height: 98vh;
   width: 98vw;
@@ -11,20 +13,26 @@
   padding: 0;
   font-family: sans-serif;
   text-align: center;
+  align-content: center;
 
   header {
+    @include grid-vertical-align;
     grid-area: header;
     background-color: #7fd2ff;
+
   }
   content {
+    @include grid-vertical-align;
     grid-area: content;
     background-color: #ff6e64;
   }
   footer {
+    @include grid-vertical-align;
     grid-area: footer;
     background-color: #a1ff93;
   }
   sidebar {
+    @include grid-vertical-align;
     grid-area: sidebar;
     background-color: #b77dff;
   }
