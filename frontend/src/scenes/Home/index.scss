@@ -11,26 +11,27 @@
   justify-content: flex-end;
   align-items: center;
 
-  .splash-page-content {
+  &__content {
     padding-right: 25%;
-    &__logo {
-      &:after {
-        content: url("images/logo.png");
-      }
+  }
+  &__title {
+    font-size: 72px;
+  }
+  &__tagline {
+
+  }
+  &__buttons {
+    margin-top:20px;
+    a {
+      @extend .btn;
+      margin-left: 10px;
+      margin-right: 10px;
     }
-    &__buttons {
-      margin-top:20px;
-      a {
-        @extend .btn;
-        margin-left: 10px;
-        margin-right: 10px;
-      }
-    }
-    &__register-button {
-      background-color: white;
-    }
-    &__login-button {
-      @extend .btn-primary;
-    }
+  }
+  &__register-button {
+    background-color: white;
+  }
+  &__login-button {
+    @extend .btn-primary;
   }
 }
