@@ -1,20 +1,12 @@
 import React, {Component} from 'react';
-import { Link } from "react-router-dom";
+import { Route } from "react-router-dom";
+import Splash from './components/Splash';
 import './index.scss';
 
 class Home extends Component {
     render() {
         return (
-            <div className="splash-page">
-                <div className="splash-page__content">
-                    <div className="splash-page__title">Action Phase</div>
-                    <div className="splage-page__tagline">Who will <i>you</i> be?</div>
-                    <div className="splash-page__buttons">
-                        <Link className="splash-page__login-button" to="/login">Login</Link>
-                        <Link className="splash-page__register-button" to="/register">Sign Up</Link>
-                    </div>
-                </div>
-            </div>
+            <Route exact path="/" component={Splash} />
         );
     }
 }
