@@ -1,3 +1,5 @@
+@import '../../../node_modules/bootstrap/scss/bootstrap.scss';
+
 .splash-page {
   min-height: 100vh;
   width: 100vw;
@@ -11,14 +13,24 @@
 
   .splash-page-content {
     padding-right: 25%;
-    .splash-page-content__logo {
+    &__logo {
       &:after {
         content: url("images/logo.png");
       }
     }
-    .splash-page-content__buttons {
-
+    &__buttons {
+      margin-top:20px;
+      a {
+        @extend .btn;
+        margin-left: 10px;
+        margin-right: 10px;
+      }
     }
-
+    &__register-button {
+      background-color: white;
+    }
+    &__login-button {
+      @extend .btn-primary;
+    }
   }
 }

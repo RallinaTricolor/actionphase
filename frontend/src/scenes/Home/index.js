@@ -9,8 +9,8 @@ class Home extends Component {
                 <div className="splash-page-content">
                     <div className="splash-page-content__logo"></div>
                     <div className="splash-page-content__buttons">
-                        <Link to="/login">Login</Link>
-                        <Link to="/register">Sign Up</Link>
+                        <Link className="splash-page-content__login-button" to="/login">Login</Link>
+                        <Link className="splash-page-content__register-button" to="/register">Sign Up</Link>
                     </div>
                 </div>
             </div>
