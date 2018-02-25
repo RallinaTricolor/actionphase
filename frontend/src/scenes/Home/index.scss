@@ -1,0 +1,13 @@
+.home {
+  min-height: 100vh;
+  width: 100vw;
+  max-width: 100%;
+  text-align: center;
+  background-image: url('images/splash.jpg');
+  color: white;
+  display: flex;
+  align-items: center;
+  > div {
+    margin-left: 55%;
+  }
+}

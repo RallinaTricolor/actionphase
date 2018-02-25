@@ -6,7 +6,9 @@ import './index.scss';
 class Home extends Component {
     render() {
         return (
-            <Route exact path="/" component={Splash} />
+            <div className="home">
+                <Route exact path="/" component={Splash} />
+            </div>
         );
     }
 }
