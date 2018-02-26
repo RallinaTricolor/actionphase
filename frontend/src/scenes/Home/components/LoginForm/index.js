@@ -15,8 +15,8 @@ class LoginForm extends Component {
                     </div>
                     <button type="submit" className="login-form__submit-button">Login</button>
                     <div className="login-form__links">
-                        <Link className="login-form__link" to="/register">Need an account?</Link><br />
-                        <Link className="login-form__link" to="/register">Forgot your password?</Link>
+                        <Link className="login-form__link" to="/">Need an account?</Link><br />
+                        <Link className="login-form__link" to="/">Forgot your password?</Link>
                     </div>
                 </form>
             </div>
