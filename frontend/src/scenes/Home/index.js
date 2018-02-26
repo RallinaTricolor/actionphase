@@ -13,7 +13,7 @@ class Home extends Component {
                     render={({location}) => (
                         <div>
                             <TransitionGroup>
-                                <CSSTransition key={location.key} classNames="fade">
+                                <CSSTransition key={location.key} classNames="fade" timeout={200}>
                                     <Switch location={location}>
                                         <Route exact path="/" component={Splash}/>
                                         <Route path="/login" component={LoginForm}/>
