@@ -1,6 +1,7 @@
 @import '../../../../../node_modules/bootstrap/scss/bootstrap.scss';
 
 .login-form {
+  position: absolute;
   input {
     @extend .form-control;
   }
