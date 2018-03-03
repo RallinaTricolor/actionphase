@@ -1,8 +1,10 @@
 import { combineReducers } from 'redux'
+import { routerReducer } from 'react-router-redux'
 import core from './core'
  
 const actionPhaseApp = combineReducers({
-  core
+    routerReducer,
+    core
 });
  
 export default actionPhaseApp
