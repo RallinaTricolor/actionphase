@@ -12,3 +12,4 @@
  Pillow
  django-markdownx
  coverage
+ coreapi

@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
+    'django.contrib.staticfiles',
     'django.core.mail',
     # Tree based models for comments
     'mptt',
@@ -63,8 +64,13 @@ INSTALLED_APPS = [
 SITE_ID = 1
 REST_USE_JWT = True
 REST_FRAMEWORK = {
+    # 'DEFAULT_PERMISSION_CLASSES': (
+    #     'rest_framework.permissions.IsAuthenticated',
+    # ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
     ),
 }
 
@@ -182,6 +188,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = '/tmp/app-messages'  # change this to a proper location
 
 # CSS & JS Settings
+STATIC_URL = '/static/'
 AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
