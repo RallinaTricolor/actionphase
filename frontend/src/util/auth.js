@@ -28,6 +28,6 @@ export function isAuthenticated(state) {
   return !isRefreshTokenExpired(state);
 }
 
-export function errors(state) {
+export function authErrors(state) {
    return state.errors;
 }

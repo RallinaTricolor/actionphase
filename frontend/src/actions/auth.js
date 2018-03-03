@@ -9,7 +9,7 @@ export const TOKEN_FAILURE = '@@auth/TOKEN_FAILURE';
 
 export const login = (username, password) => ({
   [RSAA]: {
-    endpoint: '/api/auth/token/',
+    endpoint: 'http://192.168.99.100:8000/api/auth/token/',
     method: 'POST',
     body: JSON.stringify({username, password}),
     headers: { 'Content-Type': 'application/json' },
