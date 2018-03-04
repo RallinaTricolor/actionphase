@@ -63,6 +63,9 @@ INSTALLED_APPS = [
 
 SITE_ID = 1
 REST_USE_JWT = True
+JWT_AUTH = {
+    'JWT_ALLOW_REFRESH': True
+}
 REST_FRAMEWORK = {
     # 'DEFAULT_PERMISSION_CLASSES': (
     #     'rest_framework.permissions.IsAuthenticated',
