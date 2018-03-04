@@ -11,7 +11,7 @@ import actionPhaseApp from './reducers/';
 const history = createHistory();
 
 const persistedFilter = createFilter(
-    'auth', ['access', 'refresh']
+    'auth', ['access']
 );
 
 const persistConfig = {

@@ -3,7 +3,6 @@ import * as auth from '../actions/auth'
 
 const initialState = {
   access: undefined,
-  refresh: undefined,
   errors: {},
 };
 
@@ -12,12 +11,8 @@ const authReducer = (state=initialState, action) => {
     case auth.LOGIN_SUCCESS:
       return {
         access: {
-          token: action.payload.access,
-          ...jwtDecode(action.payload.access)
-        },
-        refresh: {
-          token: action.payload.refresh,
-          ...jwtDecode(action.payload.refresh)
+          token: action.payload.token,
+          ...jwtDecode(action.payload.token)
         },
         errors: {}
     };
@@ -25,15 +20,14 @@ const authReducer = (state=initialState, action) => {
       return {
         ...state,
         access: {
-          token: action.payload.access,
-          ...jwtDecode(action.payload.access)
+          token: action.payload.token,
+          ...jwtDecode(action.payload.token)
         }
       };
     case auth.LOGIN_FAILURE:
     case auth.TOKEN_FAILURE:
       return {
          access: undefined,
-         refresh: undefined,
          errors:
              action.payload.response ||
                 {'non_field_errors': action.payload.statusText},
