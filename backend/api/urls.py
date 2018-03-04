@@ -28,7 +28,7 @@ urlpatterns = [
     path('api/auth/', include('rest_auth.urls')),
     path('api/auth/registration/', include('rest_auth.registration.urls')),
     path('api/auth/token/', obtain_jwt_token),
-    path('api/auth/token/refresh', refresh_jwt_token),
+    path('api/auth/token/refresh/', refresh_jwt_token),
     path('admin/', admin.site.urls),
     path('markdownx/', include('markdownx.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
