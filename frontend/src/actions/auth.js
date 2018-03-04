@@ -21,9 +21,9 @@ export const login = (username, password) => ({
 
 export const refreshAccessToken = (token) => ({
   [RSAA]: {
-    endpoint: '/api/auth/token/refresh/',
+    endpoint: 'http://192.168.99.100:8000/api/auth/token/refresh/',
     method: 'POST',
-    body: JSON.stringify({refresh: token}),
+    body: JSON.stringify({token: token}),
     headers: { 'Content-Type': 'application/json' },
     types: [
       TOKEN_REQUEST, TOKEN_RECEIVED, TOKEN_FAILURE
