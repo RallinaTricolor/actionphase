@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import {Link} from "react-router-dom";
 import PropTypes from 'prop-types'
+import { FormGroup, Input, Alert, Button,  Form } from 'reactstrap'
 import './index.scss';
 
 class LoginForm extends Component {
@@ -24,19 +25,19 @@ class LoginForm extends Component {
 
     render() {
         return <div className="login-form">
-            <form onSubmit={this.onSubmit}>
-                <div className="login-form__item">
-                    <input onChange={this.handleInputChange} type="text" name="username" id="username" placeholder="Username"/>
-                </div>
-                <div className="login-form__item">
-                    <input onChange={this.handleInputChange} type="password" name="password" id="password" placeholder="Password"/>
-                </div>
-                <button type="submit" className="login-form__submit-button">Login</button>
-                <div className="login-form__links">
+            <Form onSubmit={this.onSubmit}>
+                <FormGroup className="login-form__item">
+                    <Input onChange={this.handleInputChange} type="text" name="username" id="username" placeholder="Username"/>
+                </FormGroup>
+                <FormGroup className="login-form__item">
+                    <Input onChange={this.handleInputChange} type="password" name="password" id="password" placeholder="Password"/>
+                </FormGroup>
+                <Button type="submit" color="primary" className="login-form__submit-button">Login</Button>
+                <FormGroup className="login-form__links">
                     <Link className="login-form__link" to="/">Need an account?</Link><br/>
                     <Link className="login-form__link" to="/">Forgot your password?</Link>
-                </div>
-            </form>
+                </FormGroup>
+            </Form>
         </div>
     }
 }

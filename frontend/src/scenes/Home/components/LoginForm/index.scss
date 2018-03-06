@@ -2,43 +2,10 @@
 
 .login-form {
   position: absolute;
-  input {
-    @extend .form-control;
-  }
-  &__item {
-    @extend .form-group;
-  }
-  &__submit-button {
-    @extend .btn;
-    @extend .btn-primary;
-  }
   &__links {
     margin-top: 40px;
   }
   &__link {
     color: white;
-  }
-}
-
-.splash-page {
-  &__title {
-    font-size: 72px;
-  }
-  &__tagline {
-
-  }
-  &__buttons {
-    margin-top:20px;
-    a {
-      @extend .btn;
-      margin-left: 10px;
-      margin-right: 10px;
-    }
-  }
-  &__register-button {
-    background-color: white;
-  }
-  &__login-button {
-    @extend .btn-primary;
   }
 }
