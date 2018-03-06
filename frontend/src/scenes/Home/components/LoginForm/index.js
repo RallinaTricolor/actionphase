@@ -30,9 +30,9 @@ class LoginForm extends Component {
             <Form onSubmit={this.onSubmit}>
                 {
                     errors.non_field_errors ?
-                        <Alert color="danger">
+                        <div className="alert" color="danger">
                             {errors.non_field_errors}
-                        </Alert> : ""
+                        </div> : ""
                 }
                 <TextInput className="login-form__item" name="username" label="Username" error={errors.username}  onChange={this.handleInputChange} />
                 <TextInput className="login-form__item" name="password" label="Password" error={errors.password} type="password" onChange={this.handleInputChange} />
