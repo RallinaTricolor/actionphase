@@ -1,12 +1,12 @@
 export function accessToken(state) {
-    if (state.access) {
+    if (state.auth.access) {
         return state.access.token;
     }
 }
 
 export function isAccessTokenExpired(state) {
-  if (state.access && state.access.exp) {
-    return 1000 * state.access.exp - (new Date()).getTime() < 5000;
+  if (state.auth.access && state.auth.access.exp) {
+    return 1000 * state.auth.access.exp - (new Date()).getTime() < 5000;
   }
 }
 
@@ -15,5 +15,5 @@ export function isAuthenticated(state) {
 }
 
 export function authErrors(state) {
-   return state.errors;
+   return state.auth.errors;
 }
