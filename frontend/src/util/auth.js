@@ -1,6 +1,6 @@
 export function accessToken(state) {
     if (state.auth.access) {
-        return state.access.token;
+        return state.auth.access.token;
     }
 }
 
