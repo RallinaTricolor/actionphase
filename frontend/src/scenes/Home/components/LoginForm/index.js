@@ -34,8 +34,8 @@ class LoginForm extends Component {
                             {errors.non_field_errors}
                         </div> : ""
                 }
-                <TextInput className="login-form__item" name="username" label="Username" error={errors.username}  onChange={this.handleInputChange} />
-                <TextInput className="login-form__item" name="password" label="Password" error={errors.password} type="password" onChange={this.handleInputChange} />
+                <TextInput className="login-form__item" name="username" placeholder="Username" error={errors.username}  onChange={this.handleInputChange} />
+                <TextInput className="login-form__item" name="password" placeholder="Password" error={errors.password} type="password" onChange={this.handleInputChange} />
                 <Button type="submit" color="primary" className="login-form__submit-button">Login</Button>
                 <FormGroup className="login-form__links">
                     <Link className="login-form__link" to="/">Need an account?</Link><br/>
