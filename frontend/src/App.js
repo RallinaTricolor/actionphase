@@ -3,7 +3,9 @@ import {store, persistor} from "./configureStore";
 import Home from "./scenes/Home";
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import { BrowserRouter as Router } from "react-router-dom";
+import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
+import PrivateRoute from './containers/PrivateRoute';
+import LayoutContainer from "./containers/LayoutContainer";
 
 class App extends Component {
   render() {
@@ -11,7 +13,10 @@ class App extends Component {
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
             <Router>
-                <Home />
+                <Switch>
+                    <Route path="/home/" component={Home} />
+                    <PrivateRoute path="/" component={LayoutContainer}/>
+                </Switch>
             </Router>
         </PersistGate>
     </Provider>

@@ -12,8 +12,8 @@ class Home extends Component {
                     render={({location}) => (
                         <div>
                             <Switch location={location}>
-                                <Route exact path="/" component={Splash}/>
-                                <Route path="/login" component={Login}/>
+                                <Route exact path="/home" component={Splash}/>
+                                <Route path="/home/login" component={Login}/>
                             </Switch>
                         </div>
                     )}
