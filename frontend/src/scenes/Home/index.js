@@ -1,5 +1,6 @@
 import React, {Component} from 'react';
 import {Route, Switch} from "react-router-dom";
+import {TransitionGroup, CSSTransition} from "react-transition-group";
 import Splash from './components/Splash';
 import Login from './containers/Login';
 import Register from './containers/Register';
@@ -12,11 +13,15 @@ class Home extends Component {
                 <Route
                     render={({location}) => (
                         <div>
-                            <Switch location={location}>
-                                <Route exact path="/home" component={Splash}/>
-                                <Route path="/home/login" component={Login}/>
-                                <Route path="/home/register" component={Register}/>
-                            </Switch>
+                            <TransitionGroup>
+                                <CSSTransition key={location.key} classNames="fade" timeout={200}>
+                                    <Switch location={location}>
+                                        <Route exact path="/home" component={Splash}/>
+                                        <Route path="/home/login" component={Login}/>
+                                        <Route path="/home/register" component={Register}/>>
+                                    </Switch>
+                                </CSSTransition>
+                            </TransitionGroup>
                         </div>
                     )}
                 />
