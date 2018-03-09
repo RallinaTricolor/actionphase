@@ -32,9 +32,9 @@ class RegistrationForm extends Component {
             <Form onSubmit={this.onSubmit}>
                 {
                     errors.non_field_errors ?
-                        <div className="alert" color="danger">
+                        <Alert className="alert" color="danger">
                             {errors.non_field_errors}
-                        </div> : ""
+                        </Alert> : ""
                 }
                 <TextInput className="registration-form__item" name="email" placeholder="Email" error={errors.email}
                            onChange={this.handleInputChange}/>
