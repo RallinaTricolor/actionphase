@@ -24,7 +24,7 @@ export const register = (username, password1, password2, email) => ({
 
 export const login = (username, password) => ({
   [RSAA]: {
-    endpoint: 'http://192.168.99.100:8000/api/auth/token/',
+    endpoint: 'http://192.168.99.100:8000/api/auth/login/',
     method: 'POST',
     body: JSON.stringify({username, password}),
     headers: { 'Content-Type': 'application/json' },
