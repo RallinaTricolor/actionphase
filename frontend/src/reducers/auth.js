@@ -10,6 +10,7 @@ const initialState = {
 const authReducer = (state = initialState, action) => {
     switch (action.type) {
         case auth.LOGIN_SUCCESS:
+        case auth.REGISTRATION_SUCCESS:
             return {
                 access: {
                     token: action.payload.token,
@@ -18,6 +19,7 @@ const authReducer = (state = initialState, action) => {
                 errors: {}
             };
         case auth.LOGIN_REQUEST:
+        case auth.REGISTRATION_REQUEST:
         case auth.TOKEN_REQUEST:
             return {
                 fetching: true
@@ -32,6 +34,7 @@ const authReducer = (state = initialState, action) => {
                 fetching: false
             };
         case auth.LOGIN_FAILURE:
+        case auth.REGISTRATION_FAILURE:
         case auth.TOKEN_FAILURE:
             return {
                 access: undefined,

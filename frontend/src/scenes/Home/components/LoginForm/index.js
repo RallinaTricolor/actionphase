@@ -38,7 +38,7 @@ class LoginForm extends Component {
                 <TextInput className="login-form__item" name="password" placeholder="Password" error={errors.password} type="password" onChange={this.handleInputChange} />
                 <Button type="submit" color="primary" className="login-form__submit-button">Login</Button>
                 <FormGroup className="login-form__links">
-                    <Link className="login-form__link" to="/">Need an account?</Link><br/>
+                    <Link className="login-form__link" to="/home/register">Need an account?</Link><br/>
                     <Link className="login-form__link" to="/">Forgot your password?</Link>
                 </FormGroup>
             </Form>

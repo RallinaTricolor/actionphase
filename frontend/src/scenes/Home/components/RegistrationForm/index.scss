@@ -1,0 +1,12 @@
+.registration-form {
+  position: absolute;
+  &__links {
+    margin-top: 40px;
+  }
+  &__link {
+    color: white;
+  }
+}
+.invalid-feedback.form-control-feedback {
+  display: block;
+}
