@@ -32,7 +32,7 @@ class RegistrationForm extends Component {
             <Form onSubmit={this.onSubmit}>
                 {
                     errors.non_field_errors ?
-                        <Alert className="alert" color="danger">
+                        <Alert color="danger">
                             {errors.non_field_errors}
                         </Alert> : ""
                 }
