@@ -12,10 +12,4 @@
                        "footer footer";
   text-align: center;
   align-content: center;
-
-  footer {
-    @include grid-vertical-align;
-    grid-area: footer;
-    background-color: #a1ff93;
-  }
 }
