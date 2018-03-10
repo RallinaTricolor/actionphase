@@ -13,12 +13,6 @@
   text-align: center;
   align-content: center;
 
-  header {
-    @include grid-vertical-align;
-    grid-area: header;
-    background-color: #7fd2ff;
-
-  }
   content {
     grid-area: content;
     background-color: #ff6e64;

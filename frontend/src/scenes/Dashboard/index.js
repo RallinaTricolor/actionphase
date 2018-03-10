@@ -1,11 +1,12 @@
 import React, { Component } from 'react';
 import './index.scss';
+import Header from "./components/Header";
 
 class Dashobard extends Component {
   render() {
     return (
       <div id="layout">
-          <header>Header</header>
+          <Header/>
           <sidebar>Sidebar</sidebar>
           <content>Content</content>
           <footer>Footer</footer>
