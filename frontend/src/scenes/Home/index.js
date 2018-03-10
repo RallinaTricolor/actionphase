@@ -28,7 +28,7 @@ const Home = (props) => {
             />
         </div>
     );
-}
+};
 
 const mapStateToProps = state => ({
     isAuthenticated: isAuthenticated(state)

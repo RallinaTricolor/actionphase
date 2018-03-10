@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
-import '../sass/components/Layout.scss';
+import './index.scss';
 
-class Layout extends Component {
+class Dashobard extends Component {
   render() {
     return (
       <div id="layout">
@@ -14,4 +14,4 @@ class Layout extends Component {
   }
 }
 
-export default Layout;
+export default Dashobard;
