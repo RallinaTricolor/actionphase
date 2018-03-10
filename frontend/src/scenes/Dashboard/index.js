@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import './index.scss';
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
+import Content from "./components/Content";
 
 class Dashobard extends Component {
   render() {
@@ -9,7 +10,7 @@ class Dashobard extends Component {
       <div id="layout">
           <Header/>
           <Sidebar/>
-          <content>Content</content>
+          <Content/>
           <footer>Footer</footer>
       </div>
     );

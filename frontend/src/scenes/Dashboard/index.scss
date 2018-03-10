@@ -13,10 +13,6 @@
   text-align: center;
   align-content: center;
 
-  content {
-    grid-area: content;
-    background-color: #ff6e64;
-  }
   footer {
     @include grid-vertical-align;
     grid-area: footer;
