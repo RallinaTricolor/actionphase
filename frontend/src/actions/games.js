@@ -7,7 +7,7 @@ export const GAME_LIST_FAILURE = '@@games/GAME_LIST_FAILURE';
 
 export const gameList = () => ({
   [RSAA]: {
-      endpoint: '/api/games/',
+      endpoint: 'http://192.168.99.100:8000/api/games/',
       method: 'GET',
       headers: withAuth({ 'Content-Type': 'application/json' }),
       types: [
