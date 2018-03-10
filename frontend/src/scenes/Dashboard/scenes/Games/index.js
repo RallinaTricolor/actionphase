@@ -3,14 +3,18 @@ import { connect } from 'react-redux'
 import './index.scss';
 import {gameList} from "../../../../actions/games";
 import {games} from "../../../../reducers/games";
+import Game from "./components/Game";
 
 class Games extends Component {
     componentDidMount() {
-        this.props.fetchGames()
+        this.props.fetchGames();
     }
 
     render() {
-        return <div className="games">Games</div>
+        const games = this.props.games || [];
+        return <div className="games">
+            {games.map(game => <Game key={game.id} {...game} />)}
+        </div>
     }
 }
 

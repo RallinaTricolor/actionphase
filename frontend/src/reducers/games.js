@@ -1,14 +1,16 @@
 import * as gameActions from '../actions/games';
 
 const initialState = {
-  games: {}
+  games: {
+    list: []
+  }
 };
 
 const gameReducer = (state=initialState, action) => {
   switch(action.type) {
     case gameActions.GAME_LIST_SUCCESS:
       return {
-        games: action.payload.games
+        list: action.payload
       };
     default:
       return state
@@ -17,4 +19,4 @@ const gameReducer = (state=initialState, action) => {
 
 export default gameReducer;
 
-export const games = (state) => state.games;
+export const games = (state) => state.games.list;

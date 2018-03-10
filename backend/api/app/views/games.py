@@ -13,7 +13,7 @@ from api.app.models import Game, GameSignup, Plugin
 class GameSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Game
-        fields = ('name', 'abbreviation', 'description', 'status')
+        fields = ('id', 'name', 'abbreviation', 'description', 'status')
 
 
 class GameForm(ModelForm):
