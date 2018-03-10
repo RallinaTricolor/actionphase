@@ -2,8 +2,7 @@ import { applyMiddleware, createStore } from 'redux'
 import { persistStore, persistReducer } from 'redux-persist'
 import { createWhitelistFilter } from 'redux-persist-transform-filter'
 import { routerMiddleware, push } from 'react-router-redux'
-import { apiMiddleware } from 'redux-api-middleware'
-import { jwt } from './middleware/jwt'
+import { createApiMiddleware } from './middleware/api'
 import storage from 'redux-persist/lib/storage'
 import createHistory from 'history/createBrowserHistory'
 
@@ -25,8 +24,7 @@ const persistConfig = {
 const persistedReducer = persistReducer(persistConfig, actionPhaseApp);
 
 let store = createStore(persistedReducer, {}, applyMiddleware(
-    apiMiddleware,
-    jwt,
+    createApiMiddleware(),
     routerMiddleware(history)
 ));
 let persistor = persistStore(store);
