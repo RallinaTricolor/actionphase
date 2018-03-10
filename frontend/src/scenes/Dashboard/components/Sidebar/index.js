@@ -3,7 +3,7 @@ import './index.scss';
 
 class Sidebar extends Component {
     render() {
-        return <sidebar>Sidebar</sidebar>
+        return <div className="sidebar">Sidebar</div>
     }
 }
 

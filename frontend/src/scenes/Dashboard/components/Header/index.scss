@@ -1,6 +1,6 @@
 @import '../../../../sass/mixins/layout';
 
-header {
+.header {
   @include grid-vertical-align;
   grid-area: header;
   background-color: #7fd2ff;

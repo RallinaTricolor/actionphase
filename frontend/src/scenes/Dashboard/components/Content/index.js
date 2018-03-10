@@ -3,7 +3,7 @@ import './index.scss';
 
 class Content extends Component {
     render() {
-        return <content>Content</content>
+        return <div className="content">Content</div>
     }
 }
 

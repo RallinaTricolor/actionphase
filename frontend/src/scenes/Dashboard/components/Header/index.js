@@ -3,7 +3,7 @@ import './index.scss';
 
 class Header extends Component {
     render() {
-        return <header>Header</header>
+        return <div className="header">Action Phase</div>
     }
 }
 

@@ -3,7 +3,7 @@ import './index.scss';
 
 class Footer extends Component {
     render() {
-        return <footer>Footer</footer>
+        return <div className="footer">Footer</div>
     }
 }
 
