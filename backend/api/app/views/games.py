@@ -4,9 +4,15 @@ from django.forms import ModelForm, ModelMultipleChoiceField, CheckboxSelectMult
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.exceptions import ValidationError
 from django.contrib import messages
-
+from rest_framework import serializers, viewsets
 
 from api.app.models import Game, GameSignup, Plugin
+
+
+class GameSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Game
+        fields = ('name', 'abbreviation', 'description', 'status')
 
 
 class GameForm(ModelForm):
@@ -16,6 +22,10 @@ class GameForm(ModelForm):
 
     plugins = ModelMultipleChoiceField(queryset=Plugin.objects.all(), widget=CheckboxSelectMultiple, required=False)
 
+
+class GameViewSet(viewsets.ModelViewSet):
+    queryset = Game.objects.all()
+    serializer_class = GameSerializer
 
 def game_list(request, template_name='games/list.html'):
     games = Game.objects.filter(
