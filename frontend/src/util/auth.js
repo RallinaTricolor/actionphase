@@ -6,7 +6,7 @@ export function accessToken(state) {
 
 export function isAccessTokenExpired(state) {
   if (state.auth.access && state.auth.access.exp) {
-    return 1000 * state.auth.access.exp - (new Date()).getTime() < 5000;
+    return 1000 * state.auth.access.exp - (new Date()).getTime() < (1000 * 60 * 60 * 24); // Refresh token if less than one day remaining
   }
 }
 

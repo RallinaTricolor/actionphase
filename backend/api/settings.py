@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 
-import os
+import os, datetime
 from decouple import config
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -64,7 +64,9 @@ INSTALLED_APPS = [
 SITE_ID = 1
 REST_USE_JWT = True
 JWT_AUTH = {
-    'JWT_ALLOW_REFRESH': True
+    'JWT_ALLOW_REFRESH': True,
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(days=7),
+    'JWT_REFRESH_EXPIRATION_DELTA': datetime.timedelta(days=30)
 }
 REST_FRAMEWORK = {
     # 'DEFAULT_PERMISSION_CLASSES': (
