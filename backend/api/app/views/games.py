@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.core.exceptions import ValidationError
 from django.contrib import messages
 from rest_framework import serializers, viewsets
+from rest_framework import permissions
 
 from api.app.models import Game, GameSignup, Plugin
 
@@ -24,8 +25,10 @@ class GameForm(ModelForm):
 
 
 class GameViewSet(viewsets.ModelViewSet):
+    permission_classes = (permissions.IsAuthenticated,)
     queryset = Game.objects.all()
     serializer_class = GameSerializer
+
 
 def game_list(request, template_name='games/list.html'):
     games = Game.objects.filter(
