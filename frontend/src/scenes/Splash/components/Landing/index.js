@@ -2,7 +2,7 @@ import React, {Component} from 'react';
 import { Link } from "react-router-dom";
 import './index.scss';
 
-class Splash extends Component {
+class Landing extends Component {
     render() {
         return (
             <div className="splash-page">
@@ -19,4 +19,4 @@ class Splash extends Component {
     }
 }
 
-export default Splash;
+export default Landing;

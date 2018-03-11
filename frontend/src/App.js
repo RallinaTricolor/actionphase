@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import {store, persistor} from "./configureStore";
-import Home from "./scenes/Home";
+import Splash from "./scenes/Splash";
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
@@ -14,7 +14,7 @@ class App extends Component {
         <PersistGate loading={null} persistor={persistor}>
             <Router>
                 <Switch>
-                    <Route path="/home/" component={Home} />
+                    <Route path="/home/" component={Splash} />
                     <PrivateRoute path="/" component={Dashboard}/>
                 </Switch>
             </Router>

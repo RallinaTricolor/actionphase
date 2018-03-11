@@ -1,13 +1,13 @@
 import React, {Component} from 'react';
 import {Redirect, Route, Switch} from "react-router-dom";
-import Splash from './components/Splash';
+import Landing from './components/Landing';
 import Login from './containers/Login';
 import Register from './containers/Register';
 import './index.scss';
 import {isAuthenticated} from "../../util/auth";
 import {connect} from 'react-redux';
 
-const Home = (props) => {
+const Splash = (props) => {
     if (props.isAuthenticated) {
         return (
             <Redirect to="/"/>
@@ -19,7 +19,7 @@ const Home = (props) => {
                 render={({location}) => (
                     <div>
                         <Switch location={location}>
-                            <Route exact path="/home" component={Splash}/>
+                            <Route exact path="/home" component={Landing}/>
                             <Route path="/home/login" component={Login}/>
                             <Route path="/home/register" component={Register}/>>
                         </Switch>
@@ -34,4 +34,4 @@ const mapStateToProps = state => ({
     isAuthenticated: isAuthenticated(state)
 });
 
-export default connect(mapStateToProps)(Home);
+export default connect(mapStateToProps)(Splash);
