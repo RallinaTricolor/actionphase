@@ -5,7 +5,7 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 import PrivateRoute from './containers/PrivateRoute';
-import Dashboard from "./scenes/Dashboard";
+import Home from "./scenes/Home";
 
 class App extends Component {
   render() {
@@ -15,7 +15,7 @@ class App extends Component {
             <Router>
                 <Switch>
                     <Route path="/home/" component={Splash} />
-                    <PrivateRoute path="/" component={Dashboard}/>
+                    <PrivateRoute path="/" component={Home}/>
                 </Switch>
             </Router>
         </PersistGate>

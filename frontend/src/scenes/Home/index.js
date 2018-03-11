@@ -5,7 +5,7 @@ import Sidebar from "./components/Sidebar";
 import Content from "./components/Content";
 import Footer from "./components/Footer";
 
-class Dashobard extends Component {
+class Home extends Component {
   render() {
     return (
       <div id="layout">
@@ -18,4 +18,4 @@ class Dashobard extends Component {
   }
 }
 
-export default Dashobard;
+export default Home;
