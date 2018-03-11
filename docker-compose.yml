@@ -10,13 +10,22 @@ services:
         MYSQL_DATABASE: docker
         MYSQL_USER: docker
         MYSQL_PASSWORD: docker
-  web:
-    build: .
-    command: python3 manage.py runserver 0.0.0.0:8000
+  api:
+    build: ./backend
+    command: ["python3", "manage.py", "runserver", "0.0.0.0:8000"]
     volumes:
-      - .:/code
-      - /code/node_modules
+      - ./backend:/code
     ports:
       - "8000:8000"
     depends_on:
       - db
+  ui:
+    build: ./frontend
+    command: ["npm", "start"]
+    volumes:
+      - ./frontend:/code
+      - /code/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api

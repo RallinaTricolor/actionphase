@@ -1,0 +1,15 @@
+ Django>=2.0
+ mysqlclient
+ django-mptt
+ djangorestframework
+ django-rest-auth[with_social]
+ djangorestframework-jwt
+ django-cors-headers
+ selenium
+ boto3==1.5.0
+ django-storages==1.6.3
+ python-decouple
+ Pillow
+ django-markdownx
+ coverage
+ coreapi

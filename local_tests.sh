@@ -1,1 +1,0 @@
-python manage.py test actionphase.app.tests.unit && python manage.py test actionphase.app.tests.integration

@@ -1,0 +1,25 @@
+@import '../../../../../node_modules/bootstrap/scss/bootstrap.scss';
+
+.splash-page {
+  position: absolute;
+  &__title {
+    font-size: 72px;
+  }
+  &__tagline {
+
+  }
+  &__buttons {
+    margin-top:20px;
+    a {
+      @extend .btn;
+      margin-left: 10px;
+      margin-right: 10px;
+    }
+  }
+  &__register-button {
+    background-color: white;
+  }
+  &__login-button {
+    @extend .btn-primary;
+  }
+}

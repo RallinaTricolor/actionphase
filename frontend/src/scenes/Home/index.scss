@@ -1,0 +1,33 @@
+.home {
+  min-height: 100vh;
+  width: 100vw;
+  max-width: 100%;
+  text-align: center;
+  background-image: url('images/splash.jpg');
+  color: white;
+  display: flex;
+  align-items: center;
+  > div {
+    margin-left: 55%;
+  }
+}
+
+.fade-appear,
+.fade-enter {
+  opacity: 0;
+}
+
+.fade-appear-active,
+.fade-enter-active {
+  transition: opacity .3s linear;
+  opacity: 1;
+}
+
+.fade-leave {
+  transition: opacity .2s linear;
+  opacity: 1;
+}
+
+.fade-leave-active {
+  opacity: 0;
+}

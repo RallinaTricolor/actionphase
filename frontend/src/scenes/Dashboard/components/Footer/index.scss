@@ -1,0 +1,7 @@
+@import '../../../../sass/mixins/layout';
+
+.footer {
+  @include grid-vertical-align;
+  grid-area: footer;
+  background-color: #a1ff93;
+}
