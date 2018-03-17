@@ -13,7 +13,7 @@ class GameList extends Component {
     render() {
         const games = this.props.games || [];
         return <div className="games">
-            <h2>Games</h2>
+            <h2>Game Details</h2>
             {games.map(game => <Game key={game.id} {...game} />)}
         </div>
     }

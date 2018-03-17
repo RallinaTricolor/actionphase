@@ -8,8 +8,8 @@ import GameDetail from './scenes/GameDetail';
 class Games extends Component {
     render() {
         return <Switch>
-                <PrivateRoute path="/games" component={GameList}/>
-                <PrivateRoute path="/games/:id" component={GameDetail}/>
+                <PrivateRoute exact path="/games" component={GameList}/>
+                <PrivateRoute exact path="/games/:id" component={GameDetail}/>
             </Switch>
     }
 }
