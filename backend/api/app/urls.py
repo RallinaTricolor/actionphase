@@ -5,6 +5,7 @@ from api.app import views
 
 router = routers.DefaultRouter()
 router.register(r'games', views.GameViewSet)
+router.register(r'users', views.UserViewSet)
 
 
 urlpatterns = [

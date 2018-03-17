@@ -10,10 +10,17 @@ from rest_framework import permissions
 from api.app.models import Game, GameSignup, Plugin
 
 
-class GameSerializer(serializers.HyperlinkedModelSerializer):
+class GameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Game
         fields = ('id', 'name', 'abbreviation', 'description', 'get_status_display')
+
+
+class GameDetailSerializer(serializers.HyperlinkedModelSerializer):
+    game_master = serializers.PrimaryKeyRelatedField(read_only=True)
+    class Meta:
+        model = Game
+        fields = ('id', 'name', 'abbreviation', 'description', 'get_status_display', 'game_master')
 
 
 class GameForm(ModelForm):
@@ -25,9 +32,12 @@ class GameForm(ModelForm):
 
 
 class GameViewSet(viewsets.ModelViewSet):
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return GameDetailSerializer
+        return GameSerializer
     permission_classes = (permissions.IsAuthenticated,)
     queryset = Game.objects.all()
-    serializer_class = GameSerializer
 
 
 def game_list(request, template_name='games/list.html'):
