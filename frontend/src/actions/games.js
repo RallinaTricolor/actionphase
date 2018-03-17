@@ -22,7 +22,7 @@ export const gameList = () => ({
 
 export const gameDetail = (id) => ({
   [RSAA]: {
-      endpoint: 'http://192.168.99.100:8000/api/games/' + id,
+      endpoint: 'http://192.168.99.100:8000/api/games/' + id + '/',
       method: 'GET',
       headers: withAuth({ 'Content-Type': 'application/json' }),
       types: [
