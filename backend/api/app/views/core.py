@@ -4,10 +4,10 @@ from rest_framework import serializers, viewsets
 from rest_framework import permissions
 
 
-class UserSerializer(serializers.HyperlinkedModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('username',)
+        fields = ('id', 'username',)
 
 
 class UserViewSet(viewsets.ModelViewSet):
