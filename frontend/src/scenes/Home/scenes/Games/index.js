@@ -1,22 +1,17 @@
 import React, {Component} from 'react';
-import { connect } from 'react-redux'
+import {Route, Switch} from "react-router-dom";
+import PrivateRoute from '../../../../containers/PrivateRoute';
 import './index.scss';
-import {gameList} from "../../../../actions/games";
-import {games} from "../../../../reducers/games";
-import Game from "./components/Game";
+import GameList from "./scenes/GameList";
+import GameDetail from './scenes/GameDetail';
 
 class Games extends Component {
-    componentDidMount() {
-        this.props.fetchGames();
-    }
-
     render() {
-        const games = this.props.games || [];
-        return <div className="games">
-            <h2>Games</h2>
-            {games.map(game => <Game key={game.id} {...game} />)}
-        </div>
+        return <Switch>
+                <PrivateRoute path="/games" component={GameList}/>
+                <PrivateRoute path="/games/:id" component={GameDetail}/>
+            </Switch>
     }
 }
 
-export default connect(state => ({games: games(state)}), {fetchGames: gameList})(Games);
+export default Games;
