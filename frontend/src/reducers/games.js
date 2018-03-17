@@ -2,7 +2,8 @@ import * as gameActions from '../actions/games';
 
 const initialState = {
   games: {
-    list: []
+    list: [],
+    details: {}
   }
 };
 
@@ -12,6 +13,10 @@ const gameReducer = (state=initialState, action) => {
       return {
         list: action.payload
       };
+      case gameActions.GAME_DETAIL_SUCCESS:
+        return {
+          details: action.payload
+        };
     default:
       return state
   }
@@ -20,3 +25,4 @@ const gameReducer = (state=initialState, action) => {
 export default gameReducer;
 
 export const games = (state) => state.games.list;
+export const game = (state) => state.games.details;

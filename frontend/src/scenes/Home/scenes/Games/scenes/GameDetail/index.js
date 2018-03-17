@@ -1,22 +1,22 @@
 import React, {Component} from 'react';
 import { connect } from 'react-redux'
 import './index.scss';
-import {gameList} from "../../../../../../actions/games";
-import {games} from "../../../../../../reducers/games";
+import {gameDetail} from "../../../../../../actions/games";
+import {game} from "../../../../../../reducers/games";
 import Game from "./components/Game";
 
-class GameList extends Component {
+class GameDetail extends Component {
     componentDidMount() {
-        this.props.fetchGames();
+        this.props.fetchGame(this.props.match.params.id);
     }
 
     render() {
-        const games = this.props.games || [];
-        return <div className="games">
+        const game = this.props.game || [];
+        return <div className="gameDetail">
             <h2>Game Details</h2>
-            {games.map(game => <Game key={game.id} {...game} />)}
+            <Game key={game.id} {...game} />
         </div>
     }
 }
 
-export default connect(state => ({games: games(state)}), {fetchGames: gameList})(GameList);
+export default connect(state => ({game: game(state)}), {fetchGame: gameDetail})(GameDetail);
