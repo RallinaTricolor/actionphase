@@ -13,7 +13,6 @@ class GameDetail extends Component {
     render() {
         const game = this.props.game || [];
         return <div className="gameDetail">
-            <h2>Game Details</h2>
             <Game key={game.id} {...game} />
         </div>
     }
