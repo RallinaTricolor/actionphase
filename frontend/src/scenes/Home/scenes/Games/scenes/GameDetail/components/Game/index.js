@@ -16,6 +16,9 @@ class GameDetail extends Component {
             <div className="game__attribute game__description">
                 {this.props.description}
             </div>
+            <div className="game__attribute game__game_master">
+                {this.props.game_master ? this.props.game_master.username : ''}
+            </div>
         </div>
     }
 }
