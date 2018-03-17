@@ -16,10 +16,7 @@ class Home extends Component {
                     </Col>
                 </Row>
                 <Row>
-                    <Col lg="2">
-                        <Sidebar/>
-                    </Col>
-                    <Col lg="10">
+                    <Col lg="12">
                         <Content/>
                     </Col>
                 </Row>

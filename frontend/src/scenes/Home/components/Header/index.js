@@ -1,4 +1,5 @@
 import React, {Component} from 'react';
+import {Link} from 'react-router-dom';
 import {Navbar, NavbarBrand, NavbarToggler, Collapse, Nav, NavItem, NavLink, UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem} from 'reactstrap';
 import './index.scss';
 
@@ -20,19 +21,19 @@ class Header extends Component {
 
     render() {
         return <Navbar color="faded" light expand="md" className="header">
-            <NavbarBrand>Action Phase</NavbarBrand>
+            <NavbarBrand tag={Link} to="/">Action Phase</NavbarBrand>
             <NavbarToggler onClick={this.toggle}/>
             <Collapse isOpen={this.state.isOpen} navbar>
                 <Nav className="ml-auto" navbar>
                     <NavItem>
-                        <NavLink>Games</NavLink>
+                        <NavLink tag={Link} to="/">Dashboard</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink>Games</NavLink>
+                        <NavLink tag={Link} to="/games">Games</NavLink>
                     </NavItem>
                     <UncontrolledDropdown nav inNavbar>
                         <DropdownToggle nav caret>
-                            Test!
+                            Account
                         </DropdownToggle>
                         <DropdownMenu>
                             <DropdownItem>
