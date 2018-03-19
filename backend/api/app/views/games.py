@@ -33,7 +33,9 @@ class GameDetailSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Game
-        fields = ('id', 'name', 'abbreviation', 'description', 'character_guidelines', 'get_status_display', 'game_master', 'signups', 'characters')
+        fields = (
+        'id', 'name', 'abbreviation', 'description', 'character_guidelines', 'get_status_display', 'game_master',
+        'signups', 'characters')
 
 
 class GameForm(ModelForm):
@@ -49,6 +51,7 @@ class GameViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return GameDetailSerializer
         return GameSerializer
+
     permission_classes = (permissions.IsAuthenticated,)
     queryset = Game.objects.all()
 
