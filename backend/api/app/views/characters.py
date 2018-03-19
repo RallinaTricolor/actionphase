@@ -1,8 +1,19 @@
 from django.forms import ModelForm, ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.files.images import get_image_dimensions
+from rest_framework import serializers, viewsets
+from rest_framework import permissions
 
+from api.app.views.core import UserSerializer
 from api.app.models import Character
+
+
+class CharacterSerializer(serializers.ModelSerializer):
+    owner = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Character
+        fields = ('name', 'owner', 'image', 'public_profile')
 
 
 class CharacterForm(ModelForm):
