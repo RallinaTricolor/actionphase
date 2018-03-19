@@ -1,9 +1,5 @@
 @import '../../../../scss/mixins/layout';
-@import '../../../../scss/palette';
 
 .footer {
   @include grid-vertical-align;
-  border-top: $border 2px solid;
-  background-color: $contentBackground;
-  color: $text;
 }
