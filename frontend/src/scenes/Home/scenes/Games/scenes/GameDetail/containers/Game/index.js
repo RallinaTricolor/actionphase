@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import './index.scss';
 import DetailsTab from "../../components/DetailsTab";
+import SignupsTab from "../../components/SignupsTab";
 import {TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, Breadcrumb, BreadcrumbItem} from 'reactstrap';
 import {Route, Switch, Link} from "react-router-dom";
 import classnames from 'classnames';
@@ -64,7 +65,7 @@ class GameDetailContainer extends Component {
                 <TabPane tabId="2">
                     <Row>
                         <Col sm="12">
-                            <h4>Tab 2 Contents</h4>
+                            <SignupsTab {...this.props} />
                         </Col>
                     </Row>
                 </TabPane>
