@@ -6,7 +6,7 @@ class SignupsTab extends Component {
     render() {
         const signups = this.props.signups || [];
         return <div className="gameDetail__signups">
-            {signups.map(signup => <Signup {...signup}/>)}
+            {signups.map(signup => <Signup key={signup.id} {...signup}/>)}
         </div>
     }
 }
