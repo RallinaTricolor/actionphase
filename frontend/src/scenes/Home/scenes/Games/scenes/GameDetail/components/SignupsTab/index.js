@@ -1,10 +1,12 @@
-import React, { Component } from 'react';
+import React, {Component} from 'react';
 import './index.scss';
+import Signup from "../Signup";
 
 class SignupsTab extends Component {
     render() {
-        return <div className="gameDetail__content">
-            Test!
+        const signups = this.props.signups || [];
+        return <div className="gameDetail__signups">
+            {signups.map(signup => <Signup {...signup}/>)}
         </div>
     }
 }
