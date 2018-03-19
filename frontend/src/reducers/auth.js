@@ -43,6 +43,11 @@ const authReducer = (state = initialState, action) => {
                 action.payload.response ||
                 {'non_field_errors': action.payload.statusText},
             };
+        case auth.LOGOUT:
+            return {
+                access: undefined,
+                fetching: false
+            };
         default:
             return state
     }

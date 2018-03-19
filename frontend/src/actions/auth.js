@@ -9,6 +9,7 @@ export const LOGIN_FAILURE = '@@auth/LOGIN_FAILURE';
 export const TOKEN_REQUEST = '@@auth/TOKEN_REQUEST';
 export const TOKEN_RECEIVED = '@@auth/TOKEN_RECEIVED';
 export const TOKEN_FAILURE = '@@auth/TOKEN_FAILURE';
+export const LOGOUT = '@@auth/LOGOUT';
 
 export const register = (username, password1, password2, email) => ({
   [RSAA]: {

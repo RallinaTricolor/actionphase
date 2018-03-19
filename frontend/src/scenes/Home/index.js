@@ -1,10 +1,9 @@
 import React, {Component} from 'react';
 import {Container, Row, Col} from 'reactstrap';
 import './index.scss';
-import Header from "./components/Header";
-import Sidebar from "./components/Sidebar";
 import Content from "./components/Content";
 import Footer from "./components/Footer";
+import HeaderContainer from "./containers/Header";
 
 class Home extends Component {
     render() {
@@ -12,7 +11,7 @@ class Home extends Component {
             <Container fluid={true} id="layout">
                 <Row>
                     <Col>
-                        <Header/>
+                        <HeaderContainer/>
                     </Col>
                 </Row>
                 <Row>
