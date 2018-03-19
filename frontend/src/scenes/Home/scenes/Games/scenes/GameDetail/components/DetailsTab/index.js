@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import './index.scss';
 
-class GameDetail extends Component {
+class DetailsTab extends Component {
     render() {
         return <div className="gameDetail__content">
             <h2>{this.props.name}</h2>
@@ -21,4 +21,4 @@ class GameDetail extends Component {
     }
 }
 
-export default GameDetail;
+export default DetailsTab;

@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import './index.scss';
 import {gameDetail} from "../../../../../../actions/games";
 import {game} from "../../../../../../reducers/games";
-import Game from "./components/Game";
+import GameDetailContainer from "./containers/Game";
 
 class GameDetail extends Component {
     componentDidMount() {
@@ -12,9 +12,7 @@ class GameDetail extends Component {
 
     render() {
         const game = this.props.game || [];
-        return <div className="gameDetail">
-            <Game key={game.id} {...game} />
-        </div>
+        return <GameDetailContainer {...game}/>
     }
 }
 
