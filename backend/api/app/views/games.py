@@ -11,6 +11,14 @@ from api.app.views.core import UserSerializer
 from api.app.models import Game, GameSignup, Plugin
 
 
+class SignupSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = GameSignup
+        fields = ('id', 'user', 'get_status_display')
+
+
 class GameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Game
@@ -19,10 +27,11 @@ class GameSerializer(serializers.ModelSerializer):
 
 class GameDetailSerializer(serializers.HyperlinkedModelSerializer):
     game_master = UserSerializer(read_only=True)
+    signups = SignupSerializer(many=True)
 
     class Meta:
         model = Game
-        fields = ('id', 'name', 'abbreviation', 'description', 'get_status_display', 'game_master')
+        fields = ('id', 'name', 'abbreviation', 'description', 'get_status_display', 'game_master', 'signups')
 
 
 class GameForm(ModelForm):
