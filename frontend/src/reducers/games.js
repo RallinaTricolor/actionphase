@@ -28,8 +28,8 @@ export const games = (state) => state.game.list;
 export const game = (state) => state.game.details;
 
 export const isGameMaster = (state) => {
-    if (state.game.details.game_master && state.auth.user) {
-        return state.game.details.game_master === state.auth.user;
+    if (state.game.details && state.auth.access) {
+        return state.game.details.game_master.id === state.auth.access.user_id;
     }
     return false;
 };

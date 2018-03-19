@@ -2,7 +2,7 @@ import React, {Component} from 'react';
 import { connect } from 'react-redux'
 import './index.scss';
 import {gameDetail} from "../../../../../../actions/games";
-import {game} from "../../../../../../reducers/games";
+import {game, isGameMaster} from "../../../../../../reducers/games";
 import GameDetailContainer from "./containers/Game";
 
 class GameDetail extends Component {
@@ -16,4 +16,4 @@ class GameDetail extends Component {
     }
 }
 
-export default connect(state => ({game: game(state)}), {fetchGame: gameDetail})(GameDetail);
+export default connect(state => ({game: game(state), isGameMaster: isGameMaster(state)}), {fetchGame: gameDetail})(GameDetail);
