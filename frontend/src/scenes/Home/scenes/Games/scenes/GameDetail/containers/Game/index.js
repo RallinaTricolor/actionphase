@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import './index.scss';
 import DetailsTab from "../../components/DetailsTab";
-import {TabContent, TabPane, Nav, NavItem, NavLink, Row, Col} from 'reactstrap';
+import {TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, Breadcrumb, BreadcrumbItem} from 'reactstrap';
 import {Route, Switch, Link} from "react-router-dom";
 import classnames from 'classnames';
 
@@ -25,6 +25,11 @@ class GameDetailContainer extends Component {
 
     render() {
         return <div className="gameDetailContainer">
+            <Breadcrumb>
+                <BreadcrumbItem><Link to="/">Home</Link></BreadcrumbItem>
+                <BreadcrumbItem><Link to="/games">Games</Link></BreadcrumbItem>
+                <BreadcrumbItem active>{this.props.name}</BreadcrumbItem>
+            </Breadcrumb>
             <h2>{this.props.name}</h2>
             <Nav tabs>
                 <NavItem>
