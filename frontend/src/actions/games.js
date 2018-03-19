@@ -11,7 +11,7 @@ export const GAME_DETAIL_FAILURE = '@@games/GAME_DETAIL_FAILURE';
 
 export const gameList = () => ({
   [RSAA]: {
-      endpoint: 'http://192.168.99.100:8000/api/games/',
+      endpoint: process.env.REACT_APP_API_ENDPOINT + '/api/games/',
       method: 'GET',
       headers: withAuth({ 'Content-Type': 'application/json' }),
       types: [
@@ -22,7 +22,7 @@ export const gameList = () => ({
 
 export const gameDetail = (id) => ({
   [RSAA]: {
-      endpoint: 'http://192.168.99.100:8000/api/games/' + id + '/',
+      endpoint: process.env.REACT_APP_API_ENDPOINT + '/api/games/' + id + '/',
       method: 'GET',
       headers: withAuth({ 'Content-Type': 'application/json' }),
       types: [

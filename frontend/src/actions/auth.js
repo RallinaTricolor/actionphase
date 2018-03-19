@@ -13,7 +13,7 @@ export const LOGOUT = '@@auth/LOGOUT';
 
 export const register = (username, password1, password2, email) => ({
   [RSAA]: {
-    endpoint: 'http://192.168.99.100:8000/api/auth/registration/',
+    endpoint: process.env.REACT_APP_API_ENDPOINT+ '/api/auth/registration/',
     method: 'POST',
     body: JSON.stringify({username, password1, password2, email}),
     headers: { 'Content-Type': 'application/json' },
@@ -25,7 +25,7 @@ export const register = (username, password1, password2, email) => ({
 
 export const login = (username, password) => ({
   [RSAA]: {
-    endpoint: 'http://192.168.99.100:8000/api/auth/login/',
+    endpoint: process.env.REACT_APP_API_ENDPOINT + '/api/auth/login/',
     method: 'POST',
     body: JSON.stringify({username, password}),
     headers: { 'Content-Type': 'application/json' },
@@ -37,7 +37,7 @@ export const login = (username, password) => ({
 
 export const refreshAccessToken = (token) => ({
   [RSAA]: {
-    endpoint: 'http://192.168.99.100:8000/api/auth/token/refresh/',
+    endpoint: process.env.REACT_APP_API_ENDPOINT + '/api/auth/token/refresh/',
     method: 'POST',
     body: JSON.stringify({token: token}),
     headers: { 'Content-Type': 'application/json' },
