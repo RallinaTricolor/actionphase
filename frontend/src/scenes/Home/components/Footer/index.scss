@@ -1,5 +1,5 @@
-@import '../../../../sass/mixins/layout';
-@import '../../../../sass/palette';
+@import '../../../../scss/mixins/layout';
+@import '../../../../scss/palette';
 
 .footer {
   @include grid-vertical-align;

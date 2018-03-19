@@ -35,7 +35,7 @@ class Header extends Component {
                         <DropdownToggle nav caret>
                             Account
                         </DropdownToggle>
-                        <DropdownMenu>
+                        <DropdownMenu right>
                             <DropdownItem>
                                 Profile
                             </DropdownItem>
