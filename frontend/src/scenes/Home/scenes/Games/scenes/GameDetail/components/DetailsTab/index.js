@@ -4,7 +4,6 @@ import './index.scss';
 class DetailsTab extends Component {
     render() {
         return <div className="gameDetail__content">
-            <h2>{this.props.name}</h2>
             <div className="gameDetail__attribute gameDetail__abbreviation">
                 Abbreviation: {this.props.abbreviation}
             </div>
