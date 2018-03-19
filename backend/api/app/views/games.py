@@ -33,7 +33,7 @@ class GameDetailSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Game
-        fields = ('id', 'name', 'abbreviation', 'description', 'get_status_display', 'game_master', 'signups', 'characters')
+        fields = ('id', 'name', 'abbreviation', 'description', 'character_guidelines', 'get_status_display', 'game_master', 'signups', 'characters')
 
 
 class GameForm(ModelForm):
