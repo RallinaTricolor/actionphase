@@ -3,6 +3,14 @@ from django.contrib.auth.models import User
 from rest_framework import serializers, viewsets
 from rest_framework import permissions
 
+from api.app.models import Plugin
+
+
+class PluginSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plugin
+        fields = ('id', 'name',)
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

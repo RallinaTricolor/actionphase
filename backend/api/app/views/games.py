@@ -7,8 +7,17 @@ from django.contrib import messages
 from rest_framework import serializers, viewsets
 from rest_framework import permissions
 
-from api.app.views.core import UserSerializer
+from api.app.views.core import UserSerializer, PluginSerializer
+from api.app.views.characters import CharacterSerializer
 from api.app.models import Game, GameSignup, Plugin
+
+
+class SignupSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = GameSignup
+        fields = ('id', 'user', 'get_status_display')
 
 
 class GameSerializer(serializers.ModelSerializer):
@@ -19,10 +28,15 @@ class GameSerializer(serializers.ModelSerializer):
 
 class GameDetailSerializer(serializers.HyperlinkedModelSerializer):
     game_master = UserSerializer(read_only=True)
+    plugins = PluginSerializer(many=True)
+    signups = SignupSerializer(many=True)
+    characters = CharacterSerializer(many=True)
 
     class Meta:
         model = Game
-        fields = ('id', 'name', 'abbreviation', 'description', 'get_status_display', 'game_master')
+        fields = (
+            'id', 'name', 'abbreviation', 'plugins', 'description', 'character_guidelines', 'get_status_display',
+            'game_master', 'signups', 'characters')
 
 
 class GameForm(ModelForm):
@@ -38,6 +52,7 @@ class GameViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return GameDetailSerializer
         return GameSerializer
+
     permission_classes = (permissions.IsAuthenticated,)
     queryset = Game.objects.all()
 

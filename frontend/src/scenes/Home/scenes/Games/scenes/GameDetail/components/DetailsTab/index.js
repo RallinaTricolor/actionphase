@@ -1,10 +1,12 @@
 import React, { Component } from 'react';
 import './index.scss';
 
-class GameDetail extends Component {
+class DetailsTab extends Component {
     render() {
         return <div className="gameDetail__content">
-            <h2>{this.props.name}</h2>
+            <div className="gameDetail__attribute gameDetail__game_master">
+                Game Master: {this.props.game_master ? this.props.game_master.username : ''}
+            </div>
             <div className="gameDetail__attribute gameDetail__abbreviation">
                 Abbreviation: {this.props.abbreviation}
             </div>
@@ -14,11 +16,11 @@ class GameDetail extends Component {
             <div className="gameDetail__attribute gameDetail__description">
                 Description: {this.props.description}
             </div>
-            <div className="gameDetail__attribute gameDetail__game_master">
-                Game Master: {this.props.game_master ? this.props.game_master.username : ''}
+            <div className="gameDetail__attribute gameDetail__character_guidelines">
+                Character Guidelines: {this.props.character_guidelines}
             </div>
         </div>
     }
 }
 
-export default GameDetail;
+export default DetailsTab;

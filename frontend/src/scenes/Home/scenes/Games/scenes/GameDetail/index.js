@@ -2,8 +2,8 @@ import React, {Component} from 'react';
 import { connect } from 'react-redux'
 import './index.scss';
 import {gameDetail} from "../../../../../../actions/games";
-import {game} from "../../../../../../reducers/games";
-import Game from "./components/Game";
+import {game, isGameMaster} from "../../../../../../reducers/games";
+import GameDetailContainer from "./containers/Game";
 
 class GameDetail extends Component {
     componentDidMount() {
@@ -12,10 +12,8 @@ class GameDetail extends Component {
 
     render() {
         const game = this.props.game || [];
-        return <div className="gameDetail">
-            <Game key={game.id} {...game} />
-        </div>
+        return <GameDetailContainer {...game}/>
     }
 }
 
-export default connect(state => ({game: game(state)}), {fetchGame: gameDetail})(GameDetail);
+export default connect(state => ({game: game(state), isGameMaster: isGameMaster(state)}), {fetchGame: gameDetail})(GameDetail);

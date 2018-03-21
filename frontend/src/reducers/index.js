@@ -6,7 +6,7 @@ import gameReducer from "./games";
 const actionPhaseApp = combineReducers({
     router: routerReducer,
     auth: authReducer,
-    games: gameReducer
+    game: gameReducer
 });
  
 export default actionPhaseApp
