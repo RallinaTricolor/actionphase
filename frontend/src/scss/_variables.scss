@@ -1,4 +1,4 @@
-// Cyborg 4.0.0
+// Cosmo 4.0.0
 // Bootswatch
 
 //
@@ -9,27 +9,27 @@ $white: #fff;
 $gray-100: #f8f9fa;
 $gray-200: #e9ecef;
 $gray-300: #dee2e6;
-$gray-400: #ADAFAE;
-$gray-500: #888;
-$gray-600: #555;
-$gray-700: #282828;
-$gray-800: #222;
+$gray-400: #ced4da;
+$gray-500: #adb5bd;
+$gray-600: #868e96;
+$gray-700: #495057;
+$gray-800: #373a3c;
 $gray-900: #212529;
 $black: #000;
 
-$blue: #2A9FD6;
+$blue: #2780E3;
 $indigo: #6610f2;
-$purple: #6f42c1;
+$purple: #613d7c;
 $pink: #e83e8c;
-$red: #CC0000;
-$orange: #fd7e14;
-$yellow: #FF8800;
-$green: #77B300;
+$red: #FF0039;
+$orange: #f0ad4e;
+$yellow: #FF7518;
+$green: #3FB618;
 $teal: #20c997;
-$cyan: #9933CC;
+$cyan: #9954BB;
 
 $primary: $blue;
-$secondary: $gray-600;
+$secondary: $gray-800;
 $success: $green;
 $info: $cyan;
 $warning: $yellow;
@@ -39,8 +39,7 @@ $dark: $gray-800;
 
 // Body
 
-$body-bg: #060606;
-$body-color: $white;
+$body-color: #0C0D0F;
 
 // Fonts
 
@@ -48,120 +47,18 @@ $font-family-sans-serif: Verdana, Geneva, sans-serif;
 
 $font-size-base: 1rem;
 
-$h1-font-size: 4rem;
-$h2-font-size: 3rem;
-$h3-font-size: 2.5rem;
-$h4-font-size: 2rem;
-$h5-font-size: 1.5rem;
-
-$headings-color: $white;
-
-// Tables
-
-$table-accent-bg: rgba($white, .05);
-$table-hover-bg: rgba($white, .075);
-
-$table-border-color: $gray-700;
-
-$table-head-color: $white;
-
-$table-dark-bg: $gray-500;
-$table-dark-border-color: darken($gray-500, 7.5%);
-$table-dark-color: $body-bg;
-
-// Buttons
-
-$input-btn-padding-x: 1rem;
-
-// Forms
-
-$input-disabled-bg: $gray-400;
-
-$input-border-color: transparent;
-
-$input-group-addon-bg: $gray-700;
-
-// Dropdowns
-
-$dropdown-bg: $gray-700;
-$dropdown-divider-bg: $gray-800;
-
-$dropdown-link-color: $white;
-$dropdown-link-hover-color: $white;
-$dropdown-link-hover-bg: $primary;
-
-// Navs
-
-$nav-tabs-border-color: $table-border-color;
-$nav-tabs-link-hover-border-color: $nav-tabs-border-color;
-$nav-tabs-link-active-color: $white;
-$nav-tabs-link-active-bg: $nav-tabs-border-color;
-$nav-tabs-link-active-border-color: $nav-tabs-border-color;
+$headings-font-weight: 300;
 
 // Navbar
 
-$navbar-dark-hover-color: $white;
+$navbar-dark-hover-color: rgba($white, 1);
 
-// Pagination
+$navbar-light-hover-color: rgba($black, .9);
 
-$pagination-color: $white;
-$pagination-bg: $gray-700;
-$pagination-border-color: transparent;
+// Alerts
 
-$pagination-hover-color: $white;
-$pagination-hover-bg: $primary;
-$pagination-hover-border-color: $pagination-border-color;
-
-$pagination-disabled-bg: $pagination-bg;
-$pagination-disabled-border-color: $pagination-border-color;
-
-// Jumbotron
-
-$jumbotron-bg: $gray-700;
-
-// Cards
-
-$card-bg: $gray-700;
-
-// Tooltips
-
-$tooltip-bg: $gray-700;
-$tooltip-opacity: 1;
-
-// Popovers
-
-$popover-bg: $gray-700;
-
-// Modals
-
-$modal-content-bg: $gray-800;
-
-$modal-header-border-color: $gray-700;
+$alert-border-width: 0;
 
 // Progress bars
 
-$progress-bg: $gray-700;
-
-// List group
-
-$list-group-bg: $gray-800;
-$list-group-border-color: $gray-700;
-
-$list-group-hover-bg: $primary;
-
-$list-group-disabled-bg: $gray-700;
-
-$list-group-action-active-bg: $primary;
-
-// Breadcrumbs
-
-$breadcrumb-bg: $gray-700;
-
-// Close
-
-$close-color: $white;
-$close-text-shadow: none;
-
-// Code
-
-$pre-color: inherit;
+$progress-height: 8px;
