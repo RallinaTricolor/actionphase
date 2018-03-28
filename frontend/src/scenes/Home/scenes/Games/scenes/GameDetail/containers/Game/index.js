@@ -32,7 +32,7 @@ class GameDetailContainer extends Component {
                 <BreadcrumbItem><Link to="/games">Games</Link></BreadcrumbItem>
                 <BreadcrumbItem active>{this.props.name}</BreadcrumbItem>
             </Breadcrumb>
-            <h2>{this.props.name}</h2>
+            <h2>{this.props.name} ({this.props.abbreviation})</h2>
             <Nav tabs>
                 <NavItem>
                     <NavLink className={classnames({active: this.state.activeTab === '1'})} onClick={() => {

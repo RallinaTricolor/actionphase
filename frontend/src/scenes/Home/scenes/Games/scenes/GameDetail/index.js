@@ -12,7 +12,7 @@ class GameDetail extends Component {
 
     render() {
         const game = this.props.game || [];
-        return <GameDetailContainer {...game}/>
+        return <GameDetailContainer className="gameDetailContainer" {...game}/>
     }
 }
 
