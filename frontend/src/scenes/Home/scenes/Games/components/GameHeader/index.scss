@@ -1,0 +1,13 @@
+@import '../../../../../../scss/_variables.scss';
+
+.gameHeader {
+  margin-bottom: 25px;
+  &__game_master {
+    margin-left: 20px;
+    color: $gray-700;
+  }
+  &__status {
+    padding-top: 10px;
+    font-weight: bold;
+  }
+}
