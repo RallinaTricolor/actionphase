@@ -6,13 +6,6 @@ class DetailsTab extends Component {
     render() {
         return <Row className="gameDetail__content">
             <Col md="12">
-                <div
-                    className={`gameDetail__attribute gameDetail__status gameDetail__status-${this.props.get_status_display}`}>
-                    {this.props.get_status_display}
-                </div>
-                <div className="gameDetail__attribute gameDetail__game_master">
-                    Game Master: {this.props.game_master ? this.props.game_master.username : ''}
-                </div>
                 <Row>
                     <Col sm="12" md="6">
                         <div className="gameDetail__attribute gameDetail__description">

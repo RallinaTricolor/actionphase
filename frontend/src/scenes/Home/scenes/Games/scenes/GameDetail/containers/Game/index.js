@@ -6,6 +6,7 @@ import CharactersTab from "../../components/CharactersTab";
 import {TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, Breadcrumb, BreadcrumbItem} from 'reactstrap';
 import {Route, Switch, Link} from "react-router-dom";
 import classnames from 'classnames';
+import GameHeader from "../../../../components/GameHeader";
 
 class GameDetailContainer extends Component {
     constructor(props) {
@@ -32,7 +33,7 @@ class GameDetailContainer extends Component {
                 <BreadcrumbItem><Link to="/games">Games</Link></BreadcrumbItem>
                 <BreadcrumbItem active>{this.props.name}</BreadcrumbItem>
             </Breadcrumb>
-            <h2>{this.props.name} ({this.props.abbreviation})</h2>
+            <GameHeader {...this.props} />
             <Nav tabs>
                 <NavItem>
                     <NavLink className={classnames({active: this.state.activeTab === '1'})} onClick={() => {
