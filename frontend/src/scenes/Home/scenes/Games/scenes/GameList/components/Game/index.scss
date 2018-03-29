@@ -1,7 +1,7 @@
 .game {
   display: grid;
   grid-template-columns: 2fr 1fr 2fr 7fr;
-  grid-template-areas: "name abbreviation status description";
+  grid-template-areas: "name abbreviation status game_master";
   padding: 10px;
   &__attribute {
 
@@ -12,11 +12,20 @@
   }
   &__abbreviation {
     grid-area: abbreviation;
+    &-header {
+      font-weight: bold;
+    }
   }
   &__status {
     grid-area: status;
+    &-header {
+      font-weight: bold;
+    }
   }
-  &__description {
-    grid-area: description;
+  &__game_master {
+    grid-area: game_master;
+    &-header {
+      font-weight: bold;
+    }
   }
 }

@@ -21,13 +21,13 @@ class SignupSerializer(serializers.ModelSerializer):
 
 
 class GameSerializer(serializers.ModelSerializer):
+    game_master = UserSerializer(read_only=True)
     class Meta:
         model = Game
-        fields = ('id', 'name', 'abbreviation', 'description', 'get_status_display')
+        fields = ('id', 'name', 'abbreviation', 'get_status_display', 'game_master')
 
 
-class GameDetailSerializer(serializers.HyperlinkedModelSerializer):
-    game_master = UserSerializer(read_only=True)
+class GameDetailSerializer(GameSerializer):
     plugins = PluginSerializer(many=True)
     signups = SignupSerializer(many=True)
     characters = CharacterSerializer(many=True)
