@@ -13,13 +13,18 @@ class DetailsTab extends Component {
                 <div className="gameDetail__attribute gameDetail__game_master">
                     Game Master: {this.props.game_master ? this.props.game_master.username : ''}
                 </div>
-
-                <div className="gameDetail__attribute gameDetail__description">
-                    Description: {this.props.description}
-                </div>
-                <div className="gameDetail__attribute gameDetail__character_guidelines">
-                    Character Guidelines: {this.props.character_guidelines}
-                </div>
+                <Row>
+                    <Col sm="12" md="6">
+                        <div className="gameDetail__attribute gameDetail__description">
+                            Description: {this.props.description}
+                        </div>
+                    </Col>
+                    <Col sm="12" md="6">
+                        <div className="gameDetail__attribute gameDetail__character_guidelines">
+                            Character Guidelines: {this.props.character_guidelines}
+                        </div>
+                    </Col>
+                </Row>
             </Col>
         </Row>
     }
