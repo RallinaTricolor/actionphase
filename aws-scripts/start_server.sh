@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 cd /code
-mv backend/app/.env.example backend/app/.env
+mv backend/api/app/.env.example backend/api/app/.env
 mv frontend/.env.stage frontend/.env
 docker-compose build
 docker-compose run --rm api pip install -r requirements.txt
