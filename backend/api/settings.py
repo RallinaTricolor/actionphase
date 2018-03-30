@@ -82,6 +82,8 @@ REST_FRAMEWORK = {
 CORS_ORIGIN_WHITELIST = (
     '192.168.99.100:8000',
     '192.168.99.100:3000',
+    'stage.actionpha.se:8000',
+    'stage.actionpha.se:3000',
 )
 
 MIDDLEWARE = [
