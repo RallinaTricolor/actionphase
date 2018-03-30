@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 cd /code
-mv actionphase/.env.example actionphase/.env
+mv backend/app/.env.example backend/app/.env
+mv frontend/.env.stage frontend/.env
 docker-compose build
-docker-compose run --rm web pip install -r requirements.txt
+docker-compose run --rm api pip install -r requirements.txt
 docker-compose up -d
 sleep 15
-docker exec code_web_1 npm install --silent
-docker exec code_web_1 python manage.py migrate
-docker exec code_web_1 python manage.py collectstatic --noinput
-docker exec code_web_1 bash load_fixtures.sh
-docker exec code_web_1 python manage.py runserver 0.0.0.0:8000
+docker exec code_api_1 python manage.py migrate
+docker exec code_api_1 bash load_fixtures.sh
+docker exec code_api_1 python manage.py runserver 0.0.0.0:8000
