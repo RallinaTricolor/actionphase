@@ -3,12 +3,12 @@ branch = True
 source =
     backend
 omit =
-    manage.py
-    api/app/management/*
-    api/app/apps.py
-    api/settings.py
-    api/storage_backends.py
-    api/wsgi.py
+    backend/manage.py
+    backend/api/app/management/*
+    backend/api/app/apps.py
+    backend/api/settings.py
+    backend/api/storage_backends.py
+    backend/api/wsgi.py
 [report]
 # Regexes for lines to exclude from consideration
 exclude_lines =
