@@ -4,6 +4,7 @@ import './index.scss';
 import {gameList} from "../../../../../../actions/games";
 import {games} from "../../../../../../reducers/games";
 import Game from "./components/Game";
+import {Loading} from "../../../../../../components/Loading";
 
 class GameList extends Component {
     componentDidMount() {
@@ -12,6 +13,9 @@ class GameList extends Component {
 
     render() {
         const games = this.props.games || [];
+        if (!this.props.games) {
+            return <Loading />
+        }
         return <div className="games">
             <h2>Games</h2>
             <div className="game">
