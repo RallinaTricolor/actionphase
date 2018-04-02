@@ -8,7 +8,7 @@ const CreateForm = (props) => {
 };
 
 const mapStateToProps = state => ({
-    test: 'test'
+    
 });
 const mapDispatchToProps = dispatch => ({
     onSubmit: (data) => {
