@@ -1,7 +1,8 @@
 import React, {Component} from 'react';
 import {connect} from 'react-redux'
+import {Link} from 'react-router-dom';
 import './index.scss';
-import {Row, Col} from 'reactstrap';
+import {Row, Col, Button} from 'reactstrap';
 import {gameList} from "../../../../../../actions/games";
 import {games} from "../../../../../../reducers/games";
 import Game from "./components/Game";
@@ -19,22 +20,35 @@ class GameList extends Component {
         }
         return <Row className="games">
             <Col sm="12">
-                <h2>Games</h2>
-                <Row className="game">
-                    <Col sm="2" className="game__attribute game__name game__name-header">
-                        Name
+                <Row className="games__title">
+                    <Col md="8">
+                        <h2>Games</h2>
                     </Col>
-                    <Col sm="2" className="game__attribute game__abbreviation game__abbreviation-header">
-                        Abbreviation
-                    </Col>
-                    <Col sm="2" className="game__attribute game__status game__status-header">
-                        Status
-                    </Col>
-                    <Col sm="2" className="game__attribute game__game_master game__game_master-header">
-                        Game Master
+                    <Col md="4">
+                        <Link to="/games/new">
+                            <Button color="primary" active>Create Game</Button>
+                        </Link>
                     </Col>
                 </Row>
-                {games.map(game => <Game key={game.id} {...game} />)}
+                <Row>
+                    <Col sm="12">
+                        <Row className="game">
+                            <Col sm="2" className="game__attribute game__name game__name-header">
+                                Name
+                            </Col>
+                            <Col sm="2" className="game__attribute game__abbreviation game__abbreviation-header">
+                                Abbreviation
+                            </Col>
+                            <Col sm="2" className="game__attribute game__status game__status-header">
+                                Status
+                            </Col>
+                            <Col sm="2" className="game__attribute game__game_master game__game_master-header">
+                                Game Master
+                            </Col>
+                        </Row>
+                        {games.map(game => <Game key={game.id} {...game} />)}
+                    </Col>
+                </Row>
             </Col>
         </Row>
     }

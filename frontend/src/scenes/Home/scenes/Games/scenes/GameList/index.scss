@@ -1,21 +1,26 @@
-.game {
-  padding: 10px;
-  &__name {
-    font-weight: bold;
+.games {
+  &__title {
+    margin-top: 20px;
   }
-  &__abbreviation {
-    &-header {
+  .game {
+    padding: 10px;
+    &__name {
       font-weight: bold;
     }
-  }
-  &__status {
-    &-header {
-      font-weight: bold;
+    &__abbreviation {
+      &-header {
+        font-weight: bold;
+      }
     }
-  }
-  &__game_master {
-    &-header {
-      font-weight: bold;
+    &__status {
+      &-header {
+        font-weight: bold;
+      }
+    }
+    &__game_master {
+      &-header {
+        font-weight: bold;
+      }
     }
   }
 }
