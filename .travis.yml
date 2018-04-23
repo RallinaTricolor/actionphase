@@ -21,6 +21,8 @@
     webhooks: https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN
   after_failure:
     - cat /tmp/debug.log
+  after_success:
+    - coveralls
 
   jobs:
     include:
