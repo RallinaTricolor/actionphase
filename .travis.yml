@@ -1,5 +1,6 @@
   env:
-    - COVERALLS_PARALLEL=true
+    global:
+      - COVERALLS_PARALLEL=true
     matrix:
       - TO_TEST=BACKEND TESTS=unit
       - TO_TEST=BACKEND TESTS=integration
