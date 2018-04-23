@@ -5,5 +5,5 @@ if [ "$TO_TEST" = "BACKEND" ]; then
     pip install coveralls
 fi
 if [ "$TO_TEST" = "FRONTEND" ]; then
-    npm install
+    cd frontend && npm install
 fi
