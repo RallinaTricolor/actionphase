@@ -1,8 +1,7 @@
-  dist: trusty
   env:
     matrix:
-      - TESTFOLDER=unit
-      - TESTFOLDER=integration
+      - env: TO_TEST=BACKEND TESTS=UNIT
+      - env: TO_TEST=BACKEND TESTS=INTEGRATION
   language: python
   python:
     - "3.6"
@@ -11,7 +10,8 @@
     - ./travis-scripts/install.sh
   before_script:
     - ./travis-scripts/before_script.sh
-  script: "coverage run backend/manage.py test api.app.tests.$TESTFOLDER"
+  script:
+    - if [ "$TO_TEST" = "BACKEND" ]; then "coverage run backend/manage.py test api.app.tests.$TESTS"; fi
   notifications:
     email: false
   after_failure:
