@@ -1,7 +1,9 @@
   env:
     matrix:
-      - env: TO_TEST=BACKEND TESTS=UNIT
-      - env: TO_TEST=BACKEND TESTS=INTEGRATION
+      - env: TO_TEST=BACKEND
+        env: TESTS=UNIT
+      - env: TO_TEST=BACKEND
+        env: TESTS=INTEGRATION
   language: python
   python:
     - "3.6"
