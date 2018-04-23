@@ -1,4 +1,5 @@
   env:
+    - COVERALLS_PARALLEL=true
     matrix:
       - TO_TEST=BACKEND TESTS=unit
       - TO_TEST=BACKEND TESTS=integration
@@ -16,10 +17,9 @@
     - if [ "$TO_TEST" = "FRONTEND" ]; then cd frontend && yarn test; fi
   notifications:
     email: false
+    webhooks: https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN
   after_failure:
     - cat /tmp/debug.log
-  after_success:
-    - coveralls
 
   jobs:
     include:
