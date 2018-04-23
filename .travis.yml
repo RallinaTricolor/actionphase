@@ -11,11 +11,8 @@
   before_script:
     - ./travis-scripts/before_script.sh
   script:
-    - |
-      if [ "$GROUP" = "BACKEND_UNIT" ]; then
-        coverage run backend/manage.py test api.app.tests.unit
-      fi
-    - if [ "$GROUP" = "BACKEND_INTEGRATION" ]; then coverage run backend/manage.py test api.app.tests.integration; fi
+    - test $GROUP = "BACKEND_UNIT" && ./travis-scripts/unit_tests.sh
+    - if [[ "$GROUP" = "BACKEND_INTEGRATION" ]]; then coverage run backend/manage.py test api.app.tests.integration; fi
   notifications:
     email: false
   after_failure:
