@@ -64,6 +64,7 @@
   "devDependencies": {
     "babel-preset-env": "^1.6.1",
     "enzyme": "^3.3.0",
+    "enzyme-adapter-react-16": "^1.1.1",
     "jest": "^20.0.4",
     "node-sass": "^4.7.2",
     "react-test-renderer": "^16.3.2",
@@ -101,7 +102,8 @@
       "web.jsx",
       "jsx",
       "node"
-    ]
+    ],
+    "setupTestFrameworkScriptFile": "<rootDir>src/setupTests.js"
   },
   "babel": {
     "presets": [
