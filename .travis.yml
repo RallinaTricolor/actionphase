@@ -1,7 +1,7 @@
   env:
     matrix:
-      - env: TO_TEST=BACKEND TESTS=UNIT
-      - env: TO_TEST=BACKEND TESTS=INTEGRATION
+      - env: GROUP=BACKEND_UNIT
+      - env: GROUP=BACKEND_INTEGRATION
   language: python
   python:
     - "3.6"
@@ -11,8 +11,8 @@
   before_script:
     - ./travis-scripts/before_script.sh
   script:
-    - echo $TO_TEST
-    - if [ "$TO_TEST" = "BACKEND" ]; then ./travis-scripts/backend_tests.sh; fi
+    - if [ "$GROUP" = "BACKEND_UNIT" ]; then coverage run backend/manage.py test api.app.tests.unit; fi
+    - if [ "$GROUP" = "BACKEND_INTEGRATION" ]; then coverage run backend/manage.py test api.app.tests.integration; fi
   notifications:
     email: false
   after_failure:
