@@ -22,7 +22,8 @@
   after_failure:
     - cat /tmp/debug.log
   after_success:
-    - coveralls
+    - if [ "$TO_TEST" = "BACKEND" ]; then coveralls; fi
+    - if [ "$TO_TEST" = "FRONTEND" ]; then cat ./frontend/coverage/lcov.info | coveralls; fi
 
   jobs:
     include:
