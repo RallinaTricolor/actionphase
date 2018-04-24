@@ -2,7 +2,7 @@
 branch = True
 source =
     backend
-    frontend
+    frontend/src
 omit =
     backend/manage.py
     backend/api/app/management/*
