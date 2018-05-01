@@ -43,6 +43,10 @@ describe("TextInput", () => {
             const input = textInput().find("Input");
             expect(Object.keys(input.props()).length).toBeGreaterThan(0);
         });
+        it("has a default type of 'text'", () => {
+            const input = textInput().find("Input").first();
+            expect(input.prop('type')).toBe("text");
+        });
     });
 });
 
