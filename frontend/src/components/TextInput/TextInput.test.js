@@ -44,8 +44,18 @@ describe("TextInput", () => {
             expect(Object.keys(input.props()).length).toBeGreaterThan(0);
         });
         it("has a default type of 'text'", () => {
-            const input = textInput().find("Input").first();
+            const input = textInput().find("Input");
             expect(input.prop('type')).toBe("text");
+        });
+    });
+    describe("when 'name' is defined", () => {
+        beforeEach(() => {
+            props.name = 'test';
+        });
+
+        it("sets the rendered Input's 'name' to the same value as the prop", () => {
+            const input = textInput().find("Input");
+            expect(input.prop('name')).toBe(props.name);
         });
     });
 });
