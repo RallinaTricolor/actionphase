@@ -66,9 +66,16 @@ describe("TextInput", () => {
         beforeEach(() => {
             props.label = 'test';
         });
-        it('causes a Label to be rendered', () => {
+        it("causes a Label to be rendered", () => {
             const label = textInput().find("Label");
             expect(label.length).toBeGreaterThan(0);
+        });
+        describe("the rendered Label", () => {
+            it("has a 'for' attribute equal to the Input's 'id'", () => {
+                const label = textInput().find("Label");
+                const input = textInput().find("Input");
+                expect(label.prop('htmlFor')).toBe(input.prop('id'));
+            });
         });
     });
 });
