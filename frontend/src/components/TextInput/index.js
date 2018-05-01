@@ -16,7 +16,7 @@ const TextInput = ({name, label, error, type, ...rest}) => {
 
 TextInput.propTypes = {
     name: PropTypes.string.isRequired,
-    type: PropTypes.string,
+    label: PropTypes.string,
     error: PropTypes.string,
     type: PropTypes.string
 };
