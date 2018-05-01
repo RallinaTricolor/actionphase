@@ -56,9 +56,19 @@ describe("TextInput", () => {
             expect(input.prop('id')).toBe('id_' + props.name);
         });
     });
+    describe("when 'label' is undefined", () => {
+        it('does not render a Label', () => {
+            const label = textInput().find("Label");
+            expect(label.length).toBe(0);
+        });
+    });
     describe("when 'label' is defined", () => {
         beforeEach(() => {
             props.label = 'test';
+        });
+        it('causes a Label to be rendered', () => {
+            const label = textInput().find("Label");
+            expect(label.length).toBeGreaterThan(0);
         });
     });
 });
