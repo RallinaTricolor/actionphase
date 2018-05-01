@@ -77,7 +77,9 @@
   "jest": {
     "collectCoverageFrom": [
       "<rootDir>/src/**/*.{js,jsx,mjs}",
-      "!<rootDir>/src/**/*.test.{js,jsx,mjs}"
+      "!<rootDir>/src/**/*.test.{js,jsx,mjs}",
+      "!<rootDir>/src/actions/**",
+      "!<rootDir>/src/middleware/**"
     ],
     "setupFiles": [
       "<rootDir>/config/polyfills.js"
