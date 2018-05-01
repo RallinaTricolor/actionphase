@@ -39,7 +39,7 @@ describe("TextInput", () => {
         expect(textInput().find("Input").length).toBe(1);
     });
     describe("the rendered Input", () => {
-        it("receives props from the TextInput", () => {
+        it("receives props from TextInput", () => {
             const input = textInput().find("Input");
             expect(Object.keys(input.props()).length).toBeGreaterThan(0);
         });
