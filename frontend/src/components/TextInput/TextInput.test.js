@@ -110,5 +110,14 @@ describe("TextInput", () => {
             expect(input.prop('type')).toBe(props.type);
         });
     });
+    describe("when extra props are passed", () => {
+        beforeEach(() => {
+            props.onChange = jest.fn();
+        });
+        it("sets those props on the Input", () => {
+            const input = textInput().find("Input");
+            expect(input.prop('onChange')).toBe(props.onChange);
+        });
+    });
 });
 
