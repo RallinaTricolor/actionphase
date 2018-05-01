@@ -9,7 +9,7 @@ const TextInput = ({name, label, error, type, ...rest}) => {
         <FormGroup color={error ? "danger" : ""}>
             {label ? <Label htmlFor={id}>{label}</Label> : ""}
             <Input type={input_type} name={name} id={id} className={error ? "is-invalid" : ""} {...rest} />
-            {error ? <FormFeedback className="invalid-feedback"> {error} </FormFeedback> : ""}
+            {error ? <FormFeedback className="invalid-feedback">{error}</FormFeedback> : ""}
         </FormGroup>
     )
 };

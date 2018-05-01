@@ -78,5 +78,26 @@ describe("TextInput", () => {
             });
         });
     });
+    describe("when 'error' is undefined", () => {
+        it('does not render a FormFeedback', () => {
+            const label = textInput().find("FormFeedback");
+            expect(label.length).toBe(0);
+        });
+    });
+    describe("when 'error' is defined", () => {
+        beforeEach(() => {
+            props.error = 'test';
+        });
+        it("causes a FormFeedback to be rendered", () => {
+            const error = textInput().find("FormFeedback");
+            expect(error.length).toBeGreaterThan(0);
+        });
+        describe("the rendered FormFeedback", () => {
+            it("has a html equal to the 'error' prop", () => {
+                const error = textInput().find("FormFeedback");
+                expect(error.text()).toBe(props.error);
+            });
+        });
+    });
 });
 
