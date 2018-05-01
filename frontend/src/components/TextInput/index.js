@@ -1,7 +1,8 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import {FormGroup, FormFeedback, Label, Input} from 'reactstrap';
 
-export const TextInput = ({name, label, error, type, ...rest}) => {
+const TextInput = ({name, label, error, type, ...rest}) => {
     const id = `id_${name}`,
         input_type = type ? type : "text";
     return (
@@ -12,3 +13,9 @@ export const TextInput = ({name, label, error, type, ...rest}) => {
         </FormGroup>
     )
 };
+
+TextInput.propTypes = {
+  name: PropTypes.string.isRequired,
+};
+
+export default TextInput;

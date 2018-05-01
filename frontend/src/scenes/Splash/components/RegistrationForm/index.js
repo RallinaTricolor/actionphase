@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import {Link} from "react-router-dom";
 import PropTypes from 'prop-types';
-import {TextInput} from '../../../../components/TextInput';
+import TextInput from '../../../../components/TextInput';
 import {FormGroup, Alert, Button, Form} from 'reactstrap';
 import './index.scss';
 
