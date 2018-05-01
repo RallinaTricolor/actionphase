@@ -43,10 +43,6 @@ describe("TextInput", () => {
             const input = textInput().find("Input");
             expect(Object.keys(input.props()).length).toBeGreaterThan(0);
         });
-        it("has a default type of 'text'", () => {
-            const input = textInput().find("Input");
-            expect(input.prop('type')).toBe("text");
-        });
         it("has the 'name' property matching the prop", () => {
             const input = textInput().find("Input");
             expect(input.prop('name')).toBe(props.name);
@@ -97,6 +93,21 @@ describe("TextInput", () => {
                 const error = textInput().find("FormFeedback");
                 expect(error.text()).toBe(props.error);
             });
+        });
+    });
+    describe("when 'type' is undefined", () => {
+        it("gives the Input a default type of 'text'", () => {
+            const input = textInput().find("Input");
+            expect(input.prop('type')).toBe("text");
+        });
+    });
+    describe("when 'type' is defined", () => {
+        beforeEach(() => {
+            props.type = 'checkbox';
+        });
+        it("sets the Input's type attribute to the prop", () => {
+            const input = textInput().find("Input");
+            expect(input.prop('type')).toBe(props.type);
         });
     });
 });
