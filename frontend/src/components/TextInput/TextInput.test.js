@@ -1,6 +1,6 @@
 import React from "react";
 import {mount} from "enzyme";
-import {TextInput} from ".";
+import TextInput from ".";
 
 describe("TextInput", () => {
 
@@ -17,7 +17,7 @@ describe("TextInput", () => {
 
     beforeEach(() => {
         props = {
-            name: undefined,
+            name: 'test',
             label: undefined,
             error: undefined,
             type: undefined
@@ -47,15 +47,18 @@ describe("TextInput", () => {
             const input = textInput().find("Input");
             expect(input.prop('type')).toBe("text");
         });
-    });
-    describe("when 'name' is defined", () => {
-        beforeEach(() => {
-            props.name = 'test';
-        });
-
-        it("sets the rendered Input's 'name' to the same value as the prop", () => {
+        it("has the 'name' property matching the prop", () => {
             const input = textInput().find("Input");
             expect(input.prop('name')).toBe(props.name);
+        });
+        it("has the 'id' property set to to 'id_$name'", () => {
+            const input = textInput().find("Input");
+            expect(input.prop('id')).toBe('id_' + props.name);
+        });
+    });
+    describe("when 'label' is defined", () => {
+        beforeEach(() => {
+            props.label = 'test';
         });
     });
 });
