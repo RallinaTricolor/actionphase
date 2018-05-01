@@ -19,7 +19,7 @@ describe("TextInput", () => {
         props = {
             name: undefined,
             label: undefined,
-            error: undef,
+            error: undefined,
             type: undefined
         };
         mountedTextInput = undefined;
@@ -38,6 +38,11 @@ describe("TextInput", () => {
     it("always renders an Input", () => {
         expect(textInput().find("Input").length).toBe(1);
     });
-    describe("the rendered Input");
+    describe("the rendered Input", () => {
+        it("receives props from the TextInput", () => {
+            const input = textInput().find("Input");
+            expect(Object.keys(input.props()).length).toBeGreaterThan(0);
+        });
+    });
 });
 
