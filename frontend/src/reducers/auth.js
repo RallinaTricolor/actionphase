@@ -8,6 +8,9 @@ const initialState = {
 };
 
 const authReducer = (state = initialState, action) => {
+    if (typeof action === 'undefined') {
+        return initialState;
+    }
     switch (action.type) {
         case auth.LOGIN_SUCCESS:
         case auth.REGISTRATION_SUCCESS:
