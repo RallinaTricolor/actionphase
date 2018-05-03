@@ -1,4 +1,3 @@
-import Immutable from 'seamless-immutable';
 import {Reducer} from 'redux-testkit';
 import authReducer from './auth';
 import * as auth from '../actions/auth';
@@ -22,6 +21,15 @@ const samplePayload = {
     token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzY290Y2guaW8iLCJleHAiOjEzMDA4MTkzODAsIm5hbWUiOiJDaHJpcyBTZXZpbGxlamEiLCJhZG1pbiI6dHJ1ZX0.03f329983b86f7d9a9f5fef85305880101d5e302afafa20154d094b229f75773'
 };
 
+const successResult = {
+    access: {
+        token: samplePayload.token,
+        ...decodedToken
+    },
+    fetching: false,
+    errors: {}
+};
+
 describe('AuthReducer', () => {
     it('should have initial state', () => {
         expect(authReducer()).toEqual(initialState);
@@ -30,14 +38,9 @@ describe('AuthReducer', () => {
         Reducer(authReducer).expect({type: 'NOT_EXISTING'}).toReturnState(initialState);
     });
     it('should handle access token on login success', () => {
-        const result = {
-            access: {
-                token: samplePayload.token,
-                ...decodedToken
-            },
-            fetching: false,
-            errors: {}
-        };
-        Reducer(authReducer).expect({type: auth.LOGIN_SUCCESS, payload: samplePayload}).toReturnState(result);
+        Reducer(authReducer).expect({type: auth.LOGIN_SUCCESS, payload: samplePayload}).toReturnState(successResult);
+    });
+    it('should handle access token on registration success', () => {
+        Reducer(authReducer).expect({type: auth.REGISTRATION_SUCCESS, payload: samplePayload}).toReturnState(successResult);
     });
 });
