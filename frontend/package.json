@@ -72,6 +72,7 @@
     "jest": "^22.4.2",
     "node-sass": "^4.7.2",
     "react-test-renderer": "^16.3.2",
+    "redux-testkit": "^1.0.6",
     "sass-loader": "^6.0.6"
   },
   "jest": {
