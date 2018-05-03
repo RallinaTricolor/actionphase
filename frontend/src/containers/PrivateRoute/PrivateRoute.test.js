@@ -1,7 +1,13 @@
 import React from "react";
 import {mount} from "enzyme";
 import {PrivateRoute} from ".";
-import { MemoryRouter } from 'react-router';
+import {MemoryRouter} from 'react-router';
+
+const FakeComponent = () => {
+    return <div id="fake-component">
+        <h1>Test</h1>
+    </div>;
+};
 
 describe("PrivateRoute", () => {
 
@@ -10,8 +16,8 @@ describe("PrivateRoute", () => {
     const privateRoute = () => {
         if (!mountedPrivateRoute) {
             mountedPrivateRoute = mount(
-                <MemoryRouter initialEntries={[ '/test' ]}>
-                    <PrivateRoute path="/test" {...props} />
+                <MemoryRouter initialEntries={['/test']}>
+                    <PrivateRoute component={FakeComponent} path="/test" {...props} />
                 </MemoryRouter>
             );
         }
@@ -20,7 +26,6 @@ describe("PrivateRoute", () => {
 
     beforeEach(() => {
         props = {
-            component: 'Component',
             isAuthenticated: undefined
         };
         mountedPrivateRoute = undefined;
@@ -29,5 +34,24 @@ describe("PrivateRoute", () => {
     it("always renders a Route", () => {
         const route = privateRoute().find("Route");
         expect(route.length).toBe(1);
+    });
+
+    describe("the rendered Route", () => {
+        it("redirects when not authenticated", () => {
+            const route = privateRoute();
+            expect(route.html()).toBe(null);
+        });
+        describe("when isAuthenticated is true", () => {
+            beforeEach(() => {
+                props = {
+                    isAuthenticated: true
+                };
+            });
+            it("renders the passed component", () => {
+                const fakeComponent = privateRoute().find('#fake-component');
+                expect(fakeComponent.length).toBe(1);
+            });
+        });
+
     });
 });
