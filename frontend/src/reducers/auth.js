@@ -19,6 +19,7 @@ const authReducer = (state = initialState, action) => {
                     token: action.payload.token,
                     ...jwtDecode(action.payload.token)
                 },
+                fetching: false,
                 errors: {}
             };
         case auth.LOGIN_REQUEST:
@@ -29,12 +30,12 @@ const authReducer = (state = initialState, action) => {
             };
         case auth.TOKEN_RECEIVED:
             return {
-                ...state,
                 access: {
                     token: action.payload.token,
                     ...jwtDecode(action.payload.token)
                 },
-                fetching: false
+                fetching: false,
+                errors: {}
             };
         case auth.LOGIN_FAILURE:
         case auth.REGISTRATION_FAILURE:
@@ -49,7 +50,8 @@ const authReducer = (state = initialState, action) => {
         case auth.LOGOUT:
             return {
                 access: undefined,
-                fetching: false
+                fetching: false,
+                errors: {}
             };
         default:
             return state
