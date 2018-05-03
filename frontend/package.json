@@ -73,7 +73,8 @@
     "node-sass": "^4.7.2",
     "react-test-renderer": "^16.3.2",
     "redux-testkit": "^1.0.6",
-    "sass-loader": "^6.0.6"
+    "sass-loader": "^6.0.6",
+    "seamless-immutable": "^7.1.3"
   },
   "jest": {
     "collectCoverageFrom": [
