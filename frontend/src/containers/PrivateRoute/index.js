@@ -16,8 +16,10 @@ export const PrivateRoute = ({ component: Component, isAuthenticated, ...rest })
   )}/>
 );
 
+/* istanbul ignore next */
 const mapStateToProps = (state) => ({
   isAuthenticated: auth.isAuthenticated(state)
 });
 
+/* istanbul ignore next */
 export default connect(mapStateToProps, null)(PrivateRoute);
