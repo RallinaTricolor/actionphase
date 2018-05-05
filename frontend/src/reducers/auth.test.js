@@ -4,7 +4,6 @@ import * as auth from '../actions/auth';
 
 const initialState = {
     access: undefined,
-    fetching: false,
     errors: {},
 };
 
@@ -26,7 +25,6 @@ const successResult = {
         token: samplePayload.token,
         ...decodedToken
     },
-    fetching: false,
     errors: {}
 };
 
