@@ -25,15 +25,21 @@ describe('GameReducer', () => {
         Reducer(gameReducer).expect({type: 'NOT_EXISTING'}).toReturnState(initialState);
     });
     it('should return a list of games from the API on list success', () => {
-        Reducer(gameReducer).expect({type: gameActions.GAME_LIST_SUCCESS, payload: requestPayload}).toReturnState(gameListSuccess);
+        Reducer(gameReducer).expect({
+            type: gameActions.GAME_LIST_SUCCESS,
+            payload: requestPayload
+        }).toReturnState(gameListSuccess);
     });
     it('should return a game details from the API on detail success', () => {
-        Reducer(gameReducer).expect({type: gameActions.GAME_DETAIL_SUCCESS, payload: requestPayload}).toReturnState(gameDetailSuccess);
+        Reducer(gameReducer).expect({
+            type: gameActions.GAME_DETAIL_SUCCESS,
+            payload: requestPayload
+        }).toReturnState(gameDetailSuccess);
     });
     describe('the exported functions', () => {
         let functionTestState;
         beforeEach(() => {
-             functionTestState = {
+            functionTestState = {
                 game: {
                     list: [
                         {
