@@ -34,8 +34,10 @@ class LoginForm extends Component {
                             {errors.non_field_errors}
                         </Alert> : ""
                 }
-                <TextInput className="login-form__item" name="username" placeholder="Username" error={errors.username}  onChange={this.handleInputChange} />
-                <TextInput className="login-form__item" name="password" placeholder="Password" error={errors.password} type="password" onChange={this.handleInputChange} />
+                <TextInput className="login-form__item" name="username" placeholder="Username" error={errors.username}
+                           onChange={this.handleInputChange}/>
+                <TextInput className="login-form__item" name="password" placeholder="Password" error={errors.password}
+                           type="password" onChange={this.handleInputChange}/>
                 <Button type="submit" color="primary" className="login-form__submit-button">Login</Button>
                 <FormGroup className="login-form__links">
                     <Link className="login-form__link" to="/home/register">Need an account?</Link><br/>
@@ -44,10 +46,10 @@ class LoginForm extends Component {
             </Form>
         </div>
     }
-    }
+}
 
-    LoginForm.propTypes = {
-        onSubmit: PropTypes.func.isRequired,
-    };
+LoginForm.propTypes = {
+    onSubmit: PropTypes.func.isRequired,
+};
 
-    export default LoginForm;
+export default LoginForm;
