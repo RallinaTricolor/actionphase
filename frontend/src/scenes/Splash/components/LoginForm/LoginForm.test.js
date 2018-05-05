@@ -26,4 +26,12 @@ describe("LoginForm", () => {
         const divs = loginForm().find("div");
         expect(divs.length).toBeGreaterThan(0);
     });
+    it("always renders a username input", () => {
+        const usernameInput = loginForm().find("TextInput[name='username']");
+        expect(usernameInput.length).toBe(1);
+    });
+    it("always renders a password input", () => {
+        const passwordInput = loginForm().find("TextInput[name='password']");
+        expect(passwordInput.length).toBe(1);
+    });
 });
