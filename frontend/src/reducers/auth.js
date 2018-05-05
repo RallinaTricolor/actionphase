@@ -13,13 +13,6 @@ const authReducer = (state = initialState, action) => {
     switch (action.type) {
         case auth.LOGIN_SUCCESS:
         case auth.REGISTRATION_SUCCESS:
-            return {
-                access: {
-                    token: action.payload.token,
-                    ...jwtDecode(action.payload.token)
-                },
-                errors: {}
-            };
         case auth.TOKEN_RECEIVED:
             return {
                 access: {

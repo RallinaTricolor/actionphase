@@ -28,6 +28,12 @@ const successResult = {
     errors: {}
 };
 
+const errorMessage = "Error Message";
+const failureResult = {
+    access: undefined,
+    errors: errorMessage
+};
+
 describe('AuthReducer', () => {
     it('should have initial state', () => {
         expect(authReducer()).toEqual(initialState);
@@ -39,6 +45,15 @@ describe('AuthReducer', () => {
         Reducer(authReducer).expect({type: auth.LOGIN_SUCCESS, payload: samplePayload}).toReturnState(successResult);
     });
     it('should handle access token on registration success', () => {
-        Reducer(authReducer).expect({type: auth.REGISTRATION_SUCCESS, payload: samplePayload}).toReturnState(successResult);
+        Reducer(authReducer).expect({
+            type: auth.REGISTRATION_SUCCESS,
+            payload: samplePayload
+        }).toReturnState(successResult);
+    });
+    it('should handle access token on token received', () => {
+        Reducer(authReducer).expect({type: auth.TOKEN_RECEIVED, payload: samplePayload}).toReturnState(successResult);
+    });
+    it('should unset token and load error message on error', () => {
+        Reducer(authReducer).expect({type: auth.LOGIN_FAILURE, payload: {response: errorMessage}}).toReturnState(failureResult);
     });
 });
