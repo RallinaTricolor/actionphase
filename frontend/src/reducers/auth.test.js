@@ -71,4 +71,7 @@ describe('AuthReducer', () => {
             payload: {response: errorMessage}
         }).toReturnState(failureResult);
     });
+    it('should return default state on logout', () => {
+        Reducer(authReducer).expect({type: auth.LOGOUT}).toReturnState(initialState);
+    });
 });
