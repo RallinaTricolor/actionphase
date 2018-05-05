@@ -18,7 +18,8 @@ describe("LoginForm", () => {
     };
     beforeEach(() => {
         props = {
-            onSubmit: jest.fn()
+            onSubmit: jest.fn(),
+            errors: {}
         };
         mountedLoginForm = undefined;
     });
