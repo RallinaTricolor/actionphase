@@ -54,12 +54,21 @@ describe('AuthReducer', () => {
         Reducer(authReducer).expect({type: auth.TOKEN_RECEIVED, payload: samplePayload}).toReturnState(successResult);
     });
     it('should unset token and load error message on login failure', () => {
-        Reducer(authReducer).expect({type: auth.LOGIN_FAILURE, payload: {response: errorMessage}}).toReturnState(failureResult);
+        Reducer(authReducer).expect({
+            type: auth.LOGIN_FAILURE,
+            payload: {response: errorMessage}
+        }).toReturnState(failureResult);
     });
     it('should unset token and load error message on registration failure', () => {
-        Reducer(authReducer).expect({type: auth.REGISTRATION_FAILURE, payload: {response: errorMessage}}).toReturnState(failureResult);
+        Reducer(authReducer).expect({
+            type: auth.REGISTRATION_FAILURE,
+            payload: {response: errorMessage}
+        }).toReturnState(failureResult);
     });
     it('should unset token and load error message on token failure', () => {
-        Reducer(authReducer).expect({type: auth.TOKEN_FAILURE, payload: {response: errorMessage}}).toReturnState(failureResult);
+        Reducer(authReducer).expect({
+            type: auth.TOKEN_FAILURE,
+            payload: {response: errorMessage}
+        }).toReturnState(failureResult);
     });
 });
