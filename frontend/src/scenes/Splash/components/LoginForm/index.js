@@ -50,6 +50,7 @@ class LoginForm extends Component {
 
 LoginForm.propTypes = {
     onSubmit: PropTypes.func.isRequired,
+    errors: PropTypes.object
 };
 
 export default LoginForm;
