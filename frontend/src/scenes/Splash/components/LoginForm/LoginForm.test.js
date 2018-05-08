@@ -85,15 +85,10 @@ describe("LoginForm", () => {
     });
     describe("when 'onSubmit' is defined", () => {
         beforeEach(() => {
-                props = {
-                    onSubmit: sinon.fake(),
-                    errors: undefined
-                }
-            });
-        it("is called when the form is submitted", () => {
-            const form = loginForm().find("Form");
-            form.simulate('submit');
-            expect(props.onSubmit.calledOnce).toBe(true);
+            props = {
+                onSubmit: sinon.fake(),
+                errors: undefined
+            }
         });
         it("is called with the username/password field values", () => {
             const usernameInput = loginForm().find("input[name='username']");
