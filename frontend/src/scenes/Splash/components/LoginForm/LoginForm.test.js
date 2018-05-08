@@ -1,6 +1,7 @@
 import React from "react";
 import {mount} from "enzyme";
 import {MemoryRouter} from 'react-router';
+import sinon from 'sinon';
 import LoginForm from "./index";
 
 describe("LoginForm", () => {
@@ -78,6 +79,19 @@ describe("LoginForm", () => {
                 const passwordInput = loginForm().find("TextInput[name='password']");
                 expect(passwordInput.prop('error')).toBe(props.errors.password);
             });
+        });
+    });
+    describe("when 'onSubmit' is defined", () => {
+        beforeEach(() => {
+                props = {
+                    onSubmit: sinon.fake(),
+                    errors: undefined
+                }
+            });
+        it("is called when the form is submitted", () => {
+            const submitButton = loginForm().find("Button[type='submit']");
+            submitButton.simulate('click');
+            expect(props.onSubmit.calledOnce);
         });
     });
 });
