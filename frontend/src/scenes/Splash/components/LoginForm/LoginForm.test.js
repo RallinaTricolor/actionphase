@@ -2,6 +2,8 @@ import React from "react";
 import {mount} from "enzyme";
 import {MemoryRouter} from 'react-router';
 import sinon from 'sinon';
+import ReactRouterEnzymeContext from 'react-router-enzyme-context';
+
 import LoginForm from "./index";
 
 describe("LoginForm", () => {
@@ -9,10 +11,10 @@ describe("LoginForm", () => {
     let mountedLoginForm;
     const loginForm = () => {
         if (!mountedLoginForm) {
+            const options = new ReactRouterEnzymeContext();
             mountedLoginForm = mount(
-                <MemoryRouter initialEntries={['/test']}>
-                    <LoginForm {...props}/>
-                </MemoryRouter>
+                <LoginForm {...props}/>,
+                options.get()
             );
         }
         return mountedLoginForm;
@@ -81,6 +83,12 @@ describe("LoginForm", () => {
             });
         });
     });
+    it('has its username state updated when the username field changes', () => {
+        const usernameInput = loginForm().find("input[name='username']");
+        const username = "test_username";
+        usernameInput.simulate('change', {target: {name: 'username', value: username}});
+        expect(loginForm().state().username).toBe(username);
+    });
     describe("when 'onSubmit' is defined", () => {
         beforeEach(() => {
                 props = {
@@ -89,9 +97,20 @@ describe("LoginForm", () => {
                 }
             });
         it("is called when the form is submitted", () => {
-            const submitButton = loginForm().find("Button[type='submit']");
-            submitButton.simulate('click');
-            expect(props.onSubmit.calledOnce);
+            const form = loginForm().find("Form");
+            form.simulate('submit');
+            expect(props.onSubmit.calledOnce).toBe(true);
+        });
+        it("is called with the username/password field values", () => {
+            const usernameInput = loginForm().find("input[name='username']");
+            const passwordInput = loginForm().find("input[name='password']");
+            const username = "test_username";
+            const password = "test_password";
+            usernameInput.simulate('change', {target: {name: 'username', value: username}});
+            passwordInput.simulate('change', {target: {name: 'password', value: password}});
+            const form = loginForm().find("Form");
+            form.simulate('submit');
+            expect(props.onSubmit.calledWith(username, username));
         });
     });
 });
