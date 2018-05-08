@@ -83,12 +83,6 @@ describe("LoginForm", () => {
             });
         });
     });
-    it('has its username state updated when the username field changes', () => {
-        const usernameInput = loginForm().find("input[name='username']");
-        const username = "test_username";
-        usernameInput.simulate('change', {target: {name: 'username', value: username}});
-        expect(loginForm().state().username).toBe(username);
-    });
     describe("when 'onSubmit' is defined", () => {
         beforeEach(() => {
                 props = {
