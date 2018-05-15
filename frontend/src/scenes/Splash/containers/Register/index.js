@@ -11,14 +11,15 @@ const Register = (props) => {
         <RegistrationForm {...props}/>
     )
 };
-
+/* istanbul ignore next */
 const mapStateToProps = state => ({
     errors: authErrors(state)
 });
+/* istanbul ignore next */
 const mapDispatchToProps = dispatch => ({
     onSubmit: (username, password1, password2, email) => {
         dispatch(register(username, password1, password2, email))
     }
 });
-
+/* istanbul ignore next */
 export default connect(mapStateToProps, mapDispatchToProps)(Register);

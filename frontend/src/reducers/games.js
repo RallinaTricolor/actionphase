@@ -8,6 +8,9 @@ const initialState = {
 };
 
 const gameReducer = (state = initialState, action) => {
+    if (typeof action === 'undefined') {
+        return initialState;
+    }
     switch (action.type) {
         case gameActions.GAME_LIST_SUCCESS:
             return {
