@@ -11,14 +11,15 @@ const Login = (props) => {
         <LoginForm {...props}/>
     )
 };
-
+/* istanbul ignore next */
 const mapStateToProps = state => ({
     errors: authErrors(state)
 });
+/* istanbul ignore next */
 const mapDispatchToProps = dispatch => ({
     onSubmit: (username, password) => {
         dispatch(login(username, password))
     }
 });
-
+/* istanbul ignore next */
 export default connect(mapStateToProps, mapDispatchToProps)(Login);

@@ -1,8 +1,10 @@
-  dist: trusty
   env:
+    global:
+      - COVERALLS_PARALLEL=true
     matrix:
-      - TESTFOLDER=unit
-      - TESTFOLDER=integration
+      - TO_TEST=BACKEND TESTS=unit
+      - TO_TEST=BACKEND TESTS=integration
+      - TO_TEST=FRONTEND
   language: python
   python:
     - "3.6"
@@ -11,13 +13,17 @@
     - ./travis-scripts/install.sh
   before_script:
     - ./travis-scripts/before_script.sh
-  script: "coverage run backend/manage.py test api.app.tests.$TESTFOLDER"
+  script:
+    - if [ "$TO_TEST" = "BACKEND" ]; then coverage run backend/manage.py test api.app.tests.$TESTS; fi
+    - if [ "$TO_TEST" = "FRONTEND" ]; then cd frontend && yarn test --coverage; fi
   notifications:
     email: false
+    webhooks: https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN
   after_failure:
     - cat /tmp/debug.log
   after_success:
-    - coveralls
+    - if [ "$TO_TEST" = "BACKEND" ]; then coveralls; fi
+    - if [ "$TO_TEST" = "FRONTEND" ]; then cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js; fi
 
   jobs:
     include:

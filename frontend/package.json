@@ -28,7 +28,6 @@
     "fs-extra": "3.0.1",
     "history": "^4.7.2",
     "html-webpack-plugin": "2.29.0",
-    "jest": "20.0.4",
     "jwt-decode": "^2.2.0",
     "lodash": "^4.17.5",
     "object-assign": "4.1.1",
@@ -39,11 +38,12 @@
     "react": "^16.2.0",
     "react-dev-utils": "^5.0.0",
     "react-dom": "^16.2.0",
+    "react-popper": "^1.0.0-beta.5",
     "react-redux": "^5.0.7",
     "react-router-dom": "^4.2.2",
     "react-router-redux": "^5.0.0-alpha.9",
     "react-transition-group": "^1.2.0",
-    "reactstrap": "^5.0.0-beta.2",
+    "reactstrap": "^5.0.0-beta.3",
     "redux": "^3.7.2",
     "redux-api-middleware": "^2.2.0",
     "redux-logger": "^3.0.6",
@@ -60,16 +60,30 @@
   "scripts": {
     "start": "node scripts/start.js",
     "build": "node scripts/build.js",
-    "test": "node scripts/test.js --env=jsdom"
+    "test": "jest"
   },
   "devDependencies": {
     "babel-preset-env": "^1.6.1",
+    "coveralls": "^3.0.0",
+    "enzyme": "^3.3.0",
+    "enzyme-adapter-react-16": "^1.1.1",
+    "istanbul-api": "1.2.2",
+    "istanbul-reports": "1.1.4",
+    "jest": "^22.4.2",
     "node-sass": "^4.7.2",
-    "sass-loader": "^6.0.6"
+    "react-router-enzyme-context": "^1.2.0",
+    "react-test-renderer": "^16.3.2",
+    "redux-testkit": "^1.0.6",
+    "sass-loader": "^6.0.6",
+    "seamless-immutable": "^7.1.3",
+    "sinon": "^5.0.7"
   },
   "jest": {
     "collectCoverageFrom": [
-      "src/**/*.{js,jsx,mjs}"
+      "<rootDir>/src/**/*.{js,jsx,mjs}",
+      "!<rootDir>/src/**/*.test.{js,jsx,mjs}",
+      "!<rootDir>/src/actions/**",
+      "!<rootDir>/src/middleware/**"
     ],
     "setupFiles": [
       "<rootDir>/config/polyfills.js"
@@ -78,7 +92,7 @@
       "<rootDir>/src/**/__tests__/**/*.{js,jsx,mjs}",
       "<rootDir>/src/**/?(*.)(spec|test).{js,jsx,mjs}"
     ],
-    "testEnvironment": "node",
+    "testEnvironment": "jsdom",
     "testURL": "http://localhost",
     "transform": {
       "^.+\\.(js|jsx|mjs)$": "<rootDir>/node_modules/babel-jest",
@@ -99,7 +113,8 @@
       "web.jsx",
       "jsx",
       "node"
-    ]
+    ],
+    "setupTestFrameworkScriptFile": "<rootDir>/src/setupTests.js"
   },
   "babel": {
     "presets": [
