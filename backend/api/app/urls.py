@@ -15,9 +15,6 @@ urlpatterns = [
     # Index
     path('', views.index, name='index'),
     # Games
-    #path('games/', views.game_list, name='game_list'),
-    path('games/new/', views.game_create, name='game_new'),
-    path('games/view/<int:pk>/', views.game_view, name='game_view'),
     path('games/edit/<int:pk>/', views.game_update, name='game_edit'),
     path('games/delete/<int:pk>/', views.game_delete, name='game_delete'),
     path('games/nextStatus/<int:pk>/', views.game_next_status, name='game_next_status'),
