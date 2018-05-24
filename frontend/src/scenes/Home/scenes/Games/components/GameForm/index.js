@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import {Button, Form, FormGroup, Input, FormText} from 'reactstrap';
 import FormInput from "../../../../../../components/FormInput";
+import autosize from 'autosize';
 
 class GameForm extends Component {
     state = {
@@ -14,6 +15,9 @@ class GameForm extends Component {
             value = target.type ===
             'checkbox' ? target.checked : target.value,
             name = target.name;
+        if (target.type === 'textarea') {
+            autosize(target)
+        }
         this.setState({
             [name]: value
         });
