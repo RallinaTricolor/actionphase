@@ -31,11 +31,11 @@ describe("LoginForm", () => {
         expect(divs.length).toBeGreaterThan(0);
     });
     it("always renders a username input", () => {
-        const usernameInput = loginForm().find("TextInput[name='username']");
+        const usernameInput = loginForm().find("FormInput[name='username']");
         expect(usernameInput.length).toBe(1);
     });
     it("always renders a password input", () => {
-        const passwordInput = loginForm().find("TextInput[name='password']");
+        const passwordInput = loginForm().find("FormInput[name='password']");
         expect(passwordInput.length).toBe(1);
     });
     describe("when 'errors' is defined", () => {
@@ -64,7 +64,7 @@ describe("LoginForm", () => {
                 }
             });
             it("renders an error on the username input", () => {
-                const usernameInput = loginForm().find("TextInput[name='username']");
+                const usernameInput = loginForm().find("FormInput[name='username']");
                 expect(usernameInput.prop('error')).toBe(props.errors.username);
             });
         });
@@ -78,7 +78,7 @@ describe("LoginForm", () => {
                 }
             });
             it("renders an error on the password input", () => {
-                const passwordInput = loginForm().find("TextInput[name='password']");
+                const passwordInput = loginForm().find("FormInput[name='password']");
                 expect(passwordInput.prop('error')).toBe(props.errors.password);
             });
         });

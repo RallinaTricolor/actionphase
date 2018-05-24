@@ -1,18 +1,18 @@
 import React from "react";
 import {mount} from "enzyme";
-import TextInput from ".";
+import FormInput from ".";
 
-describe("TextInput", () => {
+describe("FormInput", () => {
 
     let props;
-    let mountedTextInput;
-    const textInput = () => {
-        if (!mountedTextInput) {
-            mountedTextInput = mount(
-                <TextInput {...props} />
+    let mountedFormInput;
+    const formInput = () => {
+        if (!mountedFormInput) {
+            mountedFormInput = mount(
+                <FormInput {...props} />
             );
         }
-        return mountedTextInput;
+        return mountedFormInput;
     };
 
     beforeEach(() => {
@@ -20,41 +20,42 @@ describe("TextInput", () => {
             name: 'test',
             label: undefined,
             error: undefined,
-            type: undefined
+            type: undefined,
+            text: undefined
         };
-        mountedTextInput = undefined;
+        mountedFormInput = undefined;
     });
 
     it("always renders a FormGroup", () => {
-        const formGroup = textInput().find("FormGroup");
+        const formGroup = formInput().find("FormGroup");
         expect(formGroup.length).toBe(1);
     });
     describe("the rendered FormGroup", () => {
         it("contains everything else that gets rendered", () => {
-            const formGroup = textInput().find("FormGroup").first();
+            const formGroup = formInput().find("FormGroup").first();
             expect(formGroup.children().length).toBeGreaterThan(0);
         });
     });
     it("always renders an Input", () => {
-        expect(textInput().find("Input").length).toBe(1);
+        expect(formInput().find("Input").length).toBe(1);
     });
     describe("the rendered Input", () => {
-        it("receives props from TextInput", () => {
-            const input = textInput().find("Input");
+        it("receives props from FormInput", () => {
+            const input = formInput().find("Input");
             expect(Object.keys(input.props()).length).toBeGreaterThan(0);
         });
         it("has the 'name' property matching the prop", () => {
-            const input = textInput().find("Input");
+            const input = formInput().find("Input");
             expect(input.prop('name')).toBe(props.name);
         });
         it("has the 'id' property set to to 'id_$name'", () => {
-            const input = textInput().find("Input");
+            const input = formInput().find("Input");
             expect(input.prop('id')).toBe('id_' + props.name);
         });
     });
     describe("when 'label' is undefined", () => {
         it('does not render a Label', () => {
-            const label = textInput().find("Label");
+            const label = formInput().find("Label");
             expect(label.length).toBe(0);
         });
     });
@@ -63,20 +64,20 @@ describe("TextInput", () => {
             props.label = 'test';
         });
         it("causes a Label to be rendered", () => {
-            const label = textInput().find("Label");
+            const label = formInput().find("Label");
             expect(label.length).toBeGreaterThan(0);
         });
         describe("the rendered Label", () => {
             it("has a 'for' attribute equal to the Input's 'id'", () => {
-                const label = textInput().find("Label");
-                const input = textInput().find("Input");
+                const label = formInput().find("Label");
+                const input = formInput().find("Input");
                 expect(label.prop('htmlFor')).toBe(input.prop('id'));
             });
         });
     });
     describe("when 'error' is undefined", () => {
         it('does not render a FormFeedback', () => {
-            const label = textInput().find("FormFeedback");
+            const label = formInput().find("FormFeedback");
             expect(label.length).toBe(0);
         });
     });
@@ -85,19 +86,19 @@ describe("TextInput", () => {
             props.error = 'test';
         });
         it("causes a FormFeedback to be rendered", () => {
-            const error = textInput().find("FormFeedback");
+            const error = formInput().find("FormFeedback");
             expect(error.length).toBeGreaterThan(0);
         });
         describe("the rendered FormFeedback", () => {
             it("has a html equal to the 'error' prop", () => {
-                const error = textInput().find("FormFeedback");
+                const error = formInput().find("FormFeedback");
                 expect(error.text()).toBe(props.error);
             });
         });
     });
     describe("when 'type' is undefined", () => {
         it("gives the Input a default type of 'text'", () => {
-            const input = textInput().find("Input");
+            const input = formInput().find("Input");
             expect(input.prop('type')).toBe("text");
         });
     });
@@ -106,7 +107,7 @@ describe("TextInput", () => {
             props.type = 'checkbox';
         });
         it("sets the Input's type attribute to the prop", () => {
-            const input = textInput().find("Input");
+            const input = formInput().find("Input");
             expect(input.prop('type')).toBe(props.type);
         });
     });
@@ -115,7 +116,7 @@ describe("TextInput", () => {
             props.onChange = jest.fn();
         });
         it("sets those props on the Input", () => {
-            const input = textInput().find("Input");
+            const input = formInput().find("Input");
             expect(input.prop('onChange')).toBe(props.onChange);
         });
     });

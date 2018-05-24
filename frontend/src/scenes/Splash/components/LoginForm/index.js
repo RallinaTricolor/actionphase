@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import {Link} from "react-router-dom";
 import PropTypes from 'prop-types'
-import TextInput from '../../../../components/TextInput'
+import FormInput from '../../../../components/FormInput'
 import {FormGroup, Alert, Button, Form} from 'reactstrap'
 import './index.scss';
 
@@ -34,9 +34,9 @@ class LoginForm extends Component {
                             {errors.non_field_errors}
                         </Alert> : ""
                 }
-                <TextInput className="login-form__item" name="username" placeholder="Username" error={errors.username}
+                <FormInput className="login-form__item" name="username" placeholder="Username" error={errors.username}
                            onChange={this.handleInputChange}/>
-                <TextInput className="login-form__item" name="password" placeholder="Password" error={errors.password}
+                <FormInput className="login-form__item" name="password" placeholder="Password" error={errors.password}
                            type="password" onChange={this.handleInputChange}/>
                 <Button type="submit" color="primary" className="login-form__submit-button">Login</Button>
                 <FormGroup className="login-form__links">

@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import {Link} from "react-router-dom";
 import PropTypes from 'prop-types';
-import TextInput from '../../../../components/TextInput';
+import FormInput from '../../../../components/FormInput';
 import {FormGroup, Alert, Button, Form} from 'reactstrap';
 import './index.scss';
 
@@ -36,13 +36,13 @@ class RegistrationForm extends Component {
                             {errors.non_field_errors}
                         </Alert> : ""
                 }
-                <TextInput className="registration-form__item" name="email" placeholder="Email" error={errors.email}
+                <FormInput className="registration-form__item" name="email" placeholder="Email" error={errors.email}
                            onChange={this.handleInputChange}/>
-                <TextInput className="registration-form__item" name="username" placeholder="Username" error={errors.username}
+                <FormInput className="registration-form__item" name="username" placeholder="Username" error={errors.username}
                            onChange={this.handleInputChange}/>
-                <TextInput className="registration-form__item" name="password1" placeholder="Password" error={errors.password1}
+                <FormInput className="registration-form__item" name="password1" placeholder="Password" error={errors.password1}
                            type="password" onChange={this.handleInputChange}/>
-               <TextInput className="registration-form__item" name="password2" placeholder="Confirm Password" error={errors.password2}
+               <FormInput className="registration-form__item" name="password2" placeholder="Confirm Password" error={errors.password2}
                            type="password" onChange={this.handleInputChange}/>
                 <Button type="submit" color="primary" className="registration-form__submit-button">Sign Up</Button>
                 <FormGroup className="registration-form__links">

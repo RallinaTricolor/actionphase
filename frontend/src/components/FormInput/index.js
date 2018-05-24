@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import {FormGroup, FormFeedback, FormText, Label, Input} from 'reactstrap';
 
-const TextInput = ({name, label, error, type, text, ...rest}) => {
+const FormInput = ({name, label, error, type, text, ...rest}) => {
     const id = `id_${name}`,
         input_type = type ? type : "text";
     return (
@@ -15,7 +15,7 @@ const TextInput = ({name, label, error, type, text, ...rest}) => {
     )
 };
 
-TextInput.propTypes = {
+FormInput.propTypes = {
     name: PropTypes.string.isRequired,
     label: PropTypes.string,
     error: PropTypes.string,
@@ -23,4 +23,4 @@ TextInput.propTypes = {
     text: PropTypes.string
 };
 
-export default TextInput;
+export default FormInput;
