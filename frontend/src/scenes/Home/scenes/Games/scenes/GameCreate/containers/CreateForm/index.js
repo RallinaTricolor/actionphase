@@ -5,6 +5,8 @@ import {pluginList} from "../../../../../../../../actions/core";
 import {plugins} from "../../../../../../../../reducers/core";
 import GameForm from "../../../../components/GameForm";
 import {Loading} from "../../../../../../../../components/Loading";
+import {gameCreate} from "../../../../../../../../actions/games";
+import {gameErrors} from "../../../../../../../../reducers/games";
 
 class CreateForm extends Component {
     componentDidMount() {
@@ -21,13 +23,14 @@ class CreateForm extends Component {
 }
 /* istanbul ignore next */
 const mapStateToProps = state => ({
-    plugins: plugins(state)
+    plugins: plugins(state),
+    errors: gameErrors(state)
 });
 /* istanbul ignore next */
 const mapDispatchToProps = dispatch => ({
     fetchPlugins: bindActionCreators(pluginList, dispatch),
     onSubmit: (data) => {
-        console.log(data);
+        dispatch(gameCreate(data));
     }
 });
 /* istanbul ignore next */

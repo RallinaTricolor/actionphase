@@ -28,14 +28,15 @@ class GameForm extends Component {
     };
 
     render() {
+        const errors = this.props.errors || {};
         return <Form onSubmit={this.onSubmit}>
-            <FormInput name="name" value={this.props.name} placeholder="Name" onChange={this.handleInputChange}/>
-            <FormInput name="abbreviation" value={this.props.abbreviation} onChange={this.handleInputChange}
+            <FormInput name="name" value={this.props.name} placeholder="Name" onChange={this.handleInputChange} error={errors.name}/>
+            <FormInput name="abbreviation" value={this.props.abbreviation} onChange={this.handleInputChange} error={errors.abbreviation}
                        text={'Required, but does not need to be unique. Examples: "HoF" or "DR"'}
                        placeholder="Abbreviation"/>
-            <FormInput type="textarea" name="description" value={this.props.description} placeholder="Description"
+            <FormInput type="textarea" name="description" value={this.props.description} placeholder="Description" error={errors.description}
                        onChange={this.handleInputChange}/>
-            <FormInput type="textarea" name="character_guidelines" value={this.props.character_guidelines}
+            <FormInput type="textarea" name="character_guidelines" value={this.props.character_guidelines} error={errors.character_guidelines}
                        onChange={this.handleInputChange}
                        text="You can provide this information whenever, but you should probably include it before character creation starts!"
                        placeholder="Character Creation Guidelines"/>
