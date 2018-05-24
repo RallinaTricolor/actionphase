@@ -111,6 +111,21 @@ describe("FormInput", () => {
             expect(input.prop('type')).toBe(props.type);
         });
     });
+    describe("when 'text' is defined", () => {
+        beforeEach(() => {
+            props.text = 'Test Text';
+        });
+        it("renders a FormText component", () => {
+            const text = formInput().find("FormText");
+            expect(text.length).toBeGreaterThan(0);
+        });
+        describe("the rendered FormText", () => {
+            it("has the text passed by the prop", () => {
+                const text = formInput().find("FormText");
+                expect(text.text()).toBe(props.text);
+            });
+        });
+    });
     describe("when extra props are passed", () => {
         beforeEach(() => {
             props.onChange = jest.fn();
