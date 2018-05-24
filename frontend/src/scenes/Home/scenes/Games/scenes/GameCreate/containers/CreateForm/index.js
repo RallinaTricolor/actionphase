@@ -19,15 +19,16 @@ class CreateForm extends Component {
         return <GameForm plugins={plugins} {...this.props}/>
     }
 }
-
+/* istanbul ignore next */
 const mapStateToProps = state => ({
     plugins: plugins(state)
 });
+/* istanbul ignore next */
 const mapDispatchToProps = dispatch => ({
     fetchPlugins: bindActionCreators(pluginList, dispatch),
     onSubmit: (data) => {
         console.log(data);
     }
 });
-
+/* istanbul ignore next */
 export default connect(mapStateToProps, mapDispatchToProps)(CreateForm);
