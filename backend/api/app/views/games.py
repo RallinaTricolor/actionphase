@@ -28,9 +28,9 @@ class GameSerializer(serializers.ModelSerializer):
 
 
 class GameDetailSerializer(GameSerializer):
-    plugins = PluginSerializer(many=True)
-    signups = SignupSerializer(many=True)
-    characters = CharacterSerializer(many=True)
+    plugins = PluginSerializer(many=True, required=False)
+    signups = SignupSerializer(many=True, required=False)
+    characters = CharacterSerializer(many=True, required=False)
 
     class Meta:
         model = Game
@@ -49,9 +49,12 @@ class GameForm(ModelForm):
 
 class GameViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
-        if self.action == 'retrieve':
+        if self.action != 'list':
             return GameDetailSerializer
         return GameSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(game_master=self.request.user)
 
     permission_classes = (permissions.IsAuthenticated,)
     queryset = Game.objects.all()
