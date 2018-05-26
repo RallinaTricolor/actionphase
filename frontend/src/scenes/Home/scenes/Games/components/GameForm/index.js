@@ -2,13 +2,26 @@ import React, {Component} from 'react';
 import {Button, Form, FormGroup, Input, FormText} from 'reactstrap';
 import FormInput from "../../../../../../components/FormInput";
 import autosize from 'autosize';
+import PluginForm from "../PluginForm";
 
 class GameForm extends Component {
     state = {
         name: '',
         abbreviation: '',
         description: '',
-        character_guidelines: ''
+        character_guidelines: '',
+        plugins: {}
+    };
+    handlePluginCheck = (event) => {
+        const target = event.target, value = target.checked, id=target.dataset.id;
+        console.log(target);
+        let plugins = this.state.plugins;
+        console.log(plugins);
+        console.log(id);
+        console.log(value);
+        plugins[id] = value;
+        console.log(plugins);
+        this.setState({plugins: plugins});
     };
     handleInputChange = (event) => {
         const target = event.target,
@@ -40,6 +53,7 @@ class GameForm extends Component {
                        onChange={this.handleInputChange}
                        text="You can provide this information whenever, but you should probably include it before character creation starts!"
                        placeholder="Character Creation Guidelines"/>
+            <PluginForm plugins={this.props.plugins} handleFunction={this.handlePluginCheck}/>
             <Button>Submit</Button>
         </Form>
     }

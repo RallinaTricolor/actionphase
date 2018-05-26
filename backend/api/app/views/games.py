@@ -28,16 +28,19 @@ class GameSerializer(serializers.ModelSerializer):
 
 
 class GameDetailSerializer(GameSerializer):
-    plugins = PluginSerializer(many=True, required=False)
-    signups = SignupSerializer(many=True, required=False)
-    characters = CharacterSerializer(many=True, required=False)
+    plugins = PluginSerializer(many=True, required=False, read_only=True)
+    signups = SignupSerializer(many=True, required=False, read_only=True)
+    characters = CharacterSerializer(many=True, required=False, read_only=True)
 
-    def create(self, validated_data):
-        plugin_data = validated_data.pop('plugins')
-        game = Game.objects.create(**validated_data)
-        for plugin in plugin_data:
-            game.plugins.add(plugin)
-        return game
+    # def create(self, validated_data):
+    #     plugin_data = validated_data.pop('plugins')
+    #     game = Game.objects.create(**validated_data)
+    #     for plugin in plugin_data:
+    #         if plugin_data[plugin]:
+    #             game.plugins.add(plugin)
+    #         else:
+    #             game.plugins.remove(plugin)
+    #     return game
 
     class Meta:
         model = Game
@@ -61,7 +64,11 @@ class GameViewSet(viewsets.ModelViewSet):
         return GameSerializer
 
     def perform_create(self, serializer):
-        serializer.save(game_master=self.request.user)
+        game = serializer.save(game_master=self.request.user)
+        plugins = self.request.data['plugins']
+        for plugin, enabled in plugins.items():
+            if enabled:
+                game.plugins.add(plugin)
 
     permission_classes = (permissions.IsAuthenticated,)
     queryset = Game.objects.all()
