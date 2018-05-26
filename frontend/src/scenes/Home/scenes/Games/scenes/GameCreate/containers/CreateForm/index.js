@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import {bindActionCreators} from 'redux';
 import {connect} from 'react-redux';
+import { withRouter } from 'react-router-dom';
 import {pluginList} from "../../../../../../../../actions/core";
 import {plugins} from "../../../../../../../../reducers/core";
 import GameForm from "../../../../components/GameForm";
@@ -34,4 +35,4 @@ const mapDispatchToProps = dispatch => ({
     }
 });
 /* istanbul ignore next */
-export default connect(mapStateToProps, mapDispatchToProps)(CreateForm);
+export default withRouter(connect(mapStateToProps, mapDispatchToProps)(CreateForm));
