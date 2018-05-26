@@ -18,7 +18,7 @@ const FormInput = ({name, label, error, type, text, ...rest}) => {
 FormInput.propTypes = {
     name: PropTypes.string.isRequired,
     label: PropTypes.string,
-    error: PropTypes.string,
+    error: PropTypes.array,
     type: PropTypes.string,
     text: PropTypes.string
 };
