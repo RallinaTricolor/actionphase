@@ -17,7 +17,6 @@ def insert_threads_plugin(apps, schema_editor):
     plugin = Plugin()
     plugin.name = plugin_name
     plugin.description = plugin_description
-    plugin.default_enabled = True
     plugin.save()
 
 
