@@ -83,7 +83,7 @@ describe("FormInput", () => {
     });
     describe("when 'error' is defined", () => {
         beforeEach(() => {
-            props.error = 'test';
+            props.error = ['test'];
         });
         it("causes a FormFeedback to be rendered", () => {
             const error = formInput().find("FormFeedback");
@@ -92,7 +92,7 @@ describe("FormInput", () => {
         describe("the rendered FormFeedback", () => {
             it("has a html equal to the 'error' prop", () => {
                 const error = formInput().find("FormFeedback");
-                expect(error.text()).toBe(props.error);
+                expect(error.text()).toBe(props.error[0]);
             });
         });
     });

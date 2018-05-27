@@ -59,7 +59,7 @@ describe("LoginForm", () => {
                 props = {
                     onSubmit: jest.fn(),
                     errors: {
-                        username: "Test Error Message"
+                        username: ["Test Error Message"]
                     }
                 }
             });
@@ -73,7 +73,7 @@ describe("LoginForm", () => {
                 props = {
                     onSubmit: jest.fn(),
                     errors: {
-                        password: "Test Error Message"
+                        password: ["Test Error Message"]
                     }
                 }
             });
