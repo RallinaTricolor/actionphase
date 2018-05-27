@@ -6,7 +6,9 @@ class PluginForm extends Component {
         const plugins = this.props.plugins || [];
         return <div>
             <h3>Plugins</h3>
-            {plugins.map(plugin => <PluginFormItem disabled={this.props.disabled} handleFunction={this.props.handleFunction} key={plugin.id} {...plugin} />)}
+            {plugins.map(plugin => <PluginFormItem disabled={this.props.disabled}
+                                                   handleFunction={this.props.handleFunction}
+                                                   key={plugin.id} {...plugin} />)}
         </div>
     }
 }
