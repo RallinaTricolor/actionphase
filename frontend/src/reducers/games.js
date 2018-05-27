@@ -26,6 +26,10 @@ const gameReducer = (state = initialState, action) => {
                 action.payload.response ||
                 {'non_field_errors': action.payload.statusText}
             };
+        case gameActions.GAME_CREATE_SUCCESS:
+            return {
+                details: action.payload
+            };
         default:
             return state
     }
