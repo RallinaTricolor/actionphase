@@ -32,16 +32,6 @@ class GameDetailSerializer(GameSerializer):
     signups = SignupSerializer(many=True, required=False, read_only=True)
     characters = CharacterSerializer(many=True, required=False, read_only=True)
 
-    # def create(self, validated_data):
-    #     plugin_data = validated_data.pop('plugins')
-    #     game = Game.objects.create(**validated_data)
-    #     for plugin in plugin_data:
-    #         if plugin_data[plugin]:
-    #             game.plugins.add(plugin)
-    #         else:
-    #             game.plugins.remove(plugin)
-    #     return game
-
     class Meta:
         model = Game
         fields = (
