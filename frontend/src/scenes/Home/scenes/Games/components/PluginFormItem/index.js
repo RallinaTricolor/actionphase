@@ -6,7 +6,7 @@ class PluginFormItem extends Component {
         return <FormGroup check>
             <Label check>
                 <Input type="checkbox" onChange={this.props.handleFunction} data-id={this.props.id}
-                       disabled={this.props.disabled} checked={this.props.default_enabled}/>{' '}
+                       disabled={this.props.disabled} defaultChecked={this.props.default_enabled}/>{' '}
                 {this.props.name}
                 <FormText>{this.props.description}</FormText>
             </Label>
