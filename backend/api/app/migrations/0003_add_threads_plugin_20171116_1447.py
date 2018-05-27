@@ -3,7 +3,6 @@
 from __future__ import unicode_literals
 
 from django.db import migrations
-from api.app.models import Plugin
 
 
 def insert_threads_plugin(apps, schema_editor):
@@ -14,6 +13,7 @@ def insert_threads_plugin(apps, schema_editor):
         "Reddit-style comment threads which allow for branching"
         " discussions. Only disable this if you don't want to have public common rooms."
     )
+    Plugin = apps.get_model("app", "Plugin")
     plugin = Plugin()
     plugin.name = plugin_name
     plugin.description = plugin_description

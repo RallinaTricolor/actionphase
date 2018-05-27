@@ -7,7 +7,7 @@ from api.app.models import Plugin
 def update_threads_plugin(apps, schema_editor):
     """
     """
-    plugin = Plugin.objects.get(name="Threads").first()
+    plugin = Plugin.objects.get(name="Threads")
     plugin.default_enabled = True
     plugin.save()
 
