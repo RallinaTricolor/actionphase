@@ -56,9 +56,9 @@ class GameViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         game = serializer.save(game_master=self.request.user)
         plugins = self.request.data['plugins']
-        for plugin, enabled in plugins.items():
-            if enabled:
-                game.plugins.add(plugin)
+        for index, plugin in enumerate(plugins):
+            if plugin is not None and plugin['enabled'] is True:
+                game.plugins.add(index)
 
     permission_classes = (permissions.IsAuthenticated,)
     queryset = Game.objects.all()
