@@ -15,7 +15,7 @@ class PluginSerializer(serializers.ModelSerializer):
 class PluginListSerializer(PluginSerializer):
     class Meta:
         model = Plugin
-        fields = ('id', 'name', 'description')
+        fields = ('id', 'name', 'description', 'default_enabled')
 
 
 class UserSerializer(serializers.ModelSerializer):
