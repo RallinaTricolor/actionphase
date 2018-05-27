@@ -8,7 +8,6 @@ import GameForm from "../../../../components/GameForm";
 import {Loading} from "../../../../../../../../components/Loading";
 import {gameCreate} from "../../../../../../../../actions/games";
 import {gameErrors} from "../../../../../../../../reducers/games";
-import {formApiAdapter} from "../../../../../../../../util/forms";
 
 class CreateForm extends Component {
     componentDidMount() {
@@ -31,7 +30,9 @@ const mapStateToProps = state => ({
 /* istanbul ignore next */
 const mapDispatchToProps = dispatch => ({
     fetchPlugins: bindActionCreators(pluginList, dispatch),
-    onSubmit: formApiAdapter(dispatch, gameCreate)
+    onSubmit: (data) => {
+        dispatch(gameCreate(data));
+    }
 });
 /* istanbul ignore next */
 export default withRouter(connect(mapStateToProps, mapDispatchToProps)(CreateForm));
