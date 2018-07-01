@@ -1,50 +1,28 @@
 import React, {Component} from 'react';
 import {Link} from "react-router-dom";
 import PropTypes from 'prop-types';
+import {Field, FieldArray, reduxForm} from 'redux-form';
 import FormInput from '../../../../components/FormInput';
 import {FormGroup, Alert, Button, Form} from 'reactstrap';
 import './index.scss';
 
 class RegistrationForm extends Component {
-    state = {
-        email: '',
-        username: '',
-        password1: '',
-        password2: ''
-    };
-    handleInputChange = (event) => {
-        const target = event.target,
-            value = target.type ===
-            'checkbox' ? target.checked : target.value,
-            name = target.name;
-        this.setState({
-            [name]: value
-        });
-    };
-    onSubmit = (event) => {
-        event.preventDefault();
-        this.props.onSubmit(this.state.username, this.state.password1, this.state.password2, this.state.email)
-    };
-
     render() {
         const errors = this.props.errors || {};
-        return <div className="registration-form">
-            <Form onSubmit={this.onSubmit}>
+        const {handleSubmit, submitting} = this.props;
+        return <div className="registration">
+            <Form onSubmit={handleSubmit}>
                 {
                     errors.non_field_errors ?
                         <Alert color="danger">
                             {errors.non_field_errors}
                         </Alert> : ""
                 }
-                <FormInput className="registration-form__item" name="email" placeholder="Email" error={errors.email}
-                           onChange={this.handleInputChange}/>
-                <FormInput className="registration-form__item" name="username" placeholder="Username" error={errors.username}
-                           onChange={this.handleInputChange}/>
-                <FormInput className="registration-form__item" name="password1" placeholder="Password" error={errors.password1}
-                           type="password" onChange={this.handleInputChange}/>
-               <FormInput className="registration-form__item" name="password2" placeholder="Confirm Password" error={errors.password2}
-                           type="password" onChange={this.handleInputChange}/>
-                <Button type="submit" color="primary" className="registration-form__submit-button">Sign Up</Button>
+                <Field component={FormInput} className="login-form__item" name="email" placeholder="Email Address" error={errors.email} />
+                <Field component={FormInput} className="login-form__item" name="username" placeholder="Username" error={errors.username} />
+                <Field component={FormInput} className="login-form__item" type="password" name="password1" placeholder="Password" error={errors.password1} />
+                <Field component={FormInput} className="login-form__item" type="password" name="password2" placeholder="Confirm Password" error={errors.password2} />
+                <Button disabled={submitting} type="submit" color="primary" className="registration-form__submit-button">Sign Up</Button>
                 <FormGroup className="registration-form__links">
                     <Link className="registration-form__link" to="/home/login">Already have an account?</Link><br/>
                     <Link className="registration-form__link" to="/home">Forgot your password?</Link>
@@ -58,4 +36,10 @@ RegistrationForm.propTypes = {
     onSubmit: PropTypes.func.isRequired,
 };
 
-export default RegistrationForm;
+
+const ReduxRegistrationForm = reduxForm({
+    form: 'registration'
+})(RegistrationForm);
+
+export default ReduxRegistrationForm;
+
