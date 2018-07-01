@@ -19,7 +19,7 @@ class LoginForm extends Component {
                         </Alert> : ""
                 }
                 <Field component={FormInput} className="login-form__item" name="username" placeholder="Username" error={errors.username} />
-                <Field component={FormInput} className="login-form__item" name="password" placeholder="Password" error={errors.password} />
+                <Field component={FormInput} className="login-form__item" type="password" name="password" placeholder="Password" error={errors.password} />
                 <Button disabled={submitting} type="submit" color="primary" className="login-form__submit-button">Login</Button>
                 <FormGroup className="login-form__links">
                     <Link className="login-form__link" to="/home/register">Need an account?</Link><br/>
