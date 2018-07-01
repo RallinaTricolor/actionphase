@@ -6,7 +6,7 @@ import {FormGroup, Alert, Button, Form} from 'reactstrap'
 import {Field, FieldArray, reduxForm} from 'redux-form';
 import './index.scss';
 
-class LoginForm extends Component {
+export class LoginForm extends Component {
     render() {
         const errors = this.props.errors || {};
         const {handleSubmit, submitting} = this.props;
