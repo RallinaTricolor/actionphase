@@ -17,7 +17,6 @@
     - if [ "$TO_TEST" = "BACKEND" ]; then coverage run backend/manage.py test api.app.tests.$TESTS; fi
     - if [ "$TO_TEST" = "FRONTEND" ]; then cd frontend && yarn test --coverage; fi
   notifications:
-    email: false
     webhooks: https://coveralls.io/webhook
   after_failure:
     - cat /tmp/debug.log
