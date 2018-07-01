@@ -17,11 +17,18 @@ describe("FormInput", () => {
 
     beforeEach(() => {
         props = {
-            name: 'test',
             label: undefined,
-            error: undefined,
             type: undefined,
-            text: undefined
+            text: undefined,
+            input: {
+                name: 'test',
+                value: undefined,
+                onChange: undefined
+            },
+            meta: {
+                error: undefined,
+                submitting: undefined
+            }
         };
         mountedFormInput = undefined;
     });
@@ -46,11 +53,11 @@ describe("FormInput", () => {
         });
         it("has the 'name' property matching the prop", () => {
             const input = formInput().find("Input");
-            expect(input.prop('name')).toBe(props.name);
+            expect(input.prop('name')).toBe(props.input.name);
         });
         it("has the 'id' property set to to 'id_$name'", () => {
             const input = formInput().find("Input");
-            expect(input.prop('id')).toBe('id_' + props.name);
+            expect(input.prop('id')).toBe('id_' + props.input.name);
         });
     });
     describe("when 'label' is undefined", () => {
@@ -83,7 +90,7 @@ describe("FormInput", () => {
     });
     describe("when 'error' is defined", () => {
         beforeEach(() => {
-            props.error = ['test'];
+            props.meta.error = ['test'];
         });
         it("causes a FormFeedback to be rendered", () => {
             const error = formInput().find("FormFeedback");
@@ -92,7 +99,7 @@ describe("FormInput", () => {
         describe("the rendered FormFeedback", () => {
             it("has a html equal to the 'error' prop", () => {
                 const error = formInput().find("FormFeedback");
-                expect(error.text()).toBe(props.error[0]);
+                expect(error.text()).toBe(props.meta.error[0]);
             });
         });
     });
@@ -124,15 +131,6 @@ describe("FormInput", () => {
                 const text = formInput().find("FormText");
                 expect(text.text()).toBe(props.text);
             });
-        });
-    });
-    describe("when extra props are passed", () => {
-        beforeEach(() => {
-            props.onChange = jest.fn();
-        });
-        it("sets those props on the Input", () => {
-            const input = formInput().find("Input");
-            expect(input.prop('onChange')).toBe(props.onChange);
         });
     });
 });
