@@ -15,14 +15,13 @@
     - ./travis-scripts/before_script.sh
   script:
     - if [ "$TO_TEST" = "BACKEND" ]; then coverage run backend/manage.py test api.app.tests.$TESTS; fi
-    - if [ "$TO_TEST" = "FRONTEND" ]; then cd frontend && yarn test --coverage; fi
+    - if [ "$TO_TEST" = "FRONTEND" ]; then cd frontend && jest; fi
   notifications:
-    webhooks: https://coveralls.io/webhook
+    email: false
   after_failure:
     - cat /tmp/debug.log
   after_success:
-    - if [ "$TO_TEST" = "BACKEND" ]; then coveralls; fi
-    - if [ "$TO_TEST" = "FRONTEND" ]; then cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js; fi
+    - codecov
 
   jobs:
     include:

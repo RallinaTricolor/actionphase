@@ -66,7 +66,6 @@
   },
   "devDependencies": {
     "babel-preset-env": "^1.6.1",
-    "coveralls": "^3.0.0",
     "enzyme": "^3.3.0",
     "enzyme-adapter-react-16": "^1.1.1",
     "istanbul-api": "1.2.2",
@@ -81,6 +80,8 @@
     "sinon": "^5.0.7"
   },
   "jest": {
+    "coverageDirectory": "./coverage/",
+    "collectCoverage": true,
     "collectCoverageFrom": [
       "<rootDir>/src/**/*.{js,jsx,mjs}",
       "!<rootDir>/src/**/*.test.{js,jsx,mjs}",
