@@ -20,6 +20,12 @@ const gameReducer = (state = initialState, action) => {
             return {
                 details: action.payload
             };
+        case gameActions.GAME_CREATE_FAILURE:
+            return {
+                errors:
+                action.payload.response ||
+                {'non_field_errors': action.payload.statusText}
+            };
         default:
             return state
     }
@@ -36,3 +42,5 @@ export const isGameMaster = (state) => {
     }
     return false;
 };
+
+export const gameErrors = (state) => state.game.errors;

@@ -6,6 +6,7 @@ from api.app import views
 router = routers.DefaultRouter()
 router.register(r'games', views.GameViewSet, 'games')
 router.register(r'users', views.UserViewSet, 'users')
+router.register(r'plugins', views.PluginViewSet, 'plugins')
 
 
 urlpatterns = [
@@ -14,9 +15,6 @@ urlpatterns = [
     # Index
     path('', views.index, name='index'),
     # Games
-    #path('games/', views.game_list, name='game_list'),
-    path('games/new/', views.game_create, name='game_new'),
-    path('games/view/<int:pk>/', views.game_view, name='game_view'),
     path('games/edit/<int:pk>/', views.game_update, name='game_edit'),
     path('games/delete/<int:pk>/', views.game_delete, name='game_delete'),
     path('games/nextStatus/<int:pk>/', views.game_next_status, name='game_next_status'),

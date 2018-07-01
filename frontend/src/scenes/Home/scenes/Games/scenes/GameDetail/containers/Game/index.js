@@ -6,7 +6,7 @@ import CharactersTab from "../../components/CharactersTab";
 import {TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, Breadcrumb, BreadcrumbItem} from 'reactstrap';
 import {Route, Switch, Link} from "react-router-dom";
 import classnames from 'classnames';
-import GameHeader from "../../../../components/GameHeader";
+import GameHeader from "../../components/GameHeader";
 
 class GameDetailContainer extends Component {
     constructor(props) {

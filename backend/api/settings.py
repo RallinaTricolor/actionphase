@@ -63,6 +63,7 @@ INSTALLED_APPS = [
 
 SITE_ID = 1
 REST_USE_JWT = True
+ACCOUNT_EMAIL_REQUIRED = True
 JWT_AUTH = {
     'JWT_ALLOW_REFRESH': True,
     'JWT_EXPIRATION_DELTA': datetime.timedelta(days=7),

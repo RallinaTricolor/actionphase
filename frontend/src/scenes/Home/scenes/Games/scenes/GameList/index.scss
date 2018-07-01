@@ -1,0 +1,23 @@
+.games {
+  .game {
+    padding: 10px;
+    &__name {
+      font-weight: bold;
+    }
+    &__abbreviation {
+      &-header {
+        font-weight: bold;
+      }
+    }
+    &__status {
+      &-header {
+        font-weight: bold;
+      }
+    }
+    &__game_master {
+      &-header {
+        font-weight: bold;
+      }
+    }
+  }
+}

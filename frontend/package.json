@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "autoprefixer": "7.1.6",
+    "autosize": "^4.0.2",
     "babel-core": "6.26.0",
     "babel-eslint": "7.2.3",
     "babel-jest": "20.0.3",
@@ -46,6 +47,7 @@
     "reactstrap": "^5.0.0-beta.3",
     "redux": "^3.7.2",
     "redux-api-middleware": "^2.2.0",
+    "redux-form": "^7.3.0",
     "redux-logger": "^3.0.6",
     "redux-persist": "^5.9.0",
     "redux-persist-transform-filter": "0.0.16",

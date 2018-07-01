@@ -10,3 +10,4 @@ class Plugin(models.Model):
 
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField()
+    default_enabled = models.BooleanField(default=False)

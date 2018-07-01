@@ -28,9 +28,9 @@ class GameSerializer(serializers.ModelSerializer):
 
 
 class GameDetailSerializer(GameSerializer):
-    plugins = PluginSerializer(many=True)
-    signups = SignupSerializer(many=True)
-    characters = CharacterSerializer(many=True)
+    plugins = PluginSerializer(many=True, required=False, read_only=True)
+    signups = SignupSerializer(many=True, required=False, read_only=True)
+    characters = CharacterSerializer(many=True, required=False, read_only=True)
 
     class Meta:
         model = Game
@@ -49,41 +49,19 @@ class GameForm(ModelForm):
 
 class GameViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
-        if self.action == 'retrieve':
+        if self.action != 'list':
             return GameDetailSerializer
         return GameSerializer
 
+    def perform_create(self, serializer):
+        game = serializer.save(game_master=self.request.user)
+        plugins = self.request.data['plugins']
+        for index, plugin in enumerate(plugins):
+            if plugin is not None and plugin['enabled'] is True:
+                game.plugins.add(index)
+
     permission_classes = (permissions.IsAuthenticated,)
     queryset = Game.objects.all()
-
-
-def game_list(request, template_name='games/list.html'):
-    games = Game.objects.filter(
-        Q(game_master=request.user) | Q(status__in=[Game.REGISTRATION, Game.PENDING, Game.RUNNING])
-    ).defer('description', 'character_guidelines')
-    data = {'object_list': games}
-    return render(request, template_name, data)
-
-
-def game_create(request, template_name='games/form.html'):
-    form = GameForm(request.POST or None)
-    if form.is_valid():
-        game = form.save(commit=False)
-        game.game_master = request.user
-        game.save()
-        for plugin in request.POST.getlist('plugins'):
-            game.plugins.add(plugin)
-        return redirect('game_list')
-    return render(request, template_name, {'form': form})
-
-
-def game_view(request, pk, template_name='games/view.html'):
-    game = get_object_or_404(Game, pk=pk)
-    threads = False
-    if game.has_plugin('Threads'):
-        threads = game.thread_set.defer('text')
-    user_signup = game.signups.filter(user=request.user).first()
-    return render(request, template_name, {'game': game, 'threads': threads, 'user_signup': user_signup})
 
 
 def game_update(request, pk, template_name='games/form.html'):

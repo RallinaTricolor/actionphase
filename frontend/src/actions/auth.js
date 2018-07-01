@@ -11,11 +11,11 @@ export const TOKEN_RECEIVED = '@@auth/TOKEN_RECEIVED';
 export const TOKEN_FAILURE = '@@auth/TOKEN_FAILURE';
 export const LOGOUT = '@@auth/LOGOUT';
 
-export const register = (username, password1, password2, email) => ({
+export const register = (data) => ({
   [RSAA]: {
     endpoint: process.env.REACT_APP_API_ENDPOINT+ '/api/auth/registration/',
     method: 'POST',
-    body: JSON.stringify({username, password1, password2, email}),
+    body: JSON.stringify(data),
     headers: { 'Content-Type': 'application/json' },
     types: [
       REGISTRATION_REQUEST, REGISTRATION_SUCCESS, REGISTRATION_FAILURE
@@ -23,11 +23,11 @@ export const register = (username, password1, password2, email) => ({
   }
 });
 
-export const login = (username, password) => ({
+export const login = (data) => ({
   [RSAA]: {
     endpoint: process.env.REACT_APP_API_ENDPOINT + '/api/auth/login/',
     method: 'POST',
-    body: JSON.stringify({username, password}),
+    body: JSON.stringify(data),
     headers: { 'Content-Type': 'application/json' },
     types: [
       LOGIN_REQUEST, LOGIN_SUCCESS, LOGIN_FAILURE
@@ -35,11 +35,11 @@ export const login = (username, password) => ({
   }
 });
 
-export const refreshAccessToken = (token) => ({
+export const refreshAccessToken = (data) => ({
   [RSAA]: {
     endpoint: process.env.REACT_APP_API_ENDPOINT + '/api/auth/token/refresh/',
     method: 'POST',
-    body: JSON.stringify({token: token}),
+    body: JSON.stringify(data),
     headers: { 'Content-Type': 'application/json' },
     types: [
       TOKEN_REQUEST, TOKEN_RECEIVED, TOKEN_FAILURE

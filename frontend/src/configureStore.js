@@ -29,4 +29,4 @@ let store = createStore(persistedReducer, {}, applyMiddleware(
 ));
 let persistor = persistStore(store);
 
-export { store, persistor };
+export { store, persistor, history };

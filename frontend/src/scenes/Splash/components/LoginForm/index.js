@@ -1,44 +1,26 @@
 import React, {Component} from 'react';
 import {Link} from "react-router-dom";
 import PropTypes from 'prop-types'
-import TextInput from '../../../../components/TextInput'
+import FormInput from '../../../../components/FormInput'
 import {FormGroup, Alert, Button, Form} from 'reactstrap'
+import {Field, FieldArray, reduxForm} from 'redux-form';
 import './index.scss';
 
-class LoginForm extends Component {
-    state = {
-        username: '',
-        password: ''
-    };
-    handleInputChange = (event) => {
-        const target = event.target,
-            value = target.type ===
-            'checkbox' ? target.checked : target.value,
-            name = target.name;
-        this.setState({
-            [name]: value
-        });
-    };
-    onSubmit = (event) => {
-        event.preventDefault();
-        this.props.onSubmit(this.state.username, this.state.password)
-    };
-
+export class LoginForm extends Component {
     render() {
         const errors = this.props.errors || {};
+        const {handleSubmit, submitting} = this.props;
         return <div className="login-form">
-            <Form onSubmit={this.onSubmit}>
+            <Form onSubmit={handleSubmit}>
                 {
                     errors.non_field_errors ?
                         <Alert color="danger">
                             {errors.non_field_errors}
                         </Alert> : ""
                 }
-                <TextInput className="login-form__item" name="username" placeholder="Username" error={errors.username}
-                           onChange={this.handleInputChange}/>
-                <TextInput className="login-form__item" name="password" placeholder="Password" error={errors.password}
-                           type="password" onChange={this.handleInputChange}/>
-                <Button type="submit" color="primary" className="login-form__submit-button">Login</Button>
+                <Field component={FormInput} className="login-form__item" name="username" placeholder="Username" error={errors.username} />
+                <Field component={FormInput} className="login-form__item" type="password" name="password" placeholder="Password" error={errors.password} />
+                <Button disabled={submitting} type="submit" color="primary" className="login-form__submit-button">Login</Button>
                 <FormGroup className="login-form__links">
                     <Link className="login-form__link" to="/home/register">Need an account?</Link><br/>
                     <Link className="login-form__link" to="/">Forgot your password?</Link>
@@ -53,4 +35,8 @@ LoginForm.propTypes = {
     errors: PropTypes.object
 };
 
-export default LoginForm;
+const ReduxLoginForm = reduxForm({
+    form: 'login'
+})(LoginForm);
+
+export default ReduxLoginForm;

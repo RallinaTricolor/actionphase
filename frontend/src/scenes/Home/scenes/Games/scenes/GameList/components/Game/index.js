@@ -1,23 +1,24 @@
 import React, { Component } from 'react';
+import {Row, Col} from 'reactstrap';
 import {Link} from 'react-router-dom';
 import './index.scss';
 
 class Game extends Component {
     render() {
-        return <div className="game">
-            <div className="game__attribute game__name">
+        return <Row className="game">
+            <Col sm="2" className="game__attribute game__name">
                 <Link to={"/games/" + this.props.id}>{this.props.name}</Link>
-            </div>
-            <div className="game__attribute game__abbreviation">
+            </Col>
+            <Col sm="2" className="game__attribute game__abbreviation">
                 {this.props.abbreviation}
-            </div>
-            <div className={`game__attribute game__status game__status-${this.props.get_status_display}`}>
+            </Col>
+            <Col sm="2" className={`game__attribute game__status game__status-${this.props.get_status_display}`}>
                 {this.props.get_status_display}
-            </div>
-            <div className="game__attribute game__game_master">
+            </Col>
+            <Col sm="2" className="game__attribute game__game_master">
                 {this.props.game_master ? this.props.game_master.username : ''}
-            </div>
-        </div>
+            </Col>
+        </Row>
     }
 }
 
