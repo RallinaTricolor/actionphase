@@ -10,6 +10,8 @@ export function formApiAdapter(dispatch, actionCreator) {
 }
 
 function formatErrors(response) {
+    if (response.payload && response.payload.response) {
+        return response.payload.response;
+    }
     return response.error;
-    // ...translate your API's error response into a redux-form-compatible error object
 }
