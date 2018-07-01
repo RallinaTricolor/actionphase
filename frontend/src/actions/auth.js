@@ -23,11 +23,11 @@ export const register = (username, password1, password2, email) => ({
   }
 });
 
-export const login = (username, password) => ({
+export const login = (data) => ({
   [RSAA]: {
     endpoint: process.env.REACT_APP_API_ENDPOINT + '/api/auth/login/',
     method: 'POST',
-    body: JSON.stringify({username, password}),
+    body: JSON.stringify(data),
     headers: { 'Content-Type': 'application/json' },
     types: [
       LOGIN_REQUEST, LOGIN_SUCCESS, LOGIN_FAILURE
