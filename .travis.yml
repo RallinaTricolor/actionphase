@@ -15,7 +15,7 @@
     - ./travis-scripts/before_script.sh
   script:
     - if [ "$TO_TEST" = "BACKEND" ]; then coverage run backend/manage.py test api.app.tests.$TESTS; fi
-    - if [ "$TO_TEST" = "FRONTEND" ]; then cd frontend && jest; fi
+    - if [ "$TO_TEST" = "FRONTEND" ]; then cd frontend && yarn test; fi
   notifications:
     email: false
   after_failure:
