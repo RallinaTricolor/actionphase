@@ -2,7 +2,8 @@
     global:
       - COVERALLS_PARALLEL=true
     matrix:
-      - BACKEND=1 FRONTEND=0 TESTS=backend
+      - BACKEND=1 FRONTEND=0 TESTS=backend-unit
+      - BACKEND=1 FRONTEND=0 TESTS=backend-integration
       - BACKEND=0 FRONTEND=1 TESTS=frontend
   language: python
   python:
@@ -17,7 +18,8 @@
   before_script:
     - ./travis-scripts/before_script.sh
   script:
-    - if [ "$TESTS" = "backend" ]; then cd backend && coverage run manage.py test api.app.tests; fi
+    - if [ "$TESTS" = "backend-unit" ]; then cd backend && coverage run manage.py test api.app.tests.unit; fi
+    - if [ "$TESTS" = "backend-integration" ]; then cd backend && coverage run manage.py test api.app.tests.integration; fi
     - if [ "$TESTS" = "frontend" ]; then cd frontend && yarn test --coverage; fi
     - if [ "$TESTS" = "e2e" ]; then cd frontend && cypress run; fi
   notifications:
