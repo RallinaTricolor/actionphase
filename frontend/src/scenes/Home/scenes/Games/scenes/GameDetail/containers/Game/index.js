@@ -4,7 +4,7 @@ import DetailsTab from "../../components/DetailsTab";
 import SignupsTab from "../../components/SignupsTab";
 import CharactersTab from "../../components/CharactersTab";
 import {TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, Breadcrumb, BreadcrumbItem} from 'reactstrap';
-import {Route, Switch, Link} from "react-router-dom";
+import {Link} from "react-router-dom";
 import classnames from 'classnames';
 import GameHeader from "../../components/GameHeader";
 

@@ -1,6 +1,6 @@
 import React, {Component} from 'react';
 import './index.scss';
-import {TabContent, TabPane, Nav, NavItem, NavLink, Row, Col, Breadcrumb, BreadcrumbItem} from 'reactstrap';
+import {Row, Col} from 'reactstrap';
 
 class GameHeader extends Component {
     render() {

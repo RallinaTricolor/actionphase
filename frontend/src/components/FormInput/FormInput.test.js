@@ -111,7 +111,7 @@ describe("FormInput", () => {
     });
     describe("when 'type' is defined", () => {
         beforeEach(() => {
-            props.type = 'checkbox';
+            props.type = 'textarea';
         });
         it("sets the Input's type attribute to the prop", () => {
             const input = formInput().find("Input");

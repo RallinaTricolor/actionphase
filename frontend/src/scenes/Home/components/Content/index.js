@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {Route, Switch} from "react-router-dom";
+import {Switch} from "react-router-dom";
 import PrivateRoute from '../../../../containers/PrivateRoute';
 import './index.scss';
 import DashboardContent from "../../scenes/Dashboard";

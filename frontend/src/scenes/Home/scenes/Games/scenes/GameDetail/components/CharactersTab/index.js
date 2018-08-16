@@ -1,6 +1,5 @@
 import React, {Component} from 'react';
 import './index.scss';
-import Signup from "../Signup";
 import Character from "../Character";
 
 class CharactersTab extends Component {

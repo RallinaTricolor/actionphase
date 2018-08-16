@@ -17,6 +17,16 @@ const gameDetailSuccess = {
     details: requestPayload
 };
 
+const gameCreateFailureField = {
+    errors: requestPayload
+};
+
+const gameCreateFailureNonField = {
+    errors: {
+        'non_field_errors': requestPayload
+    }
+};
+
 describe('GameReducer', () => {
     it('should have initial state', () => {
         expect(gameReducer()).toEqual(initialState);
@@ -30,11 +40,23 @@ describe('GameReducer', () => {
             payload: requestPayload
         }).toReturnState(gameListSuccess);
     });
-    it('should return a game details from the API on detail success', () => {
+    it('should return game details from the API on detail success', () => {
         Reducer(gameReducer).expect({
             type: gameActions.GAME_DETAIL_SUCCESS,
             payload: requestPayload
         }).toReturnState(gameDetailSuccess);
+    });
+    it('should return field errors from the API on create failure', () => {
+        Reducer(gameReducer).expect({
+            type: gameActions.GAME_CREATE_FAILURE,
+            payload: {response: requestPayload}
+        }).toReturnState(gameCreateFailureField);
+    });
+    it('should return non-field errors from the API on create failure', () => {
+        Reducer(gameReducer).expect({
+            type: gameActions.GAME_CREATE_FAILURE,
+            payload: {statusText: requestPayload}
+        }).toReturnState(gameCreateFailureNonField);
     });
     describe('the exported functions', () => {
         let functionTestState;

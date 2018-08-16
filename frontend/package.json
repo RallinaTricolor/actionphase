@@ -5,6 +5,7 @@
   "dependencies": {
     "autoprefixer": "7.1.6",
     "autosize": "^4.0.2",
+    "axios": "^0.18.0",
     "babel-core": "6.26.0",
     "babel-eslint": "7.2.3",
     "babel-jest": "20.0.3",
@@ -51,6 +52,7 @@
     "redux-logger": "^3.0.6",
     "redux-persist": "^5.9.0",
     "redux-persist-transform-filter": "0.0.16",
+    "redux-thunk": "^2.3.0",
     "style-loader": "0.19.0",
     "sw-precache-webpack-plugin": "0.11.4",
     "url-loader": "0.6.2",
@@ -68,6 +70,7 @@
     "babel-preset-env": "^1.6.1",
     "enzyme": "^3.3.0",
     "enzyme-adapter-react-16": "^1.1.1",
+    "faker": "^4.1.0",
     "istanbul-api": "1.2.2",
     "istanbul-reports": "1.1.4",
     "jest": "^22.4.2",
@@ -81,7 +84,6 @@
   },
   "jest": {
     "coverageDirectory": "./coverage/",
-    "collectCoverage": true,
     "collectCoverageFrom": [
       "<rootDir>/src/**/*.{js,jsx,mjs}",
       "!<rootDir>/src/**/*.test.{js,jsx,mjs}",
