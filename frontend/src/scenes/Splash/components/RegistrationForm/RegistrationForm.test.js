@@ -3,38 +3,38 @@ import {shallow} from "enzyme";
 import {MemoryRouter} from 'react-router';
 import ReactRouterEnzymeContext from 'react-router-enzyme-context';
 
-import {LoginForm} from "./index";
+import {RegistrationForm} from "./index";
 
-describe("LoginForm", () => {
+describe("RegistrationForm", () => {
     let props;
-    let mountedLoginForm;
-    const loginForm = () => {
-        if (!mountedLoginForm) {
+    let mountedRegistrationForm;
+    const registrationForm = () => {
+        if (!mountedRegistrationForm) {
             const options = new ReactRouterEnzymeContext();
-            mountedLoginForm = shallow(
-                <LoginForm {...props}/>,
+            mountedRegistrationForm = shallow(
+                <RegistrationForm {...props}/>,
                 options.get()
             );
         }
-        return mountedLoginForm;
+        return mountedRegistrationForm;
     };
     beforeEach(() => {
         props = {
             onSubmit: jest.fn(),
             errors: {}
         };
-        mountedLoginForm = undefined;
+        mountedRegistrationForm = undefined;
     });
     it("always renders a div", () => {
-        const divs = loginForm().find("div");
+        const divs = registrationForm().find("div");
         expect(divs.length).toBeGreaterThan(0);
     });
     it("always renders a username input", () => {
-        const usernameInput = loginForm().find("Field[name='username']");
+        const usernameInput = registrationForm().find("Field[name='username']");
         expect(usernameInput.length).toBe(1);
     });
     it("always renders a password input", () => {
-        const passwordInput = loginForm().find("Field[name='password']");
+        const passwordInput = registrationForm().find("Field[name='password1']");
         expect(passwordInput.length).toBe(1);
     });
     describe("when 'errors' is defined", () => {
@@ -48,7 +48,7 @@ describe("LoginForm", () => {
                 }
             });
             it("renders an Alert with the error message", () => {
-                const alert = loginForm().find("Alert");
+                const alert = registrationForm().find("Alert");
                 expect(alert.length).toBe(1);
             })
         });

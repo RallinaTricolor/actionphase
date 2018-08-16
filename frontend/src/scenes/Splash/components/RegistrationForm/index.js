@@ -1,16 +1,16 @@
 import React, {Component} from 'react';
 import {Link} from "react-router-dom";
 import PropTypes from 'prop-types';
-import {Field, FieldArray, reduxForm} from 'redux-form';
+import {Field, reduxForm} from 'redux-form';
 import FormInput from '../../../../components/FormInput';
 import {FormGroup, Alert, Button, Form} from 'reactstrap';
 import './index.scss';
 
-class RegistrationForm extends Component {
+export class RegistrationForm extends Component {
     render() {
         const errors = this.props.errors || {};
         const {handleSubmit, submitting} = this.props;
-        return <div className="registration">
+        return <div className="registration" data-testid="userRegistrationForm">
             <Form onSubmit={handleSubmit}>
                 {
                     errors.non_field_errors ?

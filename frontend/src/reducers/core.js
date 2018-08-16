@@ -5,6 +5,9 @@ const initialState = {
 };
 
 const coreReducer = (state = initialState, action) => {
+    if (typeof action === 'undefined') {
+        return initialState;
+    }
     switch (action.type) {
         case coreActions.PLUGIN_LIST_SUCCESS:
             return {

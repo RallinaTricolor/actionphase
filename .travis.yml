@@ -2,26 +2,40 @@
     global:
       - COVERALLS_PARALLEL=true
     matrix:
-      - TO_TEST=BACKEND TESTS=unit
-      - TO_TEST=BACKEND TESTS=integration
-      - TO_TEST=FRONTEND
+      - BACKEND=1 FRONTEND=0 TESTS=backend
+      - BACKEND=0 FRONTEND=1 TESTS=frontend
   language: python
   python:
     - "3.6"
   services: mysql
+  cache:
+    directories:
+      - ~/.npm
+      - ~/.cache
   install:
     - ./travis-scripts/install.sh
   before_script:
     - ./travis-scripts/before_script.sh
   script:
-    - if [ "$TO_TEST" = "BACKEND" ]; then coverage run backend/manage.py test api.app.tests.$TESTS; fi
-    - if [ "$TO_TEST" = "FRONTEND" ]; then cd frontend && yarn test; fi
+    - if [ "$TESTS" = "backend" ]; then coverage run backend/manage.py test api.app.tests; fi
+    - if [ "$TESTS" = "frontend" ]; then cd frontend && yarn test --coverage; fi
+    - if [ "$TESTS" = "e2e" ]; then cd frontend && cypress run; fi
   notifications:
     email: false
   after_failure:
     - cat /tmp/debug.log
   after_success:
     - codecov
+  addons:
+    apt:
+      packages:
+        - xvfb
+    artifacts:
+      target_paths: $TRAVIS_BUILD_NUMBER
+      bucket: actionphase-artifacts
+      s3_region: us-east-1
+      paths:
+        - /home/travis/build/jhouser/actionphase/frontend/cypress/videos/
 
   jobs:
     include:

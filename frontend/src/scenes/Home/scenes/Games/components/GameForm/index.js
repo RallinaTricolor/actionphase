@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
-import {Button, Form, FormGroup, Input, FormText, Label} from 'reactstrap';
+import {Button, Form, FormGroup, FormText, Label} from 'reactstrap';
 import {Field, FieldArray, reduxForm} from 'redux-form';
+import { push } from 'react-router-redux';
 import FormInput from "../../../../../../components/FormInput";
 
 class GameForm extends Component {
@@ -45,7 +46,10 @@ class GameForm extends Component {
 }
 
 const ReduxGameForm = reduxForm({
-    form: 'game'
+    form: 'game',
+    onSubmitSuccess: (result, dispatch) => {
+        dispatch(push('/games/' + result.id));
+    }
 })(GameForm);
 
 export default ReduxGameForm;

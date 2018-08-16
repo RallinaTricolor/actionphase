@@ -43,7 +43,7 @@ class Header extends Component {
                                 Settings
                             </DropdownItem>
                             <DropdownItem divider/>
-                            <DropdownItem onClick={this.props.onLogoutClick}>
+                            <DropdownItem onClick={this.props.onLogoutClick} data-testid="logoutButton">
                                 Logout
                             </DropdownItem>
                         </DropdownMenu>

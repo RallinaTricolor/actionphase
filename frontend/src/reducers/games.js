@@ -37,10 +37,10 @@ export const games = (state) => state.game.list;
 export const game = (state) => state.game.details;
 
 export const isGameMaster = (state) => {
-    if (state.game.details && state.auth.access) {
-        return state.game.details.game_master.id === state.auth.access.user_id;
+    if (!state.game.details || !state.auth.access) {
+        return false;
     }
-    return false;
+    return state.game.details.game_master.id === state.auth.access.user_id;
 };
 
 export const gameErrors = (state) => state.game.errors;
