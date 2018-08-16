@@ -17,7 +17,7 @@
   before_script:
     - ./travis-scripts/before_script.sh
   script:
-    - if [ "$TESTS" = "backend" ]; then coverage run backend/manage.py test api.app.tests; fi
+    - if [ "$TESTS" = "backend" ]; then cd backend && coverage run manage.py test api.app.tests; fi
     - if [ "$TESTS" = "frontend" ]; then cd frontend && yarn test --coverage; fi
     - if [ "$TESTS" = "e2e" ]; then cd frontend && cypress run; fi
   notifications:
