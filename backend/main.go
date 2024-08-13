@@ -1,17 +1,36 @@
 package main
 
 import (
-	"net/http"
+	"context"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/jhouser/actionphase/backend/pkg/http"
 )
 
 func main() {
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello World!"))
-	})
-	http.ListenAndServe(":3000", r)
+	ctx := context.Background()
+	connectionString := "postgres://postgres:example@localhost:5432/database?sslmode=disable"
+	pool, err := pgxpool.New(ctx, connectionString)
+	if err != nil {
+		panic(err)
+	}
+	db := stdlib.OpenDBFromPool(pool)
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		panic(err)
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://pkg/db/migrations",
+		"database", driver)
+	if err != nil {
+		panic(err)
+	}
+	// WE SHOULD DEFINITELY DO THIS AT DEPLOY TIME, NOT RUNTIME
+	m.Up()
+	http.Start()
 }
