@@ -1,1 +1,0 @@
-python manage.py test api.app.tests.unit && python manage.py test api.app.tests.integration
