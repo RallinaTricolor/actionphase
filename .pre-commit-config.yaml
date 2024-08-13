@@ -13,7 +13,17 @@ repos:
       - id: forbid-binary
       - id: go-fmt
       - id: go-mod-tidy
+        language: system
+        entry: bash -c 'cd backend && exec go mod tidy'
+        pass_filenames: false
+        types: [ go ]
+        files: ^backend/
       - id: go-generate
+        language: system
+        entry: bash -c 'cd backend && exec go generate'
+        pass_filenames: false
+        types: [ go ]
+        files: ^backend/
     # prepare-commit-msg
   - repo: https://github.com/avilaton/add-msg-issue-prefix-hook
     rev: v0.0.6    # Use the ref you want to point at
