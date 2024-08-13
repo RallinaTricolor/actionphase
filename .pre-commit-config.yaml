@@ -12,6 +12,11 @@ repos:
     hooks:
       - id: forbid-binary
       - id: go-fmt
+        language: system
+        entry: bash -c 'cd backend && exec go fmt ./...'
+        pass_filenames: false
+        types: [ go ]
+        files: ^backend/
       - id: go-mod-tidy
         language: system
         entry: bash -c 'cd backend && exec go mod tidy'
@@ -20,7 +25,7 @@ repos:
         files: ^backend/
       - id: go-generate
         language: system
-        entry: bash -c 'cd backend && exec go generate'
+        entry: bash -c 'cd backend && exec go generate ./...'
         pass_filenames: false
         types: [ go ]
         files: ^backend/
