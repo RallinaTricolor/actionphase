@@ -1,10 +1,12 @@
 package db
 
 import (
-	"github.com/jhouser/actionphase/backend/pkg/core"
+	"actionphase/pkg/core"
+	"database/sql"
 )
 
 type UserService struct {
+	DB *sql.DB
 }
 
 func (s *UserService) User(id int) (*core.User, error) {
