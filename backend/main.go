@@ -1,6 +1,7 @@
 package main
 
 import (
+	"actionphase/pkg/db/services"
 	"context"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -9,7 +10,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/jhouser/actionphase/backend/pkg/http"
+	"actionphase/pkg/http"
 )
 
 func main() {
@@ -19,8 +20,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	db := stdlib.OpenDBFromPool(pool)
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	database := stdlib.OpenDBFromPool(pool)
+	driver, err := postgres.WithInstance(database, &postgres.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -32,5 +33,7 @@ func main() {
 	}
 	// WE SHOULD DEFINITELY DO THIS AT DEPLOY TIME, NOT RUNTIME
 	m.Up()
+	UserService := db.UserService{DB: database}
+	UserService.User(1)
 	http.Start()
 }
