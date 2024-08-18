@@ -7,29 +7,23 @@ import (
 
 type User struct {
 	ID        int        `json:"id"`
-	Username  string     `json:"name"`
+	Username  string     `json:"username"`
 	Email     string     `json:"email"`
-	Password  Password   `json:"-"`
+	Password  string     `json:"-"`
 	CreatedAt *time.Time `json:"createdAt"`
 }
 
-type Password struct {
-	Plaintext *string
-	Hash      string
-}
-
-func (p *Password) Set(plaintext string) error {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(plaintext), bcrypt.DefaultCost)
+func (u *User) HashPassword() error {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
-	p.Plaintext = &plaintext
-	p.Hash = string(bytes)
+	u.Password = string(bytes)
 	return nil
 }
 
-func (p *Password) CheckPasswordHash(plaintext string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(p.Hash), []byte(plaintext))
+func (u *User) CheckPasswordHash(plaintext string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(plaintext))
 	return err == nil
 }
 
