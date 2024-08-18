@@ -18,7 +18,7 @@ type Password struct {
 	Hash      string
 }
 
-func (p *Password) GeneratePasswordHash(plaintext string) error {
+func (p *Password) Set(plaintext string) error {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(plaintext), bcrypt.DefaultCost)
 	if err != nil {
 		return err
