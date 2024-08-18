@@ -39,7 +39,7 @@ func Start() {
 	})
 
 	registrationHandler := auth.RegistrationHandler{DB: pool}
-	r.Post("/register", registrationHandler.CreateUser)
+	r.Post("/api/v1/register", registrationHandler.V1CreateUser)
 
 	http.ListenAndServe(":3000", r)
 }

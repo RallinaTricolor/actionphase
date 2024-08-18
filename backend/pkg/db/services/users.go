@@ -19,16 +19,21 @@ func (s *UserService) Users() ([]*core.User, error) {
 	return nil, nil
 }
 
-func (s *UserService) CreateUser(u *core.User) error {
+func (s *UserService) CreateUser(u *core.User) (core.User, error) {
 	ctx := context.Background()
 	u.HashPassword()
 	q := db.New(s.DB)
-	_, err := q.CreateUser(ctx, db.CreateUserParams{
+	dbUser, err := q.CreateUser(ctx, db.CreateUserParams{
 		Username: u.Username,
 		Password: u.Password,
 		Email:    u.Email,
 	})
-	return err
+	return core.User{
+		ID:        int(dbUser.ID),
+		Username:  dbUser.Username,
+		Email:     dbUser.Email,
+		CreatedAt: &dbUser.CreatedAt.Time,
+	}, err
 }
 
 func (s *UserService) DeleteUser(id int) error {

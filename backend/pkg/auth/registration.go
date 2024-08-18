@@ -24,22 +24,21 @@ type RegistrationHandler struct {
 	DB *pgxpool.Pool
 }
 
-func (h *RegistrationHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+func (h *RegistrationHandler) V1CreateUser(w http.ResponseWriter, r *http.Request) {
 	data := &RegistrationRequest{}
 	if err := render.Bind(r, data); err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
-	user := data.User
 	UserService := db.UserService{DB: h.DB}
-	err := UserService.CreateUser(user)
+	returnUser, err := UserService.CreateUser(data.User)
 
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 	render.Status(r, http.StatusCreated)
-	render.Render(w, r, NewRegistrationResponse(user))
+	render.Render(w, r, NewRegistrationResponse(&returnUser))
 }
 
 type RegistrationResponse struct {
