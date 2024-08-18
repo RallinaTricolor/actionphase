@@ -30,9 +30,14 @@ func (h *RegistrationHandler) V1CreateUser(w http.ResponseWriter, r *http.Reques
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
+
+	if err := data.User.Validate(); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
 	UserService := db.UserService{DB: h.DB}
 	returnUser, err := UserService.CreateUser(data.User)
-
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
 		return

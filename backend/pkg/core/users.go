@@ -1,17 +1,20 @@
 package core
 
 import (
+	"github.com/go-playground/validator/v10"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 )
 
 type User struct {
 	ID        int        `json:"id"`
-	Username  string     `json:"username"`
-	Email     string     `json:"email"`
-	Password  string     `json:"-"`
+	Username  string     `json:"username" validate:"required"`
+	Email     string     `json:"email" validate:"required,email"`
+	Password  string     `json:"password" validate:"required,min=8,max=64"`
 	CreatedAt *time.Time `json:"createdAt"`
 }
+
+var validate *validator.Validate
 
 func (u *User) HashPassword() error {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
@@ -32,4 +35,13 @@ type UserService interface {
 	Users() ([]*User, error)
 	CreateUser(u *User) error
 	DeleteUser(id int) error
+}
+
+func (u *User) Validate() error {
+	validate = validator.New(validator.WithRequiredStructEnabled())
+	err := validate.Struct(u)
+	if err != nil {
+		return err
+	}
+	return nil
 }
