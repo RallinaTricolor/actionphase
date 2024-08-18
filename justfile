@@ -13,8 +13,8 @@ tidy:
 run:
   cd backend && go run main.go
 
-just migrate:
+migrate:
      migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/database?sslmode=disable" up
 
- just rollback:
-     migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/database?sslmode=disable" down
+rollback:
+    migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/database?sslmode=disable" down
