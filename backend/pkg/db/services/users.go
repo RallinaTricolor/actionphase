@@ -21,10 +21,11 @@ func (s *UserService) Users() ([]*core.User, error) {
 
 func (s *UserService) CreateUser(u *core.User) error {
 	ctx := context.Background()
+	u.HashPassword()
 	q := db.New(s.DB)
 	_, err := q.CreateUser(ctx, db.CreateUserParams{
 		Username: u.Username,
-		Password: u.Password.Hash,
+		Password: u.Password,
 		Email:    u.Email,
 	})
 	return err

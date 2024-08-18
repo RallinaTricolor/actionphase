@@ -1,8 +1,6 @@
 package main
 
 import (
-	"actionphase/pkg/core"
-	"actionphase/pkg/db/services"
 	"context"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -32,14 +30,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// WE SHOULD DEFINITELY DO THIS AT DEPLOY TIME, NOT RUNTIME
+	// TODO: WE SHOULD DEFINITELY DO THIS AT DEPLOY TIME, NOT RUNTIME
 	m.Up()
-	UserService := db.UserService{DB: pool}
-	user := &core.User{
-		Username: "test",
-		Email:    "test@example.com",
-	}
-	user.Password.Set("password")
-	UserService.CreateUser(user)
+
 	http.Start()
 }
