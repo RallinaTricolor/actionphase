@@ -22,7 +22,7 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 	UserService := db.UserService{DB: h.DB}
 	returnUser, err := UserService.CreateUser(data.User)
 	if err != nil {
-		render.Render(w, r, core.ErrInternalError(err))
+		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
 	token, err := createToken(returnUser.Username)
