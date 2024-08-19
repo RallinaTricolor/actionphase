@@ -24,6 +24,7 @@ type Handler struct {
 
 type Response struct {
 	*core.User
+	Token string
 }
 
 func (rd *Response) Render(w http.ResponseWriter, r *http.Request) error {

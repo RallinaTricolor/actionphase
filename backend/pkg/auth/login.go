@@ -23,6 +23,13 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, core.ErrInvalidRequest(LoginError{"invalid username or password"}))
 		return
 	}
+	token, err := createToken(user.Username)
+	if err != nil {
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+	render.Status(r, http.StatusOK)
+	render.Render(w, r, NewLoginResponse(token))
 }
 
 type LoginError struct {
@@ -31,4 +38,9 @@ type LoginError struct {
 
 func (e LoginError) Error() string {
 	return e.Message
+}
+
+func NewLoginResponse(token string) *Response {
+	resp := &Response{Token: token}
+	return resp
 }
