@@ -15,6 +15,22 @@ func (s *UserService) User(id int) (*core.User, error) {
 	return nil, nil
 }
 
+func (s *UserService) UserByUsername(username string) (*core.User, error) {
+	ctx := context.Background()
+	q := db.New(s.DB)
+	dbUser, err := q.GetUserByUsername(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+	return &core.User{
+		ID:        int(dbUser.ID),
+		Username:  dbUser.Username,
+		Password:  dbUser.Password,
+		Email:     dbUser.Email,
+		CreatedAt: &dbUser.CreatedAt.Time,
+	}, nil
+}
+
 func (s *UserService) Users() ([]*core.User, error) {
 	return nil, nil
 }
