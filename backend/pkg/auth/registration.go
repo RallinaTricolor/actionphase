@@ -30,6 +30,8 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
+	SessionService := db.SessionService{DB: h.DB}
+	_, err = SessionService.CreateSession(&core.Session{User: &returnUser, Token: token})
 	render.Status(r, http.StatusCreated)
 	render.Render(w, r, NewRegistrationResponse(&returnUser, token))
 }
