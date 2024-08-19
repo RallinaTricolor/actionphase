@@ -3,29 +3,12 @@ package auth
 import (
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/services"
-	"fmt"
 	"github.com/go-chi/render"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"net/http"
 )
 
-type RegistrationRequest struct {
-	*core.User
-}
-
-func (r *RegistrationRequest) Bind(req *http.Request) error {
-	if r.User == nil {
-		return fmt.Errorf("missing required User fields")
-	}
-	return nil
-}
-
-type RegistrationHandler struct {
-	DB *pgxpool.Pool
-}
-
-func (h *RegistrationHandler) V1CreateUser(w http.ResponseWriter, r *http.Request) {
-	data := &RegistrationRequest{}
+func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
+	data := &Request{}
 	if err := render.Bind(r, data); err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
@@ -46,15 +29,7 @@ func (h *RegistrationHandler) V1CreateUser(w http.ResponseWriter, r *http.Reques
 	render.Render(w, r, NewRegistrationResponse(&returnUser))
 }
 
-type RegistrationResponse struct {
-	*core.User
-}
-
-func NewRegistrationResponse(user *core.User) *RegistrationResponse {
-	resp := &RegistrationResponse{User: user}
+func NewRegistrationResponse(user *core.User) *Response {
+	resp := &Response{User: user}
 	return resp
-}
-
-func (rd *RegistrationResponse) Render(w http.ResponseWriter, r *http.Request) error {
-	return nil
 }

@@ -38,8 +38,8 @@ func Start() {
 		panic("test")
 	})
 
-	registrationHandler := auth.RegistrationHandler{DB: pool}
-	r.Post("/api/v1/register", registrationHandler.V1CreateUser)
+	authHandler := auth.Handler{DB: pool}
+	r.Post("/api/v1/auth/register", authHandler.V1Register)
 
 	http.ListenAndServe(":3000", r)
 }
