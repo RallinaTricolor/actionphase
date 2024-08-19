@@ -41,6 +41,7 @@ func Start() {
 	authHandler := auth.Handler{DB: pool}
 	r.Post("/api/v1/auth/register", authHandler.V1Register)
 	r.Post("/api/v1/auth/login", authHandler.V1Login)
+	r.Get("/api/v1/auth/refresh", authHandler.V1Refresh)
 
 	http.ListenAndServe(":3000", r)
 }

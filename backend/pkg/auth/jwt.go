@@ -13,7 +13,7 @@ func createToken(username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
 			"username": username,
-			"exp":      time.Now().Add(time.Hour * 24).Unix(),
+			"exp":      time.Now().Add(time.Hour * 24 * 7).Unix(),
 		})
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
@@ -36,4 +36,22 @@ func verifyToken(tokenString string) error {
 	}
 
 	return nil
+}
+
+func decodeToken(tokenString string) (map[string]interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return secretKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	fmt.Println(claims)
+	return claims, nil
 }
