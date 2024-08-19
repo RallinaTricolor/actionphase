@@ -25,11 +25,16 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
+	token, err := createToken(returnUser.Username)
+	if err != nil {
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
 	render.Status(r, http.StatusCreated)
-	render.Render(w, r, NewRegistrationResponse(&returnUser))
+	render.Render(w, r, NewRegistrationResponse(&returnUser, token))
 }
 
-func NewRegistrationResponse(user *core.User) *Response {
-	resp := &Response{User: user}
+func NewRegistrationResponse(user *core.User, token string) *Response {
+	resp := &Response{User: user, Token: token}
 	return resp
 }
