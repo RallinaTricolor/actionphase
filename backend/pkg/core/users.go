@@ -32,6 +32,7 @@ func (u *User) CheckPasswordHash(plaintext string) bool {
 
 type UserService interface {
 	User(id int) (*User, error)
+	UserByUsername(username string) (*User, error)
 	Users() ([]*User, error)
 	CreateUser(u *User) error
 	DeleteUser(id int) error
