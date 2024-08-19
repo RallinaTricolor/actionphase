@@ -46,3 +46,10 @@ func (u *User) Validate() error {
 	}
 	return nil
 }
+
+type Session struct {
+	ID      int `json:"id"`
+	User    *User
+	Token   string     `json:"token"`
+	Expires *time.Time `json:"expires"`
+}

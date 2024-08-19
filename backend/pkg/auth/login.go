@@ -28,6 +28,12 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
+	SessionService := db.SessionService{DB: h.DB}
+	_, err = SessionService.CreateSession(&core.Session{User: user, Token: token})
+	if err != nil {
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
 	render.Status(r, http.StatusOK)
 	render.Render(w, r, NewLoginResponse(token))
 }
