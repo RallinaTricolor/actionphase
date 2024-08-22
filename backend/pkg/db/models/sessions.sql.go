@@ -52,6 +52,18 @@ func (q *Queries) GetSession(ctx context.Context, id int32) (Session, error) {
 	return i, err
 }
 
+const getSessionByToken = `-- name: GetSessionByToken :one
+SELECT id, user_id, data FROM sessions
+WHERE data = $1 LIMIT 1
+`
+
+func (q *Queries) GetSessionByToken(ctx context.Context, data string) (Session, error) {
+	row := q.db.QueryRow(ctx, getSessionByToken, data)
+	var i Session
+	err := row.Scan(&i.ID, &i.UserID, &i.Data)
+	return i, err
+}
+
 const getSessionsByUser = `-- name: GetSessionsByUser :many
 SELECT id, user_id, data FROM sessions
 WHERE user_id = $1
