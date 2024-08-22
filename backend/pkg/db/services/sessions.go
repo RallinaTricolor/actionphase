@@ -15,6 +15,18 @@ func (s *SessionService) Session(id int) (*core.Session, error) {
 	return nil, nil
 }
 
+func (s *SessionService) SessionByToken(token string) (*core.Session, error) {
+	ctx := context.Background()
+	q := db.New(s.DB)
+	dbSession, err := q.GetSessionByToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	return &core.Session{
+		ID: int(dbSession.ID),
+	}, nil
+}
+
 func (s *SessionService) Sessions() ([]*core.Session, error) {
 	return nil, nil
 }

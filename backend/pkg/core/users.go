@@ -53,3 +53,12 @@ type Session struct {
 	Token   string     `json:"token"`
 	Expires *time.Time `json:"expires"`
 }
+
+type SessionService interface {
+	Session(id int) (*Session, error)
+	SessionByToken(token string) (*Session, error)
+	Sessions() ([]*Session, error)
+	SessionsByUser() ([]*Session, error)
+	CreateSession(us *Session) (*Session, error)
+	DeleteSession(id int) error
+}
