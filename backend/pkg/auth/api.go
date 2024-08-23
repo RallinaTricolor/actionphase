@@ -3,7 +3,6 @@ package auth
 import (
 	"actionphase/pkg/core"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"net/http"
 )
 
@@ -19,7 +18,7 @@ func (r *Request) Bind(req *http.Request) error {
 }
 
 type Handler struct {
-	DB *pgxpool.Pool
+	App *core.App
 }
 
 type Response struct {

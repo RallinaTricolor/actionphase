@@ -13,22 +13,26 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
-	UserService := db.UserService{DB: h.DB}
+	UserService := db.UserService{DB: h.App.Pool}
 	user, err := UserService.UserByUsername(data.User.Username)
 	if err != nil {
+		h.App.Logger.Error("Error getting user", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 	if !user.CheckPasswordHash(data.User.Password) {
+		h.App.Logger.Error("Invalid password", "username", user.Username)
 		render.Render(w, r, core.ErrInvalidRequest(LoginError{"invalid username or password"}))
 		return
 	}
+	h.App.Logger.Info("Creating token for user", "username", user.Username)
 	token, err := createToken(user.Username)
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
-	SessionService := db.SessionService{DB: h.DB}
+	SessionService := db.SessionService{DB: h.App.Pool}
+	h.App.Logger.Info("Creating session for user", "username", user.Username)
 	_, err = SessionService.CreateSession(&core.Session{User: user, Token: token})
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))

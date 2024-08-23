@@ -4,11 +4,14 @@ import (
 	"context"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/jackc/pgx/v5/stdlib"
+	"log/slog"
+	"os"
 
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"actionphase/pkg/core"
 	"actionphase/pkg/http"
 )
 
@@ -19,6 +22,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	app := &core.App{
+		Logger: *slog.New(slog.NewTextHandler(os.Stdout, nil)),
+		Pool:   pool,
+	}
+
+	// TODO: WE SHOULD DEFINITELY DO THIS AT DEPLOY TIME, NOT RUNTIME
 	database := stdlib.OpenDBFromPool(pool)
 	driver, err := postgres.WithInstance(database, &postgres.Config{})
 	if err != nil {
@@ -30,8 +39,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// TODO: WE SHOULD DEFINITELY DO THIS AT DEPLOY TIME, NOT RUNTIME
+
+	app.Logger.Info("Running database migrations...")
 	m.Up()
 
-	http.Start()
+	app.Logger.Info("Starting server...")
+	httpHandler := &http.Handler{
+		App: app,
+	}
+	httpHandler.Start()
 }
