@@ -34,10 +34,18 @@ func (h *Handler) Start() {
 		panic("test")
 	})
 
-	authHandler := auth.Handler{App: h.App}
-	r.Post("/api/v1/auth/register", authHandler.V1Register)
-	r.Post("/api/v1/auth/login", authHandler.V1Login)
-	r.Get("/api/v1/auth/refresh", authHandler.V1Refresh)
+	apiV1Router := chi.NewRouter()
+
+	authRouter := chi.NewRouter()
+	authRouter.Route("/", func(r chi.Router) {
+		authHandler := auth.Handler{App: h.App}
+		r.Post("/register", authHandler.V1Register)
+		r.Post("/login", authHandler.V1Login)
+		r.Get("/refresh", authHandler.V1Refresh)
+	})
+	apiV1Router.Mount("/auth", authRouter)
+
+	r.Mount("/api/v1", apiV1Router)
 
 	http.ListenAndServe(":3000", r)
 }
