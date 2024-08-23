@@ -7,7 +7,12 @@ import (
 )
 
 func (h *Handler) V1Refresh(w http.ResponseWriter, r *http.Request) {
-	tokenClaims, err := decodeToken(r.Header.Get("Bearer"))
+	tokenString := r.Header.Get("Authorization")[len("Bearer "):]
+	if err := verifyToken(tokenString); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+	tokenClaims, err := decodeToken(tokenString)
 	if err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return

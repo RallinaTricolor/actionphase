@@ -52,6 +52,5 @@ func decodeToken(tokenString string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("invalid token claims")
 	}
 
-	fmt.Println(claims)
 	return claims, nil
 }
