@@ -7,26 +7,34 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (
-    user_id, data
+    user_id, data, expires
 ) VALUES (
-             $1, $2
+             $1, $2, $3
          )
-RETURNING id, user_id, data
+RETURNING id, user_id, data, expires
 `
 
 type CreateSessionParams struct {
-	UserID int32
-	Data   string
+	UserID  int32
+	Data    string
+	Expires pgtype.Timestamptz
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
-	row := q.db.QueryRow(ctx, createSession, arg.UserID, arg.Data)
+	row := q.db.QueryRow(ctx, createSession, arg.UserID, arg.Data, arg.Expires)
 	var i Session
-	err := row.Scan(&i.ID, &i.UserID, &i.Data)
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Data,
+		&i.Expires,
+	)
 	return i, err
 }
 
@@ -41,31 +49,41 @@ func (q *Queries) DeleteSession(ctx context.Context, id int32) error {
 }
 
 const getSession = `-- name: GetSession :one
-SELECT id, user_id, data FROM sessions
+SELECT id, user_id, data, expires FROM sessions
 WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetSession(ctx context.Context, id int32) (Session, error) {
 	row := q.db.QueryRow(ctx, getSession, id)
 	var i Session
-	err := row.Scan(&i.ID, &i.UserID, &i.Data)
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Data,
+		&i.Expires,
+	)
 	return i, err
 }
 
 const getSessionByToken = `-- name: GetSessionByToken :one
-SELECT id, user_id, data FROM sessions
+SELECT id, user_id, data, expires FROM sessions
 WHERE data = $1 LIMIT 1
 `
 
 func (q *Queries) GetSessionByToken(ctx context.Context, data string) (Session, error) {
 	row := q.db.QueryRow(ctx, getSessionByToken, data)
 	var i Session
-	err := row.Scan(&i.ID, &i.UserID, &i.Data)
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Data,
+		&i.Expires,
+	)
 	return i, err
 }
 
 const getSessionsByUser = `-- name: GetSessionsByUser :many
-SELECT id, user_id, data FROM sessions
+SELECT id, user_id, data, expires FROM sessions
 WHERE user_id = $1
 `
 
@@ -78,7 +96,12 @@ func (q *Queries) GetSessionsByUser(ctx context.Context, userID int32) ([]Sessio
 	var items []Session
 	for rows.Next() {
 		var i Session
-		if err := rows.Scan(&i.ID, &i.UserID, &i.Data); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Data,
+			&i.Expires,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
