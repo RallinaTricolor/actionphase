@@ -2,8 +2,7 @@ package http
 
 import (
 	"actionphase/pkg/auth"
-	"context"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"actionphase/pkg/core"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -11,14 +10,11 @@ import (
 	"github.com/go-chi/render"
 )
 
-func Start() {
-	ctx := context.Background()
-	connectionString := "postgres://postgres:example@localhost:5432/database?sslmode=disable"
-	pool, err := pgxpool.New(ctx, connectionString)
-	if err != nil {
-		panic(err)
-	}
+type Handler struct {
+	App *core.App
+}
 
+func (h *Handler) Start() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.RequestID)
@@ -38,7 +34,7 @@ func Start() {
 		panic("test")
 	})
 
-	authHandler := auth.Handler{DB: pool}
+	authHandler := auth.Handler{App: h.App}
 	r.Post("/api/v1/auth/register", authHandler.V1Register)
 	r.Post("/api/v1/auth/login", authHandler.V1Login)
 	r.Get("/api/v1/auth/refresh", authHandler.V1Refresh)

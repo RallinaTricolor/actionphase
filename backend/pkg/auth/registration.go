@@ -19,18 +19,22 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	UserService := db.UserService{DB: h.DB}
+	UserService := db.UserService{DB: h.App.Pool}
+	h.App.Logger.Info("Creating user", "username", data.User.Username)
 	returnUser, err := UserService.CreateUser(data.User)
 	if err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
+
+	h.App.Logger.Info("Creating token for new user", "username", returnUser.Username)
 	token, err := createToken(returnUser.Username)
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
-	SessionService := db.SessionService{DB: h.DB}
+	SessionService := db.SessionService{DB: h.App.Pool}
+	h.App.Logger.Info("Creating session for new user", "username", returnUser.Username)
 	_, err = SessionService.CreateSession(&core.Session{User: &returnUser, Token: token})
 	render.Status(r, http.StatusCreated)
 	render.Render(w, r, NewRegistrationResponse(&returnUser, token))

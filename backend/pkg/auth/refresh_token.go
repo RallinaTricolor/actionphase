@@ -17,6 +17,7 @@ func (h *Handler) V1Refresh(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
+	h.App.Logger.Info("Creating refreshed token for user", "username", tokenClaims["username"].(string))
 	token, err := createToken(tokenClaims["username"].(string))
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
