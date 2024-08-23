@@ -9,9 +9,10 @@ import (
 )
 
 type Session struct {
-	ID     int32
-	UserID int32
-	Data   string
+	ID      int32
+	UserID  int32
+	Data    string
+	Expires pgtype.Timestamptz
 }
 
 type User struct {

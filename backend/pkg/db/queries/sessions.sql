@@ -12,9 +12,9 @@ WHERE user_id = $1;
 
 -- name: CreateSession :one
 INSERT INTO sessions (
-    user_id, data
+    user_id, data, expires
 ) VALUES (
-             $1, $2
+             $1, $2, $3
          )
 RETURNING *;
 
