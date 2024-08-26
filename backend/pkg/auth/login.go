@@ -26,7 +26,8 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.App.Logger.Info("Creating token for user", "username", user.Username)
-	token, err := createToken(user.Username)
+	jwt := JWTHandler{App: h.App}
+	token, err := jwt.CreateToken(user.Username)
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
 		return

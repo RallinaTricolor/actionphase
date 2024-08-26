@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"actionphase/pkg/core"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"time"
@@ -9,7 +10,11 @@ import (
 // TODO: Read this from environment variable
 var secretKey = []byte("SECRET")
 
-func createToken(username string) (string, error) {
+type JWTHandler struct {
+	App *core.App
+}
+
+func (j *JWTHandler) CreateToken(username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
 			"username": username,
@@ -22,7 +27,7 @@ func createToken(username string) (string, error) {
 	return tokenString, nil
 }
 
-func verifyToken(tokenString string) error {
+func (j *JWTHandler) VerifyToken(tokenString string) error {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})
@@ -38,7 +43,7 @@ func verifyToken(tokenString string) error {
 	return nil
 }
 
-func decodeToken(tokenString string) (map[string]interface{}, error) {
+func (j *JWTHandler) DecodeToken(tokenString string) (map[string]interface{}, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})
