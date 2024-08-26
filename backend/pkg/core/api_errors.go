@@ -36,3 +36,11 @@ func ErrInternalError(err error) render.Renderer {
 		ErrorText:      err.Error(),
 	}
 }
+
+func ErrUnauthorized(message string) render.Renderer {
+	return &ErrResponse{
+		HTTPStatusCode: 401,
+		StatusText:     "Unauthorized.",
+		ErrorText:      message,
+	}
+}

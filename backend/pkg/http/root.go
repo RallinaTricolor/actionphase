@@ -7,11 +7,19 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 )
 
 type Handler struct {
 	App *core.App
+}
+
+var tokenAuth *jwtauth.JWTAuth
+
+func init() {
+	// TODO: Get this from env var
+	tokenAuth = jwtauth.New("HS256", []byte("SECRET"), nil)
 }
 
 func (h *Handler) Start() {
@@ -41,7 +49,12 @@ func (h *Handler) Start() {
 		authHandler := auth.Handler{App: h.App}
 		r.Post("/register", authHandler.V1Register)
 		r.Post("/login", authHandler.V1Login)
-		r.Get("/refresh", authHandler.V1Refresh)
+		r.Group(func(r chi.Router) {
+			// Seek, verify and validate JWT tokens
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Get("/refresh", authHandler.V1Refresh)
+		})
 	})
 	apiV1Router.Mount("/auth", authRouter)
 

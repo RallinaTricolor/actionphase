@@ -26,16 +26,12 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.App.Logger.Info("Creating token for user", "username", user.Username)
-	jwt := JWTHandler{App: h.App}
-	token, err := jwt.CreateToken(user)
+	token, err := MakeToken(user.Username)
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
-	if err != nil {
-		render.Render(w, r, core.ErrInternalError(err))
-		return
-	}
+	SetJWTCookie(w, token)
 	render.Status(r, http.StatusOK)
 	render.Render(w, r, NewLoginResponse(token))
 }

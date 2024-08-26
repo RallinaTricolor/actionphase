@@ -3,42 +3,35 @@ package auth
 import (
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/services"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
+	"github.com/lestrrat-go/jwx/v2/jwt"
 	"net/http"
 )
 
 func (h *Handler) V1Refresh(w http.ResponseWriter, r *http.Request) {
-	tokenString := r.Header.Get("Authorization")[len("Bearer "):]
-	jwt := JWTHandler{App: h.App}
-	if err := jwt.VerifyToken(tokenString); err != nil {
-		h.App.Logger.Error("Error verifying token", "error", err)
-		render.Render(w, r, core.ErrInvalidRequest(err))
+	token, claims, _ := jwtauth.FromContext(r.Context())
+	if token == nil || jwt.Validate(token) != nil {
+		render.Render(w, r, core.ErrUnauthorized("Invalid token"))
 		return
 	}
-	tokenClaims, err := jwt.DecodeToken(tokenString)
-	if err != nil {
-		h.App.Logger.Error("Error decoding token", "error", err)
-		render.Render(w, r, core.ErrInvalidRequest(err))
-		return
-	}
-	h.App.Logger.Info("Creating refreshed token for user", "username", tokenClaims["username"].(string))
-	us := db.UserService{DB: h.App.Pool}
-	user, err := us.UserByUsername(tokenClaims["username"].(string))
+	username := claims["username"].(string)
+	UserService := db.UserService{DB: h.App.Pool}
+	user, err := UserService.UserByUsername(username)
 	if err != nil {
 		h.App.Logger.Error("Error getting user", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
-	token, err := jwt.CreateToken(user)
+	h.App.Logger.Info("Creating token for user", "username", user.Username)
+	tokenString, err := MakeToken(user.Username)
 	if err != nil {
-		h.App.Logger.Error("Error creating token", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
-	ss := db.SessionService{DB: h.App.Pool}
-	err = ss.DeleteSessionByToken(tokenString)
+	SetJWTCookie(w, tokenString)
 	render.Status(r, http.StatusOK)
-	render.Render(w, r, NewRefreshResponse(token))
+	render.Render(w, r, NewRefreshResponse(tokenString))
 }
 
 func NewRefreshResponse(token string) *Response {
