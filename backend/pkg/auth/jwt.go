@@ -2,6 +2,7 @@ package auth
 
 import (
 	"actionphase/pkg/core"
+	db "actionphase/pkg/db/services"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"time"
@@ -38,6 +39,11 @@ func (j *JWTHandler) VerifyToken(tokenString string) error {
 
 	if !token.Valid {
 		return fmt.Errorf("invalid token")
+	}
+	s := db.SessionService{DB: j.App.Pool}
+	_, err = s.SessionByToken(tokenString)
+	if err != nil {
+		return err
 	}
 
 	return nil
