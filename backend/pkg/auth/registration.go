@@ -29,16 +29,13 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 
 	h.App.Logger.Info("Creating token for new user", "username", returnUser.Username)
 	jwt := JWTHandler{App: h.App}
-	token, err := jwt.CreateToken(returnUser.Username)
+	token, err := jwt.CreateToken(returnUser)
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
-	SessionService := db.SessionService{DB: h.App.Pool}
-	h.App.Logger.Info("Creating session for new user", "username", returnUser.Username)
-	_, err = SessionService.CreateSession(&core.Session{User: &returnUser, Token: token})
 	render.Status(r, http.StatusCreated)
-	render.Render(w, r, NewRegistrationResponse(&returnUser, token))
+	render.Render(w, r, NewRegistrationResponse(returnUser, token))
 }
 
 func NewRegistrationResponse(user *core.User, token string) *Response {

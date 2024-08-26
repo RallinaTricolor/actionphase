@@ -15,13 +15,16 @@ type JWTHandler struct {
 	App *core.App
 }
 
-func (j *JWTHandler) CreateToken(username string) (string, error) {
+func (j *JWTHandler) CreateToken(user *core.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
-			"username": username,
+			"username": user.Username,
 			"exp":      time.Now().Add(time.Hour * 24 * 7).Unix(),
 		})
 	tokenString, err := token.SignedString(secretKey)
+	SessionService := db.SessionService{DB: j.App.Pool}
+	j.App.Logger.Info("Creating session for new user", "username", user.Username)
+	_, err = SessionService.CreateSession(&core.Session{User: user, Token: tokenString})
 	if err != nil {
 		return "", err
 	}

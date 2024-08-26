@@ -61,4 +61,5 @@ type SessionService interface {
 	SessionsByUser() ([]*Session, error)
 	CreateSession(us *Session) (*Session, error)
 	DeleteSession(id int) error
+	DeleteSessionByToken(token string) error
 }

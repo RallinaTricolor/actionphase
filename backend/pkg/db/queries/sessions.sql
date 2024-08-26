@@ -21,3 +21,7 @@ RETURNING *;
 -- name: DeleteSession :exec
 DELETE FROM sessions
 WHERE id = $1;
+
+-- name: DeleteSessionByToken :exec
+DELETE FROM sessions
+WHERE data = $1;
