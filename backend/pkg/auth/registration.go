@@ -28,7 +28,8 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.App.Logger.Info("Creating token for new user", "username", returnUser.Username)
-	token, err := createToken(returnUser.Username)
+	jwt := JWTHandler{App: h.App}
+	token, err := jwt.CreateToken(returnUser.Username)
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
 		return

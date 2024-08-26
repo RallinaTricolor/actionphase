@@ -8,17 +8,18 @@ import (
 
 func (h *Handler) V1Refresh(w http.ResponseWriter, r *http.Request) {
 	tokenString := r.Header.Get("Authorization")[len("Bearer "):]
-	if err := verifyToken(tokenString); err != nil {
+	jwt := JWTHandler{App: h.App}
+	if err := jwt.VerifyToken(tokenString); err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
-	tokenClaims, err := decodeToken(tokenString)
+	tokenClaims, err := jwt.DecodeToken(tokenString)
 	if err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
 	h.App.Logger.Info("Creating refreshed token for user", "username", tokenClaims["username"].(string))
-	token, err := createToken(tokenClaims["username"].(string))
+	token, err := jwt.CreateToken(tokenClaims["username"].(string))
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
