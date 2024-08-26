@@ -45,3 +45,10 @@ func (s *SessionService) CreateSession(us *core.Session) (*core.Session, error) 
 		ID: int(dbSession.ID),
 	}, err
 }
+
+func (s *SessionService) DeleteSessionByToken(token string) error {
+	ctx := context.Background()
+	q := db.New(s.DB)
+	err := q.DeleteSessionByToken(ctx, token)
+	return err
+}

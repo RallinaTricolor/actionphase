@@ -35,7 +35,7 @@ func (s *UserService) Users() ([]*core.User, error) {
 	return nil, nil
 }
 
-func (s *UserService) CreateUser(u *core.User) (core.User, error) {
+func (s *UserService) CreateUser(u *core.User) (*core.User, error) {
 	ctx := context.Background()
 	u.HashPassword()
 	q := db.New(s.DB)
@@ -44,7 +44,7 @@ func (s *UserService) CreateUser(u *core.User) (core.User, error) {
 		Password: u.Password,
 		Email:    u.Email,
 	})
-	return core.User{
+	return &core.User{
 		ID:        int(dbUser.ID),
 		Username:  dbUser.Username,
 		Email:     dbUser.Email,

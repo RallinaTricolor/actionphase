@@ -27,14 +27,11 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 	}
 	h.App.Logger.Info("Creating token for user", "username", user.Username)
 	jwt := JWTHandler{App: h.App}
-	token, err := jwt.CreateToken(user.Username)
+	token, err := jwt.CreateToken(user)
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
-	SessionService := db.SessionService{DB: h.App.Pool}
-	h.App.Logger.Info("Creating session for user", "username", user.Username)
-	_, err = SessionService.CreateSession(&core.Session{User: user, Token: token})
 	if err != nil {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
