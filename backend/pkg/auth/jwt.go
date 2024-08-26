@@ -4,9 +4,36 @@ import (
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/services"
 	"fmt"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/golang-jwt/jwt/v5"
+	"net/http"
 	"time"
 )
+
+var tokenAuth *jwtauth.JWTAuth
+
+func init() {
+	// TODO: Get this from env var
+	tokenAuth = jwtauth.New("HS256", []byte("SECRET"), nil)
+}
+
+func MakeToken(name string) (string, error) {
+	_, tokenString, err := tokenAuth.Encode(map[string]interface{}{"username": name})
+	return tokenString, err
+}
+
+func SetJWTCookie(w http.ResponseWriter, token string) {
+	http.SetCookie(w, &http.Cookie{
+		HttpOnly: true,
+		Expires:  time.Now().Add(7 * 24 * time.Hour),
+		SameSite: http.SameSiteLaxMode,
+		// Uncomment below for HTTPS:
+		// Secure: true,
+		Name:  "jwt", // Must be named "jwt" or else the token cannot be searched for by jwtauth.Verifier.
+		Value: token,
+		Path:  "/",
+	})
+}
 
 // TODO: Read this from environment variable
 var secretKey = []byte("SECRET")
