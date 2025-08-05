@@ -27,6 +27,18 @@ type CreateGameRequest struct {
 	IsPublic            bool
 }
 
+type UpdateGameRequest struct {
+	ID                  int32
+	Title               string
+	Description         string
+	Genre               string
+	StartDate           *time.Time
+	EndDate             *time.Time
+	RecruitmentDeadline *time.Time
+	MaxPlayers          int32
+	IsPublic            bool
+}
+
 type GameWithDetails struct {
 	Game             models.Game
 	GMUsername       string
@@ -210,4 +222,89 @@ func isValidGameState(state string) bool {
 		}
 	}
 	return false
+}
+
+// UpdateGame - Update game details
+func (gs *GameService) UpdateGame(ctx context.Context, req UpdateGameRequest) (*models.Game, error) {
+	queries := models.New(gs.DB)
+
+	var startDate, endDate, recruitmentDeadline pgtype.Timestamptz
+
+	if req.StartDate != nil {
+		startDate = pgtype.Timestamptz{Time: *req.StartDate, Valid: true}
+	}
+	if req.EndDate != nil {
+		endDate = pgtype.Timestamptz{Time: *req.EndDate, Valid: true}
+	}
+	if req.RecruitmentDeadline != nil {
+		recruitmentDeadline = pgtype.Timestamptz{Time: *req.RecruitmentDeadline, Valid: true}
+	}
+
+	game, err := queries.UpdateGame(ctx, models.UpdateGameParams{
+		ID:                  req.ID,
+		Title:               req.Title,
+		Description:         req.Description,
+		Genre:               pgtype.Text{String: req.Genre, Valid: req.Genre != ""},
+		StartDate:           startDate,
+		EndDate:             endDate,
+		RecruitmentDeadline: recruitmentDeadline,
+		MaxPlayers:          pgtype.Int4{Int32: req.MaxPlayers, Valid: req.MaxPlayers > 0},
+		IsPublic:            pgtype.Bool{Bool: req.IsPublic, Valid: true},
+	})
+
+	return &game, err
+}
+
+// DeleteGame - Delete a game
+func (gs *GameService) DeleteGame(ctx context.Context, gameID int32) error {
+	queries := models.New(gs.DB)
+	return queries.DeleteGame(ctx, gameID)
+}
+
+// GetGameWithDetails - Get game with additional details like GM username and player count
+func (gs *GameService) GetGameWithDetails(ctx context.Context, gameID int32) (*models.GetGameWithDetailsRow, error) {
+	queries := models.New(gs.DB)
+	game, err := queries.GetGameWithDetails(ctx, gameID)
+	return &game, err
+}
+
+// GetRecruitingGames - Get games currently accepting players
+func (gs *GameService) GetRecruitingGames(ctx context.Context) ([]models.GetRecruitingGamesRow, error) {
+	queries := models.New(gs.DB)
+	return queries.GetRecruitingGames(ctx)
+}
+
+// CanUserJoinGame - Check if user can join a game
+func (gs *GameService) CanUserJoinGame(ctx context.Context, gameID, userID int32) (string, error) {
+	queries := models.New(gs.DB)
+	return queries.CanUserJoinGame(ctx, models.CanUserJoinGameParams{
+		GameID: gameID,
+		UserID: userID,
+	})
+}
+
+// AddGameParticipant - Add a user as a participant to a game
+func (gs *GameService) AddGameParticipant(ctx context.Context, gameID, userID int32, role string) (*models.GameParticipant, error) {
+	queries := models.New(gs.DB)
+	participant, err := queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
+		GameID: gameID,
+		UserID: userID,
+		Role:   role,
+	})
+	return &participant, err
+}
+
+// RemoveGameParticipant - Remove a user from game participants
+func (gs *GameService) RemoveGameParticipant(ctx context.Context, gameID, userID int32) error {
+	queries := models.New(gs.DB)
+	return queries.RemoveGameParticipant(ctx, models.RemoveGameParticipantParams{
+		GameID: gameID,
+		UserID: userID,
+	})
+}
+
+// GetGameParticipants - Get all participants for a game
+func (gs *GameService) GetGameParticipants(ctx context.Context, gameID int32) ([]models.GetGameParticipantsRow, error) {
+	queries := models.New(gs.DB)
+	return queries.GetGameParticipants(ctx, gameID)
 }

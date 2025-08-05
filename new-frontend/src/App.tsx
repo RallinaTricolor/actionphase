@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { GamesPage } from './pages/GamesPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 
@@ -34,6 +35,10 @@ function AppRoutes() {
               <DashboardPage />
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/games"
+          element={<GamesPage />}
         />
         <Route path="/" element={<HomePage />} />
       </Routes>

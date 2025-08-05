@@ -71,15 +71,25 @@ func (h *Handler) Start() {
 
 		// Public routes - all games are visible to everyone
 		r.Get("/public", gameHandler.GetAllGames)
+		r.Get("/recruiting", gameHandler.GetRecruitingGames)
 		r.Get("/{id}", gameHandler.GetGame)
+		r.Get("/{id}/details", gameHandler.GetGameWithDetails)
+		r.Get("/{id}/participants", gameHandler.GetGameParticipants)
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 
+			// Game management
 			r.Post("/", gameHandler.CreateGame)
+			r.Put("/{id}", gameHandler.UpdateGame)
+			r.Delete("/{id}", gameHandler.DeleteGame)
 			r.Put("/{id}/state", gameHandler.UpdateGameState)
+
+			// Participant management
+			r.Post("/{id}/join", gameHandler.JoinGame)
+			r.Delete("/{id}/leave", gameHandler.LeaveGame)
 		})
 	})
 	apiV1Router.Mount("/games", gamesRouter)

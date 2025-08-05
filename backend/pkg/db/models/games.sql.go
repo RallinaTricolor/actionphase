@@ -37,6 +37,37 @@ func (q *Queries) AddGameParticipant(ctx context.Context, arg AddGameParticipant
 	return i, err
 }
 
+const canUserJoinGame = `-- name: CanUserJoinGame :one
+SELECT
+    CASE
+        WHEN g.state != 'recruitment' THEN 'game_not_recruiting'
+        WHEN g.recruitment_deadline IS NOT NULL AND g.recruitment_deadline < NOW() THEN 'deadline_passed'
+        WHEN COALESCE(pc.player_count, 0) >= g.max_players THEN 'game_full'
+        WHEN EXISTS(SELECT 1 FROM game_participants gp WHERE gp.game_id = $1 AND gp.user_id = $2 AND gp.status = 'active') THEN 'already_joined'
+        ELSE 'can_join'
+    END as join_status
+FROM games g
+LEFT JOIN (
+    SELECT game_id, COUNT(*) as player_count
+    FROM game_participants
+    WHERE role = 'player' AND status = 'active'
+    GROUP BY game_id
+) pc ON g.id = pc.game_id
+WHERE g.id = $1
+`
+
+type CanUserJoinGameParams struct {
+	GameID int32
+	UserID int32
+}
+
+func (q *Queries) CanUserJoinGame(ctx context.Context, arg CanUserJoinGameParams) (string, error) {
+	row := q.db.QueryRow(ctx, canUserJoinGame, arg.GameID, arg.UserID)
+	var join_status string
+	err := row.Scan(&join_status)
+	return join_status, err
+}
+
 const createGame = `-- name: CreateGame :one
 INSERT INTO games (
     title, description, gm_user_id, genre, start_date, end_date,
@@ -243,6 +274,63 @@ func (q *Queries) GetGameParticipants(ctx context.Context, gameID int32) ([]GetG
 	return items, nil
 }
 
+const getGameWithDetails = `-- name: GetGameWithDetails :one
+SELECT
+    g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.created_at, g.updated_at,
+    u.username as gm_username,
+    COALESCE(pc.player_count, 0) as current_players
+FROM games g
+LEFT JOIN users u ON g.gm_user_id = u.id
+LEFT JOIN (
+    SELECT game_id, COUNT(*) as player_count
+    FROM game_participants
+    WHERE role = 'player' AND status = 'active'
+    GROUP BY game_id
+) pc ON g.id = pc.game_id
+WHERE g.id = $1
+`
+
+type GetGameWithDetailsRow struct {
+	ID                  int32
+	Title               string
+	Description         string
+	GmUserID            int32
+	State               string
+	Genre               pgtype.Text
+	StartDate           pgtype.Timestamptz
+	EndDate             pgtype.Timestamptz
+	RecruitmentDeadline pgtype.Timestamptz
+	MaxPlayers          pgtype.Int4
+	IsPublic            pgtype.Bool
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	GmUsername          pgtype.Text
+	CurrentPlayers      int64
+}
+
+func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWithDetailsRow, error) {
+	row := q.db.QueryRow(ctx, getGameWithDetails, id)
+	var i GetGameWithDetailsRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.GmUserID,
+		&i.State,
+		&i.Genre,
+		&i.StartDate,
+		&i.EndDate,
+		&i.RecruitmentDeadline,
+		&i.MaxPlayers,
+		&i.IsPublic,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GmUsername,
+		&i.CurrentPlayers,
+	)
+	return i, err
+}
+
 const getGamesByGM = `-- name: GetGamesByGM :many
 SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, created_at, updated_at FROM games WHERE gm_user_id = $1 ORDER BY created_at DESC
 `
@@ -344,6 +432,46 @@ func (q *Queries) GetGamesByUser(ctx context.Context, userID int32) ([]GetGamesB
 	return items, nil
 }
 
+const getGamesNeedingStateUpdate = `-- name: GetGamesNeedingStateUpdate :many
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, created_at, updated_at FROM games
+WHERE (state = 'recruitment' AND recruitment_deadline IS NOT NULL AND recruitment_deadline < NOW())
+   OR (state = 'in_progress' AND end_date IS NOT NULL AND end_date < NOW())
+`
+
+func (q *Queries) GetGamesNeedingStateUpdate(ctx context.Context) ([]Game, error) {
+	rows, err := q.db.Query(ctx, getGamesNeedingStateUpdate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Game
+	for rows.Next() {
+		var i Game
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.GmUserID,
+			&i.State,
+			&i.Genre,
+			&i.StartDate,
+			&i.EndDate,
+			&i.RecruitmentDeadline,
+			&i.MaxPlayers,
+			&i.IsPublic,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getParticipantRole = `-- name: GetParticipantRole :one
 SELECT role FROM game_participants
 WHERE game_id = $1 AND user_id = $2 AND status = 'active'
@@ -359,6 +487,77 @@ func (q *Queries) GetParticipantRole(ctx context.Context, arg GetParticipantRole
 	var role string
 	err := row.Scan(&role)
 	return role, err
+}
+
+const getRecruitingGames = `-- name: GetRecruitingGames :many
+SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username,
+       COALESCE(participant_count.count, 0) as current_players
+FROM games
+LEFT JOIN users ON games.gm_user_id = users.id
+LEFT JOIN (
+    SELECT game_id, COUNT(*) as count
+    FROM game_participants
+    WHERE role = 'player' AND status = 'active'
+    GROUP BY game_id
+) participant_count ON games.id = participant_count.game_id
+WHERE games.is_public = true
+AND games.state = 'recruitment'
+AND (games.recruitment_deadline IS NULL OR games.recruitment_deadline > NOW())
+ORDER BY games.created_at DESC
+`
+
+type GetRecruitingGamesRow struct {
+	ID                  int32
+	Title               string
+	Description         string
+	GmUserID            int32
+	State               string
+	Genre               pgtype.Text
+	StartDate           pgtype.Timestamptz
+	EndDate             pgtype.Timestamptz
+	RecruitmentDeadline pgtype.Timestamptz
+	MaxPlayers          pgtype.Int4
+	IsPublic            pgtype.Bool
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	GmUsername          string
+	CurrentPlayers      int64
+}
+
+func (q *Queries) GetRecruitingGames(ctx context.Context) ([]GetRecruitingGamesRow, error) {
+	rows, err := q.db.Query(ctx, getRecruitingGames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRecruitingGamesRow
+	for rows.Next() {
+		var i GetRecruitingGamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.GmUserID,
+			&i.State,
+			&i.Genre,
+			&i.StartDate,
+			&i.EndDate,
+			&i.RecruitmentDeadline,
+			&i.MaxPlayers,
+			&i.IsPublic,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.GmUsername,
+			&i.CurrentPlayers,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const isUserInGame = `-- name: IsUserInGame :one
@@ -429,6 +628,83 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		arg.IsPublic,
 	)
 	var i Game
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.GmUserID,
+		&i.State,
+		&i.Genre,
+		&i.StartDate,
+		&i.EndDate,
+		&i.RecruitmentDeadline,
+		&i.MaxPlayers,
+		&i.IsPublic,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateGameAndAddGM = `-- name: UpdateGameAndAddGM :one
+WITH game_update AS (
+    UPDATE games
+    SET title = $2, description = $3, genre = $4, start_date = $5,
+        end_date = $6, recruitment_deadline = $7, max_players = $8,
+        is_public = $9, updated_at = NOW()
+    WHERE games.id = $1
+    RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, created_at, updated_at
+),
+gm_participant AS (
+    INSERT INTO game_participants (game_id, user_id, role)
+    VALUES ($1, (SELECT gu.gm_user_id FROM game_update gu), 'co_gm')
+    ON CONFLICT (game_id, user_id) DO NOTHING
+    RETURNING id, game_id, user_id, role, status, joined_at
+)
+SELECT gu.id, gu.title, gu.description, gu.gm_user_id, gu.state, gu.genre, gu.start_date, gu.end_date, gu.recruitment_deadline, gu.max_players, gu.is_public, gu.created_at, gu.updated_at FROM game_update gu
+`
+
+type UpdateGameAndAddGMParams struct {
+	ID                  int32
+	Title               string
+	Description         string
+	Genre               pgtype.Text
+	StartDate           pgtype.Timestamptz
+	EndDate             pgtype.Timestamptz
+	RecruitmentDeadline pgtype.Timestamptz
+	MaxPlayers          pgtype.Int4
+	IsPublic            pgtype.Bool
+}
+
+type UpdateGameAndAddGMRow struct {
+	ID                  int32
+	Title               string
+	Description         string
+	GmUserID            int32
+	State               string
+	Genre               pgtype.Text
+	StartDate           pgtype.Timestamptz
+	EndDate             pgtype.Timestamptz
+	RecruitmentDeadline pgtype.Timestamptz
+	MaxPlayers          pgtype.Int4
+	IsPublic            pgtype.Bool
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+}
+
+func (q *Queries) UpdateGameAndAddGM(ctx context.Context, arg UpdateGameAndAddGMParams) (UpdateGameAndAddGMRow, error) {
+	row := q.db.QueryRow(ctx, updateGameAndAddGM,
+		arg.ID,
+		arg.Title,
+		arg.Description,
+		arg.Genre,
+		arg.StartDate,
+		arg.EndDate,
+		arg.RecruitmentDeadline,
+		arg.MaxPlayers,
+		arg.IsPublic,
+	)
+	var i UpdateGameAndAddGMRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
