@@ -98,6 +98,66 @@ func (q *Queries) DeleteGame(ctx context.Context, id int32) error {
 	return err
 }
 
+const getAllGames = `-- name: GetAllGames :many
+SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username
+FROM games
+LEFT JOIN users ON games.gm_user_id = users.id
+WHERE games.is_public = true
+ORDER BY games.id DESC
+`
+
+type GetAllGamesRow struct {
+	ID                  int32
+	Title               string
+	Description         string
+	GmUserID            int32
+	State               string
+	Genre               pgtype.Text
+	StartDate           pgtype.Timestamptz
+	EndDate             pgtype.Timestamptz
+	RecruitmentDeadline pgtype.Timestamptz
+	MaxPlayers          pgtype.Int4
+	IsPublic            pgtype.Bool
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	GmUsername          string
+}
+
+func (q *Queries) GetAllGames(ctx context.Context) ([]GetAllGamesRow, error) {
+	rows, err := q.db.Query(ctx, getAllGames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllGamesRow
+	for rows.Next() {
+		var i GetAllGamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.GmUserID,
+			&i.State,
+			&i.Genre,
+			&i.StartDate,
+			&i.EndDate,
+			&i.RecruitmentDeadline,
+			&i.MaxPlayers,
+			&i.IsPublic,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.GmUsername,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGame = `-- name: GetGame :one
 SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, created_at, updated_at FROM games WHERE id = $1
 `
@@ -299,67 +359,6 @@ func (q *Queries) GetParticipantRole(ctx context.Context, arg GetParticipantRole
 	var role string
 	err := row.Scan(&role)
 	return role, err
-}
-
-const getPublicGames = `-- name: GetPublicGames :many
-SELECT g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.created_at, g.updated_at, u.username as gm_username
-FROM games g
-JOIN users u ON g.gm_user_id = u.id
-WHERE g.is_public = true
-  AND g.state = 'recruitment'
-ORDER BY g.created_at DESC
-`
-
-type GetPublicGamesRow struct {
-	ID                  int32
-	Title               string
-	Description         string
-	GmUserID            int32
-	State               string
-	Genre               pgtype.Text
-	StartDate           pgtype.Timestamptz
-	EndDate             pgtype.Timestamptz
-	RecruitmentDeadline pgtype.Timestamptz
-	MaxPlayers          pgtype.Int4
-	IsPublic            pgtype.Bool
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	GmUsername          string
-}
-
-func (q *Queries) GetPublicGames(ctx context.Context) ([]GetPublicGamesRow, error) {
-	rows, err := q.db.Query(ctx, getPublicGames)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetPublicGamesRow
-	for rows.Next() {
-		var i GetPublicGamesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Description,
-			&i.GmUserID,
-			&i.State,
-			&i.Genre,
-			&i.StartDate,
-			&i.EndDate,
-			&i.RecruitmentDeadline,
-			&i.MaxPlayers,
-			&i.IsPublic,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.GmUsername,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const isUserInGame = `-- name: IsUserInGame :one
