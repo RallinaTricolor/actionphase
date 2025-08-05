@@ -15,7 +15,7 @@ INSERT INTO users (
 ) VALUES (
              $1, $2, $3
          )
-RETURNING id, username, password, email, created_at
+RETURNING id, username, password, email, created_at, is_admin, display_name, bio, timezone, email_notifications, high_contrast
 `
 
 type CreateUserParams struct {
@@ -33,6 +33,12 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Password,
 		&i.Email,
 		&i.CreatedAt,
+		&i.IsAdmin,
+		&i.DisplayName,
+		&i.Bio,
+		&i.Timezone,
+		&i.EmailNotifications,
+		&i.HighContrast,
 	)
 	return i, err
 }
@@ -48,7 +54,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, password, email, created_at FROM users
+SELECT id, username, password, email, created_at, is_admin, display_name, bio, timezone, email_notifications, high_contrast FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -61,12 +67,18 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.Password,
 		&i.Email,
 		&i.CreatedAt,
+		&i.IsAdmin,
+		&i.DisplayName,
+		&i.Bio,
+		&i.Timezone,
+		&i.EmailNotifications,
+		&i.HighContrast,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, password, email, created_at FROM users
+SELECT id, username, password, email, created_at, is_admin, display_name, bio, timezone, email_notifications, high_contrast FROM users
 WHERE username = $1 LIMIT 1
 `
 
@@ -79,12 +91,18 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.Password,
 		&i.Email,
 		&i.CreatedAt,
+		&i.IsAdmin,
+		&i.DisplayName,
+		&i.Bio,
+		&i.Timezone,
+		&i.EmailNotifications,
+		&i.HighContrast,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, password, email, created_at FROM users
+SELECT id, username, password, email, created_at, is_admin, display_name, bio, timezone, email_notifications, high_contrast FROM users
 ORDER BY username
 `
 
@@ -103,6 +121,12 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Password,
 			&i.Email,
 			&i.CreatedAt,
+			&i.IsAdmin,
+			&i.DisplayName,
+			&i.Bio,
+			&i.Timezone,
+			&i.EmailNotifications,
+			&i.HighContrast,
 		); err != nil {
 			return nil, err
 		}

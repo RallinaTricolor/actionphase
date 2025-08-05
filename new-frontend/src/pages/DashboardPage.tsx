@@ -1,5 +1,6 @@
 import { useAuth } from '../hooks/useAuth';
 import { usePing } from '../hooks/useAuth';
+import { GamesList } from '../components/GamesList';
 
 export const DashboardPage = () => {
   const { logout } = useAuth();
@@ -119,6 +120,11 @@ export const DashboardPage = () => {
               </div>
             </div>
 
+          </div>
+
+          {/* Games List */}
+          <div className="mt-8">
+            <GamesList />
           </div>
 
           {/* Welcome Message */}

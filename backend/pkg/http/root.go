@@ -3,6 +3,7 @@ package http
 import (
 	"actionphase/pkg/auth"
 	"actionphase/pkg/core"
+	"actionphase/pkg/games"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -57,6 +58,26 @@ func (h *Handler) Start() {
 		})
 	})
 	apiV1Router.Mount("/auth", authRouter)
+
+	// Games API
+	gamesRouter := chi.NewRouter()
+	gamesRouter.Route("/", func(r chi.Router) {
+		gameHandler := games.Handler{App: h.App}
+
+		// Public routes
+		r.Get("/public", gameHandler.GetPublicGames)
+		r.Get("/{id}", gameHandler.GetGame)
+
+		// Protected routes
+		r.Group(func(r chi.Router) {
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+
+			r.Post("/", gameHandler.CreateGame)
+			r.Put("/{id}/state", gameHandler.UpdateGameState)
+		})
+	})
+	apiV1Router.Mount("/games", gamesRouter)
 
 	r.Mount("/api/v1", apiV1Router)
 
