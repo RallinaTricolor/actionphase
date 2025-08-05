@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 )
 
@@ -25,7 +26,6 @@ type CreateGameRequest struct {
 	EndDate             *time.Time `json:"end_date,omitempty"`
 	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          int32      `json:"max_players,omitempty"`
-	IsPublic            bool       `json:"is_public"`
 }
 
 func (r *CreateGameRequest) Bind(req *http.Request) error {
@@ -43,7 +43,6 @@ type GameResponse struct {
 	EndDate             *time.Time `json:"end_date,omitempty"`
 	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          int32      `json:"max_players,omitempty"`
-	IsPublic            bool       `json:"is_public"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
 }
@@ -65,8 +64,30 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user ID from JWT token (for now, we'll use a placeholder)
-	userID := int32(1) // TODO: Extract from JWT
+	// Get user ID from JWT token
+	token, _, err := jwtauth.FromContext(r.Context())
+	if err != nil {
+		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+		return
+	}
+
+	username, ok := token.Get("username")
+	if !ok {
+		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
+		return
+	}
+
+	// Look up user by username to get user ID
+	userService := &db.UserService{DB: h.App.Pool}
+	user, err := userService.UserByUsername(username.(string))
+	if err != nil {
+		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
+		render.Render(w, r, core.ErrUnauthorized("user not found"))
+		return
+	}
+
+	h.App.Logger.Info("Found user for game creation", "username", username, "user_id", user.ID)
+	userID := int32(user.ID)
 
 	gameService := &db.GameService{DB: h.App.Pool}
 
@@ -79,7 +100,7 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		EndDate:             data.EndDate,
 		RecruitmentDeadline: data.RecruitmentDeadline,
 		MaxPlayers:          data.MaxPlayers,
-		IsPublic:            data.IsPublic,
+		IsPublic:            true, // All games are now public
 	})
 
 	if err != nil {
@@ -95,7 +116,6 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		Description: game.Description,
 		GMUserID:    game.GmUserID,
 		State:       game.State,
-		IsPublic:    game.IsPublic.Bool,
 		CreatedAt:   game.CreatedAt.Time,
 		UpdatedAt:   game.UpdatedAt.Time,
 	}
@@ -143,7 +163,6 @@ func (h *Handler) GetGame(w http.ResponseWriter, r *http.Request) {
 		Description: game.Description,
 		GMUserID:    game.GmUserID,
 		State:       game.State,
-		IsPublic:    game.IsPublic.Bool,
 		CreatedAt:   game.CreatedAt.Time,
 		UpdatedAt:   game.UpdatedAt.Time,
 	}
@@ -167,14 +186,16 @@ func (h *Handler) GetGame(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, r, response)
 }
 
-func (h *Handler) GetPublicGames(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetAllGames(w http.ResponseWriter, r *http.Request) {
 	gameService := &db.GameService{DB: h.App.Pool}
-	games, err := gameService.GetPublicGames(r.Context())
+	games, err := gameService.GetAllGames(r.Context())
 	if err != nil {
-		h.App.Logger.Error("Failed to get public games", "error", err)
+		h.App.Logger.Error("Failed to get all games", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
+
+	h.App.Logger.Info("GetAllGames returned", "count", len(games))
 
 	// Convert to response format
 	var response []map[string]interface{}
@@ -186,7 +207,6 @@ func (h *Handler) GetPublicGames(w http.ResponseWriter, r *http.Request) {
 			"gm_user_id":  game.GmUserID,
 			"gm_username": game.GmUsername,
 			"state":       game.State,
-			"is_public":   game.IsPublic.Bool,
 			"created_at":  game.CreatedAt.Time,
 			"updated_at":  game.UpdatedAt.Time,
 		}
@@ -206,12 +226,49 @@ func (h *Handler) GetPublicGames(w http.ResponseWriter, r *http.Request) {
 		if game.MaxPlayers.Valid {
 			gameData["max_players"] = game.MaxPlayers.Int32
 		}
+		if game.IsPublic.Valid {
+			gameData["is_public"] = game.IsPublic.Bool
+		}
 
 		response = append(response, gameData)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) GetAllGamesDebug(w http.ResponseWriter, r *http.Request) {
+	// Direct SQL query to bypass SQLC
+	rows, err := h.App.Pool.Query(r.Context(), "SELECT id, title, is_public FROM games WHERE is_public = true ORDER BY id DESC")
+	if err != nil {
+		h.App.Logger.Error("Direct query failed", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+	defer rows.Close()
+
+	var games []map[string]interface{}
+	for rows.Next() {
+		var id int32
+		var title string
+		var isPublic bool
+
+		if err := rows.Scan(&id, &title, &isPublic); err != nil {
+			h.App.Logger.Error("Row scan failed", "error", err)
+			continue
+		}
+
+		games = append(games, map[string]interface{}{
+			"id":        id,
+			"title":     title,
+			"is_public": isPublic,
+		})
+	}
+
+	h.App.Logger.Info("Direct query returned", "count", len(games))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(games)
 }
 
 type UpdateGameStateRequest struct {
@@ -254,7 +311,6 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 		Description: game.Description,
 		GMUserID:    game.GmUserID,
 		State:       game.State,
-		IsPublic:    game.IsPublic.Bool,
 		CreatedAt:   game.CreatedAt.Time,
 		UpdatedAt:   game.UpdatedAt.Time,
 	}

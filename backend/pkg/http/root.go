@@ -39,6 +39,11 @@ func (h *Handler) Start() {
 		w.Write([]byte("ponger"))
 	})
 
+	r.Get("/debug-games", func(w http.ResponseWriter, r *http.Request) {
+		gameHandler := games.Handler{App: h.App}
+		gameHandler.GetAllGamesDebug(w, r)
+	})
+
 	r.Get("/panic", func(w http.ResponseWriter, r *http.Request) {
 		panic("test")
 	})
@@ -64,8 +69,8 @@ func (h *Handler) Start() {
 	gamesRouter.Route("/", func(r chi.Router) {
 		gameHandler := games.Handler{App: h.App}
 
-		// Public routes
-		r.Get("/public", gameHandler.GetPublicGames)
+		// Public routes - all games are visible to everyone
+		r.Get("/public", gameHandler.GetAllGames)
 		r.Get("/{id}", gameHandler.GetGame)
 
 		// Protected routes

@@ -1,7 +1,7 @@
 import { usePing } from '../hooks/useAuth';
 
 export const BackendStatus = () => {
-  const { data, isLoading, error } = usePing();
+  const { isLoading, error } = usePing();
 
   return (
     <div className="mb-4 p-4 border rounded-lg">
