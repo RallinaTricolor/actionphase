@@ -8,6 +8,137 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ActionResult struct {
+	ID       int32
+	GameID   int32
+	UserID   int32
+	PhaseID  int32
+	GmUserID int32
+	Content  string
+	SentAt   pgtype.Timestamptz
+}
+
+type ActionSubmission struct {
+	ID          int32
+	GameID      int32
+	UserID      int32
+	PhaseID     int32
+	CharacterID pgtype.Int4
+	Content     string
+	SubmittedAt pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
+type Character struct {
+	ID            int32
+	GameID        int32
+	UserID        pgtype.Int4
+	Name          string
+	CharacterType string
+	Status        string
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+}
+
+type CharacterDatum struct {
+	ID          int32
+	CharacterID int32
+	ModuleType  string
+	FieldName   string
+	FieldValue  pgtype.Text
+	FieldType   string
+	IsPublic    pgtype.Bool
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
+type Conversation struct {
+	ID               int32
+	GameID           int32
+	ConversationType string
+	Title            pgtype.Text
+	CreatedByUserID  int32
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+}
+
+type ConversationParticipant struct {
+	ID             int32
+	ConversationID int32
+	UserID         int32
+	CharacterID    pgtype.Int4
+	JoinedAt       pgtype.Timestamptz
+	LastReadAt     pgtype.Timestamptz
+}
+
+type Game struct {
+	ID                  int32
+	Title               string
+	Description         string
+	GmUserID            int32
+	State               string
+	Genre               pgtype.Text
+	StartDate           pgtype.Timestamptz
+	EndDate             pgtype.Timestamptz
+	RecruitmentDeadline pgtype.Timestamptz
+	MaxPlayers          pgtype.Int4
+	IsPublic            pgtype.Bool
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+}
+
+type GameParticipant struct {
+	ID       int32
+	GameID   int32
+	UserID   int32
+	Role     string
+	Status   string
+	JoinedAt pgtype.Timestamptz
+}
+
+type GamePhase struct {
+	ID          int32
+	GameID      int32
+	PhaseType   string
+	PhaseNumber int32
+	StartTime   pgtype.Timestamptz
+	EndTime     pgtype.Timestamptz
+	Deadline    pgtype.Timestamptz
+	IsActive    pgtype.Bool
+	CreatedAt   pgtype.Timestamptz
+}
+
+type Notification struct {
+	ID                int32
+	UserID            int32
+	GameID            pgtype.Int4
+	NotificationType  string
+	Title             string
+	Content           pgtype.Text
+	RelatedEntityType pgtype.Text
+	RelatedEntityID   pgtype.Int4
+	IsRead            pgtype.Bool
+	CreatedAt         pgtype.Timestamptz
+}
+
+type NpcAssignment struct {
+	ID               int32
+	CharacterID      int32
+	AssignedUserID   int32
+	AssignedByUserID int32
+	AssignedAt       pgtype.Timestamptz
+}
+
+type PrivateMessage struct {
+	ID                int32
+	ConversationID    int32
+	SenderUserID      int32
+	SenderCharacterID pgtype.Int4
+	Content           string
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
+}
+
 type Session struct {
 	ID      int32
 	UserID  int32
@@ -15,10 +146,40 @@ type Session struct {
 	Expires pgtype.Timestamptz
 }
 
+type Thread struct {
+	ID              int32
+	GameID          int32
+	PhaseID         pgtype.Int4
+	CreatedByUserID int32
+	Title           string
+	Content         string
+	IsPinned        pgtype.Bool
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+type ThreadPost struct {
+	ID           int32
+	ThreadID     int32
+	ParentPostID pgtype.Int4
+	UserID       int32
+	CharacterID  pgtype.Int4
+	Content      string
+	IsEdited     pgtype.Bool
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+}
+
 type User struct {
-	ID        int32
-	Username  string
-	Password  string
-	Email     string
-	CreatedAt pgtype.Timestamp
+	ID                 int32
+	Username           string
+	Password           string
+	Email              string
+	CreatedAt          pgtype.Timestamp
+	IsAdmin            pgtype.Bool
+	DisplayName        pgtype.Text
+	Bio                pgtype.Text
+	Timezone           pgtype.Text
+	EmailNotifications pgtype.Bool
+	HighContrast       pgtype.Bool
 }
