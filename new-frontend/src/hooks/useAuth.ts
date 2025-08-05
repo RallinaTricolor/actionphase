@@ -9,7 +9,12 @@ export const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: (data: LoginRequest) => apiClient.login(data),
     onSuccess: (response) => {
-      apiClient.setAuthToken(response.data.token);
+      // Handle both Token (backend) and token (lowercase) formats
+      const token = response.data.Token || response.data.token;
+      console.log('Login success, token received:', !!token);
+      if (token) {
+        apiClient.setAuthToken(token);
+      }
       queryClient.invalidateQueries({ queryKey: ['auth'] });
     },
   });
@@ -17,7 +22,12 @@ export const useAuth = () => {
   const registerMutation = useMutation({
     mutationFn: (data: RegisterRequest) => apiClient.register(data),
     onSuccess: (response) => {
-      apiClient.setAuthToken(response.data.token);
+      // Handle both Token (backend) and token (lowercase) formats
+      const token = response.data.Token || response.data.token;
+      console.log('Register success, token received:', !!token);
+      if (token) {
+        apiClient.setAuthToken(token);
+      }
       queryClient.invalidateQueries({ queryKey: ['auth'] });
     },
   });
@@ -28,7 +38,13 @@ export const useAuth = () => {
     queryClient.clear();
   };
 
-  const isAuthenticated = !!apiClient.getAuthToken();
+  // Use useQuery to make isAuthenticated reactive to token changes
+  const { data: isAuthenticated = false } = useQuery({
+    queryKey: ['auth'],
+    queryFn: () => !!apiClient.getAuthToken(),
+    staleTime: 0, // Always check fresh
+    refetchOnWindowFocus: true,
+  });
 
   return {
     login: loginMutation.mutateAsync,

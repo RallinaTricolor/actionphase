@@ -19,7 +19,8 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   user?: User;
-  token: string;
+  Token: string; // Backend uses capital T
+  token?: string; // Keep lowercase for backward compatibility
 }
 
 export interface AuthError {

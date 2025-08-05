@@ -79,3 +79,74 @@ SELECT EXISTS(
 -- name: GetGameParticipantCount :one
 SELECT COUNT(*) FROM game_participants
 WHERE game_id = $1 AND role = 'player' AND status = 'active';
+
+-- name: GetRecruitingGames :many
+SELECT games.*, COALESCE(users.username, 'Unknown') as gm_username,
+       COALESCE(participant_count.count, 0) as current_players
+FROM games
+LEFT JOIN users ON games.gm_user_id = users.id
+LEFT JOIN (
+    SELECT game_id, COUNT(*) as count
+    FROM game_participants
+    WHERE role = 'player' AND status = 'active'
+    GROUP BY game_id
+) participant_count ON games.id = participant_count.game_id
+WHERE games.is_public = true
+AND games.state = 'recruitment'
+AND (games.recruitment_deadline IS NULL OR games.recruitment_deadline > NOW())
+ORDER BY games.created_at DESC;
+
+-- name: GetGameWithDetails :one
+SELECT
+    g.*,
+    u.username as gm_username,
+    COALESCE(pc.player_count, 0) as current_players
+FROM games g
+LEFT JOIN users u ON g.gm_user_id = u.id
+LEFT JOIN (
+    SELECT game_id, COUNT(*) as player_count
+    FROM game_participants
+    WHERE role = 'player' AND status = 'active'
+    GROUP BY game_id
+) pc ON g.id = pc.game_id
+WHERE g.id = $1;
+
+-- name: CanUserJoinGame :one
+SELECT
+    CASE
+        WHEN g.state != 'recruitment' THEN 'game_not_recruiting'
+        WHEN g.recruitment_deadline IS NOT NULL AND g.recruitment_deadline < NOW() THEN 'deadline_passed'
+        WHEN COALESCE(pc.player_count, 0) >= g.max_players THEN 'game_full'
+        WHEN EXISTS(SELECT 1 FROM game_participants gp WHERE gp.game_id = $1 AND gp.user_id = $2 AND gp.status = 'active') THEN 'already_joined'
+        ELSE 'can_join'
+    END as join_status
+FROM games g
+LEFT JOIN (
+    SELECT game_id, COUNT(*) as player_count
+    FROM game_participants
+    WHERE role = 'player' AND status = 'active'
+    GROUP BY game_id
+) pc ON g.id = pc.game_id
+WHERE g.id = $1;
+
+-- name: GetGamesNeedingStateUpdate :many
+SELECT * FROM games
+WHERE (state = 'recruitment' AND recruitment_deadline IS NOT NULL AND recruitment_deadline < NOW())
+   OR (state = 'in_progress' AND end_date IS NOT NULL AND end_date < NOW());
+
+-- name: UpdateGameAndAddGM :one
+WITH game_update AS (
+    UPDATE games
+    SET title = $2, description = $3, genre = $4, start_date = $5,
+        end_date = $6, recruitment_deadline = $7, max_players = $8,
+        is_public = $9, updated_at = NOW()
+    WHERE games.id = $1
+    RETURNING *
+),
+gm_participant AS (
+    INSERT INTO game_participants (game_id, user_id, role)
+    VALUES ($1, (SELECT gu.gm_user_id FROM game_update gu), 'co_gm')
+    ON CONFLICT (game_id, user_id) DO NOTHING
+    RETURNING *
+)
+SELECT gu.* FROM game_update gu;
