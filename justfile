@@ -54,6 +54,22 @@ test:
 test-verbose:
   cd backend && go test -v ./...
 
+# Fast unit tests using mocks (no database required)
+test-mocks:
+  cd backend && SKIP_DB_TESTS=true go test -v -run "Mock" ./pkg/core/
+
+# Integration tests with database (requires PostgreSQL)
+test-integration:
+  cd backend && go test -v ./pkg/auth/ ./pkg/core/
+
+# All tests in parallel for maximum speed
+test-parallel:
+  cd backend && go test -parallel 4 ./...
+
+# Run only mock tests without database dependencies
+test-no-db:
+  cd backend && go test -tags="!integration" ./pkg/core/
+
 test-coverage:
   cd backend && go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html
 
@@ -68,6 +84,12 @@ test-service service:
 
 test-clean:
   cd backend && rm -f coverage.out coverage.html
+
+# Test database setup for integration tests
+test-db-setup:
+  @echo "Creating test database..."
+  createdb actionphase_test || echo "Database may already exist"
+  @echo "Test database ready"
 
 # === Frontend Commands ===
 install-frontend:

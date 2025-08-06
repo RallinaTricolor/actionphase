@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"net/url"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,13 +31,51 @@ type TestingInterface interface {
 
 // NewTestDatabase creates a new test database connection
 // Note: This requires a running PostgreSQL instance for integration tests
+// Set TEST_DATABASE_URL environment variable to override default connection string
+// Set SKIP_DB_TESTS=true to skip tests that require a database
 func NewTestDatabase(t TestingInterface) *TestDatabase {
-	// Use environment variable or default test connection string
-	connectionString := "postgres://postgres:example@localhost:5432/database?sslmode=disable"
+	// Check if database tests should be skipped
+	if os.Getenv("SKIP_DB_TESTS") == "true" {
+		t.Logf("Skipping database test - SKIP_DB_TESTS=true")
+		if tb, ok := t.(*testing.T); ok {
+			tb.Skip("Database tests skipped - set SKIP_DB_TESTS=false to enable")
+		}
+		return nil // This won't be reached due to Skip(), but keeps the compiler happy
+	}
+
+	connectionString := os.Getenv("TEST_DATABASE_URL")
+	if connectionString == "" {
+		connectionString = "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable"
+	}
+
+	// Validate connection string format
+	if _, err := url.Parse(connectionString); err != nil {
+		t.Fatalf("Invalid test database URL '%s': %v", connectionString, err)
+	}
 
 	pool, err := pgxpool.New(context.Background(), connectionString)
 	if err != nil {
-		t.Fatalf("Failed to connect to test database: %v", err)
+		// Instead of failing immediately, try to provide helpful guidance
+		t.Logf("Failed to connect to test database: %v", err)
+		t.Logf("To skip database tests, set SKIP_DB_TESTS=true")
+		t.Logf("To run with database tests, ensure PostgreSQL is running and database exists:")
+		t.Logf("  createdb actionphase_test")
+		t.Logf("  or set TEST_DATABASE_URL to point to your test database")
+
+		if tb, ok := t.(*testing.T); ok {
+			tb.Skip("Database unavailable - skipping test")
+		}
+		return nil
+	}
+
+	// Test the connection
+	if err := pool.Ping(context.Background()); err != nil {
+		pool.Close()
+		t.Logf("Database connection test failed: %v", err)
+		if tb, ok := t.(*testing.T); ok {
+			tb.Skip("Database connection failed - skipping test")
+		}
+		return nil
 	}
 
 	return &TestDatabase{Pool: pool}
@@ -49,13 +90,37 @@ func (td *TestDatabase) Close() {
 
 // CleanupTables removes test data from tables (useful for test cleanup)
 // Tables should be provided in dependency order (child tables first)
+// Uses CASCADE to handle foreign key dependencies automatically
 func (td *TestDatabase) CleanupTables(t TestingInterface, tables ...string) {
 	ctx := context.Background()
+
+	// If no tables specified, clean up common test tables in proper order
+	if len(tables) == 0 {
+		tables = []string{"game_participants", "games", "sessions", "users"}
+	}
+
+	// Use a single transaction for atomic cleanup
+	tx, err := td.Pool.Begin(ctx)
+	if err != nil {
+		t.Logf("Warning: Failed to begin cleanup transaction: %v", err)
+		return
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Logf("Warning: Failed to rollback cleanup transaction: %v", err)
+		}
+	}()
+
 	for _, table := range tables {
-		_, err := td.Pool.Exec(ctx, "TRUNCATE TABLE "+table+" RESTART IDENTITY CASCADE")
+		_, err := tx.Exec(ctx, "TRUNCATE TABLE "+table+" RESTART IDENTITY CASCADE")
 		if err != nil {
 			t.Logf("Warning: Failed to cleanup table %s: %v", table, err)
+			return
 		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		t.Logf("Warning: Failed to commit cleanup transaction: %v", err)
 	}
 }
 
@@ -212,4 +277,98 @@ func AssertTrue(t *testing.T, condition bool, message string) {
 	if !condition {
 		t.Errorf("%s: expected true, got false", message)
 	}
+}
+
+// AssertErrorContains checks that an error contains a specific substring
+func AssertErrorContains(t *testing.T, err error, substring string, message string) {
+	t.Helper()
+	if err == nil {
+		t.Errorf("%s: expected error containing '%s', got nil", message, substring)
+		return
+	}
+	if !strings.Contains(err.Error(), substring) {
+		t.Errorf("%s: expected error to contain '%s', got '%s'", message, substring, err.Error())
+	}
+}
+
+// AssertHttpStatus checks HTTP status code with detailed error message
+func AssertHttpStatus(t *testing.T, expected, actual int, testName, responseBody string) {
+	t.Helper()
+	if expected != actual {
+		t.Errorf("Test '%s' failed: expected status %d, got %d. Response: %s",
+			testName, expected, actual, responseBody)
+	}
+}
+
+// TestConfig holds configuration for test execution
+type TestConfig struct {
+	DatabaseURL    string
+	EnableParallel bool
+	CleanupTables  bool
+	LogLevel       string
+}
+
+// LoadTestConfig loads test configuration from environment variables
+func LoadTestConfig() *TestConfig {
+	return &TestConfig{
+		DatabaseURL:    getEnvOrDefault("TEST_DATABASE_URL", "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable"),
+		EnableParallel: getEnvBoolOrDefault("TEST_PARALLEL", false),
+		CleanupTables:  getEnvBoolOrDefault("TEST_CLEANUP", true),
+		LogLevel:       getEnvOrDefault("TEST_LOG_LEVEL", "warn"),
+	}
+}
+
+// getEnvOrDefault returns environment variable value or default if not set
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+// getEnvBoolOrDefault returns environment variable as bool or default if not set
+func getEnvBoolOrDefault(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		switch value {
+		case "true", "1", "yes":
+			return true
+		case "false", "0", "no":
+			return false
+		}
+	}
+	return defaultValue
+}
+
+// CreateTestUserWithCredentials creates a test user and returns both the user and plain password
+// This is useful for tests that need to know the plain password for login
+func (td *TestDatabase) CreateTestUserWithCredentials(t TestingInterface, username, email, plainPassword string) (*User, string) {
+	ctx := context.Background()
+	queries := models.New(td.Pool)
+
+	// Make username and email unique to avoid conflicts
+	uniqueUsername := generateUniqueUsername(username)
+	uniqueEmail := generateUniqueEmail(email)
+
+	user := &User{
+		Username: uniqueUsername,
+		Email:    uniqueEmail,
+		Password: plainPassword,
+	}
+	user.HashPassword() // Hash the password before storing
+
+	dbUser, err := queries.CreateUser(ctx, models.CreateUserParams{
+		Username: user.Username,
+		Password: user.Password,
+		Email:    user.Email,
+	})
+	if err != nil {
+		t.Fatalf("Failed to create test user: %v", err)
+	}
+
+	return &User{
+		ID:        int(dbUser.ID),
+		Username:  dbUser.Username,
+		Email:     dbUser.Email,
+		CreatedAt: &dbUser.CreatedAt.Time,
+	}, plainPassword
 }
