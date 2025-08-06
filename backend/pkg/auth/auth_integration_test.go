@@ -2,9 +2,7 @@ package auth
 
 import (
 	"actionphase/pkg/core"
-	"actionphase/pkg/http"
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
@@ -13,103 +11,200 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 )
 
-// TestAuthFlow tests the complete authentication flow including registration, login, and token refresh
-func TestAuthFlow_CompleteWorkflow(t *testing.T) {
+// TestAuthFlow tests each authentication step independently for better test isolation
+func TestAuthFlow_Registration(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "sessions", "users")
 
-	// Setup test server
 	app := &core.App{
 		Pool:   testDB.Pool,
 		Logger: core.NewTestLogger(),
 	}
-
 	router := setupAuthTestRouter(app)
 
-	// Test data
 	testUser := core.User{
-		Username: "integrationtest",
-		Email:    "integration@test.com",
+		Username: "registrationtest",
+		Email:    "registration@test.com",
 		Password: "testpassword123",
 	}
 
-	// Step 1: Register a new user
-	t.Run("user_registration", func(t *testing.T) {
-		registerPayload, _ := json.Marshal(testUser)
-		req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(registerPayload))
-		req.Header.Set("Content-Type", "application/json")
-		w := httptest.NewRecorder()
+	registerPayload, _ := json.Marshal(testUser)
+	req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(registerPayload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
 
-		router.ServeHTTP(w, req)
+	router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 200, w.Code, "Registration should succeed")
+	core.AssertEqual(t, 200, w.Code, "Registration should succeed")
 
-		var response map[string]interface{}
-		err := json.Unmarshal(w.Body.Bytes(), &response)
-		core.AssertNoError(t, err, "Response should be valid JSON")
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	core.AssertNoError(t, err, "Response should be valid JSON")
 
-		// Check that tokens are returned
-		core.AssertNotEqual(t, "", response["token"], "Access token should be returned")
-		core.AssertNotEqual(t, "", response["refresh_token"], "Refresh token should be returned")
+	// Check that tokens are returned
+	core.AssertNotEqual(t, "", response["token"], "Access token should be returned")
+	core.AssertNotEqual(t, "", response["refresh_token"], "Refresh token should be returned")
+}
+
+func TestAuthFlow_Login(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "sessions", "users")
+
+	app := &core.App{
+		Pool:   testDB.Pool,
+		Logger: core.NewTestLogger(),
+	}
+	router := setupAuthTestRouter(app)
+
+	// Create test user first
+	testUser := core.User{
+		Username: "logintest",
+		Email:    "login@test.com",
+		Password: "testpassword123",
+	}
+
+	// Register user first
+	registerPayload, _ := json.Marshal(testUser)
+	registerReq := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(registerPayload))
+	registerReq.Header.Set("Content-Type", "application/json")
+	registerW := httptest.NewRecorder()
+	router.ServeHTTP(registerW, registerReq)
+	core.AssertEqual(t, 200, registerW.Code, "Registration should succeed for login test")
+
+	// Now test login
+	loginPayload, _ := json.Marshal(map[string]string{
+		"username": testUser.Username,
+		"password": testUser.Password,
 	})
+	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(loginPayload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
 
-	// Step 2: Login with registered user
-	var accessToken, refreshToken string
-	t.Run("user_login", func(t *testing.T) {
-		loginPayload, _ := json.Marshal(map[string]string{
-			"username": testUser.Username,
-			"password": testUser.Password,
-		})
-		req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(loginPayload))
-		req.Header.Set("Content-Type", "application/json")
-		w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
 
-		router.ServeHTTP(w, req)
+	core.AssertEqual(t, 200, w.Code, "Login should succeed")
 
-		core.AssertEqual(t, 200, w.Code, "Login should succeed")
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	core.AssertNoError(t, err, "Response should be valid JSON")
 
-		var response map[string]interface{}
-		err := json.Unmarshal(w.Body.Bytes(), &response)
-		core.AssertNoError(t, err, "Response should be valid JSON")
+	// Safely extract tokens with proper error handling
+	accessToken, ok := response["token"].(string)
+	if !ok {
+		t.Fatalf("Expected 'token' field in response, got: %+v", response)
+	}
 
-		// Store tokens for subsequent tests
-		accessToken = response["token"].(string)
-		refreshToken = response["refresh_token"].(string)
+	refreshToken, ok := response["refresh_token"].(string)
+	if !ok {
+		t.Fatalf("Expected 'refresh_token' field in response, got: %+v", response)
+	}
 
-		core.AssertNotEqual(t, "", accessToken, "Access token should be returned")
-		core.AssertNotEqual(t, "", refreshToken, "Refresh token should be returned")
-	})
+	core.AssertNotEqual(t, "", accessToken, "Access token should be returned")
+	core.AssertNotEqual(t, "", refreshToken, "Refresh token should be returned")
+}
 
-	// Step 3: Access protected endpoint with valid token
-	t.Run("protected_endpoint_access", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/auth/refresh", nil)
-		req.Header.Set("Authorization", "Bearer "+accessToken)
-		w := httptest.NewRecorder()
+func TestAuthFlow_ProtectedEndpointAccess(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "sessions", "users")
 
-		router.ServeHTTP(w, req)
+	app := &core.App{
+		Pool:   testDB.Pool,
+		Logger: core.NewTestLogger(),
+	}
+	router := setupAuthTestRouter(app)
 
-		core.AssertEqual(t, 200, w.Code, "Protected endpoint should be accessible with valid token")
-	})
+	// Create and register test user
+	testUser := core.User{
+		Username: "protectedtest",
+		Email:    "protected@test.com",
+		Password: "testpassword123",
+	}
 
-	// Step 4: Token refresh
-	t.Run("token_refresh", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/auth/refresh", nil)
-		req.Header.Set("Authorization", "Bearer "+accessToken)
-		w := httptest.NewRecorder()
+	registerPayload, _ := json.Marshal(testUser)
+	registerReq := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(registerPayload))
+	registerReq.Header.Set("Content-Type", "application/json")
+	registerW := httptest.NewRecorder()
+	router.ServeHTTP(registerW, registerReq)
+	core.AssertEqual(t, 200, registerW.Code, "Registration should succeed for protected endpoint test")
 
-		router.ServeHTTP(w, req)
+	// Get access token from registration response
+	var registerResponse map[string]interface{}
+	err := json.Unmarshal(registerW.Body.Bytes(), &registerResponse)
+	core.AssertNoError(t, err, "Registration response should be valid JSON")
 
-		core.AssertEqual(t, 200, w.Code, "Token refresh should succeed")
+	accessToken, ok := registerResponse["token"].(string)
+	if !ok {
+		t.Fatalf("Expected 'token' field in registration response, got: %+v", registerResponse)
+	}
 
-		var response map[string]interface{}
-		err := json.Unmarshal(w.Body.Bytes(), &response)
-		core.AssertNoError(t, err, "Response should be valid JSON")
+	// Test protected endpoint access
+	req := httptest.NewRequest("GET", "/api/v1/auth/refresh", nil)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	w := httptest.NewRecorder()
 
-		newAccessToken := response["token"].(string)
-		core.AssertNotEqual(t, "", newAccessToken, "New access token should be returned")
-		core.AssertNotEqual(t, accessToken, newAccessToken, "New token should be different from old token")
-	})
+	router.ServeHTTP(w, req)
+
+	core.AssertEqual(t, 200, w.Code, "Protected endpoint should be accessible with valid token")
+}
+
+func TestAuthFlow_TokenRefresh(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "sessions", "users")
+
+	app := &core.App{
+		Pool:   testDB.Pool,
+		Logger: core.NewTestLogger(),
+	}
+	router := setupAuthTestRouter(app)
+
+	// Create and register test user
+	testUser := core.User{
+		Username: "refreshtest",
+		Email:    "refresh@test.com",
+		Password: "testpassword123",
+	}
+
+	registerPayload, _ := json.Marshal(testUser)
+	registerReq := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(registerPayload))
+	registerReq.Header.Set("Content-Type", "application/json")
+	registerW := httptest.NewRecorder()
+	router.ServeHTTP(registerW, registerReq)
+	core.AssertEqual(t, 200, registerW.Code, "Registration should succeed for token refresh test")
+
+	// Get access token from registration response
+	var registerResponse map[string]interface{}
+	err := json.Unmarshal(registerW.Body.Bytes(), &registerResponse)
+	core.AssertNoError(t, err, "Registration response should be valid JSON")
+
+	originalAccessToken, ok := registerResponse["token"].(string)
+	if !ok {
+		t.Fatalf("Expected 'token' field in registration response, got: %+v", registerResponse)
+	}
+
+	// Test token refresh
+	req := httptest.NewRequest("GET", "/api/v1/auth/refresh", nil)
+	req.Header.Set("Authorization", "Bearer "+originalAccessToken)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	core.AssertEqual(t, 200, w.Code, "Token refresh should succeed")
+
+	var response map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	core.AssertNoError(t, err, "Response should be valid JSON")
+
+	newAccessToken, ok := response["token"].(string)
+	if !ok {
+		t.Fatalf("Expected 'token' field in refresh response, got: %+v", response)
+	}
+
+	core.AssertNotEqual(t, "", newAccessToken, "New access token should be returned")
+	core.AssertNotEqual(t, originalAccessToken, newAccessToken, "New token should be different from old token")
 }
 
 func TestAuthFlow_InvalidCredentials(t *testing.T) {
