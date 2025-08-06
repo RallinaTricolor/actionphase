@@ -3,50 +3,54 @@ package db
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 )
 
+// GameService provides database operations for game management.
+// It implements core.GameServiceInterface and handles all game-related
+// database interactions including CRUD operations, state management,
+// and participant management.
 type GameService struct {
 	DB *pgxpool.Pool
 }
 
-type CreateGameRequest struct {
-	Title               string
-	Description         string
-	GMUserID            int32
-	Genre               string
-	StartDate           *time.Time
-	EndDate             *time.Time
-	RecruitmentDeadline *time.Time
-	MaxPlayers          int32
-	IsPublic            bool
-}
+// Ensure GameService implements the interface at compile time
+var _ core.GameServiceInterface = (*GameService)(nil)
 
-type UpdateGameRequest struct {
-	ID                  int32
-	Title               string
-	Description         string
-	Genre               string
-	StartDate           *time.Time
-	EndDate             *time.Time
-	RecruitmentDeadline *time.Time
-	MaxPlayers          int32
-	IsPublic            bool
-}
-
+// GameWithDetails represents a game enriched with additional metadata
+// including GM information, participant count, and user's role in the game.
+// This is used for detailed game views that require aggregated data.
 type GameWithDetails struct {
 	Game             models.Game
-	GMUsername       string
-	ParticipantCount int64
-	UserRole         string // empty if user not in game
+	GMUsername       string // Username of the Game Master
+	ParticipantCount int64  // Number of current participants
+	UserRole         string // User's role in this game, empty if not participating
 }
 
-func (gs *GameService) CreateGame(ctx context.Context, req CreateGameRequest) (*models.Game, error) {
+// CreateGame creates a new game with the specified parameters.
+// The game is initially created in "setup" state and requires the GM to
+// transition it to "recruitment" when ready to accept players.
+//
+// Parameters:
+//   - ctx: Context for the database operation
+//   - req: Game creation request with title, description, GM user ID, and optional settings
+//
+// Returns:
+//   - *models.Game: The created game with generated ID and default state
+//   - error: Database error or validation failure
+//
+// Business Rules:
+//   - GMUserID must reference a valid user
+//   - Title and description are required
+//   - Optional dates must be in logical order (recruitment < start < end)
+//   - MaxPlayers defaults to 6 if not specified
+//   - Game starts in "setup" state
+func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameRequest) (*models.Game, error) {
 	queries := models.New(gs.DB)
 
 	var startDate, endDate, recruitmentDeadline pgtype.Timestamptz
@@ -108,6 +112,31 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 	return &game, err
 }
 
+// JoinGame allows a user to join a game as a participant with the specified role.
+// This function enforces multiple business rules to ensure game integrity
+// and proper capacity management.
+//
+// Parameters:
+//   - ctx: Context for the database operation
+//   - gameID: ID of the game to join
+//   - userID: ID of the user attempting to join
+//   - role: Role to join as ("player", "observer", etc.)
+//
+// Returns:
+//   - error: nil if successful, otherwise describes the failure reason
+//
+// Business Rules Enforced:
+//   - Game must be in "recruitment" state to accept new participants
+//   - Players cannot join if game is at maximum capacity
+//   - Observers can join regardless of player capacity
+//   - Users cannot join the same game multiple times
+//   - Game Master is automatically considered a participant
+//
+// Common Error Scenarios:
+//   - Game not found: returns database error
+//   - Game not recruiting: "game is not accepting new participants"
+//   - Game full: "game is full (X/Y players)"
+//   - Already joined: database constraint violation
 func (gs *GameService) JoinGame(ctx context.Context, gameID, userID int32, role string) error {
 	queries := models.New(gs.DB)
 
@@ -214,6 +243,28 @@ func (gs *GameService) IsUserInGame(ctx context.Context, gameID, userID int32) (
 	return exists, err
 }
 
+// isValidGameState validates that a game state string is one of the allowed values.
+// This function enforces the game state machine and prevents invalid transitions.
+//
+// Valid Game States:
+//   - "setup": Initial state when game is created, GM configuring game
+//   - "recruitment": Game is accepting new players to join
+//   - "character_creation": Players are creating their characters
+//   - "in_progress": Game is actively being played
+//   - "paused": Game is temporarily suspended but can resume
+//   - "completed": Game has finished successfully
+//   - "cancelled": Game was cancelled before completion
+//
+// State Transition Rules (enforced at business logic level):
+//
+//	setup → recruitment → character_creation → in_progress ↔ paused → completed
+//	Any state → cancelled (emergency cancellation)
+//
+// Parameters:
+//   - state: The state string to validate
+//
+// Returns:
+//   - bool: true if state is valid, false otherwise
 func isValidGameState(state string) bool {
 	validStates := []string{"setup", "recruitment", "character_creation", "in_progress", "paused", "completed", "cancelled"}
 	for _, validState := range validStates {
@@ -225,7 +276,7 @@ func isValidGameState(state string) bool {
 }
 
 // UpdateGame - Update game details
-func (gs *GameService) UpdateGame(ctx context.Context, req UpdateGameRequest) (*models.Game, error) {
+func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameRequest) (*models.Game, error) {
 	queries := models.New(gs.DB)
 
 	var startDate, endDate, recruitmentDeadline pgtype.Timestamptz

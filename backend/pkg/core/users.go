@@ -6,16 +6,36 @@ import (
 	"time"
 )
 
+// User represents a user account in the ActionPhase system.
+// It includes authentication credentials, contact information, and metadata.
+// The struct supports JSON serialization and validation tags for API usage.
 type User struct {
-	ID        int        `json:"id"`
-	Username  string     `json:"username" validate:"required"`
-	Email     string     `json:"email" validate:"required,email"`
-	Password  string     `json:"password" validate:"required,min=8,max=64"`
-	CreatedAt *time.Time `json:"createdAt"`
+	ID        int        `json:"id"`                                        // Unique user identifier
+	Username  string     `json:"username" validate:"required"`              // Unique username for login
+	Email     string     `json:"email" validate:"required,email"`           // User's email address
+	Password  string     `json:"password" validate:"required,min=8,max=64"` // Hashed password (bcrypt)
+	CreatedAt *time.Time `json:"createdAt"`                                 // Account creation timestamp
 }
 
+// validate is the shared validator instance for user validation
 var validate *validator.Validate
 
+// HashPassword hashes the user's plaintext password using bcrypt.
+// This method modifies the User struct by replacing the plaintext password
+// with its bcrypt hash. It should be called before storing the user in the database.
+//
+// Security Features:
+//   - Uses bcrypt.DefaultCost (currently 10) for appropriate security/performance balance
+//   - Salt is automatically generated and included in the hash
+//   - Resistant to rainbow table and brute force attacks
+//
+// Returns:
+//   - error: bcrypt hashing error, or nil if successful
+//
+// Usage:
+//
+//	user := &User{Password: "plaintext_password"}
+//	err := user.HashPassword()  // user.Password is now hashed
 func (u *User) HashPassword() error {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -25,6 +45,25 @@ func (u *User) HashPassword() error {
 	return nil
 }
 
+// CheckPasswordHash verifies a plaintext password against the user's stored hash.
+// This method is used during login to authenticate users.
+//
+// Parameters:
+//   - plaintext: The plaintext password to verify
+//
+// Returns:
+//   - bool: true if password matches, false otherwise
+//
+// Security Notes:
+//   - Uses constant-time comparison to prevent timing attacks
+//   - No error information is exposed to prevent enumeration attacks
+//   - Hash comparison includes salt verification
+//
+// Usage:
+//
+//	if user.CheckPasswordHash("attempted_password") {
+//	    // Password is correct, user is authenticated
+//	}
 func (u *User) CheckPasswordHash(plaintext string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(plaintext))
 	return err == nil

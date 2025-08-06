@@ -91,7 +91,7 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 
 	gameService := &db.GameService{DB: h.App.Pool}
 
-	game, err := gameService.CreateGame(r.Context(), db.CreateGameRequest{
+	game, err := gameService.CreateGame(r.Context(), core.CreateGameRequest{
 		Title:               data.Title,
 		Description:         data.Description,
 		GMUserID:            userID,
@@ -450,7 +450,7 @@ func (h *Handler) UpdateGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the game
-	updatedGame, err := gameService.UpdateGame(r.Context(), db.UpdateGameRequest{
+	updatedGame, err := gameService.UpdateGame(r.Context(), core.UpdateGameRequest{
 		ID:                  int32(gameID),
 		Title:               data.Title,
 		Description:         data.Description,
