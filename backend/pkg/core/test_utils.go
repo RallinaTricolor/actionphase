@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"testing"
 	"time"
@@ -191,4 +192,24 @@ func Int32Ptr(i int32) *int32 {
 // BoolPtr is a helper function to get a pointer to a bool
 func BoolPtr(b bool) *bool {
 	return &b
+}
+
+// NewTestLogger creates a no-op logger for testing purposes
+func NewTestLogger() slog.Logger {
+	return *slog.New(slog.NewTextHandler(&discardWriter{}, nil))
+}
+
+// discardWriter is a writer that discards all input (for test logging)
+type discardWriter struct{}
+
+func (discardWriter) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+
+// AssertTrue is a test helper that fails if the condition is false
+func AssertTrue(t *testing.T, condition bool, message string) {
+	t.Helper()
+	if !condition {
+		t.Errorf("%s: expected true, got false", message)
+	}
 }
