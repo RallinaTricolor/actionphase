@@ -644,17 +644,52 @@ if game.State != core.GameStateRecruitment {
 - Database test utilities with automatic cleanup
 - Parallel test execution support
 - Environment-based test configuration
+- Fast mock tests (~0.3s) for rapid development
+- Docker-integrated database tests for CI/CD
+
+### 7. Development Environment Excellence
+
+- **Environment Variable Management**: `.env` file support with validation
+- **Docker Integration**: PostgreSQL database runs in containers
+- **One-Command Setup**: `just dev-setup` for new developers
+- **Multiple Test Strategies**: Fast mocks vs. comprehensive integration tests
+- **Smart Configuration**: Auto-detection of environment capabilities
+- **Production Ready**: Security validation and deployment considerations
 
 ## Development Guidelines
 
 ### Adding New Features
 
-1. **Define Domain Model**: Add types to `pkg/core/`
-2. **Create Interface**: Define service contract in `pkg/core/interfaces.go`
-3. **Implement Repository**: Add data access in `pkg/db/services/`
-4. **Create Handlers**: Add HTTP handlers in appropriate package
-5. **Add Tests**: Unit tests with mocks, integration tests with database
-6. **Update Documentation**: Add examples and usage notes
+1. **Setup Development Environment** (first time):
+   ```bash
+   just dev-setup && just migrate && just dev
+   ```
+
+2. **Define Domain Model**: Add types to `pkg/core/`
+   - Use `pkg/core/constants.go` for enums and magic values
+   - Add validation functions where appropriate
+
+3. **Create Interface**: Define service contract in `pkg/core/interfaces.go`
+   - Include comprehensive documentation with usage examples
+   - Define request/response types in core package
+
+4. **Implement Repository**: Add data access in `pkg/db/services/`
+   - Use SQLC for type-safe database queries
+   - Add both interface implementation and compile-time verification
+
+5. **Create Handlers**: Add HTTP handlers in appropriate package
+   - Use structured error responses from `pkg/core/api_errors.go`
+   - Follow consistent request/response patterns
+
+6. **Add Tests**: Multiple testing strategies
+   ```bash
+   just test-mocks        # Fast development feedback
+   just test-integration  # Comprehensive validation
+   ```
+
+7. **Update Documentation**: Add examples and usage notes
+   - Update API documentation
+   - Add environment variables to `.env.example` if needed
 
 ### Code Review Checklist
 
@@ -666,6 +701,9 @@ if game.State != core.GameStateRecruitment {
 - [ ] Integration tests cover happy path and error cases
 - [ ] Configuration externalized to environment variables
 - [ ] Proper separation of concerns maintained
+- [ ] Environment variables documented in `.env.example`
+- [ ] Fast mock tests written for rapid feedback
+- [ ] Integration tests work with Docker database
 
 ### Performance Considerations
 
