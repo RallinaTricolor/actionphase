@@ -4,14 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Architecture
 
-ActionPhase is a multi-language gaming platform with three backend implementations:
+ActionPhase is a modern gaming platform with a clean architecture:
 
-- **Go Backend** (primary, active development): Modern JWT-based API using Chi router, PostgreSQL with sqlc for type-safe queries
-- **Python Backend** (legacy): Django-based REST API with MySQL
-- **Modern Frontend** (new): React/TypeScript SPA with Vite, Tailwind CSS, and React Query
-- **Legacy Frontend**: React/Redux SPA with custom webpack configuration
+- **Go Backend**: Modern JWT-based API using Chi router, PostgreSQL with sqlc for type-safe queries
+- **React Frontend**: Modern React/TypeScript SPA with Vite, Tailwind CSS, and React Query
 
-The current active development is focused on the Go backend rewrite, which uses:
+Key technologies used:
 - Chi router for HTTP routing
 - JWT authentication with refresh tokens
 - PostgreSQL database with migration support
@@ -64,7 +62,7 @@ just quick-test               # Run fast tests only
 just ci-test                  # Full CI test suite
 ```
 
-### Modern Frontend (Recommended)
+### React Frontend
 ```bash
 # Setup & Dependencies
 just install-frontend         # Install npm dependencies
@@ -93,33 +91,6 @@ just clean                   # Clean build artifacts
 just ci-build                # Build both backend and frontend
 ```
 
-### Legacy Frontend
-```bash
-cd frontend
-
-# Development server
-npm start
-
-# Build for production
-npm run build
-
-# Run tests
-npm test
-```
-
-### Python Backend (Legacy)
-```bash
-cd python-backend
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run Django server
-python manage.py runserver
-
-# Run tests
-./local_tests.sh
-```
 
 ### Docker Development
 ```bash
@@ -161,7 +132,7 @@ Current available endpoints:
 
 ## Frontend Architecture
 
-The modern frontend (`new-frontend/`) uses:
+The React frontend (`frontend/`) uses:
 - **Vite** for fast development and building
 - **React Router** for client-side routing
 - **React Query** for server state management with automatic caching and refetching
@@ -177,16 +148,15 @@ Key features:
 
 ## Testing
 
-- Modern Frontend: TypeScript + Vite (testing setup pending)
-- Legacy Frontend: Jest with Enzyme for React component testing
-- Python Backend: Django test framework with coverage reporting
-- Go Backend: Standard Go testing patterns (in development)
+- React Frontend: TypeScript + Vite (testing setup pending)
+- Go Backend: Comprehensive test coverage with interface mocks and database integration tests
 
 ## Project Structure Notes
 
 - `justfile` provides common development commands
-- Each backend has its own dependency management (go.mod, requirements.txt, package.json)
-- Database migrations are environment-specific (Go uses postgres, Python uses MySQL)
+- Go backend uses `go.mod` for dependency management
+- Frontend uses `package.json` and npm for dependency management
+- Database migrations use golang-migrate with PostgreSQL
 - Frontend communicates with backend via REST API with JWT authentication
 
 ## AI-Friendly Coding Standards
