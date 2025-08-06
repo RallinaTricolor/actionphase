@@ -11,6 +11,23 @@ db_down:
 db_reset: db_down db_up
   @echo "Database reset complete"
 
+# Create databases for development and testing
+db_create:
+  @echo "Creating ActionPhase databases..."
+  @echo "Waiting for PostgreSQL to be ready..."
+  @sleep 3
+  -createdb -h localhost -U postgres -W actionphase
+  -createdb -h localhost -U postgres -W actionphase_test
+  @echo "Databases created successfully"
+  @echo "Note: You may be prompted for password 'example' (from docker-compose.yml)"
+
+# Full database setup for new development environment
+db_setup: db_up db_create
+  @echo "Database setup complete!"
+  @echo "Next steps:"
+  @echo "  1. Run migrations: just migrate"
+  @echo "  2. Start the backend: just run"
+
 # === Code Generation ===
 sqlgen:
   cd backend/pkg/db && sqlc generate
@@ -20,13 +37,17 @@ make_migration name:
   migrate create -ext sql -dir backend/pkg/db/migrations {{name}}
 
 migrate:
-  migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/database?sslmode=disable" up
+  migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable" up
 
 rollback:
-  migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/database?sslmode=disable" down
+  migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable" down
 
 migrate_status:
-  migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/database?sslmode=disable" version
+  migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable" version
+
+# Apply migrations to test database
+migrate_test:
+  migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" up
 
 # === Go Backend Commands ===
 tidy:
@@ -86,10 +107,13 @@ test-clean:
   cd backend && rm -f coverage.out coverage.html
 
 # Test database setup for integration tests
-test-db-setup:
-  @echo "Creating test database..."
-  createdb actionphase_test || echo "Database may already exist"
-  @echo "Test database ready"
+test-db-setup: db_up
+  @echo "Setting up test database..."
+  @sleep 2
+  -createdb -h localhost -U postgres -W actionphase_test
+  @echo "Applying migrations to test database..."
+  @just migrate_test
+  @echo "✓ Test database ready"
 
 # === Frontend Commands ===
 install-frontend:
@@ -123,11 +147,41 @@ lint-frontend:
   cd frontend && npm run lint
 
 # === Development Workflows ===
-dev-setup: db_up install-frontend tidy
-  @echo "Development environment setup complete"
 
-dev: db_up
-  @echo "Starting development servers..."
+# Complete setup for new developers
+dev-setup: db_setup tidy
+  @echo "Setting up development environment..."
+  @echo "Creating .env file if it doesn't exist..."
+  @if [ ! -f .env ]; then cp .env.example .env; echo "✓ Created .env from .env.example"; fi
+  @echo ""
+  @echo "🎉 Development environment setup complete!"
+  @echo ""
+  @echo "Next steps:"
+  @echo "  1. Review and customize .env file if needed"
+  @echo "  2. Run migrations: just migrate"
+  @echo "  3. Start development: just dev"
+
+# Quick development startup with environment validation
+dev:
+  @echo "Starting ActionPhase development environment..."
+  @echo "📋 Checking environment..."
+  @if [ ! -f .env ]; then echo "❌ .env file not found. Run 'just dev-setup' first."; exit 1; fi
+  @echo "✓ .env file found"
+  @echo "✓ Starting database..."
+  @just db_up
+  @sleep 2
+  @echo "✓ Database running"
+  @echo ""
+  @echo "🚀 Starting backend server..."
+  @echo "   Backend: http://localhost:3000"
+  @echo "   Database: localhost:5432"
+  @echo ""
+  @echo "Press Ctrl+C to stop"
+  cd backend && go run main.go
+
+# Full development environment with frontend
+dev-full: db_up
+  @echo "Starting full development environment..."
   @echo "Backend: http://localhost:3000"
   @echo "Frontend: http://localhost:5173"
   @echo "Press Ctrl+C to stop all services"

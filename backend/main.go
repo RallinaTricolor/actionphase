@@ -5,18 +5,24 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 
 	"actionphase/pkg/core"
 	"actionphase/pkg/http"
 )
 
 func main() {
+	// Load .env file if it exists (for local development)
+	// Look for .env file in current directory and parent directories
+	loadDotEnvFile()
+
 	// Load configuration from environment with validation
 	config, err := core.LoadConfig()
 	if err != nil {
@@ -143,4 +149,37 @@ func runMigrations(logger *slog.Logger, pool *pgxpool.Pool) error {
 	}
 
 	return nil
+}
+
+// loadDotEnvFile loads environment variables from .env file if it exists.
+// It searches for .env file in current directory and parent directories,
+// making it work whether you run from backend/ or project root.
+//
+// This function is designed to fail gracefully - if no .env file is found
+// or if there are errors reading it, the application continues using
+// system environment variables.
+func loadDotEnvFile() {
+	// List of possible .env file locations (in order of preference)
+	envFiles := []string{
+		".env",       // Current directory
+		"../.env",    // Parent directory (for running from backend/)
+		"../../.env", // Two levels up (for nested execution)
+	}
+
+	for _, envFile := range envFiles {
+		if absPath, err := filepath.Abs(envFile); err == nil {
+			if _, err := os.Stat(absPath); err == nil {
+				// .env file exists, try to load it
+				if err := godotenv.Load(absPath); err == nil {
+					fmt.Printf("✓ Loaded environment from: %s\n", absPath)
+					return
+				} else {
+					fmt.Printf("⚠ Found .env file but couldn't load it: %s (%v)\n", absPath, err)
+				}
+			}
+		}
+	}
+
+	// No .env file found - this is okay for production or when using system env vars
+	fmt.Println("ℹ No .env file found - using system environment variables")
 }
