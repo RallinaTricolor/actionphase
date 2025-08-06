@@ -60,8 +60,29 @@ export interface UpdateGameRequest extends CreateGameRequest {
   is_public: boolean;
 }
 
-export interface JoinGameRequest {
-  role?: 'player' | 'audience';
+export interface ApplyToGameRequest {
+  role: 'player' | 'audience';
+  message?: string;
+}
+
+export interface GameApplication {
+  id: number;
+  game_id: number;
+  user_id: number;
+  username?: string;
+  email?: string;
+  role: 'player' | 'audience';
+  message?: string;
+  status: ApplicationStatus;
+  applied_at: string;
+  reviewed_at?: string;
+  reviewed_by_user_id?: number;
+}
+
+export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+
+export interface ReviewApplicationRequest {
+  action: 'approve' | 'reject';
 }
 
 export interface UpdateGameStateRequest {
@@ -86,4 +107,18 @@ export const GAME_STATE_COLORS: Record<GameState, string> = {
   paused: 'bg-orange-100 text-orange-800',
   completed: 'bg-purple-100 text-purple-800',
   cancelled: 'bg-red-100 text-red-800'
+};
+
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  pending: 'Pending Review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn'
+};
+
+export const APPLICATION_STATUS_COLORS: Record<ApplicationStatus, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  approved: 'bg-green-100 text-green-800',
+  rejected: 'bg-red-100 text-red-800',
+  withdrawn: 'bg-gray-100 text-gray-800'
 };

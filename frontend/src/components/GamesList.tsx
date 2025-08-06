@@ -8,7 +8,7 @@ interface GamesListProps {
   onGameClick?: (game: GameListItem) => void;
   showCreateButton?: boolean;
   onCreateClick?: () => void;
-  onJoinGame?: (gameId: number, role?: 'player' | 'audience') => void;
+  onApplyToGame?: (gameId: number, role?: 'player' | 'audience') => void;
   isJoining?: boolean;
 }
 
@@ -17,7 +17,7 @@ export const GamesList = ({
   onGameClick,
   showCreateButton = false,
   onCreateClick,
-  onJoinGame,
+  onApplyToGame,
   isJoining = false
 }: GamesListProps) => {
   const [games, setGames] = useState<GameListItem[]>([]);
@@ -157,17 +157,17 @@ export const GamesList = ({
                 )}
               </div>
 
-              {game.state === 'recruitment' && onJoinGame && (
+              {game.state === 'recruitment' && onApplyToGame && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <button
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed text-white text-sm py-2 px-4 rounded transition-colors"
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white text-sm py-2 px-4 rounded transition-colors"
                     disabled={isJoining}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onJoinGame(game.id, 'player');
+                      onApplyToGame(game.id, 'player');
                     }}
                   >
-                    {isJoining ? 'Joining...' : 'Join Game'}
+                    {isJoining ? 'Applying...' : 'Apply to Join'}
                   </button>
                 </div>
               )}
