@@ -17,47 +17,65 @@ Key technologies used:
 
 ## Development Commands
 
-### Quick Start
+### Quick Start for New Developers
 ```bash
-# Complete development environment setup
+# Complete setup (database + environment + dependencies)
 just dev-setup
 
-# Start both backend and frontend servers
-just dev
+# Apply database migrations
+just migrate
 
-# Check project status (git, db, dependencies)
-just status
+# Start development server with environment loading
+just dev
 ```
+
+### Environment & Configuration
+ActionPhase uses `.env` files for configuration. The repository includes:
+- `.env` - Working defaults for local Docker development
+- `.env.example` - Template with all available options
+
+Key environment variables:
+- `DATABASE_URL` - PostgreSQL connection string
+- `JWT_SECRET` - JWT signing secret (change for production!)
+- `ENVIRONMENT` - development/staging/production
+- `LOG_LEVEL` - debug/info/warn/error
+- `SKIP_DB_TESTS` - Skip database tests if set to "true"
 
 ### Go Backend (Primary)
 ```bash
-# Database Management
-just db_up                    # Start database
-just db_down                  # Stop database
-just db_reset                 # Reset database
+# Database Management (Docker-based)
+just db_up                    # Start PostgreSQL Docker container
+just db_down                  # Stop PostgreSQL Docker container
+just db_reset                 # Reset database (restart container)
+just db_create                # Create actionphase and actionphase_test databases
+just db_setup                 # Complete database setup (start + create)
 just migrate_status           # Check migration status
-
-# Code Generation & Dependencies
-just sqlgen                   # Generate SQL code from queries
-just tidy                     # Clean up Go modules
-
-# Development & Building
-just run                      # Run Go server
-just build                    # Build all Go packages
-just lint                     # Format and vet Go code
 
 # Database Migrations
 just make_migration <name>    # Create new migration
-just migrate                  # Run database migrations
+just migrate                  # Apply migrations to main database
+just migrate_test             # Apply migrations to test database
 just rollback                 # Rollback migrations
 
-# Testing
-just test                     # Run all backend tests
-just test-verbose             # Run tests with verbose output
+# Development & Building
+just dev                      # Start backend with .env loading
+just run                      # Run Go server without auto-restart
+just build                    # Build all Go packages
+just lint                     # Format and vet Go code
+just tidy                     # Clean up Go modules
+
+# Code Generation
+just sqlgen                   # Generate Go code from SQL queries
+
+# Testing (Multiple Strategies)
+just test-mocks               # Fast unit tests (no database) ~0.3s
+just test-integration         # Integration tests (requires database)
+just test                     # All tests (auto-skips DB if unavailable)
+just test-parallel            # All tests in parallel
 just test-coverage            # Generate test coverage report
 just test-race                # Run tests with race detection
 just test-bench               # Run benchmark tests
-just test-service <service>   # Test specific service (e.g., games, sessions)
+just test-db-setup            # Setup test database
 just quick-test               # Run fast tests only
 just ci-test                  # Full CI test suite
 ```
