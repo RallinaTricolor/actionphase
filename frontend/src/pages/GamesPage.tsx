@@ -29,12 +29,12 @@ export const GamesPage = () => {
     console.log('Game created with ID:', gameId);
   };
 
-  const handleJoinGame = async (gameId: number, role: 'player' | 'audience' = 'player') => {
+  const handleApplyToGame = async (gameId: number, role: 'player' | 'audience' = 'player', message?: string) => {
     if (isJoining) return;
 
     // Debug logging
     const token = apiClient.getAuthToken();
-    console.log('Join game - isAuthenticated:', isAuthenticated, 'token exists:', !!token);
+    console.log('Apply to game - isAuthenticated:', isAuthenticated, 'token exists:', !!token);
     console.log('Token type:', typeof token, 'Token length:', token?.length);
     console.log('Token preview:', token ? token.substring(0, 50) + '...' : 'null');
     console.log('Raw localStorage auth_token:', localStorage.getItem('auth_token'));
@@ -43,7 +43,7 @@ export const GamesPage = () => {
     if (!token || token.trim() === '' || token === 'undefined' || token === 'null') {
       console.log('Invalid token detected, clearing localStorage');
       apiClient.removeAuthToken();
-      if (confirm('You need to log in to join a game. Would you like to go to the login page?')) {
+      if (confirm('You need to log in to apply to a game. Would you like to go to the login page?')) {
         window.location.href = '/login';
       }
       return;
@@ -51,10 +51,10 @@ export const GamesPage = () => {
 
     try {
       setIsJoining(true);
-      await apiClient.joinGame(gameId, { role });
+      await apiClient.applyToGame(gameId, { role, message });
 
       // Show success message
-      alert(`Successfully joined game as ${role}!`);
+      alert(`Successfully applied to game as ${role}!`);
 
       // TODO: Refresh the games list or navigate to game details
       window.location.reload(); // Simple refresh for now
@@ -137,7 +137,7 @@ export const GamesPage = () => {
             onGameClick={handleGameClick}
             showCreateButton={true}
             onCreateClick={handleCreateGame}
-            onJoinGame={handleJoinGame}
+            onApplyToGame={handleApplyToGame}
             isJoining={isJoining}
           />
         </div>

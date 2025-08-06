@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
-import type { GameWithDetails, GameParticipant, GameState } from '../types/games';
+import type { GameWithDetails, GameParticipant, GameState, GameApplication } from '../types/games';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
+import { GameApplicationsList } from '../components/GameApplicationsList';
+import { ApplyToGameModal } from '../components/ApplyToGameModal';
 
 interface GameDetailsPageProps {
   gameId: number;
@@ -11,9 +13,11 @@ interface GameDetailsPageProps {
 export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) => {
   const [game, setGame] = useState<GameWithDetails | null>(null);
   const [participants, setParticipants] = useState<GameParticipant[]>([]);
+  const [userApplication, setUserApplication] = useState<GameApplication | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
 
   useEffect(() => {
     fetchGameData();
@@ -29,6 +33,11 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
 
       setGame(gameResponse.data);
       setParticipants(participantsResponse.data);
+
+      // For now, we'll set userApplication to null as we need proper user context
+      // In a real implementation, you'd fetch the user's application here
+      setUserApplication(null);
+
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load game details');
@@ -51,13 +60,19 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
     }
   };
 
-  const handleJoinGame = async (role: 'player' | 'audience' = 'player') => {
+  const handleApplicationSubmitted = () => {
+    fetchGameData(); // Refresh data after application is submitted
+  };
+
+  const handleWithdrawApplication = async () => {
+    if (!confirm('Are you sure you want to withdraw your application?')) return;
+
     try {
       setActionLoading(true);
-      await apiClient.joinGame(gameId, { role });
+      await apiClient.withdrawGameApplication(gameId);
       await fetchGameData(); // Refresh data
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to join game');
+      alert(err instanceof Error ? err.message : 'Failed to withdraw application');
     } finally {
       setActionLoading(false);
     }
@@ -155,6 +170,30 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
 
           <p className="text-gray-700 mb-6 leading-relaxed">{game.description}</p>
 
+          {/* User Application Status */}
+          {!isGM && userApplication && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-blue-900">Your Application Status</h4>
+                  <p className="text-sm text-blue-700">
+                    Applied as {userApplication.role} • Status: {userApplication.status}
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800`}>
+                  {userApplication.status}
+                </span>
+              </div>
+              {userApplication.message && (
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <p className="text-sm text-blue-700">
+                    <strong>Your message:</strong> "{userApplication.message}"
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Game Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div>
@@ -193,23 +232,24 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
               </button>
             ))}
 
-            {!isGM && game.state === 'recruitment' && (
-              <>
-                <button
-                  onClick={() => handleJoinGame('player')}
-                  disabled={actionLoading}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  Join as Player
-                </button>
-                <button
-                  onClick={() => handleJoinGame('audience')}
-                  disabled={actionLoading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  Join as Audience
-                </button>
-              </>
+            {!isGM && game.state === 'recruitment' && !userApplication && (
+              <button
+                onClick={() => setShowApplyModal(true)}
+                disabled={actionLoading}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                Apply to Join
+              </button>
+            )}
+
+            {!isGM && userApplication && userApplication.status === 'pending' && (
+              <button
+                onClick={handleWithdrawApplication}
+                disabled={actionLoading}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                Withdraw Application
+              </button>
             )}
 
             {!isGM && (
@@ -223,6 +263,9 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
             )}
           </div>
         </div>
+
+        {/* Applications (GM only) */}
+        {isGM && <GameApplicationsList gameId={gameId} isGM={isGM} />}
 
         {/* Participants */}
         <div className="bg-white rounded-lg shadow-md p-8">
@@ -261,6 +304,17 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
           )}
         </div>
       </div>
+
+      {/* Apply to Game Modal */}
+      {game && (
+        <ApplyToGameModal
+          gameId={gameId}
+          gameTitle={game.title}
+          isOpen={showApplyModal}
+          onClose={() => setShowApplyModal(false)}
+          onApplicationSubmitted={handleApplicationSubmitted}
+        />
+      )}
     </div>
   );
 };
