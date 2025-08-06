@@ -1,0 +1,282 @@
+package core
+
+// GameStates defines all valid game states and their transitions.
+// This provides a single source of truth for game state management
+// and enables compile-time checking of state values.
+const (
+	// GameStateSetup - Initial game creation state
+	// GM is configuring game settings, not yet accepting players
+	GameStateSetup = "setup"
+
+	// GameStateRecruitment - Game is accepting new players
+	// Players can join during this state
+	GameStateRecruitment = "recruitment"
+
+	// GameStateCharacterCreation - Character creation phase
+	// Players create/customize their characters
+	GameStateCharacterCreation = "character_creation"
+
+	// GameStateInProgress - Game is actively being played
+	// No new players can join (except as audience)
+	GameStateInProgress = "in_progress"
+
+	// GameStatePaused - Game temporarily paused
+	// Can resume to in_progress
+	GameStatePaused = "paused"
+
+	// GameStateCompleted - Game finished successfully
+	// No further state changes allowed
+	GameStateCompleted = "completed"
+
+	// GameStateCancelled - Game cancelled or abandoned
+	// Terminal state - no further changes allowed
+	GameStateCancelled = "cancelled"
+)
+
+// ValidGameStates contains all valid game states for validation.
+var ValidGameStates = []string{
+	GameStateSetup,
+	GameStateRecruitment,
+	GameStateCharacterCreation,
+	GameStateInProgress,
+	GameStatePaused,
+	GameStateCompleted,
+	GameStateCancelled,
+}
+
+// GameStateTransitions defines valid state transitions.
+// Maps current state -> allowed next states.
+//
+// State Machine Rules:
+//   - Games must progress through states sequentially (no skipping)
+//   - Only GM can change game state
+//   - Some transitions are bidirectional (in_progress ↔ paused)
+//   - Terminal states (completed, cancelled) cannot transition
+var GameStateTransitions = map[string][]string{
+	GameStateSetup: {
+		GameStateRecruitment, // GM opens recruitment
+		GameStateCancelled,   // GM cancels during setup
+	},
+	GameStateRecruitment: {
+		GameStateCharacterCreation, // Proceed when players ready
+		GameStateCancelled,         // GM cancels during recruitment
+	},
+	GameStateCharacterCreation: {
+		GameStateInProgress, // Start the game
+		GameStateCancelled,  // GM cancels during character creation
+	},
+	GameStateInProgress: {
+		GameStatePaused,    // Temporary pause
+		GameStateCompleted, // Normal completion
+		GameStateCancelled, // Emergency cancellation
+	},
+	GameStatePaused: {
+		GameStateInProgress, // Resume game
+		GameStateCancelled,  // Cancel from pause
+	},
+	// Terminal states - no transitions allowed
+	GameStateCompleted: {},
+	GameStateCancelled: {},
+}
+
+// ParticipantRoles defines all valid participant roles in games.
+const (
+	// RoleGM - Game Master, controls the game narrative and rules
+	RoleGM = "gm"
+
+	// RolePlayer - Active participant who controls a character
+	RolePlayer = "player"
+
+	// RoleAudience - Observer who can watch but not participate actively
+	RoleAudience = "audience"
+)
+
+// ValidParticipantRoles contains all valid participant roles for validation.
+var ValidParticipantRoles = []string{
+	RoleGM,
+	RolePlayer,
+	RoleAudience,
+}
+
+// ParticipantStatus defines the status of a game participant.
+const (
+	// StatusActive - Participant is actively involved in the game
+	StatusActive = "active"
+
+	// StatusInactive - Participant is temporarily inactive
+	StatusInactive = "inactive"
+
+	// StatusBanned - Participant has been banned from the game
+	StatusBanned = "banned"
+)
+
+// ValidParticipantStatuses contains all valid participant statuses.
+var ValidParticipantStatuses = []string{
+	StatusActive,
+	StatusInactive,
+	StatusBanned,
+}
+
+// ErrorCodes define application-specific error codes for client handling.
+// These supplement HTTP status codes with more specific error categorization.
+const (
+	// General validation errors (1000-1099)
+	ErrCodeValidation     = 1001
+	ErrCodeMissingField   = 1002
+	ErrCodeInvalidFormat  = 1003
+	ErrCodeDuplicateValue = 1004
+
+	// Authentication/Authorization errors (1100-1199)
+	ErrCodeUnauthorized       = 1101
+	ErrCodeForbidden          = 1102
+	ErrCodeInvalidToken       = 1103
+	ErrCodeExpiredToken       = 1104
+	ErrCodeInvalidCredentials = 1105
+
+	// User management errors (1200-1299)
+	ErrCodeUserNotFound      = 1201
+	ErrCodeUserAlreadyExists = 1202
+	ErrCodeWeakPassword      = 1203
+	ErrCodeInvalidEmail      = 1204
+
+	// Game management errors (1300-1399)
+	ErrCodeGameNotFound           = 1301
+	ErrCodeGameNotRecruiting      = 1302
+	ErrCodeGameFull               = 1303
+	ErrCodeGameDeadlinePassed     = 1304
+	ErrCodeAlreadyParticipant     = 1305
+	ErrCodeNotParticipant         = 1306
+	ErrCodeInvalidGameState       = 1307
+	ErrCodeInvalidStateTransition = 1308
+	ErrCodeNotGameMaster          = 1309
+
+	// System/Infrastructure errors (1400-1499)
+	ErrCodeDatabaseError   = 1401
+	ErrCodeExternalService = 1402
+	ErrCodeRateLimited     = 1403
+)
+
+// JoinGameStatusCodes define the possible results of checking if a user can join a game.
+// These are used by the CanUserJoinGame service method.
+const (
+	// CanJoin - User is eligible to join the game
+	CanJoin = "can_join"
+
+	// GameNotRecruiting - Game is not in recruitment state
+	GameNotRecruiting = "game_not_recruiting"
+
+	// DeadlinePassed - Recruitment deadline has passed
+	DeadlinePassed = "deadline_passed"
+
+	// GameFull - Game has reached maximum player capacity
+	GameFull = "game_full"
+
+	// AlreadyJoined - User is already a participant in this game
+	AlreadyJoined = "already_joined"
+
+	// GameNotFound - Game does not exist
+	GameNotFound = "game_not_found"
+)
+
+// DatabaseTableNames defines table names for consistent referencing.
+// Useful for cleanup operations and migrations.
+const (
+	TableUsers            = "users"
+	TableGames            = "games"
+	TableGameParticipants = "game_participants"
+	TableSessions         = "sessions"
+	TableCharacters       = "characters"
+	TablePhases           = "phases"
+	TableCommunications   = "communications"
+	TableNotifications    = "notifications"
+)
+
+// CommonTableCleanupOrder defines the order for cleaning up tables during tests.
+// Child tables with foreign keys should be cleaned up before parent tables.
+var CommonTableCleanupOrder = []string{
+	TableNotifications,
+	TableCommunications,
+	TablePhases,
+	TableCharacters,
+	TableGameParticipants,
+	TableGames,
+	TableSessions,
+	TableUsers,
+}
+
+// IsValidGameState checks if the given state is a valid game state.
+func IsValidGameState(state string) bool {
+	for _, validState := range ValidGameStates {
+		if state == validState {
+			return true
+		}
+	}
+	return false
+}
+
+// IsValidStateTransition checks if transitioning from currentState to newState is allowed.
+func IsValidStateTransition(currentState, newState string) bool {
+	allowedStates, exists := GameStateTransitions[currentState]
+	if !exists {
+		return false
+	}
+
+	for _, allowedState := range allowedStates {
+		if newState == allowedState {
+			return true
+		}
+	}
+	return false
+}
+
+// IsValidParticipantRole checks if the given role is a valid participant role.
+func IsValidParticipantRole(role string) bool {
+	for _, validRole := range ValidParticipantRoles {
+		if role == validRole {
+			return true
+		}
+	}
+	return false
+}
+
+// IsValidParticipantStatus checks if the given status is a valid participant status.
+func IsValidParticipantStatus(status string) bool {
+	for _, validStatus := range ValidParticipantStatuses {
+		if status == validStatus {
+			return true
+		}
+	}
+	return false
+}
+
+// GetGameStateDescription returns a human-readable description of a game state.
+func GetGameStateDescription(state string) string {
+	descriptions := map[string]string{
+		GameStateSetup:             "Game is being set up by the GM",
+		GameStateRecruitment:       "Game is accepting new players",
+		GameStateCharacterCreation: "Players are creating their characters",
+		GameStateInProgress:        "Game is actively being played",
+		GameStatePaused:            "Game is temporarily paused",
+		GameStateCompleted:         "Game has finished successfully",
+		GameStateCancelled:         "Game has been cancelled",
+	}
+
+	if desc, exists := descriptions[state]; exists {
+		return desc
+	}
+	return "Unknown game state"
+}
+
+// GetParticipantRoleDescription returns a human-readable description of a participant role.
+func GetParticipantRoleDescription(role string) string {
+	descriptions := map[string]string{
+		RoleGM:       "Game Master - controls the game and narrative",
+		RolePlayer:   "Player - actively participates with a character",
+		RoleAudience: "Audience - observes the game without active participation",
+	}
+
+	if desc, exists := descriptions[role]; exists {
+		return desc
+	}
+	return "Unknown participant role"
+}

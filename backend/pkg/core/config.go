@@ -1,0 +1,270 @@
+package core
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+	"time"
+)
+
+// Config holds all application configuration values.
+// It provides a centralized location for environment-based configuration
+// with sensible defaults and validation.
+//
+// Usage Example:
+//
+//	config, err := LoadConfig()
+//	if err != nil {
+//	    log.Fatal("Failed to load config", "error", err)
+//	}
+//
+//	// Use configuration values
+//	pool, err := pgxpool.New(ctx, config.Database.URL)
+type Config struct {
+	Database DatabaseConfig `env:"DATABASE"`
+	JWT      JWTConfig      `env:"JWT"`
+	Server   ServerConfig   `env:"SERVER"`
+	App      AppConfig      `env:"APP"`
+}
+
+// DatabaseConfig contains database connection and behavior settings.
+// Supports both development and production database configurations.
+type DatabaseConfig struct {
+	// URL is the full PostgreSQL connection string
+	// Example: "postgres://user:pass@localhost:5432/dbname?sslmode=disable"
+	URL string `env:"DATABASE_URL"`
+
+	// TestURL is used for running tests (optional - falls back to URL with _test suffix)
+	TestURL string `env:"TEST_DATABASE_URL"`
+
+	// MaxConnections controls connection pool size (default: 10)
+	MaxConnections int `env:"DATABASE_MAX_CONNECTIONS"`
+
+	// MaxIdleTime controls how long connections stay idle (default: 30m)
+	MaxIdleTime time.Duration `env:"DATABASE_MAX_IDLE_TIME"`
+}
+
+// JWTConfig contains JWT token configuration for authentication.
+// Supports both access tokens (short-lived) and refresh tokens (long-lived).
+type JWTConfig struct {
+	// Secret is the signing key for JWT tokens (required)
+	Secret string `env:"JWT_SECRET"`
+
+	// AccessTokenExpiry controls access token lifetime (default: 15m)
+	AccessTokenExpiry time.Duration `env:"JWT_ACCESS_TOKEN_EXPIRY"`
+
+	// RefreshTokenExpiry controls refresh token lifetime (default: 7d)
+	RefreshTokenExpiry time.Duration `env:"JWT_REFRESH_TOKEN_EXPIRY"`
+
+	// Algorithm specifies the signing algorithm (default: HS256)
+	Algorithm string `env:"JWT_ALGORITHM"`
+}
+
+// ServerConfig contains HTTP server configuration.
+type ServerConfig struct {
+	// Port is the HTTP server port (default: 3000)
+	Port int `env:"PORT"`
+
+	// Host is the bind address (default: "0.0.0.0")
+	Host string `env:"HOST"`
+
+	// ReadTimeout controls request read timeout (default: 10s)
+	ReadTimeout time.Duration `env:"SERVER_READ_TIMEOUT"`
+
+	// WriteTimeout controls response write timeout (default: 10s)
+	WriteTimeout time.Duration `env:"SERVER_WRITE_TIMEOUT"`
+
+	// IdleTimeout controls idle connection timeout (default: 60s)
+	IdleTimeout time.Duration `env:"SERVER_IDLE_TIMEOUT"`
+}
+
+// AppConfig contains application-specific settings.
+type AppConfig struct {
+	// Environment specifies the deployment environment (development, staging, production)
+	Environment string `env:"ENVIRONMENT"`
+
+	// LogLevel controls logging verbosity (debug, info, warn, error)
+	LogLevel string `env:"LOG_LEVEL"`
+
+	// RunMigrations controls whether to run database migrations at startup
+	RunMigrations bool `env:"RUN_MIGRATIONS"`
+
+	// CORS settings for cross-origin requests
+	CORSEnabled bool     `env:"CORS_ENABLED"`
+	CORSOrigins []string `env:"CORS_ORIGINS"`
+}
+
+// LoadConfig loads configuration from environment variables with sensible defaults.
+// It validates required fields and returns an error if critical configuration is missing.
+//
+// Required Environment Variables:
+//   - DATABASE_URL: PostgreSQL connection string
+//   - JWT_SECRET: Secret key for JWT signing (must be strong in production)
+//
+// Example Environment Setup:
+//
+//	export DATABASE_URL="postgres://postgres:example@localhost:5432/actionphase?sslmode=disable"
+//	export JWT_SECRET="your-super-secret-key-here"
+//	export ENVIRONMENT="development"
+//	export LOG_LEVEL="info"
+func LoadConfig() (*Config, error) {
+	config := &Config{
+		Database: DatabaseConfig{
+			URL:            getEnvString("DATABASE_URL", ""),
+			TestURL:        getEnvString("TEST_DATABASE_URL", ""),
+			MaxConnections: getEnvInt("DATABASE_MAX_CONNECTIONS", 10),
+			MaxIdleTime:    getEnvDuration("DATABASE_MAX_IDLE_TIME", 30*time.Minute),
+		},
+		JWT: JWTConfig{
+			Secret:             getEnvString("JWT_SECRET", ""),
+			AccessTokenExpiry:  getEnvDuration("JWT_ACCESS_TOKEN_EXPIRY", 15*time.Minute),
+			RefreshTokenExpiry: getEnvDuration("JWT_REFRESH_TOKEN_EXPIRY", 7*24*time.Hour),
+			Algorithm:          getEnvString("JWT_ALGORITHM", "HS256"),
+		},
+		Server: ServerConfig{
+			Port:         getEnvInt("PORT", 3000),
+			Host:         getEnvString("HOST", "0.0.0.0"),
+			ReadTimeout:  getEnvDuration("SERVER_READ_TIMEOUT", 10*time.Second),
+			WriteTimeout: getEnvDuration("SERVER_WRITE_TIMEOUT", 10*time.Second),
+			IdleTimeout:  getEnvDuration("SERVER_IDLE_TIMEOUT", 60*time.Second),
+		},
+		App: AppConfig{
+			Environment:   getEnvString("ENVIRONMENT", "development"),
+			LogLevel:      getEnvString("LOG_LEVEL", "info"),
+			RunMigrations: getEnvBool("RUN_MIGRATIONS", true),
+			CORSEnabled:   getEnvBool("CORS_ENABLED", true),
+			CORSOrigins:   getEnvStringSlice("CORS_ORIGINS", []string{"http://localhost:5173"}),
+		},
+	}
+
+	// Validate required configuration
+	if err := config.Validate(); err != nil {
+		return nil, fmt.Errorf("configuration validation failed: %w", err)
+	}
+
+	return config, nil
+}
+
+// Validate checks that required configuration values are present and valid.
+// It returns a descriptive error if any critical configuration is missing or invalid.
+func (c *Config) Validate() error {
+	if c.Database.URL == "" {
+		return fmt.Errorf("DATABASE_URL is required")
+	}
+
+	if c.JWT.Secret == "" {
+		return fmt.Errorf("JWT_SECRET is required")
+	}
+
+	// Warn about weak JWT secrets in production
+	if c.App.Environment == "production" && len(c.JWT.Secret) < 32 {
+		return fmt.Errorf("JWT_SECRET must be at least 32 characters in production")
+	}
+
+	// Validate environment values
+	validEnvironments := []string{"development", "staging", "production"}
+	if !contains(validEnvironments, c.App.Environment) {
+		return fmt.Errorf("ENVIRONMENT must be one of: %v", validEnvironments)
+	}
+
+	validLogLevels := []string{"debug", "info", "warn", "error"}
+	if !contains(validLogLevels, c.App.LogLevel) {
+		return fmt.Errorf("LOG_LEVEL must be one of: %v", validLogLevels)
+	}
+
+	return nil
+}
+
+// GetTestDatabaseURL returns the test database URL, falling back to a test variant of the main URL.
+func (c *Config) GetTestDatabaseURL() string {
+	if c.Database.TestURL != "" {
+		return c.Database.TestURL
+	}
+
+	// Default: append _test to database name in main URL
+	if c.Database.URL != "" {
+		// This is a simple implementation - could be enhanced with proper URL parsing
+		return c.Database.URL + "_test"
+	}
+
+	return "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable"
+}
+
+// GetServerAddress returns the full server bind address (host:port).
+func (c *Config) GetServerAddress() string {
+	return fmt.Sprintf("%s:%d", c.Server.Host, c.Server.Port)
+}
+
+// IsDevelopment returns true if running in development mode.
+func (c *Config) IsDevelopment() bool {
+	return c.App.Environment == "development"
+}
+
+// IsProduction returns true if running in production mode.
+func (c *Config) IsProduction() bool {
+	return c.App.Environment == "production"
+}
+
+// Helper functions for environment variable parsing
+
+func getEnvString(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
+			return parsed
+		}
+	}
+	return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		switch value {
+		case "true", "1", "yes", "on":
+			return true
+		case "false", "0", "no", "off":
+			return false
+		}
+	}
+	return defaultValue
+}
+
+func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
+	if value := os.Getenv(key); value != "" {
+		if parsed, err := time.ParseDuration(value); err == nil {
+			return parsed
+		}
+	}
+	return defaultValue
+}
+
+func getEnvStringSlice(key string, defaultValue []string) []string {
+	if value := os.Getenv(key); value != "" {
+		// Simple comma-separated parsing - could be enhanced
+		result := []string{}
+		for _, v := range []string{value} {
+			if v != "" {
+				result = append(result, v)
+			}
+		}
+		if len(result) > 0 {
+			return result
+		}
+	}
+	return defaultValue
+}
+
+func contains(slice []string, item string) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}

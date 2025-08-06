@@ -127,3 +127,120 @@ func ErrBadRequest(err error) render.Renderer {
 		ErrorText:      err.Error(),
 	}
 }
+
+// ErrNotFound creates a 404 Not Found error for missing resources.
+// Use this when a specific resource (user, game, etc.) cannot be found.
+//
+// Example Usage:
+//
+//	game, err := gameService.GetGame(ctx, gameID)
+//	if err != nil {
+//	    render.Render(w, r, ErrNotFound("Game not found"))
+//	    return
+//	}
+func ErrNotFound(message string) render.Renderer {
+	return &ErrResponse{
+		HTTPStatusCode: 404,
+		StatusText:     "Not found.",
+		ErrorText:      message,
+		AppCode:        ErrCodeGameNotFound, // Default, can be overridden
+	}
+}
+
+// ErrValidationFailed creates a 422 Unprocessable Entity error for validation failures.
+// Use this for business rule violations that aren't simple malformed requests.
+//
+// Example Usage:
+//
+//	if user.Age < 13 {
+//	    render.Render(w, r, ErrValidationFailed("Must be at least 13 years old"))
+//	    return
+//	}
+func ErrValidationFailed(message string) render.Renderer {
+	return &ErrResponse{
+		HTTPStatusCode: 422,
+		StatusText:     "Validation failed.",
+		ErrorText:      message,
+		AppCode:        ErrCodeValidation,
+	}
+}
+
+// ErrConflict creates a 409 Conflict error for resource conflicts.
+// Use this when the request conflicts with the current state of the system.
+//
+// Example Usage:
+//
+//	if user.IsAlreadyRegistered {
+//	    render.Render(w, r, ErrConflict("Username already exists"))
+//	    return
+//	}
+func ErrConflict(message string) render.Renderer {
+	return &ErrResponse{
+		HTTPStatusCode: 409,
+		StatusText:     "Conflict.",
+		ErrorText:      message,
+		AppCode:        ErrCodeDuplicateValue,
+	}
+}
+
+// ErrWithCode creates a custom error response with a specific application error code.
+// This allows for more specific error categorization for client handling.
+//
+// Example Usage:
+//
+//	if game.State != "recruitment" {
+//	    render.Render(w, r, ErrWithCode(400, ErrCodeGameNotRecruiting,
+//	        "Game is not accepting new players"))
+//	    return
+//	}
+func ErrWithCode(httpStatus int, appCode int64, message string) render.Renderer {
+	statusText := getStatusText(httpStatus)
+	return &ErrResponse{
+		HTTPStatusCode: httpStatus,
+		StatusText:     statusText,
+		ErrorText:      message,
+		AppCode:        appCode,
+	}
+}
+
+// getStatusText returns a default status text for HTTP status codes.
+func getStatusText(httpStatus int) string {
+	statusTexts := map[int]string{
+		400: "Bad request.",
+		401: "Unauthorized.",
+		403: "Forbidden.",
+		404: "Not found.",
+		409: "Conflict.",
+		422: "Validation failed.",
+		500: "Internal server error.",
+	}
+
+	if text, exists := statusTexts[httpStatus]; exists {
+		return text
+	}
+	return "Unknown error."
+}
+
+// ErrGameNotRecruiting creates a specific error for games that aren't accepting players.
+func ErrGameNotRecruiting() render.Renderer {
+	return ErrWithCode(400, ErrCodeGameNotRecruiting,
+		"Game is not currently accepting new players")
+}
+
+// ErrGameFull creates a specific error for games that have reached capacity.
+func ErrGameFull() render.Renderer {
+	return ErrWithCode(400, ErrCodeGameFull,
+		"Game has reached maximum player capacity")
+}
+
+// ErrAlreadyParticipant creates a specific error for users already in a game.
+func ErrAlreadyParticipant() render.Renderer {
+	return ErrWithCode(400, ErrCodeAlreadyParticipant,
+		"You are already a participant in this game")
+}
+
+// ErrNotGameMaster creates a specific error for non-GM users trying to perform GM actions.
+func ErrNotGameMaster() render.Renderer {
+	return ErrWithCode(403, ErrCodeNotGameMaster,
+		"Only the game master can perform this action")
+}
