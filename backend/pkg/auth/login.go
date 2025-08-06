@@ -16,8 +16,8 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 	UserService := db.UserService{DB: h.App.Pool}
 	user, err := UserService.UserByUsername(data.User.Username)
 	if err != nil {
-		h.App.Logger.Error("Error getting user", "error", err)
-		render.Render(w, r, core.ErrInternalError(err))
+		h.App.Logger.Info("Login attempt for non-existent user", "username", data.User.Username)
+		render.Render(w, r, core.ErrUnauthorized("Invalid username or password"))
 		return
 	}
 	if !user.CheckPasswordHash(data.User.Password) {

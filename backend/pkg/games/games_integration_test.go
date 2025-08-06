@@ -21,7 +21,7 @@ import (
 func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
 	app := &core.App{
 		Pool:   testDB.Pool,
@@ -181,7 +181,7 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 func TestGameAPI_PublicEndpoints(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
 	app := &core.App{
 		Pool:   testDB.Pool,
@@ -297,7 +297,7 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 func TestGameAPI_ParticipantManagement(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
 	app := &core.App{
 		Pool:   testDB.Pool,
@@ -338,40 +338,16 @@ func TestGameAPI_ParticipantManagement(t *testing.T) {
 
 	secondUserToken, _ := createTestAuthToken(createdSecondUser.Username)
 
-	// Test joining a game
-	t.Run("join_game", func(t *testing.T) {
-		joinData := JoinGameRequest{
-			Role: "player",
-		}
+	// NOTE: Direct joining tests removed because direct joining is no longer supported.
+	// All game participation now goes through the application system.
+	// See game_applications_integration_test.go for tests of the new application-based joining process.
 
-		payload, _ := json.Marshal(joinData)
-		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(testGame.ID))+"/join", bytes.NewBuffer(payload))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+secondUserToken)
-		w := httptest.NewRecorder()
+	// For this test, manually add participant to test leave functionality
+	_, err = gameService.AddGameParticipant(context.Background(), testGame.ID, int32(createdSecondUser.ID), "player")
+	core.AssertNoError(t, err, "Failed to add test participant")
 
-		router.ServeHTTP(w, req)
-
-		if w.Code != 200 && w.Code != 201 {
-			t.Logf("Join game failed with status %d, response: %s", w.Code, w.Body.String())
-		}
-		// Accept both 200 and 201 as success codes for join game
-		if w.Code != 200 && w.Code != 201 {
-			t.Errorf("Joining game should succeed with 200 or 201, got %d", w.Code)
-		}
-
-		var response map[string]interface{}
-		err := json.Unmarshal(w.Body.Bytes(), &response)
-		core.AssertNoError(t, err, "Response should be valid JSON")
-
-		core.AssertEqual(t, float64(testGame.ID), response["game_id"].(float64), "Game ID should match")
-		core.AssertEqual(t, float64(createdSecondUser.ID), response["user_id"].(float64), "User ID should match")
-		core.AssertEqual(t, "player", response["role"].(string), "Role should match")
-		core.AssertEqual(t, "active", response["status"].(string), "Status should be active")
-	})
-
-	// Test getting game participants after joining
-	t.Run("get_participants_after_join", func(t *testing.T) {
+	// Test getting game participants
+	t.Run("get_participants", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(testGame.ID))+"/participants", nil)
 		w := httptest.NewRecorder()
 
@@ -388,22 +364,7 @@ func TestGameAPI_ParticipantManagement(t *testing.T) {
 		core.AssertEqual(t, "player", response[0]["role"].(string), "Role should match")
 	})
 
-	// Test attempting to join the same game again (should fail)
-	t.Run("join_game_duplicate", func(t *testing.T) {
-		joinData := JoinGameRequest{
-			Role: "player",
-		}
-
-		payload, _ := json.Marshal(joinData)
-		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(testGame.ID))+"/join", bytes.NewBuffer(payload))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+secondUserToken)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		core.AssertEqual(t, 400, w.Code, "Duplicate join should fail")
-	})
+	// NOTE: Duplicate join test removed because direct joining is no longer supported.
 
 	// Test leaving a game
 	t.Run("leave_game", func(t *testing.T) {
@@ -433,7 +394,7 @@ func TestGameAPI_ParticipantManagement(t *testing.T) {
 func TestGameAPI_Authorization(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
 	app := &core.App{
 		Pool:   testDB.Pool,
@@ -538,7 +499,7 @@ func TestGameAPI_Authorization(t *testing.T) {
 func TestGameAPI_ErrorHandling(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
 	app := &core.App{
 		Pool:   testDB.Pool,
@@ -599,17 +560,7 @@ func TestGameAPI_ErrorHandling(t *testing.T) {
 			expectedStatus: 400,
 			description:    "Invalid game ID should return 400",
 		},
-		{
-			name:     "join_nonexistent_game",
-			method:   "POST",
-			endpoint: "/api/v1/games/99999/join",
-			payload: JoinGameRequest{
-				Role: "player",
-			},
-			requiresAuth:   true,
-			expectedStatus: 500,
-			description:    "Joining non-existent game should fail",
-		},
+		// NOTE: join_nonexistent_game test removed because direct joining is no longer supported
 	}
 
 	for _, tc := range testCases {
@@ -682,7 +633,7 @@ func setupGameTestRouter(app *core.App) *chi.Mux {
 				r.Put("/{id}/state", gameHandler.UpdateGameState)
 
 				// Participant management
-				r.Post("/{id}/join", gameHandler.JoinGame)
+				// NOTE: join endpoint removed - use application system instead
 				r.Delete("/{id}/leave", gameHandler.LeaveGame)
 			})
 		})
@@ -730,7 +681,7 @@ func createTestAuthToken(username string) (string, error) {
 func BenchmarkGameAPI_CreateGame(b *testing.B) {
 	testDB := core.NewTestDatabase(b)
 	defer testDB.Close()
-	defer testDB.CleanupTables(b, "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(b, "game_applications", "game_participants", "games", "sessions", "users")
 
 	app := &core.App{
 		Pool:   testDB.Pool,
@@ -768,7 +719,7 @@ func BenchmarkGameAPI_CreateGame(b *testing.B) {
 func BenchmarkGameAPI_GetAllGames(b *testing.B) {
 	testDB := core.NewTestDatabase(b)
 	defer testDB.Close()
-	defer testDB.CleanupTables(b, "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(b, "game_applications", "game_participants", "games", "sessions", "users")
 
 	app := &core.App{
 		Pool:   testDB.Pool,

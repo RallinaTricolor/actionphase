@@ -87,6 +87,18 @@ type Game struct {
 	UpdatedAt           pgtype.Timestamptz
 }
 
+type GameApplication struct {
+	ID               int32
+	GameID           int32
+	UserID           int32
+	Role             string
+	Message          pgtype.Text
+	Status           string
+	AppliedAt        pgtype.Timestamptz
+	ReviewedAt       pgtype.Timestamptz
+	ReviewedByUserID pgtype.Int4
+}
+
 type GameParticipant struct {
 	ID       int32
 	GameID   int32
