@@ -19,42 +19,78 @@ The current active development is focused on the Go backend rewrite, which uses:
 
 ## Development Commands
 
+### Quick Start
+```bash
+# Complete development environment setup
+just dev-setup
+
+# Start both backend and frontend servers
+just dev
+
+# Check project status (git, db, dependencies)
+just status
+```
+
 ### Go Backend (Primary)
 ```bash
-# Start database
-just db_up
+# Database Management
+just db_up                    # Start database
+just db_down                  # Stop database
+just db_reset                 # Reset database
+just migrate_status           # Check migration status
 
-# Generate SQL code from queries
-just sqlgen
+# Code Generation & Dependencies
+just sqlgen                   # Generate SQL code from queries
+just tidy                     # Clean up Go modules
 
-# Run database migrations
-just migrate
+# Development & Building
+just run                      # Run Go server
+just build                    # Build all Go packages
+just lint                     # Format and vet Go code
 
-# Rollback migrations
-just rollback
+# Database Migrations
+just make_migration <name>    # Create new migration
+just migrate                  # Run database migrations
+just rollback                 # Rollback migrations
 
-# Create new migration
-just make_migration <name>
-
-# Run Go server
-just run
-
-# Clean up Go modules
-just tidy
+# Testing
+just test                     # Run all backend tests
+just test-verbose             # Run tests with verbose output
+just test-coverage            # Generate test coverage report
+just test-race                # Run tests with race detection
+just test-bench               # Run benchmark tests
+just test-service <service>   # Test specific service (e.g., games, sessions)
+just quick-test               # Run fast tests only
+just ci-test                  # Full CI test suite
 ```
 
 ### Modern Frontend (Recommended)
 ```bash
-cd new-frontend
+# Setup & Dependencies
+just install-frontend         # Install npm dependencies
+just setup-frontend-tests     # Setup testing infrastructure
 
-# Install dependencies
-npm install
+# Development & Building
+just run-frontend             # Development server
+just build-frontend           # Build for production
+just preview-frontend         # Preview production build
+just lint-frontend            # Run ESLint
 
-# Development server
-npm run dev
+# Testing
+just test-frontend            # Run frontend tests
+just test-frontend-watch      # Run tests in watch mode
+just test-frontend-coverage   # Generate test coverage
+```
 
-# Build for production
-npm run build
+### Development Workflows
+```bash
+# Testing
+just ci-test                  # Backend CI test suite (lint + test + race)
+just full-test               # All tests (backend + frontend)
+just clean                   # Clean build artifacts
+
+# Building
+just ci-build                # Build both backend and frontend
 ```
 
 ### Legacy Frontend
@@ -152,3 +188,83 @@ Key features:
 - Each backend has its own dependency management (go.mod, requirements.txt, package.json)
 - Database migrations are environment-specific (Go uses postgres, Python uses MySQL)
 - Frontend communicates with backend via REST API with JWT authentication
+
+## AI-Friendly Coding Standards
+
+To maintain AI comprehensibility as the codebase scales, follow these patterns:
+
+### Go Backend Standards
+
+#### Interface-First Development
+- **ALWAYS** define service interfaces in `backend/pkg/core/interfaces.go` before implementation
+- Use compile-time interface verification: `var _ InterfaceName = (*ImplementationType)(nil)`
+- Request/response types belong in `core` package for reuse across layers
+
+Example:
+```go
+// In backend/pkg/core/interfaces.go
+type UserServiceInterface interface {
+    CreateUser(ctx context.Context, user *User) (*User, error)
+    GetUser(ctx context.Context, id int) (*User, error)
+}
+
+// In backend/pkg/db/services/users.go
+var _ core.UserServiceInterface = (*UserService)(nil)
+
+type UserService struct {
+    DB *pgxpool.Pool
+}
+```
+
+#### Documentation Requirements
+- All public functions MUST have Go doc comments
+- Complex business logic MUST be documented inline
+- Package-level comments required for all packages
+
+#### Error Handling
+- Use typed errors with context information
+- Consistent error response formats via `core.APIError`
+- Return meaningful error messages for API consumers
+
+#### Testing Standards (Implementation Pending)
+- All services MUST have unit tests with interface mocks
+- Integration tests for database operations
+- API endpoint tests for all handlers
+
+### Frontend Standards
+
+#### TypeScript Requirements
+- Strict mode MUST be enabled
+- All components MUST have proper type definitions
+- API client methods MUST be type-safe
+
+#### Component Organization
+- One component per file
+- Props interfaces defined inline or in types file
+- Custom hooks in dedicated `hooks/` directory
+
+#### Testing Standards (Implementation Pending)
+- All components MUST have tests using React Testing Library
+- Custom hooks MUST have dedicated tests
+- API integration tests for critical flows
+
+### General Standards
+
+#### Naming Conventions
+- Use descriptive, unambiguous names
+- Follow language idioms (camelCase for TS/JS, PascalCase for Go exported)
+- Database columns use snake_case, Go structs use PascalCase
+
+#### File Organization
+- Group related functionality in packages/directories
+- Keep files focused on single responsibility
+- Use consistent import ordering
+
+#### Configuration Management
+- Environment variables MUST be validated at startup
+- No hardcoded secrets or configuration values
+- Configuration structs with proper defaults
+
+### Progress Tracking
+
+See `AI_FRIENDLY_IMPROVEMENTS.md` for current improvement status and roadmap.

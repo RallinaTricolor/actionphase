@@ -13,6 +13,9 @@ type SessionService struct {
 	DB *pgxpool.Pool
 }
 
+// Ensure SessionService implements the interface
+var _ core.SessionServiceInterface = (*SessionService)(nil)
+
 func (s *SessionService) Session(id int) (*core.Session, error) {
 	return nil, nil
 }

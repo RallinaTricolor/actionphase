@@ -11,6 +11,9 @@ type UserService struct {
 	DB *pgxpool.Pool
 }
 
+// Ensure UserService implements the interface
+var _ core.UserServiceInterface = (*UserService)(nil)
+
 func (s *UserService) User(id int) (*core.User, error) {
 	return nil, nil
 }

@@ -10,13 +10,31 @@ import (
 	"time"
 )
 
+// tokenAuth is the global JWT authentication instance used throughout the application.
+// It uses HMAC-SHA256 algorithm for token signing and verification.
+// TODO: Get secret key from environment variable for production security.
 var tokenAuth *jwtauth.JWTAuth
 
 func init() {
-	// TODO: Get this from env var
+	// Initialize JWT auth with HMAC-SHA256 algorithm and secret key
+	// TODO: Get this from env var for production deployment
 	tokenAuth = jwtauth.New("HS256", []byte("SECRET"), nil)
 }
 
+// MakeToken creates a new JWT access token for the specified username.
+// The token contains the username claim and is signed with the application secret.
+//
+// Parameters:
+//   - name: Username to encode in the token
+//
+// Returns:
+//   - string: The encoded JWT token string
+//   - error: Encoding error if token creation fails
+//
+// Security Notes:
+//   - Tokens are signed with HMAC-SHA256
+//   - Default expiration is handled by jwtauth library
+//   - Secret key should be from environment variable in production
 func MakeToken(name string) (string, error) {
 	_, tokenString, err := tokenAuth.Encode(map[string]interface{}{"username": name})
 	return tokenString, err
