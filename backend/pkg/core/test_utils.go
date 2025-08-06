@@ -95,32 +95,69 @@ func (td *TestDatabase) CleanupTables(t TestingInterface, tables ...string) {
 	ctx := context.Background()
 
 	// If no tables specified, clean up common test tables in proper order
+	// (child tables first to avoid foreign key constraint violations)
 	if len(tables) == 0 {
-		tables = []string{"game_participants", "games", "sessions", "users"}
+		tables = []string{"game_applications", "game_participants", "games", "sessions", "users"}
 	}
 
-	// Use a single transaction for atomic cleanup
+	// First check which tables exist to avoid transaction aborts
+	existingTables := []string{}
+	for _, table := range tables {
+		var exists bool
+		err := td.Pool.QueryRow(ctx,
+			"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
+			table).Scan(&exists)
+		if err != nil {
+			t.Logf("Warning: Failed to check if table %s exists: %v", table, err)
+			continue
+		}
+		if exists {
+			existingTables = append(existingTables, table)
+		} else {
+			t.Logf("Note: Table %s does not exist, skipping cleanup", table)
+		}
+	}
+
+	// If no tables exist, nothing to clean up
+	if len(existingTables) == 0 {
+		return
+	}
+
+	// Use a single transaction for atomic cleanup of existing tables
 	tx, err := td.Pool.Begin(ctx)
 	if err != nil {
 		t.Logf("Warning: Failed to begin cleanup transaction: %v", err)
 		return
 	}
+
+	committed := false
 	defer func() {
-		if err := tx.Rollback(ctx); err != nil {
-			t.Logf("Warning: Failed to rollback cleanup transaction: %v", err)
+		if !committed {
+			if err := tx.Rollback(ctx); err != nil {
+				t.Logf("Warning: Failed to rollback cleanup transaction: %v", err)
+			}
 		}
 	}()
 
-	for _, table := range tables {
-		_, err := tx.Exec(ctx, "TRUNCATE TABLE "+table+" RESTART IDENTITY CASCADE")
+	for _, table := range existingTables {
+		// Use DELETE instead of TRUNCATE to avoid deadlock issues with foreign keys
+		_, err := tx.Exec(ctx, "DELETE FROM "+table)
 		if err != nil {
 			t.Logf("Warning: Failed to cleanup table %s: %v", table, err)
 			return
+		}
+		// Reset sequences for primary key columns
+		_, err = tx.Exec(ctx, "SELECT setval(pg_get_serial_sequence('"+table+"', 'id'), 1, false)")
+		if err != nil {
+			// Not all tables have id columns, so just log this as info
+			t.Logf("Note: No sequence to reset for table %s", table)
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		t.Logf("Warning: Failed to commit cleanup transaction: %v", err)
+	} else {
+		committed = true
 	}
 }
 

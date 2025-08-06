@@ -294,14 +294,6 @@ func (r *UpdateGameRequest) Bind(req *http.Request) error {
 	return nil
 }
 
-type JoinGameRequest struct {
-	Role string `json:"role,omitempty"` // defaults to "player"
-}
-
-func (r *JoinGameRequest) Bind(req *http.Request) error {
-	return nil
-}
-
 type GameWithDetailsResponse struct {
 	ID                  int32      `json:"id"`
 	Title               string     `json:"title"`
@@ -380,6 +372,29 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 		h.App.Logger.Error("Failed to update game state", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
+	}
+
+	// If transitioning out of recruitment, convert approved applications to participants
+	if game.State == core.GameStateRecruitment && data.State != core.GameStateRecruitment {
+		h.App.Logger.Info("Transitioning out of recruitment, converting approved applications", "game_id", gameID)
+
+		applicationService := &db.GameApplicationService{DB: h.App.Pool}
+
+		// First, auto-approve all pending applications (as specified in requirements)
+		err = applicationService.BulkApproveApplications(r.Context(), int32(gameID), userID)
+		if err != nil {
+			h.App.Logger.Error("Failed to bulk approve applications", "error", err, "game_id", gameID)
+			// Don't fail the state transition, but log the error
+		}
+
+		// Convert approved applications to participants
+		err = applicationService.ConvertApprovedApplicationsToParticipants(r.Context(), int32(gameID))
+		if err != nil {
+			h.App.Logger.Error("Failed to convert approved applications to participants", "error", err, "game_id", gameID)
+			// Don't fail the state transition, but log the error
+		} else {
+			h.App.Logger.Info("Successfully converted approved applications to participants", "game_id", gameID)
+		}
 	}
 
 	// Convert to response format (same as GetGame)
@@ -655,105 +670,6 @@ func (h *Handler) GetRecruitingGames(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// JoinGame - Join a game as a participant
-func (h *Handler) JoinGame(w http.ResponseWriter, r *http.Request) {
-	gameIDStr := chi.URLParam(r, "id")
-	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
-	if err != nil {
-		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
-		return
-	}
-
-	data := &JoinGameRequest{}
-	if err := render.Bind(r, data); err != nil {
-		render.Render(w, r, core.ErrInvalidRequest(err))
-		return
-	}
-
-	// Default role to player
-	if data.Role == "" {
-		data.Role = "player"
-	}
-
-	// Validate role
-	if data.Role != "player" && data.Role != "audience" {
-		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid role: must be 'player' or 'audience'")))
-		return
-	}
-
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := int32(user.ID)
-	gameService := &db.GameService{DB: h.App.Pool}
-
-	// Check if user can join the game
-	joinStatus, err := gameService.CanUserJoinGame(r.Context(), int32(gameID), userID)
-	if err != nil {
-		h.App.Logger.Error("Failed to check if user can join game", "error", err, "game_id", gameID, "user_id", userID)
-		render.Render(w, r, core.ErrInternalError(err))
-		return
-	}
-
-	if joinStatus != "can_join" {
-		var message string
-		switch joinStatus {
-		case "game_not_recruiting":
-			message = "Game is not currently accepting new players"
-		case "deadline_passed":
-			message = "Recruitment deadline has passed"
-		case "game_full":
-			message = "Game is full"
-		case "already_joined":
-			message = "You are already a participant in this game"
-		default:
-			message = "Cannot join game"
-		}
-		render.Render(w, r, core.ErrBadRequest(fmt.Errorf(message)))
-		return
-	}
-
-	// Add user as participant
-	participant, err := gameService.AddGameParticipant(r.Context(), int32(gameID), userID, data.Role)
-	if err != nil {
-		h.App.Logger.Error("Failed to add game participant", "error", err, "game_id", gameID, "user_id", userID)
-		render.Render(w, r, core.ErrInternalError(err))
-		return
-	}
-
-	response := map[string]interface{}{
-		"id":        participant.ID,
-		"game_id":   participant.GameID,
-		"user_id":   participant.UserID,
-		"role":      participant.Role,
-		"status":    participant.Status,
-		"joined_at": participant.JoinedAt.Time,
-	}
-
-	render.Status(r, http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}
-
 // LeaveGame - Remove user from game participants
 func (h *Handler) LeaveGame(w http.ResponseWriter, r *http.Request) {
 	gameIDStr := chi.URLParam(r, "id")
@@ -787,13 +703,39 @@ func (h *Handler) LeaveGame(w http.ResponseWriter, r *http.Request) {
 
 	userID := int32(user.ID)
 	gameService := &db.GameService{DB: h.App.Pool}
+	applicationService := &db.GameApplicationService{DB: h.App.Pool}
 
-	// Remove user from game participants
+	// First, try to remove user from game participants (if they are a participant)
+	participantRemoved := false
 	err = gameService.RemoveGameParticipant(r.Context(), int32(gameID), userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to remove game participant", "error", err, "game_id", gameID, "user_id", userID)
-		render.Render(w, r, core.ErrInternalError(err))
-		return
+		// Log but don't fail - user might not be a participant (might just have an application)
+		h.App.Logger.Debug("User not found in participants (might have application instead)", "game_id", gameID, "user_id", userID)
+	} else {
+		participantRemoved = true
+		h.App.Logger.Info("Removed user from game participants", "game_id", gameID, "user_id", userID)
+	}
+
+	// Also check for and withdraw any pending applications
+	application, err := applicationService.GetGameApplicationByUserAndGame(r.Context(), int32(gameID), userID)
+	if err != nil {
+		// User has no application - that's fine if they were a participant
+		if !participantRemoved {
+			h.App.Logger.Error("User is neither participant nor applicant", "error", err, "game_id", gameID, "user_id", userID)
+			render.Render(w, r, core.ErrNotFound("you are not associated with this game"))
+			return
+		}
+	} else {
+		// Withdraw the application if it's pending
+		if application.Status == core.ApplicationStatusPending {
+			err = applicationService.WithdrawGameApplication(r.Context(), application.ID, userID)
+			if err != nil {
+				h.App.Logger.Error("Failed to withdraw application", "error", err, "application_id", application.ID)
+				render.Render(w, r, core.ErrInternalError(err))
+				return
+			}
+			h.App.Logger.Info("Withdrew pending application", "application_id", application.ID, "game_id", gameID, "user_id", userID)
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -834,4 +776,413 @@ func (h *Handler) GetGameParticipants(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// === GAME APPLICATION ENDPOINTS ===
+
+type ApplyToGameRequest struct {
+	Role    string `json:"role" validate:"required"`
+	Message string `json:"message,omitempty"`
+}
+
+func (r *ApplyToGameRequest) Bind(req *http.Request) error {
+	return nil
+}
+
+type GameApplicationResponse struct {
+	ID               int32      `json:"id"`
+	GameID           int32      `json:"game_id"`
+	UserID           int32      `json:"user_id"`
+	Username         string     `json:"username,omitempty"`
+	Email            string     `json:"email,omitempty"`
+	Role             string     `json:"role"`
+	Message          string     `json:"message,omitempty"`
+	Status           string     `json:"status"`
+	AppliedAt        time.Time  `json:"applied_at"`
+	ReviewedAt       *time.Time `json:"reviewed_at,omitempty"`
+	ReviewedByUserID *int32     `json:"reviewed_by_user_id,omitempty"`
+}
+
+func (rd *GameApplicationResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+// ApplyToGame - Apply to join a game as a player or audience
+func (h *Handler) ApplyToGame(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "id")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	data := &ApplyToGameRequest{}
+	if err := render.Bind(r, data); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	// Validate role
+	if data.Role != "player" && data.Role != "audience" {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("role must be 'player' or 'audience'")))
+		return
+	}
+
+	// Get user ID from JWT token
+	token, _, err := jwtauth.FromContext(r.Context())
+	if err != nil {
+		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+		return
+	}
+
+	username, ok := token.Get("username")
+	if !ok {
+		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
+		return
+	}
+
+	// Look up user by username to get user ID
+	userService := &db.UserService{DB: h.App.Pool}
+	user, err := userService.UserByUsername(username.(string))
+	if err != nil {
+		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
+		render.Render(w, r, core.ErrUnauthorized("user not found"))
+		return
+	}
+
+	userID := int32(user.ID)
+	applicationService := &db.GameApplicationService{DB: h.App.Pool}
+
+	// Create the application
+	application, err := applicationService.CreateGameApplication(r.Context(), core.CreateGameApplicationRequest{
+		GameID:  int32(gameID),
+		UserID:  userID,
+		Role:    data.Role,
+		Message: data.Message,
+	})
+	if err != nil {
+		h.App.Logger.Error("Failed to create game application", "error", err, "game_id", gameID, "user_id", userID)
+
+		// Check for specific error types to provide better responses
+		if fmt.Sprintf("%v", err) == "user already has a pending application for this game" {
+			render.Render(w, r, core.ErrBadRequest(err))
+			return
+		}
+		if fmt.Sprintf("%v", err) == "user is already a participant in this game" {
+			render.Render(w, r, core.ErrBadRequest(err))
+			return
+		}
+		if fmt.Sprintf("%v", err) == "game is not currently recruiting" {
+			render.Render(w, r, core.ErrBadRequest(err))
+			return
+		}
+
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	response := &GameApplicationResponse{
+		ID:        application.ID,
+		GameID:    application.GameID,
+		UserID:    application.UserID,
+		Username:  user.Username,
+		Role:      application.Role,
+		Status:    application.Status,
+		AppliedAt: application.AppliedAt.Time,
+	}
+
+	if application.Message.Valid {
+		response.Message = application.Message.String
+	}
+	if application.ReviewedAt.Valid {
+		reviewedAt := application.ReviewedAt.Time
+		response.ReviewedAt = &reviewedAt
+	}
+	if application.ReviewedByUserID.Valid {
+		reviewedByUserID := application.ReviewedByUserID.Int32
+		response.ReviewedByUserID = &reviewedByUserID
+	}
+
+	render.Status(r, http.StatusCreated)
+	render.Render(w, r, response)
+}
+
+// GetGameApplications - Get all applications for a game (GM only)
+func (h *Handler) GetGameApplications(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "id")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Get user ID from JWT token
+	token, _, err := jwtauth.FromContext(r.Context())
+	if err != nil {
+		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+		return
+	}
+
+	username, ok := token.Get("username")
+	if !ok {
+		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
+		return
+	}
+
+	// Look up user by username to get user ID
+	userService := &db.UserService{DB: h.App.Pool}
+	user, err := userService.UserByUsername(username.(string))
+	if err != nil {
+		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
+		render.Render(w, r, core.ErrUnauthorized("user not found"))
+		return
+	}
+
+	userID := int32(user.ID)
+
+	// Verify user is GM of this game
+	gameService := &db.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get game for permission check", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if game.GmUserID != userID {
+		render.Render(w, r, core.ErrForbidden("only the GM can view game applications"))
+		return
+	}
+
+	// Get applications for the game
+	applicationService := &db.GameApplicationService{DB: h.App.Pool}
+	applications, err := applicationService.GetGameApplications(r.Context(), int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get game applications", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	var response []map[string]interface{}
+	for _, app := range applications {
+		appData := map[string]interface{}{
+			"id":         app.ID,
+			"game_id":    app.GameID,
+			"user_id":    app.UserID,
+			"username":   app.Username,
+			"email":      app.Email,
+			"role":       app.Role,
+			"status":     app.Status,
+			"applied_at": app.AppliedAt.Time,
+		}
+
+		if app.Message.Valid {
+			appData["message"] = app.Message.String
+		}
+		if app.ReviewedAt.Valid {
+			appData["reviewed_at"] = app.ReviewedAt.Time
+		}
+		if app.ReviewedByUserID.Valid {
+			appData["reviewed_by_user_id"] = app.ReviewedByUserID.Int32
+		}
+
+		response = append(response, appData)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+type ReviewApplicationRequest struct {
+	Action string `json:"action" validate:"required"` // "approve" or "reject"
+}
+
+func (r *ReviewApplicationRequest) Bind(req *http.Request) error {
+	return nil
+}
+
+// ReviewGameApplication - Approve or reject a game application (GM only)
+func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "id")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	applicationIDStr := chi.URLParam(r, "applicationId")
+	applicationID, err := strconv.ParseInt(applicationIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid application ID")))
+		return
+	}
+
+	data := &ReviewApplicationRequest{}
+	if err := render.Bind(r, data); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	// Validate action
+	if data.Action != "approve" && data.Action != "reject" {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("action must be 'approve' or 'reject'")))
+		return
+	}
+
+	// Get user ID from JWT token
+	token, _, err := jwtauth.FromContext(r.Context())
+	if err != nil {
+		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+		return
+	}
+
+	username, ok := token.Get("username")
+	if !ok {
+		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
+		return
+	}
+
+	// Look up user by username to get user ID
+	userService := &db.UserService{DB: h.App.Pool}
+	user, err := userService.UserByUsername(username.(string))
+	if err != nil {
+		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
+		render.Render(w, r, core.ErrUnauthorized("user not found"))
+		return
+	}
+
+	userID := int32(user.ID)
+
+	// Verify user is GM of this game
+	gameService := &db.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get game for permission check", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if game.GmUserID != userID {
+		render.Render(w, r, core.ErrForbidden("only the GM can review game applications"))
+		return
+	}
+
+	// Verify application belongs to this game
+	applicationService := &db.GameApplicationService{DB: h.App.Pool}
+	application, err := applicationService.GetGameApplication(r.Context(), int32(applicationID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get game application", "error", err, "application_id", applicationID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if application.GameID != int32(gameID) {
+		render.Render(w, r, core.ErrBadRequest(fmt.Errorf("application does not belong to this game")))
+		return
+	}
+
+	// Perform the action
+	if data.Action == "approve" {
+		err = applicationService.ApproveGameApplication(r.Context(), int32(applicationID), userID)
+	} else {
+		err = applicationService.RejectGameApplication(r.Context(), int32(applicationID), userID)
+	}
+
+	if err != nil {
+		h.App.Logger.Error("Failed to review game application", "error", err, "application_id", applicationID, "action", data.Action)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Return updated application
+	updatedApplication, err := applicationService.GetGameApplication(r.Context(), int32(applicationID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get updated application", "error", err, "application_id", applicationID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	response := &GameApplicationResponse{
+		ID:        updatedApplication.ID,
+		GameID:    updatedApplication.GameID,
+		UserID:    updatedApplication.UserID,
+		Role:      updatedApplication.Role,
+		Status:    updatedApplication.Status,
+		AppliedAt: updatedApplication.AppliedAt.Time,
+	}
+
+	if updatedApplication.Message.Valid {
+		response.Message = updatedApplication.Message.String
+	}
+	if updatedApplication.ReviewedAt.Valid {
+		reviewedAt := updatedApplication.ReviewedAt.Time
+		response.ReviewedAt = &reviewedAt
+	}
+	if updatedApplication.ReviewedByUserID.Valid {
+		reviewedByUserID := updatedApplication.ReviewedByUserID.Int32
+		response.ReviewedByUserID = &reviewedByUserID
+	}
+
+	render.Render(w, r, response)
+}
+
+// WithdrawGameApplication - Withdraw user's own application
+func (h *Handler) WithdrawGameApplication(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "id")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Get user ID from JWT token
+	token, _, err := jwtauth.FromContext(r.Context())
+	if err != nil {
+		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+		return
+	}
+
+	username, ok := token.Get("username")
+	if !ok {
+		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
+		return
+	}
+
+	// Look up user by username to get user ID
+	userService := &db.UserService{DB: h.App.Pool}
+	user, err := userService.UserByUsername(username.(string))
+	if err != nil {
+		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
+		render.Render(w, r, core.ErrUnauthorized("user not found"))
+		return
+	}
+
+	userID := int32(user.ID)
+
+	// Find user's application for this game
+	applicationService := &db.GameApplicationService{DB: h.App.Pool}
+	application, err := applicationService.GetGameApplicationByUserAndGame(r.Context(), int32(gameID), userID)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user's application", "error", err, "game_id", gameID, "user_id", userID)
+		render.Render(w, r, core.ErrNotFound("no application found for this game"))
+		return
+	}
+
+	// Only allow withdrawal of pending applications
+	if application.Status != core.ApplicationStatusPending {
+		render.Render(w, r, core.ErrBadRequest(fmt.Errorf("can only withdraw pending applications")))
+		return
+	}
+
+	// Withdraw the application
+	err = applicationService.WithdrawGameApplication(r.Context(), application.ID, userID)
+	if err != nil {
+		h.App.Logger.Error("Failed to withdraw application", "error", err, "application_id", application.ID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

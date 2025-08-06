@@ -125,79 +125,14 @@ func TestGameService_UpdateGameState(t *testing.T) {
 	}
 }
 
-func TestGameService_JoinGame(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
-	defer testDB.CleanupTables(t, "games", "game_participants", "sessions", "users")
-
-	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
-
-	// Create another test user to join the game
-	player := testDB.CreateTestUser(t, "player1", "player1@example.com")
-
-	// Create a game in recruitment state
-	req := core.CreateGameRequest{
-		Title:       "Join Test Game",
-		Description: "Testing game joining",
-		GMUserID:    int32(fixtures.TestUser.ID),
-		MaxPlayers:  3,
-		IsPublic:    true,
-	}
-
-	game, err := gameService.CreateGame(context.Background(), req)
-	core.AssertNoError(t, err, "Failed to create game")
-
-	// Move game to recruitment state
-	_, err = gameService.UpdateGameState(context.Background(), game.ID, "recruitment")
-	core.AssertNoError(t, err, "Failed to set game to recruitment")
-
-	testCases := []struct {
-		name        string
-		gameID      int32
-		userID      int32
-		role        string
-		expectError bool
-	}{
-		{
-			name:        "valid player join",
-			gameID:      game.ID,
-			userID:      int32(player.ID),
-			role:        "player",
-			expectError: false,
-		},
-		{
-			name:        "duplicate join attempt",
-			gameID:      game.ID,
-			userID:      int32(player.ID),
-			role:        "player",
-			expectError: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := gameService.JoinGame(context.Background(), tc.gameID, tc.userID, tc.role)
-
-			if tc.expectError {
-				core.AssertError(t, err, "Expected error for invalid join attempt")
-				return
-			}
-
-			core.AssertNoError(t, err, "Failed to join game")
-
-			// Verify user is in game
-			inGame, err := gameService.IsUserInGame(context.Background(), tc.gameID, tc.userID)
-			core.AssertNoError(t, err, "Failed to check if user is in game")
-			core.AssertEqual(t, true, inGame, "User should be in game after joining")
-		})
-	}
-}
+// NOTE: TestGameService_JoinGame has been removed because direct joining is no longer supported.
+// All game participation now goes through the application system (GameApplicationService).
+// See game_applications_test.go for tests of the new application-based joining process.
 
 func TestGameService_LeaveGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "games", "game_participants", "sessions", "users")
+	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
 	gameService := &GameService{DB: testDB.Pool}
@@ -219,9 +154,9 @@ func TestGameService_LeaveGame(t *testing.T) {
 	_, err = gameService.UpdateGameState(context.Background(), game.ID, "recruitment")
 	core.AssertNoError(t, err, "Failed to set game to recruitment")
 
-	// Join game first
-	err = gameService.JoinGame(context.Background(), game.ID, int32(player.ID), "player")
-	core.AssertNoError(t, err, "Failed to join game")
+	// Add player as participant directly (since we removed JoinGame method)
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	core.AssertNoError(t, err, "Failed to add game participant")
 
 	testCases := []struct {
 		name        string
@@ -270,7 +205,7 @@ func TestGameService_LeaveGame(t *testing.T) {
 func TestGameService_GetUserRole(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "games", "game_participants", "sessions", "users")
+	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
 	gameService := &GameService{DB: testDB.Pool}
@@ -285,8 +220,8 @@ func TestGameService_GetUserRole(t *testing.T) {
 	_, err := gameService.UpdateGameState(context.Background(), game.ID, "recruitment")
 	core.AssertNoError(t, err, "Failed to set game to recruitment")
 
-	err = gameService.JoinGame(context.Background(), game.ID, int32(player.ID), "player")
-	core.AssertNoError(t, err, "Failed to join game")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	core.AssertNoError(t, err, "Failed to add game participant")
 
 	testCases := []struct {
 		name         string

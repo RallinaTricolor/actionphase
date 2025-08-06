@@ -7,10 +7,9 @@ import (
 
 // TestDataFactories demonstrates how to use the test data factories for clean, readable tests
 func TestDataFactories_BasicUsage(t *testing.T) {
-	t.Parallel() // Enable parallel execution for this test
+	// Note: Removing t.Parallel() to avoid database conflicts during cleanup
 
 	t.Run("create_simple_user", func(t *testing.T) {
-		t.Parallel() // Enable parallel execution for this subtest
 
 		// Each subtest gets its own independent setup
 		testDB := NewTestDatabase(t)
@@ -28,7 +27,6 @@ func TestDataFactories_BasicUsage(t *testing.T) {
 	})
 
 	t.Run("create_custom_user", func(t *testing.T) {
-		t.Parallel() // Enable parallel execution for this subtest
 
 		// Each subtest gets its own independent setup
 		testDB := NewTestDatabase(t)
@@ -50,7 +48,6 @@ func TestDataFactories_BasicUsage(t *testing.T) {
 	})
 
 	t.Run("create_game_with_participants", func(t *testing.T) {
-		t.Parallel() // Enable parallel execution for this subtest
 
 		// Each subtest gets its own independent setup
 		testDB := NewTestDatabase(t)
@@ -74,7 +71,6 @@ func TestDataFactories_BasicUsage(t *testing.T) {
 	})
 
 	t.Run("create_authenticated_user", func(t *testing.T) {
-		t.Parallel() // Enable parallel execution for this subtest
 
 		// Each subtest gets its own independent setup
 		testDB := NewTestDatabase(t)

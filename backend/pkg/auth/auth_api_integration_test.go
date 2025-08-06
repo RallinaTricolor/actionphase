@@ -185,7 +185,7 @@ func TestAuthAPI_LoginEndpoint(t *testing.T) {
 				"username": "nonexistent",
 				"password": "anypassword",
 			},
-			expectedStatus: 500, // UserByUsername returns error for non-existent user
+			expectedStatus: 401, // Fixed to return unauthorized instead of internal error
 			description:    "Login with non-existent user should fail",
 		},
 		{
@@ -193,7 +193,7 @@ func TestAuthAPI_LoginEndpoint(t *testing.T) {
 			payload: map[string]interface{}{
 				"password": plainPassword,
 			},
-			expectedStatus: 500,
+			expectedStatus: 401,
 			description:    "Login without username should fail",
 		},
 		{
@@ -210,7 +210,7 @@ func TestAuthAPI_LoginEndpoint(t *testing.T) {
 				"username": "",
 				"password": "",
 			},
-			expectedStatus: 500,
+			expectedStatus: 401,
 			description:    "Login with empty credentials should fail",
 		},
 	}
@@ -441,7 +441,7 @@ func TestAuthAPI_RateLimiting(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			// Count how many requests succeeded (got processed, even if they failed authentication)
-			if w.Code == 500 || w.Code == 400 { // These are "processed" responses
+			if w.Code == 401 || w.Code == 400 { // These are "processed" responses
 				successCount++
 			}
 		}
@@ -454,7 +454,7 @@ func TestAuthAPI_RateLimiting(t *testing.T) {
 
 // setupAuthAPITestRouter creates a test router with auth routes configured for API testing
 func setupAuthAPITestRouter(app *core.App) *chi.Mux {
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := jwtauth.New("HS256", []byte("SECRET"), nil)
 
 	r := chi.NewRouter()
 
@@ -478,7 +478,7 @@ func setupAuthAPITestRouter(app *core.App) *chi.Mux {
 
 // createTestAuthToken creates a JWT token for testing purposes
 func createTestAuthToken(username string) (string, error) {
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := jwtauth.New("HS256", []byte("SECRET"), nil)
 
 	claims := map[string]interface{}{
 		"username": username,
@@ -491,7 +491,7 @@ func createTestAuthToken(username string) (string, error) {
 
 // createExpiredTestAuthToken creates an expired JWT token for testing purposes
 func createExpiredTestAuthToken(username string) (string, error) {
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := jwtauth.New("HS256", []byte("SECRET"), nil)
 
 	claims := map[string]interface{}{
 		"username": username,

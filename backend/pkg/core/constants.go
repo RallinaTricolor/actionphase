@@ -140,15 +140,18 @@ const (
 	ErrCodeInvalidEmail      = 1204
 
 	// Game management errors (1300-1399)
-	ErrCodeGameNotFound           = 1301
-	ErrCodeGameNotRecruiting      = 1302
-	ErrCodeGameFull               = 1303
-	ErrCodeGameDeadlinePassed     = 1304
-	ErrCodeAlreadyParticipant     = 1305
-	ErrCodeNotParticipant         = 1306
-	ErrCodeInvalidGameState       = 1307
-	ErrCodeInvalidStateTransition = 1308
-	ErrCodeNotGameMaster          = 1309
+	ErrCodeGameNotFound             = 1301
+	ErrCodeGameNotRecruiting        = 1302
+	ErrCodeGameFull                 = 1303
+	ErrCodeGameDeadlinePassed       = 1304
+	ErrCodeAlreadyParticipant       = 1305
+	ErrCodeNotParticipant           = 1306
+	ErrCodeInvalidGameState         = 1307
+	ErrCodeInvalidStateTransition   = 1308
+	ErrCodeNotGameMaster            = 1309
+	ErrCodeApplicationNotFound      = 1310
+	ErrCodeApplicationExists        = 1311
+	ErrCodeInvalidApplicationStatus = 1312
 
 	// System/Infrastructure errors (1400-1499)
 	ErrCodeDatabaseError   = 1401
@@ -178,12 +181,55 @@ const (
 	GameNotFound = "game_not_found"
 )
 
+// ApplicationStatusCodes define the possible results of checking if a user can apply to a game.
+// These are used by the CanUserApplyToGame service method.
+const (
+	// CanApply - User can submit an application to the game
+	CanApply = "can_apply"
+
+	// ApplicationPending - User already has a pending application
+	ApplicationPending = "application_pending"
+
+	// ApplicationRejected - User's previous application was rejected
+	ApplicationRejected = "application_rejected"
+
+	// AlreadyParticipant - User is already a participant in the game
+	AlreadyParticipant = "already_participant"
+
+	// NotRecruiting - Game is not currently in recruitment state
+	NotRecruiting = "not_recruiting"
+)
+
+// ApplicationStatuses define all valid application statuses.
+const (
+	// ApplicationStatusPending - Application submitted, awaiting GM review
+	ApplicationStatusPending = "pending"
+
+	// ApplicationStatusApproved - GM approved the application
+	ApplicationStatusApproved = "approved"
+
+	// ApplicationStatusRejected - GM rejected the application
+	ApplicationStatusRejected = "rejected"
+
+	// ApplicationStatusWithdrawn - Applicant withdrew their application
+	ApplicationStatusWithdrawn = "withdrawn"
+)
+
+// ValidApplicationStatuses contains all valid application statuses for validation.
+var ValidApplicationStatuses = []string{
+	ApplicationStatusPending,
+	ApplicationStatusApproved,
+	ApplicationStatusRejected,
+	ApplicationStatusWithdrawn,
+}
+
 // DatabaseTableNames defines table names for consistent referencing.
 // Useful for cleanup operations and migrations.
 const (
 	TableUsers            = "users"
 	TableGames            = "games"
 	TableGameParticipants = "game_participants"
+	TableGameApplications = "game_applications"
 	TableSessions         = "sessions"
 	TableCharacters       = "characters"
 	TablePhases           = "phases"
@@ -199,6 +245,7 @@ var CommonTableCleanupOrder = []string{
 	TablePhases,
 	TableCharacters,
 	TableGameParticipants,
+	TableGameApplications, // Must be cleaned before TableGames
 	TableGames,
 	TableSessions,
 	TableUsers,
@@ -242,6 +289,16 @@ func IsValidParticipantRole(role string) bool {
 // IsValidParticipantStatus checks if the given status is a valid participant status.
 func IsValidParticipantStatus(status string) bool {
 	for _, validStatus := range ValidParticipantStatuses {
+		if status == validStatus {
+			return true
+		}
+	}
+	return false
+}
+
+// IsValidApplicationStatus checks if the given status is a valid application status.
+func IsValidApplicationStatus(status string) bool {
+	for _, validStatus := range ValidApplicationStatuses {
 		if status == validStatus {
 			return true
 		}

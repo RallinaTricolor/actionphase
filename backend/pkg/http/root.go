@@ -88,8 +88,13 @@ func (h *Handler) Start() {
 			r.Put("/{id}/state", gameHandler.UpdateGameState)
 
 			// Participant management
-			r.Post("/{id}/join", gameHandler.JoinGame)
 			r.Delete("/{id}/leave", gameHandler.LeaveGame)
+
+			// Game application management
+			r.Post("/{id}/apply", gameHandler.ApplyToGame)
+			r.Get("/{id}/applications", gameHandler.GetGameApplications)
+			r.Put("/{id}/applications/{applicationId}/review", gameHandler.ReviewGameApplication)
+			r.Delete("/{id}/application", gameHandler.WithdrawGameApplication)
 		})
 	})
 	apiV1Router.Mount("/games", gamesRouter)

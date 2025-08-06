@@ -104,8 +104,8 @@ type UserServiceInterface interface {
 //	// Transition game to accept players
 //	game, err = gameService.UpdateGameState(ctx, game.ID, "recruitment")
 //
-//	// Player joins the game
-//	err = gameService.JoinGame(ctx, game.ID, int32(player.ID), "player")
+//	// Players apply to join the game (no direct joining)
+//	// Applications are handled by the GameApplicationService
 //
 //	// Check if user can perform actions
 //	role, err := gameService.GetUserRole(ctx, game.ID, int32(user.ID))
@@ -113,8 +113,8 @@ type UserServiceInterface interface {
 //	    // User is Game Master, allow game management
 //	}
 //
-//	// Start the game when ready
-//	game, err = gameService.UpdateGameState(ctx, game.ID, "in_progress")
+//	// Start the game when ready (auto-approves and converts applications)
+//	game, err = gameService.UpdateGameState(ctx, game.ID, "character_creation")
 type GameServiceInterface interface {
 	// CreateGame creates a new game with the given parameters
 	CreateGame(ctx context.Context, req CreateGameRequest) (*models.Game, error)
@@ -136,9 +136,6 @@ type GameServiceInterface interface {
 
 	// DeleteGame removes a game from the system
 	DeleteGame(ctx context.Context, gameID int32) error
-
-	// JoinGame allows a user to join a game with a specific role
-	JoinGame(ctx context.Context, gameID, userID int32, role string) error
 
 	// LeaveGame allows a user to leave a game
 	LeaveGame(ctx context.Context, gameID, userID int32) error
@@ -168,6 +165,73 @@ type GameServiceInterface interface {
 	GetGameParticipants(ctx context.Context, gameID int32) ([]models.GetGameParticipantsRow, error)
 }
 
+// GameApplicationServiceInterface defines the contract for game application operations.
+// Handles the application flow where players apply to join games and require GM approval.
+//
+// Usage Example:
+//
+//	applicationService := &services.GameApplicationService{DB: pool}
+//
+//	// Player applies to join a game
+//	application, err := applicationService.CreateGameApplication(ctx, CreateGameApplicationRequest{
+//	    GameID:  123,
+//	    UserID:  456,
+//	    Role:    "player",
+//	    Message: "I'd love to play a wizard in this campaign!",
+//	})
+//
+//	// GM views all applications for their game
+//	applications, err := applicationService.GetGameApplications(ctx, 123)
+//
+//	// GM approves an application
+//	err = applicationService.ApproveGameApplication(ctx, application.ID, gmUserID)
+//
+//	// Check if user can apply to a game
+//	canApply, err := applicationService.CanUserApplyToGame(ctx, gameID, userID)
+type GameApplicationServiceInterface interface {
+	// CreateGameApplication creates a new application to join a game
+	CreateGameApplication(ctx context.Context, req CreateGameApplicationRequest) (*models.GameApplication, error)
+
+	// GetGameApplication retrieves a specific application by ID
+	GetGameApplication(ctx context.Context, applicationID int32) (*models.GameApplication, error)
+
+	// GetGameApplications retrieves all applications for a game with user details
+	GetGameApplications(ctx context.Context, gameID int32) ([]models.GetGameApplicationsRow, error)
+
+	// GetGameApplicationsByStatus retrieves applications for a game filtered by status
+	GetGameApplicationsByStatus(ctx context.Context, gameID int32, status string) ([]models.GetGameApplicationsByStatusRow, error)
+
+	// GetUserGameApplications retrieves all applications submitted by a user
+	GetUserGameApplications(ctx context.Context, userID int32) ([]models.GetUserGameApplicationsRow, error)
+
+	// ApproveGameApplication approves an application and optionally creates participant
+	ApproveGameApplication(ctx context.Context, applicationID, reviewerID int32) error
+
+	// RejectGameApplication rejects an application
+	RejectGameApplication(ctx context.Context, applicationID, reviewerID int32) error
+
+	// WithdrawGameApplication allows applicant to withdraw their application
+	WithdrawGameApplication(ctx context.Context, applicationID, userID int32) error
+
+	// DeleteGameApplication removes an application (for cleanup)
+	DeleteGameApplication(ctx context.Context, applicationID, userID int32) error
+
+	// CanUserApplyToGame checks if a user is eligible to apply to a game
+	CanUserApplyToGame(ctx context.Context, gameID, userID int32) (string, error)
+
+	// HasUserAppliedToGame checks if user has an existing application
+	HasUserAppliedToGame(ctx context.Context, gameID, userID int32) (bool, error)
+
+	// CountPendingApplicationsForGame returns count of pending applications
+	CountPendingApplicationsForGame(ctx context.Context, gameID int32) (int64, error)
+
+	// BulkApproveApplications approves all pending applications for a game
+	BulkApproveApplications(ctx context.Context, gameID, reviewerID int32) error
+
+	// GetApprovedApplicationsForGame retrieves approved applications for participant creation
+	GetApprovedApplicationsForGame(ctx context.Context, gameID int32) ([]models.GetApprovedApplicationsForGameRow, error)
+}
+
 // CreateGameRequest represents the parameters needed to create a new game
 type CreateGameRequest struct {
 	Title               string
@@ -192,4 +256,12 @@ type UpdateGameRequest struct {
 	RecruitmentDeadline *time.Time
 	MaxPlayers          int32
 	IsPublic            bool
+}
+
+// CreateGameApplicationRequest represents the parameters needed to create a game application
+type CreateGameApplicationRequest struct {
+	GameID  int32
+	UserID  int32
+	Role    string
+	Message string
 }
