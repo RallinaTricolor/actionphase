@@ -33,8 +33,8 @@ This document tracks our progress on making ActionPhase more comprehensible for 
 - ⏳ Add integration tests for auth flow
 - ⏳ Add API endpoint tests
 
-**Frontend:**
-- ⏳ Set up React Testing Library + Vitest
+**React Frontend:**
+- ⏳ Set up React Testing Library + Vitest (`frontend/`)
 - ⏳ Add component tests for core components (Login, GameList, etc.)
 - ⏳ Add hook tests for custom hooks
 - ⏳ Add API client tests

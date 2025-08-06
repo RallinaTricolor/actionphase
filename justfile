@@ -71,34 +71,34 @@ test-clean:
 
 # === Frontend Commands ===
 install-frontend:
-  cd new-frontend && npm install
+  cd frontend && npm install
 
 run-frontend:
-  cd new-frontend && npm run dev
+  cd frontend && npm run dev
 
 build-frontend:
-  cd new-frontend && npm run build
+  cd frontend && npm run build
 
 preview-frontend:
-  cd new-frontend && npm run preview
+  cd frontend && npm run preview
 
 # === Frontend Testing Commands ===
 setup-frontend-tests:
   @echo "Setting up frontend testing (Vitest + React Testing Library)..."
-  cd new-frontend && npm install --save-dev vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
+  cd frontend && npm install --save-dev vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
   @echo "Frontend testing setup complete. Run 'just test-frontend' to run tests."
 
 test-frontend:
-  @cd new-frontend && if npm run test >/dev/null 2>&1; then npm run test; else echo "Frontend tests not configured. Run 'just setup-frontend-tests' first."; fi
+  @cd frontend && if npm run test >/dev/null 2>&1; then npm run test; else echo "Frontend tests not configured. Run 'just setup-frontend-tests' first."; fi
 
 test-frontend-watch:
-  @cd new-frontend && if npm run test:watch >/dev/null 2>&1; then npm run test:watch; else echo "Frontend tests not configured. Run 'just setup-frontend-tests' first."; fi
+  @cd frontend && if npm run test:watch >/dev/null 2>&1; then npm run test:watch; else echo "Frontend tests not configured. Run 'just setup-frontend-tests' first."; fi
 
 test-frontend-coverage:
-  @cd new-frontend && if npm run test:coverage >/dev/null 2>&1; then npm run test:coverage; else echo "Frontend tests not configured. Run 'just setup-frontend-tests' first."; fi
+  @cd frontend && if npm run test:coverage >/dev/null 2>&1; then npm run test:coverage; else echo "Frontend tests not configured. Run 'just setup-frontend-tests' first."; fi
 
 lint-frontend:
-  cd new-frontend && npm run lint
+  cd frontend && npm run lint
 
 # === Development Workflows ===
 dev-setup: db_up install-frontend tidy
@@ -111,7 +111,7 @@ dev: db_up
   @echo "Press Ctrl+C to stop all services"
   @trap 'kill 0' SIGINT; \
   (cd backend && go run main.go) & \
-  (cd new-frontend && npm run dev) & \
+  (cd frontend && npm run dev) & \
   wait
 
 ci-test: lint test test-race
@@ -122,13 +122,13 @@ ci-build: build build-frontend
 
 full-test: ci-test
   @echo "Running full test suite..."
-  @cd new-frontend && if npm run test >/dev/null 2>&1; then npm run test; else echo "Skipping frontend tests (not configured)"; fi
+  @cd frontend && if npm run test >/dev/null 2>&1; then npm run test; else echo "Skipping frontend tests (not configured)"; fi
   @echo "Full test suite complete"
 
 # === Cleanup Commands ===
 clean: test-clean
   cd backend && go clean
-  cd new-frontend && rm -rf node_modules/.cache dist
+  cd frontend && rm -rf node_modules/.cache dist
   @echo "Cleanup complete"
 
 # === Quick Commands ===
