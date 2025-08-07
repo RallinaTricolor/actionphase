@@ -617,7 +617,7 @@ func TestGameAPI_ErrorHandling(t *testing.T) {
 
 // setupGameTestRouter creates a test router with game routes configured
 func setupGameTestRouter(app *core.App) *chi.Mux {
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := core.CreateTestTokenAuth()
 
 	r := chi.NewRouter()
 
@@ -663,7 +663,7 @@ func setupGameTestRouter(app *core.App) *chi.Mux {
 
 // setupAuthTestRouter creates a test router with auth routes for token creation
 func setupAuthTestRouter(app *core.App) *chi.Mux {
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := core.CreateTestTokenAuth()
 
 	r := chi.NewRouter()
 
@@ -685,15 +685,7 @@ func setupAuthTestRouter(app *core.App) *chi.Mux {
 
 // createTestAuthToken creates a JWT token for testing purposes
 func createTestAuthToken(username string) (string, error) {
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
-
-	claims := map[string]interface{}{
-		"username": username,
-		"exp":      time.Now().Add(time.Hour).Unix(),
-	}
-
-	_, tokenString, err := tokenAuth.Encode(claims)
-	return tokenString, err
+	return core.CreateTestJWTToken(username)
 }
 
 // Benchmark tests for performance monitoring

@@ -130,19 +130,35 @@ preview-frontend:
   cd frontend && npm run preview
 
 # === Frontend Testing Commands ===
+# Verify frontend testing setup (already configured)
 setup-frontend-tests:
-  @echo "Setting up frontend testing (Vitest + React Testing Library)..."
-  cd frontend && npm install --save-dev vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
-  @echo "Frontend testing setup complete. Run 'just test-frontend' to run tests."
+  @echo "Frontend testing is already configured with Vitest + React Testing Library"
+  @echo "Available commands:"
+  @echo "  just test-frontend                    - Run tests once"
+  @echo "  just test-frontend-watch              - Run tests in watch mode"
+  @echo "  just test-frontend-coverage           - Run tests with coverage"
+  @echo "  just test-frontend-ui                 - Run tests with interactive UI"
+  @echo "  just test-frontend-file <filename>    - Run specific test file"
 
+# Run frontend tests once
 test-frontend:
-  @cd frontend && if npm run test >/dev/null 2>&1; then npm run test; else echo "Frontend tests not configured. Run 'just setup-frontend-tests' first."; fi
+  cd frontend && npm run test
 
+# Run frontend tests in watch mode
 test-frontend-watch:
-  @cd frontend && if npm run test:watch >/dev/null 2>&1; then npm run test:watch; else echo "Frontend tests not configured. Run 'just setup-frontend-tests' first."; fi
+  cd frontend && npm run test:watch
 
+# Run frontend tests with coverage report
 test-frontend-coverage:
-  @cd frontend && if npm run test:coverage >/dev/null 2>&1; then npm run test:coverage; else echo "Frontend tests not configured. Run 'just setup-frontend-tests' first."; fi
+  cd frontend && npm run test:coverage
+
+# Run frontend tests with UI (interactive)
+test-frontend-ui:
+  cd frontend && npx vitest --ui
+
+# Run specific frontend test file
+test-frontend-file file:
+  cd frontend && npx vitest {{file}}
 
 lint-frontend:
   cd frontend && npm run lint
@@ -197,10 +213,13 @@ ci-test: lint test test-race
 ci-build: build build-frontend
   @echo "CI build complete"
 
-full-test: ci-test
-  @echo "Running full test suite..."
-  @cd frontend && if npm run test >/dev/null 2>&1; then npm run test; else echo "Skipping frontend tests (not configured)"; fi
+# Run full test suite (backend + frontend)
+full-test: ci-test test-frontend
   @echo "Full test suite complete"
+
+# Run all tests (backend + frontend, no race detection)
+test-all: test test-frontend
+  @echo "All tests complete"
 
 # === Cleanup Commands ===
 clean: test-clean

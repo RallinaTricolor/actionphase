@@ -53,7 +53,7 @@ func TestCharacterAPI_CompleteCharacterLifecycle(t *testing.T) {
 	core.AssertNoError(t, err, "Failed to create player token")
 
 	// Setup router with character routes and JWT middleware
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := core.CreateTestTokenAuth()
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
@@ -237,7 +237,7 @@ func TestCharacterAPI_NPCManagement(t *testing.T) {
 	core.AssertNoError(t, err, "Failed to create GM token")
 
 	// Setup router with JWT middleware
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := core.CreateTestTokenAuth()
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
@@ -363,7 +363,7 @@ func TestCharacterAPI_Authorization(t *testing.T) {
 	core.AssertNoError(t, err, "Failed to create other token")
 
 	// Setup router with JWT middleware
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := core.CreateTestTokenAuth()
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
@@ -504,7 +504,7 @@ func TestCharacterAPI_ErrorHandling(t *testing.T) {
 	core.AssertNoError(t, err, "Failed to create player token")
 
 	// Setup router with JWT middleware
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := core.CreateTestTokenAuth()
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
@@ -623,7 +623,7 @@ func TestCharacterAPI_UnauthenticatedAccess(t *testing.T) {
 
 	// Setup router with JWT middleware
 	r := chi.NewRouter()
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := core.CreateTestTokenAuth()
 
 	handler := Handler{App: app}
 	r.Route("/api/v1/characters/{id}", func(r chi.Router) {
@@ -662,7 +662,7 @@ func TestCharacterAPI_UnauthenticatedAccess(t *testing.T) {
 
 // createTestAuthToken creates a JWT token for testing purposes
 func createTestAuthToken(username string) (string, error) {
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := core.CreateTestTokenAuth()
 
 	claims := map[string]interface{}{
 		"username": username,
