@@ -73,6 +73,7 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 	// Step 2: Get the created game
 	t.Run("get_game", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(createdGameID)), nil)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -90,6 +91,7 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 	// Step 3: Get game with details
 	t.Run("get_game_with_details", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(createdGameID))+"/details", nil)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -170,6 +172,7 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 
 		// Verify game is deleted by trying to get it
 		getReq := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(createdGameID)), nil)
+		getReq.Header.Set("Authorization", "Bearer "+accessToken)
 		getW := httptest.NewRecorder()
 
 		router.ServeHTTP(getW, getReq)
@@ -177,7 +180,7 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 	})
 }
 
-// TestGameAPI_PublicEndpoints tests public game endpoints that don't require authentication
+// TestGameAPI_PublicEndpoints tests game listing endpoints that require authentication
 func TestGameAPI_PublicEndpoints(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
@@ -190,6 +193,10 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 
 	router := setupGameTestRouter(app)
 	fixtures := testDB.SetupFixtures(t)
+
+	// Create auth token for test user
+	accessToken, err := createTestAuthToken(fixtures.TestUser.Username)
+	core.AssertNoError(t, err, "Test token creation should succeed")
 
 	// Create a test game directly via service
 	gameService := &db.GameService{DB: testDB.Pool}
@@ -207,9 +214,10 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 	_, err = gameService.UpdateGameState(context.Background(), createdGame.ID, "recruitment")
 	core.AssertNoError(t, err, "Game state update should succeed")
 
-	// Test get all games (public)
+	// Test get all games (authenticated)
 	t.Run("get_all_games", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/v1/games/public", nil)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -234,9 +242,10 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 		core.AssertTrue(t, found, "Created game should be in the response")
 	})
 
-	// Test get recruiting games (public)
+	// Test get recruiting games (authenticated)
 	t.Run("get_recruiting_games", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/v1/games/recruiting", nil)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -259,9 +268,10 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 		core.AssertTrue(t, found, "Recruiting game should be in the response")
 	})
 
-	// Test get single game (public)
+	// Test get single game (authenticated)
 	t.Run("get_single_game", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(createdGame.ID)), nil)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -276,9 +286,10 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 		core.AssertEqual(t, "Public Test Game", response.Title, "Game title should match")
 	})
 
-	// Test get game participants (public)
+	// Test get game participants (authenticated)
 	t.Run("get_game_participants", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(createdGame.ID))+"/participants", nil)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -308,7 +319,7 @@ func TestGameAPI_ParticipantManagement(t *testing.T) {
 	fixtures := testDB.SetupFixtures(t)
 
 	// Create auth token for test user
-	_, _ = createTestAuthToken(fixtures.TestUser.Username)
+	accessToken, _ := createTestAuthToken(fixtures.TestUser.Username)
 
 	// Create a game for testing participation
 	gameService := &db.GameService{DB: testDB.Pool}
@@ -349,6 +360,7 @@ func TestGameAPI_ParticipantManagement(t *testing.T) {
 	// Test getting game participants
 	t.Run("get_participants", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(testGame.ID))+"/participants", nil)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -378,6 +390,7 @@ func TestGameAPI_ParticipantManagement(t *testing.T) {
 
 		// Verify participant was removed
 		getReq := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(testGame.ID))+"/participants", nil)
+		getReq.Header.Set("Authorization", "Bearer "+accessToken)
 		getW := httptest.NewRecorder()
 
 		router.ServeHTTP(getW, getReq)
@@ -547,7 +560,7 @@ func TestGameAPI_ErrorHandling(t *testing.T) {
 			method:         "GET",
 			endpoint:       "/api/v1/games/99999",
 			payload:        nil,
-			requiresAuth:   false,
+			requiresAuth:   true,
 			expectedStatus: 500, // sqlc returns error for non-existent records
 			description:    "Getting non-existent game should fail",
 		},
@@ -556,7 +569,7 @@ func TestGameAPI_ErrorHandling(t *testing.T) {
 			method:         "GET",
 			endpoint:       "/api/v1/games/invalid",
 			payload:        nil,
-			requiresAuth:   false,
+			requiresAuth:   true,
 			expectedStatus: 400,
 			description:    "Invalid game ID should return 400",
 		},
@@ -614,17 +627,17 @@ func setupGameTestRouter(app *core.App) *chi.Mux {
 		r.Route("/games", func(r chi.Router) {
 			gameHandler := Handler{App: app}
 
-			// Public routes
-			r.Get("/public", gameHandler.GetAllGames)
-			r.Get("/recruiting", gameHandler.GetRecruitingGames)
-			r.Get("/{id}", gameHandler.GetGame)
-			r.Get("/{id}/details", gameHandler.GetGameWithDetails)
-			r.Get("/{id}/participants", gameHandler.GetGameParticipants)
-
-			// Protected routes
+			// All routes require authentication
 			r.Group(func(r chi.Router) {
 				r.Use(jwtauth.Verifier(tokenAuth))
 				r.Use(jwtauth.Authenticator(tokenAuth))
+
+				// Game listing and viewing
+				r.Get("/public", gameHandler.GetAllGames)
+				r.Get("/recruiting", gameHandler.GetRecruitingGames)
+				r.Get("/{id}", gameHandler.GetGame)
+				r.Get("/{id}/details", gameHandler.GetGameWithDetails)
+				r.Get("/{id}/participants", gameHandler.GetGameParticipants)
 
 				// Game management
 				r.Post("/", gameHandler.CreateGame)
@@ -635,6 +648,12 @@ func setupGameTestRouter(app *core.App) *chi.Mux {
 				// Participant management
 				// NOTE: join endpoint removed - use application system instead
 				r.Delete("/{id}/leave", gameHandler.LeaveGame)
+
+				// Game application management
+				r.Post("/{id}/apply", gameHandler.ApplyToGame)
+				r.Get("/{id}/applications", gameHandler.GetGameApplications)
+				r.Put("/{id}/applications/{applicationId}/review", gameHandler.ReviewGameApplication)
+				r.Delete("/{id}/application", gameHandler.WithdrawGameApplication)
 			})
 		})
 	})
@@ -729,6 +748,12 @@ func BenchmarkGameAPI_GetAllGames(b *testing.B) {
 	router := setupGameTestRouter(app)
 	fixtures := testDB.SetupFixtures(b)
 
+	// Create auth token for test user
+	accessToken, err := createTestAuthToken(fixtures.TestUser.Username)
+	if err != nil {
+		b.Fatalf("Test token creation should succeed: %v", err)
+	}
+
 	// Create some test games
 	gameService := &db.GameService{DB: testDB.Pool}
 	for i := 0; i < 10; i++ {
@@ -744,6 +769,7 @@ func BenchmarkGameAPI_GetAllGames(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		req := httptest.NewRequest("GET", "/api/v1/games/public", nil)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)

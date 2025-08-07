@@ -41,6 +41,7 @@ func (h *Handler) Start() {
 		w.Write([]byte("ponger"))
 	})
 
+	// Debug endpoint - should be removed in production
 	r.Get("/debug-games", func(w http.ResponseWriter, r *http.Request) {
 		gameHandler := games.Handler{App: h.App}
 		gameHandler.GetAllGamesDebug(w, r)
@@ -66,22 +67,22 @@ func (h *Handler) Start() {
 	})
 	apiV1Router.Mount("/auth", authRouter)
 
-	// Games API
+	// Games API - All routes require authentication
 	gamesRouter := chi.NewRouter()
 	gamesRouter.Route("/", func(r chi.Router) {
 		gameHandler := games.Handler{App: h.App}
 
-		// Public routes - all games are visible to everyone
-		r.Get("/public", gameHandler.GetAllGames)
-		r.Get("/recruiting", gameHandler.GetRecruitingGames)
-		r.Get("/{id}", gameHandler.GetGame)
-		r.Get("/{id}/details", gameHandler.GetGameWithDetails)
-		r.Get("/{id}/participants", gameHandler.GetGameParticipants)
-
-		// Protected routes
+		// All routes require authentication
 		r.Group(func(r chi.Router) {
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
+
+			// Game listing and viewing
+			r.Get("/public", gameHandler.GetAllGames)
+			r.Get("/recruiting", gameHandler.GetRecruitingGames)
+			r.Get("/{id}", gameHandler.GetGame)
+			r.Get("/{id}/details", gameHandler.GetGameWithDetails)
+			r.Get("/{id}/participants", gameHandler.GetGameParticipants)
 
 			// Game management
 			r.Post("/", gameHandler.CreateGame)
