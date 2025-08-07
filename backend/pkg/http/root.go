@@ -4,6 +4,7 @@ import (
 	"actionphase/pkg/auth"
 	"actionphase/pkg/characters"
 	"actionphase/pkg/core"
+	"actionphase/pkg/docs"
 	"actionphase/pkg/games"
 	"actionphase/pkg/phases"
 	"net/http"
@@ -25,9 +26,15 @@ func (h *Handler) getTokenAuth() *jwtauth.JWTAuth {
 
 func (h *Handler) Start() {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+
+	// Add observability middleware stack first
+	observabilityMiddleware := h.App.Observability.MiddlewareStack()
+	for _, mw := range observabilityMiddleware {
+		r.Use(mw)
+	}
+
+	// Keep existing middleware for compatibility
 	r.Use(middleware.RequestID)
-	r.Use(middleware.Recoverer)
 	r.Use(middleware.URLFormat)
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 
@@ -38,6 +45,10 @@ func (h *Handler) Start() {
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ponger"))
 	})
+
+	// Observability endpoints
+	r.Get("/health", h.App.Observability.HealthHandler())
+	r.Get("/metrics", h.App.Observability.MetricsHandler())
 
 	// Debug endpoint - should be removed in production
 	r.Get("/debug-games", func(w http.ResponseWriter, r *http.Request) {
@@ -154,6 +165,10 @@ func (h *Handler) Start() {
 		})
 	})
 	apiV1Router.Mount("/phases", phasesRouter)
+
+	// API Documentation routes (public)
+	docsHandler := &docs.Handler{}
+	docsHandler.RegisterRoutes(apiV1Router)
 
 	r.Mount("/api/v1", apiV1Router)
 

@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useErrorHandler } from '../hooks/useErrorHandler';
+import { ErrorDisplay } from './ErrorDisplay';
+import { errorHandlers } from '../lib/errors';
 import type { LoginRequest } from '../types/auth';
 
 interface LoginFormProps {
@@ -11,15 +14,18 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     username: '',
     password: '',
   });
-  const { login, isLoading, error } = useAuth();
+  const { login, isLoading } = useAuth();
+  const { error, handleError, clearError } = useErrorHandler();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
+
     try {
       await login(formData);
       onSuccess?.();
     } catch (err) {
-      // Error is handled by the hook
+      handleError(errorHandlers.authentication(err));
     }
   };
 
@@ -68,11 +74,12 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           />
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-            {(error as any)?.response?.data?.message || 'Login failed. Please try again.'}
-          </div>
-        )}
+        <ErrorDisplay
+          error={error}
+          onRetry={() => handleSubmit(new Event('submit') as any)}
+          onDismiss={clearError}
+          compact
+        />
 
         <button
           type="submit"
