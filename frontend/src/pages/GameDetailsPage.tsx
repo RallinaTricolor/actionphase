@@ -4,6 +4,7 @@ import type { GameWithDetails, GameParticipant, GameState, GameApplication } fro
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
 import { GameApplicationsList } from '../components/GameApplicationsList';
 import { ApplyToGameModal } from '../components/ApplyToGameModal';
+import { CharactersList } from '../components/CharactersList';
 
 interface GameDetailsPageProps {
   gameId: number;
@@ -266,6 +267,15 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
 
         {/* Applications (GM only) */}
         {isGM && <GameApplicationsList gameId={gameId} isGM={isGM} />}
+
+        {/* Characters */}
+        <div className="mb-6">
+          <CharactersList
+            gameId={gameId}
+            userRole={isGM ? 'gm' : 'player'}
+            gameState={game.state}
+          />
+        </div>
 
         {/* Participants */}
         <div className="bg-white rounded-lg shadow-md p-8">

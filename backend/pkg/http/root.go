@@ -2,6 +2,7 @@ package http
 
 import (
 	"actionphase/pkg/auth"
+	"actionphase/pkg/characters"
 	"actionphase/pkg/core"
 	"actionphase/pkg/games"
 	"net/http"
@@ -95,9 +96,34 @@ func (h *Handler) Start() {
 			r.Get("/{id}/applications", gameHandler.GetGameApplications)
 			r.Put("/{id}/applications/{applicationId}/review", gameHandler.ReviewGameApplication)
 			r.Delete("/{id}/application", gameHandler.WithdrawGameApplication)
+
+			// Character management within games
+			characterHandler := characters.Handler{App: h.App}
+			r.Post("/{gameId}/characters", characterHandler.CreateCharacter)
+			r.Get("/{gameId}/characters", characterHandler.GetGameCharacters)
 		})
 	})
 	apiV1Router.Mount("/games", gamesRouter)
+
+	// Characters API (for character-specific operations)
+	charactersRouter := chi.NewRouter()
+	charactersRouter.Route("/", func(r chi.Router) {
+		characterHandler := characters.Handler{App: h.App}
+
+		// All character routes require authentication
+		r.Group(func(r chi.Router) {
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+
+			// Character management
+			r.Get("/{id}", characterHandler.GetCharacter)
+			r.Post("/{id}/approve", characterHandler.ApproveCharacter)
+			r.Post("/{id}/assign", characterHandler.AssignNPC)
+			r.Post("/{id}/data", characterHandler.SetCharacterData)
+			r.Get("/{id}/data", characterHandler.GetCharacterData)
+		})
+	})
+	apiV1Router.Mount("/characters", charactersRouter)
 
 	r.Mount("/api/v1", apiV1Router)
 
