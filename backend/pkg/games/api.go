@@ -19,13 +19,13 @@ type Handler struct {
 }
 
 type CreateGameRequest struct {
-	Title               string     `json:"title" validate:"required,min=3,max=255"`
-	Description         string     `json:"description" validate:"required,min=10"`
-	Genre               string     `json:"genre,omitempty"`
-	StartDate           *time.Time `json:"start_date,omitempty"`
-	EndDate             *time.Time `json:"end_date,omitempty"`
-	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
-	MaxPlayers          int32      `json:"max_players,omitempty"`
+	Title               string              `json:"title" validate:"required,min=3,max=255"`
+	Description         string              `json:"description" validate:"required,min=10"`
+	Genre               string              `json:"genre,omitempty"`
+	StartDate           *core.LocalDateTime `json:"start_date,omitempty"`
+	EndDate             *core.LocalDateTime `json:"end_date,omitempty"`
+	RecruitmentDeadline *core.LocalDateTime `json:"recruitment_deadline,omitempty"`
+	MaxPlayers          int32               `json:"max_players,omitempty"`
 }
 
 func (r *CreateGameRequest) Bind(req *http.Request) error {
@@ -96,9 +96,9 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		Description:         data.Description,
 		GMUserID:            userID,
 		Genre:               data.Genre,
-		StartDate:           data.StartDate,
-		EndDate:             data.EndDate,
-		RecruitmentDeadline: data.RecruitmentDeadline,
+		StartDate:           data.StartDate.ToTimePtr(),
+		EndDate:             data.EndDate.ToTimePtr(),
+		RecruitmentDeadline: data.RecruitmentDeadline.ToTimePtr(),
 		MaxPlayers:          data.MaxPlayers,
 		IsPublic:            true, // All games are now public
 	})

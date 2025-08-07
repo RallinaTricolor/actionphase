@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { GameWithDetails, GameParticipant, GameState, GameApplication } from '../types/games';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
 import { GameApplicationsList } from '../components/GameApplicationsList';
 import { ApplyToGameModal } from '../components/ApplyToGameModal';
 import { CharactersList } from '../components/CharactersList';
+import { CurrentPhaseDisplay } from '../components/CurrentPhaseDisplay';
+import { PhaseManagement } from '../components/PhaseManagement';
+import { ActionSubmission } from '../components/ActionSubmission';
 
 interface GameDetailsPageProps {
   gameId: number;
@@ -19,6 +23,14 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
+
+  // Get current phase data using react-query
+  const { data: currentPhaseData } = useQuery({
+    queryKey: ['currentPhase', gameId],
+    queryFn: () => apiClient.getCurrentPhase(gameId).then(res => res.data),
+    enabled: !!gameId && game?.state === 'in_progress',
+    refetchInterval: 30000, // Refetch every 30 seconds when game is in progress
+  });
 
   useEffect(() => {
     fetchGameData();
@@ -276,6 +288,40 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
             gameState={game.state}
           />
         </div>
+
+        {/* Game Phase Management - Only show when game is in progress */}
+        {game.state === 'in_progress' && (
+          <>
+            {/* Current Phase Display */}
+            <div className="mb-6">
+              <CurrentPhaseDisplay
+                gameId={gameId}
+                isGM={isGM}
+                onPhaseExpired={() => {
+                  // Optionally show a notification or refresh phase data
+                  console.log('Phase expired');
+                }}
+              />
+            </div>
+
+            {/* GM Phase Management */}
+            {isGM && (
+              <div className="mb-6">
+                <PhaseManagement gameId={gameId} />
+              </div>
+            )}
+
+            {/* Action Submission for Players */}
+            {!isGM && (
+              <div className="mb-6">
+                <ActionSubmission
+                  gameId={gameId}
+                  currentPhase={currentPhaseData?.phase}
+                />
+              </div>
+            )}
+          </>
+        )}
 
         {/* Participants */}
         <div className="bg-white rounded-lg shadow-md p-8">
