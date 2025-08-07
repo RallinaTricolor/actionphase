@@ -16,6 +16,7 @@ import (
 
 	"actionphase/pkg/core"
 	"actionphase/pkg/http"
+	"actionphase/pkg/observability"
 )
 
 func main() {
@@ -30,7 +31,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup structured logger with appropriate level
+	// Setup observability system with structured logging and metrics
+	obs := observability.New(config.App.Environment, config.App.LogLevel)
+
+	// Keep backward compatibility with existing slog.Logger
 	logLevel := slog.LevelInfo
 	switch config.App.LogLevel {
 	case "debug":
@@ -77,11 +81,13 @@ func main() {
 
 	logger.Info("Database connection established")
 
-	// Initialize application context
+	// Initialize application context with observability
 	app := &core.App{
-		Logger: *logger,
-		Pool:   pool,
-		Config: config,
+		Logger:        *logger,
+		ObsLogger:     obs.Logger,
+		Pool:          pool,
+		Config:        config,
+		Observability: obs,
 	}
 
 	// Run database migrations if configured

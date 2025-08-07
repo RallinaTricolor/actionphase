@@ -4,3 +4,4 @@
 - Hidden player/character list
 - What tools would make GMing easier?
 - Site administration tools
+- OpenAPI docs in CI

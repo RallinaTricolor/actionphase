@@ -1,0 +1,868 @@
+openapi: 3.0.3
+info:
+  title: ActionPhase API
+  description: |
+    ActionPhase is a specialized platform for running play-by-post RPG games that alternate between two distinct phases:
+    - **Common Room Phase**: Asynchronous, Reddit-style threaded discussions where players interact in-character
+    - **Action Phase**: Players submit private moves to the Game Master, who processes and publishes results
+
+    This API provides access to game management, character creation, and phase management functionality.
+  version: 1.0.0
+  contact:
+    name: ActionPhase Development Team
+    url: https://github.com/actionphase/actionphase
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+  - url: https://api.actionphase.com/api/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Error Response Schema
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: User-friendly status message
+          example: "Bad request."
+        code:
+          type: integer
+          format: int64
+          description: Application-specific error code
+          example: 1001
+        error:
+          type: string
+          description: Detailed error message for debugging
+          example: "username already exists"
+      required:
+        - status
+
+    # User Schemas
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 123
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: "gamemaster_alex"
+        email:
+          type: string
+          format: email
+          example: "alex@example.com"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - email
+
+    # Authentication Schemas
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: "gamemaster_alex"
+        password:
+          type: string
+          minLength: 8
+          example: "secure_password123"
+      required:
+        - username
+        - password
+
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: "new_player"
+        email:
+          type: string
+          format: email
+          example: "player@example.com"
+        password:
+          type: string
+          minLength: 8
+          example: "secure_password123"
+      required:
+        - username
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: JWT access token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      required:
+        - user
+        - token
+
+    # Game Schemas
+    Game:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 456
+        title:
+          type: string
+          minLength: 3
+          maxLength: 255
+          example: "The Chronicles of Eldoria"
+        description:
+          type: string
+          minLength: 10
+          example: "A high-fantasy RPG campaign set in the mystical realm of Eldoria"
+        gm_user_id:
+          type: integer
+          format: int32
+          example: 123
+        state:
+          type: string
+          enum: [setup, recruitment, character_creation, in_progress, paused, completed, cancelled]
+          example: "recruitment"
+        genre:
+          type: string
+          example: "Fantasy RPG"
+        start_date:
+          type: string
+          format: date-time
+          nullable: true
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        recruitment_deadline:
+          type: string
+          format: date-time
+          nullable: true
+        max_players:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 20
+          example: 6
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - description
+        - gm_user_id
+        - state
+
+    GameWithDetails:
+      allOf:
+        - $ref: '#/components/schemas/Game'
+        - type: object
+          properties:
+            current_players:
+              type: integer
+              format: int64
+              example: 4
+            gm_username:
+              type: string
+              example: "gamemaster_alex"
+            is_public:
+              type: boolean
+              example: true
+
+    CreateGameRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 255
+          example: "The Chronicles of Eldoria"
+        description:
+          type: string
+          minLength: 10
+          example: "A high-fantasy RPG campaign set in the mystical realm of Eldoria"
+        genre:
+          type: string
+          example: "Fantasy RPG"
+        start_date:
+          type: string
+          format: date-time
+          nullable: true
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        recruitment_deadline:
+          type: string
+          format: date-time
+          nullable: true
+        max_players:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 20
+          example: 6
+      required:
+        - title
+        - description
+
+    UpdateGameRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 255
+        description:
+          type: string
+          minLength: 10
+        genre:
+          type: string
+        start_date:
+          type: string
+          format: date-time
+          nullable: true
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        recruitment_deadline:
+          type: string
+          format: date-time
+          nullable: true
+        max_players:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 20
+        is_public:
+          type: boolean
+
+    UpdateGameStateRequest:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [setup, recruitment, character_creation, in_progress, paused, completed, cancelled]
+          example: "in_progress"
+      required:
+        - state
+
+    GameParticipant:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int32
+        username:
+          type: string
+        role:
+          type: string
+          enum: [player, audience, gm]
+          example: "player"
+        joined_at:
+          type: string
+          format: date-time
+
+    # Game Application Schemas
+    GameApplication:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        game_id:
+          type: integer
+          format: int32
+        user_id:
+          type: integer
+          format: int32
+        username:
+          type: string
+        message:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        created_at:
+          type: string
+          format: date-time
+
+    ApplyToGameRequest:
+      type: object
+      properties:
+        message:
+          type: string
+          minLength: 10
+          example: "I'm an experienced player looking to join a fantasy campaign"
+      required:
+        - message
+
+    ReviewApplicationRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        response_message:
+          type: string
+          nullable: true
+      required:
+        - status
+
+paths:
+  # Health Check
+  /ping:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Simple health check to verify API is running
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "ponger"
+
+  # Authentication Endpoints
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account and receive an authentication token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate user
+      description: Login with username/password and receive authentication token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    get:
+      tags:
+        - Authentication
+      summary: Refresh authentication token
+      description: Get a new authentication token using existing valid token
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '401':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Game Management Endpoints
+  /games/public:
+    get:
+      tags:
+        - Games
+      summary: Get all public games
+      description: Retrieve a list of all public games
+      responses:
+        '200':
+          description: List of public games
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Game'
+
+  /games/recruiting:
+    get:
+      tags:
+        - Games
+      summary: Get games currently recruiting
+      description: Retrieve games that are actively recruiting new players
+      responses:
+        '200':
+          description: List of recruiting games
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Game'
+
+  /games:
+    post:
+      tags:
+        - Games
+      summary: Create a new game
+      description: Create a new RPG game. Only authenticated users can create games.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGameRequest'
+      responses:
+        '201':
+          description: Game created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /games/{id}:
+    get:
+      tags:
+        - Games
+      summary: Get game by ID
+      description: Retrieve detailed information about a specific game
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Game ID
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Game details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '404':
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Games
+      summary: Update game
+      description: Update game information. Only the game master can update their games.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Game ID
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGameRequest'
+      responses:
+        '200':
+          description: Game updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Only game master can update game
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Games
+      summary: Delete game
+      description: Delete a game. Only the game master can delete their games.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Game ID
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Game deleted successfully
+        '403':
+          description: Only game master can delete game
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /games/{id}/details:
+    get:
+      tags:
+        - Games
+      summary: Get game with detailed information
+      description: Retrieve comprehensive game information including participant count and GM details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Game ID
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Game details with additional information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameWithDetails'
+
+  /games/{id}/state:
+    put:
+      tags:
+        - Games
+      summary: Update game state
+      description: Change the game's current state (e.g., from recruitment to in_progress)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Game ID
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGameStateRequest'
+      responses:
+        '200':
+          description: Game state updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          description: Invalid state transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Only game master can update game state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /games/{id}/participants:
+    get:
+      tags:
+        - Games
+      summary: Get game participants
+      description: Retrieve list of all participants in the game
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Game ID
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: List of game participants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameParticipant'
+
+  /games/{id}/leave:
+    delete:
+      tags:
+        - Games
+      summary: Leave game
+      description: Remove yourself from a game you're participating in
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Game ID
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Successfully left the game
+        '400':
+          description: Cannot leave game (e.g., game master, game in progress)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Game Application Endpoints
+  /games/{id}/apply:
+    post:
+      tags:
+        - Game Applications
+      summary: Apply to join game
+      description: Submit an application to join a game during recruitment phase
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Game ID
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyToGameRequest'
+      responses:
+        '201':
+          description: Application submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameApplication'
+        '400':
+          description: Invalid application or game not accepting applications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /games/{id}/applications:
+    get:
+      tags:
+        - Game Applications
+      summary: Get game applications
+      description: Get all applications for a game (GM only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Game ID
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: List of applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameApplication'
+        '403':
+          description: Only game master can view applications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /games/{id}/applications/{applicationId}/review:
+    put:
+      tags:
+        - Game Applications
+      summary: Review application
+      description: Approve or reject a game application (GM only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Game ID
+          schema:
+            type: integer
+            format: int32
+        - name: applicationId
+          in: path
+          required: true
+          description: Application ID
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewApplicationRequest'
+      responses:
+        '200':
+          description: Application reviewed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameApplication'
+        '403':
+          description: Only game master can review applications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /games/{id}/application:
+    delete:
+      tags:
+        - Game Applications
+      summary: Withdraw application
+      description: Withdraw your pending application to join a game
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Game ID
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Application withdrawn successfully
+        '404':
+          description: No pending application found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Health
+    description: API health and status endpoints
+  - name: Authentication
+    description: User authentication and session management
+  - name: Games
+    description: Game creation, management, and participation
+  - name: Game Applications
+    description: Application system for joining games

@@ -1,8 +1,12 @@
 package core
 
 import (
+	"context"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
+
+	"actionphase/pkg/observability"
 )
 
 // App holds the core application dependencies and configuration.
@@ -28,11 +32,17 @@ type App struct {
 	// Logger provides structured logging throughout the application
 	Logger slog.Logger
 
+	// ObsLogger provides context-aware structured logging with correlation IDs
+	ObsLogger *observability.Logger
+
 	// Pool provides database connection pooling for PostgreSQL
 	Pool *pgxpool.Pool
 
 	// Config holds all application configuration loaded from environment
 	Config *Config
+
+	// Observability provides unified logging, metrics, and tracing
+	Observability *observability.Observability
 }
 
 // Logger interface for dependency injection in middleware and services.
@@ -42,4 +52,15 @@ type Logger interface {
 	Info(msg string, args ...any)
 	Warn(msg string, args ...any)
 	Error(msg string, args ...any)
+}
+
+// ContextLogger interface for context-aware logging with structured fields.
+// This is the preferred interface for new code that supports observability.
+type ContextLogger interface {
+	Debug(ctx context.Context, msg string, args ...any)
+	Info(ctx context.Context, msg string, args ...any)
+	Warn(ctx context.Context, msg string, args ...any)
+	Error(ctx context.Context, msg string, args ...any)
+	LogError(ctx context.Context, err error, msg string, args ...any)
+	LogOperation(ctx context.Context, operation string, args ...any) func()
 }

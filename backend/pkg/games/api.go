@@ -52,27 +52,39 @@ func (rd *GameResponse) Render(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Track the overall operation timing using observability logger
+	defer h.App.ObsLogger.LogOperation(ctx, "api_create_game")()
+
+	// Increment business metric
+	h.App.Observability.Metrics.IncrementCounter("games_create_requests")
+
 	data := &CreateGameRequest{}
 	if err := render.Bind(r, data); err != nil {
+		h.App.ObsLogger.LogError(ctx, err, "Failed to bind create game request")
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
 
 	// TODO: Validate request using validator
 	if data.Title == "" {
+		h.App.ObsLogger.Warn(ctx, "Game creation rejected: missing title")
 		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("title is required")))
 		return
 	}
 
 	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
+	token, _, err := jwtauth.FromContext(ctx)
 	if err != nil {
+		h.App.ObsLogger.LogError(ctx, err, "No valid JWT token found")
 		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
 		return
 	}
 
 	username, ok := token.Get("username")
 	if !ok {
+		h.App.ObsLogger.Error(ctx, "Username not found in JWT token")
 		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
 		return
 	}
@@ -81,12 +93,15 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 	userService := &db.UserService{DB: h.App.Pool}
 	user, err := userService.UserByUsername(username.(string))
 	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
+		h.App.ObsLogger.LogError(ctx, err, "Failed to get user by username",
+			"username", username)
 		render.Render(w, r, core.ErrUnauthorized("user not found"))
 		return
 	}
 
-	h.App.Logger.Info("Found user for game creation", "username", username, "user_id", user.ID)
+	h.App.ObsLogger.Info(ctx, "Found user for game creation",
+		"username", username,
+		"user_id", user.ID)
 	userID := int32(user.ID)
 
 	gameService := &db.GameService{DB: h.App.Pool}
@@ -104,10 +119,20 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		h.App.Logger.Error("Failed to create game", "error", err)
+		h.App.ObsLogger.LogError(ctx, err, "Failed to create game",
+			"title", data.Title,
+			"user_id", userID)
+		h.App.Observability.Metrics.IncrementCounter("games_create_errors")
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
+
+	// Record successful game creation
+	h.App.ObsLogger.Info(ctx, "Game created successfully",
+		"game_id", game.ID,
+		"title", game.Title,
+		"gm_user_id", game.GmUserID)
+	h.App.Observability.Metrics.IncrementCounter("games_created")
 
 	// Convert to response format
 	response := &GameResponse{
