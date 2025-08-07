@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import type { CharacterData, CharacterDataRequest } from '../types/characters';
+import type { CharacterData, CharacterDataRequest, CharacterAbility, CharacterSkill, InventoryItem, CurrencyEntry } from '../types/characters';
 import { CHARACTER_MODULES } from '../types/characters';
+import { AbilitiesManager } from './AbilitiesManager';
+import { InventoryManager } from './InventoryManager';
 
 interface CharacterSheetProps {
   characterId: number;
@@ -52,6 +54,29 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
   const getFieldValue = (moduleType: string, fieldName: string): string => {
     const key = `${moduleType}_${fieldName}`;
     return fieldValues[key] || '';
+  };
+
+  // Parse JSON field values for abilities and inventory
+  const parseJsonField = (moduleType: string, fieldName: string): any => {
+    const value = getFieldValue(moduleType, fieldName);
+    if (!value) return [];
+    try {
+      return JSON.parse(value);
+    } catch {
+      return [];
+    }
+  };
+
+  // Save JSON field values
+  const saveJsonField = (moduleType: string, fieldName: string, data: any) => {
+    const value = JSON.stringify(data);
+    saveCharacterDataMutation.mutate({
+      module_type: moduleType,
+      field_name: fieldName,
+      field_value: value,
+      field_type: 'json',
+      is_public: fieldName !== 'currency' // currency is private, others are public
+    });
   };
 
   // Get field data object
@@ -153,95 +178,115 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
               <p className="text-sm text-gray-600">{module.description}</p>
             </div>
 
-            <div className="space-y-6">
-              {module.fields.map((field) => {
-                const key = `${module.type}_${field.name}`;
-                const fieldData = getFieldData(module.type, field.name);
-                const value = getFieldValue(module.type, field.name);
-                const isEditing = editingField === key;
+            {/* Render specialized components for abilities and inventory modules */}
+            {module.type === 'abilities' ? (
+              <AbilitiesManager
+                abilities={parseJsonField('abilities', 'abilities') as CharacterAbility[]}
+                skills={parseJsonField('abilities', 'skills') as CharacterSkill[]}
+                canEdit={canEdit}
+                onAbilitiesChange={(abilities) => saveJsonField('abilities', 'abilities', abilities)}
+                onSkillsChange={(skills) => saveJsonField('abilities', 'skills', skills)}
+              />
+            ) : module.type === 'inventory' ? (
+              <InventoryManager
+                items={parseJsonField('inventory', 'items') as InventoryItem[]}
+                currency={parseJsonField('inventory', 'currency') as CurrencyEntry[]}
+                canEdit={canEdit}
+                onItemsChange={(items) => saveJsonField('inventory', 'items', items)}
+                onCurrencyChange={(currency) => saveJsonField('inventory', 'currency', currency)}
+              />
+            ) : (
+              /* Regular text-based fields for bio and notes modules */
+              <div className="space-y-6">
+                {module.fields.map((field) => {
+                  const key = `${module.type}_${field.name}`;
+                  const fieldData = getFieldData(module.type, field.name);
+                  const value = getFieldValue(module.type, field.name);
+                  const isEditing = editingField === key;
 
-                return (
-                  <div key={field.name} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          {field.label}
-                          {field.required && <span className="text-red-500 ml-1">*</span>}
-                        </label>
-                        {fieldData && (
-                          <div className="flex items-center space-x-2 mt-1">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              field.isPublic
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {field.isPublic ? 'Public' : 'Private'}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              Last updated: {new Date(fieldData.updated_at).toLocaleDateString()}
-                            </span>
-                          </div>
+                  return (
+                    <div key={field.name} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            {field.label}
+                            {field.required && <span className="text-red-500 ml-1">*</span>}
+                          </label>
+                          {fieldData && (
+                            <div className="flex items-center space-x-2 mt-1">
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                field.isPublic
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {field.isPublic ? 'Public' : 'Private'}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                Last updated: {new Date(fieldData.updated_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {canEdit && !isEditing && (
+                          <button
+                            onClick={() => handleFieldEdit(module.type, field.name)}
+                            className="px-2 py-1 text-xs text-blue-600 hover:text-blue-800 focus:outline-none"
+                          >
+                            Edit
+                          </button>
                         )}
                       </div>
 
-                      {canEdit && !isEditing && (
-                        <button
-                          onClick={() => handleFieldEdit(module.type, field.name)}
-                          className="px-2 py-1 text-xs text-blue-600 hover:text-blue-800 focus:outline-none"
-                        >
-                          Edit
-                        </button>
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <textarea
+                            value={value}
+                            onChange={(e) => handleFieldChange(key, e.target.value)}
+                            placeholder={field.placeholder}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
+                            rows={field.type === 'text' ? 4 : 1}
+                          />
+                          <div className="flex justify-end space-x-2">
+                            <button
+                              onClick={() => setEditingField(null)}
+                              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                              disabled={saveCharacterDataMutation.isPending}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleFieldSave(
+                                module.type,
+                                field.name,
+                                field.type,
+                                field.isPublic ?? true
+                              )}
+                              className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                              disabled={saveCharacterDataMutation.isPending}
+                            >
+                              {saveCharacterDataMutation.isPending ? 'Saving...' : 'Save'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2">
+                          {value ? (
+                            <div className="text-sm text-gray-900 whitespace-pre-wrap">
+                              {value}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-500 italic">
+                              {field.placeholder || 'No content yet...'}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
-
-                    {isEditing ? (
-                      <div className="space-y-3">
-                        <textarea
-                          value={value}
-                          onChange={(e) => handleFieldChange(key, e.target.value)}
-                          placeholder={field.placeholder}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
-                          rows={field.type === 'text' ? 4 : 1}
-                        />
-                        <div className="flex justify-end space-x-2">
-                          <button
-                            onClick={() => setEditingField(null)}
-                            className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                            disabled={saveCharacterDataMutation.isPending}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => handleFieldSave(
-                              module.type,
-                              field.name,
-                              field.type,
-                              field.isPublic ?? true
-                            )}
-                            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                            disabled={saveCharacterDataMutation.isPending}
-                          >
-                            {saveCharacterDataMutation.isPending ? 'Saving...' : 'Save'}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-2">
-                        {value ? (
-                          <div className="text-sm text-gray-900 whitespace-pre-wrap">
-                            {value}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-500 italic">
-                            {field.placeholder || 'No content yet...'}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ))}
 

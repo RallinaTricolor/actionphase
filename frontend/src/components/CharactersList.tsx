@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 import { CreateCharacterModal } from './CreateCharacterModal';
+import { CharacterSheet } from './CharacterSheet';
+import { Modal } from './Modal';
 
 interface CharactersListProps {
   gameId: number;
@@ -18,6 +20,7 @@ export function CharactersList({
   gameState = 'setup'
 }: CharactersListProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const queryClient = useQueryClient();
 
   const { data: characters = [], isLoading } = useQuery({
@@ -54,6 +57,25 @@ export function CharactersList({
   // Check if character belongs to current user
   const isUserCharacter = (character: Character) => {
     return character.user_id === currentUserId;
+  };
+
+  // Check if user can view character sheet
+  const canViewCharacterSheet = (character: Character) => {
+    // GM can view all character sheets
+    if (userRole === 'gm') return true;
+    // Users can view their own characters
+    if (isUserCharacter(character)) return true;
+    // Public view for approved characters (for now, restrict to owner and GM)
+    return false;
+  };
+
+  // Check if user can edit character sheet
+  const canEditCharacterSheet = (character: Character) => {
+    // GM can edit all character sheets
+    if (userRole === 'gm') return true;
+    // Users can edit their own characters if approved
+    if (isUserCharacter(character) && character.status === 'approved') return true;
+    return false;
   };
 
   // Get character status badge styles
@@ -125,6 +147,9 @@ export function CharactersList({
                       userRole={userRole}
                       onApprove={handleApproveCharacter}
                       getStatusBadge={getStatusBadge}
+                      canViewSheet={canViewCharacterSheet(character)}
+                      canEditSheet={canEditCharacterSheet(character)}
+                      onViewSheet={() => setSelectedCharacterId(character.id)}
                     />
                   ))}
                 </div>
@@ -144,6 +169,9 @@ export function CharactersList({
                       userRole={userRole}
                       onApprove={handleApproveCharacter}
                       getStatusBadge={getStatusBadge}
+                      canViewSheet={canViewCharacterSheet(character)}
+                      canEditSheet={canEditCharacterSheet(character)}
+                      onViewSheet={() => setSelectedCharacterId(character.id)}
                     />
                   ))}
                 </div>
@@ -163,6 +191,9 @@ export function CharactersList({
                       userRole={userRole}
                       onApprove={handleApproveCharacter}
                       getStatusBadge={getStatusBadge}
+                      canViewSheet={canViewCharacterSheet(character)}
+                      canEditSheet={canEditCharacterSheet(character)}
+                      onViewSheet={() => setSelectedCharacterId(character.id)}
                     />
                   ))}
                 </div>
@@ -178,6 +209,21 @@ export function CharactersList({
         gameId={gameId}
         userRole={userRole}
       />
+
+      {/* Character Sheet Modal */}
+      {selectedCharacterId && (
+        <Modal
+          isOpen={true}
+          onClose={() => setSelectedCharacterId(null)}
+          title=""
+        >
+          <CharacterSheet
+            characterId={selectedCharacterId}
+            canEdit={canEditCharacterSheet(characters.find(c => c.id === selectedCharacterId) || ({} as Character))}
+            onClose={() => setSelectedCharacterId(null)}
+          />
+        </Modal>
+      )}
     </div>
   );
 }
@@ -188,6 +234,9 @@ interface CharacterCardProps {
   userRole: string;
   onApprove: (characterId: number, status: 'approved' | 'rejected') => void;
   getStatusBadge: (status: string) => string;
+  canViewSheet: boolean;
+  canEditSheet: boolean;
+  onViewSheet: () => void;
 }
 
 function CharacterCard({
@@ -195,7 +244,10 @@ function CharacterCard({
   isOwner,
   userRole,
   onApprove,
-  getStatusBadge
+  getStatusBadge,
+  canViewSheet,
+  canEditSheet,
+  onViewSheet
 }: CharacterCardProps) {
   return (
     <div className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
@@ -223,23 +275,39 @@ function CharacterCard({
           </div>
         </div>
 
-        {/* GM Actions */}
-        {userRole === 'gm' && character.status === 'pending' && (
-          <div className="flex space-x-2 ml-4">
+        <div className="flex flex-col space-y-2 ml-4">
+          {/* View Character Sheet Button */}
+          {canViewSheet && (
             <button
-              onClick={() => onApprove(character.id, 'approved')}
-              className="px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+              onClick={onViewSheet}
+              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                canEditSheet
+                  ? 'text-blue-700 bg-blue-100 hover:bg-blue-200 focus:ring-blue-500'
+                  : 'text-gray-700 bg-gray-100 hover:bg-gray-200 focus:ring-gray-500'
+              } focus:outline-none focus:ring-2`}
             >
-              Approve
+              {canEditSheet ? 'Edit Sheet' : 'View Sheet'}
             </button>
-            <button
-              onClick={() => onApprove(character.id, 'rejected')}
-              className="px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              Reject
-            </button>
-          </div>
-        )}
+          )}
+
+          {/* GM Actions */}
+          {userRole === 'gm' && character.status === 'pending' && (
+            <div className="flex space-x-2">
+              <button
+                onClick={() => onApprove(character.id, 'approved')}
+                className="px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                Approve
+              </button>
+              <button
+                onClick={() => onApprove(character.id, 'rejected')}
+                className="px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                Reject
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -45,6 +45,47 @@ export interface AssignNPCRequest {
   assigned_user_id: number;
 }
 
+// Individual ability/skill item structures for JSON fields
+export interface CharacterAbility {
+  id: string; // UUID or unique identifier
+  name: string;
+  description?: string;
+  type: 'innate' | 'learned' | 'gm_assigned';
+  source?: string; // Who assigned it (GM name, class, etc.)
+  active: boolean;
+  metadata?: Record<string, any>; // For game-specific stats
+}
+
+export interface CharacterSkill {
+  id: string;
+  name: string;
+  level?: number | string; // Could be numeric or descriptive like "Expert"
+  description?: string;
+  category?: string; // e.g., "Combat", "Social", "Academic"
+  metadata?: Record<string, any>;
+}
+
+// Individual inventory item structures for JSON fields
+export interface InventoryItem {
+  id: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  category?: string; // e.g., "Weapon", "Armor", "Consumable", "Tool"
+  condition?: string; // e.g., "Excellent", "Good", "Damaged"
+  value?: number;
+  weight?: number;
+  equipped?: boolean; // For equipment/weapons
+  metadata?: Record<string, any>; // Game-specific properties
+}
+
+export interface CurrencyEntry {
+  id: string;
+  type: string; // e.g., "Gold", "Credits", "XP", "Reputation"
+  amount: number;
+  description?: string;
+}
+
 // Character module types for the modular character sheet system
 export interface CharacterModule {
   type: string;
@@ -112,17 +153,17 @@ export const CHARACTER_MODULES: CharacterModule[] = [
     description: 'Character abilities, skills, and special powers',
     fields: [
       {
-        name: 'abilities_list',
-        type: 'text',
+        name: 'abilities',
+        type: 'json',
         label: 'Abilities',
-        placeholder: 'List your character\'s abilities...',
+        placeholder: 'Manage your character abilities...',
         isPublic: true
       },
       {
         name: 'skills',
-        type: 'text',
+        type: 'json',
         label: 'Skills',
-        placeholder: 'Character skills and proficiencies...',
+        placeholder: 'Manage your character skills...',
         isPublic: true
       }
     ]
@@ -133,17 +174,17 @@ export const CHARACTER_MODULES: CharacterModule[] = [
     description: 'Character possessions and equipment',
     fields: [
       {
-        name: 'equipment',
-        type: 'text',
-        label: 'Equipment',
-        placeholder: 'List your character\'s equipment...',
+        name: 'items',
+        type: 'json',
+        label: 'Items',
+        placeholder: 'Manage your character items...',
         isPublic: true
       },
       {
-        name: 'money',
-        type: 'text',
+        name: 'currency',
+        type: 'json',
         label: 'Currency/Resources',
-        placeholder: 'Gold, credits, resources...',
+        placeholder: 'Track your character\'s resources...',
         isPublic: false
       }
     ]
