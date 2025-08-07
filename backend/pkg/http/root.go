@@ -18,11 +18,9 @@ type Handler struct {
 	App *core.App
 }
 
-var tokenAuth *jwtauth.JWTAuth
-
-func init() {
-	// TODO: Get this from env var
-	tokenAuth = jwtauth.New("HS256", []byte("SECRET"), nil)
+// getTokenAuth creates JWT auth using the app configuration
+func (h *Handler) getTokenAuth() *jwtauth.JWTAuth {
+	return jwtauth.New(h.App.Config.JWT.Algorithm, []byte(h.App.Config.JWT.Secret), nil)
 }
 
 func (h *Handler) Start() {
@@ -60,6 +58,7 @@ func (h *Handler) Start() {
 		r.Post("/login", authHandler.V1Login)
 		r.Group(func(r chi.Router) {
 			// Seek, verify and validate JWT tokens
+			tokenAuth := h.getTokenAuth()
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 			r.Get("/refresh", authHandler.V1Refresh)
@@ -74,6 +73,7 @@ func (h *Handler) Start() {
 
 		// All routes require authentication
 		r.Group(func(r chi.Router) {
+			tokenAuth := h.getTokenAuth()
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 
@@ -123,6 +123,7 @@ func (h *Handler) Start() {
 
 		// All character routes require authentication
 		r.Group(func(r chi.Router) {
+			tokenAuth := h.getTokenAuth()
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 
@@ -143,6 +144,7 @@ func (h *Handler) Start() {
 
 		// All phase routes require authentication
 		r.Group(func(r chi.Router) {
+			tokenAuth := h.getTokenAuth()
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 
@@ -155,5 +157,21 @@ func (h *Handler) Start() {
 
 	r.Mount("/api/v1", apiV1Router)
 
-	http.ListenAndServe(":3000", r)
+	// Create HTTP server with configuration
+	server := &http.Server{
+		Addr:         h.App.Config.GetServerAddress(),
+		Handler:      r,
+		ReadTimeout:  h.App.Config.Server.ReadTimeout,
+		WriteTimeout: h.App.Config.Server.WriteTimeout,
+		IdleTimeout:  h.App.Config.Server.IdleTimeout,
+	}
+
+	h.App.Logger.Info("HTTP server starting",
+		"address", server.Addr,
+		"read_timeout", server.ReadTimeout,
+		"write_timeout", server.WriteTimeout)
+
+	if err := server.ListenAndServe(); err != nil {
+		h.App.Logger.Error("HTTP server failed", "error", err)
+	}
 }

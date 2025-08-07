@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -343,6 +344,7 @@ type TestConfig struct {
 	EnableParallel bool
 	CleanupTables  bool
 	LogLevel       string
+	JWTSecret      string
 }
 
 // LoadTestConfig loads test configuration from environment variables
@@ -352,6 +354,7 @@ func LoadTestConfig() *TestConfig {
 		EnableParallel: getEnvBoolOrDefault("TEST_PARALLEL", false),
 		CleanupTables:  getEnvBoolOrDefault("TEST_CLEANUP", true),
 		LogLevel:       getEnvOrDefault("TEST_LOG_LEVEL", "warn"),
+		JWTSecret:      getEnvOrDefault("TEST_JWT_SECRET", "test_jwt_secret_for_unit_tests_only"),
 	}
 }
 
@@ -374,6 +377,26 @@ func getEnvBoolOrDefault(key string, defaultValue bool) bool {
 		}
 	}
 	return defaultValue
+}
+
+// CreateTestJWTToken creates a JWT token for testing purposes using configurable secret
+func CreateTestJWTToken(username string) (string, error) {
+	config := LoadTestConfig()
+	tokenAuth := jwtauth.New("HS256", []byte(config.JWTSecret), nil)
+
+	claims := map[string]interface{}{
+		"username": username,
+		"exp":      time.Now().Add(time.Hour).Unix(),
+	}
+
+	_, tokenString, err := tokenAuth.Encode(claims)
+	return tokenString, err
+}
+
+// CreateTestTokenAuth creates a JWT auth instance for testing with configurable secret
+func CreateTestTokenAuth() *jwtauth.JWTAuth {
+	config := LoadTestConfig()
+	return jwtauth.New("HS256", []byte(config.JWTSecret), nil)
 }
 
 // CreateTestUserWithCredentials creates a test user and returns both the user and plain password

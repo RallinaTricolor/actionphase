@@ -3,8 +3,6 @@ package core
 import (
 	"testing"
 	"time"
-
-	"github.com/go-chi/jwtauth/v5"
 )
 
 // ExampleImprovedTest demonstrates best practices for test implementation
@@ -104,7 +102,7 @@ func ExampleTestIsolation(t *testing.T) {
 
 // Example of proper JWT token creation for testing
 func ExampleCreateTestToken(username string, expiresIn time.Duration) (string, error) {
-	tokenAuth := jwtauth.New("HS256", []byte("TEST_SECRET"), nil)
+	tokenAuth := CreateTestTokenAuth()
 
 	claims := map[string]interface{}{
 		"username": username,
