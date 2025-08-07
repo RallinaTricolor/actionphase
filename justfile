@@ -70,10 +70,10 @@ run:
 
 # === Backend Testing Commands ===
 test:
-  cd backend && go test ./...
+  cd backend && go test -p 1 ./...
 
 test-verbose:
-  cd backend && go test -v ./...
+  cd backend && go test -p 1 -v ./...
 
 # Fast unit tests using mocks (no database required)
 test-mocks:
@@ -81,10 +81,11 @@ test-mocks:
 
 # Integration tests with database (requires PostgreSQL)
 test-integration:
-  cd backend && go test -v ./pkg/auth/ ./pkg/core/
+  cd backend && go test -p 1 -v ./pkg/auth/ ./pkg/core/
 
-# All tests in parallel for maximum speed
+# All tests in parallel for maximum speed (may fail due to database conflicts)
 test-parallel:
+  @echo "WARNING: Parallel tests may fail due to database conflicts. Use 'just test' for reliable results."
   cd backend && go test -parallel 4 ./...
 
 # Run only mock tests without database dependencies
@@ -92,10 +93,10 @@ test-no-db:
   cd backend && go test -tags="!integration" ./pkg/core/
 
 test-coverage:
-  cd backend && go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html
+  cd backend && go test -p 1 -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html
 
 test-race:
-  cd backend && go test -race ./...
+  cd backend && go test -p 1 -race ./...
 
 test-bench:
   cd backend && go test -bench=. ./...

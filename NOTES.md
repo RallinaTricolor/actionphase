@@ -1,0 +1,5 @@
+- Maps/locations
+- Chatroom style games
+- CI/CD
+- Hidden player/character list
+- What tools would make GMing easier?
