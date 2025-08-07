@@ -3,3 +3,4 @@
 - CI/CD
 - Hidden player/character list
 - What tools would make GMing easier?
+- Site administration tools

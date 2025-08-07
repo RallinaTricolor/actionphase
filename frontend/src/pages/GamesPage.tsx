@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { GamesList } from '../components/GamesList';
 import { CreateGameForm } from '../components/CreateGameForm';
 import { Modal } from '../components/Modal';
@@ -9,14 +10,14 @@ import type { GameListItem } from '../types/games';
 type ViewMode = 'all' | 'recruiting';
 
 export const GamesPage = () => {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('recruiting');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const { isAuthenticated } = useAuth();
 
   const handleGameClick = (game: GameListItem) => {
-    // TODO: Navigate to game details page
-    console.log('Navigate to game:', game.id);
+    navigate(`/games/${game.id}`);
   };
 
   const handleCreateGame = () => {
@@ -25,8 +26,7 @@ export const GamesPage = () => {
 
   const handleCreateSuccess = (gameId: number) => {
     setShowCreateModal(false);
-    // TODO: Navigate to the newly created game
-    console.log('Game created with ID:', gameId);
+    navigate(`/games/${gameId}`);
   };
 
   const handleApplyToGame = async (gameId: number, role: 'player' | 'audience' = 'player', message?: string) => {

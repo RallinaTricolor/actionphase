@@ -1,9 +1,10 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { GamesPage } from './pages/GamesPage';
+import { GameDetailsPage } from './pages/GameDetailsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
 
@@ -38,12 +39,40 @@ function AppRoutes() {
         />
         <Route
           path="/games"
-          element={<GamesPage />}
+          element={
+            <ProtectedRoute>
+              <GamesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/games/:gameId"
+          element={
+            <ProtectedRoute>
+              <GameDetailsPageWrapper />
+            </ProtectedRoute>
+          }
         />
         <Route path="/" element={<HomePage />} />
+        <Route
+          path="*"
+          element={
+            <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
+          }
+        />
       </Routes>
     </Router>
   );
+}
+
+function GameDetailsPageWrapper() {
+  const { gameId } = useParams<{ gameId: string }>();
+
+  if (!gameId) {
+    return <Navigate to="/games" replace />;
+  }
+
+  return <GameDetailsPage gameId={parseInt(gameId, 10)} />;
 }
 
 function App() {
