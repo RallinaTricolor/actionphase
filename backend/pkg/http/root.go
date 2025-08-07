@@ -5,6 +5,7 @@ import (
 	"actionphase/pkg/characters"
 	"actionphase/pkg/core"
 	"actionphase/pkg/games"
+	"actionphase/pkg/phases"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -101,6 +102,15 @@ func (h *Handler) Start() {
 			characterHandler := characters.Handler{App: h.App}
 			r.Post("/{gameId}/characters", characterHandler.CreateCharacter)
 			r.Get("/{gameId}/characters", characterHandler.GetGameCharacters)
+
+			// Phase management within games
+			phaseHandler := phases.Handler{App: h.App}
+			r.Post("/{gameId}/phases", phaseHandler.CreatePhase)
+			r.Get("/{gameId}/current-phase", phaseHandler.GetCurrentPhase)
+			r.Get("/{gameId}/phases", phaseHandler.GetGamePhases)
+			r.Post("/{gameId}/actions", phaseHandler.SubmitAction)
+			r.Get("/{gameId}/actions", phaseHandler.GetGameActions)
+			r.Get("/{gameId}/actions/mine", phaseHandler.GetUserActions)
 		})
 	})
 	apiV1Router.Mount("/games", gamesRouter)
@@ -124,6 +134,23 @@ func (h *Handler) Start() {
 		})
 	})
 	apiV1Router.Mount("/characters", charactersRouter)
+
+	// Phases API (for phase-specific operations)
+	phasesRouter := chi.NewRouter()
+	phasesRouter.Route("/", func(r chi.Router) {
+		phaseHandler := phases.Handler{App: h.App}
+
+		// All phase routes require authentication
+		r.Group(func(r chi.Router) {
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+
+			// Phase management
+			r.Post("/{id}/activate", phaseHandler.ActivatePhase)
+			r.Put("/{id}/deadline", phaseHandler.UpdatePhaseDeadline)
+		})
+	})
+	apiV1Router.Mount("/phases", phasesRouter)
 
 	r.Mount("/api/v1", apiV1Router)
 
