@@ -15,12 +15,12 @@ const addConversationParticipant = `-- name: AddConversationParticipant :one
 INSERT INTO conversation_participants (conversation_id, user_id, character_id)
 VALUES ($1, $2, $3)
 ON CONFLICT (conversation_id, user_id, character_id) DO NOTHING
-RETURNING id, conversation_id, user_id, character_id, joined_at, last_read_at
+RETURNING id, conversation_id, user_id, character_id, joined_at
 `
 
 type AddConversationParticipantParams struct {
 	ConversationID int32
-	UserID         int32
+	UserID         pgtype.Int4
 	CharacterID    pgtype.Int4
 }
 
@@ -33,7 +33,6 @@ func (q *Queries) AddConversationParticipant(ctx context.Context, arg AddConvers
 		&i.UserID,
 		&i.CharacterID,
 		&i.JoinedAt,
-		&i.LastReadAt,
 	)
 	return i, err
 }
@@ -41,12 +40,12 @@ func (q *Queries) AddConversationParticipant(ctx context.Context, arg AddConvers
 const createConversation = `-- name: CreateConversation :one
 INSERT INTO conversations (game_id, conversation_type, title, created_by_user_id)
 VALUES ($1, $2, $3, $4)
-RETURNING id, game_id, conversation_type, title, created_by_user_id, created_at, updated_at
+RETURNING id, game_id, title, conversation_type, created_by_user_id, created_at, updated_at
 `
 
 type CreateConversationParams struct {
 	GameID           int32
-	ConversationType string
+	ConversationType pgtype.Text
 	Title            pgtype.Text
 	CreatedByUserID  int32
 }
@@ -62,8 +61,8 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.ConversationType,
 		&i.Title,
+		&i.ConversationType,
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -74,7 +73,7 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 const createThread = `-- name: CreateThread :one
 INSERT INTO threads (game_id, phase_id, created_by_user_id, title, content)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, game_id, phase_id, created_by_user_id, title, content, is_pinned, created_at, updated_at
+RETURNING id, game_id, phase_id, title, content, created_by_user_id, is_pinned, created_at, updated_at
 `
 
 type CreateThreadParams struct {
@@ -82,7 +81,7 @@ type CreateThreadParams struct {
 	PhaseID         pgtype.Int4
 	CreatedByUserID int32
 	Title           string
-	Content         string
+	Content         pgtype.Text
 }
 
 func (q *Queries) CreateThread(ctx context.Context, arg CreateThreadParams) (Thread, error) {
@@ -98,9 +97,9 @@ func (q *Queries) CreateThread(ctx context.Context, arg CreateThreadParams) (Thr
 		&i.ID,
 		&i.GameID,
 		&i.PhaseID,
-		&i.CreatedByUserID,
 		&i.Title,
 		&i.Content,
+		&i.CreatedByUserID,
 		&i.IsPinned,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -111,7 +110,7 @@ func (q *Queries) CreateThread(ctx context.Context, arg CreateThreadParams) (Thr
 const createThreadPost = `-- name: CreateThreadPost :one
 INSERT INTO thread_posts (thread_id, parent_post_id, user_id, character_id, content)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, thread_id, parent_post_id, user_id, character_id, content, is_edited, created_at, updated_at
+RETURNING id, thread_id, parent_post_id, user_id, character_id, content, created_at, updated_at
 `
 
 type CreateThreadPostParams struct {
@@ -138,7 +137,6 @@ func (q *Queries) CreateThreadPost(ctx context.Context, arg CreateThreadPostPara
 		&i.UserID,
 		&i.CharacterID,
 		&i.Content,
-		&i.IsEdited,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -164,7 +162,7 @@ func (q *Queries) DeleteThreadPost(ctx context.Context, id int32) error {
 }
 
 const getConversation = `-- name: GetConversation :one
-SELECT id, game_id, conversation_type, title, created_by_user_id, created_at, updated_at FROM conversations WHERE id = $1
+SELECT id, game_id, title, conversation_type, created_by_user_id, created_at, updated_at FROM conversations WHERE id = $1
 `
 
 func (q *Queries) GetConversation(ctx context.Context, id int32) (Conversation, error) {
@@ -173,8 +171,8 @@ func (q *Queries) GetConversation(ctx context.Context, id int32) (Conversation, 
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.ConversationType,
 		&i.Title,
+		&i.ConversationType,
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -183,7 +181,7 @@ func (q *Queries) GetConversation(ctx context.Context, id int32) (Conversation, 
 }
 
 const getConversationMessages = `-- name: GetConversationMessages :many
-SELECT pm.id, pm.conversation_id, pm.sender_user_id, pm.sender_character_id, pm.content, pm.created_at, pm.updated_at, u.username as sender_username, c.name as sender_character_name
+SELECT pm.id, pm.conversation_id, pm.sender_user_id, pm.sender_character_id, pm.content, pm.sent_at, pm.created_at, u.username as sender_username, c.name as sender_character_name
 FROM private_messages pm
 JOIN users u ON pm.sender_user_id = u.id
 LEFT JOIN characters c ON pm.sender_character_id = c.id
@@ -194,11 +192,11 @@ ORDER BY pm.created_at
 type GetConversationMessagesRow struct {
 	ID                  int32
 	ConversationID      int32
-	SenderUserID        int32
+	SenderUserID        pgtype.Int4
 	SenderCharacterID   pgtype.Int4
 	Content             string
+	SentAt              pgtype.Timestamptz
 	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
 	SenderUsername      string
 	SenderCharacterName pgtype.Text
 }
@@ -218,8 +216,8 @@ func (q *Queries) GetConversationMessages(ctx context.Context, conversationID in
 			&i.SenderUserID,
 			&i.SenderCharacterID,
 			&i.Content,
+			&i.SentAt,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 			&i.SenderUsername,
 			&i.SenderCharacterName,
 		); err != nil {
@@ -234,7 +232,7 @@ func (q *Queries) GetConversationMessages(ctx context.Context, conversationID in
 }
 
 const getConversationParticipants = `-- name: GetConversationParticipants :many
-SELECT cp.id, cp.conversation_id, cp.user_id, cp.character_id, cp.joined_at, cp.last_read_at, u.username, c.name as character_name
+SELECT cp.id, cp.conversation_id, cp.user_id, cp.character_id, cp.joined_at, u.username, c.name as character_name
 FROM conversation_participants cp
 JOIN users u ON cp.user_id = u.id
 LEFT JOIN characters c ON cp.character_id = c.id
@@ -245,10 +243,9 @@ ORDER BY cp.joined_at
 type GetConversationParticipantsRow struct {
 	ID             int32
 	ConversationID int32
-	UserID         int32
+	UserID         pgtype.Int4
 	CharacterID    pgtype.Int4
 	JoinedAt       pgtype.Timestamptz
-	LastReadAt     pgtype.Timestamptz
 	Username       string
 	CharacterName  pgtype.Text
 }
@@ -268,7 +265,6 @@ func (q *Queries) GetConversationParticipants(ctx context.Context, conversationI
 			&i.UserID,
 			&i.CharacterID,
 			&i.JoinedAt,
-			&i.LastReadAt,
 			&i.Username,
 			&i.CharacterName,
 		); err != nil {
@@ -283,7 +279,7 @@ func (q *Queries) GetConversationParticipants(ctx context.Context, conversationI
 }
 
 const getGameThreads = `-- name: GetGameThreads :many
-SELECT t.id, t.game_id, t.phase_id, t.created_by_user_id, t.title, t.content, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username,
+SELECT t.id, t.game_id, t.phase_id, t.title, t.content, t.created_by_user_id, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username,
        (SELECT COUNT(*) FROM thread_posts WHERE thread_id = t.id) as post_count
 FROM threads t
 JOIN users u ON t.created_by_user_id = u.id
@@ -295,9 +291,9 @@ type GetGameThreadsRow struct {
 	ID              int32
 	GameID          int32
 	PhaseID         pgtype.Int4
-	CreatedByUserID int32
 	Title           string
-	Content         string
+	Content         pgtype.Text
+	CreatedByUserID int32
 	IsPinned        pgtype.Bool
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
@@ -318,9 +314,9 @@ func (q *Queries) GetGameThreads(ctx context.Context, gameID int32) ([]GetGameTh
 			&i.ID,
 			&i.GameID,
 			&i.PhaseID,
-			&i.CreatedByUserID,
 			&i.Title,
 			&i.Content,
+			&i.CreatedByUserID,
 			&i.IsPinned,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -338,7 +334,7 @@ func (q *Queries) GetGameThreads(ctx context.Context, gameID int32) ([]GetGameTh
 }
 
 const getPhaseThreads = `-- name: GetPhaseThreads :many
-SELECT t.id, t.game_id, t.phase_id, t.created_by_user_id, t.title, t.content, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username,
+SELECT t.id, t.game_id, t.phase_id, t.title, t.content, t.created_by_user_id, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username,
        (SELECT COUNT(*) FROM thread_posts WHERE thread_id = t.id) as post_count
 FROM threads t
 JOIN users u ON t.created_by_user_id = u.id
@@ -350,9 +346,9 @@ type GetPhaseThreadsRow struct {
 	ID              int32
 	GameID          int32
 	PhaseID         pgtype.Int4
-	CreatedByUserID int32
 	Title           string
-	Content         string
+	Content         pgtype.Text
+	CreatedByUserID int32
 	IsPinned        pgtype.Bool
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
@@ -373,9 +369,9 @@ func (q *Queries) GetPhaseThreads(ctx context.Context, phaseID pgtype.Int4) ([]G
 			&i.ID,
 			&i.GameID,
 			&i.PhaseID,
-			&i.CreatedByUserID,
 			&i.Title,
 			&i.Content,
+			&i.CreatedByUserID,
 			&i.IsPinned,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -393,7 +389,7 @@ func (q *Queries) GetPhaseThreads(ctx context.Context, phaseID pgtype.Int4) ([]G
 }
 
 const getThread = `-- name: GetThread :one
-SELECT t.id, t.game_id, t.phase_id, t.created_by_user_id, t.title, t.content, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username
+SELECT t.id, t.game_id, t.phase_id, t.title, t.content, t.created_by_user_id, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username
 FROM threads t
 JOIN users u ON t.created_by_user_id = u.id
 WHERE t.id = $1
@@ -403,9 +399,9 @@ type GetThreadRow struct {
 	ID              int32
 	GameID          int32
 	PhaseID         pgtype.Int4
-	CreatedByUserID int32
 	Title           string
-	Content         string
+	Content         pgtype.Text
+	CreatedByUserID int32
 	IsPinned        pgtype.Bool
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
@@ -419,9 +415,9 @@ func (q *Queries) GetThread(ctx context.Context, id int32) (GetThreadRow, error)
 		&i.ID,
 		&i.GameID,
 		&i.PhaseID,
-		&i.CreatedByUserID,
 		&i.Title,
 		&i.Content,
+		&i.CreatedByUserID,
 		&i.IsPinned,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -431,7 +427,7 @@ func (q *Queries) GetThread(ctx context.Context, id int32) (GetThreadRow, error)
 }
 
 const getThreadPost = `-- name: GetThreadPost :one
-SELECT tp.id, tp.thread_id, tp.parent_post_id, tp.user_id, tp.character_id, tp.content, tp.is_edited, tp.created_at, tp.updated_at, u.username, c.name as character_name
+SELECT tp.id, tp.thread_id, tp.parent_post_id, tp.user_id, tp.character_id, tp.content, tp.created_at, tp.updated_at, u.username, c.name as character_name
 FROM thread_posts tp
 JOIN users u ON tp.user_id = u.id
 LEFT JOIN characters c ON tp.character_id = c.id
@@ -445,7 +441,6 @@ type GetThreadPostRow struct {
 	UserID        int32
 	CharacterID   pgtype.Int4
 	Content       string
-	IsEdited      pgtype.Bool
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 	Username      string
@@ -462,7 +457,6 @@ func (q *Queries) GetThreadPost(ctx context.Context, id int32) (GetThreadPostRow
 		&i.UserID,
 		&i.CharacterID,
 		&i.Content,
-		&i.IsEdited,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Username,
@@ -472,7 +466,7 @@ func (q *Queries) GetThreadPost(ctx context.Context, id int32) (GetThreadPostRow
 }
 
 const getThreadPosts = `-- name: GetThreadPosts :many
-SELECT tp.id, tp.thread_id, tp.parent_post_id, tp.user_id, tp.character_id, tp.content, tp.is_edited, tp.created_at, tp.updated_at, u.username, c.name as character_name
+SELECT tp.id, tp.thread_id, tp.parent_post_id, tp.user_id, tp.character_id, tp.content, tp.created_at, tp.updated_at, u.username, c.name as character_name
 FROM thread_posts tp
 JOIN users u ON tp.user_id = u.id
 LEFT JOIN characters c ON tp.character_id = c.id
@@ -487,7 +481,6 @@ type GetThreadPostsRow struct {
 	UserID        int32
 	CharacterID   pgtype.Int4
 	Content       string
-	IsEdited      pgtype.Bool
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 	Username      string
@@ -510,7 +503,6 @@ func (q *Queries) GetThreadPosts(ctx context.Context, threadID int32) ([]GetThre
 			&i.UserID,
 			&i.CharacterID,
 			&i.Content,
-			&i.IsEdited,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Username,
@@ -536,7 +528,7 @@ WHERE cp.user_id = $1 AND cp.conversation_id = $2
 `
 
 type GetUnreadMessageCountParams struct {
-	UserID         int32
+	UserID         pgtype.Int4
 	ConversationID int32
 }
 
@@ -548,7 +540,7 @@ func (q *Queries) GetUnreadMessageCount(ctx context.Context, arg GetUnreadMessag
 }
 
 const getUserConversations = `-- name: GetUserConversations :many
-SELECT c.id, c.game_id, c.conversation_type, c.title, c.created_by_user_id, c.created_at, c.updated_at,
+SELECT c.id, c.game_id, c.title, c.conversation_type, c.created_by_user_id, c.created_at, c.updated_at,
        (SELECT COUNT(*) FROM conversation_participants WHERE conversation_id = c.id) as participant_count,
        (SELECT content FROM private_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
        (SELECT created_at FROM private_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_at
@@ -559,15 +551,15 @@ ORDER BY c.updated_at DESC
 `
 
 type GetUserConversationsParams struct {
-	UserID int32
+	UserID pgtype.Int4
 	GameID int32
 }
 
 type GetUserConversationsRow struct {
 	ID               int32
 	GameID           int32
-	ConversationType string
 	Title            pgtype.Text
+	ConversationType pgtype.Text
 	CreatedByUserID  int32
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
@@ -588,8 +580,8 @@ func (q *Queries) GetUserConversations(ctx context.Context, arg GetUserConversat
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
-			&i.ConversationType,
 			&i.Title,
+			&i.ConversationType,
 			&i.CreatedByUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -616,7 +608,7 @@ SELECT EXISTS(
 
 type IsUserInConversationParams struct {
 	ConversationID int32
-	UserID         int32
+	UserID         pgtype.Int4
 }
 
 func (q *Queries) IsUserInConversation(ctx context.Context, arg IsUserInConversationParams) (bool, error) {
@@ -634,7 +626,7 @@ WHERE conversation_id = $1 AND user_id = $2 AND
 
 type RemoveConversationParticipantParams struct {
 	ConversationID int32
-	UserID         int32
+	UserID         pgtype.Int4
 	CharacterID    pgtype.Int4
 }
 
@@ -646,12 +638,12 @@ func (q *Queries) RemoveConversationParticipant(ctx context.Context, arg RemoveC
 const sendPrivateMessage = `-- name: SendPrivateMessage :one
 INSERT INTO private_messages (conversation_id, sender_user_id, sender_character_id, content)
 VALUES ($1, $2, $3, $4)
-RETURNING id, conversation_id, sender_user_id, sender_character_id, content, created_at, updated_at
+RETURNING id, conversation_id, sender_user_id, sender_character_id, content, sent_at, created_at
 `
 
 type SendPrivateMessageParams struct {
 	ConversationID    int32
-	SenderUserID      int32
+	SenderUserID      pgtype.Int4
 	SenderCharacterID pgtype.Int4
 	Content           string
 }
@@ -670,8 +662,8 @@ func (q *Queries) SendPrivateMessage(ctx context.Context, arg SendPrivateMessage
 		&i.SenderUserID,
 		&i.SenderCharacterID,
 		&i.Content,
+		&i.SentAt,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -680,7 +672,7 @@ const toggleThreadPin = `-- name: ToggleThreadPin :one
 UPDATE threads
 SET is_pinned = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, phase_id, created_by_user_id, title, content, is_pinned, created_at, updated_at
+RETURNING id, game_id, phase_id, title, content, created_by_user_id, is_pinned, created_at, updated_at
 `
 
 type ToggleThreadPinParams struct {
@@ -695,9 +687,9 @@ func (q *Queries) ToggleThreadPin(ctx context.Context, arg ToggleThreadPinParams
 		&i.ID,
 		&i.GameID,
 		&i.PhaseID,
-		&i.CreatedByUserID,
 		&i.Title,
 		&i.Content,
+		&i.CreatedByUserID,
 		&i.IsPinned,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -724,7 +716,7 @@ WHERE conversation_id = $1 AND user_id = $2
 
 type UpdateLastReadTimeParams struct {
 	ConversationID int32
-	UserID         int32
+	UserID         pgtype.Int4
 }
 
 func (q *Queries) UpdateLastReadTime(ctx context.Context, arg UpdateLastReadTimeParams) error {
@@ -736,13 +728,13 @@ const updateThread = `-- name: UpdateThread :one
 UPDATE threads
 SET title = $2, content = $3, updated_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, phase_id, created_by_user_id, title, content, is_pinned, created_at, updated_at
+RETURNING id, game_id, phase_id, title, content, created_by_user_id, is_pinned, created_at, updated_at
 `
 
 type UpdateThreadParams struct {
 	ID      int32
 	Title   string
-	Content string
+	Content pgtype.Text
 }
 
 func (q *Queries) UpdateThread(ctx context.Context, arg UpdateThreadParams) (Thread, error) {
@@ -752,9 +744,9 @@ func (q *Queries) UpdateThread(ctx context.Context, arg UpdateThreadParams) (Thr
 		&i.ID,
 		&i.GameID,
 		&i.PhaseID,
-		&i.CreatedByUserID,
 		&i.Title,
 		&i.Content,
+		&i.CreatedByUserID,
 		&i.IsPinned,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -777,7 +769,7 @@ const updateThreadPost = `-- name: UpdateThreadPost :one
 UPDATE thread_posts
 SET content = $2, is_edited = true, updated_at = NOW()
 WHERE id = $1
-RETURNING id, thread_id, parent_post_id, user_id, character_id, content, is_edited, created_at, updated_at
+RETURNING id, thread_id, parent_post_id, user_id, character_id, content, created_at, updated_at
 `
 
 type UpdateThreadPostParams struct {
@@ -795,7 +787,6 @@ func (q *Queries) UpdateThreadPost(ctx context.Context, arg UpdateThreadPostPara
 		&i.UserID,
 		&i.CharacterID,
 		&i.Content,
-		&i.IsEdited,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

@@ -41,7 +41,7 @@ func TestCharacterWorkflow_CompleteApprovalFlow(t *testing.T) {
 			CharacterType: "player_character",
 		})
 		core.AssertNoError(t, err, "Failed to create character")
-		core.AssertEqual(t, "pending", character.Status, "Character should start as pending")
+		core.AssertEqual(t, "pending", character.Status.String, "Character should start as pending")
 
 		// Step 2: Player adds character data while pending
 		err = characterService.SetCharacterData(context.Background(), services.CharacterDataRequest{
@@ -57,7 +57,7 @@ func TestCharacterWorkflow_CompleteApprovalFlow(t *testing.T) {
 		// Step 3: GM reviews and approves character
 		approved, err := characterService.ApproveCharacter(context.Background(), character.ID)
 		core.AssertNoError(t, err, "GM should be able to approve character")
-		core.AssertEqual(t, "approved", approved.Status, "Character should be approved")
+		core.AssertEqual(t, "approved", approved.Status.String, "Character should be approved")
 
 		// Step 4: Player can still edit approved character data
 		err = characterService.SetCharacterData(context.Background(), services.CharacterDataRequest{
@@ -73,7 +73,7 @@ func TestCharacterWorkflow_CompleteApprovalFlow(t *testing.T) {
 		// Step 5: Verify final state
 		final, err := characterService.GetCharacter(context.Background(), character.ID)
 		core.AssertNoError(t, err, "Should be able to get final character")
-		core.AssertEqual(t, "approved", final.Status, "Character should remain approved")
+		core.AssertEqual(t, "approved", final.Status.String, "Character should remain approved")
 
 		data, err := characterService.GetCharacterData(context.Background(), character.ID)
 		core.AssertNoError(t, err, "Should be able to get character data")
@@ -94,7 +94,7 @@ func TestCharacterWorkflow_CompleteApprovalFlow(t *testing.T) {
 		// GM rejects character
 		rejected, err := characterService.RejectCharacter(context.Background(), character.ID)
 		core.AssertNoError(t, err, "GM should be able to reject character")
-		core.AssertEqual(t, "rejected", rejected.Status, "Character should be rejected")
+		core.AssertEqual(t, "rejected", rejected.Status.String, "Character should be rejected")
 
 		// Player can still edit rejected character (in case they want to resubmit)
 		err = characterService.SetCharacterData(context.Background(), services.CharacterDataRequest{

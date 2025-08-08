@@ -67,7 +67,7 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 
 	game, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:               req.Title,
-		Description:         req.Description,
+		Description:         pgtype.Text{String: req.Description, Valid: req.Description != ""},
 		GmUserID:            req.GMUserID,
 		Genre:               pgtype.Text{String: req.Genre, Valid: req.Genre != ""},
 		StartDate:           startDate,
@@ -106,7 +106,7 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 
 	game, err := queries.UpdateGameState(ctx, models.UpdateGameStateParams{
 		ID:    gameID,
-		State: newState,
+		State: pgtype.Text{String: newState, Valid: true},
 	})
 
 	return &game, err
@@ -229,7 +229,7 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 	game, err := queries.UpdateGame(ctx, models.UpdateGameParams{
 		ID:                  req.ID,
 		Title:               req.Title,
-		Description:         req.Description,
+		Description:         pgtype.Text{String: req.Description, Valid: req.Description != ""},
 		Genre:               pgtype.Text{String: req.Genre, Valid: req.Genre != ""},
 		StartDate:           startDate,
 		EndDate:             endDate,

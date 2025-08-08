@@ -53,7 +53,7 @@ func (cs *CharacterService) CreateCharacter(ctx context.Context, req CreateChara
 		UserID:        userID,
 		Name:          req.Name,
 		CharacterType: req.CharacterType,
-		Status:        "pending", // Default status
+		Status:        pgtype.Text{String: "pending", Valid: true}, // Default status
 	})
 
 	return &character, err
@@ -84,7 +84,7 @@ func (cs *CharacterService) ApproveCharacter(ctx context.Context, characterID in
 	queries := models.New(cs.DB)
 	character, err := queries.UpdateCharacterStatus(ctx, models.UpdateCharacterStatusParams{
 		ID:     characterID,
-		Status: "approved",
+		Status: pgtype.Text{String: "approved", Valid: true},
 	})
 	return &character, err
 }
@@ -93,7 +93,7 @@ func (cs *CharacterService) RejectCharacter(ctx context.Context, characterID int
 	queries := models.New(cs.DB)
 	character, err := queries.UpdateCharacterStatus(ctx, models.UpdateCharacterStatusParams{
 		ID:     characterID,
-		Status: "rejected",
+		Status: pgtype.Text{String: "rejected", Valid: true},
 	})
 	return &character, err
 }
@@ -145,7 +145,7 @@ func (cs *CharacterService) SetCharacterData(ctx context.Context, req CharacterD
 		ModuleType:  req.ModuleType,
 		FieldName:   req.FieldName,
 		FieldValue:  fieldValue,
-		FieldType:   req.FieldType,
+		FieldType:   pgtype.Text{String: req.FieldType, Valid: true},
 		IsPublic:    pgtype.Bool{Bool: req.IsPublic, Valid: true},
 	})
 

@@ -138,9 +138,9 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 	response := &GameResponse{
 		ID:          game.ID,
 		Title:       game.Title,
-		Description: game.Description,
+		Description: game.Description.String,
 		GMUserID:    game.GmUserID,
-		State:       game.State,
+		State:       game.State.String,
 		CreatedAt:   game.CreatedAt.Time,
 		UpdatedAt:   game.UpdatedAt.Time,
 	}
@@ -185,9 +185,9 @@ func (h *Handler) GetGame(w http.ResponseWriter, r *http.Request) {
 	response := &GameResponse{
 		ID:          game.ID,
 		Title:       game.Title,
-		Description: game.Description,
+		Description: game.Description.String,
 		GMUserID:    game.GmUserID,
-		State:       game.State,
+		State:       game.State.String,
 		CreatedAt:   game.CreatedAt.Time,
 		UpdatedAt:   game.UpdatedAt.Time,
 	}
@@ -400,7 +400,7 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If transitioning out of recruitment, convert approved applications to participants
-	if game.State == core.GameStateRecruitment && data.State != core.GameStateRecruitment {
+	if game.State.String == core.GameStateRecruitment && data.State != core.GameStateRecruitment {
 		h.App.Logger.Info("Transitioning out of recruitment, converting approved applications", "game_id", gameID)
 
 		applicationService := &db.GameApplicationService{DB: h.App.Pool}
@@ -426,9 +426,9 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 	response := &GameResponse{
 		ID:          updatedGame.ID,
 		Title:       updatedGame.Title,
-		Description: updatedGame.Description,
+		Description: updatedGame.Description.String,
 		GMUserID:    updatedGame.GmUserID,
-		State:       updatedGame.State,
+		State:       updatedGame.State.String,
 		CreatedAt:   updatedGame.CreatedAt.Time,
 		UpdatedAt:   updatedGame.UpdatedAt.Time,
 	}
@@ -512,9 +512,9 @@ func (h *Handler) UpdateGame(w http.ResponseWriter, r *http.Request) {
 	response := &GameResponse{
 		ID:          updatedGame.ID,
 		Title:       updatedGame.Title,
-		Description: updatedGame.Description,
+		Description: updatedGame.Description.String,
 		GMUserID:    updatedGame.GmUserID,
-		State:       updatedGame.State,
+		State:       updatedGame.State.String,
 		CreatedAt:   updatedGame.CreatedAt.Time,
 		UpdatedAt:   updatedGame.UpdatedAt.Time,
 	}
@@ -617,9 +617,9 @@ func (h *Handler) GetGameWithDetails(w http.ResponseWriter, r *http.Request) {
 	response := &GameWithDetailsResponse{
 		ID:             game.ID,
 		Title:          game.Title,
-		Description:    game.Description,
+		Description:    game.Description.String,
 		GMUserID:       game.GmUserID,
-		State:          game.State,
+		State:          game.State.String,
 		CurrentPlayers: game.CurrentPlayers,
 		CreatedAt:      game.CreatedAt.Time,
 		UpdatedAt:      game.UpdatedAt.Time,
@@ -752,7 +752,7 @@ func (h *Handler) LeaveGame(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Withdraw the application if it's pending
-		if application.Status == core.ApplicationStatusPending {
+		if application.Status.String == core.ApplicationStatusPending {
 			err = applicationService.WithdrawGameApplication(r.Context(), application.ID, userID)
 			if err != nil {
 				h.App.Logger.Error("Failed to withdraw application", "error", err, "application_id", application.ID)
@@ -913,7 +913,7 @@ func (h *Handler) ApplyToGame(w http.ResponseWriter, r *http.Request) {
 		UserID:    application.UserID,
 		Username:  user.Username,
 		Role:      application.Role,
-		Status:    application.Status,
+		Status:    application.Status.String,
 		AppliedAt: application.AppliedAt.Time,
 	}
 
@@ -1134,7 +1134,7 @@ func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) 
 		GameID:    updatedApplication.GameID,
 		UserID:    updatedApplication.UserID,
 		Role:      updatedApplication.Role,
-		Status:    updatedApplication.Status,
+		Status:    updatedApplication.Status.String,
 		AppliedAt: updatedApplication.AppliedAt.Time,
 	}
 
@@ -1196,7 +1196,7 @@ func (h *Handler) WithdrawGameApplication(w http.ResponseWriter, r *http.Request
 	}
 
 	// Only allow withdrawal of pending applications
-	if application.Status != core.ApplicationStatusPending {
+	if application.Status.String != core.ApplicationStatusPending {
 		render.Render(w, r, core.ErrBadRequest(fmt.Errorf("can only withdraw pending applications")))
 		return
 	}

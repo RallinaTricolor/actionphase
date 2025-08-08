@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -124,7 +125,7 @@ func generateID(prefix string) string {
 	bytes := make([]byte, 8)
 	if _, err := rand.Read(bytes); err != nil {
 		// Fallback to timestamp-based ID if random fails
-		return prefix + "_" + string(time.Now().UnixNano())
+		return prefix + "_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	}
 	return prefix + "_" + hex.EncodeToString(bytes)
 }

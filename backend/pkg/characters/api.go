@@ -241,7 +241,7 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 		GameID:        character.GameID,
 		Name:          character.Name,
 		CharacterType: character.CharacterType,
-		Status:        character.Status,
+		Status:        character.Status.String,
 		CreatedAt:     character.CreatedAt.Time,
 		UpdatedAt:     character.UpdatedAt.Time,
 	}
@@ -277,7 +277,7 @@ func (h *Handler) GetCharacter(w http.ResponseWriter, r *http.Request) {
 		GameID:        character.GameID,
 		Name:          character.Name,
 		CharacterType: character.CharacterType,
-		Status:        character.Status,
+		Status:        character.Status.String,
 		CreatedAt:     character.CreatedAt.Time,
 		UpdatedAt:     character.UpdatedAt.Time,
 	}
@@ -406,7 +406,7 @@ func (h *Handler) ApproveCharacter(w http.ResponseWriter, r *http.Request) {
 		GameID:        updatedCharacter.GameID,
 		Name:          updatedCharacter.Name,
 		CharacterType: updatedCharacter.CharacterType,
-		Status:        updatedCharacter.Status,
+		Status:        updatedCharacter.Status.String,
 		CreatedAt:     updatedCharacter.CreatedAt.Time,
 		UpdatedAt:     updatedCharacter.UpdatedAt.Time,
 	}

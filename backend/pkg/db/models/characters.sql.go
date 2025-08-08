@@ -49,7 +49,7 @@ type CreateCharacterParams struct {
 	UserID        pgtype.Int4
 	Name          string
 	CharacterType string
-	Status        string
+	Status        pgtype.Text
 }
 
 func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams) (Character, error) {
@@ -87,7 +87,7 @@ type CreateCharacterDataParams struct {
 	ModuleType  string
 	FieldName   string
 	FieldValue  pgtype.Text
-	FieldType   string
+	FieldType   pgtype.Text
 	IsPublic    pgtype.Bool
 }
 
@@ -266,7 +266,7 @@ type GetCharactersByGameRow struct {
 	UserID        pgtype.Int4
 	Name          string
 	CharacterType string
-	Status        string
+	Status        pgtype.Text
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 	OwnerUsername pgtype.Text
@@ -316,7 +316,7 @@ type GetCharactersByUserRow struct {
 	UserID        pgtype.Int4
 	Name          string
 	CharacterType string
-	Status        string
+	Status        pgtype.Text
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 	GameTitle     string
@@ -385,7 +385,7 @@ type GetNPCsByGameRow struct {
 	UserID           pgtype.Int4
 	Name             string
 	CharacterType    string
-	Status           string
+	Status           pgtype.Text
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
 	OwnerUsername    pgtype.Text
@@ -439,7 +439,7 @@ type GetPlayerCharactersByGameRow struct {
 	UserID        pgtype.Int4
 	Name          string
 	CharacterType string
-	Status        string
+	Status        pgtype.Text
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 	OwnerUsername string
@@ -526,7 +526,7 @@ type GetUserNPCsRow struct {
 	UserID        pgtype.Int4
 	Name          string
 	CharacterType string
-	Status        string
+	Status        pgtype.Text
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 	GameTitle     string
@@ -581,7 +581,7 @@ RETURNING id, game_id, user_id, name, character_type, status, created_at, update
 type UpdateCharacterParams struct {
 	ID     int32
 	Name   string
-	Status string
+	Status pgtype.Text
 }
 
 func (q *Queries) UpdateCharacter(ctx context.Context, arg UpdateCharacterParams) (Character, error) {
@@ -609,7 +609,7 @@ RETURNING id, game_id, user_id, name, character_type, status, created_at, update
 
 type UpdateCharacterStatusParams struct {
 	ID     int32
-	Status string
+	Status pgtype.Text
 }
 
 func (q *Queries) UpdateCharacterStatus(ctx context.Context, arg UpdateCharacterStatusParams) (Character, error) {

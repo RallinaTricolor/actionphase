@@ -15,7 +15,7 @@ const activatePhase = `-- name: ActivatePhase :one
 UPDATE game_phases
 SET is_active = true
 WHERE id = $1
-RETURNING id, game_id, phase_type, phase_number, start_time, end_time, deadline, is_active, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at
 `
 
 func (q *Queries) ActivatePhase(ctx context.Context, id int32) (GamePhase, error) {
@@ -26,6 +26,8 @@ func (q *Queries) ActivatePhase(ctx context.Context, id int32) (GamePhase, error
 		&i.GameID,
 		&i.PhaseType,
 		&i.PhaseNumber,
+		&i.Title,
+		&i.Description,
 		&i.StartTime,
 		&i.EndTime,
 		&i.Deadline,
@@ -35,16 +37,83 @@ func (q *Queries) ActivatePhase(ctx context.Context, id int32) (GamePhase, error
 	return i, err
 }
 
+const canUserSubmitToPhase = `-- name: CanUserSubmitToPhase :one
+SELECT
+    CASE
+        WHEN ph.phase_type != 'action' THEN false
+        WHEN ph.deadline IS NOT NULL AND ph.deadline < NOW() THEN false
+        WHEN NOT ph.is_active THEN false
+        WHEN gp.role != 'player' THEN false
+        ELSE true
+    END as can_submit
+FROM game_phases ph
+JOIN games g ON ph.game_id = g.id
+JOIN game_participants gp ON g.id = gp.game_id
+WHERE ph.id = $1 AND gp.user_id = $2
+`
+
+type CanUserSubmitToPhaseParams struct {
+	ID     int32
+	UserID int32
+}
+
+func (q *Queries) CanUserSubmitToPhase(ctx context.Context, arg CanUserSubmitToPhaseParams) (bool, error) {
+	row := q.db.QueryRow(ctx, canUserSubmitToPhase, arg.ID, arg.UserID)
+	var can_submit bool
+	err := row.Scan(&can_submit)
+	return can_submit, err
+}
+
+const createActionResult = `-- name: CreateActionResult :one
+INSERT INTO action_results (game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at)
+VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6 THEN NOW() ELSE NULL END)
+RETURNING id, game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at
+`
+
+type CreateActionResultParams struct {
+	GameID      int32
+	UserID      int32
+	PhaseID     int32
+	GmUserID    int32
+	Content     string
+	IsPublished pgtype.Bool
+}
+
+func (q *Queries) CreateActionResult(ctx context.Context, arg CreateActionResultParams) (ActionResult, error) {
+	row := q.db.QueryRow(ctx, createActionResult,
+		arg.GameID,
+		arg.UserID,
+		arg.PhaseID,
+		arg.GmUserID,
+		arg.Content,
+		arg.IsPublished,
+	)
+	var i ActionResult
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.UserID,
+		&i.PhaseID,
+		&i.GmUserID,
+		&i.Content,
+		&i.IsPublished,
+		&i.SentAt,
+	)
+	return i, err
+}
+
 const createGamePhase = `-- name: CreateGamePhase :one
-INSERT INTO game_phases (game_id, phase_type, phase_number, start_time, end_time, deadline)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, game_id, phase_type, phase_number, start_time, end_time, deadline, is_active, created_at
+INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, end_time, deadline)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at
 `
 
 type CreateGamePhaseParams struct {
 	GameID      int32
 	PhaseType   string
 	PhaseNumber int32
+	Title       string
+	Description pgtype.Text
 	StartTime   pgtype.Timestamptz
 	EndTime     pgtype.Timestamptz
 	Deadline    pgtype.Timestamptz
@@ -55,6 +124,8 @@ func (q *Queries) CreateGamePhase(ctx context.Context, arg CreateGamePhaseParams
 		arg.GameID,
 		arg.PhaseType,
 		arg.PhaseNumber,
+		arg.Title,
+		arg.Description,
 		arg.StartTime,
 		arg.EndTime,
 		arg.Deadline,
@@ -65,10 +136,49 @@ func (q *Queries) CreateGamePhase(ctx context.Context, arg CreateGamePhaseParams
 		&i.GameID,
 		&i.PhaseType,
 		&i.PhaseNumber,
+		&i.Title,
+		&i.Description,
 		&i.StartTime,
 		&i.EndTime,
 		&i.Deadline,
 		&i.IsActive,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createPhaseTransition = `-- name: CreatePhaseTransition :one
+
+INSERT INTO phase_transitions (game_id, from_phase_id, to_phase_id, initiated_by, reason)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, game_id, from_phase_id, to_phase_id, initiated_by, reason, created_at
+`
+
+type CreatePhaseTransitionParams struct {
+	GameID      int32
+	FromPhaseID pgtype.Int4
+	ToPhaseID   int32
+	InitiatedBy int32
+	Reason      pgtype.Text
+}
+
+// Phase transition queries
+func (q *Queries) CreatePhaseTransition(ctx context.Context, arg CreatePhaseTransitionParams) (PhaseTransition, error) {
+	row := q.db.QueryRow(ctx, createPhaseTransition,
+		arg.GameID,
+		arg.FromPhaseID,
+		arg.ToPhaseID,
+		arg.InitiatedBy,
+		arg.Reason,
+	)
+	var i PhaseTransition
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.FromPhaseID,
+		&i.ToPhaseID,
+		&i.InitiatedBy,
+		&i.Reason,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -89,7 +199,7 @@ const deactivatePhase = `-- name: DeactivatePhase :one
 UPDATE game_phases
 SET is_active = false, end_time = NOW()
 WHERE id = $1
-RETURNING id, game_id, phase_type, phase_number, start_time, end_time, deadline, is_active, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at
 `
 
 func (q *Queries) DeactivatePhase(ctx context.Context, id int32) (GamePhase, error) {
@@ -100,6 +210,8 @@ func (q *Queries) DeactivatePhase(ctx context.Context, id int32) (GamePhase, err
 		&i.GameID,
 		&i.PhaseType,
 		&i.PhaseNumber,
+		&i.Title,
+		&i.Description,
 		&i.StartTime,
 		&i.EndTime,
 		&i.Deadline,
@@ -125,8 +237,73 @@ func (q *Queries) DeleteAction(ctx context.Context, arg DeleteActionParams) erro
 	return err
 }
 
+const deleteActionSubmission = `-- name: DeleteActionSubmission :exec
+DELETE FROM action_submissions
+WHERE id = $1 AND user_id = $2
+`
+
+type DeleteActionSubmissionParams struct {
+	ID     int32
+	UserID int32
+}
+
+func (q *Queries) DeleteActionSubmission(ctx context.Context, arg DeleteActionSubmissionParams) error {
+	_, err := q.db.Exec(ctx, deleteActionSubmission, arg.ID, arg.UserID)
+	return err
+}
+
+const deletePhase = `-- name: DeletePhase :exec
+DELETE FROM game_phases WHERE id = $1
+`
+
+func (q *Queries) DeletePhase(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, deletePhase, id)
+	return err
+}
+
+const getActionResult = `-- name: GetActionResult :one
+SELECT id, game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at FROM action_results WHERE id = $1
+`
+
+func (q *Queries) GetActionResult(ctx context.Context, id int32) (ActionResult, error) {
+	row := q.db.QueryRow(ctx, getActionResult, id)
+	var i ActionResult
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.UserID,
+		&i.PhaseID,
+		&i.GmUserID,
+		&i.Content,
+		&i.IsPublished,
+		&i.SentAt,
+	)
+	return i, err
+}
+
+const getActionSubmission = `-- name: GetActionSubmission :one
+SELECT id, game_id, user_id, phase_id, character_id, content, is_draft, submitted_at, updated_at FROM action_submissions WHERE id = $1
+`
+
+func (q *Queries) GetActionSubmission(ctx context.Context, id int32) (ActionSubmission, error) {
+	row := q.db.QueryRow(ctx, getActionSubmission, id)
+	var i ActionSubmission
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.UserID,
+		&i.PhaseID,
+		&i.CharacterID,
+		&i.Content,
+		&i.IsDraft,
+		&i.SubmittedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getActivePhase = `-- name: GetActivePhase :one
-SELECT id, game_id, phase_type, phase_number, start_time, end_time, deadline, is_active, created_at FROM game_phases
+SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at FROM game_phases
 WHERE game_id = $1 AND is_active = true
 `
 
@@ -138,6 +315,8 @@ func (q *Queries) GetActivePhase(ctx context.Context, gameID int32) (GamePhase, 
 		&i.GameID,
 		&i.PhaseType,
 		&i.PhaseNumber,
+		&i.Title,
+		&i.Description,
 		&i.StartTime,
 		&i.EndTime,
 		&i.Deadline,
@@ -148,7 +327,7 @@ func (q *Queries) GetActivePhase(ctx context.Context, gameID int32) (GamePhase, 
 }
 
 const getGameActions = `-- name: GetGameActions :many
-SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.submitted_at, acts.updated_at, u.username, c.name as character_name, gp.phase_type, gp.phase_number
+SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.is_draft, acts.submitted_at, acts.updated_at, u.username, c.name as character_name, gp.phase_type, gp.phase_number
 FROM action_submissions acts
 JOIN users u ON acts.user_id = u.id
 JOIN game_phases gp ON acts.phase_id = gp.id
@@ -164,6 +343,7 @@ type GetGameActionsRow struct {
 	PhaseID       int32
 	CharacterID   pgtype.Int4
 	Content       string
+	IsDraft       pgtype.Bool
 	SubmittedAt   pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 	Username      string
@@ -188,6 +368,7 @@ func (q *Queries) GetGameActions(ctx context.Context, gameID int32) ([]GetGameAc
 			&i.PhaseID,
 			&i.CharacterID,
 			&i.Content,
+			&i.IsDraft,
 			&i.SubmittedAt,
 			&i.UpdatedAt,
 			&i.Username,
@@ -206,7 +387,7 @@ func (q *Queries) GetGameActions(ctx context.Context, gameID int32) ([]GetGameAc
 }
 
 const getGamePhases = `-- name: GetGamePhases :many
-SELECT id, game_id, phase_type, phase_number, start_time, end_time, deadline, is_active, created_at FROM game_phases
+SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at FROM game_phases
 WHERE game_id = $1
 ORDER BY phase_number
 `
@@ -225,6 +406,8 @@ func (q *Queries) GetGamePhases(ctx context.Context, gameID int32) ([]GamePhase,
 			&i.GameID,
 			&i.PhaseType,
 			&i.PhaseNumber,
+			&i.Title,
+			&i.Description,
 			&i.StartTime,
 			&i.EndTime,
 			&i.Deadline,
@@ -242,10 +425,9 @@ func (q *Queries) GetGamePhases(ctx context.Context, gameID int32) ([]GamePhase,
 }
 
 const getGameResults = `-- name: GetGameResults :many
-SELECT results.id, results.game_id, results.user_id, results.phase_id, results.gm_user_id, results.content, results.sent_at, u.username, gm.username as gm_username, gp.phase_type, gp.phase_number
+SELECT results.id, results.game_id, results.user_id, results.phase_id, results.gm_user_id, results.content, results.is_published, results.sent_at, u.username, gp.phase_type, gp.phase_number
 FROM action_results results
 JOIN users u ON results.user_id = u.id
-JOIN users gm ON results.gm_user_id = gm.id
 JOIN game_phases gp ON results.phase_id = gp.id
 WHERE results.game_id = $1
 ORDER BY gp.phase_number, results.sent_at
@@ -258,9 +440,9 @@ type GetGameResultsRow struct {
 	PhaseID     int32
 	GmUserID    int32
 	Content     string
+	IsPublished pgtype.Bool
 	SentAt      pgtype.Timestamptz
 	Username    string
-	GmUsername  string
 	PhaseType   string
 	PhaseNumber int32
 }
@@ -281,9 +463,9 @@ func (q *Queries) GetGameResults(ctx context.Context, gameID int32) ([]GetGameRe
 			&i.PhaseID,
 			&i.GmUserID,
 			&i.Content,
+			&i.IsPublished,
 			&i.SentAt,
 			&i.Username,
-			&i.GmUsername,
 			&i.PhaseType,
 			&i.PhaseNumber,
 		); err != nil {
@@ -311,7 +493,7 @@ func (q *Queries) GetLatestPhaseNumber(ctx context.Context, gameID int32) (inter
 }
 
 const getPhase = `-- name: GetPhase :one
-SELECT id, game_id, phase_type, phase_number, start_time, end_time, deadline, is_active, created_at FROM game_phases WHERE id = $1
+SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at FROM game_phases WHERE id = $1
 `
 
 func (q *Queries) GetPhase(ctx context.Context, id int32) (GamePhase, error) {
@@ -322,6 +504,8 @@ func (q *Queries) GetPhase(ctx context.Context, id int32) (GamePhase, error) {
 		&i.GameID,
 		&i.PhaseType,
 		&i.PhaseNumber,
+		&i.Title,
+		&i.Description,
 		&i.StartTime,
 		&i.EndTime,
 		&i.Deadline,
@@ -332,7 +516,7 @@ func (q *Queries) GetPhase(ctx context.Context, id int32) (GamePhase, error) {
 }
 
 const getPhaseActions = `-- name: GetPhaseActions :many
-SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.submitted_at, acts.updated_at, u.username, c.name as character_name
+SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.is_draft, acts.submitted_at, acts.updated_at, u.username, c.name as character_name
 FROM action_submissions acts
 JOIN users u ON acts.user_id = u.id
 LEFT JOIN characters c ON acts.character_id = c.id
@@ -347,6 +531,7 @@ type GetPhaseActionsRow struct {
 	PhaseID       int32
 	CharacterID   pgtype.Int4
 	Content       string
+	IsDraft       pgtype.Bool
 	SubmittedAt   pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 	Username      string
@@ -369,6 +554,7 @@ func (q *Queries) GetPhaseActions(ctx context.Context, phaseID int32) ([]GetPhas
 			&i.PhaseID,
 			&i.CharacterID,
 			&i.Content,
+			&i.IsDraft,
 			&i.SubmittedAt,
 			&i.UpdatedAt,
 			&i.Username,
@@ -385,7 +571,7 @@ func (q *Queries) GetPhaseActions(ctx context.Context, phaseID int32) ([]GetPhas
 }
 
 const getPhaseResults = `-- name: GetPhaseResults :many
-SELECT results.id, results.game_id, results.user_id, results.phase_id, results.gm_user_id, results.content, results.sent_at, u.username, gm.username as gm_username
+SELECT results.id, results.game_id, results.user_id, results.phase_id, results.gm_user_id, results.content, results.is_published, results.sent_at, u.username, gm.username as gm_username
 FROM action_results results
 JOIN users u ON results.user_id = u.id
 JOIN users gm ON results.gm_user_id = gm.id
@@ -394,15 +580,16 @@ ORDER BY results.sent_at
 `
 
 type GetPhaseResultsRow struct {
-	ID         int32
-	GameID     int32
-	UserID     int32
-	PhaseID    int32
-	GmUserID   int32
-	Content    string
-	SentAt     pgtype.Timestamptz
-	Username   string
-	GmUsername string
+	ID          int32
+	GameID      int32
+	UserID      int32
+	PhaseID     int32
+	GmUserID    int32
+	Content     string
+	IsPublished pgtype.Bool
+	SentAt      pgtype.Timestamptz
+	Username    string
+	GmUsername  string
 }
 
 func (q *Queries) GetPhaseResults(ctx context.Context, phaseID int32) ([]GetPhaseResultsRow, error) {
@@ -421,6 +608,7 @@ func (q *Queries) GetPhaseResults(ctx context.Context, phaseID int32) ([]GetPhas
 			&i.PhaseID,
 			&i.GmUserID,
 			&i.Content,
+			&i.IsPublished,
 			&i.SentAt,
 			&i.Username,
 			&i.GmUsername,
@@ -435,8 +623,168 @@ func (q *Queries) GetPhaseResults(ctx context.Context, phaseID int32) ([]GetPhas
 	return items, nil
 }
 
+const getPhaseSubmissions = `-- name: GetPhaseSubmissions :many
+SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.is_draft, acts.submitted_at, acts.updated_at, u.username, c.name as character_name
+FROM action_submissions acts
+JOIN users u ON acts.user_id = u.id
+LEFT JOIN characters c ON acts.character_id = c.id
+WHERE acts.phase_id = $1
+ORDER BY acts.submitted_at
+`
+
+type GetPhaseSubmissionsRow struct {
+	ID            int32
+	GameID        int32
+	UserID        int32
+	PhaseID       int32
+	CharacterID   pgtype.Int4
+	Content       string
+	IsDraft       pgtype.Bool
+	SubmittedAt   pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+	Username      string
+	CharacterName pgtype.Text
+}
+
+func (q *Queries) GetPhaseSubmissions(ctx context.Context, phaseID int32) ([]GetPhaseSubmissionsRow, error) {
+	rows, err := q.db.Query(ctx, getPhaseSubmissions, phaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPhaseSubmissionsRow
+	for rows.Next() {
+		var i GetPhaseSubmissionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.UserID,
+			&i.PhaseID,
+			&i.CharacterID,
+			&i.Content,
+			&i.IsDraft,
+			&i.SubmittedAt,
+			&i.UpdatedAt,
+			&i.Username,
+			&i.CharacterName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPhaseTransitions = `-- name: GetPhaseTransitions :many
+SELECT pt.id, pt.game_id, pt.from_phase_id, pt.to_phase_id, pt.initiated_by, pt.reason, pt.created_at,
+       from_phase.phase_type as from_phase_type, from_phase.phase_number as from_phase_number,
+       to_phase.phase_type as to_phase_type, to_phase.phase_number as to_phase_number,
+       u.username as initiated_by_username
+FROM phase_transitions pt
+LEFT JOIN game_phases from_phase ON pt.from_phase_id = from_phase.id
+JOIN game_phases to_phase ON pt.to_phase_id = to_phase.id
+JOIN users u ON pt.initiated_by = u.id
+WHERE pt.game_id = $1
+ORDER BY pt.created_at
+`
+
+type GetPhaseTransitionsRow struct {
+	ID                  int32
+	GameID              int32
+	FromPhaseID         pgtype.Int4
+	ToPhaseID           int32
+	InitiatedBy         int32
+	Reason              pgtype.Text
+	CreatedAt           pgtype.Timestamptz
+	FromPhaseType       pgtype.Text
+	FromPhaseNumber     pgtype.Int4
+	ToPhaseType         string
+	ToPhaseNumber       int32
+	InitiatedByUsername string
+}
+
+func (q *Queries) GetPhaseTransitions(ctx context.Context, gameID int32) ([]GetPhaseTransitionsRow, error) {
+	rows, err := q.db.Query(ctx, getPhaseTransitions, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPhaseTransitionsRow
+	for rows.Next() {
+		var i GetPhaseTransitionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.FromPhaseID,
+			&i.ToPhaseID,
+			&i.InitiatedBy,
+			&i.Reason,
+			&i.CreatedAt,
+			&i.FromPhaseType,
+			&i.FromPhaseNumber,
+			&i.ToPhaseType,
+			&i.ToPhaseNumber,
+			&i.InitiatedByUsername,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSubmissionStatsForPhase = `-- name: GetSubmissionStatsForPhase :one
+SELECT
+    $1::int as phase_id,
+    COUNT(DISTINCT gp.user_id) as total_players,
+    COUNT(DISTINCT CASE WHEN acts.id IS NOT NULL AND NOT acts.is_draft THEN acts.user_id END) as submitted_count,
+    COUNT(DISTINCT CASE WHEN acts.is_draft THEN acts.user_id END) as draft_count,
+    COALESCE(
+        ROUND(
+            (COUNT(DISTINCT CASE WHEN acts.id IS NOT NULL AND NOT acts.is_draft THEN acts.user_id END) * 100.0) /
+            NULLIF(COUNT(DISTINCT gp.user_id), 0),
+            2
+        ),
+        0
+    ) as submission_rate,
+    MAX(acts.submitted_at) as latest_submission
+FROM game_participants gp
+JOIN game_phases ph ON gp.game_id = ph.game_id
+LEFT JOIN action_submissions acts ON gp.user_id = acts.user_id AND acts.phase_id = ph.id
+WHERE ph.id = $1 AND gp.role = 'player'
+`
+
+type GetSubmissionStatsForPhaseRow struct {
+	PhaseID          int32
+	TotalPlayers     int64
+	SubmittedCount   int64
+	DraftCount       int64
+	SubmissionRate   interface{}
+	LatestSubmission interface{}
+}
+
+func (q *Queries) GetSubmissionStatsForPhase(ctx context.Context, dollar_1 int32) (GetSubmissionStatsForPhaseRow, error) {
+	row := q.db.QueryRow(ctx, getSubmissionStatsForPhase, dollar_1)
+	var i GetSubmissionStatsForPhaseRow
+	err := row.Scan(
+		&i.PhaseID,
+		&i.TotalPlayers,
+		&i.SubmittedCount,
+		&i.DraftCount,
+		&i.SubmissionRate,
+		&i.LatestSubmission,
+	)
+	return i, err
+}
+
 const getUserAction = `-- name: GetUserAction :one
-SELECT id, game_id, user_id, phase_id, character_id, content, submitted_at, updated_at FROM action_submissions
+SELECT id, game_id, user_id, phase_id, character_id, content, is_draft, submitted_at, updated_at FROM action_submissions
 WHERE game_id = $1 AND user_id = $2 AND phase_id = $3
 `
 
@@ -456,6 +804,7 @@ func (q *Queries) GetUserAction(ctx context.Context, arg GetUserActionParams) (A
 		&i.PhaseID,
 		&i.CharacterID,
 		&i.Content,
+		&i.IsDraft,
 		&i.SubmittedAt,
 		&i.UpdatedAt,
 	)
@@ -463,7 +812,7 @@ func (q *Queries) GetUserAction(ctx context.Context, arg GetUserActionParams) (A
 }
 
 const getUserActions = `-- name: GetUserActions :many
-SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.submitted_at, acts.updated_at, gp.phase_type, gp.phase_number
+SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.is_draft, acts.submitted_at, acts.updated_at, gp.phase_type, gp.phase_number
 FROM action_submissions acts
 JOIN game_phases gp ON acts.phase_id = gp.id
 WHERE acts.game_id = $1 AND acts.user_id = $2
@@ -482,6 +831,7 @@ type GetUserActionsRow struct {
 	PhaseID     int32
 	CharacterID pgtype.Int4
 	Content     string
+	IsDraft     pgtype.Bool
 	SubmittedAt pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 	PhaseType   string
@@ -504,6 +854,7 @@ func (q *Queries) GetUserActions(ctx context.Context, arg GetUserActionsParams) 
 			&i.PhaseID,
 			&i.CharacterID,
 			&i.Content,
+			&i.IsDraft,
 			&i.SubmittedAt,
 			&i.UpdatedAt,
 			&i.PhaseType,
@@ -519,8 +870,75 @@ func (q *Queries) GetUserActions(ctx context.Context, arg GetUserActionsParams) 
 	return items, nil
 }
 
+const getUserPhaseResults = `-- name: GetUserPhaseResults :many
+SELECT id, game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at FROM action_results
+WHERE phase_id = $1 AND user_id = $2
+ORDER BY sent_at
+`
+
+type GetUserPhaseResultsParams struct {
+	PhaseID int32
+	UserID  int32
+}
+
+func (q *Queries) GetUserPhaseResults(ctx context.Context, arg GetUserPhaseResultsParams) ([]ActionResult, error) {
+	rows, err := q.db.Query(ctx, getUserPhaseResults, arg.PhaseID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ActionResult
+	for rows.Next() {
+		var i ActionResult
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.UserID,
+			&i.PhaseID,
+			&i.GmUserID,
+			&i.Content,
+			&i.IsPublished,
+			&i.SentAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserPhaseSubmission = `-- name: GetUserPhaseSubmission :one
+SELECT id, game_id, user_id, phase_id, character_id, content, is_draft, submitted_at, updated_at FROM action_submissions
+WHERE phase_id = $1 AND user_id = $2
+`
+
+type GetUserPhaseSubmissionParams struct {
+	PhaseID int32
+	UserID  int32
+}
+
+func (q *Queries) GetUserPhaseSubmission(ctx context.Context, arg GetUserPhaseSubmissionParams) (ActionSubmission, error) {
+	row := q.db.QueryRow(ctx, getUserPhaseSubmission, arg.PhaseID, arg.UserID)
+	var i ActionSubmission
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.UserID,
+		&i.PhaseID,
+		&i.CharacterID,
+		&i.Content,
+		&i.IsDraft,
+		&i.SubmittedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserResults = `-- name: GetUserResults :many
-SELECT results.id, results.game_id, results.user_id, results.phase_id, results.gm_user_id, results.content, results.sent_at, gp.phase_type, gp.phase_number, u.username as gm_username
+SELECT results.id, results.game_id, results.user_id, results.phase_id, results.gm_user_id, results.content, results.is_published, results.sent_at, gp.phase_type, gp.phase_number, u.username as gm_username
 FROM action_results results
 JOIN game_phases gp ON results.phase_id = gp.id
 JOIN users u ON results.gm_user_id = u.id
@@ -540,6 +958,7 @@ type GetUserResultsRow struct {
 	PhaseID     int32
 	GmUserID    int32
 	Content     string
+	IsPublished pgtype.Bool
 	SentAt      pgtype.Timestamptz
 	PhaseType   string
 	PhaseNumber int32
@@ -562,6 +981,7 @@ func (q *Queries) GetUserResults(ctx context.Context, arg GetUserResultsParams) 
 			&i.PhaseID,
 			&i.GmUserID,
 			&i.Content,
+			&i.IsPublished,
 			&i.SentAt,
 			&i.PhaseType,
 			&i.PhaseNumber,
@@ -577,28 +997,15 @@ func (q *Queries) GetUserResults(ctx context.Context, arg GetUserResultsParams) 
 	return items, nil
 }
 
-const sendActionResult = `-- name: SendActionResult :one
-INSERT INTO action_results (game_id, user_id, phase_id, gm_user_id, content)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, game_id, user_id, phase_id, gm_user_id, content, sent_at
+const publishActionResult = `-- name: PublishActionResult :one
+UPDATE action_results
+SET is_published = true, sent_at = NOW()
+WHERE id = $1
+RETURNING id, game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at
 `
 
-type SendActionResultParams struct {
-	GameID   int32
-	UserID   int32
-	PhaseID  int32
-	GmUserID int32
-	Content  string
-}
-
-func (q *Queries) SendActionResult(ctx context.Context, arg SendActionResultParams) (ActionResult, error) {
-	row := q.db.QueryRow(ctx, sendActionResult,
-		arg.GameID,
-		arg.UserID,
-		arg.PhaseID,
-		arg.GmUserID,
-		arg.Content,
-	)
+func (q *Queries) PublishActionResult(ctx context.Context, id int32) (ActionResult, error) {
+	row := q.db.QueryRow(ctx, publishActionResult, id)
 	var i ActionResult
 	err := row.Scan(
 		&i.ID,
@@ -607,17 +1014,20 @@ func (q *Queries) SendActionResult(ctx context.Context, arg SendActionResultPara
 		&i.PhaseID,
 		&i.GmUserID,
 		&i.Content,
+		&i.IsPublished,
 		&i.SentAt,
 	)
 	return i, err
 }
 
 const submitAction = `-- name: SubmitAction :one
-INSERT INTO action_submissions (game_id, user_id, phase_id, character_id, content)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (game_id, user_id, phase_id)
-DO UPDATE SET content = $5, character_id = $4, updated_at = NOW()
-RETURNING id, game_id, user_id, phase_id, character_id, content, submitted_at, updated_at
+INSERT INTO action_submissions (game_id, user_id, phase_id, character_id, content, is_draft, submitted_at)
+VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6 THEN NULL ELSE NOW() END)
+ON CONFLICT (phase_id, user_id)
+DO UPDATE SET content = $5, character_id = $4, is_draft = $6,
+              submitted_at = CASE WHEN $6 THEN action_submissions.submitted_at ELSE COALESCE(action_submissions.submitted_at, NOW()) END,
+              updated_at = NOW()
+RETURNING id, game_id, user_id, phase_id, character_id, content, is_draft, submitted_at, updated_at
 `
 
 type SubmitActionParams struct {
@@ -626,6 +1036,7 @@ type SubmitActionParams struct {
 	PhaseID     int32
 	CharacterID pgtype.Int4
 	Content     string
+	IsDraft     pgtype.Bool
 }
 
 func (q *Queries) SubmitAction(ctx context.Context, arg SubmitActionParams) (ActionSubmission, error) {
@@ -635,6 +1046,7 @@ func (q *Queries) SubmitAction(ctx context.Context, arg SubmitActionParams) (Act
 		arg.PhaseID,
 		arg.CharacterID,
 		arg.Content,
+		arg.IsDraft,
 	)
 	var i ActionSubmission
 	err := row.Scan(
@@ -644,8 +1056,53 @@ func (q *Queries) SubmitAction(ctx context.Context, arg SubmitActionParams) (Act
 		&i.PhaseID,
 		&i.CharacterID,
 		&i.Content,
+		&i.IsDraft,
 		&i.SubmittedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updatePhase = `-- name: UpdatePhase :one
+
+UPDATE game_phases
+SET title = $2, description = $3, start_time = $4, end_time = $5, deadline = $6
+WHERE id = $1
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at
+`
+
+type UpdatePhaseParams struct {
+	ID          int32
+	Title       string
+	Description pgtype.Text
+	StartTime   pgtype.Timestamptz
+	EndTime     pgtype.Timestamptz
+	Deadline    pgtype.Timestamptz
+}
+
+// Additional queries for comprehensive phase management
+func (q *Queries) UpdatePhase(ctx context.Context, arg UpdatePhaseParams) (GamePhase, error) {
+	row := q.db.QueryRow(ctx, updatePhase,
+		arg.ID,
+		arg.Title,
+		arg.Description,
+		arg.StartTime,
+		arg.EndTime,
+		arg.Deadline,
+	)
+	var i GamePhase
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.PhaseType,
+		&i.PhaseNumber,
+		&i.Title,
+		&i.Description,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Deadline,
+		&i.IsActive,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -654,7 +1111,7 @@ const updatePhaseDeadline = `-- name: UpdatePhaseDeadline :one
 UPDATE game_phases
 SET deadline = $2
 WHERE id = $1
-RETURNING id, game_id, phase_type, phase_number, start_time, end_time, deadline, is_active, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at
 `
 
 type UpdatePhaseDeadlineParams struct {
@@ -670,6 +1127,8 @@ func (q *Queries) UpdatePhaseDeadline(ctx context.Context, arg UpdatePhaseDeadli
 		&i.GameID,
 		&i.PhaseType,
 		&i.PhaseNumber,
+		&i.Title,
+		&i.Description,
 		&i.StartTime,
 		&i.EndTime,
 		&i.Deadline,
