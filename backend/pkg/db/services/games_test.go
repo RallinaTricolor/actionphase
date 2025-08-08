@@ -62,7 +62,7 @@ func TestGameService_CreateGame(t *testing.T) {
 
 			core.AssertNoError(t, err, "Failed to create game")
 			core.AssertEqual(t, tc.request.Title, game.Title, "Game title mismatch")
-			core.AssertEqual(t, tc.checkState, game.State, "Game state mismatch")
+			core.AssertEqual(t, tc.checkState, game.State.String, "Game state mismatch")
 			core.AssertEqual(t, tc.request.GMUserID, game.GmUserID, "GM user ID mismatch")
 
 			t.Logf("Successfully created game with ID: %d", game.ID)
@@ -116,10 +116,10 @@ func TestGameService_UpdateGameState(t *testing.T) {
 				}
 
 				core.AssertNoError(t, err, "Failed to update game state")
-				core.AssertEqual(t, tt.toState, updatedGame.State, "Game state not updated correctly")
+				core.AssertEqual(t, tt.toState, updatedGame.State.String, "Game state not updated correctly")
 				currentState = tt.toState
 
-				t.Logf("Successfully updated game state to: %s", updatedGame.State)
+				t.Logf("Successfully updated game state to: %s", updatedGame.State.String)
 			})
 		}
 	}
@@ -286,7 +286,7 @@ func TestGameService_UpdateGame(t *testing.T) {
 	core.AssertNoError(t, err, "Failed to update game")
 
 	core.AssertEqual(t, updateReq.Title, updatedGame.Title, "Title not updated")
-	core.AssertEqual(t, updateReq.Description, updatedGame.Description, "Description not updated")
+	core.AssertEqual(t, updateReq.Description, updatedGame.Description.String, "Description not updated")
 	core.AssertEqual(t, updateReq.MaxPlayers, updatedGame.MaxPlayers.Int32, "MaxPlayers not updated")
 	core.AssertEqual(t, updateReq.IsPublic, updatedGame.IsPublic.Bool, "IsPublic not updated")
 }

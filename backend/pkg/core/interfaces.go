@@ -258,6 +258,207 @@ type UpdateGameRequest struct {
 	IsPublic            bool
 }
 
+// PhaseServiceInterface defines the contract for game phase management operations.
+// Handles the alternating Common Room and Action phases that define ActionPhase gameplay.
+//
+// Usage Example:
+//
+//	phaseService := &services.PhaseService{DB: pool}
+//
+//	// Create the first phase for a new game
+//	phase, err := phaseService.CreatePhase(ctx, CreatePhaseRequest{
+//	    GameID:      123,
+//	    PhaseType:   "common_room",
+//	    PhaseNumber: 1,
+//	    Title:       "Opening Scene",
+//	    StartTime:   time.Now(),
+//	    EndTime:     time.Now().Add(48 * time.Hour),
+//	})
+//
+//	// Transition to action phase
+//	actionPhase, err := phaseService.TransitionToNextPhase(ctx, 123, gmUserID,
+//	    TransitionPhaseRequest{
+//	        PhaseType: "action",
+//	        Title:     "Submit Your Actions",
+//	        Deadline:  time.Now().Add(72 * time.Hour),
+//	    })
+//
+//	// Get current active phase
+//	currentPhase, err := phaseService.GetActivePhase(ctx, gameID)
+type PhaseServiceInterface interface {
+	// CreatePhase creates a new phase for a game
+	CreatePhase(ctx context.Context, req CreatePhaseRequest) (*models.GamePhase, error)
+
+	// GetPhase retrieves a specific phase by ID
+	GetPhase(ctx context.Context, phaseID int32) (*models.GamePhase, error)
+
+	// GetActivePhase retrieves the currently active phase for a game
+	GetActivePhase(ctx context.Context, gameID int32) (*models.GamePhase, error)
+
+	// GetGamePhases retrieves all phases for a game in chronological order
+	GetGamePhases(ctx context.Context, gameID int32) ([]models.GamePhase, error)
+
+	// UpdatePhase updates phase details (title, description, times)
+	UpdatePhase(ctx context.Context, req UpdatePhaseRequest) (*models.GamePhase, error)
+
+	// TransitionToNextPhase ends current phase and starts a new one
+	TransitionToNextPhase(ctx context.Context, gameID, userID int32, req TransitionPhaseRequest) (*models.GamePhase, error)
+
+	// ExtendPhaseDeadline extends the end time or deadline of a phase
+	ExtendPhaseDeadline(ctx context.Context, phaseID int32, newDeadline time.Time) (*models.GamePhase, error)
+
+	// ActivatePhase makes a specific phase the active phase for a game
+	ActivatePhase(ctx context.Context, phaseID, userID int32) error
+
+	// DeactivatePhase ends the current active phase
+	DeactivatePhase(ctx context.Context, gameID, userID int32) error
+
+	// GetPhaseHistory retrieves phase transition history for a game
+	GetPhaseHistory(ctx context.Context, gameID int32) ([]PhaseTransitionInfo, error)
+}
+
+// ActionSubmissionServiceInterface defines the contract for action submission operations.
+// Handles player action submissions during Action phases of games.
+//
+// Usage Example:
+//
+//	actionService := &services.ActionSubmissionService{DB: pool}
+//
+//	// Player submits action during action phase
+//	submission, err := actionService.SubmitAction(ctx, SubmitActionRequest{
+//	    GameID:    123,
+//	    PhaseID:   456,
+//	    UserID:    789,
+//	    Content:   richTextContent,
+//	    IsDraft:   false,
+//	})
+//
+//	// GM retrieves all submissions for processing
+//	submissions, err := actionService.GetPhaseSubmissions(ctx, phaseID)
+//
+//	// GM sends result to player
+//	result, err := actionService.CreateActionResult(ctx, CreateActionResultRequest{
+//	    GameID:             123,
+//	    PhaseID:            456,
+//	    UserID:             789,
+//	    ActionSubmissionID: submission.ID,
+//	    Content:            gmResponseContent,
+//	})
+type ActionSubmissionServiceInterface interface {
+	// SubmitAction creates or updates an action submission for a phase
+	SubmitAction(ctx context.Context, req SubmitActionRequest) (*models.ActionSubmission, error)
+
+	// GetActionSubmission retrieves a specific action submission
+	GetActionSubmission(ctx context.Context, submissionID int32) (*models.ActionSubmission, error)
+
+	// GetUserPhaseSubmission retrieves a user's submission for a specific phase
+	GetUserPhaseSubmission(ctx context.Context, phaseID, userID int32) (*models.ActionSubmission, error)
+
+	// GetPhaseSubmissions retrieves all submissions for a phase (GM only)
+	GetPhaseSubmissions(ctx context.Context, phaseID int32) ([]models.ActionSubmission, error)
+
+	// DeleteActionSubmission removes an action submission (before deadline)
+	DeleteActionSubmission(ctx context.Context, submissionID, userID int32) error
+
+	// CreateActionResult creates a GM result for an action submission
+	CreateActionResult(ctx context.Context, req CreateActionResultRequest) (*models.ActionResult, error)
+
+	// GetActionResult retrieves a specific action result
+	GetActionResult(ctx context.Context, resultID int32) (*models.ActionResult, error)
+
+	// GetUserPhaseResults retrieves all results for a user in a phase
+	GetUserPhaseResults(ctx context.Context, phaseID, userID int32) ([]models.ActionResult, error)
+
+	// PublishActionResult makes an action result visible to the player
+	PublishActionResult(ctx context.Context, resultID, userID int32) error
+
+	// GetSubmissionStats returns statistics about submissions for a phase
+	GetSubmissionStats(ctx context.Context, phaseID int32) (*ActionSubmissionStats, error)
+
+	// CanUserSubmitAction checks if user can submit/edit actions for a phase
+	CanUserSubmitAction(ctx context.Context, phaseID, userID int32) (bool, error)
+}
+
+// CreatePhaseRequest represents the parameters needed to create a new game phase
+type CreatePhaseRequest struct {
+	GameID      int32
+	PhaseType   string // "common_room", "action", "results"
+	PhaseNumber int32
+	Title       string
+	Description string
+	StartTime   *time.Time
+	EndTime     *time.Time
+	Deadline    *time.Time // For action phases
+}
+
+// UpdatePhaseRequest represents the parameters needed to update a phase
+type UpdatePhaseRequest struct {
+	ID          int32
+	Title       string
+	Description string
+	StartTime   *time.Time
+	EndTime     *time.Time
+	Deadline    *time.Time
+}
+
+// TransitionPhaseRequest represents the parameters for phase transitions
+type TransitionPhaseRequest struct {
+	PhaseType   string // "common_room", "action", "results"
+	Title       string
+	Description string
+	Duration    *time.Duration // If specified, calculates EndTime from now
+	EndTime     *time.Time     // Explicit end time
+	Deadline    *time.Time     // For action phases
+	Reason      string         // Optional reason for transition
+}
+
+// SubmitActionRequest represents the parameters needed to submit an action
+type SubmitActionRequest struct {
+	GameID      int32
+	PhaseID     int32
+	UserID      int32
+	CharacterID *int32      // Optional reference to character
+	Content     interface{} // Rich text content (JSON)
+	IsDraft     bool
+}
+
+// CreateActionResultRequest represents the parameters needed to create action results
+type CreateActionResultRequest struct {
+	GameID             int32
+	PhaseID            int32
+	UserID             int32
+	ActionSubmissionID *int32      // Optional reference to submission
+	Content            interface{} // Rich text content (JSON)
+	IsPublished        bool
+}
+
+// ActionSubmissionStats provides statistics about action submissions for a phase
+type ActionSubmissionStats struct {
+	PhaseID          int32
+	TotalPlayers     int32
+	SubmittedCount   int32
+	DraftCount       int32
+	SubmissionRate   float64 // Percentage of players who submitted
+	AverageWordCount int32
+	LatestSubmission *time.Time
+}
+
+// PhaseTransitionInfo represents a phase transition record
+type PhaseTransitionInfo struct {
+	ID              int32
+	GameID          int32
+	FromPhaseID     *int32
+	ToPhaseID       int32
+	InitiatedBy     int32
+	Reason          string
+	CreatedAt       time.Time
+	FromPhaseType   string // Type of phase transitioned from
+	ToPhaseType     string // Type of phase transitioned to
+	FromPhaseNum    int32  // Phase number transitioned from
+	ToPhaseNum      int32  // Phase number transitioned to
+	InitiatedByUser string // Username who initiated transition
+}
+
 // CreateGameApplicationRequest represents the parameters needed to create a game application
 type CreateGameApplicationRequest struct {
 	GameID  int32

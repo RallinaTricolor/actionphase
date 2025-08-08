@@ -185,7 +185,7 @@ func (b *GameBuilder) WithRecruitmentDeadline(deadline time.Time) *GameBuilder {
 func (b *GameBuilder) Create() db.Game {
 	params := db.CreateGameParams{
 		Title:       b.title,
-		Description: b.description,
+		Description: pgtype.Text{String: b.description, Valid: true},
 		GmUserID:    b.gmUserID,
 		Genre:       pgtype.Text{String: b.genre, Valid: true},
 		MaxPlayers:  pgtype.Int4{Int32: b.maxPlayers, Valid: true},
@@ -214,7 +214,7 @@ func (b *GameBuilder) Create() db.Game {
 	if b.state != "setup" {
 		updateParams := db.UpdateGameStateParams{
 			ID:    game.ID,
-			State: b.state,
+			State: pgtype.Text{String: b.state, Valid: true},
 		}
 		game, err = queries.UpdateGameState(context.Background(), updateParams)
 		if err != nil {
@@ -361,7 +361,7 @@ func (b *GameParticipantBuilder) Create() db.GameParticipant {
 		updateParams := db.UpdateParticipantStatusParams{
 			GameID: b.gameID,
 			UserID: b.userID,
-			Status: b.status,
+			Status: pgtype.Text{String: b.status, Valid: true},
 		}
 		participant, err = queries.UpdateParticipantStatus(context.Background(), updateParams)
 		if err != nil {

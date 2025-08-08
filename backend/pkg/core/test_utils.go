@@ -212,7 +212,7 @@ func (td *TestDatabase) CreateTestGame(t TestingInterface, gmUserID int32, title
 
 	game, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:       title,
-		Description: "Test game created for testing purposes",
+		Description: pgtype.Text{String: "Test game created for testing purposes", Valid: true},
 		GmUserID:    gmUserID,
 		Genre:       pgtype.Text{String: "Test", Valid: true},
 		MaxPlayers:  pgtype.Int4{Int32: 6, Valid: true},

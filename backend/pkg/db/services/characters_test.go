@@ -98,7 +98,7 @@ func TestCharacterService_CreateCharacter(t *testing.T) {
 				core.AssertNoError(t, err, "Failed to create character")
 				core.AssertEqual(t, tc.request.Name, character.Name, "Character name mismatch")
 				core.AssertEqual(t, tc.request.CharacterType, character.CharacterType, "Character type mismatch")
-				core.AssertEqual(t, "pending", character.Status, "Character should start with pending status")
+				core.AssertEqual(t, "pending", character.Status.String, "Character should start with pending status")
 
 				if tc.request.UserID != nil {
 					core.AssertEqual(t, true, character.UserID.Valid, "Character should have user ID")
@@ -225,7 +225,7 @@ func TestCharacterService_ApproveRejectCharacter(t *testing.T) {
 	t.Run("approve character", func(t *testing.T) {
 		approved, err := characterService.ApproveCharacter(context.Background(), character.ID)
 		core.AssertNoError(t, err, "Failed to approve character")
-		core.AssertEqual(t, "approved", approved.Status, "Character should be approved")
+		core.AssertEqual(t, "approved", approved.Status.String, "Character should be approved")
 	})
 
 	// Create another character for rejection test
@@ -241,7 +241,7 @@ func TestCharacterService_ApproveRejectCharacter(t *testing.T) {
 	t.Run("reject character", func(t *testing.T) {
 		rejected, err := characterService.RejectCharacter(context.Background(), character2.ID)
 		core.AssertNoError(t, err, "Failed to reject character")
-		core.AssertEqual(t, "rejected", rejected.Status, "Character should be rejected")
+		core.AssertEqual(t, "rejected", rejected.Status.String, "Character should be rejected")
 	})
 
 	// Test approval of nonexistent character

@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Example of how to use repository mocks for fast unit testing
@@ -89,7 +91,7 @@ func TestGameService_CreateAndRetrieveGame(t *testing.T) {
 
 	gameParams := db.CreateGameParams{
 		Title:       "Test Adventure",
-		Description: "A test RPG game",
+		Description: pgtype.Text{String: "A test RPG game", Valid: true},
 		GmUserID:    1,
 	}
 
@@ -131,7 +133,7 @@ func TestSessionService_CreateAndRetrieve(t *testing.T) {
 	}
 
 	if session.Data != sessionParams.Data {
-		t.Errorf("Expected session data %s, got %s", sessionParams.Data, session.Data)
+		t.Errorf("Expected session token %s, got %s", sessionParams.Data, session.Data)
 	}
 
 	// Retrieve by token

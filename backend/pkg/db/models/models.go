@@ -9,13 +9,14 @@ import (
 )
 
 type ActionResult struct {
-	ID       int32
-	GameID   int32
-	UserID   int32
-	PhaseID  int32
-	GmUserID int32
-	Content  string
-	SentAt   pgtype.Timestamptz
+	ID          int32
+	GameID      int32
+	UserID      int32
+	PhaseID     int32
+	GmUserID    int32
+	Content     string
+	IsPublished pgtype.Bool
+	SentAt      pgtype.Timestamptz
 }
 
 type ActionSubmission struct {
@@ -25,6 +26,7 @@ type ActionSubmission struct {
 	PhaseID     int32
 	CharacterID pgtype.Int4
 	Content     string
+	IsDraft     pgtype.Bool
 	SubmittedAt pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 }
@@ -35,7 +37,7 @@ type Character struct {
 	UserID        pgtype.Int4
 	Name          string
 	CharacterType string
-	Status        string
+	Status        pgtype.Text
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 }
@@ -46,7 +48,7 @@ type CharacterDatum struct {
 	ModuleType  string
 	FieldName   string
 	FieldValue  pgtype.Text
-	FieldType   string
+	FieldType   pgtype.Text
 	IsPublic    pgtype.Bool
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
@@ -55,8 +57,8 @@ type CharacterDatum struct {
 type Conversation struct {
 	ID               int32
 	GameID           int32
-	ConversationType string
 	Title            pgtype.Text
+	ConversationType pgtype.Text
 	CreatedByUserID  int32
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
@@ -65,18 +67,17 @@ type Conversation struct {
 type ConversationParticipant struct {
 	ID             int32
 	ConversationID int32
-	UserID         int32
+	UserID         pgtype.Int4
 	CharacterID    pgtype.Int4
 	JoinedAt       pgtype.Timestamptz
-	LastReadAt     pgtype.Timestamptz
 }
 
 type Game struct {
 	ID                  int32
 	Title               string
-	Description         string
+	Description         pgtype.Text
 	GmUserID            int32
-	State               string
+	State               pgtype.Text
 	Genre               pgtype.Text
 	StartDate           pgtype.Timestamptz
 	EndDate             pgtype.Timestamptz
@@ -93,10 +94,12 @@ type GameApplication struct {
 	UserID           int32
 	Role             string
 	Message          pgtype.Text
-	Status           string
-	AppliedAt        pgtype.Timestamptz
-	ReviewedAt       pgtype.Timestamptz
+	Status           pgtype.Text
 	ReviewedByUserID pgtype.Int4
+	ReviewedAt       pgtype.Timestamptz
+	AppliedAt        pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
 }
 
 type GameParticipant struct {
@@ -104,7 +107,7 @@ type GameParticipant struct {
 	GameID   int32
 	UserID   int32
 	Role     string
-	Status   string
+	Status   pgtype.Text
 	JoinedAt pgtype.Timestamptz
 }
 
@@ -113,6 +116,8 @@ type GamePhase struct {
 	GameID      int32
 	PhaseType   string
 	PhaseNumber int32
+	Title       string
+	Description pgtype.Text
 	StartTime   pgtype.Timestamptz
 	EndTime     pgtype.Timestamptz
 	Deadline    pgtype.Timestamptz
@@ -124,11 +129,11 @@ type Notification struct {
 	ID                int32
 	UserID            int32
 	GameID            pgtype.Int4
+	RelatedEntityType pgtype.Text
+	RelatedEntityID   pgtype.Int4
 	NotificationType  string
 	Title             string
 	Content           pgtype.Text
-	RelatedEntityType pgtype.Text
-	RelatedEntityID   pgtype.Int4
 	IsRead            pgtype.Bool
 	CreatedAt         pgtype.Timestamptz
 }
@@ -141,14 +146,24 @@ type NpcAssignment struct {
 	AssignedAt       pgtype.Timestamptz
 }
 
+type PhaseTransition struct {
+	ID          int32
+	GameID      int32
+	FromPhaseID pgtype.Int4
+	ToPhaseID   int32
+	InitiatedBy int32
+	Reason      pgtype.Text
+	CreatedAt   pgtype.Timestamptz
+}
+
 type PrivateMessage struct {
 	ID                int32
 	ConversationID    int32
-	SenderUserID      int32
+	SenderUserID      pgtype.Int4
 	SenderCharacterID pgtype.Int4
 	Content           string
+	SentAt            pgtype.Timestamptz
 	CreatedAt         pgtype.Timestamptz
-	UpdatedAt         pgtype.Timestamptz
 }
 
 type Session struct {
@@ -162,9 +177,9 @@ type Thread struct {
 	ID              int32
 	GameID          int32
 	PhaseID         pgtype.Int4
-	CreatedByUserID int32
 	Title           string
-	Content         string
+	Content         pgtype.Text
+	CreatedByUserID int32
 	IsPinned        pgtype.Bool
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
@@ -177,7 +192,6 @@ type ThreadPost struct {
 	UserID       int32
 	CharacterID  pgtype.Int4
 	Content      string
-	IsEdited     pgtype.Bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 }
@@ -185,10 +199,10 @@ type ThreadPost struct {
 type User struct {
 	ID                 int32
 	Username           string
-	Password           string
 	Email              string
-	CreatedAt          pgtype.Timestamp
+	Password           string
 	IsAdmin            pgtype.Bool
+	CreatedAt          pgtype.Timestamp
 	DisplayName        pgtype.Text
 	Bio                pgtype.Text
 	Timezone           pgtype.Text

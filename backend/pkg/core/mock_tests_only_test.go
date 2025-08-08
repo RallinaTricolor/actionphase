@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // This file contains only mock-based tests that don't require a database
@@ -88,7 +90,7 @@ func TestMocks_GameService_CreateAndRetrieveGame(t *testing.T) {
 
 	gameParams := db.CreateGameParams{
 		Title:       "Test Adventure",
-		Description: "A test RPG game",
+		Description: pgtype.Text{String: "A test RPG game", Valid: true},
 		GmUserID:    1,
 	}
 
@@ -160,7 +162,7 @@ func TestMocks_SessionService_CreateAndRetrieve(t *testing.T) {
 	}
 
 	if session.Data != sessionParams.Data {
-		t.Errorf("Expected session data %s, got %s", sessionParams.Data, session.Data)
+		t.Errorf("Expected session token %s, got %s", sessionParams.Data, session.Data)
 	}
 
 	retrievedSession, err := mockRepo.Session.GetSessionByToken(context.Background(), sessionParams.Data)

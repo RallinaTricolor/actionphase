@@ -79,7 +79,7 @@ INSERT INTO games (
 
 type CreateGameParams struct {
 	Title               string
-	Description         string
+	Description         pgtype.Text
 	GmUserID            int32
 	Genre               pgtype.Text
 	StartDate           pgtype.Timestamptz
@@ -140,9 +140,9 @@ ORDER BY games.id DESC
 type GetAllGamesRow struct {
 	ID                  int32
 	Title               string
-	Description         string
+	Description         pgtype.Text
 	GmUserID            int32
-	State               string
+	State               pgtype.Text
 	Genre               pgtype.Text
 	StartDate           pgtype.Timestamptz
 	EndDate             pgtype.Timestamptz
@@ -239,7 +239,7 @@ type GetGameParticipantsRow struct {
 	GameID   int32
 	UserID   int32
 	Role     string
-	Status   string
+	Status   pgtype.Text
 	JoinedAt pgtype.Timestamptz
 	Username string
 	Email    string
@@ -293,9 +293,9 @@ WHERE g.id = $1
 type GetGameWithDetailsRow struct {
 	ID                  int32
 	Title               string
-	Description         string
+	Description         pgtype.Text
 	GmUserID            int32
-	State               string
+	State               pgtype.Text
 	Genre               pgtype.Text
 	StartDate           pgtype.Timestamptz
 	EndDate             pgtype.Timestamptz
@@ -381,9 +381,9 @@ ORDER BY g.updated_at DESC
 type GetGamesByUserRow struct {
 	ID                  int32
 	Title               string
-	Description         string
+	Description         pgtype.Text
 	GmUserID            int32
-	State               string
+	State               pgtype.Text
 	Genre               pgtype.Text
 	StartDate           pgtype.Timestamptz
 	EndDate             pgtype.Timestamptz
@@ -509,9 +509,9 @@ ORDER BY games.created_at DESC
 type GetRecruitingGamesRow struct {
 	ID                  int32
 	Title               string
-	Description         string
+	Description         pgtype.Text
 	GmUserID            int32
-	State               string
+	State               pgtype.Text
 	Genre               pgtype.Text
 	StartDate           pgtype.Timestamptz
 	EndDate             pgtype.Timestamptz
@@ -606,7 +606,7 @@ RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date
 type UpdateGameParams struct {
 	ID                  int32
 	Title               string
-	Description         string
+	Description         pgtype.Text
 	Genre               pgtype.Text
 	StartDate           pgtype.Timestamptz
 	EndDate             pgtype.Timestamptz
@@ -667,7 +667,7 @@ SELECT gu.id, gu.title, gu.description, gu.gm_user_id, gu.state, gu.genre, gu.st
 type UpdateGameAndAddGMParams struct {
 	ID                  int32
 	Title               string
-	Description         string
+	Description         pgtype.Text
 	Genre               pgtype.Text
 	StartDate           pgtype.Timestamptz
 	EndDate             pgtype.Timestamptz
@@ -679,9 +679,9 @@ type UpdateGameAndAddGMParams struct {
 type UpdateGameAndAddGMRow struct {
 	ID                  int32
 	Title               string
-	Description         string
+	Description         pgtype.Text
 	GmUserID            int32
-	State               string
+	State               pgtype.Text
 	Genre               pgtype.Text
 	StartDate           pgtype.Timestamptz
 	EndDate             pgtype.Timestamptz
@@ -732,7 +732,7 @@ RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date
 
 type UpdateGameStateParams struct {
 	ID    int32
-	State string
+	State pgtype.Text
 }
 
 func (q *Queries) UpdateGameState(ctx context.Context, arg UpdateGameStateParams) (Game, error) {
@@ -766,7 +766,7 @@ RETURNING id, game_id, user_id, role, status, joined_at
 type UpdateParticipantStatusParams struct {
 	GameID int32
 	UserID int32
-	Status string
+	Status pgtype.Text
 }
 
 func (q *Queries) UpdateParticipantStatus(ctx context.Context, arg UpdateParticipantStatusParams) (GameParticipant, error) {

@@ -74,6 +74,7 @@ func (r *UpdateDeadlineRequest) Bind(req *http.Request) error {
 type SubmitActionRequest struct {
 	CharacterID *int32 `json:"character_id,omitempty"`
 	Content     string `json:"content" validate:"required"`
+	IsDraft     bool   `json:"is_draft,omitempty"`
 }
 
 func (r *SubmitActionRequest) Bind(req *http.Request) error {
@@ -190,7 +191,7 @@ func (h *Handler) CreatePhase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create phase
-	req := services.CreatePhaseRequest{
+	req := core.CreatePhaseRequest{
 		GameID:    int32(gameID),
 		PhaseType: data.PhaseType,
 		StartTime: data.StartTime.ToTimePtr(),
@@ -341,9 +342,17 @@ func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Activate phase
-	activePhase, err := phaseService.ActivatePhase(r.Context(), int32(phaseID))
+	err = phaseService.ActivatePhase(r.Context(), int32(phaseID), int32(user.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to activate phase", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Get the updated phase after activation
+	activePhase, err := phaseService.GetPhase(r.Context(), int32(phaseID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get activated phase", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -486,12 +495,13 @@ func (h *Handler) SubmitAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Submit action
-	req := services.ActionSubmissionRequest{
+	req := core.SubmitActionRequest{
 		GameID:      int32(gameID),
 		UserID:      int32(user.ID),
 		PhaseID:     activePhase.ID,
 		CharacterID: data.CharacterID,
 		Content:     data.Content,
+		IsDraft:     data.IsDraft,
 	}
 
 	action, err := phaseService.SubmitAction(r.Context(), req)

@@ -69,7 +69,7 @@ INSERT INTO game_applications (
     game_id, user_id, role, message
 ) VALUES (
     $1, $2, $3, $4
-) RETURNING id, game_id, user_id, role, message, status, applied_at, reviewed_at, reviewed_by_user_id
+) RETURNING id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, created_at, updated_at
 `
 
 type CreateGameApplicationParams struct {
@@ -94,9 +94,11 @@ func (q *Queries) CreateGameApplication(ctx context.Context, arg CreateGameAppli
 		&i.Role,
 		&i.Message,
 		&i.Status,
-		&i.AppliedAt,
-		&i.ReviewedAt,
 		&i.ReviewedByUserID,
+		&i.ReviewedAt,
+		&i.AppliedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -117,7 +119,7 @@ func (q *Queries) DeleteGameApplication(ctx context.Context, arg DeleteGameAppli
 
 const getApprovedApplicationsForGame = `-- name: GetApprovedApplicationsForGame :many
 SELECT
-    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.applied_at, ga.reviewed_at, ga.reviewed_by_user_id,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.created_at, ga.updated_at,
     u.username,
     u.email
 FROM game_applications ga
@@ -132,10 +134,12 @@ type GetApprovedApplicationsForGameRow struct {
 	UserID           int32
 	Role             string
 	Message          pgtype.Text
-	Status           string
-	AppliedAt        pgtype.Timestamptz
-	ReviewedAt       pgtype.Timestamptz
+	Status           pgtype.Text
 	ReviewedByUserID pgtype.Int4
+	ReviewedAt       pgtype.Timestamptz
+	AppliedAt        pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
 	Username         string
 	Email            string
 }
@@ -156,9 +160,11 @@ func (q *Queries) GetApprovedApplicationsForGame(ctx context.Context, gameID int
 			&i.Role,
 			&i.Message,
 			&i.Status,
-			&i.AppliedAt,
-			&i.ReviewedAt,
 			&i.ReviewedByUserID,
+			&i.ReviewedAt,
+			&i.AppliedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.Username,
 			&i.Email,
 		); err != nil {
@@ -173,7 +179,7 @@ func (q *Queries) GetApprovedApplicationsForGame(ctx context.Context, gameID int
 }
 
 const getGameApplication = `-- name: GetGameApplication :one
-SELECT id, game_id, user_id, role, message, status, applied_at, reviewed_at, reviewed_by_user_id FROM game_applications WHERE id = $1
+SELECT id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, created_at, updated_at FROM game_applications WHERE id = $1
 `
 
 func (q *Queries) GetGameApplication(ctx context.Context, id int32) (GameApplication, error) {
@@ -186,15 +192,17 @@ func (q *Queries) GetGameApplication(ctx context.Context, id int32) (GameApplica
 		&i.Role,
 		&i.Message,
 		&i.Status,
-		&i.AppliedAt,
-		&i.ReviewedAt,
 		&i.ReviewedByUserID,
+		&i.ReviewedAt,
+		&i.AppliedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getGameApplicationByUserAndGame = `-- name: GetGameApplicationByUserAndGame :one
-SELECT id, game_id, user_id, role, message, status, applied_at, reviewed_at, reviewed_by_user_id FROM game_applications
+SELECT id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, created_at, updated_at FROM game_applications
 WHERE game_id = $1 AND user_id = $2
 `
 
@@ -213,16 +221,18 @@ func (q *Queries) GetGameApplicationByUserAndGame(ctx context.Context, arg GetGa
 		&i.Role,
 		&i.Message,
 		&i.Status,
-		&i.AppliedAt,
-		&i.ReviewedAt,
 		&i.ReviewedByUserID,
+		&i.ReviewedAt,
+		&i.AppliedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getGameApplications = `-- name: GetGameApplications :many
 SELECT
-    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.applied_at, ga.reviewed_at, ga.reviewed_by_user_id,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.created_at, ga.updated_at,
     u.username,
     u.email
 FROM game_applications ga
@@ -237,10 +247,12 @@ type GetGameApplicationsRow struct {
 	UserID           int32
 	Role             string
 	Message          pgtype.Text
-	Status           string
-	AppliedAt        pgtype.Timestamptz
-	ReviewedAt       pgtype.Timestamptz
+	Status           pgtype.Text
 	ReviewedByUserID pgtype.Int4
+	ReviewedAt       pgtype.Timestamptz
+	AppliedAt        pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
 	Username         string
 	Email            string
 }
@@ -261,9 +273,11 @@ func (q *Queries) GetGameApplications(ctx context.Context, gameID int32) ([]GetG
 			&i.Role,
 			&i.Message,
 			&i.Status,
-			&i.AppliedAt,
-			&i.ReviewedAt,
 			&i.ReviewedByUserID,
+			&i.ReviewedAt,
+			&i.AppliedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.Username,
 			&i.Email,
 		); err != nil {
@@ -279,7 +293,7 @@ func (q *Queries) GetGameApplications(ctx context.Context, gameID int32) ([]GetG
 
 const getGameApplicationsByStatus = `-- name: GetGameApplicationsByStatus :many
 SELECT
-    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.applied_at, ga.reviewed_at, ga.reviewed_by_user_id,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.created_at, ga.updated_at,
     u.username,
     u.email
 FROM game_applications ga
@@ -290,7 +304,7 @@ ORDER BY ga.applied_at ASC
 
 type GetGameApplicationsByStatusParams struct {
 	GameID int32
-	Status string
+	Status pgtype.Text
 }
 
 type GetGameApplicationsByStatusRow struct {
@@ -299,10 +313,12 @@ type GetGameApplicationsByStatusRow struct {
 	UserID           int32
 	Role             string
 	Message          pgtype.Text
-	Status           string
-	AppliedAt        pgtype.Timestamptz
-	ReviewedAt       pgtype.Timestamptz
+	Status           pgtype.Text
 	ReviewedByUserID pgtype.Int4
+	ReviewedAt       pgtype.Timestamptz
+	AppliedAt        pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
 	Username         string
 	Email            string
 }
@@ -323,9 +339,11 @@ func (q *Queries) GetGameApplicationsByStatus(ctx context.Context, arg GetGameAp
 			&i.Role,
 			&i.Message,
 			&i.Status,
-			&i.AppliedAt,
-			&i.ReviewedAt,
 			&i.ReviewedByUserID,
+			&i.ReviewedAt,
+			&i.AppliedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.Username,
 			&i.Email,
 		); err != nil {
@@ -341,7 +359,7 @@ func (q *Queries) GetGameApplicationsByStatus(ctx context.Context, arg GetGameAp
 
 const getUserGameApplications = `-- name: GetUserGameApplications :many
 SELECT
-    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.applied_at, ga.reviewed_at, ga.reviewed_by_user_id,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.created_at, ga.updated_at,
     g.title AS game_title,
     g.state AS game_state
 FROM game_applications ga
@@ -356,12 +374,14 @@ type GetUserGameApplicationsRow struct {
 	UserID           int32
 	Role             string
 	Message          pgtype.Text
-	Status           string
-	AppliedAt        pgtype.Timestamptz
-	ReviewedAt       pgtype.Timestamptz
+	Status           pgtype.Text
 	ReviewedByUserID pgtype.Int4
+	ReviewedAt       pgtype.Timestamptz
+	AppliedAt        pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
 	GameTitle        string
-	GameState        string
+	GameState        pgtype.Text
 }
 
 func (q *Queries) GetUserGameApplications(ctx context.Context, userID int32) ([]GetUserGameApplicationsRow, error) {
@@ -380,9 +400,11 @@ func (q *Queries) GetUserGameApplications(ctx context.Context, userID int32) ([]
 			&i.Role,
 			&i.Message,
 			&i.Status,
-			&i.AppliedAt,
-			&i.ReviewedAt,
 			&i.ReviewedByUserID,
+			&i.ReviewedAt,
+			&i.AppliedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.GameTitle,
 			&i.GameState,
 		); err != nil {
@@ -422,12 +444,12 @@ SET
     reviewed_at = NOW(),
     reviewed_by_user_id = $3
 WHERE id = $1
-RETURNING id, game_id, user_id, role, message, status, applied_at, reviewed_at, reviewed_by_user_id
+RETURNING id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, created_at, updated_at
 `
 
 type UpdateGameApplicationStatusParams struct {
 	ID               int32
-	Status           string
+	Status           pgtype.Text
 	ReviewedByUserID pgtype.Int4
 }
 
@@ -441,9 +463,11 @@ func (q *Queries) UpdateGameApplicationStatus(ctx context.Context, arg UpdateGam
 		&i.Role,
 		&i.Message,
 		&i.Status,
-		&i.AppliedAt,
-		&i.ReviewedAt,
 		&i.ReviewedByUserID,
+		&i.ReviewedAt,
+		&i.AppliedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
