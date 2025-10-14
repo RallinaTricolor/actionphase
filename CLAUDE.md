@@ -333,10 +333,18 @@ All major architectural decisions are documented in `/docs/adrs/`:
 - **Observability**: `backend/pkg/observability/` - Logging, metrics, and tracing
 
 ### Development Patterns to Follow
-1. **New Backend Feature**: Interface → Service → Repository → Handler → Tests
-2. **New Frontend Feature**: API client → Custom hooks → Components → Tests
-3. **Database Changes**: Create migration → Update queries → Regenerate sqlc → Test
-4. **API Changes**: Update handler → Update frontend API client → Update documentation
+
+**IMPORTANT: Integrated Feature Development**
+Each feature should be implemented with BOTH backend and frontend components completed together before moving to the next feature. This enables manual UI testing to validate requirements and implementation correctness.
+
+1. **New Feature (Integrated Approach)**:
+   - Backend: Database migration → SQL queries (sqlc) → Service interface → Service implementation → Handler → API tests
+   - Frontend: API client → Custom hooks → Components → Component tests
+   - Manual Testing: Test the complete feature in the UI before moving to next feature
+   - Documentation: Update API docs and any relevant guides
+
+2. **Database Changes**: Create migration → Update queries → Regenerate sqlc → Test
+3. **Testing Strategy**: Write automated tests but rely on manual UI testing to validate feature completeness
 
 ### Progress Tracking
 

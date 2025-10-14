@@ -115,6 +115,53 @@ func (rd *ActionWithDetailsResponse) Render(w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
+type CreateActionResultRequest struct {
+	UserID      int32  `json:"user_id" validate:"required"`
+	Content     string `json:"content" validate:"required"`
+	IsPublished bool   `json:"is_published,omitempty"`
+}
+
+func (r *CreateActionResultRequest) Bind(req *http.Request) error {
+	return nil
+}
+
+type ActionResultResponse struct {
+	ID          int32      `json:"id"`
+	GameID      int32      `json:"game_id"`
+	UserID      int32      `json:"user_id"`
+	PhaseID     int32      `json:"phase_id"`
+	GMUserID    int32      `json:"gm_user_id"`
+	Content     string     `json:"content"`
+	IsPublished bool       `json:"is_published"`
+	SentAt      *time.Time `json:"sent_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+func (rd *ActionResultResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+type ActionResultWithDetailsResponse struct {
+	ID          int32      `json:"id"`
+	GameID      int32      `json:"game_id"`
+	UserID      int32      `json:"user_id"`
+	PhaseID     int32      `json:"phase_id"`
+	GMUserID    int32      `json:"gm_user_id"`
+	Content     string     `json:"content"`
+	IsPublished bool       `json:"is_published"`
+	SentAt      *time.Time `json:"sent_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	GMUsername  *string    `json:"gm_username,omitempty"`
+	PhaseType   *string    `json:"phase_type,omitempty"`
+	PhaseNumber *int32     `json:"phase_number,omitempty"`
+}
+
+func (rd *ActionResultWithDetailsResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
 // Helper functions
 
 func (h *Handler) getUserFromToken(r *http.Request) (*core.User, error) {
@@ -641,6 +688,231 @@ func (h *Handler) GetGameActions(w http.ResponseWriter, r *http.Request) {
 		}
 
 		response = append(response, actionResp)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// CreateActionResult - GM creates result for a player action
+func (h *Handler) CreateActionResult(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	data := &CreateActionResultRequest{}
+	if err := render.Bind(r, data); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	// Get GM user from token
+	gmUser, err := h.getUserFromToken(r)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	// Check permissions - must be GM
+	phaseService := &services.PhaseService{DB: h.App.Pool}
+	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(gmUser.ID))
+	if err != nil {
+		h.App.Logger.Error("Failed to check phase management permission", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canManage {
+		render.Render(w, r, core.ErrForbidden("only the GM can create action results"))
+		return
+	}
+
+	// Get active phase
+	activePhase, err := phaseService.GetActivePhase(r.Context(), int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get active phase", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if activePhase == nil {
+		render.Render(w, r, core.ErrBadRequest(fmt.Errorf("no active phase for this game")))
+		return
+	}
+
+	// Create action result using ActionSubmissionService
+	actionService := &services.ActionSubmissionService{DB: h.App.Pool}
+	req := core.CreateActionResultRequest{
+		GameID:      int32(gameID),
+		UserID:      data.UserID,
+		PhaseID:     activePhase.ID,
+		GMUserID:    int32(gmUser.ID),
+		Content:     data.Content,
+		IsPublished: data.IsPublished,
+	}
+
+	result, err := actionService.CreateActionResult(r.Context(), req)
+	if err != nil {
+		h.App.Logger.Error("Failed to create action result", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	response := &ActionResultResponse{
+		ID:          result.ID,
+		GameID:      result.GameID,
+		UserID:      result.UserID,
+		PhaseID:     result.PhaseID,
+		GMUserID:    result.GmUserID,
+		Content:     result.Content.String,
+		IsPublished: result.IsPublished,
+		CreatedAt:   result.CreatedAt.Time,
+		UpdatedAt:   result.UpdatedAt.Time,
+	}
+
+	if result.SentAt.Valid {
+		response.SentAt = &result.SentAt.Time
+	}
+
+	render.Status(r, http.StatusCreated)
+	render.Render(w, r, response)
+}
+
+// GetUserActionResults - Get user's action results for a game
+func (h *Handler) GetUserActionResults(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Get user from token
+	user, err := h.getUserFromToken(r)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	phaseService := &services.PhaseService{DB: h.App.Pool}
+	results, err := phaseService.GetUserResults(r.Context(), int32(gameID), int32(user.ID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get user action results", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	var response []ActionResultWithDetailsResponse
+	for _, result := range results {
+		resultResp := ActionResultWithDetailsResponse{
+			ID:          result.ID,
+			GameID:      result.GameID,
+			UserID:      result.UserID,
+			PhaseID:     result.PhaseID,
+			GMUserID:    result.GmUserID,
+			Content:     result.Content.String,
+			IsPublished: result.IsPublished,
+			CreatedAt:   result.CreatedAt.Time,
+			UpdatedAt:   result.UpdatedAt.Time,
+		}
+
+		if result.SentAt.Valid {
+			resultResp.SentAt = &result.SentAt.Time
+		}
+
+		if result.GmUsername.Valid {
+			resultResp.GMUsername = &result.GmUsername.String
+		}
+
+		if result.PhaseType.Valid {
+			resultResp.PhaseType = &result.PhaseType.String
+		}
+
+		if result.PhaseNumber.Valid {
+			resultResp.PhaseNumber = &result.PhaseNumber.Int32
+		}
+
+		response = append(response, resultResp)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetGameActionResults - Get all action results for a game (GM only)
+func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Get user from token
+	user, err := h.getUserFromToken(r)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	// Check permissions - must be GM
+	phaseService := &services.PhaseService{DB: h.App.Pool}
+	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
+	if err != nil {
+		h.App.Logger.Error("Failed to check phase management permission", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canManage {
+		render.Render(w, r, core.ErrForbidden("only the GM can view all action results"))
+		return
+	}
+
+	results, err := phaseService.GetGameResults(r.Context(), int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get game action results", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	var response []ActionResultWithDetailsResponse
+	for _, result := range results {
+		resultResp := ActionResultWithDetailsResponse{
+			ID:          result.ID,
+			GameID:      result.GameID,
+			UserID:      result.UserID,
+			PhaseID:     result.PhaseID,
+			GMUserID:    result.GmUserID,
+			Content:     result.Content.String,
+			IsPublished: result.IsPublished,
+			Username:    result.Username,
+			CreatedAt:   result.CreatedAt.Time,
+			UpdatedAt:   result.UpdatedAt.Time,
+		}
+
+		if result.SentAt.Valid {
+			resultResp.SentAt = &result.SentAt.Time
+		}
+
+		if result.PhaseType.Valid {
+			resultResp.PhaseType = &result.PhaseType.String
+		}
+
+		if result.PhaseNumber.Valid {
+			resultResp.PhaseNumber = &result.PhaseNumber.Int32
+		}
+
+		response = append(response, resultResp)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
