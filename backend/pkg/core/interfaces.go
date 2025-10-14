@@ -427,6 +427,7 @@ type CreateActionResultRequest struct {
 	GameID             int32
 	PhaseID            int32
 	UserID             int32
+	GMUserID           int32       // The GM creating the result
 	ActionSubmissionID *int32      // Optional reference to submission
 	Content            interface{} // Rich text content (JSON)
 	IsPublished        bool

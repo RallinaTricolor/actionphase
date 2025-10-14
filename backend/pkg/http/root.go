@@ -123,6 +123,11 @@ func (h *Handler) Start() {
 			r.Post("/{gameId}/actions", phaseHandler.SubmitAction)
 			r.Get("/{gameId}/actions", phaseHandler.GetGameActions)
 			r.Get("/{gameId}/actions/mine", phaseHandler.GetUserActions)
+
+			// Action results management
+			r.Post("/{gameId}/results", phaseHandler.CreateActionResult)
+			r.Get("/{gameId}/results", phaseHandler.GetGameActionResults)
+			r.Get("/{gameId}/results/mine", phaseHandler.GetUserActionResults)
 		})
 	})
 	apiV1Router.Mount("/games", gamesRouter)
