@@ -9,11 +9,10 @@ import { InventoryManager } from './InventoryManager';
 interface CharacterSheetProps {
   characterId: number;
   canEdit?: boolean;
-  isGM?: boolean;
   onClose?: () => void;
 }
 
-export function CharacterSheet({ characterId, canEdit = false, isGM = false, onClose }: CharacterSheetProps) {
+export function CharacterSheet({ characterId, canEdit = false, onClose }: CharacterSheetProps) {
   const [activeModule, setActiveModule] = useState('bio');
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -200,7 +199,7 @@ export function CharacterSheet({ characterId, canEdit = false, isGM = false, onC
               <AbilitiesManager
                 abilities={parseJsonField('abilities', 'abilities') as CharacterAbility[]}
                 skills={parseJsonField('abilities', 'skills') as CharacterSkill[]}
-                canEdit={isGM}
+                canEdit={canEdit}
                 onAbilitiesChange={(abilities) => saveJsonField('abilities', 'abilities', abilities)}
                 onSkillsChange={(skills) => saveJsonField('abilities', 'skills', skills)}
               />
@@ -208,7 +207,7 @@ export function CharacterSheet({ characterId, canEdit = false, isGM = false, onC
               <InventoryManager
                 items={parseJsonField('inventory', 'items') as InventoryItem[]}
                 currency={parseJsonField('inventory', 'currency') as CurrencyEntry[]}
-                canEdit={isGM}
+                canEdit={canEdit}
                 onItemsChange={(items) => saveJsonField('inventory', 'items', items)}
                 onCurrencyChange={(currency) => saveJsonField('inventory', 'currency', currency)}
               />

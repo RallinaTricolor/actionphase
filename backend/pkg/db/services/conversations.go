@@ -143,8 +143,8 @@ func (s *ConversationService) GetOrCreateConversation(ctx context.Context, gameI
 // GetUserConversations gets all conversations for a user in a game
 func (s *ConversationService) GetUserConversations(ctx context.Context, gameID int32, userID int32) ([]models.GetUserConversationsRow, error) {
 	conversations, err := s.Queries.GetUserConversations(ctx, models.GetUserConversationsParams{
-		UserID: userID,
-		GameID: gameID,
+		GmUserID: userID, // Note: This is actually the current user ID, used both for filtering and GM check
+		GameID:   gameID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user conversations: %w", err)

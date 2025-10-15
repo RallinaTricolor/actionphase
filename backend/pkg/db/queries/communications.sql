@@ -87,11 +87,23 @@ SELECT c.*,
        (SELECT COUNT(*) FROM conversation_participants WHERE conversation_id = c.id) as participant_count,
        COALESCE(lm.last_message, '') as last_message,
        lm.last_message_at,
-       (SELECT STRING_AGG(COALESCE(chars.name, users.username), ', ' ORDER BY COALESCE(chars.name, users.username))
-        FROM conversation_participants cps
-        JOIN users ON cps.user_id = users.id
-        LEFT JOIN characters chars ON cps.character_id = chars.id
-        WHERE cps.conversation_id = c.id) as participant_names
+       COALESCE(
+           (SELECT STRING_AGG(chars.name, ', ' ORDER BY chars.name)
+            FROM conversation_participants cps
+            LEFT JOIN characters chars ON cps.character_id = chars.id
+            LEFT JOIN games g ON c.game_id = g.id
+            WHERE cps.conversation_id = c.id
+              AND chars.id IS NOT NULL
+              AND (
+                  -- GM sees all participants
+                  g.gm_user_id = $1
+                  -- Non-GM sees only other people's characters
+                  OR (chars.user_id IS NOT NULL AND chars.user_id != $1)
+                  -- Non-GM sees NPCs (characters without user_id)
+                  OR chars.user_id IS NULL
+              )),
+           ''
+       )::text as participant_names
 FROM conversations c
 JOIN conversation_participants cp ON c.id = cp.conversation_id
 LEFT JOIN LATERAL (

@@ -116,11 +116,11 @@ export function PostCard({ post, gameId, characters, onCreateComment, currentUse
               <p className="text-sm text-gray-600 mt-1">
                 Posted by @{post.author_username} · {formatDate(post.created_at)}
                 {post.is_edited && <span className="ml-1 text-gray-400">(edited)</span>}
+                {isAuthor && (
+                  <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">You</span>
+                )}
               </p>
             </div>
-            {isAuthor && (
-              <span className="text-xs bg-blue-600 text-white px-3 py-1 rounded-full font-medium">GM</span>
-            )}
           </div>
 
           {/* Toggle Button for Long Content */}

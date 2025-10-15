@@ -76,25 +76,26 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
   }, [gameId, game, isGM, isParticipant, controllableCharacters, controllableCharsLoading, controllableCharsError]);
 
   useEffect(() => {
-    // Decode JWT token to get current user ID
-    const token = localStorage.getItem('auth_token');
-    if (token) {
+    // Fetch current user ID from API instead of JWT
+    const fetchCurrentUser = async () => {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('[GameDetailsPage] JWT payload:', payload);
-        setCurrentUserId(payload.user_id);
-        if (!payload.user_id) {
-          console.warn('[GameDetailsPage] JWT token missing user_id - please log out and log back in');
-        }
+        const response = await apiClient.getCurrentUser();
+        console.log('[GameDetailsPage] Current user:', response.data);
+        setCurrentUserId(response.data.id);
       } catch (err) {
-        console.error('Failed to decode token:', err);
+        console.error('[GameDetailsPage] Failed to fetch current user:', err);
       }
-    }
+    };
+    fetchCurrentUser();
   }, []);
 
   useEffect(() => {
-    fetchGameData();
-  }, [gameId]);
+    // Refetch game data when gameId or currentUserId changes
+    // This ensures application status is fetched correctly after user ID is loaded
+    if (gameId) {
+      fetchGameData();
+    }
+  }, [gameId, currentUserId]);
 
   const fetchGameData = async () => {
     try {
@@ -107,22 +108,12 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
       setGame(gameResponse.data);
       setParticipants(participantsResponse.data || []);
 
-      // Get current user ID from token
-      let userId: number | null = null;
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          userId = payload.user_id;
-        } catch (err) {
-          console.error('Failed to decode token:', err);
-        }
-      }
-
       // Only fetch user's application if they're not the GM and game is in recruitment
       // Applications are only relevant during recruitment phase
-      const isGameGM = gameResponse.data && userId && gameResponse.data.gm_user_id === userId;
-      if (!isGameGM && !isGMProp && gameResponse.data.state === 'recruitment') {
+      // Note: currentUserId might not be available on first render, but fetchGameData is called
+      // again after state changes and we can rely on the user refreshing if needed
+      const isGameGM = gameResponse.data && currentUserId && gameResponse.data.gm_user_id === currentUserId;
+      if (!isGameGM && !isGMProp && gameResponse.data.state === 'recruitment' && currentUserId) {
         try {
           const applicationResponse = await apiClient.getMyGameApplication(gameId);
           setUserApplication(applicationResponse.data);

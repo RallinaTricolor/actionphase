@@ -200,7 +200,7 @@ export function CharactersList({
                         <CharacterCard
                           key={character.id}
                           character={character}
-                          isOwner={false}
+                          isOwner={isUserCharacter(character)}
                           userRole={userRole}
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
@@ -250,20 +250,25 @@ export function CharactersList({
       />
 
       {/* Character Sheet Modal */}
-      {selectedCharacterId && (
-        <Modal
-          isOpen={true}
-          onClose={() => setSelectedCharacterId(null)}
-          title=""
-        >
-          <CharacterSheet
-            characterId={selectedCharacterId}
-            canEdit={canEditCharacterSheet(characters.find(c => c.id === selectedCharacterId) || ({} as Character))}
-            isGM={userRole === 'gm'}
+      {selectedCharacterId && (() => {
+        const character = characters.find(c => c.id === selectedCharacterId);
+        // Safety check: only show sheet if character exists
+        if (!character) return null;
+
+        return (
+          <Modal
+            isOpen={true}
             onClose={() => setSelectedCharacterId(null)}
-          />
-        </Modal>
-      )}
+            title=""
+          >
+            <CharacterSheet
+              characterId={selectedCharacterId}
+              canEdit={canEditCharacterSheet(character)}
+              onClose={() => setSelectedCharacterId(null)}
+            />
+          </Modal>
+        );
+      })()}
     </div>
   );
 }
