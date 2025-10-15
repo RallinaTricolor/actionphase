@@ -1,21 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { GameWithDetails, GameParticipant, GameState, GameApplication } from '../types/games';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
 import { GameApplicationsList } from '../components/GameApplicationsList';
 import { ApplyToGameModal } from '../components/ApplyToGameModal';
+import { EditGameModal } from '../components/EditGameModal';
 import { CharactersList } from '../components/CharactersList';
-import { CurrentPhaseDisplay } from '../components/CurrentPhaseDisplay';
 import { PhaseManagement } from '../components/PhaseManagement';
 import { ActionSubmission } from '../components/ActionSubmission';
+import { ActionsList } from '../components/ActionsList';
+import { ActionResultsList } from '../components/ActionResultsList';
+import { CommonRoom } from '../components/CommonRoom';
+import { PrivateMessages } from '../components/PrivateMessages';
+import { PhaseHistoryView } from '../components/PhaseHistoryView';
+import { TabNavigation, type Tab } from '../components/TabNavigation';
 
 interface GameDetailsPageProps {
   gameId: number;
   isGM?: boolean;
 }
 
-export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) => {
+export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsPageProps) => {
   const [game, setGame] = useState<GameWithDetails | null>(null);
   const [participants, setParticipants] = useState<GameParticipant[]>([]);
   const [userApplication, setUserApplication] = useState<GameApplication | null>(null);
@@ -23,6 +29,9 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('default');
 
   // Get current phase data using react-query
   const { data: currentPhaseData } = useQuery({
@@ -31,6 +40,57 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
     enabled: !!gameId && game?.state === 'in_progress',
     refetchInterval: 30000, // Refetch every 30 seconds when game is in progress
   });
+
+  // Compute isGM and isParticipant early for use in queries
+  const isGM = useMemo(() => {
+    return isGMProp || (game && currentUserId && game.gm_user_id === currentUserId);
+  }, [isGMProp, game, currentUserId]);
+
+  const isParticipant = useMemo(() => {
+    return participants.some(p => p.user_id === currentUserId);
+  }, [participants, currentUserId]);
+
+  // Get user's controllable characters for private messaging
+  // Enable for everyone in in_progress games since they might have characters even if not in participants table yet
+  const { data: controllableCharacters = [], isLoading: controllableCharsLoading, error: controllableCharsError } = useQuery({
+    queryKey: ['controllableCharacters', gameId],
+    queryFn: async () => {
+      console.log('[GameDetailsPage] Fetching controllable characters for gameId:', gameId);
+      const result = await apiClient.getUserControllableCharacters(gameId);
+      console.log('[GameDetailsPage] Controllable characters result:', result.data);
+      return result.data;
+    },
+    enabled: !!gameId && !!game && game.state === 'in_progress',
+  });
+
+  // Debug logging for query state
+  useEffect(() => {
+    console.log('[GameDetailsPage] Controllable characters query state:', {
+      enabled: !!gameId && !!game && (isGM || isParticipant),
+      isGM,
+      isParticipant,
+      controllableCharacters,
+      isLoading: controllableCharsLoading,
+      error: controllableCharsError
+    });
+  }, [gameId, game, isGM, isParticipant, controllableCharacters, controllableCharsLoading, controllableCharsError]);
+
+  useEffect(() => {
+    // Decode JWT token to get current user ID
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('[GameDetailsPage] JWT payload:', payload);
+        setCurrentUserId(payload.user_id);
+        if (!payload.user_id) {
+          console.warn('[GameDetailsPage] JWT token missing user_id - please log out and log back in');
+        }
+      } catch (err) {
+        console.error('Failed to decode token:', err);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     fetchGameData();
@@ -45,11 +105,34 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
       ]);
 
       setGame(gameResponse.data);
-      setParticipants(participantsResponse.data);
+      setParticipants(participantsResponse.data || []);
 
-      // For now, we'll set userApplication to null as we need proper user context
-      // In a real implementation, you'd fetch the user's application here
-      setUserApplication(null);
+      // Get current user ID from token
+      let userId: number | null = null;
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          userId = payload.user_id;
+        } catch (err) {
+          console.error('Failed to decode token:', err);
+        }
+      }
+
+      // Only fetch user's application if they're not the GM and game is in recruitment
+      // Applications are only relevant during recruitment phase
+      const isGameGM = gameResponse.data && userId && gameResponse.data.gm_user_id === userId;
+      if (!isGameGM && !isGMProp && gameResponse.data.state === 'recruitment') {
+        try {
+          const applicationResponse = await apiClient.getMyGameApplication(gameId);
+          setUserApplication(applicationResponse.data);
+        } catch (appErr) {
+          // User has no application - that's fine
+          setUserApplication(null);
+        }
+      } else {
+        setUserApplication(null);
+      }
 
       setError(null);
     } catch (err) {
@@ -110,6 +193,56 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
     return new Date(dateString).toLocaleString();
   };
 
+  // Phase-aware tab configuration (must be called on every render)
+  const tabs: Tab[] = useMemo(() => {
+    if (!game) return [];
+
+    const tabList: Tab[] = [];
+
+    if (game.state === 'recruitment') {
+      if (isGM) {
+        tabList.push({ id: 'applications', label: 'Applications', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> });
+      }
+      tabList.push({ id: 'participants', label: 'Participants', badge: participants.length, icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> });
+      tabList.push({ id: 'info', label: 'Game Info', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> });
+    } else if (game.state === 'character_creation') {
+      tabList.push({ id: 'characters', label: 'Characters', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> });
+      tabList.push({ id: 'participants', label: 'Participants', badge: participants.length, icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> });
+      if (isGM) {
+        tabList.push({ id: 'applications', label: 'Applications', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> });
+      }
+    } else if (game.state === 'in_progress') {
+      // Common Room is primary when it's a common_room phase
+      if (currentPhaseData?.phase?.phase_type === 'common_room') {
+        tabList.push({ id: 'common-room', label: 'Common Room', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg> });
+      }
+      // Actions tab
+      tabList.push({ id: 'actions', label: isGM ? 'Manage Actions' : 'Submit Action', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> });
+      // Characters
+      tabList.push({ id: 'characters', label: 'Characters', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> });
+      // Private Messages
+      tabList.push({ id: 'messages', label: 'Private Messages', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> });
+      // Phase History
+      tabList.push({ id: 'history', label: 'Phase History', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> });
+      // Participants
+      tabList.push({ id: 'participants', label: 'Participants', badge: participants.length, icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> });
+    } else {
+      // Default tabs for other states (setup, paused, completed, cancelled)
+      tabList.push({ id: 'info', label: 'Game Info', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> });
+      tabList.push({ id: 'characters', label: 'Characters', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> });
+      tabList.push({ id: 'participants', label: 'Participants', badge: participants.length, icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> });
+    }
+
+    return tabList;
+  }, [game, isGM, participants.length, currentPhaseData?.phase?.phase_type]);
+
+  // Set default tab when tabs change
+  useEffect(() => {
+    if (tabs.length > 0 && !tabs.find(t => t.id === activeTab)) {
+      setActiveTab(tabs[0].id);
+    }
+  }, [tabs, activeTab]);
+
   const getStateActions = (currentState: GameState) => {
     const actions: { label: string; state: GameState; color: string }[] = [];
 
@@ -161,6 +294,14 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
     );
   }
 
+  console.log('[GameDetailsPage] Role check:', {
+    currentUserId,
+    gmUserId: game?.gm_user_id,
+    isGM,
+    isParticipant,
+    participants: participants.map(p => p.user_id)
+  });
+
   const stateActions = isGM ? getStateActions(game.state) : [];
 
   return (
@@ -183,8 +324,44 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
 
           <p className="text-gray-700 mb-6 leading-relaxed">{game.description}</p>
 
-          {/* User Application Status */}
-          {!isGM && userApplication && (
+          {/* Current Phase Summary - Only show when game is in progress */}
+          {game.state === 'in_progress' && currentPhaseData?.phase && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-r-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    {currentPhaseData.phase.phase_type === 'common_room' ? (
+                      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900">
+                        Current Phase: {currentPhaseData.phase.title || `Phase ${currentPhaseData.phase.phase_number}`}
+                      </span>
+                      <span className="px-2 py-0.5 text-xs rounded-full font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                        {currentPhaseData.phase.phase_type === 'common_room' ? 'Discussion' : 'Action'}
+                      </span>
+                    </div>
+                    {currentPhaseData.phase.deadline && (
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        Deadline: {new Date(currentPhaseData.phase.deadline).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* User Application Status - Only show during recruitment */}
+          {!isGM && userApplication && game.state === 'recruitment' && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
@@ -234,6 +411,16 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
 
           {/* Action Buttons */}
           <div className="flex gap-4">
+            {isGM && (
+              <button
+                onClick={() => setShowEditModal(true)}
+                disabled={actionLoading}
+                className="px-4 py-2 text-indigo-700 bg-indigo-100 hover:bg-indigo-200 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                Edit Game
+              </button>
+            )}
+
             {isGM && stateActions.map((action) => (
               <button
                 key={action.state}
@@ -255,7 +442,7 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
               </button>
             )}
 
-            {!isGM && userApplication && userApplication.status === 'pending' && (
+            {!isGM && userApplication && userApplication.status === 'pending' && game.state === 'recruitment' && (
               <button
                 onClick={handleWithdrawApplication}
                 disabled={actionLoading}
@@ -265,7 +452,7 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
               </button>
             )}
 
-            {!isGM && (
+            {!isGM && isParticipant && (
               <button
                 onClick={handleLeaveGame}
                 disabled={actionLoading}
@@ -277,88 +464,164 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
           </div>
         </div>
 
-        {/* Applications (GM only) */}
-        {isGM && <GameApplicationsList gameId={gameId} isGM={isGM} />}
+        {/* Tab Navigation */}
+        {tabs.length > 0 && (
+          <div className="mb-6">
+            <TabNavigation
+              tabs={tabs}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
 
-        {/* Characters */}
-        <div className="mb-6">
-          <CharactersList
-            gameId={gameId}
-            userRole={isGM ? 'gm' : 'player'}
-            gameState={game.state}
-          />
-        </div>
+            {/* Tab Content */}
+            <div className={`bg-white rounded-b-lg shadow-md ${activeTab === 'common-room' ? 'p-4' : 'p-6'}`}>
+              {/* Applications Tab (Recruitment - GM only) */}
+              {activeTab === 'applications' && game.state === 'recruitment' && isGM && (
+                <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} />
+              )}
 
-        {/* Game Phase Management - Only show when game is in progress */}
-        {game.state === 'in_progress' && (
-          <>
-            {/* Current Phase Display */}
-            <div className="mb-6">
-              <CurrentPhaseDisplay
-                gameId={gameId}
-                isGM={isGM}
-                onPhaseExpired={() => {
-                  // Optionally show a notification or refresh phase data
-                  console.log('Phase expired');
-                }}
-              />
-            </div>
+              {/* Applications Tab (Character Creation - GM only, collapsed) */}
+              {activeTab === 'applications' && game.state === 'character_creation' && isGM && (
+                <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} />
+              )}
 
-            {/* GM Phase Management */}
-            {isGM && (
-              <div className="mb-6">
-                <PhaseManagement gameId={gameId} />
-              </div>
-            )}
-
-            {/* Action Submission for Players */}
-            {!isGM && (
-              <div className="mb-6">
-                <ActionSubmission
-                  gameId={gameId}
-                  currentPhase={currentPhaseData?.phase}
-                />
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Participants */}
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Participants</h2>
-
-          {participants.length === 0 ? (
-            <p className="text-gray-500">No participants yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {['player', 'co_gm', 'audience'].map((role) => {
-                const roleParticipants = participants.filter(p => p.role === role);
-                if (roleParticipants.length === 0) return null;
-
-                return (
-                  <div key={role}>
-                    <h3 className="font-semibold text-gray-900 mb-2 capitalize">
-                      {role.replace('_', ' ')}s ({roleParticipants.length})
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {roleParticipants.map((participant) => (
-                        <div
-                          key={participant.id}
-                          className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-                        >
-                          <div className="font-medium text-gray-900">{participant.username}</div>
-                          <div className="text-sm text-gray-500">
-                            Joined {new Date(participant.joined_at).toLocaleDateString()}
+              {/* Participants Tab */}
+              {activeTab === 'participants' && (
+                <>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Participants</h2>
+                  {participants.length === 0 ? (
+                    <p className="text-gray-500">No participants yet.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {['player', 'co_gm', 'audience'].map((role) => {
+                        const roleParticipants = participants.filter(p => p.role === role);
+                        if (roleParticipants.length === 0) return null;
+                        return (
+                          <div key={role}>
+                            <h3 className="font-semibold text-gray-900 mb-2 capitalize">
+                              {role.replace('_', ' ')}s ({roleParticipants.length})
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {roleParticipants.map((participant) => (
+                                <div key={participant.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                  <div className="font-medium text-gray-900">{participant.username}</div>
+                                  <div className="text-sm text-gray-500">
+                                    Joined {new Date(participant.joined_at).toLocaleDateString()}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Game Info Tab (Recruitment & other states) */}
+              {activeTab === 'info' && (
+                <>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Game Information</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Genre</h3>
+                      <p className="text-gray-600">{game.genre || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Players</h3>
+                      <p className="text-gray-600">
+                        {game.current_players} / {game.max_players || 'Unlimited'}
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Recruitment Deadline</h3>
+                      <p className="text-gray-600">{formatDate(game.recruitment_deadline)}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Start Date</h3>
+                      <p className="text-gray-600">{formatDate(game.start_date)}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">End Date</h3>
+                      <p className="text-gray-600">{formatDate(game.end_date)}</p>
                     </div>
                   </div>
-                );
-              })}
+                </>
+              )}
+
+              {/* Characters Tab */}
+              {activeTab === 'characters' && (
+                <CharactersList
+                  gameId={gameId}
+                  userRole={isGM ? 'gm' : (isParticipant ? 'player' : 'audience')}
+                  currentUserId={currentUserId || undefined}
+                  gameState={game.state}
+                  isAnonymous={game.is_anonymous || false}
+                />
+              )}
+
+              {/* Common Room Tab (In Progress - common_room phases) */}
+              {activeTab === 'common-room' && game.state === 'in_progress' && currentPhaseData?.phase?.phase_type === 'common_room' && (
+                <CommonRoom
+                  gameId={gameId}
+                  phaseId={currentPhaseData?.phase?.id}
+                  phaseTitle={currentPhaseData?.phase?.title || `Phase ${currentPhaseData?.phase?.phase_number}`}
+                  isCurrentPhase={true}
+                  isGM={isGM}
+                />
+              )}
+
+              {/* Actions Tab (In Progress) */}
+              {activeTab === 'actions' && game.state === 'in_progress' && (
+                <>
+                  {isGM ? (
+                    <>
+                      <div className="mb-6">
+                        <PhaseManagement gameId={gameId} />
+                      </div>
+                      <div className="mb-6">
+                        <ActionsList
+                          gameId={gameId}
+                          currentPhase={currentPhaseData?.phase}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mb-6">
+                        <ActionSubmission
+                          gameId={gameId}
+                          currentPhase={currentPhaseData?.phase}
+                        />
+                      </div>
+                      <div className="mb-6">
+                        <ActionResultsList gameId={gameId} />
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* Phase History Tab (In Progress) */}
+              {activeTab === 'history' && game.state === 'in_progress' && (
+                <PhaseHistoryView gameId={gameId} currentPhaseId={currentPhaseData?.phase?.id} isGM={isGM} />
+              )}
+
+              {/* Private Messages Tab (In Progress) */}
+              {activeTab === 'messages' && game.state === 'in_progress' && (
+                <div className="h-[600px]">
+                  <PrivateMessages
+                    gameId={gameId}
+                    characters={controllableCharacters}
+                    isAnonymous={game.is_anonymous || false}
+                  />
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
       </div>
 
       {/* Apply to Game Modal */}
@@ -369,6 +632,16 @@ export const GameDetailsPage = ({ gameId, isGM = false }: GameDetailsPageProps) 
           isOpen={showApplyModal}
           onClose={() => setShowApplyModal(false)}
           onApplicationSubmitted={handleApplicationSubmitted}
+        />
+      )}
+
+      {/* Edit Game Modal */}
+      {game && (
+        <EditGameModal
+          game={game}
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onGameUpdated={fetchGameData}
         />
       )}
     </div>

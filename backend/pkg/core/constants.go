@@ -210,9 +210,6 @@ const (
 
 	// ApplicationStatusRejected - GM rejected the application
 	ApplicationStatusRejected = "rejected"
-
-	// ApplicationStatusWithdrawn - Applicant withdrew their application
-	ApplicationStatusWithdrawn = "withdrawn"
 )
 
 // ValidApplicationStatuses contains all valid application statuses for validation.
@@ -220,7 +217,6 @@ var ValidApplicationStatuses = []string{
 	ApplicationStatusPending,
 	ApplicationStatusApproved,
 	ApplicationStatusRejected,
-	ApplicationStatusWithdrawn,
 }
 
 // DatabaseTableNames defines table names for consistent referencing.

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { CountdownTimer } from './CountdownTimer';
@@ -10,10 +10,30 @@ interface ActionSubmissionProps {
   className?: string;
 }
 
+// Simple JWT decoder to extract user_id from token
+function decodeJWT(token: string): { user_id?: number; username?: string } | null {
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    console.error('Failed to decode JWT:', e);
+    return null;
+  }
+}
+
 export function ActionSubmission({ gameId, currentPhase, className = '' }: ActionSubmissionProps) {
   const [content, setContent] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showPreviousActions, setShowPreviousActions] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -25,16 +45,33 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
   });
 
   // Get user's previous actions
-  const { data: userActions = [] } = useQuery({
+  const { data: userActionsData } = useQuery({
     queryKey: ['userActions', gameId],
     queryFn: () => apiClient.getUserActions(gameId).then(res => res.data),
     enabled: !!gameId
   });
 
+  // Ensure userActions is always an array
+  const userActions = userActionsData || [];
+
   // Get current action for this phase if it exists
   const currentAction = currentPhase
     ? userActions.find(action => action.phase_id === currentPhase.id)
     : null;
+
+  // Get current user ID from JWT token (memoized to prevent re-decoding)
+  const currentUserId = useMemo(() => {
+    const token = apiClient.getAuthToken();
+    return token ? decodeJWT(token)?.user_id : null;
+  }, []);
+
+  // Filter characters to only show those owned by or assigned to the current user (memoized)
+  const availableCharacters = useMemo(() => {
+    return characters.filter(char => {
+      // Include if character belongs to the current user
+      return char.user_id === currentUserId;
+    });
+  }, [characters, currentUserId]);
 
   const submitActionMutation = useMutation({
     mutationFn: (data: ActionSubmissionRequest) => apiClient.submitAction(gameId, data),
@@ -54,9 +91,14 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
       }
     } else {
       setContent('');
-      setSelectedCharacterId(null);
+      // Auto-select character if player has exactly one
+      if (availableCharacters.length === 1) {
+        setSelectedCharacterId(availableCharacters[0].id);
+      } else {
+        setSelectedCharacterId(null);
+      }
     }
-  }, [currentAction]);
+  }, [currentAction, availableCharacters]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,12 +117,6 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
   const isDeadlinePassed = currentPhase?.deadline && new Date() > new Date(currentPhase.deadline);
 
   const canSubmitAction = isActionPhase && isPhaseActive && !isDeadlinePassed;
-
-  // Filter characters to only show those owned by or assigned to the user
-  const availableCharacters = characters.filter(char =>
-    char.character_type === 'player_character' ||
-    (char.character_type.includes('npc') && char.user_id) // Assigned NPCs
-  );
 
   if (!isActionPhase) {
     return (
@@ -165,8 +201,8 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
         {/* Submission Form */}
         {(!currentAction || isExpanded) && canSubmitAction && (
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Character Selection */}
-            {availableCharacters.length > 0 && (
+            {/* Character Selection - only show dropdown if multiple characters */}
+            {availableCharacters.length > 1 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Acting as Character (Optional)
@@ -183,6 +219,15 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {/* Display single character */}
+            {availableCharacters.length === 1 && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-900">
+                  <span className="font-medium">Acting as:</span> {availableCharacters[0].name}
+                </p>
               </div>
             )}
 
@@ -251,24 +296,53 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
       </div>
 
       {/* Action History */}
-      {userActions.length > 0 && (
-        <div className="border-t border-gray-200">
-          <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Your Previous Actions</h3>
-            <ActionHistory actions={userActions} />
+      {(() => {
+        const previousActions = userActions.filter(action => action.phase_id !== currentPhase?.id);
+        return previousActions.length > 0 && (
+          <div className="border-t border-gray-200">
+            <button
+              onClick={() => setShowPreviousActions(!showPreviousActions)}
+              className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Your Previous Actions ({previousActions.length})
+                </h3>
+              </div>
+              <svg
+                className={`w-5 h-5 text-gray-400 transition-transform ${showPreviousActions ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showPreviousActions && (
+              <div className="px-6 pb-6">
+                <ActionHistory actions={userActions} currentPhaseId={currentPhase?.id} />
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
 
 interface ActionHistoryProps {
   actions: ActionWithDetails[];
+  currentPhaseId?: number;
 }
 
-function ActionHistory({ actions }: ActionHistoryProps) {
-  const sortedActions = [...actions].sort((a, b) => (b.phase_number || 0) - (a.phase_number || 0));
+function ActionHistory({ actions, currentPhaseId }: ActionHistoryProps) {
+  // Filter out the current phase action
+  const previousActions = actions.filter(action => action.phase_id !== currentPhaseId);
+  const sortedActions = [...previousActions].sort((a, b) => (b.phase_number || 0) - (a.phase_number || 0));
 
   if (sortedActions.length === 0) {
     return (

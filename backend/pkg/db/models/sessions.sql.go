@@ -21,9 +21,9 @@ RETURNING id, user_id, data, expires
 `
 
 type CreateSessionParams struct {
-	UserID  int32
-	Data    string
-	Expires pgtype.Timestamptz
+	UserID  int32              `json:"user_id"`
+	Data    string             `json:"data"`
+	Expires pgtype.Timestamptz `json:"expires"`
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {

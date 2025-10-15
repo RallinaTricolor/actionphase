@@ -9,15 +9,23 @@ import { InventoryManager } from './InventoryManager';
 interface CharacterSheetProps {
   characterId: number;
   canEdit?: boolean;
+  isGM?: boolean;
   onClose?: () => void;
 }
 
-export function CharacterSheet({ characterId, canEdit = false, onClose }: CharacterSheetProps) {
+export function CharacterSheet({ characterId, canEdit = false, isGM = false, onClose }: CharacterSheetProps) {
   const [activeModule, setActiveModule] = useState('bio');
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
   const queryClient = useQueryClient();
+
+  // If user cannot edit and is viewing a restricted module, switch to bio
+  useEffect(() => {
+    if (!canEdit && activeModule !== 'bio') {
+      setActiveModule('bio');
+    }
+  }, [canEdit, activeModule]);
 
   const { data: character } = useQuery({
     queryKey: ['character', characterId],
@@ -152,9 +160,14 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
           )}
         </div>
 
-        {/* Module Tabs */}
+        {/* Module Tabs - Filter out modules user cannot view */}
         <div className="flex space-x-8 px-6">
-          {CHARACTER_MODULES.map((module) => (
+          {CHARACTER_MODULES.filter((module) => {
+            // Bio is always visible (public information)
+            if (module.type === 'bio') return true;
+            // Private modules only visible to editors (GM, owner, audience)
+            return canEdit;
+          }).map((module) => (
             <button
               key={module.type}
               onClick={() => setActiveModule(module.type)}
@@ -171,7 +184,11 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
       </div>
 
       <div className="p-6">
-        {CHARACTER_MODULES.filter(module => module.type === activeModule).map((module) => (
+        {CHARACTER_MODULES.filter(module => {
+          // Only render modules the user has permission to view
+          if (module.type === 'bio') return true;
+          return canEdit;
+        }).filter(module => module.type === activeModule).map((module) => (
           <div key={module.type}>
             <div className="mb-4">
               <h3 className="text-lg font-medium text-gray-900">{module.name}</h3>
@@ -183,7 +200,7 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
               <AbilitiesManager
                 abilities={parseJsonField('abilities', 'abilities') as CharacterAbility[]}
                 skills={parseJsonField('abilities', 'skills') as CharacterSkill[]}
-                canEdit={canEdit}
+                canEdit={isGM}
                 onAbilitiesChange={(abilities) => saveJsonField('abilities', 'abilities', abilities)}
                 onSkillsChange={(skills) => saveJsonField('abilities', 'skills', skills)}
               />
@@ -191,7 +208,7 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
               <InventoryManager
                 items={parseJsonField('inventory', 'items') as InventoryItem[]}
                 currency={parseJsonField('inventory', 'currency') as CurrencyEntry[]}
-                canEdit={canEdit}
+                canEdit={isGM}
                 onItemsChange={(items) => saveJsonField('inventory', 'items', items)}
                 onCurrencyChange={(currency) => saveJsonField('inventory', 'currency', currency)}
               />
@@ -204,6 +221,13 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
                   const value = getFieldValue(module.type, field.name);
                   const isEditing = editingField === key;
 
+                  // Hide private fields if user cannot edit
+                  // If fieldData exists, use its is_public value; otherwise fall back to field.isPublic
+                  const isFieldPublic = fieldData ? fieldData.is_public : (field.isPublic ?? true);
+                  if (!canEdit && !isFieldPublic) {
+                    return null; // Don't render private fields for viewers
+                  }
+
                   return (
                     <div key={field.name} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
@@ -215,11 +239,11 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
                           {fieldData && (
                             <div className="flex items-center space-x-2 mt-1">
                               <span className={`px-2 py-1 text-xs rounded-full ${
-                                field.isPublic
+                                isFieldPublic
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-yellow-100 text-yellow-800'
                               }`}>
-                                {field.isPublic ? 'Public' : 'Private'}
+                                {isFieldPublic ? 'Public' : 'Private'}
                               </span>
                               <span className="text-xs text-gray-500">
                                 Last updated: {new Date(fieldData.updated_at).toLocaleDateString()}

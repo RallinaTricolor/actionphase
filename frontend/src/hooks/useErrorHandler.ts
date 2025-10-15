@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { AppError } from '../types/errors';
+import type { AppError } from '../types/errors';
 import {
   createAppError,
   getErrorMessage,

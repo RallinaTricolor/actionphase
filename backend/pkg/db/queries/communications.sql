@@ -85,10 +85,22 @@ SELECT * FROM conversations WHERE id = $1;
 -- name: GetUserConversations :many
 SELECT c.*,
        (SELECT COUNT(*) FROM conversation_participants WHERE conversation_id = c.id) as participant_count,
-       (SELECT content FROM private_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
-       (SELECT created_at FROM private_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_at
+       COALESCE(lm.last_message, '') as last_message,
+       lm.last_message_at,
+       (SELECT STRING_AGG(COALESCE(chars.name, users.username), ', ' ORDER BY COALESCE(chars.name, users.username))
+        FROM conversation_participants cps
+        JOIN users ON cps.user_id = users.id
+        LEFT JOIN characters chars ON cps.character_id = chars.id
+        WHERE cps.conversation_id = c.id) as participant_names
 FROM conversations c
 JOIN conversation_participants cp ON c.id = cp.conversation_id
+LEFT JOIN LATERAL (
+    SELECT content as last_message, created_at as last_message_at
+    FROM private_messages
+    WHERE conversation_id = c.id
+    ORDER BY created_at DESC
+    LIMIT 1
+) lm ON true
 WHERE cp.user_id = $1 AND c.game_id = $2
 ORDER BY c.updated_at DESC;
 

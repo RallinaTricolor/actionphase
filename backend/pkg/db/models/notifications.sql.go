@@ -18,13 +18,13 @@ RETURNING id, user_id, game_id, related_entity_type, related_entity_id, notifica
 `
 
 type CreateNotificationParams struct {
-	UserID            int32
-	GameID            pgtype.Int4
-	NotificationType  string
-	Title             string
-	Content           pgtype.Text
-	RelatedEntityType pgtype.Text
-	RelatedEntityID   pgtype.Int4
+	UserID            int32       `json:"user_id"`
+	GameID            pgtype.Int4 `json:"game_id"`
+	NotificationType  string      `json:"notification_type"`
+	Title             string      `json:"title"`
+	Content           pgtype.Text `json:"content"`
+	RelatedEntityType pgtype.Text `json:"related_entity_type"`
+	RelatedEntityID   pgtype.Int4 `json:"related_entity_id"`
 }
 
 func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error) {
@@ -59,8 +59,8 @@ WHERE id = $1 AND user_id = $2
 `
 
 type DeleteNotificationParams struct {
-	ID     int32
-	UserID int32
+	ID     int32 `json:"id"`
+	UserID int32 `json:"user_id"`
 }
 
 func (q *Queries) DeleteNotification(ctx context.Context, arg DeleteNotificationParams) error {
@@ -88,23 +88,23 @@ LIMIT $2 OFFSET $3
 `
 
 type GetGameNotificationsParams struct {
-	GameID pgtype.Int4
-	Limit  int32
-	Offset int32
+	GameID pgtype.Int4 `json:"game_id"`
+	Limit  int32       `json:"limit"`
+	Offset int32       `json:"offset"`
 }
 
 type GetGameNotificationsRow struct {
-	ID                int32
-	UserID            int32
-	GameID            pgtype.Int4
-	RelatedEntityType pgtype.Text
-	RelatedEntityID   pgtype.Int4
-	NotificationType  string
-	Title             string
-	Content           pgtype.Text
-	IsRead            pgtype.Bool
-	CreatedAt         pgtype.Timestamptz
-	Username          string
+	ID                int32              `json:"id"`
+	UserID            int32              `json:"user_id"`
+	GameID            pgtype.Int4        `json:"game_id"`
+	RelatedEntityType pgtype.Text        `json:"related_entity_type"`
+	RelatedEntityID   pgtype.Int4        `json:"related_entity_id"`
+	NotificationType  string             `json:"notification_type"`
+	Title             string             `json:"title"`
+	Content           pgtype.Text        `json:"content"`
+	IsRead            pgtype.Bool        `json:"is_read"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	Username          string             `json:"username"`
 }
 
 func (q *Queries) GetGameNotifications(ctx context.Context, arg GetGameNotificationsParams) ([]GetGameNotificationsRow, error) {
@@ -160,17 +160,17 @@ ORDER BY n.created_at DESC
 `
 
 type GetUnreadNotificationsRow struct {
-	ID                int32
-	UserID            int32
-	GameID            pgtype.Int4
-	RelatedEntityType pgtype.Text
-	RelatedEntityID   pgtype.Int4
-	NotificationType  string
-	Title             string
-	Content           pgtype.Text
-	IsRead            pgtype.Bool
-	CreatedAt         pgtype.Timestamptz
-	GameTitle         pgtype.Text
+	ID                int32              `json:"id"`
+	UserID            int32              `json:"user_id"`
+	GameID            pgtype.Int4        `json:"game_id"`
+	RelatedEntityType pgtype.Text        `json:"related_entity_type"`
+	RelatedEntityID   pgtype.Int4        `json:"related_entity_id"`
+	NotificationType  string             `json:"notification_type"`
+	Title             string             `json:"title"`
+	Content           pgtype.Text        `json:"content"`
+	IsRead            pgtype.Bool        `json:"is_read"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	GameTitle         pgtype.Text        `json:"game_title"`
 }
 
 func (q *Queries) GetUnreadNotifications(ctx context.Context, userID int32) ([]GetUnreadNotificationsRow, error) {
@@ -215,23 +215,23 @@ LIMIT $2 OFFSET $3
 `
 
 type GetUserNotificationsParams struct {
-	UserID int32
-	Limit  int32
-	Offset int32
+	UserID int32 `json:"user_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
 }
 
 type GetUserNotificationsRow struct {
-	ID                int32
-	UserID            int32
-	GameID            pgtype.Int4
-	RelatedEntityType pgtype.Text
-	RelatedEntityID   pgtype.Int4
-	NotificationType  string
-	Title             string
-	Content           pgtype.Text
-	IsRead            pgtype.Bool
-	CreatedAt         pgtype.Timestamptz
-	GameTitle         pgtype.Text
+	ID                int32              `json:"id"`
+	UserID            int32              `json:"user_id"`
+	GameID            pgtype.Int4        `json:"game_id"`
+	RelatedEntityType pgtype.Text        `json:"related_entity_type"`
+	RelatedEntityID   pgtype.Int4        `json:"related_entity_id"`
+	NotificationType  string             `json:"notification_type"`
+	Title             string             `json:"title"`
+	Content           pgtype.Text        `json:"content"`
+	IsRead            pgtype.Bool        `json:"is_read"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	GameTitle         pgtype.Text        `json:"game_title"`
 }
 
 func (q *Queries) GetUserNotifications(ctx context.Context, arg GetUserNotificationsParams) ([]GetUserNotificationsRow, error) {
@@ -284,8 +284,8 @@ WHERE user_id = $1 AND game_id = $2
 `
 
 type MarkGameNotificationsReadParams struct {
-	UserID int32
-	GameID pgtype.Int4
+	UserID int32       `json:"user_id"`
+	GameID pgtype.Int4 `json:"game_id"`
 }
 
 func (q *Queries) MarkGameNotificationsRead(ctx context.Context, arg MarkGameNotificationsReadParams) error {
@@ -301,8 +301,8 @@ RETURNING id, user_id, game_id, related_entity_type, related_entity_id, notifica
 `
 
 type MarkNotificationReadParams struct {
-	ID     int32
-	UserID int32
+	ID     int32 `json:"id"`
+	UserID int32 `json:"user_id"`
 }
 
 func (q *Queries) MarkNotificationRead(ctx context.Context, arg MarkNotificationReadParams) (Notification, error) {
@@ -331,13 +331,13 @@ WHERE gp.game_id = $1 AND gp.role = 'audience' AND gp.status = 'active' AND gp.u
 `
 
 type NotifyAudienceMembersParams struct {
-	GameID            pgtype.Int4
-	NotificationType  string
-	Title             string
-	Content           pgtype.Text
-	RelatedEntityType pgtype.Text
-	RelatedEntityID   pgtype.Int4
-	UserID            int32
+	GameID            pgtype.Int4 `json:"game_id"`
+	NotificationType  string      `json:"notification_type"`
+	Title             string      `json:"title"`
+	Content           pgtype.Text `json:"content"`
+	RelatedEntityType pgtype.Text `json:"related_entity_type"`
+	RelatedEntityID   pgtype.Int4 `json:"related_entity_id"`
+	UserID            int32       `json:"user_id"`
 }
 
 func (q *Queries) NotifyAudienceMembers(ctx context.Context, arg NotifyAudienceMembersParams) error {
@@ -361,13 +361,13 @@ WHERE g.id = $1 AND g.gm_user_id != $7
 `
 
 type NotifyGMParams struct {
-	GameID            pgtype.Int4
-	NotificationType  string
-	Title             string
-	Content           pgtype.Text
-	RelatedEntityType pgtype.Text
-	RelatedEntityID   pgtype.Int4
-	GmUserID          int32
+	GameID            pgtype.Int4 `json:"game_id"`
+	NotificationType  string      `json:"notification_type"`
+	Title             string      `json:"title"`
+	Content           pgtype.Text `json:"content"`
+	RelatedEntityType pgtype.Text `json:"related_entity_type"`
+	RelatedEntityID   pgtype.Int4 `json:"related_entity_id"`
+	GmUserID          int32       `json:"gm_user_id"`
 }
 
 func (q *Queries) NotifyGM(ctx context.Context, arg NotifyGMParams) error {
@@ -391,13 +391,13 @@ WHERE gp.game_id = $1 AND gp.status = 'active' AND gp.user_id != $7
 `
 
 type NotifyGameParticipantsParams struct {
-	GameID            pgtype.Int4
-	NotificationType  string
-	Title             string
-	Content           pgtype.Text
-	RelatedEntityType pgtype.Text
-	RelatedEntityID   pgtype.Int4
-	UserID            int32
+	GameID            pgtype.Int4 `json:"game_id"`
+	NotificationType  string      `json:"notification_type"`
+	Title             string      `json:"title"`
+	Content           pgtype.Text `json:"content"`
+	RelatedEntityType pgtype.Text `json:"related_entity_type"`
+	RelatedEntityID   pgtype.Int4 `json:"related_entity_id"`
+	UserID            int32       `json:"user_id"`
 }
 
 // Helper queries for creating notifications

@@ -21,12 +21,33 @@ WHERE game_id = $1 AND status = 'pending'
 `
 
 type BulkApproveApplicationsParams struct {
-	GameID           int32
-	ReviewedByUserID pgtype.Int4
+	GameID           int32       `json:"game_id"`
+	ReviewedByUserID pgtype.Int4 `json:"reviewed_by_user_id"`
 }
 
 func (q *Queries) BulkApproveApplications(ctx context.Context, arg BulkApproveApplicationsParams) error {
 	_, err := q.db.Exec(ctx, bulkApproveApplications, arg.GameID, arg.ReviewedByUserID)
+	return err
+}
+
+const bulkRejectApplications = `-- name: BulkRejectApplications :exec
+UPDATE game_applications
+SET
+    status = 'rejected',
+    reviewed_at = NOW(),
+    reviewed_by_user_id = $2
+WHERE game_id = $1 AND status = 'pending'
+`
+
+type BulkRejectApplicationsParams struct {
+	GameID           int32       `json:"game_id"`
+	ReviewedByUserID pgtype.Int4 `json:"reviewed_by_user_id"`
+}
+
+// Reject all pending applications for a game
+// This is called when GM closes recruitment
+func (q *Queries) BulkRejectApplications(ctx context.Context, arg BulkRejectApplicationsParams) error {
+	_, err := q.db.Exec(ctx, bulkRejectApplications, arg.GameID, arg.ReviewedByUserID)
 	return err
 }
 
@@ -41,8 +62,8 @@ END AS status
 `
 
 type CanUserApplyToGameParams struct {
-	GameID int32
-	UserID int32
+	GameID int32 `json:"game_id"`
+	UserID int32 `json:"user_id"`
 }
 
 func (q *Queries) CanUserApplyToGame(ctx context.Context, arg CanUserApplyToGameParams) (string, error) {
@@ -69,24 +90,37 @@ INSERT INTO game_applications (
     game_id, user_id, role, message
 ) VALUES (
     $1, $2, $3, $4
-) RETURNING id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, created_at, updated_at
+) RETURNING id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, is_published
 `
 
 type CreateGameApplicationParams struct {
-	GameID  int32
-	UserID  int32
-	Role    string
-	Message pgtype.Text
+	GameID  int32       `json:"game_id"`
+	UserID  int32       `json:"user_id"`
+	Role    string      `json:"role"`
+	Message pgtype.Text `json:"message"`
 }
 
-func (q *Queries) CreateGameApplication(ctx context.Context, arg CreateGameApplicationParams) (GameApplication, error) {
+type CreateGameApplicationRow struct {
+	ID               int32              `json:"id"`
+	GameID           int32              `json:"game_id"`
+	UserID           int32              `json:"user_id"`
+	Role             string             `json:"role"`
+	Message          pgtype.Text        `json:"message"`
+	Status           pgtype.Text        `json:"status"`
+	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
+	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
+	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
+	IsPublished      bool               `json:"is_published"`
+}
+
+func (q *Queries) CreateGameApplication(ctx context.Context, arg CreateGameApplicationParams) (CreateGameApplicationRow, error) {
 	row := q.db.QueryRow(ctx, createGameApplication,
 		arg.GameID,
 		arg.UserID,
 		arg.Role,
 		arg.Message,
 	)
-	var i GameApplication
+	var i CreateGameApplicationRow
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
@@ -97,8 +131,7 @@ func (q *Queries) CreateGameApplication(ctx context.Context, arg CreateGameAppli
 		&i.ReviewedByUserID,
 		&i.ReviewedAt,
 		&i.AppliedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.IsPublished,
 	)
 	return i, err
 }
@@ -108,8 +141,8 @@ DELETE FROM game_applications WHERE id = $1 AND user_id = $2
 `
 
 type DeleteGameApplicationParams struct {
-	ID     int32
-	UserID int32
+	ID     int32 `json:"id"`
+	UserID int32 `json:"user_id"`
 }
 
 func (q *Queries) DeleteGameApplication(ctx context.Context, arg DeleteGameApplicationParams) error {
@@ -119,7 +152,7 @@ func (q *Queries) DeleteGameApplication(ctx context.Context, arg DeleteGameAppli
 
 const getApprovedApplicationsForGame = `-- name: GetApprovedApplicationsForGame :many
 SELECT
-    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.created_at, ga.updated_at,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
     u.email
 FROM game_applications ga
@@ -129,19 +162,18 @@ ORDER BY ga.reviewed_at ASC
 `
 
 type GetApprovedApplicationsForGameRow struct {
-	ID               int32
-	GameID           int32
-	UserID           int32
-	Role             string
-	Message          pgtype.Text
-	Status           pgtype.Text
-	ReviewedByUserID pgtype.Int4
-	ReviewedAt       pgtype.Timestamptz
-	AppliedAt        pgtype.Timestamptz
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
-	Username         string
-	Email            string
+	ID               int32              `json:"id"`
+	GameID           int32              `json:"game_id"`
+	UserID           int32              `json:"user_id"`
+	Role             string             `json:"role"`
+	Message          pgtype.Text        `json:"message"`
+	Status           pgtype.Text        `json:"status"`
+	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
+	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
+	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
+	IsPublished      bool               `json:"is_published"`
+	Username         string             `json:"username"`
+	Email            string             `json:"email"`
 }
 
 func (q *Queries) GetApprovedApplicationsForGame(ctx context.Context, gameID int32) ([]GetApprovedApplicationsForGameRow, error) {
@@ -163,8 +195,7 @@ func (q *Queries) GetApprovedApplicationsForGame(ctx context.Context, gameID int
 			&i.ReviewedByUserID,
 			&i.ReviewedAt,
 			&i.AppliedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.IsPublished,
 			&i.Username,
 			&i.Email,
 		); err != nil {
@@ -179,12 +210,26 @@ func (q *Queries) GetApprovedApplicationsForGame(ctx context.Context, gameID int
 }
 
 const getGameApplication = `-- name: GetGameApplication :one
-SELECT id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, created_at, updated_at FROM game_applications WHERE id = $1
+SELECT id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, is_published
+FROM game_applications WHERE id = $1
 `
 
-func (q *Queries) GetGameApplication(ctx context.Context, id int32) (GameApplication, error) {
+type GetGameApplicationRow struct {
+	ID               int32              `json:"id"`
+	GameID           int32              `json:"game_id"`
+	UserID           int32              `json:"user_id"`
+	Role             string             `json:"role"`
+	Message          pgtype.Text        `json:"message"`
+	Status           pgtype.Text        `json:"status"`
+	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
+	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
+	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
+	IsPublished      bool               `json:"is_published"`
+}
+
+func (q *Queries) GetGameApplication(ctx context.Context, id int32) (GetGameApplicationRow, error) {
 	row := q.db.QueryRow(ctx, getGameApplication, id)
-	var i GameApplication
+	var i GetGameApplicationRow
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
@@ -195,25 +240,38 @@ func (q *Queries) GetGameApplication(ctx context.Context, id int32) (GameApplica
 		&i.ReviewedByUserID,
 		&i.ReviewedAt,
 		&i.AppliedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.IsPublished,
 	)
 	return i, err
 }
 
 const getGameApplicationByUserAndGame = `-- name: GetGameApplicationByUserAndGame :one
-SELECT id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, created_at, updated_at FROM game_applications
+SELECT id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, is_published
+FROM game_applications
 WHERE game_id = $1 AND user_id = $2
 `
 
 type GetGameApplicationByUserAndGameParams struct {
-	GameID int32
-	UserID int32
+	GameID int32 `json:"game_id"`
+	UserID int32 `json:"user_id"`
 }
 
-func (q *Queries) GetGameApplicationByUserAndGame(ctx context.Context, arg GetGameApplicationByUserAndGameParams) (GameApplication, error) {
+type GetGameApplicationByUserAndGameRow struct {
+	ID               int32              `json:"id"`
+	GameID           int32              `json:"game_id"`
+	UserID           int32              `json:"user_id"`
+	Role             string             `json:"role"`
+	Message          pgtype.Text        `json:"message"`
+	Status           pgtype.Text        `json:"status"`
+	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
+	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
+	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
+	IsPublished      bool               `json:"is_published"`
+}
+
+func (q *Queries) GetGameApplicationByUserAndGame(ctx context.Context, arg GetGameApplicationByUserAndGameParams) (GetGameApplicationByUserAndGameRow, error) {
 	row := q.db.QueryRow(ctx, getGameApplicationByUserAndGame, arg.GameID, arg.UserID)
-	var i GameApplication
+	var i GetGameApplicationByUserAndGameRow
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
@@ -224,15 +282,14 @@ func (q *Queries) GetGameApplicationByUserAndGame(ctx context.Context, arg GetGa
 		&i.ReviewedByUserID,
 		&i.ReviewedAt,
 		&i.AppliedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.IsPublished,
 	)
 	return i, err
 }
 
 const getGameApplications = `-- name: GetGameApplications :many
 SELECT
-    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.created_at, ga.updated_at,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
     u.email
 FROM game_applications ga
@@ -242,19 +299,18 @@ ORDER BY ga.applied_at ASC
 `
 
 type GetGameApplicationsRow struct {
-	ID               int32
-	GameID           int32
-	UserID           int32
-	Role             string
-	Message          pgtype.Text
-	Status           pgtype.Text
-	ReviewedByUserID pgtype.Int4
-	ReviewedAt       pgtype.Timestamptz
-	AppliedAt        pgtype.Timestamptz
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
-	Username         string
-	Email            string
+	ID               int32              `json:"id"`
+	GameID           int32              `json:"game_id"`
+	UserID           int32              `json:"user_id"`
+	Role             string             `json:"role"`
+	Message          pgtype.Text        `json:"message"`
+	Status           pgtype.Text        `json:"status"`
+	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
+	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
+	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
+	IsPublished      bool               `json:"is_published"`
+	Username         string             `json:"username"`
+	Email            string             `json:"email"`
 }
 
 func (q *Queries) GetGameApplications(ctx context.Context, gameID int32) ([]GetGameApplicationsRow, error) {
@@ -276,8 +332,7 @@ func (q *Queries) GetGameApplications(ctx context.Context, gameID int32) ([]GetG
 			&i.ReviewedByUserID,
 			&i.ReviewedAt,
 			&i.AppliedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.IsPublished,
 			&i.Username,
 			&i.Email,
 		); err != nil {
@@ -293,7 +348,7 @@ func (q *Queries) GetGameApplications(ctx context.Context, gameID int32) ([]GetG
 
 const getGameApplicationsByStatus = `-- name: GetGameApplicationsByStatus :many
 SELECT
-    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.created_at, ga.updated_at,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
     u.email
 FROM game_applications ga
@@ -303,24 +358,23 @@ ORDER BY ga.applied_at ASC
 `
 
 type GetGameApplicationsByStatusParams struct {
-	GameID int32
-	Status pgtype.Text
+	GameID int32       `json:"game_id"`
+	Status pgtype.Text `json:"status"`
 }
 
 type GetGameApplicationsByStatusRow struct {
-	ID               int32
-	GameID           int32
-	UserID           int32
-	Role             string
-	Message          pgtype.Text
-	Status           pgtype.Text
-	ReviewedByUserID pgtype.Int4
-	ReviewedAt       pgtype.Timestamptz
-	AppliedAt        pgtype.Timestamptz
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
-	Username         string
-	Email            string
+	ID               int32              `json:"id"`
+	GameID           int32              `json:"game_id"`
+	UserID           int32              `json:"user_id"`
+	Role             string             `json:"role"`
+	Message          pgtype.Text        `json:"message"`
+	Status           pgtype.Text        `json:"status"`
+	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
+	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
+	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
+	IsPublished      bool               `json:"is_published"`
+	Username         string             `json:"username"`
+	Email            string             `json:"email"`
 }
 
 func (q *Queries) GetGameApplicationsByStatus(ctx context.Context, arg GetGameApplicationsByStatusParams) ([]GetGameApplicationsByStatusRow, error) {
@@ -342,8 +396,7 @@ func (q *Queries) GetGameApplicationsByStatus(ctx context.Context, arg GetGameAp
 			&i.ReviewedByUserID,
 			&i.ReviewedAt,
 			&i.AppliedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.IsPublished,
 			&i.Username,
 			&i.Email,
 		); err != nil {
@@ -359,7 +412,7 @@ func (q *Queries) GetGameApplicationsByStatus(ctx context.Context, arg GetGameAp
 
 const getUserGameApplications = `-- name: GetUserGameApplications :many
 SELECT
-    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.created_at, ga.updated_at,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     g.title AS game_title,
     g.state AS game_state
 FROM game_applications ga
@@ -369,19 +422,18 @@ ORDER BY ga.applied_at DESC
 `
 
 type GetUserGameApplicationsRow struct {
-	ID               int32
-	GameID           int32
-	UserID           int32
-	Role             string
-	Message          pgtype.Text
-	Status           pgtype.Text
-	ReviewedByUserID pgtype.Int4
-	ReviewedAt       pgtype.Timestamptz
-	AppliedAt        pgtype.Timestamptz
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
-	GameTitle        string
-	GameState        pgtype.Text
+	ID               int32              `json:"id"`
+	GameID           int32              `json:"game_id"`
+	UserID           int32              `json:"user_id"`
+	Role             string             `json:"role"`
+	Message          pgtype.Text        `json:"message"`
+	Status           pgtype.Text        `json:"status"`
+	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
+	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
+	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
+	IsPublished      bool               `json:"is_published"`
+	GameTitle        string             `json:"game_title"`
+	GameState        pgtype.Text        `json:"game_state"`
 }
 
 func (q *Queries) GetUserGameApplications(ctx context.Context, userID int32) ([]GetUserGameApplicationsRow, error) {
@@ -403,8 +455,7 @@ func (q *Queries) GetUserGameApplications(ctx context.Context, userID int32) ([]
 			&i.ReviewedByUserID,
 			&i.ReviewedAt,
 			&i.AppliedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.IsPublished,
 			&i.GameTitle,
 			&i.GameState,
 		); err != nil {
@@ -426,8 +477,8 @@ SELECT EXISTS(
 `
 
 type HasUserAppliedToGameParams struct {
-	GameID int32
-	UserID int32
+	GameID int32 `json:"game_id"`
+	UserID int32 `json:"user_id"`
 }
 
 func (q *Queries) HasUserAppliedToGame(ctx context.Context, arg HasUserAppliedToGameParams) (bool, error) {
@@ -437,6 +488,19 @@ func (q *Queries) HasUserAppliedToGame(ctx context.Context, arg HasUserAppliedTo
 	return exists, err
 }
 
+const publishApplicationStatuses = `-- name: PublishApplicationStatuses :exec
+UPDATE game_applications
+SET is_published = TRUE
+WHERE game_id = $1
+`
+
+// Mark all application statuses as published for a game
+// This is called when GM closes recruitment
+func (q *Queries) PublishApplicationStatuses(ctx context.Context, gameID int32) error {
+	_, err := q.db.Exec(ctx, publishApplicationStatuses, gameID)
+	return err
+}
+
 const updateGameApplicationStatus = `-- name: UpdateGameApplicationStatus :one
 UPDATE game_applications
 SET
@@ -444,18 +508,31 @@ SET
     reviewed_at = NOW(),
     reviewed_by_user_id = $3
 WHERE id = $1
-RETURNING id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, created_at, updated_at
+RETURNING id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, is_published
 `
 
 type UpdateGameApplicationStatusParams struct {
-	ID               int32
-	Status           pgtype.Text
-	ReviewedByUserID pgtype.Int4
+	ID               int32       `json:"id"`
+	Status           pgtype.Text `json:"status"`
+	ReviewedByUserID pgtype.Int4 `json:"reviewed_by_user_id"`
 }
 
-func (q *Queries) UpdateGameApplicationStatus(ctx context.Context, arg UpdateGameApplicationStatusParams) (GameApplication, error) {
+type UpdateGameApplicationStatusRow struct {
+	ID               int32              `json:"id"`
+	GameID           int32              `json:"game_id"`
+	UserID           int32              `json:"user_id"`
+	Role             string             `json:"role"`
+	Message          pgtype.Text        `json:"message"`
+	Status           pgtype.Text        `json:"status"`
+	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
+	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
+	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
+	IsPublished      bool               `json:"is_published"`
+}
+
+func (q *Queries) UpdateGameApplicationStatus(ctx context.Context, arg UpdateGameApplicationStatusParams) (UpdateGameApplicationStatusRow, error) {
 	row := q.db.QueryRow(ctx, updateGameApplicationStatus, arg.ID, arg.Status, arg.ReviewedByUserID)
-	var i GameApplication
+	var i UpdateGameApplicationStatusRow
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
@@ -466,26 +543,7 @@ func (q *Queries) UpdateGameApplicationStatus(ctx context.Context, arg UpdateGam
 		&i.ReviewedByUserID,
 		&i.ReviewedAt,
 		&i.AppliedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.IsPublished,
 	)
 	return i, err
-}
-
-const withdrawGameApplication = `-- name: WithdrawGameApplication :exec
-UPDATE game_applications
-SET
-    status = 'withdrawn',
-    reviewed_at = NOW()
-WHERE id = $1 AND user_id = $2
-`
-
-type WithdrawGameApplicationParams struct {
-	ID     int32
-	UserID int32
-}
-
-func (q *Queries) WithdrawGameApplication(ctx context.Context, arg WithdrawGameApplicationParams) error {
-	_, err := q.db.Exec(ctx, withdrawGameApplication, arg.ID, arg.UserID)
-	return err
 }

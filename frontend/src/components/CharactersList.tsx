@@ -11,23 +11,28 @@ interface CharactersListProps {
   userRole?: string; // 'gm', 'player', 'audience'
   currentUserId?: number;
   gameState?: string;
+  isAnonymous?: boolean;
 }
 
 export function CharactersList({
   gameId,
   userRole = 'player',
   currentUserId,
-  gameState = 'setup'
+  gameState = 'setup',
+  isAnonymous = false
 }: CharactersListProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: characters = [], isLoading } = useQuery({
+  const { data: charactersData, isLoading } = useQuery({
     queryKey: ['gameCharacters', gameId],
-    queryFn: () => apiClient.getGameCharacters(gameId).then(res => res.data),
+    queryFn: () => apiClient.getGameCharacters(gameId).then(res => res.data || []),
     refetchInterval: 30000 // Refetch every 30 seconds
   });
+
+  // Ensure characters is always an array
+  const characters = charactersData || [];
 
   const approveCharacterMutation = useMutation({
     mutationFn: ({ characterId, status }: { characterId: number; status: 'approved' | 'rejected' }) =>
@@ -41,10 +46,17 @@ export function CharactersList({
     approveCharacterMutation.mutate({ characterId, status });
   };
 
+  // Filter characters based on user role and status
+  // GM sees all characters
+  // Players see approved characters + their own characters (regardless of status)
+  const visibleCharacters = userRole === 'gm'
+    ? characters
+    : characters.filter(char => char.status === 'approved' || char.user_id === currentUserId);
+
   // Group characters by type
-  const playerCharacters = characters.filter(char => char.character_type === 'player_character');
-  const gmNPCs = characters.filter(char => char.character_type === 'npc_gm');
-  const audienceNPCs = characters.filter(char => char.character_type === 'npc_audience');
+  const playerCharacters = visibleCharacters.filter(char => char.character_type === 'player_character');
+  const gmNPCs = visibleCharacters.filter(char => char.character_type === 'npc_gm');
+  const audienceNPCs = visibleCharacters.filter(char => char.character_type === 'npc_audience');
 
   // Check if user can create characters
   const canCreateCharacter = () => {
@@ -65,7 +77,8 @@ export function CharactersList({
     if (userRole === 'gm') return true;
     // Users can view their own characters
     if (isUserCharacter(character)) return true;
-    // Public view for approved characters (for now, restrict to owner and GM)
+    // Anyone can view approved characters (they'll only see public information)
+    if (character.status === 'approved') return true;
     return false;
   };
 
@@ -73,8 +86,8 @@ export function CharactersList({
   const canEditCharacterSheet = (character: Character) => {
     // GM can edit all character sheets
     if (userRole === 'gm') return true;
-    // Users can edit their own characters if approved
-    if (isUserCharacter(character) && character.status === 'approved') return true;
+    // Users can edit their own characters (regardless of approval status)
+    if (isUserCharacter(character)) return true;
     return false;
   };
 
@@ -134,70 +147,96 @@ export function CharactersList({
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Player Characters */}
-            {playerCharacters.length > 0 && (
-              <div>
-                <h3 className="text-md font-medium text-gray-700 mb-3">Player Characters</h3>
-                <div className="space-y-3">
-                  {playerCharacters.map((character) => (
-                    <CharacterCard
-                      key={character.id}
-                      character={character}
-                      isOwner={isUserCharacter(character)}
-                      userRole={userRole}
-                      onApprove={handleApproveCharacter}
-                      getStatusBadge={getStatusBadge}
-                      canViewSheet={canViewCharacterSheet(character)}
-                      canEditSheet={canEditCharacterSheet(character)}
-                      onViewSheet={() => setSelectedCharacterId(character.id)}
-                    />
-                  ))}
-                </div>
+            {/* Anonymous mode: Show all characters in one unified list */}
+            {isAnonymous && userRole !== 'gm' ? (
+              <div className="space-y-3">
+                {visibleCharacters.map((character) => (
+                  <CharacterCard
+                    key={character.id}
+                    character={character}
+                    isOwner={isUserCharacter(character)}
+                    userRole={userRole}
+                    isAnonymous={isAnonymous}
+                    onApprove={handleApproveCharacter}
+                    getStatusBadge={getStatusBadge}
+                    canViewSheet={canViewCharacterSheet(character)}
+                    canEditSheet={canEditCharacterSheet(character)}
+                    onViewSheet={() => setSelectedCharacterId(character.id)}
+                  />
+                ))}
               </div>
-            )}
+            ) : (
+              <>
+                {/* Non-anonymous mode: Show characters grouped by type */}
+                {/* Player Characters */}
+                {playerCharacters.length > 0 && (
+                  <div>
+                    <h3 className="text-md font-medium text-gray-700 mb-3">Player Characters</h3>
+                    <div className="space-y-3">
+                      {playerCharacters.map((character) => (
+                        <CharacterCard
+                          key={character.id}
+                          character={character}
+                          isOwner={isUserCharacter(character)}
+                          userRole={userRole}
+                          isAnonymous={isAnonymous}
+                          onApprove={handleApproveCharacter}
+                          getStatusBadge={getStatusBadge}
+                          canViewSheet={canViewCharacterSheet(character)}
+                          canEditSheet={canEditCharacterSheet(character)}
+                          onViewSheet={() => setSelectedCharacterId(character.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {/* GM NPCs */}
-            {gmNPCs.length > 0 && (
-              <div>
-                <h3 className="text-md font-medium text-gray-700 mb-3">GM NPCs</h3>
-                <div className="space-y-3">
-                  {gmNPCs.map((character) => (
-                    <CharacterCard
-                      key={character.id}
-                      character={character}
-                      isOwner={false}
-                      userRole={userRole}
-                      onApprove={handleApproveCharacter}
-                      getStatusBadge={getStatusBadge}
-                      canViewSheet={canViewCharacterSheet(character)}
-                      canEditSheet={canEditCharacterSheet(character)}
-                      onViewSheet={() => setSelectedCharacterId(character.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+                {/* GM NPCs */}
+                {gmNPCs.length > 0 && (
+                  <div>
+                    <h3 className="text-md font-medium text-gray-700 mb-3">GM NPCs</h3>
+                    <div className="space-y-3">
+                      {gmNPCs.map((character) => (
+                        <CharacterCard
+                          key={character.id}
+                          character={character}
+                          isOwner={false}
+                          userRole={userRole}
+                          isAnonymous={isAnonymous}
+                          onApprove={handleApproveCharacter}
+                          getStatusBadge={getStatusBadge}
+                          canViewSheet={canViewCharacterSheet(character)}
+                          canEditSheet={canEditCharacterSheet(character)}
+                          onViewSheet={() => setSelectedCharacterId(character.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {/* Audience NPCs */}
-            {audienceNPCs.length > 0 && (
-              <div>
-                <h3 className="text-md font-medium text-gray-700 mb-3">Audience NPCs</h3>
-                <div className="space-y-3">
-                  {audienceNPCs.map((character) => (
-                    <CharacterCard
-                      key={character.id}
-                      character={character}
-                      isOwner={isUserCharacter(character)}
-                      userRole={userRole}
-                      onApprove={handleApproveCharacter}
-                      getStatusBadge={getStatusBadge}
-                      canViewSheet={canViewCharacterSheet(character)}
-                      canEditSheet={canEditCharacterSheet(character)}
-                      onViewSheet={() => setSelectedCharacterId(character.id)}
-                    />
-                  ))}
-                </div>
-              </div>
+                {/* Audience NPCs */}
+                {audienceNPCs.length > 0 && (
+                  <div>
+                    <h3 className="text-md font-medium text-gray-700 mb-3">Audience NPCs</h3>
+                    <div className="space-y-3">
+                      {audienceNPCs.map((character) => (
+                        <CharacterCard
+                          key={character.id}
+                          character={character}
+                          isOwner={isUserCharacter(character)}
+                          userRole={userRole}
+                          isAnonymous={isAnonymous}
+                          onApprove={handleApproveCharacter}
+                          getStatusBadge={getStatusBadge}
+                          canViewSheet={canViewCharacterSheet(character)}
+                          canEditSheet={canEditCharacterSheet(character)}
+                          onViewSheet={() => setSelectedCharacterId(character.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -220,6 +259,7 @@ export function CharactersList({
           <CharacterSheet
             characterId={selectedCharacterId}
             canEdit={canEditCharacterSheet(characters.find(c => c.id === selectedCharacterId) || ({} as Character))}
+            isGM={userRole === 'gm'}
             onClose={() => setSelectedCharacterId(null)}
           />
         </Modal>
@@ -232,6 +272,7 @@ interface CharacterCardProps {
   character: Character;
   isOwner: boolean;
   userRole: string;
+  isAnonymous?: boolean;
   onApprove: (characterId: number, status: 'approved' | 'rejected') => void;
   getStatusBadge: (status: string) => string;
   canViewSheet: boolean;
@@ -243,6 +284,7 @@ function CharacterCard({
   character,
   isOwner,
   userRole,
+  isAnonymous = false,
   onApprove,
   getStatusBadge,
   canViewSheet,
@@ -258,7 +300,8 @@ function CharacterCard({
             <span className={getStatusBadge(character.status)}>
               {character.status}
             </span>
-            {isOwner && (
+            {/* Only show ownership badge if not anonymous or if GM */}
+            {isOwner && (!isAnonymous || userRole === 'gm') && (
               <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
                 Your Character
               </span>
@@ -266,10 +309,14 @@ function CharacterCard({
           </div>
 
           <div className="text-sm text-gray-600 space-y-1">
-            <div>
-              Type: <span className="capitalize">{character.character_type.replace('_', ' ')}</span>
-            </div>
-            {character.username && (
+            {/* Only show character type if not anonymous or if GM */}
+            {(!isAnonymous || userRole === 'gm') && (
+              <div>
+                Type: <span className="capitalize">{character.character_type.replace('_', ' ')}</span>
+              </div>
+            )}
+            {/* Only show player name if not anonymous or if GM */}
+            {character.username && (!isAnonymous || userRole === 'gm') && (
               <div>Player: {character.username}</div>
             )}
           </div>

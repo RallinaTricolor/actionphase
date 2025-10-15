@@ -1,12 +1,15 @@
 export interface GamePhase {
   id: number;
   game_id: number;
-  phase_type: 'common_room' | 'action' | 'results';
+  phase_type: 'common_room' | 'action';
   phase_number: number;
+  title?: string;
+  description?: string;
   start_time: string;
   end_time?: string;
   deadline?: string;
   is_active: boolean;
+  is_published: boolean; // For action phases: whether GM has published results
   created_at: string;
 
   // Calculated fields from API
@@ -15,9 +18,17 @@ export interface GamePhase {
 }
 
 export interface CreatePhaseRequest {
-  phase_type: 'common_room' | 'action' | 'results';
+  phase_type: 'common_room' | 'action';
+  title?: string;
+  description?: string;
   start_time?: string;
   end_time?: string;
+  deadline?: string;
+}
+
+export interface UpdatePhaseRequest {
+  title?: string;
+  description?: string;
   deadline?: string;
 }
 
@@ -55,27 +66,46 @@ export interface ActionResult {
   phase_id: number;
   gm_user_id: number;
   content: string;
+  is_published: boolean;
   sent_at: string;
   phase_type?: string;
   phase_number?: number;
   gm_username?: string;
+  username?: string;
 }
 
 // Phase display helpers
 export const PHASE_TYPE_LABELS: Record<GamePhase['phase_type'], string> = {
   common_room: 'Common Room',
-  action: 'Action Phase',
-  results: 'Results'
+  action: 'Action Phase'
 };
 
 export const PHASE_TYPE_DESCRIPTIONS: Record<GamePhase['phase_type'], string> = {
   common_room: 'Open discussion and roleplay between characters',
-  action: 'Submit private actions to the GM',
-  results: 'GM publishes results and consequences'
+  action: 'Submit private actions to the GM'
 };
 
 export const PHASE_TYPE_COLORS: Record<GamePhase['phase_type'], string> = {
   common_room: 'bg-green-100 text-green-800 border-green-200',
-  action: 'bg-blue-100 text-blue-800 border-blue-200',
-  results: 'bg-purple-100 text-purple-800 border-purple-200'
+  action: 'bg-blue-100 text-blue-800 border-blue-200'
+};
+
+// Action phase states
+export const getActionPhaseLabel = (phase: GamePhase): string => {
+  if (phase.phase_type !== 'action') return PHASE_TYPE_LABELS[phase.phase_type];
+  return phase.is_published ? 'Results Published' : 'Action Phase';
+};
+
+export const getActionPhaseDescription = (phase: GamePhase): string => {
+  if (phase.phase_type !== 'action') return PHASE_TYPE_DESCRIPTIONS[phase.phase_type];
+  return phase.is_published
+    ? 'GM has published the results and consequences of player actions'
+    : 'Submit private actions to the GM';
+};
+
+export const getActionPhaseColor = (phase: GamePhase): string => {
+  if (phase.phase_type !== 'action') return PHASE_TYPE_COLORS[phase.phase_type];
+  return phase.is_published
+    ? 'bg-purple-100 text-purple-800 border-purple-200'
+    : 'bg-blue-100 text-blue-800 border-blue-200';
 };

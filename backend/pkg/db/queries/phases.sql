@@ -46,7 +46,7 @@ WHERE game_id = $1;
 -- name: SubmitAction :one
 INSERT INTO action_submissions (game_id, user_id, phase_id, character_id, content, is_draft, submitted_at)
 VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6 THEN NULL ELSE NOW() END)
-ON CONFLICT (phase_id, user_id)
+ON CONFLICT (game_id, user_id, phase_id)
 DO UPDATE SET content = $5, character_id = $4, is_draft = $6,
               submitted_at = CASE WHEN $6 THEN action_submissions.submitted_at ELSE COALESCE(action_submissions.submitted_at, NOW()) END,
               updated_at = NOW()
@@ -94,7 +94,7 @@ SELECT results.*, gp.phase_type, gp.phase_number, u.username as gm_username
 FROM action_results results
 JOIN game_phases gp ON results.phase_id = gp.id
 JOIN users u ON results.gm_user_id = u.id
-WHERE results.game_id = $1 AND results.user_id = $2
+WHERE results.game_id = $1 AND results.user_id = $2 AND results.is_published = true
 ORDER BY gp.phase_number DESC;
 
 -- name: GetPhaseResults :many
@@ -155,6 +155,22 @@ ORDER BY sent_at;
 UPDATE action_results
 SET is_published = true, sent_at = NOW()
 WHERE id = $1
+RETURNING *;
+
+-- name: PublishAllPhaseResults :exec
+UPDATE action_results
+SET is_published = true, sent_at = COALESCE(sent_at, NOW())
+WHERE phase_id = $1 AND is_published = false;
+
+-- name: GetUnpublishedResultsCount :one
+SELECT COUNT(*) as count
+FROM action_results
+WHERE phase_id = $1 AND is_published = false;
+
+-- name: UpdateActionResult :one
+UPDATE action_results
+SET content = $2
+WHERE id = $1 AND is_published = false
 RETURNING *;
 
 -- name: GetSubmissionStatsForPhase :one

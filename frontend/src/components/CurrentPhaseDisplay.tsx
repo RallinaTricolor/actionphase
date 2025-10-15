@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { CountdownTimer } from './CountdownTimer';
 import {
   PHASE_TYPE_LABELS,
   PHASE_TYPE_DESCRIPTIONS,
-  PHASE_TYPE_COLORS
+  PHASE_TYPE_COLORS,
+  getActionPhaseLabel,
+  getActionPhaseDescription,
+  getActionPhaseColor
 } from '../types/phases';
 import type { GamePhase } from '../types/phases';
 
@@ -21,11 +25,24 @@ export function CurrentPhaseDisplay({
   onPhaseExpired,
   className = ''
 }: CurrentPhaseDisplayProps) {
+  const [showPreviousPhases, setShowPreviousPhases] = useState(false);
+
   const { data: currentPhaseData, isLoading, error } = useQuery({
     queryKey: ['currentPhase', gameId],
     queryFn: () => apiClient.getCurrentPhase(gameId).then(res => res.data),
     refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnMount: 'always',
+    staleTime: 0,
     enabled: !!gameId
+  });
+
+  // Get all phases for history
+  const { data: allPhasesData } = useQuery({
+    queryKey: ['gamePhases', gameId],
+    queryFn: () => apiClient.getGamePhases(gameId).then(res => res.data),
+    enabled: !!gameId && !isGM, // Only fetch for non-GM users
+    refetchOnMount: 'always',
+    staleTime: 0
   });
 
   if (isLoading) {
@@ -52,6 +69,14 @@ export function CurrentPhaseDisplay({
   }
 
   const currentPhase = currentPhaseData?.phase;
+  const allPhases = allPhasesData || [];
+  // Only show phases that have ended (have end_time) or are not active
+  // This filters out future phases that haven't been activated yet
+  const previousPhases = allPhases.filter(phase =>
+    !phase.is_active &&
+    phase.id !== currentPhase?.id &&
+    (phase.end_time || phase.phase_number < (currentPhase?.phase_number || 0))
+  );
 
   if (!currentPhase) {
     return (
@@ -73,12 +98,50 @@ export function CurrentPhaseDisplay({
   }
 
   return (
-    <CurrentPhaseCard
-      phase={currentPhase}
-      isGM={isGM}
-      onPhaseExpired={onPhaseExpired}
-      className={className}
-    />
+    <div className={className}>
+      <CurrentPhaseCard
+        phase={currentPhase}
+        isGM={isGM}
+        onPhaseExpired={onPhaseExpired}
+      />
+
+      {/* Previous Phases Section (Non-GM only) */}
+      {!isGM && previousPhases.length > 0 && (
+        <div className="mt-4 bg-white rounded-lg border border-gray-200">
+          <button
+            onClick={() => setShowPreviousPhases(!showPreviousPhases)}
+            className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-md font-medium text-gray-900">
+                Previous Phases ({previousPhases.length})
+              </h3>
+            </div>
+            <svg
+              className={`w-5 h-5 text-gray-400 transition-transform ${showPreviousPhases ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showPreviousPhases && (
+            <div className="border-t border-gray-200 p-4">
+              <div className="space-y-3">
+                {previousPhases.map((phase) => (
+                  <PreviousPhaseCard key={phase.id} phase={phase} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -95,11 +158,11 @@ function CurrentPhaseCard({
   onPhaseExpired,
   className = ''
 }: CurrentPhaseCardProps) {
-  const phaseColorClass = PHASE_TYPE_COLORS[phase.phase_type];
-  const phaseLabel = PHASE_TYPE_LABELS[phase.phase_type];
-  const phaseDescription = PHASE_TYPE_DESCRIPTIONS[phase.phase_type];
+  const phaseColorClass = getActionPhaseColor(phase);
+  const phaseLabel = getActionPhaseLabel(phase);
+  const phaseDescription = getActionPhaseDescription(phase);
 
-  const phaseIcon = getPhaseIcon(phase.phase_type);
+  const phaseIcon = getPhaseIcon(phase);
 
   return (
     <div className={`bg-white rounded-lg border-2 shadow-sm ${className}`}>
@@ -164,6 +227,21 @@ interface PhaseActionsProps {
 
 function PhaseActions({ phase, isGM }: PhaseActionsProps) {
   if (phase.phase_type === 'action') {
+    // Action phase with published results
+    if (phase.is_published) {
+      return (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <p className="text-sm text-purple-700 font-medium">
+            {isGM
+              ? 'Results have been published to all players.'
+              : 'The GM has published the results of your actions.'
+            }
+          </p>
+        </div>
+      );
+    }
+
+    // Action phase still accepting submissions
     return (
       <div className="mt-4 pt-4 border-t border-gray-100">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -198,26 +276,24 @@ function PhaseActions({ phase, isGM }: PhaseActionsProps) {
     );
   }
 
-  if (phase.phase_type === 'results') {
+  return null;
+}
+
+function getPhaseIcon(phase: GamePhase) {
+  const iconClass = "w-8 h-8";
+
+  // Check if action phase with published results
+  if (phase.phase_type === 'action' && phase.is_published) {
     return (
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <p className="text-sm text-purple-700 font-medium">
-          {isGM
-            ? 'Share the results of player actions.'
-            : 'The GM is revealing the results of your actions.'
-          }
-        </p>
+      <div className="p-2 bg-purple-100 rounded-lg">
+        <svg className={`${iconClass} text-purple-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
       </div>
     );
   }
 
-  return null;
-}
-
-function getPhaseIcon(phaseType: GamePhase['phase_type']) {
-  const iconClass = "w-8 h-8";
-
-  switch (phaseType) {
+  switch (phase.phase_type) {
     case 'common_room':
       return (
         <div className="p-2 bg-green-100 rounded-lg">
@@ -236,15 +312,6 @@ function getPhaseIcon(phaseType: GamePhase['phase_type']) {
         </div>
       );
 
-    case 'results':
-      return (
-        <div className="p-2 bg-purple-100 rounded-lg">
-          <svg className={`${iconClass} text-purple-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-      );
-
     default:
       return (
         <div className="p-2 bg-gray-100 rounded-lg">
@@ -254,4 +321,35 @@ function getPhaseIcon(phaseType: GamePhase['phase_type']) {
         </div>
       );
   }
+}
+
+interface PreviousPhaseCardProps {
+  phase: GamePhase;
+}
+
+function PreviousPhaseCard({ phase }: PreviousPhaseCardProps) {
+  const phaseColorClass = getActionPhaseColor(phase);
+  const phaseLabel = getActionPhaseLabel(phase);
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <span className={`px-2 py-1 text-xs rounded-full font-medium border ${phaseColorClass}`}>
+            Phase {phase.phase_number}
+          </span>
+          <div>
+            <h4 className="font-medium text-gray-900 text-sm">{phaseLabel}</h4>
+            <p className="text-xs text-gray-600">
+              {new Date(phase.start_time).toLocaleDateString()} •
+              {phase.end_time ? ` Ended ${new Date(phase.end_time).toLocaleDateString()}` : ' Completed'}
+            </p>
+          </div>
+        </div>
+        <span className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded">
+          Completed
+        </span>
+      </div>
+    </div>
+  );
 }

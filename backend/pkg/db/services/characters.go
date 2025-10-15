@@ -80,6 +80,14 @@ func (cs *CharacterService) GetNPCs(ctx context.Context, gameID int32) ([]models
 	return queries.GetNPCsByGame(ctx, gameID)
 }
 
+func (cs *CharacterService) GetUserControllableCharacters(ctx context.Context, gameID, userID int32) ([]models.Character, error) {
+	queries := models.New(cs.DB)
+	return queries.GetUserControllableCharacters(ctx, models.GetUserControllableCharactersParams{
+		GameID: gameID,
+		UserID: pgtype.Int4{Int32: userID, Valid: true},
+	})
+}
+
 func (cs *CharacterService) ApproveCharacter(ctx context.Context, characterID int32) (*models.Character, error) {
 	queries := models.New(cs.DB)
 	character, err := queries.UpdateCharacterStatus(ctx, models.UpdateCharacterStatusParams{

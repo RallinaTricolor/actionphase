@@ -307,7 +307,8 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert to response format
-	var response []map[string]interface{}
+	// Initialize as empty slice to ensure JSON encodes as [] not null
+	response := make([]map[string]interface{}, 0)
 	for _, char := range characters {
 		charData := map[string]interface{}{
 			"id":             char.ID,
@@ -324,6 +325,58 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 		}
 		if char.OwnerUsername.Valid {
 			charData["username"] = char.OwnerUsername.String
+		}
+
+		response = append(response, charData)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetUserControllableCharacters - Get all characters the current user can control in a game
+func (h *Handler) GetUserControllableCharacters(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Get user from token
+	user, err := h.getUserFromToken(r)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	userID := int32(user.ID)
+
+	characterService := &services.CharacterService{DB: h.App.Pool}
+	characters, err := characterService.GetUserControllableCharacters(r.Context(), int32(gameID), userID)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user controllable characters", "error", err, "game_id", gameID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	// Initialize as empty slice to ensure JSON encodes as [] not null
+	response := make([]map[string]interface{}, 0)
+	for _, char := range characters {
+		charData := map[string]interface{}{
+			"id":             char.ID,
+			"game_id":        char.GameID,
+			"name":           char.Name,
+			"character_type": char.CharacterType,
+			"status":         char.Status.String,
+			"created_at":     char.CreatedAt.Time,
+			"updated_at":     char.UpdatedAt.Time,
+		}
+
+		if char.UserID.Valid {
+			charData["user_id"] = char.UserID.Int32
 		}
 
 		response = append(response, charData)
@@ -588,7 +641,8 @@ func (h *Handler) GetCharacterData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert to response format
-	var response []map[string]interface{}
+	// Initialize as empty slice to ensure JSON encodes as [] not null
+	response := make([]map[string]interface{}, 0)
 	for _, data := range characterData {
 		dataItem := map[string]interface{}{
 			"id":           data.ID,

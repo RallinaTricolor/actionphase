@@ -243,6 +243,7 @@ type CreateGameRequest struct {
 	RecruitmentDeadline *time.Time
 	MaxPlayers          int32
 	IsPublic            bool
+	IsAnonymous         bool
 }
 
 // UpdateGameRequest represents the parameters needed to update an existing game
@@ -256,6 +257,7 @@ type UpdateGameRequest struct {
 	RecruitmentDeadline *time.Time
 	MaxPlayers          int32
 	IsPublic            bool
+	IsAnonymous         bool
 }
 
 // PhaseServiceInterface defines the contract for game phase management operations.
@@ -372,11 +374,118 @@ type ActionSubmissionServiceInterface interface {
 	// PublishActionResult makes an action result visible to the player
 	PublishActionResult(ctx context.Context, resultID, userID int32) error
 
+	// PublishAllPhaseResults publishes all unpublished results for a phase
+	PublishAllPhaseResults(ctx context.Context, phaseID int32) error
+
+	// GetUnpublishedResultsCount returns the count of unpublished results for a phase
+	GetUnpublishedResultsCount(ctx context.Context, phaseID int32) (int64, error)
+
+	// UpdateActionResult updates the content of an unpublished action result
+	UpdateActionResult(ctx context.Context, resultID int32, content string) (*models.ActionResult, error)
+
 	// GetSubmissionStats returns statistics about submissions for a phase
 	GetSubmissionStats(ctx context.Context, phaseID int32) (*ActionSubmissionStats, error)
 
 	// CanUserSubmitAction checks if user can submit/edit actions for a phase
 	CanUserSubmitAction(ctx context.Context, phaseID, userID int32) (bool, error)
+}
+
+// MessageServiceInterface defines the contract for message and comment operations.
+// Handles both Common Room posts/comments and future private messaging between characters.
+//
+// Key Design Principles:
+// - All messages MUST be sent as a character (character_id is required)
+// - Visibility types: 'game' (Common Room) or 'private' (future DMs)
+// - Reddit-style threading: parent_id creates threaded conversations
+// - Thread building: Frontend recursively calls GetPostComments to build comment trees
+//
+// Usage Example:
+//
+//	messageService := &services.MessageService{DB: pool}
+//
+//	// Create a Common Room post
+//	post, err := messageService.CreatePost(ctx, CreatePostRequest{
+//	    GameID:      123,
+//	    PhaseID:     456,
+//	    AuthorID:    789,
+//	    CharacterID: 111,
+//	    Content:     "What should we do next?",
+//	    Visibility:  "game",
+//	})
+//
+//	// Add a comment to the post
+//	comment, err := messageService.CreateComment(ctx, CreateCommentRequest{
+//	    GameID:      123,
+//	    PhaseID:     456,
+//	    AuthorID:    222,
+//	    CharacterID: 333,
+//	    Content:     "I think we should investigate the old ruins",
+//	    ParentID:    post.ID,
+//	    Visibility:  "game",
+//	})
+//
+//	// Get all posts for a game
+//	posts, err := messageService.GetGamePosts(ctx, gameID, phaseID, limit, offset)
+//
+//	// Get comments for a post (direct children only - frontend builds tree)
+//	comments, err := messageService.GetPostComments(ctx, postID)
+type MessageServiceInterface interface {
+	// CreatePost creates a new top-level message post
+	CreatePost(ctx context.Context, req CreatePostRequest) (*models.Message, error)
+
+	// GetPost retrieves a specific post by ID with metadata
+	GetPost(ctx context.Context, postID int32) (*MessageWithDetails, error)
+
+	// GetGamePosts retrieves posts for a game, optionally filtered by phase
+	GetGamePosts(ctx context.Context, gameID int32, phaseID *int32, limit, offset int32) ([]MessageWithDetails, error)
+
+	// GetPhasePosts retrieves all posts for a specific phase
+	GetPhasePosts(ctx context.Context, phaseID int32) ([]MessageWithDetails, error)
+
+	// UpdatePost updates the content of an existing post
+	UpdatePost(ctx context.Context, postID int32, content string) (*models.Message, error)
+
+	// DeletePost soft-deletes a post (preserves thread structure)
+	DeletePost(ctx context.Context, postID int32) error
+
+	// CreateComment creates a comment reply to a post or another comment
+	CreateComment(ctx context.Context, req CreateCommentRequest) (*models.Message, error)
+
+	// GetComment retrieves a specific comment by ID with metadata
+	GetComment(ctx context.Context, commentID int32) (*MessageWithDetails, error)
+
+	// GetPostComments retrieves direct child comments for a post or comment
+	GetPostComments(ctx context.Context, parentID int32) ([]MessageWithDetails, error)
+
+	// UpdateComment updates the content of an existing comment
+	UpdateComment(ctx context.Context, commentID int32, content string) (*models.Message, error)
+
+	// DeleteComment soft-deletes a comment (preserves thread structure)
+	DeleteComment(ctx context.Context, commentID int32) error
+
+	// GetGamePostCount returns total post count for a game
+	GetGamePostCount(ctx context.Context, gameID int32, phaseID *int32) (int64, error)
+
+	// GetPostCommentCount returns total comment count for a post
+	GetPostCommentCount(ctx context.Context, postID int32) (int64, error)
+
+	// GetUserPostsInGame retrieves all posts by a user in a game
+	GetUserPostsInGame(ctx context.Context, gameID, userID int32) ([]MessageWithDetails, error)
+
+	// AddReaction adds a reaction to a message
+	AddReaction(ctx context.Context, messageID, userID int32, reactionType string) (*models.MessageReaction, error)
+
+	// RemoveReaction removes a reaction from a message
+	RemoveReaction(ctx context.Context, messageID, userID int32, reactionType string) error
+
+	// GetMessageReactions retrieves all reactions for a message
+	GetMessageReactions(ctx context.Context, messageID int32) ([]models.GetMessageReactionsRow, error)
+
+	// GetReactionCounts retrieves reaction counts grouped by type
+	GetReactionCounts(ctx context.Context, messageID int32) ([]models.GetReactionCountsRow, error)
+
+	// ValidateCharacterOwnership verifies character belongs to author and game
+	ValidateCharacterOwnership(ctx context.Context, characterID, authorID, gameID int32) error
 }
 
 // CreatePhaseRequest represents the parameters needed to create a new game phase
@@ -466,4 +575,34 @@ type CreateGameApplicationRequest struct {
 	UserID  int32
 	Role    string
 	Message string
+}
+
+// CreatePostRequest represents the parameters needed to create a new post
+type CreatePostRequest struct {
+	GameID      int32
+	PhaseID     *int32 // Optional - can be nil for game-wide posts
+	AuthorID    int32
+	CharacterID int32
+	Content     string
+	Visibility  string // "game" or "private"
+}
+
+// CreateCommentRequest represents the parameters needed to create a comment
+type CreateCommentRequest struct {
+	GameID      int32
+	PhaseID     *int32 // Optional - inherits from parent
+	AuthorID    int32
+	CharacterID int32
+	Content     string
+	ParentID    int32  // Required - the post or comment being replied to
+	Visibility  string // "game" or "private"
+}
+
+// MessageWithDetails represents a message with additional metadata
+type MessageWithDetails struct {
+	models.Message
+	AuthorUsername string
+	CharacterName  string
+	CommentCount   int64 // For posts
+	ReplyCount     int64 // For comments
 }

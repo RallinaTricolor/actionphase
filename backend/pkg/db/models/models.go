@@ -5,207 +5,334 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type MessageType string
+
+const (
+	MessageTypePost           MessageType = "post"
+	MessageTypeComment        MessageType = "comment"
+	MessageTypePrivateMessage MessageType = "private_message"
+)
+
+func (e *MessageType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MessageType(s)
+	case string:
+		*e = MessageType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MessageType: %T", src)
+	}
+	return nil
+}
+
+type NullMessageType struct {
+	MessageType MessageType `json:"message_type"`
+	Valid       bool        `json:"valid"` // Valid is true if MessageType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMessageType) Scan(value interface{}) error {
+	if value == nil {
+		ns.MessageType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MessageType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMessageType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MessageType), nil
+}
+
+type MessageVisibility string
+
+const (
+	MessageVisibilityGame    MessageVisibility = "game"
+	MessageVisibilityPrivate MessageVisibility = "private"
+)
+
+func (e *MessageVisibility) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MessageVisibility(s)
+	case string:
+		*e = MessageVisibility(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MessageVisibility: %T", src)
+	}
+	return nil
+}
+
+type NullMessageVisibility struct {
+	MessageVisibility MessageVisibility `json:"message_visibility"`
+	Valid             bool              `json:"valid"` // Valid is true if MessageVisibility is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMessageVisibility) Scan(value interface{}) error {
+	if value == nil {
+		ns.MessageVisibility, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MessageVisibility.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMessageVisibility) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MessageVisibility), nil
+}
+
 type ActionResult struct {
-	ID          int32
-	GameID      int32
-	UserID      int32
-	PhaseID     int32
-	GmUserID    int32
-	Content     string
-	IsPublished pgtype.Bool
-	SentAt      pgtype.Timestamptz
+	ID          int32              `json:"id"`
+	GameID      int32              `json:"game_id"`
+	UserID      int32              `json:"user_id"`
+	PhaseID     int32              `json:"phase_id"`
+	GmUserID    int32              `json:"gm_user_id"`
+	Content     string             `json:"content"`
+	IsPublished pgtype.Bool        `json:"is_published"`
+	SentAt      pgtype.Timestamptz `json:"sent_at"`
 }
 
 type ActionSubmission struct {
-	ID          int32
-	GameID      int32
-	UserID      int32
-	PhaseID     int32
-	CharacterID pgtype.Int4
-	Content     string
-	IsDraft     pgtype.Bool
-	SubmittedAt pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
+	ID          int32              `json:"id"`
+	GameID      int32              `json:"game_id"`
+	UserID      int32              `json:"user_id"`
+	PhaseID     int32              `json:"phase_id"`
+	CharacterID pgtype.Int4        `json:"character_id"`
+	Content     string             `json:"content"`
+	IsDraft     pgtype.Bool        `json:"is_draft"`
+	SubmittedAt pgtype.Timestamptz `json:"submitted_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Character struct {
-	ID            int32
-	GameID        int32
-	UserID        pgtype.Int4
-	Name          string
-	CharacterType string
-	Status        pgtype.Text
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
+	ID            int32              `json:"id"`
+	GameID        int32              `json:"game_id"`
+	UserID        pgtype.Int4        `json:"user_id"`
+	Name          string             `json:"name"`
+	CharacterType string             `json:"character_type"`
+	Status        pgtype.Text        `json:"status"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
 type CharacterDatum struct {
-	ID          int32
-	CharacterID int32
-	ModuleType  string
-	FieldName   string
-	FieldValue  pgtype.Text
-	FieldType   pgtype.Text
-	IsPublic    pgtype.Bool
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
+	ID          int32              `json:"id"`
+	CharacterID int32              `json:"character_id"`
+	ModuleType  string             `json:"module_type"`
+	FieldName   string             `json:"field_name"`
+	FieldValue  pgtype.Text        `json:"field_value"`
+	FieldType   pgtype.Text        `json:"field_type"`
+	IsPublic    pgtype.Bool        `json:"is_public"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Conversation struct {
-	ID               int32
-	GameID           int32
-	Title            pgtype.Text
-	ConversationType pgtype.Text
-	CreatedByUserID  int32
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
+	ID               int32              `json:"id"`
+	GameID           int32              `json:"game_id"`
+	ConversationType string             `json:"conversation_type"`
+	Title            pgtype.Text        `json:"title"`
+	CreatedByUserID  int32              `json:"created_by_user_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ConversationParticipant struct {
-	ID             int32
-	ConversationID int32
-	UserID         pgtype.Int4
-	CharacterID    pgtype.Int4
-	JoinedAt       pgtype.Timestamptz
+	ID             int32              `json:"id"`
+	ConversationID int32              `json:"conversation_id"`
+	UserID         int32              `json:"user_id"`
+	CharacterID    pgtype.Int4        `json:"character_id"`
+	JoinedAt       pgtype.Timestamptz `json:"joined_at"`
+	LastReadAt     pgtype.Timestamptz `json:"last_read_at"`
 }
 
 type Game struct {
-	ID                  int32
-	Title               string
-	Description         pgtype.Text
-	GmUserID            int32
-	State               pgtype.Text
-	Genre               pgtype.Text
-	StartDate           pgtype.Timestamptz
-	EndDate             pgtype.Timestamptz
-	RecruitmentDeadline pgtype.Timestamptz
-	MaxPlayers          pgtype.Int4
-	IsPublic            pgtype.Bool
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
+	ID                  int32              `json:"id"`
+	Title               string             `json:"title"`
+	Description         pgtype.Text        `json:"description"`
+	GmUserID            int32              `json:"gm_user_id"`
+	State               pgtype.Text        `json:"state"`
+	Genre               pgtype.Text        `json:"genre"`
+	StartDate           pgtype.Timestamptz `json:"start_date"`
+	EndDate             pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers          pgtype.Int4        `json:"max_players"`
+	IsPublic            pgtype.Bool        `json:"is_public"`
+	IsAnonymous         bool               `json:"is_anonymous"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GameApplication struct {
-	ID               int32
-	GameID           int32
-	UserID           int32
-	Role             string
-	Message          pgtype.Text
-	Status           pgtype.Text
-	ReviewedByUserID pgtype.Int4
-	ReviewedAt       pgtype.Timestamptz
-	AppliedAt        pgtype.Timestamptz
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
+	ID               int32              `json:"id"`
+	GameID           int32              `json:"game_id"`
+	UserID           int32              `json:"user_id"`
+	Role             string             `json:"role"`
+	Message          pgtype.Text        `json:"message"`
+	Status           pgtype.Text        `json:"status"`
+	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
+	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
+	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
+	IsPublished      bool               `json:"is_published"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GameParticipant struct {
-	ID       int32
-	GameID   int32
-	UserID   int32
-	Role     string
-	Status   pgtype.Text
-	JoinedAt pgtype.Timestamptz
+	ID       int32              `json:"id"`
+	GameID   int32              `json:"game_id"`
+	UserID   int32              `json:"user_id"`
+	Role     string             `json:"role"`
+	Status   pgtype.Text        `json:"status"`
+	JoinedAt pgtype.Timestamptz `json:"joined_at"`
 }
 
 type GamePhase struct {
-	ID          int32
-	GameID      int32
-	PhaseType   string
-	PhaseNumber int32
-	Title       string
-	Description pgtype.Text
-	StartTime   pgtype.Timestamptz
-	EndTime     pgtype.Timestamptz
-	Deadline    pgtype.Timestamptz
-	IsActive    pgtype.Bool
-	CreatedAt   pgtype.Timestamptz
+	ID          int32              `json:"id"`
+	GameID      int32              `json:"game_id"`
+	PhaseType   string             `json:"phase_type"`
+	PhaseNumber int32              `json:"phase_number"`
+	Title       string             `json:"title"`
+	Description pgtype.Text        `json:"description"`
+	StartTime   pgtype.Timestamptz `json:"start_time"`
+	EndTime     pgtype.Timestamptz `json:"end_time"`
+	Deadline    pgtype.Timestamptz `json:"deadline"`
+	IsActive    pgtype.Bool        `json:"is_active"`
+	IsPublished bool               `json:"is_published"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type Message struct {
+	ID          int32             `json:"id"`
+	GameID      int32             `json:"game_id"`
+	PhaseID     pgtype.Int4       `json:"phase_id"`
+	AuthorID    int32             `json:"author_id"`
+	CharacterID int32             `json:"character_id"`
+	Content     string            `json:"content"`
+	MessageType MessageType       `json:"message_type"`
+	ParentID    pgtype.Int4       `json:"parent_id"`
+	ThreadDepth int32             `json:"thread_depth"`
+	Visibility  MessageVisibility `json:"visibility"`
+	IsEdited    bool              `json:"is_edited"`
+	IsDeleted   bool              `json:"is_deleted"`
+	CreatedAt   pgtype.Timestamp  `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp  `json:"updated_at"`
+	DeletedAt   pgtype.Timestamp  `json:"deleted_at"`
+}
+
+type MessageReaction struct {
+	ID           int32            `json:"id"`
+	MessageID    int32            `json:"message_id"`
+	UserID       int32            `json:"user_id"`
+	ReactionType string           `json:"reaction_type"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+}
+
+type MessageRecipient struct {
+	ID          int32            `json:"id"`
+	MessageID   int32            `json:"message_id"`
+	RecipientID int32            `json:"recipient_id"`
+	IsRead      bool             `json:"is_read"`
+	ReadAt      pgtype.Timestamp `json:"read_at"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
 }
 
 type Notification struct {
-	ID                int32
-	UserID            int32
-	GameID            pgtype.Int4
-	RelatedEntityType pgtype.Text
-	RelatedEntityID   pgtype.Int4
-	NotificationType  string
-	Title             string
-	Content           pgtype.Text
-	IsRead            pgtype.Bool
-	CreatedAt         pgtype.Timestamptz
+	ID                int32              `json:"id"`
+	UserID            int32              `json:"user_id"`
+	GameID            pgtype.Int4        `json:"game_id"`
+	RelatedEntityType pgtype.Text        `json:"related_entity_type"`
+	RelatedEntityID   pgtype.Int4        `json:"related_entity_id"`
+	NotificationType  string             `json:"notification_type"`
+	Title             string             `json:"title"`
+	Content           pgtype.Text        `json:"content"`
+	IsRead            pgtype.Bool        `json:"is_read"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 }
 
 type NpcAssignment struct {
-	ID               int32
-	CharacterID      int32
-	AssignedUserID   int32
-	AssignedByUserID int32
-	AssignedAt       pgtype.Timestamptz
+	ID               int32              `json:"id"`
+	CharacterID      int32              `json:"character_id"`
+	AssignedUserID   int32              `json:"assigned_user_id"`
+	AssignedByUserID int32              `json:"assigned_by_user_id"`
+	AssignedAt       pgtype.Timestamptz `json:"assigned_at"`
 }
 
 type PhaseTransition struct {
-	ID          int32
-	GameID      int32
-	FromPhaseID pgtype.Int4
-	ToPhaseID   int32
-	InitiatedBy int32
-	Reason      pgtype.Text
-	CreatedAt   pgtype.Timestamptz
+	ID          int32              `json:"id"`
+	GameID      int32              `json:"game_id"`
+	FromPhaseID pgtype.Int4        `json:"from_phase_id"`
+	ToPhaseID   int32              `json:"to_phase_id"`
+	InitiatedBy int32              `json:"initiated_by"`
+	Reason      pgtype.Text        `json:"reason"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type PrivateMessage struct {
-	ID                int32
-	ConversationID    int32
-	SenderUserID      pgtype.Int4
-	SenderCharacterID pgtype.Int4
-	Content           string
-	SentAt            pgtype.Timestamptz
-	CreatedAt         pgtype.Timestamptz
+	ID                int32              `json:"id"`
+	ConversationID    int32              `json:"conversation_id"`
+	SenderUserID      int32              `json:"sender_user_id"`
+	SenderCharacterID pgtype.Int4        `json:"sender_character_id"`
+	Content           string             `json:"content"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Session struct {
-	ID      int32
-	UserID  int32
-	Data    string
-	Expires pgtype.Timestamptz
+	ID      int32              `json:"id"`
+	UserID  int32              `json:"user_id"`
+	Data    string             `json:"data"`
+	Expires pgtype.Timestamptz `json:"expires"`
 }
 
 type Thread struct {
-	ID              int32
-	GameID          int32
-	PhaseID         pgtype.Int4
-	Title           string
-	Content         pgtype.Text
-	CreatedByUserID int32
-	IsPinned        pgtype.Bool
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
+	ID              int32              `json:"id"`
+	GameID          int32              `json:"game_id"`
+	PhaseID         pgtype.Int4        `json:"phase_id"`
+	Title           string             `json:"title"`
+	Content         pgtype.Text        `json:"content"`
+	CreatedByUserID int32              `json:"created_by_user_id"`
+	IsPinned        pgtype.Bool        `json:"is_pinned"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ThreadPost struct {
-	ID           int32
-	ThreadID     int32
-	ParentPostID pgtype.Int4
-	UserID       int32
-	CharacterID  pgtype.Int4
-	Content      string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
+	ID           int32              `json:"id"`
+	ThreadID     int32              `json:"thread_id"`
+	ParentPostID pgtype.Int4        `json:"parent_post_id"`
+	UserID       int32              `json:"user_id"`
+	CharacterID  pgtype.Int4        `json:"character_id"`
+	Content      string             `json:"content"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type User struct {
-	ID                 int32
-	Username           string
-	Email              string
-	Password           string
-	IsAdmin            pgtype.Bool
-	CreatedAt          pgtype.Timestamp
-	DisplayName        pgtype.Text
-	Bio                pgtype.Text
-	Timezone           pgtype.Text
-	EmailNotifications pgtype.Bool
-	HighContrast       pgtype.Bool
+	ID                 int32            `json:"id"`
+	Username           string           `json:"username"`
+	Email              string           `json:"email"`
+	Password           string           `json:"password"`
+	IsAdmin            pgtype.Bool      `json:"is_admin"`
+	CreatedAt          pgtype.Timestamp `json:"created_at"`
+	DisplayName        pgtype.Text      `json:"display_name"`
+	Bio                pgtype.Text      `json:"bio"`
+	Timezone           pgtype.Text      `json:"timezone"`
+	EmailNotifications pgtype.Bool      `json:"email_notifications"`
+	HighContrast       pgtype.Bool      `json:"high_contrast"`
 }

@@ -9,6 +9,7 @@ export interface Game {
   end_date?: string;
   recruitment_deadline?: string;
   max_players?: number;
+  is_anonymous?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -54,10 +55,12 @@ export interface CreateGameRequest {
   end_date?: string;
   recruitment_deadline?: string;
   max_players?: number;
+  is_anonymous?: boolean;
 }
 
 export interface UpdateGameRequest extends CreateGameRequest {
   is_public: boolean;
+  is_anonymous?: boolean;
 }
 
 export interface ApplyToGameRequest {

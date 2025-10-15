@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import type { GameApplication } from '../types/games';
+import type { GameApplication, GameState } from '../types/games';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from '../types/games';
 
 interface GameApplicationCardProps {
   application: GameApplication;
   isGM?: boolean;
+  gameState?: GameState;
   onApprove?: (applicationId: number) => Promise<void>;
   onReject?: (applicationId: number) => Promise<void>;
 }
@@ -12,6 +13,7 @@ interface GameApplicationCardProps {
 export const GameApplicationCard = ({
   application,
   isGM = false,
+  gameState,
   onApprove,
   onReject
 }: GameApplicationCardProps) => {
@@ -27,29 +29,23 @@ export const GameApplicationCard = ({
     });
   };
 
-  const handleApprove = async () => {
-    if (!onApprove) return;
+  const handleToggleStatus = async () => {
+    // If pending or rejected, approve. If approved, reject.
+    const shouldApprove = application.status !== 'approved';
+    const handler = shouldApprove ? onApprove : onReject;
 
-    try {
-      setActionLoading(true);
-      await onApprove(application.id);
-    } catch (error) {
-      console.error('Failed to approve application:', error);
-    } finally {
-      setActionLoading(false);
+    if (!handler) return;
+
+    // Only confirm for rejection
+    if (!shouldApprove && !confirm('Are you sure you want to reject this application?')) {
+      return;
     }
-  };
-
-  const handleReject = async () => {
-    if (!onReject) return;
-
-    if (!confirm('Are you sure you want to reject this application?')) return;
 
     try {
       setActionLoading(true);
-      await onReject(application.id);
+      await handler(application.id);
     } catch (error) {
-      console.error('Failed to reject application:', error);
+      console.error('Failed to update application:', error);
     } finally {
       setActionLoading(false);
     }
@@ -90,21 +86,22 @@ export const GameApplicationCard = ({
         )}
       </div>
 
-      {isGM && application.status === 'pending' && onApprove && onReject && (
-        <div className="flex gap-3 pt-4 border-t border-gray-100">
+      {isGM && gameState === 'recruitment' && onApprove && onReject && (
+        <div className="flex justify-end pt-4 border-t border-gray-100">
           <button
-            onClick={handleApprove}
+            onClick={handleToggleStatus}
             disabled={actionLoading}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`${
+              application.status === 'approved'
+                ? 'bg-red-600 hover:bg-red-700'
+                : 'bg-green-600 hover:bg-green-700'
+            } text-white py-1.5 px-3 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            {actionLoading ? 'Processing...' : 'Approve'}
-          </button>
-          <button
-            onClick={handleReject}
-            disabled={actionLoading}
-            className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {actionLoading ? 'Processing...' : 'Reject'}
+            {actionLoading
+              ? 'Processing...'
+              : application.status === 'approved'
+              ? 'Reject'
+              : 'Approve'}
           </button>
         </div>
       )}

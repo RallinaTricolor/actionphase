@@ -37,6 +37,7 @@ CREATE TABLE games (
     recruitment_deadline TIMESTAMP WITH TIME ZONE,
     max_players INTEGER DEFAULT 6,
     is_public BOOLEAN DEFAULT TRUE,
+    is_anonymous BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -63,6 +64,7 @@ CREATE TABLE game_applications (
     reviewed_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     reviewed_at TIMESTAMP WITH TIME ZONE,
     applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    is_published BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(game_id, user_id)
@@ -106,7 +108,7 @@ CREATE TABLE npc_assignments (
 CREATE TABLE game_phases (
     id SERIAL PRIMARY KEY,
     game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
-    phase_type VARCHAR(20) NOT NULL CHECK (phase_type IN ('common_room', 'action', 'results')),
+    phase_type VARCHAR(20) NOT NULL CHECK (phase_type IN ('common_room', 'action')),
     phase_number INTEGER NOT NULL,
     title VARCHAR(255) NOT NULL DEFAULT 'Untitled Phase',
     description TEXT,
@@ -114,6 +116,7 @@ CREATE TABLE game_phases (
     end_time TIMESTAMP WITH TIME ZONE,
     deadline TIMESTAMP WITH TIME ZONE,
     is_active BOOLEAN DEFAULT FALSE,
+    is_published BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(game_id, phase_number)
 );
@@ -159,30 +162,32 @@ CREATE TABLE phase_transitions (
 CREATE TABLE conversations (
     id SERIAL PRIMARY KEY,
     game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    conversation_type VARCHAR(20) NOT NULL DEFAULT 'direct',
     title VARCHAR(255),
-    conversation_type VARCHAR(50) DEFAULT 'private',
     created_by_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CHECK (conversation_type IN ('direct', 'group'))
 );
 
 CREATE TABLE conversation_participants (
     id SERIAL PRIMARY KEY,
     conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    character_id INTEGER REFERENCES characters(id) ON DELETE SET NULL,
     joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_read_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(conversation_id, user_id, character_id)
 );
 
 CREATE TABLE private_messages (
     id SERIAL PRIMARY KEY,
     conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    sender_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    sender_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     sender_character_id INTEGER REFERENCES characters(id) ON DELETE SET NULL,
     content TEXT NOT NULL,
-    sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Threads (for common room discussions)
@@ -226,6 +231,7 @@ CREATE TABLE notifications (
 -- Indexes for performance
 CREATE INDEX idx_game_phases_game_id ON game_phases(game_id);
 CREATE INDEX idx_game_phases_active ON game_phases(is_active) WHERE is_active = TRUE;
+CREATE INDEX idx_game_phases_published ON game_phases(game_id, is_published) WHERE is_published = TRUE AND phase_type = 'action';
 CREATE INDEX idx_action_submissions_phase_id ON action_submissions(phase_id);
 CREATE INDEX idx_action_submissions_user_id ON action_submissions(user_id);
 CREATE INDEX idx_action_results_phase_id ON action_results(phase_id);
@@ -235,3 +241,61 @@ CREATE INDEX idx_game_participants_game_id ON game_participants(game_id);
 CREATE INDEX idx_game_participants_user_id ON game_participants(user_id);
 CREATE INDEX idx_characters_game_id ON characters(game_id);
 CREATE INDEX idx_character_data_character_id ON character_data(character_id);
+CREATE INDEX idx_conversations_game_id ON conversations(game_id);
+CREATE INDEX idx_conversation_participants_conversation_id ON conversation_participants(conversation_id);
+CREATE INDEX idx_conversation_participants_user_id ON conversation_participants(user_id);
+CREATE INDEX idx_private_messages_conversation_id ON private_messages(conversation_id);
+
+-- Messages System (Common Room and Private Messages)
+CREATE TYPE message_visibility AS ENUM ('game', 'private');
+CREATE TYPE message_type AS ENUM ('post', 'comment', 'private_message');
+
+CREATE TABLE messages (
+    id SERIAL PRIMARY KEY,
+    game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    phase_id INTEGER REFERENCES game_phases(id) ON DELETE SET NULL,
+    author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    message_type message_type NOT NULL DEFAULT 'post',
+    parent_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
+    thread_depth INTEGER NOT NULL DEFAULT 0,
+    visibility message_visibility NOT NULL DEFAULT 'game',
+    is_edited BOOLEAN NOT NULL DEFAULT false,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP
+);
+
+CREATE TABLE message_recipients (
+    id SERIAL PRIMARY KEY,
+    message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    is_read BOOLEAN NOT NULL DEFAULT false,
+    read_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE(message_id, recipient_id)
+);
+
+CREATE TABLE message_reactions (
+    id SERIAL PRIMARY KEY,
+    message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reaction_type VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE(message_id, user_id, reaction_type)
+);
+
+CREATE INDEX idx_messages_game_id ON messages(game_id);
+CREATE INDEX idx_messages_phase_id ON messages(phase_id);
+CREATE INDEX idx_messages_author_id ON messages(author_id);
+CREATE INDEX idx_messages_parent_id ON messages(parent_id);
+CREATE INDEX idx_messages_created_at ON messages(created_at DESC);
+CREATE INDEX idx_messages_game_phase ON messages(game_id, phase_id);
+CREATE INDEX idx_messages_thread ON messages(game_id, parent_id, created_at) WHERE is_deleted = false;
+CREATE INDEX idx_message_recipients_message_id ON message_recipients(message_id);
+CREATE INDEX idx_message_recipients_recipient_id ON message_recipients(recipient_id);
+CREATE INDEX idx_message_recipients_unread ON message_recipients(recipient_id, is_read) WHERE is_read = false;
+CREATE INDEX idx_message_reactions_message_id ON message_reactions(message_id);
+CREATE INDEX idx_message_reactions_user_id ON message_reactions(user_id);

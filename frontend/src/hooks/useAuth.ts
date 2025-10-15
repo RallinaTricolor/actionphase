@@ -14,8 +14,9 @@ export const useAuth = () => {
       console.log('Login success, token received:', !!token);
       if (token) {
         apiClient.setAuthToken(token);
+        // Immediately set the auth state to true
+        queryClient.setQueryData(['auth'], true);
       }
-      queryClient.invalidateQueries({ queryKey: ['auth'] });
     },
   });
 
@@ -27,24 +28,34 @@ export const useAuth = () => {
       console.log('Register success, token received:', !!token);
       if (token) {
         apiClient.setAuthToken(token);
+        // Immediately set the auth state to true
+        queryClient.setQueryData(['auth'], true);
       }
-      queryClient.invalidateQueries({ queryKey: ['auth'] });
     },
   });
 
   const logout = () => {
     apiClient.removeAuthToken();
-    queryClient.invalidateQueries({ queryKey: ['auth'] });
+    // Immediately set auth state to false
+    queryClient.setQueryData(['auth'], false);
     queryClient.clear();
   };
 
   // Use useQuery to make isAuthenticated reactive to token changes
-  const { data: isAuthenticated = false } = useQuery({
+  const { data: isAuthenticated, isLoading: isCheckingAuth } = useQuery({
     queryKey: ['auth'],
-    queryFn: () => !!apiClient.getAuthToken(),
+    queryFn: () => {
+      const hasToken = !!apiClient.getAuthToken();
+      console.log('[useAuth] queryFn checking token:', hasToken);
+      return hasToken;
+    },
+    // Set initial data from localStorage to avoid flash of unauthenticated state
+    initialData: () => !!apiClient.getAuthToken(),
     staleTime: 0, // Always check fresh
     refetchOnWindowFocus: true,
   });
+
+  console.log('[useAuth] isAuthenticated:', isAuthenticated, 'isCheckingAuth:', isCheckingAuth);
 
   return {
     login: loginMutation.mutateAsync,

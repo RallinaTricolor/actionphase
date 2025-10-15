@@ -54,7 +54,7 @@ func (gas *GameApplicationService) CreateGameApplication(ctx context.Context, re
 		messageText = pgtype.Text{String: req.Message, Valid: true}
 	}
 
-	application, err := queries.CreateGameApplication(ctx, models.CreateGameApplicationParams{
+	appRow, err := queries.CreateGameApplication(ctx, models.CreateGameApplicationParams{
 		GameID:  req.GameID,
 		UserID:  req.UserID,
 		Role:    req.Role,
@@ -64,19 +64,45 @@ func (gas *GameApplicationService) CreateGameApplication(ctx context.Context, re
 		return nil, fmt.Errorf("failed to create game application: %w", err)
 	}
 
-	return &application, nil
+	// Convert CreateGameApplicationRow to GameApplication
+	application := &models.GameApplication{
+		ID:               appRow.ID,
+		GameID:           appRow.GameID,
+		UserID:           appRow.UserID,
+		Role:             appRow.Role,
+		Message:          appRow.Message,
+		Status:           appRow.Status,
+		ReviewedByUserID: appRow.ReviewedByUserID,
+		ReviewedAt:       appRow.ReviewedAt,
+		AppliedAt:        appRow.AppliedAt,
+	}
+
+	return application, nil
 }
 
 // GetGameApplication retrieves a specific application by ID
 func (gas *GameApplicationService) GetGameApplication(ctx context.Context, applicationID int32) (*models.GameApplication, error) {
 	queries := models.New(gas.DB)
 
-	application, err := queries.GetGameApplication(ctx, applicationID)
+	appRow, err := queries.GetGameApplication(ctx, applicationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get game application: %w", err)
 	}
 
-	return &application, nil
+	// Convert GetGameApplicationRow to GameApplication
+	application := &models.GameApplication{
+		ID:               appRow.ID,
+		GameID:           appRow.GameID,
+		UserID:           appRow.UserID,
+		Role:             appRow.Role,
+		Message:          appRow.Message,
+		Status:           appRow.Status,
+		ReviewedByUserID: appRow.ReviewedByUserID,
+		ReviewedAt:       appRow.ReviewedAt,
+		AppliedAt:        appRow.AppliedAt,
+	}
+
+	return application, nil
 }
 
 // GetGameApplications retrieves all applications for a game with user details
@@ -159,22 +185,7 @@ func (gas *GameApplicationService) RejectGameApplication(ctx context.Context, ap
 	return nil
 }
 
-// WithdrawGameApplication allows applicant to withdraw their application
-func (gas *GameApplicationService) WithdrawGameApplication(ctx context.Context, applicationID, userID int32) error {
-	queries := models.New(gas.DB)
-
-	err := queries.WithdrawGameApplication(ctx, models.WithdrawGameApplicationParams{
-		ID:     applicationID,
-		UserID: userID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to withdraw game application: %w", err)
-	}
-
-	return nil
-}
-
-// DeleteGameApplication removes an application (for cleanup)
+// DeleteGameApplication removes an application
 func (gas *GameApplicationService) DeleteGameApplication(ctx context.Context, applicationID, userID int32) error {
 	queries := models.New(gas.DB)
 
@@ -246,6 +257,21 @@ func (gas *GameApplicationService) BulkApproveApplications(ctx context.Context, 
 	return nil
 }
 
+// BulkRejectApplications rejects all pending applications for a game
+func (gas *GameApplicationService) BulkRejectApplications(ctx context.Context, gameID, reviewerID int32) error {
+	queries := models.New(gas.DB)
+
+	err := queries.BulkRejectApplications(ctx, models.BulkRejectApplicationsParams{
+		GameID:           gameID,
+		ReviewedByUserID: pgtype.Int4{Int32: reviewerID, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to bulk reject applications: %w", err)
+	}
+
+	return nil
+}
+
 // GetApprovedApplicationsForGame retrieves approved applications for participant creation
 func (gas *GameApplicationService) GetApprovedApplicationsForGame(ctx context.Context, gameID int32) ([]models.GetApprovedApplicationsForGameRow, error) {
 	queries := models.New(gas.DB)
@@ -262,7 +288,7 @@ func (gas *GameApplicationService) GetApprovedApplicationsForGame(ctx context.Co
 func (gas *GameApplicationService) GetGameApplicationByUserAndGame(ctx context.Context, gameID, userID int32) (*models.GameApplication, error) {
 	queries := models.New(gas.DB)
 
-	application, err := queries.GetGameApplicationByUserAndGame(ctx, models.GetGameApplicationByUserAndGameParams{
+	appRow, err := queries.GetGameApplicationByUserAndGame(ctx, models.GetGameApplicationByUserAndGameParams{
 		GameID: gameID,
 		UserID: userID,
 	})
@@ -270,7 +296,20 @@ func (gas *GameApplicationService) GetGameApplicationByUserAndGame(ctx context.C
 		return nil, fmt.Errorf("failed to get game application by user and game: %w", err)
 	}
 
-	return &application, nil
+	// Convert GetGameApplicationByUserAndGameRow to GameApplication
+	application := &models.GameApplication{
+		ID:               appRow.ID,
+		GameID:           appRow.GameID,
+		UserID:           appRow.UserID,
+		Role:             appRow.Role,
+		Message:          appRow.Message,
+		Status:           appRow.Status,
+		ReviewedByUserID: appRow.ReviewedByUserID,
+		ReviewedAt:       appRow.ReviewedAt,
+		AppliedAt:        appRow.AppliedAt,
+	}
+
+	return application, nil
 }
 
 // ConvertApprovedApplicationsToParticipants converts approved applications to game participants
@@ -294,6 +333,19 @@ func (gas *GameApplicationService) ConvertApprovedApplicationsToParticipants(ctx
 		if err != nil {
 			return fmt.Errorf("failed to create participant from application %d: %w", app.ID, err)
 		}
+	}
+
+	return nil
+}
+
+// PublishApplicationStatuses marks all application statuses as published for a game
+// This is called when GM closes recruitment
+func (gas *GameApplicationService) PublishApplicationStatuses(ctx context.Context, gameID int32) error {
+	queries := models.New(gas.DB)
+
+	err := queries.PublishApplicationStatuses(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("failed to publish application statuses: %w", err)
 	}
 
 	return nil
