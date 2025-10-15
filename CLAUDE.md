@@ -174,10 +174,36 @@ Key features:
 - API health monitoring
 - Modern responsive UI
 
-## Testing
+## Testing Overview
 
-- React Frontend: TypeScript + Vite (testing setup pending)
-- Go Backend: Comprehensive test coverage with interface mocks and database integration tests
+**Testing is MANDATORY for all new features and bug fixes.**
+
+### Backend Testing
+- **Framework**: Go standard library `testing` package
+- **Location**: Test files co-located with implementation (`*_test.go`)
+- **Coverage**: Comprehensive test coverage with interface mocks and database integration tests
+- **Commands**:
+  - `just test-mocks` - Fast unit tests (~300ms)
+  - `SKIP_DB_TESTS=false just test` - Integration tests with database
+  - `just test-coverage` - Generate coverage reports
+  - `just ci-test` - Full CI test suite
+
+### Frontend Testing
+- **Framework**: React Testing Library + Vitest
+- **Location**: Test files co-located with components (`*.test.tsx`)
+- **Focus**: User interactions, component behavior, custom hooks
+- **Commands**:
+  - `just test-frontend` - Run all frontend tests
+  - `just test-frontend-watch` - Watch mode for development
+  - `just test-frontend-coverage` - Generate coverage reports
+
+### Test Requirements
+1. **New Features**: Write tests BEFORE or alongside implementation
+2. **Bug Fixes**: ALWAYS add a regression test that reproduces the bug
+3. **Code Review**: PRs without tests will be rejected
+4. **Coverage**: Maintain >80% coverage on service layer and critical paths
+
+See **Testing Philosophy** section below for detailed testing approach and examples.
 
 ## Project Structure Notes
 
@@ -224,10 +250,42 @@ Metrics         Error Recovery   Error     Domain     Connection   Constraints
 - **Comprehensive Logging**: All errors logged with full context
 
 ### Testing Philosophy
+
+**Test-Driven Development (TDD) Approach**:
+- Write tests BEFORE implementing features when possible
+- Tests serve as living documentation of expected behavior
+- Tests prevent regressions and enable confident refactoring
+
+**Test Layers**:
 - **Unit Tests**: Fast tests with mocked dependencies (~300ms total)
+  - Test individual functions and methods in isolation
+  - Mock external dependencies (database, APIs, etc.)
+  - Run with: `just test-mocks`
 - **Integration Tests**: Database tests with transaction isolation
+  - Test service layer with real database
+  - Use test database with rollback after each test
+  - Run with: `SKIP_DB_TESTS=false just test`
 - **API Tests**: End-to-end HTTP endpoint testing
+  - Test complete request/response cycle
+  - Validate authentication, authorization, validation
+  - Test error responses and edge cases
 - **Frontend Tests**: Component and custom hook testing
+  - Test user interactions and visual feedback
+  - Test loading, error, and success states
+  - Run with: `just test-frontend`
+
+**Bug Fix Process (Mandatory)**:
+1. Reproduce bug in a failing test
+2. Fix the bug
+3. Verify test passes
+4. Commit both test and fix together
+5. This prevents the bug from ever coming back
+
+**Coverage Goals**:
+- Critical business logic: 100% coverage
+- Service layer: >80% coverage
+- API handlers: >80% coverage
+- Frontend components: Test all user-facing functionality
 
 ## AI-Friendly Coding Standards
 
@@ -266,10 +324,33 @@ type UserService struct {
 - Consistent error response formats via `core.APIError`
 - Return meaningful error messages for API consumers
 
-#### Testing Standards (Implementation Pending)
-- All services MUST have unit tests with interface mocks
-- Integration tests for database operations
-- API endpoint tests for all handlers
+#### Testing Standards
+- **MANDATORY**: All new services MUST have unit tests with interface mocks
+- **MANDATORY**: Integration tests for all database operations
+- **MANDATORY**: API endpoint tests for all handlers
+- **MANDATORY**: Write regression tests for every bug fix
+- Test files should be co-located with implementation: `*_test.go`
+- Use table-driven tests for testing multiple scenarios
+- Mock external dependencies using interfaces
+- Example test structure:
+  ```go
+  func TestServiceMethod(t *testing.T) {
+      tests := []struct {
+          name    string
+          input   interface{}
+          want    interface{}
+          wantErr bool
+      }{
+          {"success case", validInput, expectedOutput, false},
+          {"error case", invalidInput, nil, true},
+      }
+      for _, tt := range tests {
+          t.Run(tt.name, func(t *testing.T) {
+              // Test implementation
+          })
+      }
+  }
+  ```
 
 ### Frontend Standards
 
@@ -283,10 +364,34 @@ type UserService struct {
 - Props interfaces defined inline or in types file
 - Custom hooks in dedicated `hooks/` directory
 
-#### Testing Standards (Implementation Pending)
-- All components MUST have tests using React Testing Library
-- Custom hooks MUST have dedicated tests
-- API integration tests for critical flows
+#### Testing Standards
+- **MANDATORY**: All new components MUST have tests using React Testing Library
+- **MANDATORY**: Custom hooks MUST have dedicated tests using `@testing-library/react-hooks`
+- **MANDATORY**: API integration tests for critical user flows
+- **MANDATORY**: Write regression tests for every bug fix
+- Test files should be co-located: `ComponentName.test.tsx`
+- Test user interactions, not implementation details
+- Use `screen` queries for accessibility-friendly tests
+- Example test structure:
+  ```typescript
+  describe('ComponentName', () => {
+    it('renders with initial state', () => {
+      render(<ComponentName />);
+      expect(screen.getByText('Expected Text')).toBeInTheDocument();
+    });
+
+    it('handles user interaction', async () => {
+      render(<ComponentName />);
+      await userEvent.click(screen.getByRole('button'));
+      expect(screen.getByText('Updated Text')).toBeInTheDocument();
+    });
+
+    it('handles error state', () => {
+      render(<ComponentName error={mockError} />);
+      expect(screen.getByText(/error/i)).toBeInTheDocument();
+    });
+  });
+  ```
 
 ### General Standards
 
@@ -337,14 +442,65 @@ All major architectural decisions are documented in `/docs/adrs/`:
 **IMPORTANT: Integrated Feature Development**
 Each feature should be implemented with BOTH backend and frontend components completed together before moving to the next feature. This enables manual UI testing to validate requirements and implementation correctness.
 
-1. **New Feature (Integrated Approach)**:
-   - Backend: Database migration → SQL queries (sqlc) → Service interface → Service implementation → Handler → API tests
-   - Frontend: API client → Custom hooks → Components → Component tests
+1. **New Feature (Integrated Approach with Test-Driven Development)**:
+   - Backend:
+     1. Database migration (if needed)
+     2. SQL queries (sqlc)
+     3. Service interface definition
+     4. **Write unit tests first** (test-driven approach)
+     5. Service implementation
+     6. Handler implementation
+     7. **Write API endpoint tests**
+     8. Run tests: `just test` or `SKIP_DB_TESTS=false just test` for integration tests
+   - Frontend:
+     1. API client method
+     2. Custom hooks
+     3. **Write hook tests** (React Testing Library)
+     4. Components
+     5. **Write component tests**
+     6. Run tests: `just test-frontend`
    - Manual Testing: Test the complete feature in the UI before moving to next feature
    - Documentation: Update API docs and any relevant guides
 
-2. **Database Changes**: Create migration → Update queries → Regenerate sqlc → Test
-3. **Testing Strategy**: Write automated tests but rely on manual UI testing to validate feature completeness
+2. **Database Changes**: Create migration → Update queries → Regenerate sqlc → Write/update tests → Test
+
+3. **Bug Fixes (Regression Prevention)**:
+   - **ALWAYS** add or update tests when fixing bugs
+   - Write a test that reproduces the bug (it should fail)
+   - Fix the bug
+   - Verify the test now passes
+   - This prevents the same bug from recurring
+   - Example workflow:
+     ```bash
+     # 1. Write failing test
+     go test ./pkg/db/services -run TestBugFix -v  # Should fail
+     # 2. Fix the bug in code
+     # 3. Verify test passes
+     go test ./pkg/db/services -run TestBugFix -v  # Should pass
+     ```
+
+4. **Testing Requirements (MANDATORY for all new features)**:
+   - **Backend**:
+     - Unit tests for all service methods (use mocks where appropriate)
+     - Integration tests for database operations (use `SKIP_DB_TESTS=false`)
+     - API endpoint tests for all handlers
+     - Test edge cases, error conditions, and validation
+   - **Frontend**:
+     - Component tests using React Testing Library
+     - Custom hook tests using `@testing-library/react-hooks`
+     - Test user interactions and state changes
+     - Test error handling and loading states
+   - **Test Coverage Goals**:
+     - Backend: Aim for >80% coverage on critical paths
+     - Frontend: Test all user-facing functionality
+     - Use `just test-coverage` to check coverage metrics
+
+5. **Testing Strategy Summary**:
+   - Write tests for every new feature
+   - Add regression tests for every bug fix
+   - Run tests before committing: `just ci-test` (backend) and `just test-frontend`
+   - Tests are documentation - they show how code should be used
+   - Manual UI testing validates end-to-end user experience
 
 ### Progress Tracking
 

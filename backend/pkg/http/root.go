@@ -3,9 +3,11 @@ package http
 import (
 	"actionphase/pkg/auth"
 	"actionphase/pkg/characters"
+	"actionphase/pkg/conversations"
 	"actionphase/pkg/core"
 	"actionphase/pkg/docs"
 	"actionphase/pkg/games"
+	"actionphase/pkg/messages"
 	"actionphase/pkg/phases"
 	"net/http"
 
@@ -107,6 +109,7 @@ func (h *Handler) Start() {
 			// Game application management
 			r.Post("/{id}/apply", gameHandler.ApplyToGame)
 			r.Get("/{id}/applications", gameHandler.GetGameApplications)
+			r.Get("/{id}/application/mine", gameHandler.GetMyGameApplication)
 			r.Put("/{id}/applications/{applicationId}/review", gameHandler.ReviewGameApplication)
 			r.Delete("/{id}/application", gameHandler.WithdrawGameApplication)
 
@@ -114,6 +117,7 @@ func (h *Handler) Start() {
 			characterHandler := characters.Handler{App: h.App}
 			r.Post("/{gameId}/characters", characterHandler.CreateCharacter)
 			r.Get("/{gameId}/characters", characterHandler.GetGameCharacters)
+			r.Get("/{gameId}/characters/controllable", characterHandler.GetUserControllableCharacters)
 
 			// Phase management within games
 			phaseHandler := phases.Handler{App: h.App}
@@ -128,6 +132,20 @@ func (h *Handler) Start() {
 			r.Post("/{gameId}/results", phaseHandler.CreateActionResult)
 			r.Get("/{gameId}/results", phaseHandler.GetGameActionResults)
 			r.Get("/{gameId}/results/mine", phaseHandler.GetUserActionResults)
+			r.Put("/{gameId}/results/{resultId}", phaseHandler.UpdateActionResult)
+			r.Post("/{gameId}/phases/{phaseId}/results/publish", phaseHandler.PublishAllPhaseResults)
+			r.Get("/{gameId}/phases/{phaseId}/results/unpublished-count", phaseHandler.GetUnpublishedResultsCount)
+
+			// Common Room messages (posts and comments)
+			messageHandler := messages.Handler{App: h.App}
+			r.Post("/{gameId}/posts", messageHandler.CreatePost)
+			r.Get("/{gameId}/posts", messageHandler.GetGamePosts)
+			r.Post("/{gameId}/posts/{postId}/comments", messageHandler.CreateComment)
+			r.Get("/{gameId}/posts/{postId}/comments", messageHandler.GetPostComments)
+
+			// Private messages (conversations)
+			conversationHandler := &conversations.Handler{App: h.App}
+			conversationHandler.RegisterRoutes(r)
 		})
 	})
 	apiV1Router.Mount("/games", gamesRouter)
@@ -167,6 +185,7 @@ func (h *Handler) Start() {
 			// Phase management
 			r.Post("/{id}/activate", phaseHandler.ActivatePhase)
 			r.Put("/{id}/deadline", phaseHandler.UpdatePhaseDeadline)
+			r.Put("/{id}", phaseHandler.UpdatePhase)
 		})
 	})
 	apiV1Router.Mount("/phases", phasesRouter)

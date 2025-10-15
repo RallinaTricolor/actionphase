@@ -89,49 +89,51 @@ export const GamesPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="px-6 py-4">
-            <h1 className="text-3xl font-bold text-gray-900">Games</h1>
-            <p className="text-gray-600 mt-1">
-              Discover and join role-playing games in the ActionPhase community
-            </p>
-          </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Games</h1>
+        <p className="text-gray-600 mt-2 text-sm">
+          Discover and join role-playing games in the ActionPhase community
+        </p>
+      </div>
 
-          {/* Navigation Tabs */}
+      {/* Content Card */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-100">
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200">
           <div className="px-6">
-            <nav className="flex space-x-8">
-              <button
-                onClick={() => setViewMode('recruiting')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  viewMode === 'recruiting'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Recruiting
-                <span className="ml-2 bg-green-100 text-green-800 py-1 px-2 rounded-full text-xs">
-                  Open
-                </span>
-              </button>
-              <button
-                onClick={() => setViewMode('all')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  viewMode === 'all'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                All Games
-              </button>
-            </nav>
+
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setViewMode('recruiting')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                viewMode === 'recruiting'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Recruiting
+              <span className="ml-2 bg-green-100 text-green-800 py-1 px-2 rounded-full text-xs font-semibold">
+                Open
+              </span>
+            </button>
+            <button
+              onClick={() => setViewMode('all')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                viewMode === 'all'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              All Games
+            </button>
+          </nav>
           </div>
         </div>
 
         {/* Game Lists */}
-        <div className="bg-white">
+        <div>
           <GamesList
             showRecruitingOnly={viewMode === 'recruiting'}
             onGameClick={handleGameClick}
@@ -142,18 +144,19 @@ export const GamesPage = () => {
           />
         </div>
 
-        {/* Create Game Modal */}
-        <Modal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          title="Create New Game"
-        >
-          <CreateGameForm
-            onSuccess={handleCreateSuccess}
-            onCancel={() => setShowCreateModal(false)}
-          />
-        </Modal>
       </div>
+
+      {/* Create Game Modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Game"
+      >
+        <CreateGameForm
+          onSuccess={handleCreateSuccess}
+          onCancel={() => setShowCreateModal(false)}
+        />
+      </Modal>
     </div>
   );
 };

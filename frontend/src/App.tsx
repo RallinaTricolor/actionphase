@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { Layout } from './components/Layout';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -23,45 +24,47 @@ function AppRoutes() {
 
   return (
     <Router>
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/games"
-          element={
-            <ProtectedRoute>
-              <GamesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/games/:gameId"
-          element={
-            <ProtectedRoute>
-              <GameDetailsPageWrapper />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/" element={<HomePage />} />
-        <Route
-          path="*"
-          element={
-            <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
-          }
-        />
-      </Routes>
+      <Layout>
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/games"
+            element={
+              <ProtectedRoute>
+                <GamesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/games/:gameId"
+            element={
+              <ProtectedRoute>
+                <GameDetailsPageWrapper />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/" element={<HomePage />} />
+          <Route
+            path="*"
+            element={
+              <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
+            }
+          />
+        </Routes>
+      </Layout>
     </Router>
   );
 }

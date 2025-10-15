@@ -37,6 +37,8 @@ type PhaseResponse struct {
 	GameID      int32      `json:"game_id"`
 	PhaseType   string     `json:"phase_type"`
 	PhaseNumber int32      `json:"phase_number"`
+	Title       *string    `json:"title,omitempty"`
+	Description *string    `json:"description,omitempty"`
 	StartTime   time.Time  `json:"start_time"`
 	EndTime     *time.Time `json:"end_time,omitempty"`
 	Deadline    *time.Time `json:"deadline,omitempty"`
@@ -68,6 +70,16 @@ type UpdateDeadlineRequest struct {
 }
 
 func (r *UpdateDeadlineRequest) Bind(req *http.Request) error {
+	return nil
+}
+
+type UpdatePhaseRequest struct {
+	Title       *string             `json:"title,omitempty"`
+	Description *string             `json:"description,omitempty"`
+	Deadline    *core.LocalDateTime `json:"deadline,omitempty"`
+}
+
+func (r *UpdatePhaseRequest) Bind(req *http.Request) error {
 	return nil
 }
 
@@ -134,8 +146,6 @@ type ActionResultResponse struct {
 	Content     string     `json:"content"`
 	IsPublished bool       `json:"is_published"`
 	SentAt      *time.Time `json:"sent_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 func (rd *ActionResultResponse) Render(w http.ResponseWriter, r *http.Request) error {
@@ -151,11 +161,10 @@ type ActionResultWithDetailsResponse struct {
 	Content     string     `json:"content"`
 	IsPublished bool       `json:"is_published"`
 	SentAt      *time.Time `json:"sent_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
-	GMUsername  *string    `json:"gm_username,omitempty"`
-	PhaseType   *string    `json:"phase_type,omitempty"`
-	PhaseNumber *int32     `json:"phase_number,omitempty"`
+	Username    string     `json:"username,omitempty"`    // Player username (for GM view)
+	GMUsername  string     `json:"gm_username,omitempty"` // GM username (for player view)
+	PhaseType   string     `json:"phase_type,omitempty"`
+	PhaseNumber int32      `json:"phase_number,omitempty"`
 }
 
 func (rd *ActionResultWithDetailsResponse) Render(w http.ResponseWriter, r *http.Request) error {
@@ -262,6 +271,8 @@ func (h *Handler) CreatePhase(w http.ResponseWriter, r *http.Request) {
 		GameID:      response.GameID,
 		PhaseType:   response.PhaseType,
 		PhaseNumber: response.PhaseNumber,
+		Title:       response.Title,
+		Description: response.Description,
 		StartTime:   response.StartTime,
 		EndTime:     response.EndTime,
 		Deadline:    response.Deadline,
@@ -287,27 +298,29 @@ func (h *Handler) GetCurrentPhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if phase == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{"phase": nil})
-		return
+	// Convert to response format
+	var phaseResponse *PhaseResponse
+	if phase != nil {
+		response := phaseService.ConvertPhaseToResponse(phase)
+		phaseResponse = &PhaseResponse{
+			ID:          response.ID,
+			GameID:      response.GameID,
+			PhaseType:   response.PhaseType,
+			PhaseNumber: response.PhaseNumber,
+			Title:       response.Title,
+			Description: response.Description,
+			StartTime:   response.StartTime,
+			EndTime:     response.EndTime,
+			Deadline:    response.Deadline,
+			IsActive:    response.IsActive,
+			CreatedAt:   response.CreatedAt,
+		}
+		// Calculate time remaining and expiry
+		phaseResponse.Render(w, r)
 	}
 
-	// Convert to response format
-	response := phaseService.ConvertPhaseToResponse(phase)
-
-	render.Render(w, r, &PhaseResponse{
-		ID:          response.ID,
-		GameID:      response.GameID,
-		PhaseType:   response.PhaseType,
-		PhaseNumber: response.PhaseNumber,
-		StartTime:   response.StartTime,
-		EndTime:     response.EndTime,
-		Deadline:    response.Deadline,
-		IsActive:    response.IsActive,
-		CreatedAt:   response.CreatedAt,
-	})
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"phase": phaseResponse})
 }
 
 // GetGamePhases - Get all phases for a game
@@ -336,6 +349,8 @@ func (h *Handler) GetGamePhases(w http.ResponseWriter, r *http.Request) {
 			GameID:      phaseResp.GameID,
 			PhaseType:   phaseResp.PhaseType,
 			PhaseNumber: phaseResp.PhaseNumber,
+			Title:       phaseResp.Title,
+			Description: phaseResp.Description,
 			StartTime:   phaseResp.StartTime,
 			EndTime:     phaseResp.EndTime,
 			Deadline:    phaseResp.Deadline,
@@ -412,6 +427,8 @@ func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
 		GameID:      response.GameID,
 		PhaseType:   response.PhaseType,
 		PhaseNumber: response.PhaseNumber,
+		Title:       response.Title,
+		Description: response.Description,
 		StartTime:   response.StartTime,
 		EndTime:     response.EndTime,
 		Deadline:    response.Deadline,
@@ -482,6 +499,93 @@ func (h *Handler) UpdatePhaseDeadline(w http.ResponseWriter, r *http.Request) {
 		GameID:      response.GameID,
 		PhaseType:   response.PhaseType,
 		PhaseNumber: response.PhaseNumber,
+		Title:       response.Title,
+		Description: response.Description,
+		StartTime:   response.StartTime,
+		EndTime:     response.EndTime,
+		Deadline:    response.Deadline,
+		IsActive:    response.IsActive,
+		CreatedAt:   response.CreatedAt,
+	})
+}
+
+// UpdatePhase - Update phase details (GM only)
+func (h *Handler) UpdatePhase(w http.ResponseWriter, r *http.Request) {
+	phaseIDStr := chi.URLParam(r, "id")
+	phaseID, err := strconv.ParseInt(phaseIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid phase ID")))
+		return
+	}
+
+	data := &UpdatePhaseRequest{}
+	if err := render.Bind(r, data); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	// Get user from token
+	user, err := h.getUserFromToken(r)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	phaseService := &services.PhaseService{DB: h.App.Pool}
+
+	// Get phase to check game ID
+	phase, err := phaseService.GetPhase(r.Context(), int32(phaseID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get phase", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Check permissions
+	canManage, err := phaseService.CanUserManagePhases(r.Context(), phase.GameID, int32(user.ID))
+	if err != nil {
+		h.App.Logger.Error("Failed to check phase management permission", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canManage {
+		render.Render(w, r, core.ErrForbidden("only the GM can update phases"))
+		return
+	}
+
+	// Update phase
+	req := core.UpdatePhaseRequest{
+		ID:       int32(phaseID),
+		Deadline: data.Deadline.ToTimePtr(),
+	}
+
+	if data.Title != nil {
+		req.Title = *data.Title
+	}
+
+	if data.Description != nil {
+		req.Description = *data.Description
+	}
+
+	updatedPhase, err := phaseService.UpdatePhase(r.Context(), req)
+	if err != nil {
+		h.App.Logger.Error("Failed to update phase", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	response := phaseService.ConvertPhaseToResponse(updatedPhase)
+
+	render.Render(w, r, &PhaseResponse{
+		ID:          response.ID,
+		GameID:      response.GameID,
+		PhaseType:   response.PhaseType,
+		PhaseNumber: response.PhaseNumber,
+		Title:       response.Title,
+		Description: response.Description,
 		StartTime:   response.StartTime,
 		EndTime:     response.EndTime,
 		Deadline:    response.Deadline,
@@ -769,10 +873,8 @@ func (h *Handler) CreateActionResult(w http.ResponseWriter, r *http.Request) {
 		UserID:      result.UserID,
 		PhaseID:     result.PhaseID,
 		GMUserID:    result.GmUserID,
-		Content:     result.Content.String,
-		IsPublished: result.IsPublished,
-		CreatedAt:   result.CreatedAt.Time,
-		UpdatedAt:   result.UpdatedAt.Time,
+		Content:     result.Content,
+		IsPublished: result.IsPublished.Bool,
 	}
 
 	if result.SentAt.Valid {
@@ -817,26 +919,15 @@ func (h *Handler) GetUserActionResults(w http.ResponseWriter, r *http.Request) {
 			UserID:      result.UserID,
 			PhaseID:     result.PhaseID,
 			GMUserID:    result.GmUserID,
-			Content:     result.Content.String,
-			IsPublished: result.IsPublished,
-			CreatedAt:   result.CreatedAt.Time,
-			UpdatedAt:   result.UpdatedAt.Time,
+			Content:     result.Content,
+			IsPublished: result.IsPublished.Bool,
+			GMUsername:  result.GmUsername,
+			PhaseType:   result.PhaseType,
+			PhaseNumber: result.PhaseNumber,
 		}
 
 		if result.SentAt.Valid {
 			resultResp.SentAt = &result.SentAt.Time
-		}
-
-		if result.GmUsername.Valid {
-			resultResp.GMUsername = &result.GmUsername.String
-		}
-
-		if result.PhaseType.Valid {
-			resultResp.PhaseType = &result.PhaseType.String
-		}
-
-		if result.PhaseNumber.Valid {
-			resultResp.PhaseNumber = &result.PhaseNumber.Int32
 		}
 
 		response = append(response, resultResp)
@@ -893,23 +984,15 @@ func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 			UserID:      result.UserID,
 			PhaseID:     result.PhaseID,
 			GMUserID:    result.GmUserID,
-			Content:     result.Content.String,
-			IsPublished: result.IsPublished,
+			Content:     result.Content,
+			IsPublished: result.IsPublished.Bool,
 			Username:    result.Username,
-			CreatedAt:   result.CreatedAt.Time,
-			UpdatedAt:   result.UpdatedAt.Time,
+			PhaseType:   result.PhaseType,
+			PhaseNumber: result.PhaseNumber,
 		}
 
 		if result.SentAt.Valid {
 			resultResp.SentAt = &result.SentAt.Time
-		}
-
-		if result.PhaseType.Valid {
-			resultResp.PhaseType = &result.PhaseType.String
-		}
-
-		if result.PhaseNumber.Valid {
-			resultResp.PhaseNumber = &result.PhaseNumber.Int32
 		}
 
 		response = append(response, resultResp)
@@ -917,4 +1000,185 @@ func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// PublishAllPhaseResults - Publish all unpublished results for a phase (GM only)
+func (h *Handler) PublishAllPhaseResults(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	phaseIDStr := chi.URLParam(r, "phaseId")
+	phaseID, err := strconv.ParseInt(phaseIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid phase ID")))
+		return
+	}
+
+	// Get user from token
+	user, err := h.getUserFromToken(r)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	// Check permissions - must be GM
+	phaseService := &services.PhaseService{DB: h.App.Pool}
+	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
+	if err != nil {
+		h.App.Logger.Error("Failed to check phase management permission", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canManage {
+		render.Render(w, r, core.ErrForbidden("only the GM can publish action results"))
+		return
+	}
+
+	// Publish all unpublished results for the phase
+	actionService := &services.ActionSubmissionService{DB: h.App.Pool}
+	err = actionService.PublishAllPhaseResults(r.Context(), int32(phaseID))
+	if err != nil {
+		h.App.Logger.Error("Failed to publish all phase results", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "All results published successfully",
+	})
+}
+
+// GetUnpublishedResultsCount - Get count of unpublished results for a phase (GM only)
+func (h *Handler) GetUnpublishedResultsCount(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	phaseIDStr := chi.URLParam(r, "phaseId")
+	phaseID, err := strconv.ParseInt(phaseIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid phase ID")))
+		return
+	}
+
+	// Get user from token
+	user, err := h.getUserFromToken(r)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	// Check permissions - must be GM
+	phaseService := &services.PhaseService{DB: h.App.Pool}
+	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
+	if err != nil {
+		h.App.Logger.Error("Failed to check phase management permission", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canManage {
+		render.Render(w, r, core.ErrForbidden("only the GM can view result counts"))
+		return
+	}
+
+	// Get count of unpublished results
+	actionService := &services.ActionSubmissionService{DB: h.App.Pool}
+	count, err := actionService.GetUnpublishedResultsCount(r.Context(), int32(phaseID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get unpublished results count", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"count": count,
+	})
+}
+
+// UpdateActionResult - Update an unpublished action result (GM only)
+func (h *Handler) UpdateActionResult(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	resultIDStr := chi.URLParam(r, "resultId")
+	resultID, err := strconv.ParseInt(resultIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid result ID")))
+		return
+	}
+
+	type UpdateResultRequest struct {
+		Content string `json:"content" validate:"required"`
+	}
+
+	data := &UpdateResultRequest{}
+	if err := json.NewDecoder(r.Body).Decode(data); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	// Get user from token
+	user, err := h.getUserFromToken(r)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	// Check permissions - must be GM
+	phaseService := &services.PhaseService{DB: h.App.Pool}
+	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
+	if err != nil {
+		h.App.Logger.Error("Failed to check phase management permission", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canManage {
+		render.Render(w, r, core.ErrForbidden("only the GM can update action results"))
+		return
+	}
+
+	// Update the action result
+	actionService := &services.ActionSubmissionService{DB: h.App.Pool}
+	result, err := actionService.UpdateActionResult(r.Context(), int32(resultID), data.Content)
+	if err != nil {
+		h.App.Logger.Error("Failed to update action result", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	response := &ActionResultResponse{
+		ID:          result.ID,
+		GameID:      result.GameID,
+		UserID:      result.UserID,
+		PhaseID:     result.PhaseID,
+		GMUserID:    result.GmUserID,
+		Content:     result.Content,
+		IsPublished: result.IsPublished.Bool,
+	}
+
+	if result.SentAt.Valid {
+		response.SentAt = &result.SentAt.Time
+	}
+
+	render.Render(w, r, response)
 }

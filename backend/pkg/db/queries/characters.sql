@@ -101,3 +101,25 @@ WHERE character_id = $1 AND module_type = $2 AND field_name = $3;
 -- name: DeleteCharacterModule :exec
 DELETE FROM character_data
 WHERE character_id = $1 AND module_type = $2;
+
+-- name: GetUserControllableCharacters :many
+-- Get all characters a user can control in a game:
+-- 1. Their own player characters (where user_id matches)
+-- 2. NPCs assigned to them via npc_assignments
+-- 3. If they're the GM, all NPCs (for emergency situations, GMs can control any NPC)
+SELECT DISTINCT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at
+FROM characters c
+LEFT JOIN npc_assignments na ON c.id = na.character_id
+LEFT JOIN games g ON c.game_id = g.id
+WHERE c.game_id = $1
+  AND (
+    -- User's own player characters
+    (c.user_id = $2 AND c.character_type = 'player_character')
+    OR
+    -- NPCs assigned to user
+    (na.assigned_user_id = $2)
+    OR
+    -- If user is GM, all NPCs (GMs can control any NPC in their game)
+    (g.gm_user_id = $2 AND c.character_type IN ('npc_gm', 'npc_audience'))
+  )
+ORDER BY c.character_type, c.name;

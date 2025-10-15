@@ -35,6 +35,23 @@ export function useCreateActionResult(gameId: number) {
       // Invalidate action results queries to refetch
       queryClient.invalidateQueries({ queryKey: ['actionResults', 'game', gameId] });
       queryClient.invalidateQueries({ queryKey: ['actionResults', 'user', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['unpublishedResultsCount'] });
+    },
+  });
+}
+
+export function useUpdateActionResult(gameId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ resultId, content }: { resultId: number; content: string }) => {
+      const response = await apiClient.updateActionResult(gameId, resultId, { content });
+      return response.data;
+    },
+    onSuccess: () => {
+      // Invalidate action results queries to refetch
+      queryClient.invalidateQueries({ queryKey: ['actionResults', 'game', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['actionResults', 'user', gameId] });
     },
   });
 }

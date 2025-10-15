@@ -28,6 +28,28 @@ db_setup: db_up db_create
   @echo "  1. Run migrations: just migrate"
   @echo "  2. Start the backend: just run"
 
+# === Test Data Commands ===
+# Apply all test data fixtures to development database
+test-fixtures:
+  @echo "Applying test data fixtures..."
+  @./backend/pkg/db/test_fixtures/apply_all.sh
+  @echo "✅ Test data loaded successfully!"
+
+# Reset test data only (removes all test_*@example.com data)
+reset-test-data:
+  @echo "Resetting test data..."
+  @PGPASSWORD=example psql -h localhost -p 5432 -U postgres -d actionphase -f backend/pkg/db/test_fixtures/00_reset.sql
+  @echo "✅ Test data reset complete"
+
+# Full reset and reload of test data
+reload-test-data: reset-test-data test-fixtures
+  @echo "🎉 Test data reloaded!"
+  @echo ""
+  @echo "Test Accounts Available:"
+  @echo "  GM: test_gm@example.com / testpassword123"
+  @echo "  Players: test_player1@example.com through test_player5@example.com / testpassword123"
+  @echo "  Audience: test_audience@example.com / testpassword123"
+
 # === Code Generation ===
 sqlgen:
   cd backend/pkg/db && sqlc generate

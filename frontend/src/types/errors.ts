@@ -5,14 +5,6 @@ export interface ApiError {
   error?: string;
 }
 
-// Enhanced error interface with additional frontend context
-export interface AppError extends Error {
-  type: ErrorType;
-  statusCode?: number;
-  apiError?: ApiError;
-  context?: Record<string, unknown>;
-}
-
 export enum ErrorType {
   // Network/API errors
   NETWORK_ERROR = 'network_error',
@@ -60,6 +52,14 @@ export interface ErrorContext {
   timestamp: Date;
   source?: string;
   metadata?: Record<string, unknown>;
+}
+
+// Enhanced error interface with additional frontend context
+export type AppError = Error & {
+  type: ErrorType;
+  statusCode?: number;
+  apiError?: ApiError;
+  context?: ErrorContext;
 }
 
 // Standard error messages that align with backend responses

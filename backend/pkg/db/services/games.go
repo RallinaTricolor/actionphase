@@ -75,6 +75,7 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 		RecruitmentDeadline: recruitmentDeadline,
 		MaxPlayers:          pgtype.Int4{Int32: req.MaxPlayers, Valid: req.MaxPlayers > 0},
 		IsPublic:            pgtype.Bool{Bool: req.IsPublic, Valid: true},
+		IsAnonymous:         req.IsAnonymous,
 	})
 
 	return &game, err
@@ -236,6 +237,7 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 		RecruitmentDeadline: recruitmentDeadline,
 		MaxPlayers:          pgtype.Int4{Int32: req.MaxPlayers, Valid: req.MaxPlayers > 0},
 		IsPublic:            pgtype.Bool{Bool: req.IsPublic, Valid: true},
+		IsAnonymous:         req.IsAnonymous,
 	})
 
 	return &game, err

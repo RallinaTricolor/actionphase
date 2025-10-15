@@ -34,7 +34,7 @@ var _ core.ActionSubmissionServiceInterface = (*ActionSubmissionService)(nil)
 
 type CreatePhaseRequest struct {
 	GameID    int32
-	PhaseType string // "common_room", "action", "results"
+	PhaseType string // "common_room" or "action"
 	StartTime *time.Time
 	EndTime   *time.Time
 	Deadline  *time.Time
@@ -45,10 +45,13 @@ type PhaseResponse struct {
 	GameID      int32      `json:"game_id"`
 	PhaseType   string     `json:"phase_type"`
 	PhaseNumber int32      `json:"phase_number"`
+	Title       *string    `json:"title,omitempty"`
+	Description *string    `json:"description,omitempty"`
 	StartTime   time.Time  `json:"start_time"`
 	EndTime     *time.Time `json:"end_time,omitempty"`
 	Deadline    *time.Time `json:"deadline,omitempty"`
 	IsActive    bool       `json:"is_active"`
+	IsPublished bool       `json:"is_published"`
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
@@ -77,7 +80,7 @@ func (ps *PhaseService) CreatePhase(ctx context.Context, req core.CreatePhaseReq
 	queries := models.New(ps.DB)
 
 	// Validate phase type
-	validPhaseTypes := []string{"common_room", "action", "results"}
+	validPhaseTypes := []string{"common_room", "action"}
 	isValid := false
 	for _, validType := range validPhaseTypes {
 		if req.PhaseType == validType {
@@ -86,7 +89,7 @@ func (ps *PhaseService) CreatePhase(ctx context.Context, req core.CreatePhaseReq
 		}
 	}
 	if !isValid {
-		return nil, fmt.Errorf("invalid phase type: %s", req.PhaseType)
+		return nil, fmt.Errorf("invalid phase type: %s (must be 'common_room' or 'action')", req.PhaseType)
 	}
 
 	// Get next phase number
@@ -225,6 +228,24 @@ func (ps *PhaseService) SubmitAction(ctx context.Context, req core.SubmitActionR
 	// Check deadline if set
 	if phase.Deadline.Valid && time.Now().After(phase.Deadline.Time) {
 		return nil, fmt.Errorf("action submission deadline has passed")
+	}
+
+	// Validate character ownership if character_id is provided
+	if req.CharacterID != nil {
+		character, err := queries.GetCharacter(ctx, *req.CharacterID)
+		if err != nil {
+			return nil, fmt.Errorf("character not found")
+		}
+
+		// Verify the character belongs to the user submitting the action
+		if !character.UserID.Valid || character.UserID.Int32 != req.UserID {
+			return nil, fmt.Errorf("you can only submit actions for characters you own")
+		}
+
+		// Verify the character belongs to the same game
+		if character.GameID != req.GameID {
+			return nil, fmt.Errorf("character does not belong to this game")
+		}
 	}
 
 	// Convert content to string
@@ -372,6 +393,17 @@ func (ps *PhaseService) GetUserResults(ctx context.Context, gameID, userID int32
 	return results, nil
 }
 
+func (ps *PhaseService) GetGameResults(ctx context.Context, gameID int32) ([]models.GetGameResultsRow, error) {
+	queries := models.New(ps.DB)
+
+	results, err := queries.GetGameResults(ctx, gameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get game results: %w", err)
+	}
+
+	return results, nil
+}
+
 // Permission checking
 
 func (ps *PhaseService) CanUserManagePhases(ctx context.Context, gameID, userID int32) (bool, error) {
@@ -412,7 +444,16 @@ func (ps *PhaseService) ConvertPhaseToResponse(phase *models.GamePhase) PhaseRes
 		PhaseNumber: phase.PhaseNumber,
 		StartTime:   phase.StartTime.Time,
 		IsActive:    phase.IsActive.Bool,
+		IsPublished: phase.IsPublished,
 		CreatedAt:   phase.CreatedAt.Time,
+	}
+
+	if phase.Title != "" {
+		response.Title = &phase.Title
+	}
+
+	if phase.Description.Valid && phase.Description.String != "" {
+		response.Description = &phase.Description.String
 	}
 
 	if phase.EndTime.Valid {
@@ -703,6 +744,24 @@ func (as *ActionSubmissionService) SubmitAction(ctx context.Context, req core.Su
 		return nil, fmt.Errorf("user cannot submit actions to this phase")
 	}
 
+	// Validate character ownership if character_id is provided
+	if req.CharacterID != nil {
+		character, err := queries.GetCharacter(ctx, *req.CharacterID)
+		if err != nil {
+			return nil, fmt.Errorf("character not found")
+		}
+
+		// Verify the character belongs to the user submitting the action
+		if !character.UserID.Valid || character.UserID.Int32 != req.UserID {
+			return nil, fmt.Errorf("you can only submit actions for characters you own")
+		}
+
+		// Verify the character belongs to the same game
+		if character.GameID != req.GameID {
+			return nil, fmt.Errorf("character does not belong to this game")
+		}
+	}
+
 	// Convert content to string (assuming JSON marshaling)
 	contentStr := fmt.Sprintf("%v", req.Content)
 
@@ -870,6 +929,45 @@ func (as *ActionSubmissionService) PublishActionResult(ctx context.Context, resu
 	}
 
 	return nil
+}
+
+func (as *ActionSubmissionService) PublishAllPhaseResults(ctx context.Context, phaseID int32) error {
+	queries := models.New(as.DB)
+
+	err := queries.PublishAllPhaseResults(ctx, phaseID)
+	if err != nil {
+		return fmt.Errorf("failed to publish all phase results: %w", err)
+	}
+
+	return nil
+}
+
+func (as *ActionSubmissionService) GetUnpublishedResultsCount(ctx context.Context, phaseID int32) (int64, error) {
+	queries := models.New(as.DB)
+
+	count, err := queries.GetUnpublishedResultsCount(ctx, phaseID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get unpublished results count: %w", err)
+	}
+
+	return count, nil
+}
+
+func (as *ActionSubmissionService) UpdateActionResult(ctx context.Context, resultID int32, content string) (*models.ActionResult, error) {
+	queries := models.New(as.DB)
+
+	result, err := queries.UpdateActionResult(ctx, models.UpdateActionResultParams{
+		ID:      resultID,
+		Content: content,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("result not found or already published")
+		}
+		return nil, fmt.Errorf("failed to update action result: %w", err)
+	}
+
+	return &result, nil
 }
 
 func (as *ActionSubmissionService) GetSubmissionStats(ctx context.Context, phaseID int32) (*core.ActionSubmissionStats, error) {

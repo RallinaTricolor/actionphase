@@ -20,9 +20,9 @@ RETURNING id, character_id, assigned_user_id, assigned_by_user_id, assigned_at
 `
 
 type AssignNPCToUserParams struct {
-	CharacterID      int32
-	AssignedUserID   int32
-	AssignedByUserID int32
+	CharacterID      int32 `json:"character_id"`
+	AssignedUserID   int32 `json:"assigned_user_id"`
+	AssignedByUserID int32 `json:"assigned_by_user_id"`
 }
 
 func (q *Queries) AssignNPCToUser(ctx context.Context, arg AssignNPCToUserParams) (NpcAssignment, error) {
@@ -45,11 +45,11 @@ RETURNING id, game_id, user_id, name, character_type, status, created_at, update
 `
 
 type CreateCharacterParams struct {
-	GameID        int32
-	UserID        pgtype.Int4
-	Name          string
-	CharacterType string
-	Status        pgtype.Text
+	GameID        int32       `json:"game_id"`
+	UserID        pgtype.Int4 `json:"user_id"`
+	Name          string      `json:"name"`
+	CharacterType string      `json:"character_type"`
+	Status        pgtype.Text `json:"status"`
 }
 
 func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams) (Character, error) {
@@ -83,12 +83,12 @@ RETURNING id, character_id, module_type, field_name, field_value, field_type, is
 `
 
 type CreateCharacterDataParams struct {
-	CharacterID int32
-	ModuleType  string
-	FieldName   string
-	FieldValue  pgtype.Text
-	FieldType   pgtype.Text
-	IsPublic    pgtype.Bool
+	CharacterID int32       `json:"character_id"`
+	ModuleType  string      `json:"module_type"`
+	FieldName   string      `json:"field_name"`
+	FieldValue  pgtype.Text `json:"field_value"`
+	FieldType   pgtype.Text `json:"field_type"`
+	IsPublic    pgtype.Bool `json:"is_public"`
 }
 
 func (q *Queries) CreateCharacterData(ctx context.Context, arg CreateCharacterDataParams) (CharacterDatum, error) {
@@ -130,9 +130,9 @@ WHERE character_id = $1 AND module_type = $2 AND field_name = $3
 `
 
 type DeleteCharacterDataParams struct {
-	CharacterID int32
-	ModuleType  string
-	FieldName   string
+	CharacterID int32  `json:"character_id"`
+	ModuleType  string `json:"module_type"`
+	FieldName   string `json:"field_name"`
 }
 
 func (q *Queries) DeleteCharacterData(ctx context.Context, arg DeleteCharacterDataParams) error {
@@ -146,8 +146,8 @@ WHERE character_id = $1 AND module_type = $2
 `
 
 type DeleteCharacterModuleParams struct {
-	CharacterID int32
-	ModuleType  string
+	CharacterID int32  `json:"character_id"`
+	ModuleType  string `json:"module_type"`
 }
 
 func (q *Queries) DeleteCharacterModule(ctx context.Context, arg DeleteCharacterModuleParams) error {
@@ -218,8 +218,8 @@ ORDER BY field_name
 `
 
 type GetCharacterDataByModuleParams struct {
-	CharacterID int32
-	ModuleType  string
+	CharacterID int32  `json:"character_id"`
+	ModuleType  string `json:"module_type"`
 }
 
 func (q *Queries) GetCharacterDataByModule(ctx context.Context, arg GetCharacterDataByModuleParams) ([]CharacterDatum, error) {
@@ -261,15 +261,15 @@ ORDER BY c.character_type, c.name
 `
 
 type GetCharactersByGameRow struct {
-	ID            int32
-	GameID        int32
-	UserID        pgtype.Int4
-	Name          string
-	CharacterType string
-	Status        pgtype.Text
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
-	OwnerUsername pgtype.Text
+	ID            int32              `json:"id"`
+	GameID        int32              `json:"game_id"`
+	UserID        pgtype.Int4        `json:"user_id"`
+	Name          string             `json:"name"`
+	CharacterType string             `json:"character_type"`
+	Status        pgtype.Text        `json:"status"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	OwnerUsername pgtype.Text        `json:"owner_username"`
 }
 
 func (q *Queries) GetCharactersByGame(ctx context.Context, gameID int32) ([]GetCharactersByGameRow, error) {
@@ -311,15 +311,15 @@ ORDER BY c.created_at DESC
 `
 
 type GetCharactersByUserRow struct {
-	ID            int32
-	GameID        int32
-	UserID        pgtype.Int4
-	Name          string
-	CharacterType string
-	Status        pgtype.Text
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
-	GameTitle     string
+	ID            int32              `json:"id"`
+	GameID        int32              `json:"game_id"`
+	UserID        pgtype.Int4        `json:"user_id"`
+	Name          string             `json:"name"`
+	CharacterType string             `json:"character_type"`
+	Status        pgtype.Text        `json:"status"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	GameTitle     string             `json:"game_title"`
 }
 
 func (q *Queries) GetCharactersByUser(ctx context.Context, userID pgtype.Int4) ([]GetCharactersByUserRow, error) {
@@ -380,17 +380,17 @@ ORDER BY c.character_type, c.name
 `
 
 type GetNPCsByGameRow struct {
-	ID               int32
-	GameID           int32
-	UserID           pgtype.Int4
-	Name             string
-	CharacterType    string
-	Status           pgtype.Text
-	CreatedAt        pgtype.Timestamptz
-	UpdatedAt        pgtype.Timestamptz
-	OwnerUsername    pgtype.Text
-	AssignedUserID   pgtype.Int4
-	AssignedUsername pgtype.Text
+	ID               int32              `json:"id"`
+	GameID           int32              `json:"game_id"`
+	UserID           pgtype.Int4        `json:"user_id"`
+	Name             string             `json:"name"`
+	CharacterType    string             `json:"character_type"`
+	Status           pgtype.Text        `json:"status"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	OwnerUsername    pgtype.Text        `json:"owner_username"`
+	AssignedUserID   pgtype.Int4        `json:"assigned_user_id"`
+	AssignedUsername pgtype.Text        `json:"assigned_username"`
 }
 
 func (q *Queries) GetNPCsByGame(ctx context.Context, gameID int32) ([]GetNPCsByGameRow, error) {
@@ -434,15 +434,15 @@ ORDER BY c.name
 `
 
 type GetPlayerCharactersByGameRow struct {
-	ID            int32
-	GameID        int32
-	UserID        pgtype.Int4
-	Name          string
-	CharacterType string
-	Status        pgtype.Text
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
-	OwnerUsername string
+	ID            int32              `json:"id"`
+	GameID        int32              `json:"game_id"`
+	UserID        pgtype.Int4        `json:"user_id"`
+	Name          string             `json:"name"`
+	CharacterType string             `json:"character_type"`
+	Status        pgtype.Text        `json:"status"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	OwnerUsername string             `json:"owner_username"`
 }
 
 func (q *Queries) GetPlayerCharactersByGame(ctx context.Context, gameID int32) ([]GetPlayerCharactersByGameRow, error) {
@@ -511,6 +511,63 @@ func (q *Queries) GetPublicCharacterData(ctx context.Context, characterID int32)
 	return items, nil
 }
 
+const getUserControllableCharacters = `-- name: GetUserControllableCharacters :many
+SELECT DISTINCT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at
+FROM characters c
+LEFT JOIN npc_assignments na ON c.id = na.character_id
+LEFT JOIN games g ON c.game_id = g.id
+WHERE c.game_id = $1
+  AND (
+    -- User's own player characters
+    (c.user_id = $2 AND c.character_type = 'player_character')
+    OR
+    -- NPCs assigned to user
+    (na.assigned_user_id = $2)
+    OR
+    -- If user is GM, all NPCs (GMs can control any NPC in their game)
+    (g.gm_user_id = $2 AND c.character_type IN ('npc_gm', 'npc_audience'))
+  )
+ORDER BY c.character_type, c.name
+`
+
+type GetUserControllableCharactersParams struct {
+	GameID int32       `json:"game_id"`
+	UserID pgtype.Int4 `json:"user_id"`
+}
+
+// Get all characters a user can control in a game:
+// 1. Their own player characters (where user_id matches)
+// 2. NPCs assigned to them via npc_assignments
+// 3. If they're the GM, all NPCs (for emergency situations, GMs can control any NPC)
+func (q *Queries) GetUserControllableCharacters(ctx context.Context, arg GetUserControllableCharactersParams) ([]Character, error) {
+	rows, err := q.db.Query(ctx, getUserControllableCharacters, arg.GameID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Character
+	for rows.Next() {
+		var i Character
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.UserID,
+			&i.Name,
+			&i.CharacterType,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserNPCs = `-- name: GetUserNPCs :many
 SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, g.title as game_title
 FROM characters c
@@ -521,15 +578,15 @@ ORDER BY g.title, c.name
 `
 
 type GetUserNPCsRow struct {
-	ID            int32
-	GameID        int32
-	UserID        pgtype.Int4
-	Name          string
-	CharacterType string
-	Status        pgtype.Text
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
-	GameTitle     string
+	ID            int32              `json:"id"`
+	GameID        int32              `json:"game_id"`
+	UserID        pgtype.Int4        `json:"user_id"`
+	Name          string             `json:"name"`
+	CharacterType string             `json:"character_type"`
+	Status        pgtype.Text        `json:"status"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	GameTitle     string             `json:"game_title"`
 }
 
 func (q *Queries) GetUserNPCs(ctx context.Context, assignedUserID int32) ([]GetUserNPCsRow, error) {
@@ -579,9 +636,9 @@ RETURNING id, game_id, user_id, name, character_type, status, created_at, update
 `
 
 type UpdateCharacterParams struct {
-	ID     int32
-	Name   string
-	Status pgtype.Text
+	ID     int32       `json:"id"`
+	Name   string      `json:"name"`
+	Status pgtype.Text `json:"status"`
 }
 
 func (q *Queries) UpdateCharacter(ctx context.Context, arg UpdateCharacterParams) (Character, error) {
@@ -608,8 +665,8 @@ RETURNING id, game_id, user_id, name, character_type, status, created_at, update
 `
 
 type UpdateCharacterStatusParams struct {
-	ID     int32
-	Status pgtype.Text
+	ID     int32       `json:"id"`
+	Status pgtype.Text `json:"status"`
 }
 
 func (q *Queries) UpdateCharacterStatus(ctx context.Context, arg UpdateCharacterStatusParams) (Character, error) {

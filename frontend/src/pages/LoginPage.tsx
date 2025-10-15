@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LoginForm } from '../components/LoginForm';
 import { RegisterForm } from '../components/RegisterForm';
 import { BackendStatus } from '../components/BackendStatus';
@@ -8,9 +8,12 @@ import { TestConnection } from '../components/TestConnection';
 export const LoginPage = () => {
   const [showRegister, setShowRegister] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSuccess = () => {
-    navigate('/dashboard');
+    // Redirect to the page they were trying to access, or dashboard if none
+    const from = (location.state as any)?.from?.pathname || '/dashboard';
+    navigate(from, { replace: true });
   };
 
   return (

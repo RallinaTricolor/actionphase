@@ -18,9 +18,9 @@ RETURNING id, game_id, user_id, role, status, joined_at
 `
 
 type AddGameParticipantParams struct {
-	GameID int32
-	UserID int32
-	Role   string
+	GameID int32  `json:"game_id"`
+	UserID int32  `json:"user_id"`
+	Role   string `json:"role"`
 }
 
 func (q *Queries) AddGameParticipant(ctx context.Context, arg AddGameParticipantParams) (GameParticipant, error) {
@@ -57,8 +57,8 @@ WHERE g.id = $1
 `
 
 type CanUserJoinGameParams struct {
-	GameID int32
-	UserID int32
+	GameID int32 `json:"game_id"`
+	UserID int32 `json:"user_id"`
 }
 
 func (q *Queries) CanUserJoinGame(ctx context.Context, arg CanUserJoinGameParams) (string, error) {
@@ -71,22 +71,23 @@ func (q *Queries) CanUserJoinGame(ctx context.Context, arg CanUserJoinGameParams
 const createGame = `-- name: CreateGame :one
 INSERT INTO games (
     title, description, gm_user_id, genre, start_date, end_date,
-    recruitment_deadline, max_players, is_public
+    recruitment_deadline, max_players, is_public, is_anonymous
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
-) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, created_at, updated_at
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at
 `
 
 type CreateGameParams struct {
-	Title               string
-	Description         pgtype.Text
-	GmUserID            int32
-	Genre               pgtype.Text
-	StartDate           pgtype.Timestamptz
-	EndDate             pgtype.Timestamptz
-	RecruitmentDeadline pgtype.Timestamptz
-	MaxPlayers          pgtype.Int4
-	IsPublic            pgtype.Bool
+	Title               string             `json:"title"`
+	Description         pgtype.Text        `json:"description"`
+	GmUserID            int32              `json:"gm_user_id"`
+	Genre               pgtype.Text        `json:"genre"`
+	StartDate           pgtype.Timestamptz `json:"start_date"`
+	EndDate             pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers          pgtype.Int4        `json:"max_players"`
+	IsPublic            pgtype.Bool        `json:"is_public"`
+	IsAnonymous         bool               `json:"is_anonymous"`
 }
 
 func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, error) {
@@ -100,6 +101,7 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		arg.RecruitmentDeadline,
 		arg.MaxPlayers,
 		arg.IsPublic,
+		arg.IsAnonymous,
 	)
 	var i Game
 	err := row.Scan(
@@ -114,6 +116,7 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		&i.RecruitmentDeadline,
 		&i.MaxPlayers,
 		&i.IsPublic,
+		&i.IsAnonymous,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -130,7 +133,7 @@ func (q *Queries) DeleteGame(ctx context.Context, id int32) error {
 }
 
 const getAllGames = `-- name: GetAllGames :many
-SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username
+SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.is_anonymous, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username
 FROM games
 LEFT JOIN users ON games.gm_user_id = users.id
 WHERE games.is_public = true
@@ -138,20 +141,21 @@ ORDER BY games.id DESC
 `
 
 type GetAllGamesRow struct {
-	ID                  int32
-	Title               string
-	Description         pgtype.Text
-	GmUserID            int32
-	State               pgtype.Text
-	Genre               pgtype.Text
-	StartDate           pgtype.Timestamptz
-	EndDate             pgtype.Timestamptz
-	RecruitmentDeadline pgtype.Timestamptz
-	MaxPlayers          pgtype.Int4
-	IsPublic            pgtype.Bool
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	GmUsername          string
+	ID                  int32              `json:"id"`
+	Title               string             `json:"title"`
+	Description         pgtype.Text        `json:"description"`
+	GmUserID            int32              `json:"gm_user_id"`
+	State               pgtype.Text        `json:"state"`
+	Genre               pgtype.Text        `json:"genre"`
+	StartDate           pgtype.Timestamptz `json:"start_date"`
+	EndDate             pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers          pgtype.Int4        `json:"max_players"`
+	IsPublic            pgtype.Bool        `json:"is_public"`
+	IsAnonymous         bool               `json:"is_anonymous"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	GmUsername          string             `json:"gm_username"`
 }
 
 func (q *Queries) GetAllGames(ctx context.Context) ([]GetAllGamesRow, error) {
@@ -175,6 +179,7 @@ func (q *Queries) GetAllGames(ctx context.Context) ([]GetAllGamesRow, error) {
 			&i.RecruitmentDeadline,
 			&i.MaxPlayers,
 			&i.IsPublic,
+			&i.IsAnonymous,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.GmUsername,
@@ -190,7 +195,7 @@ func (q *Queries) GetAllGames(ctx context.Context) ([]GetAllGamesRow, error) {
 }
 
 const getGame = `-- name: GetGame :one
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, created_at, updated_at FROM games WHERE id = $1
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at FROM games WHERE id = $1
 `
 
 func (q *Queries) GetGame(ctx context.Context, id int32) (Game, error) {
@@ -208,6 +213,7 @@ func (q *Queries) GetGame(ctx context.Context, id int32) (Game, error) {
 		&i.RecruitmentDeadline,
 		&i.MaxPlayers,
 		&i.IsPublic,
+		&i.IsAnonymous,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -235,14 +241,14 @@ ORDER BY gp.joined_at
 `
 
 type GetGameParticipantsRow struct {
-	ID       int32
-	GameID   int32
-	UserID   int32
-	Role     string
-	Status   pgtype.Text
-	JoinedAt pgtype.Timestamptz
-	Username string
-	Email    string
+	ID       int32              `json:"id"`
+	GameID   int32              `json:"game_id"`
+	UserID   int32              `json:"user_id"`
+	Role     string             `json:"role"`
+	Status   pgtype.Text        `json:"status"`
+	JoinedAt pgtype.Timestamptz `json:"joined_at"`
+	Username string             `json:"username"`
+	Email    string             `json:"email"`
 }
 
 func (q *Queries) GetGameParticipants(ctx context.Context, gameID int32) ([]GetGameParticipantsRow, error) {
@@ -276,7 +282,7 @@ func (q *Queries) GetGameParticipants(ctx context.Context, gameID int32) ([]GetG
 
 const getGameWithDetails = `-- name: GetGameWithDetails :one
 SELECT
-    g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.created_at, g.updated_at,
+    g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.is_anonymous, g.created_at, g.updated_at,
     u.username as gm_username,
     COALESCE(pc.player_count, 0) as current_players
 FROM games g
@@ -291,21 +297,22 @@ WHERE g.id = $1
 `
 
 type GetGameWithDetailsRow struct {
-	ID                  int32
-	Title               string
-	Description         pgtype.Text
-	GmUserID            int32
-	State               pgtype.Text
-	Genre               pgtype.Text
-	StartDate           pgtype.Timestamptz
-	EndDate             pgtype.Timestamptz
-	RecruitmentDeadline pgtype.Timestamptz
-	MaxPlayers          pgtype.Int4
-	IsPublic            pgtype.Bool
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	GmUsername          pgtype.Text
-	CurrentPlayers      int64
+	ID                  int32              `json:"id"`
+	Title               string             `json:"title"`
+	Description         pgtype.Text        `json:"description"`
+	GmUserID            int32              `json:"gm_user_id"`
+	State               pgtype.Text        `json:"state"`
+	Genre               pgtype.Text        `json:"genre"`
+	StartDate           pgtype.Timestamptz `json:"start_date"`
+	EndDate             pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers          pgtype.Int4        `json:"max_players"`
+	IsPublic            pgtype.Bool        `json:"is_public"`
+	IsAnonymous         bool               `json:"is_anonymous"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	GmUsername          pgtype.Text        `json:"gm_username"`
+	CurrentPlayers      int64              `json:"current_players"`
 }
 
 func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWithDetailsRow, error) {
@@ -323,6 +330,7 @@ func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWith
 		&i.RecruitmentDeadline,
 		&i.MaxPlayers,
 		&i.IsPublic,
+		&i.IsAnonymous,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.GmUsername,
@@ -332,7 +340,7 @@ func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWith
 }
 
 const getGamesByGM = `-- name: GetGamesByGM :many
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, created_at, updated_at FROM games WHERE gm_user_id = $1 ORDER BY created_at DESC
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at FROM games WHERE gm_user_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, error) {
@@ -356,6 +364,7 @@ func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, err
 			&i.RecruitmentDeadline,
 			&i.MaxPlayers,
 			&i.IsPublic,
+			&i.IsAnonymous,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -370,7 +379,7 @@ func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, err
 }
 
 const getGamesByUser = `-- name: GetGamesByUser :many
-SELECT g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.created_at, g.updated_at, gp.role as user_role, u.username as gm_username
+SELECT g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.is_anonymous, g.created_at, g.updated_at, gp.role as user_role, u.username as gm_username
 FROM games g
 JOIN game_participants gp ON g.id = gp.game_id
 JOIN users u ON g.gm_user_id = u.id
@@ -379,21 +388,22 @@ ORDER BY g.updated_at DESC
 `
 
 type GetGamesByUserRow struct {
-	ID                  int32
-	Title               string
-	Description         pgtype.Text
-	GmUserID            int32
-	State               pgtype.Text
-	Genre               pgtype.Text
-	StartDate           pgtype.Timestamptz
-	EndDate             pgtype.Timestamptz
-	RecruitmentDeadline pgtype.Timestamptz
-	MaxPlayers          pgtype.Int4
-	IsPublic            pgtype.Bool
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	UserRole            string
-	GmUsername          string
+	ID                  int32              `json:"id"`
+	Title               string             `json:"title"`
+	Description         pgtype.Text        `json:"description"`
+	GmUserID            int32              `json:"gm_user_id"`
+	State               pgtype.Text        `json:"state"`
+	Genre               pgtype.Text        `json:"genre"`
+	StartDate           pgtype.Timestamptz `json:"start_date"`
+	EndDate             pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers          pgtype.Int4        `json:"max_players"`
+	IsPublic            pgtype.Bool        `json:"is_public"`
+	IsAnonymous         bool               `json:"is_anonymous"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	UserRole            string             `json:"user_role"`
+	GmUsername          string             `json:"gm_username"`
 }
 
 func (q *Queries) GetGamesByUser(ctx context.Context, userID int32) ([]GetGamesByUserRow, error) {
@@ -417,6 +427,7 @@ func (q *Queries) GetGamesByUser(ctx context.Context, userID int32) ([]GetGamesB
 			&i.RecruitmentDeadline,
 			&i.MaxPlayers,
 			&i.IsPublic,
+			&i.IsAnonymous,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.UserRole,
@@ -433,7 +444,7 @@ func (q *Queries) GetGamesByUser(ctx context.Context, userID int32) ([]GetGamesB
 }
 
 const getGamesNeedingStateUpdate = `-- name: GetGamesNeedingStateUpdate :many
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, created_at, updated_at FROM games
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at FROM games
 WHERE (state = 'recruitment' AND recruitment_deadline IS NOT NULL AND recruitment_deadline < NOW())
    OR (state = 'in_progress' AND end_date IS NOT NULL AND end_date < NOW())
 `
@@ -459,6 +470,7 @@ func (q *Queries) GetGamesNeedingStateUpdate(ctx context.Context) ([]Game, error
 			&i.RecruitmentDeadline,
 			&i.MaxPlayers,
 			&i.IsPublic,
+			&i.IsAnonymous,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -478,8 +490,8 @@ WHERE game_id = $1 AND user_id = $2 AND status = 'active'
 `
 
 type GetParticipantRoleParams struct {
-	GameID int32
-	UserID int32
+	GameID int32 `json:"game_id"`
+	UserID int32 `json:"user_id"`
 }
 
 func (q *Queries) GetParticipantRole(ctx context.Context, arg GetParticipantRoleParams) (string, error) {
@@ -490,7 +502,7 @@ func (q *Queries) GetParticipantRole(ctx context.Context, arg GetParticipantRole
 }
 
 const getRecruitingGames = `-- name: GetRecruitingGames :many
-SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username,
+SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.is_anonymous, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username,
        COALESCE(participant_count.count, 0) as current_players
 FROM games
 LEFT JOIN users ON games.gm_user_id = users.id
@@ -507,21 +519,22 @@ ORDER BY games.created_at DESC
 `
 
 type GetRecruitingGamesRow struct {
-	ID                  int32
-	Title               string
-	Description         pgtype.Text
-	GmUserID            int32
-	State               pgtype.Text
-	Genre               pgtype.Text
-	StartDate           pgtype.Timestamptz
-	EndDate             pgtype.Timestamptz
-	RecruitmentDeadline pgtype.Timestamptz
-	MaxPlayers          pgtype.Int4
-	IsPublic            pgtype.Bool
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	GmUsername          string
-	CurrentPlayers      int64
+	ID                  int32              `json:"id"`
+	Title               string             `json:"title"`
+	Description         pgtype.Text        `json:"description"`
+	GmUserID            int32              `json:"gm_user_id"`
+	State               pgtype.Text        `json:"state"`
+	Genre               pgtype.Text        `json:"genre"`
+	StartDate           pgtype.Timestamptz `json:"start_date"`
+	EndDate             pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers          pgtype.Int4        `json:"max_players"`
+	IsPublic            pgtype.Bool        `json:"is_public"`
+	IsAnonymous         bool               `json:"is_anonymous"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	GmUsername          string             `json:"gm_username"`
+	CurrentPlayers      int64              `json:"current_players"`
 }
 
 func (q *Queries) GetRecruitingGames(ctx context.Context) ([]GetRecruitingGamesRow, error) {
@@ -545,6 +558,7 @@ func (q *Queries) GetRecruitingGames(ctx context.Context) ([]GetRecruitingGamesR
 			&i.RecruitmentDeadline,
 			&i.MaxPlayers,
 			&i.IsPublic,
+			&i.IsAnonymous,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.GmUsername,
@@ -568,8 +582,8 @@ SELECT EXISTS(
 `
 
 type IsUserInGameParams struct {
-	GameID int32
-	UserID int32
+	GameID int32 `json:"game_id"`
+	UserID int32 `json:"user_id"`
 }
 
 func (q *Queries) IsUserInGame(ctx context.Context, arg IsUserInGameParams) (bool, error) {
@@ -585,8 +599,8 @@ WHERE game_id = $1 AND user_id = $2
 `
 
 type RemoveGameParticipantParams struct {
-	GameID int32
-	UserID int32
+	GameID int32 `json:"game_id"`
+	UserID int32 `json:"user_id"`
 }
 
 func (q *Queries) RemoveGameParticipant(ctx context.Context, arg RemoveGameParticipantParams) error {
@@ -598,21 +612,22 @@ const updateGame = `-- name: UpdateGame :one
 UPDATE games
 SET title = $2, description = $3, genre = $4, start_date = $5,
     end_date = $6, recruitment_deadline = $7, max_players = $8,
-    is_public = $9, updated_at = NOW()
+    is_public = $9, is_anonymous = $10, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, created_at, updated_at
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at
 `
 
 type UpdateGameParams struct {
-	ID                  int32
-	Title               string
-	Description         pgtype.Text
-	Genre               pgtype.Text
-	StartDate           pgtype.Timestamptz
-	EndDate             pgtype.Timestamptz
-	RecruitmentDeadline pgtype.Timestamptz
-	MaxPlayers          pgtype.Int4
-	IsPublic            pgtype.Bool
+	ID                  int32              `json:"id"`
+	Title               string             `json:"title"`
+	Description         pgtype.Text        `json:"description"`
+	Genre               pgtype.Text        `json:"genre"`
+	StartDate           pgtype.Timestamptz `json:"start_date"`
+	EndDate             pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers          pgtype.Int4        `json:"max_players"`
+	IsPublic            pgtype.Bool        `json:"is_public"`
+	IsAnonymous         bool               `json:"is_anonymous"`
 }
 
 func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, error) {
@@ -626,6 +641,7 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		arg.RecruitmentDeadline,
 		arg.MaxPlayers,
 		arg.IsPublic,
+		arg.IsAnonymous,
 	)
 	var i Game
 	err := row.Scan(
@@ -640,6 +656,7 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		&i.RecruitmentDeadline,
 		&i.MaxPlayers,
 		&i.IsPublic,
+		&i.IsAnonymous,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -651,9 +668,9 @@ WITH game_update AS (
     UPDATE games
     SET title = $2, description = $3, genre = $4, start_date = $5,
         end_date = $6, recruitment_deadline = $7, max_players = $8,
-        is_public = $9, updated_at = NOW()
+        is_public = $9, is_anonymous = $10, updated_at = NOW()
     WHERE games.id = $1
-    RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, created_at, updated_at
+    RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at
 ),
 gm_participant AS (
     INSERT INTO game_participants (game_id, user_id, role)
@@ -661,35 +678,37 @@ gm_participant AS (
     ON CONFLICT (game_id, user_id) DO NOTHING
     RETURNING id, game_id, user_id, role, status, joined_at
 )
-SELECT gu.id, gu.title, gu.description, gu.gm_user_id, gu.state, gu.genre, gu.start_date, gu.end_date, gu.recruitment_deadline, gu.max_players, gu.is_public, gu.created_at, gu.updated_at FROM game_update gu
+SELECT gu.id, gu.title, gu.description, gu.gm_user_id, gu.state, gu.genre, gu.start_date, gu.end_date, gu.recruitment_deadline, gu.max_players, gu.is_public, gu.is_anonymous, gu.created_at, gu.updated_at FROM game_update gu
 `
 
 type UpdateGameAndAddGMParams struct {
-	ID                  int32
-	Title               string
-	Description         pgtype.Text
-	Genre               pgtype.Text
-	StartDate           pgtype.Timestamptz
-	EndDate             pgtype.Timestamptz
-	RecruitmentDeadline pgtype.Timestamptz
-	MaxPlayers          pgtype.Int4
-	IsPublic            pgtype.Bool
+	ID                  int32              `json:"id"`
+	Title               string             `json:"title"`
+	Description         pgtype.Text        `json:"description"`
+	Genre               pgtype.Text        `json:"genre"`
+	StartDate           pgtype.Timestamptz `json:"start_date"`
+	EndDate             pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers          pgtype.Int4        `json:"max_players"`
+	IsPublic            pgtype.Bool        `json:"is_public"`
+	IsAnonymous         bool               `json:"is_anonymous"`
 }
 
 type UpdateGameAndAddGMRow struct {
-	ID                  int32
-	Title               string
-	Description         pgtype.Text
-	GmUserID            int32
-	State               pgtype.Text
-	Genre               pgtype.Text
-	StartDate           pgtype.Timestamptz
-	EndDate             pgtype.Timestamptz
-	RecruitmentDeadline pgtype.Timestamptz
-	MaxPlayers          pgtype.Int4
-	IsPublic            pgtype.Bool
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
+	ID                  int32              `json:"id"`
+	Title               string             `json:"title"`
+	Description         pgtype.Text        `json:"description"`
+	GmUserID            int32              `json:"gm_user_id"`
+	State               pgtype.Text        `json:"state"`
+	Genre               pgtype.Text        `json:"genre"`
+	StartDate           pgtype.Timestamptz `json:"start_date"`
+	EndDate             pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers          pgtype.Int4        `json:"max_players"`
+	IsPublic            pgtype.Bool        `json:"is_public"`
+	IsAnonymous         bool               `json:"is_anonymous"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
 func (q *Queries) UpdateGameAndAddGM(ctx context.Context, arg UpdateGameAndAddGMParams) (UpdateGameAndAddGMRow, error) {
@@ -703,6 +722,7 @@ func (q *Queries) UpdateGameAndAddGM(ctx context.Context, arg UpdateGameAndAddGM
 		arg.RecruitmentDeadline,
 		arg.MaxPlayers,
 		arg.IsPublic,
+		arg.IsAnonymous,
 	)
 	var i UpdateGameAndAddGMRow
 	err := row.Scan(
@@ -717,6 +737,7 @@ func (q *Queries) UpdateGameAndAddGM(ctx context.Context, arg UpdateGameAndAddGM
 		&i.RecruitmentDeadline,
 		&i.MaxPlayers,
 		&i.IsPublic,
+		&i.IsAnonymous,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -727,12 +748,12 @@ const updateGameState = `-- name: UpdateGameState :one
 UPDATE games
 SET state = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, created_at, updated_at
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at
 `
 
 type UpdateGameStateParams struct {
-	ID    int32
-	State pgtype.Text
+	ID    int32       `json:"id"`
+	State pgtype.Text `json:"state"`
 }
 
 func (q *Queries) UpdateGameState(ctx context.Context, arg UpdateGameStateParams) (Game, error) {
@@ -750,6 +771,7 @@ func (q *Queries) UpdateGameState(ctx context.Context, arg UpdateGameStateParams
 		&i.RecruitmentDeadline,
 		&i.MaxPlayers,
 		&i.IsPublic,
+		&i.IsAnonymous,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -764,9 +786,9 @@ RETURNING id, game_id, user_id, role, status, joined_at
 `
 
 type UpdateParticipantStatusParams struct {
-	GameID int32
-	UserID int32
-	Status pgtype.Text
+	GameID int32       `json:"game_id"`
+	UserID int32       `json:"user_id"`
+	Status pgtype.Text `json:"status"`
 }
 
 func (q *Queries) UpdateParticipantStatus(ctx context.Context, arg UpdateParticipantStatusParams) (GameParticipant, error) {

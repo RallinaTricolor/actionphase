@@ -3,18 +3,20 @@ INSERT INTO game_applications (
     game_id, user_id, role, message
 ) VALUES (
     $1, $2, $3, $4
-) RETURNING *;
+) RETURNING id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, is_published;
 
 -- name: GetGameApplication :one
-SELECT * FROM game_applications WHERE id = $1;
+SELECT id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, is_published
+FROM game_applications WHERE id = $1;
 
 -- name: GetGameApplicationByUserAndGame :one
-SELECT * FROM game_applications
+SELECT id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, is_published
+FROM game_applications
 WHERE game_id = $1 AND user_id = $2;
 
 -- name: GetGameApplications :many
 SELECT
-    ga.*,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
     u.email
 FROM game_applications ga
@@ -24,7 +26,7 @@ ORDER BY ga.applied_at ASC;
 
 -- name: GetGameApplicationsByStatus :many
 SELECT
-    ga.*,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
     u.email
 FROM game_applications ga
@@ -34,7 +36,7 @@ ORDER BY ga.applied_at ASC;
 
 -- name: GetUserGameApplications :many
 SELECT
-    ga.*,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     g.title AS game_title,
     g.state AS game_state
 FROM game_applications ga
@@ -49,14 +51,7 @@ SET
     reviewed_at = NOW(),
     reviewed_by_user_id = $3
 WHERE id = $1
-RETURNING *;
-
--- name: WithdrawGameApplication :exec
-UPDATE game_applications
-SET
-    status = 'withdrawn',
-    reviewed_at = NOW()
-WHERE id = $1 AND user_id = $2;
+RETURNING id, game_id, user_id, role, message, status, reviewed_by_user_id, reviewed_at, applied_at, is_published;
 
 -- name: DeleteGameApplication :exec
 DELETE FROM game_applications WHERE id = $1 AND user_id = $2;
@@ -67,7 +62,7 @@ WHERE game_id = $1 AND status = 'pending';
 
 -- name: GetApprovedApplicationsForGame :many
 SELECT
-    ga.*,
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
     u.email
 FROM game_applications ga
@@ -79,6 +74,16 @@ ORDER BY ga.reviewed_at ASC;
 UPDATE game_applications
 SET
     status = 'approved',
+    reviewed_at = NOW(),
+    reviewed_by_user_id = $2
+WHERE game_id = $1 AND status = 'pending';
+
+-- name: BulkRejectApplications :exec
+-- Reject all pending applications for a game
+-- This is called when GM closes recruitment
+UPDATE game_applications
+SET
+    status = 'rejected',
     reviewed_at = NOW(),
     reviewed_by_user_id = $2
 WHERE game_id = $1 AND status = 'pending';
@@ -97,3 +102,10 @@ SELECT CASE
     WHEN EXISTS(SELECT 1 FROM games g WHERE g.id = $1 AND g.state != 'recruitment') THEN 'not_recruiting'
     ELSE 'can_apply'
 END AS status;
+
+-- name: PublishApplicationStatuses :exec
+-- Mark all application statuses as published for a game
+-- This is called when GM closes recruitment
+UPDATE game_applications
+SET is_published = TRUE
+WHERE game_id = $1;

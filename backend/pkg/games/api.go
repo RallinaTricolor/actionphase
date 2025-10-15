@@ -43,6 +43,7 @@ type GameResponse struct {
 	EndDate             *time.Time `json:"end_date,omitempty"`
 	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          int32      `json:"max_players,omitempty"`
+	IsAnonymous         bool       `json:"is_anonymous"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
 }
@@ -313,6 +314,7 @@ type UpdateGameRequest struct {
 	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          int32      `json:"max_players,omitempty"`
 	IsPublic            bool       `json:"is_public"`
+	IsAnonymous         bool       `json:"is_anonymous"`
 }
 
 func (r *UpdateGameRequest) Bind(req *http.Request) error {
@@ -331,6 +333,7 @@ type GameWithDetailsResponse struct {
 	EndDate             *time.Time `json:"end_date,omitempty"`
 	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          int32      `json:"max_players,omitempty"`
+	IsAnonymous         bool       `json:"is_anonymous"`
 	CurrentPlayers      int64      `json:"current_players"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
@@ -405,11 +408,20 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 
 		applicationService := &db.GameApplicationService{DB: h.App.Pool}
 
-		// First, auto-approve all pending applications (as specified in requirements)
-		err = applicationService.BulkApproveApplications(r.Context(), int32(gameID), userID)
+		// Auto-reject all pending applications (those not explicitly approved)
+		err = applicationService.BulkRejectApplications(r.Context(), int32(gameID), userID)
 		if err != nil {
-			h.App.Logger.Error("Failed to bulk approve applications", "error", err, "game_id", gameID)
+			h.App.Logger.Error("Failed to bulk reject pending applications", "error", err, "game_id", gameID)
 			// Don't fail the state transition, but log the error
+		}
+
+		// Publish application statuses so applicants can see their final status
+		err = applicationService.PublishApplicationStatuses(r.Context(), int32(gameID))
+		if err != nil {
+			h.App.Logger.Error("Failed to publish application statuses", "error", err, "game_id", gameID)
+			// Don't fail the state transition, but log the error
+		} else {
+			h.App.Logger.Info("Successfully published application statuses", "game_id", gameID)
 		}
 
 		// Convert approved applications to participants
@@ -500,6 +512,7 @@ func (h *Handler) UpdateGame(w http.ResponseWriter, r *http.Request) {
 		RecruitmentDeadline: data.RecruitmentDeadline,
 		MaxPlayers:          data.MaxPlayers,
 		IsPublic:            data.IsPublic,
+		IsAnonymous:         data.IsAnonymous,
 	})
 
 	if err != nil {
@@ -515,6 +528,7 @@ func (h *Handler) UpdateGame(w http.ResponseWriter, r *http.Request) {
 		Description: updatedGame.Description.String,
 		GMUserID:    updatedGame.GmUserID,
 		State:       updatedGame.State.String,
+		IsAnonymous: updatedGame.IsAnonymous,
 		CreatedAt:   updatedGame.CreatedAt.Time,
 		UpdatedAt:   updatedGame.UpdatedAt.Time,
 	}
@@ -620,6 +634,7 @@ func (h *Handler) GetGameWithDetails(w http.ResponseWriter, r *http.Request) {
 		Description:    game.Description.String,
 		GMUserID:       game.GmUserID,
 		State:          game.State.String,
+		IsAnonymous:    game.IsAnonymous,
 		CurrentPlayers: game.CurrentPlayers,
 		CreatedAt:      game.CreatedAt.Time,
 		UpdatedAt:      game.UpdatedAt.Time,
@@ -751,15 +766,15 @@ func (h *Handler) LeaveGame(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// Withdraw the application if it's pending
+		// Delete the application if it's pending (allows them to reapply if they want)
 		if application.Status.String == core.ApplicationStatusPending {
-			err = applicationService.WithdrawGameApplication(r.Context(), application.ID, userID)
+			err = applicationService.DeleteGameApplication(r.Context(), application.ID, userID)
 			if err != nil {
-				h.App.Logger.Error("Failed to withdraw application", "error", err, "application_id", application.ID)
+				h.App.Logger.Error("Failed to delete application", "error", err, "application_id", application.ID)
 				render.Render(w, r, core.ErrInternalError(err))
 				return
 			}
-			h.App.Logger.Info("Withdrew pending application", "application_id", application.ID, "game_id", gameID, "user_id", userID)
+			h.App.Logger.Info("Deleted pending application", "application_id", application.ID, "game_id", gameID, "user_id", userID)
 		}
 	}
 
@@ -787,11 +802,11 @@ func (h *Handler) GetGameParticipants(w http.ResponseWriter, r *http.Request) {
 	var response []map[string]interface{}
 	for _, participant := range participants {
 		participantData := map[string]interface{}{
-			"id":        participant.ID,
-			"game_id":   participant.GameID,
-			"user_id":   participant.UserID,
-			"username":  participant.Username,
-			"email":     participant.Email,
+			"id":       participant.ID,
+			"game_id":  participant.GameID,
+			"user_id":  participant.UserID,
+			"username": participant.Username,
+			// Note: Email is intentionally omitted for privacy
 			"role":      participant.Role,
 			"status":    participant.Status,
 			"joined_at": participant.JoinedAt.Time,
@@ -990,14 +1005,15 @@ func (h *Handler) GetGameApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert to response format
-	var response []map[string]interface{}
+	// Initialize as empty slice to ensure JSON encodes as [] not null
+	response := make([]map[string]interface{}, 0)
 	for _, app := range applications {
 		appData := map[string]interface{}{
-			"id":         app.ID,
-			"game_id":    app.GameID,
-			"user_id":    app.UserID,
-			"username":   app.Username,
-			"email":      app.Email,
+			"id":       app.ID,
+			"game_id":  app.GameID,
+			"user_id":  app.UserID,
+			"username": app.Username,
+			// Note: Email is intentionally omitted for privacy
 			"role":       app.Role,
 			"status":     app.Status,
 			"applied_at": app.AppliedAt.Time,
@@ -1153,6 +1169,83 @@ func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) 
 	render.Render(w, r, response)
 }
 
+// GetMyGameApplication - Get current user's application for a game
+func (h *Handler) GetMyGameApplication(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "id")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Get user ID from JWT token
+	token, _, err := jwtauth.FromContext(r.Context())
+	if err != nil {
+		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+		return
+	}
+
+	username, ok := token.Get("username")
+	if !ok {
+		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
+		return
+	}
+
+	// Look up user by username to get user ID
+	userService := &db.UserService{DB: h.App.Pool}
+	user, err := userService.UserByUsername(username.(string))
+	if err != nil {
+		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
+		render.Render(w, r, core.ErrUnauthorized("user not found"))
+		return
+	}
+
+	userID := int32(user.ID)
+
+	// Find user's application for this game
+	applicationService := &db.GameApplicationService{DB: h.App.Pool}
+	application, err := applicationService.GetGameApplicationByUserAndGame(r.Context(), int32(gameID), userID)
+	if err != nil {
+		// User has no application - return 404
+		render.Render(w, r, core.ErrNotFound("no application found for this game"))
+		return
+	}
+
+	// Determine what status to show to the applicant
+	// If status hasn't been published, show "pending" regardless of actual status
+	displayStatus := application.Status.String
+	if !application.IsPublished {
+		displayStatus = core.ApplicationStatusPending
+	}
+
+	// Convert to response format
+	response := &GameApplicationResponse{
+		ID:        application.ID,
+		GameID:    application.GameID,
+		UserID:    application.UserID,
+		Role:      application.Role,
+		Status:    displayStatus,
+		AppliedAt: application.AppliedAt.Time,
+	}
+
+	if application.Message.Valid {
+		response.Message = application.Message.String
+	}
+	// Only include review information if status is published
+	if application.IsPublished {
+		if application.ReviewedAt.Valid {
+			reviewedAt := application.ReviewedAt.Time
+			response.ReviewedAt = &reviewedAt
+		}
+		if application.ReviewedByUserID.Valid {
+			reviewedByUserID := application.ReviewedByUserID.Int32
+			response.ReviewedByUserID = &reviewedByUserID
+		}
+	}
+
+	render.Render(w, r, response)
+}
+
 // WithdrawGameApplication - Withdraw user's own application
 func (h *Handler) WithdrawGameApplication(w http.ResponseWriter, r *http.Request) {
 	gameIDStr := chi.URLParam(r, "id")
@@ -1201,10 +1294,11 @@ func (h *Handler) WithdrawGameApplication(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Withdraw the application
-	err = applicationService.WithdrawGameApplication(r.Context(), application.ID, userID)
+	// Delete the application instead of marking as withdrawn
+	// This allows users to reapply if they change their mind
+	err = applicationService.DeleteGameApplication(r.Context(), application.ID, userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to withdraw application", "error", err, "application_id", application.ID)
+		h.App.Logger.Error("Failed to delete application", "error", err, "application_id", application.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}

@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
-import type { GameApplication } from '../types/games';
+import type { GameApplication, GameState } from '../types/games';
 import { GameApplicationCard } from './GameApplicationCard';
 
 interface GameApplicationsListProps {
   gameId: number;
   isGM?: boolean;
+  gameState?: GameState;
 }
 
-export const GameApplicationsList = ({ gameId, isGM = false }: GameApplicationsListProps) => {
+export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameApplicationsListProps) => {
   const [applications, setApplications] = useState<GameApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,6 +118,7 @@ export const GameApplicationsList = ({ gameId, isGM = false }: GameApplicationsL
                     key={application.id}
                     application={application}
                     isGM={true}
+                    gameState={gameState}
                     onApprove={handleApprove}
                     onReject={handleReject}
                   />
@@ -140,6 +142,9 @@ export const GameApplicationsList = ({ gameId, isGM = false }: GameApplicationsL
                     key={application.id}
                     application={application}
                     isGM={true}
+                    gameState={gameState}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
                   />
                 ))}
               </div>

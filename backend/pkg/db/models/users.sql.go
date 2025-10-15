@@ -19,9 +19,9 @@ RETURNING id, username, email, password, is_admin, created_at, display_name, bio
 `
 
 type CreateUserParams struct {
-	Username string
-	Password string
-	Email    string
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -147,10 +147,10 @@ WHERE id = $1
 `
 
 type UpdateUserParams struct {
-	ID       int32
-	Username string
-	Password string
-	Email    string
+	ID       int32  `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {

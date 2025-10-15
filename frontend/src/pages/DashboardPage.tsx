@@ -1,40 +1,32 @@
 import { useAuth } from '../hooks/useAuth';
 import { usePing } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { GamesList } from '../components/GamesList';
+import type { GameListItem } from '../types/games';
 
 export const DashboardPage = () => {
-  const { logout } = useAuth();
+  const navigate = useNavigate();
   const { data: pingData, isLoading: isPingLoading, error: pingError } = usePing();
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = '/login';
+  const handleGameClick = (game: GameListItem) => {
+    navigate(`/games/${game.id}`);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="mt-2 text-sm text-gray-600">
+          Welcome to ActionPhase - your collaborative role-playing platform
+        </p>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-            {/* API Health Check Card */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+      <div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* API Health Check Card */}
+          <div className="bg-white overflow-hidden shadow-md rounded-xl border border-gray-100">
               <div className="p-5">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -68,8 +60,8 @@ export const DashboardPage = () => {
               </div>
             </div>
 
-            {/* Authentication Status Card */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+          {/* Authentication Status Card */}
+          <div className="bg-white overflow-hidden shadow-md rounded-xl border border-gray-100">
               <div className="p-5">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -97,22 +89,17 @@ export const DashboardPage = () => {
               </div>
             </div>
 
-            {/* API Endpoints Card */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+          {/* Quick Stats Card */}
+          <div className="bg-white overflow-hidden shadow-md rounded-xl border border-gray-100">
               <div className="p-5">
                 <div className="flex items-center">
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Available Endpoints
+                        System Status
                       </dt>
-                      <dd className="mt-2 text-sm text-gray-900">
-                        <ul className="space-y-1">
-                          <li>POST /api/v1/auth/login</li>
-                          <li>POST /api/v1/auth/register</li>
-                          <li>GET /api/v1/auth/refresh</li>
-                          <li>GET /ping</li>
-                        </ul>
+                      <dd className="mt-2 text-lg font-semibold text-gray-900">
+                        All Systems Operational
                       </dd>
                     </dl>
                   </div>
@@ -120,49 +107,17 @@ export const DashboardPage = () => {
               </div>
             </div>
 
-          </div>
+        </div>
 
-          {/* Games List */}
-          <div className="mt-8">
-            <GamesList />
+        {/* Games Section */}
+        <div className="mt-8">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">My Games</h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Browse and manage your active role-playing games
+            </p>
           </div>
-
-          {/* Welcome Message */}
-          <div className="mt-8 bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Welcome to ActionPhase!
-              </h3>
-              <div className="mt-2 max-w-xl text-sm text-gray-500">
-                <p>
-                  This is a modern React frontend built with TypeScript, Tailwind CSS,
-                  and React Query to work with your Go backend. All authentication
-                  endpoints are integrated and ready for testing.
-                </p>
-              </div>
-              <div className="mt-5">
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                  <div className="flex">
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-blue-800">
-                        Features implemented:
-                      </h3>
-                      <div className="mt-2 text-sm text-blue-700">
-                        <ul className="list-disc list-inside space-y-1">
-                          <li>JWT authentication with automatic token refresh</li>
-                          <li>User registration and login</li>
-                          <li>Protected routes</li>
-                          <li>API health monitoring</li>
-                          <li>Modern UI with Tailwind CSS</li>
-                          <li>TypeScript for type safety</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <GamesList onGameClick={handleGameClick} />
         </div>
       </div>
     </div>
