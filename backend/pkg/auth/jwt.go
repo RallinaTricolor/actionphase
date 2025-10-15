@@ -31,7 +31,9 @@ type JWTHandler struct {
 func (j *JWTHandler) CreateToken(user *core.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
-			"user_id":  user.ID,
+			// SECURITY: Only include username, not user_id
+			// This prevents stale user_id from being used for authorization
+			// Backend always looks up current user_id by username from database
 			"username": user.Username,
 			"exp":      time.Now().Add(time.Hour * 24 * 7).Unix(),
 		})

@@ -21,17 +21,18 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined);
 
-  // Decode JWT to get user_id
+  // Fetch current user_id from API instead of JWT
+  // This ensures we always have the current user_id from database, not a stale value
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
+    const fetchCurrentUser = async () => {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setCurrentUserId(payload.user_id);
+        const response = await apiClient.getCurrentUser();
+        setCurrentUserId(response.data.id);
       } catch (err) {
-        console.error('Failed to decode token:', err);
+        console.error('Failed to fetch current user:', err);
       }
-    }
+    };
+    fetchCurrentUser();
   }, []);
 
   useEffect(() => {
