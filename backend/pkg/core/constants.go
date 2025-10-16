@@ -187,6 +187,9 @@ const (
 	// CanApply - User can submit an application to the game
 	CanApply = "can_apply"
 
+	// IsGameMaster - User is the Game Master of this game
+	IsGameMaster = "is_game_master"
+
 	// ApplicationPending - User already has a pending application
 	ApplicationPending = "application_pending"
 

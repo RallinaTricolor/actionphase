@@ -53,10 +53,11 @@ func (q *Queries) BulkRejectApplications(ctx context.Context, arg BulkRejectAppl
 
 const canUserApplyToGame = `-- name: CanUserApplyToGame :one
 SELECT CASE
+    WHEN EXISTS(SELECT 1 FROM games g WHERE g.id = $1 AND g.gm_user_id = $2) THEN 'is_game_master'
     WHEN EXISTS(SELECT 1 FROM game_participants gp WHERE gp.game_id = $1 AND gp.user_id = $2) THEN 'already_participant'
     WHEN EXISTS(SELECT 1 FROM game_applications ga WHERE ga.game_id = $1 AND ga.user_id = $2 AND ga.status = 'pending') THEN 'application_pending'
     WHEN EXISTS(SELECT 1 FROM game_applications ga2 WHERE ga2.game_id = $1 AND ga2.user_id = $2 AND ga2.status = 'rejected') THEN 'application_rejected'
-    WHEN EXISTS(SELECT 1 FROM games g WHERE g.id = $1 AND g.state != 'recruitment') THEN 'not_recruiting'
+    WHEN EXISTS(SELECT 1 FROM games g2 WHERE g2.id = $1 AND g2.state != 'recruitment') THEN 'not_recruiting'
     ELSE 'can_apply'
 END AS status
 `

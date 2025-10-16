@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 import type { GameListItem } from '../types/games';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
 
@@ -20,6 +21,7 @@ export const GamesList = ({
   onApplyToGame,
   isJoining = false
 }: GamesListProps) => {
+  const { currentUser, isCheckingAuth } = useAuth();
   const [games, setGames] = useState<GameListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -157,7 +159,7 @@ export const GamesList = ({
                 )}
               </div>
 
-              {game.state === 'recruitment' && onApplyToGame && (
+              {game.state === 'recruitment' && onApplyToGame && !isCheckingAuth && game.gm_user_id !== currentUser?.id && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <button
                     className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white text-sm py-2 px-4 rounded transition-colors"

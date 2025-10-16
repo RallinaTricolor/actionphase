@@ -138,8 +138,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated: isAuthenticated || false,
     isLoading,
     isCheckingAuth: isCheckingAuth || isLoadingUser,
-    login: loginMutation.mutateAsync,
-    register: registerMutation.mutateAsync,
+    login: async (data: LoginRequest) => {
+      await loginMutation.mutateAsync(data);
+    },
+    register: async (data: RegisterRequest) => {
+      await registerMutation.mutateAsync(data);
+    },
     logout,
     error: authError || loginMutation.error || registerMutation.error,
   };

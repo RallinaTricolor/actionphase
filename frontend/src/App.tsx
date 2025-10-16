@@ -8,7 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { GamesPage } from './pages/GamesPage';
 import { GameDetailsPage } from './pages/GameDetailsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { useAuth } from './hooks/useAuth';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,7 +83,9 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AppRoutes />
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
