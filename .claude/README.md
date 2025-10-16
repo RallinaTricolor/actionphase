@@ -27,6 +27,17 @@ This directory contains all AI-specific context and instructions for working wit
 
 (Currently empty - add custom commands here as needed)
 
+### `/planning/` - Session Planning & Task Tracking
+**Persistent planning documents that survive across sessions:**
+
+Use this directory to:
+- Track multi-session implementation plans
+- Document feature roadmaps and milestones
+- Keep TODO lists for ongoing work
+- Store design decisions and exploration notes
+
+This allows for continuity between AI sessions and provides historical context for planning decisions.
+
 ## External Documentation References
 
 ### Architecture Decision Records (ADRs)
@@ -49,12 +60,12 @@ Read ADRs for understanding architectural decisions:
 - SEQUENCE_DIAGRAMS.md - Visual process flows
 
 ### Project Status & Planning
-**Location**: `/docs/`
+**Location**: `.claude/planning/` and `/docs/`
 
-- **TEST_COVERAGE_ANALYSIS.md** - Current test coverage and improvement plan (READ BEFORE WRITING TESTS)
-- TEST_DATA.md - Test fixtures and data setup
-- MVP_STATUS.md - Current MVP implementation status
-- ADR_UPDATE_RECOMMENDATIONS.md - Recent ADR review findings
+- **MVP_STATUS.md** (`.claude/planning/`) - Current MVP implementation status and development plan
+- **TEST_COVERAGE_ANALYSIS.md** (`/docs/`) - Current test coverage and improvement plan (READ BEFORE WRITING TESTS)
+- **TEST_DATA.md** (`/docs/`) - Test fixtures and data setup
+- **ADR_UPDATE_RECOMMENDATIONS.md** (`/docs/`) - Recent ADR review findings
 
 ### Frontend Documentation
 **Location**: `/frontend/docs/`

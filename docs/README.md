@@ -6,7 +6,7 @@ Welcome to the ActionPhase documentation! This directory contains comprehensive 
 
 ### Getting Started
 - **[Developer Onboarding Guide](DEVELOPER_ONBOARDING.md)** - Get up and running in under 30 minutes
-- **[MVP Status](MVP_STATUS.md)** - Current project status, completed features, and roadmap
+- **[MVP Status & Development Plan](../.claude/planning/MVP_STATUS.md)** - Current project status, completed features, and roadmap
 - **[Project README](../README.md)** - Project overview and quick start
 - **[Environment Setup](../backend/README.md)** - Detailed setup instructions
 
@@ -80,7 +80,7 @@ This documentation aims to:
 - **Architect**: [ADR Index](adrs/README.md) → [System Architecture](architecture/SYSTEM_ARCHITECTURE.md)
 
 ### By Task
-- **Checking project status**: [MVP Status](MVP_STATUS.md)
+- **Checking project status**: [MVP Status & Development Plan](../.claude/planning/MVP_STATUS.md)
 - **Setting up development environment**: [Developer Onboarding](DEVELOPER_ONBOARDING.md)
 - **Understanding data flow**: [Sequence Diagrams](architecture/SEQUENCE_DIAGRAMS.md)
 - **Adding new features**: [Component Interactions](architecture/COMPONENT_INTERACTIONS.md)

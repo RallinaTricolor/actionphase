@@ -1,8 +1,10 @@
-# ActionPhase MVP Status
+# ActionPhase MVP Status & Development Plan
 
 **Last Updated:** 2025-10-15
 
-This document tracks the status of the ActionPhase MVP, including completed features, in-progress work, and pending tasks.
+This document tracks the status of the ActionPhase MVP, including completed features, in-progress work, pending tasks, and the post-MVP roadmap.
+
+**See Also:** [Original MVP Development Plan](MVP_DEVELOPMENT_PLAN.md) - The original phase-by-phase development roadmap (historical reference)
 
 ## 📊 Overall MVP Status
 
@@ -362,7 +364,7 @@ A comprehensive unified state management system to consolidate duplicated logic 
 
 ---
 
-## 📈 Post-MVP Roadmap
+## 📈 Post-MVP Development Roadmap
 
 ### Phase 1: Optimization & Polish (Current)
 - 🔄 **State Management Integration** - Reduce duplication and API calls
@@ -450,11 +452,9 @@ A comprehensive unified state management system to consolidate duplicated logic 
 
 ---
 
-## 📝 Development Notes
+## 📝 Development Session Log
 
-### Recent Sessions
-
-**2025-10-15 - Security Hardening & State Management**
+### 2025-10-15 - Security Hardening & State Management
 - Fixed conversation participant names display issue
 - Implemented smart participant filtering for private messages
 - Fixed "You" badge for player characters in common rooms
@@ -465,23 +465,29 @@ A comprehensive unified state management system to consolidate duplicated logic 
 - Created unified state management system (ready for integration)
 - **Result:** MVP feature-complete with production-ready security, optimization ready
 
-### Key Decisions Made
-- **JWT Security:** Separated authentication (JWT) from authorization (database)
-  - JWT only contains username (proves identity)
-  - All permissions fetched fresh from database
-  - Prevents stale user_id attacks
-- **State Management:** Created unified context system to eliminate duplication
-  - Single source of truth for user/game state
-  - 60-70% reduction in API calls expected
-  - Integration deferred to next session
-- **Permission Model:** Character sheet permissions properly propagated through component hierarchy
-  - GM can edit all character sheets
-  - Players can only edit their own characters
-  - Backend enforces authorization, frontend matches for UX
+### Key Architectural Decisions
+
+**JWT Security Architecture:**
+- Separated authentication (JWT) from authorization (database)
+- JWT only contains username (proves identity)
+- All permissions fetched fresh from database
+- Prevents stale user_id attacks
+
+**State Management Strategy:**
+- Created unified context system to eliminate duplication
+- Single source of truth for user/game state
+- 60-70% reduction in API calls expected
+- Integration deferred to next session for thorough testing
+
+**Permission Model:**
+- Character sheet permissions properly propagated through component hierarchy
+- GM can edit all character sheets
+- Players can only edit their own characters
+- Backend enforces authorization, frontend matches for UX
 
 ---
 
-## 🎉 Conclusion
+## 🎉 MVP Status Summary
 
 **ActionPhase MVP is 95% complete** with all core gameplay features functional and production-ready security. The final 5% is optimization work (unified state management integration) that will improve performance and maintainability but is not required for MVP functionality.
 
