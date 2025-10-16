@@ -1,4 +1,3 @@
-import { useAuth } from '../hooks/useAuth';
 import { usePing } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { GamesList } from '../components/GamesList';

@@ -35,6 +35,8 @@ func (gas *GameApplicationService) CreateGameApplication(ctx context.Context, re
 
 	if canApplyStatus != core.CanApply {
 		switch canApplyStatus {
+		case core.IsGameMaster:
+			return nil, fmt.Errorf("game master cannot apply to their own game")
 		case core.AlreadyParticipant:
 			return nil, fmt.Errorf("user is already a participant in this game")
 		case core.ApplicationPending:

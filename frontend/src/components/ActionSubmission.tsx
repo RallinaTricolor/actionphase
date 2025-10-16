@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 import { CountdownTimer } from './CountdownTimer';
 import type { GamePhase, ActionSubmissionRequest, ActionWithDetails } from '../types/phases';
 
@@ -10,26 +11,11 @@ interface ActionSubmissionProps {
   className?: string;
 }
 
-// Simple JWT decoder to extract user_id from token
-function decodeJWT(token: string): { user_id?: number; username?: string } | null {
-  try {
-    const base64Url = token.split('.')[1];
-    if (!base64Url) return null;
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch (e) {
-    console.error('Failed to decode JWT:', e);
-    return null;
-  }
-}
-
 export function ActionSubmission({ gameId, currentPhase, className = '' }: ActionSubmissionProps) {
+  // Get current user from AuthContext
+  const { currentUser } = useAuth();
+  const currentUserId = currentUser?.id ?? null;
+
   const [content, setContent] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -58,12 +44,6 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
   const currentAction = currentPhase
     ? userActions.find(action => action.phase_id === currentPhase.id)
     : null;
-
-  // Get current user ID from JWT token (memoized to prevent re-decoding)
-  const currentUserId = useMemo(() => {
-    const token = apiClient.getAuthToken();
-    return token ? decodeJWT(token)?.user_id : null;
-  }, []);
 
   // Filter characters to only show those owned by or assigned to the current user (memoized)
   const availableCharacters = useMemo(() => {

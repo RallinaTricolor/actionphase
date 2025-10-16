@@ -29,23 +29,31 @@ export const GameApplicationCard = ({
     });
   };
 
-  const handleToggleStatus = async () => {
-    // If pending or rejected, approve. If approved, reject.
-    const shouldApprove = application.status !== 'approved';
-    const handler = shouldApprove ? onApprove : onReject;
+  const handleApprove = async () => {
+    if (!onApprove) return;
 
-    if (!handler) return;
+    try {
+      setActionLoading(true);
+      await onApprove(application.id);
+    } catch (error) {
+      console.error('Failed to approve application:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
-    // Only confirm for rejection
-    if (!shouldApprove && !confirm('Are you sure you want to reject this application?')) {
+  const handleReject = async () => {
+    if (!onReject) return;
+
+    if (!confirm('Are you sure you want to reject this application?')) {
       return;
     }
 
     try {
       setActionLoading(true);
-      await handler(application.id);
+      await onReject(application.id);
     } catch (error) {
-      console.error('Failed to update application:', error);
+      console.error('Failed to reject application:', error);
     } finally {
       setActionLoading(false);
     }
@@ -87,22 +95,43 @@ export const GameApplicationCard = ({
       </div>
 
       {isGM && gameState === 'recruitment' && onApprove && onReject && (
-        <div className="flex justify-end pt-4 border-t border-gray-100">
-          <button
-            onClick={handleToggleStatus}
-            disabled={actionLoading}
-            className={`${
-              application.status === 'approved'
-                ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-green-600 hover:bg-green-700'
-            } text-white py-1.5 px-3 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            {actionLoading
-              ? 'Processing...'
-              : application.status === 'approved'
-              ? 'Reject'
-              : 'Approve'}
-          </button>
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+          {application.status === 'pending' && (
+            <>
+              <button
+                onClick={handleReject}
+                disabled={actionLoading}
+                className="bg-red-600 hover:bg-red-700 text-white py-1.5 px-3 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {actionLoading ? 'Processing...' : 'Reject'}
+              </button>
+              <button
+                onClick={handleApprove}
+                disabled={actionLoading}
+                className="bg-green-600 hover:bg-green-700 text-white py-1.5 px-3 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {actionLoading ? 'Processing...' : 'Approve'}
+              </button>
+            </>
+          )}
+          {application.status === 'approved' && (
+            <button
+              onClick={handleReject}
+              disabled={actionLoading}
+              className="bg-red-600 hover:bg-red-700 text-white py-1.5 px-3 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {actionLoading ? 'Processing...' : 'Reject'}
+            </button>
+          )}
+          {application.status === 'rejected' && (
+            <button
+              onClick={handleApprove}
+              disabled={actionLoading}
+              className="bg-green-600 hover:bg-green-700 text-white py-1.5 px-3 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {actionLoading ? 'Processing...' : 'Approve'}
+            </button>
+          )}
         </div>
       )}
     </div>

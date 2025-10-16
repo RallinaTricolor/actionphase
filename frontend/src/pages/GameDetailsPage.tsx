@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { GameWithDetails, GameParticipant, GameState, GameApplication } from '../types/games';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
+import { useAuth } from '../contexts/AuthContext';
 import { GameApplicationsList } from '../components/GameApplicationsList';
 import { ApplyToGameModal } from '../components/ApplyToGameModal';
 import { EditGameModal } from '../components/EditGameModal';
@@ -22,6 +23,10 @@ interface GameDetailsPageProps {
 }
 
 export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsPageProps) => {
+  // Get current user from AuthContext
+  const { currentUser, isCheckingAuth } = useAuth();
+  const currentUserId = currentUser?.id ?? null;
+
   const [game, setGame] = useState<GameWithDetails | null>(null);
   const [participants, setParticipants] = useState<GameParticipant[]>([]);
   const [userApplication, setUserApplication] = useState<GameApplication | null>(null);
@@ -30,7 +35,6 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
   const [actionLoading, setActionLoading] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<string>('default');
 
   // Get current phase data using react-query
@@ -43,7 +47,7 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
 
   // Compute isGM and isParticipant early for use in queries
   const isGM = useMemo(() => {
-    return isGMProp || (game && currentUserId && game.gm_user_id === currentUserId);
+    return isGMProp || Boolean(game && currentUserId && game.gm_user_id === currentUserId);
   }, [isGMProp, game, currentUserId]);
 
   const isParticipant = useMemo(() => {
@@ -74,20 +78,6 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
       error: controllableCharsError
     });
   }, [gameId, game, isGM, isParticipant, controllableCharacters, controllableCharsLoading, controllableCharsError]);
-
-  useEffect(() => {
-    // Fetch current user ID from API instead of JWT
-    const fetchCurrentUser = async () => {
-      try {
-        const response = await apiClient.getCurrentUser();
-        console.log('[GameDetailsPage] Current user:', response.data);
-        setCurrentUserId(response.data.id);
-      } catch (err) {
-        console.error('[GameDetailsPage] Failed to fetch current user:', err);
-      }
-    };
-    fetchCurrentUser();
-  }, []);
 
   useEffect(() => {
     // Refetch game data when gameId or currentUserId changes
@@ -423,7 +413,7 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
               </button>
             ))}
 
-            {!isGM && game.state === 'recruitment' && !userApplication && (
+            {!isGM && !isCheckingAuth && game.state === 'recruitment' && !userApplication && (
               <button
                 onClick={() => setShowApplyModal(true)}
                 disabled={actionLoading}

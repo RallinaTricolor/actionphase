@@ -23,7 +23,22 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
       setError(null);
       const response = await apiClient.getUserConversations(gameId);
       console.log('[ConversationList] Loaded conversations:', response.data.conversations);
-      setConversations(response.data.conversations || []);
+
+      // Deduplicate conversations by ID (user may own multiple characters in same conversation)
+      const conversationMap = new Map<number, ConversationListItem>();
+      (response.data.conversations || []).forEach(conv => {
+        if (!conversationMap.has(conv.id)) {
+          conversationMap.set(conv.id, conv);
+        }
+      });
+      const uniqueConversations = Array.from(conversationMap.values());
+
+      console.log('[ConversationList] Deduplicated:', {
+        original: response.data.conversations?.length || 0,
+        unique: uniqueConversations.length
+      });
+
+      setConversations(uniqueConversations);
     } catch (err) {
       console.error('Failed to load conversations:', err);
       setError('Failed to load conversations');

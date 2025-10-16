@@ -4,7 +4,7 @@ import { GamesList } from '../components/GamesList';
 import { CreateGameForm } from '../components/CreateGameForm';
 import { Modal } from '../components/Modal';
 import { apiClient } from '../lib/api';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import type { GameListItem } from '../types/games';
 
 type ViewMode = 'all' | 'recruiting';

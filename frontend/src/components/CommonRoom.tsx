@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { CreatePostForm } from './CreatePostForm';
@@ -14,26 +15,15 @@ interface CommonRoomProps {
 }
 
 export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true, isGM = false }: CommonRoomProps) {
+  // Get current user from AuthContext
+  const { currentUser } = useAuth();
+  const currentUserId = currentUser?.id;
+
   const [posts, setPosts] = useState<Message[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined);
-
-  // Fetch current user_id from API instead of JWT
-  // This ensures we always have the current user_id from database, not a stale value
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const response = await apiClient.getCurrentUser();
-        setCurrentUserId(response.data.id);
-      } catch (err) {
-        console.error('Failed to fetch current user:', err);
-      }
-    };
-    fetchCurrentUser();
-  }, []);
 
   useEffect(() => {
     loadData();
