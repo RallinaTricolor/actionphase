@@ -11,6 +11,7 @@ The `.claude/` directory contains organized AI context and instructions:
 - **`.claude/context/`** - Essential context to read before specific tasks
 - **`.claude/reference/`** - Detailed implementation guides
 - **`.claude/commands/`** - Custom slash commands
+- **`.claude/planning/`** - Persistent planning documents and multi-session task tracking
 
 ### When to Read Context Files
 
@@ -228,7 +229,7 @@ Location: `.claude/reference/`
 - **ERROR_HANDLING.md** - Error handling patterns
 
 ### Current Status
-- **`/docs/MVP_STATUS.md`** - Current MVP implementation status
+- **`.claude/planning/MVP_STATUS.md`** - Current MVP implementation status and development plan
 - **`/docs/TEST_COVERAGE_ANALYSIS.md`** - Test coverage and improvement plan
 - **`/docs/TEST_DATA.md`** - Detailed test fixture documentation
 
@@ -337,7 +338,7 @@ Key variables in `.env`:
 **After major refactors**:
 - Update relevant ADRs in **`/docs/adrs/`** if decisions changed
 - Add "Recent Changes" sections to context files with date
-- Update **`/docs/MVP_STATUS.md`** with current implementation status
+- Update **`.claude/planning/MVP_STATUS.md`** with current implementation status
 
 ### What to Update
 
@@ -365,7 +366,7 @@ Key variables in `.env`:
 When we completed the AuthContext centralization refactor:
 1. ✅ Updated .claude/context/STATE_MANAGEMENT.md with new patterns
 2. ✅ Updated /docs/adrs/005-frontend-state-management.md with evolution section
-3. ✅ Updated /docs/MVP_STATUS.md with completion status
+3. ✅ Updated `.claude/planning/MVP_STATUS.md` with completion status
 4. ✅ Documented isCheckingAuth pattern to prevent future bugs
 ```
 
