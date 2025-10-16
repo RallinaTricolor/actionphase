@@ -2,32 +2,76 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Architecture
+## AI Context Directory
+
+**IMPORTANT: Before performing specific coding tasks, read the relevant context files from `.claude/context/`**
+
+The `.claude/` directory contains organized AI context and instructions:
+- **`.claude/README.md`** - Complete index of all AI context and documentation
+- **`.claude/context/`** - Essential context to read before specific tasks
+- **`.claude/reference/`** - Detailed implementation guides
+- **`.claude/commands/`** - Custom slash commands
+
+### When to Read Context Files
+
+**Before Writing ANY Tests**:
+1. Read **`.claude/context/TESTING.md`** for testing philosophy and patterns
+2. Review **`/docs/TEST_COVERAGE_ANALYSIS.md`** for current coverage status
+3. Reference **`/docs/adrs/007-testing-strategy.md`** for strategy details
+4. Check **`.claude/context/TEST_DATA.md`** when using test fixtures
+
+**Before Implementing Features**:
+1. Read **`.claude/context/ARCHITECTURE.md`** for architectural patterns
+2. Review relevant ADRs in **`/docs/adrs/`** for architectural decisions
+3. Check **`/docs/architecture/`** for system design context
+
+**Before Frontend State Work**:
+1. Read **`.claude/context/STATE_MANAGEMENT.md`** for state management patterns
+2. Review **`/docs/adrs/005-frontend-state-management.md`** for architecture decisions
+3. Reference **`/frontend/docs/STATE_MANAGEMENT_QUICK_REFERENCE.md`** for quick lookups
+
+**Before Working with Test Data**:
+1. Read **`.claude/context/TEST_DATA.md`** for fixture overview
+2. Review **`/docs/TEST_DATA.md`** for detailed fixture documentation
+3. Check **`/backend/pkg/db/test_fixtures/`** for actual SQL files
+
+### Context File Quick Reference
+
+- **TESTING.md** - Testing philosophy, coverage status, patterns, commands
+- **ARCHITECTURE.md** - Clean Architecture patterns, request flow, key files
+- **STATE_MANAGEMENT.md** - React Query, AuthContext, common patterns
+- **TEST_DATA.md** - Test fixtures, test users, game scenarios
+
+**See `.claude/README.md` for complete documentation index and workflow guides.**
+
+---
+
+## Project Overview
 
 ActionPhase is a modern gaming platform with Clean Architecture principles:
 
-- **Go Backend**: Modern JWT-based API using Chi router, PostgreSQL with sqlc for type-safe queries
-- **React Frontend**: Modern React/TypeScript SPA with Vite, Tailwind CSS, and React Query
-- **Database**: PostgreSQL with hybrid relational-document design using JSONB for game data
+- **Go Backend**: JWT-based API using Chi router, PostgreSQL with sqlc
+- **React Frontend**: React/TypeScript SPA with Vite, Tailwind CSS, React Query
+- **Database**: PostgreSQL with hybrid relational-document design (JSONB for game data)
 
-### Core Architecture Principles
-- **Interface-First Development**: All services defined as interfaces in `pkg/core/interfaces.go`
-- **Domain-Driven Design**: Clear bounded contexts (auth, games, characters, phases)
-- **Clean Architecture**: Dependency inversion with business logic isolated from infrastructure
-- **Observability-First**: Structured logging with correlation IDs and metrics collection
-- **API-First**: RESTful design with comprehensive validation and error handling
+### Core Principles
+- **Interface-First Development** - Define interfaces before implementation
+- **Domain-Driven Design** - Clear bounded contexts (auth, games, characters, phases)
+- **Test-Driven Development** - Write tests before/alongside features
+- **Observability-First** - Structured logging with correlation IDs
 
-### Key Technologies & Decisions
-- **Chi Router**: HTTP routing and composable middleware
-- **JWT + Refresh Tokens**: Stateless auth with server-side session management
-- **PostgreSQL + JSONB**: ACID compliance with flexible game data storage
-- **sqlc**: Type-safe SQL query generation at compile time
-- **React Query**: Server state management with intelligent caching
-- **Structured Logging**: JSON logs with correlation ID tracing
+### Technology Stack
+- **Backend**: Go, Chi, PostgreSQL, sqlc, golang-migrate
+- **Frontend**: React, TypeScript, Vite, React Query, Tailwind CSS
+- **Auth**: JWT + Refresh Tokens with server-side sessions
 
-## Development Commands
+**For architectural details, read `.claude/context/ARCHITECTURE.md`**
 
-### Quick Start for New Developers
+---
+
+## Quick Start Commands
+
+### Environment Setup
 ```bash
 # Complete setup (database + environment + dependencies)
 just dev-setup
@@ -35,473 +79,327 @@ just dev-setup
 # Apply database migrations
 just migrate
 
-# Start development server with environment loading
+# Start development server
 just dev
 ```
 
-### Environment & Configuration
-ActionPhase uses `.env` files for configuration. The repository includes:
-- `.env` - Working defaults for local Docker development
-- `.env.example` - Template with all available options
+### Development Workflow
 
-Key environment variables:
+**Backend Development**:
+```bash
+just dev                      # Start backend with .env loading
+just sqlgen                   # Generate Go code from SQL queries
+just test                     # Run all tests
+just test-mocks               # Fast unit tests (~300ms)
+just ci-test                  # Full CI test suite (lint + test + race)
+```
+
+**Frontend Development**:
+```bash
+just run-frontend             # Start development server
+just test-frontend            # Run frontend tests
+just test-frontend-watch      # Watch mode for development
+```
+
+**Database Management**:
+```bash
+just make_migration <name>    # Create new migration
+just migrate                  # Apply migrations
+just migrate_test             # Apply migrations to test database
+```
+
+**For complete command reference, see justfile or run `just --list`**
+
+---
+
+## Testing Requirements
+
+**Tests are MANDATORY for all new features and bug fixes.**
+
+### Quick Testing Guide
+
+**Backend**:
+- Unit tests with mocks: `just test-mocks`
+- Integration tests with DB: `SKIP_DB_TESTS=false just test`
+- Target: >80% coverage on service layer
+
+**Frontend**:
+- Component tests: `just test-frontend`
+- Watch mode: `just test-frontend-watch`
+- Test user interactions, not implementation
+
+### Bug Fix Process (Mandatory)
+1. Write test that reproduces bug (should fail)
+2. Fix the bug
+3. Verify test passes
+4. Commit test and fix together
+
+**For detailed testing patterns and requirements, read `.claude/context/TESTING.md`**
+
+---
+
+## Development Patterns
+
+### Integrated Feature Development
+
+**Implement BOTH backend and frontend together before moving to next feature.**
+
+**Backend Flow**:
+1. Database migration (if needed) → `just make_migration <name>`
+2. SQL queries → `backend/pkg/db/queries/*.sql`
+3. Generate code → `just sqlgen`
+4. Define interface → `backend/pkg/core/interfaces.go`
+5. **Write tests first** → `*_test.go`
+6. Implement service → `backend/pkg/db/services/*.go`
+7. Implement handler → `backend/pkg/*/api.go`
+8. Run tests → `just test`
+
+**Frontend Flow**:
+1. API client method → `frontend/src/lib/api.ts`
+2. Custom hooks → `frontend/src/hooks/*.ts`
+3. **Write hook tests** → `*.test.ts`
+4. Implement components → `frontend/src/components/*.tsx`
+5. **Write component tests** → `*.test.tsx`
+6. Run tests → `just test-frontend`
+
+**Then**: Test complete feature in UI before moving on
+
+**For architectural patterns and best practices, read `.claude/context/ARCHITECTURE.md`**
+
+---
+
+## Key Files Reference
+
+### Backend Core
+- `backend/pkg/core/interfaces.go` - All service interfaces
+- `backend/pkg/core/models.go` - Domain models
+- `backend/pkg/http/root.go` - API routing and middleware
+- `backend/pkg/db/queries/` - SQL queries (generates code via sqlc)
+- `backend/pkg/db/services/` - Service implementations
+
+### Frontend Core
+- `frontend/src/lib/api.ts` - API client with JWT interceptors
+- `frontend/src/contexts/AuthContext.tsx` - Centralized auth state
+- `frontend/src/App.tsx` - Application setup
+- `frontend/src/hooks/` - Custom hooks
+- `frontend/src/components/` - React components
+
+### Configuration
+- `.env` - Environment variables (local development)
+- `.env.example` - Environment variable template
+- `justfile` - Development commands
+- `backend/pkg/db/migrations/` - Database migrations
+
+---
+
+## Documentation Index
+
+### Essential Context (Read Before Coding)
+- **`.claude/context/TESTING.md`** - Testing patterns and requirements
+- **`.claude/context/ARCHITECTURE.md`** - Architectural patterns
+- **`.claude/context/STATE_MANAGEMENT.md`** - Frontend state management
+- **`.claude/context/TEST_DATA.md`** - Test fixtures and data
+
+### Architecture Decision Records (ADRs)
+Location: `/docs/adrs/`
+
+- **ADR-001**: Technology Stack Selection
+- **ADR-002**: Database Design Approach
+- **ADR-003**: Authentication Strategy
+- **ADR-004**: API Design Principles
+- **ADR-005**: Frontend State Management
+- **ADR-006**: Observability Approach
+- **ADR-007**: Testing Strategy
+
+### System Design Documentation
+Location: `/docs/architecture/`
+
+- **SYSTEM_ARCHITECTURE.md** - Complete system design
+- **COMPONENT_INTERACTIONS.md** - How components communicate
+- **SEQUENCE_DIAGRAMS.md** - Visual process flows
+
+### Reference Documentation
+Location: `.claude/reference/`
+
+- **BACKEND_ARCHITECTURE.md** - Detailed backend guide
+- **API_DOCUMENTATION.md** - API endpoint documentation
+- **TESTING_GUIDE.md** - Implementation testing guide
+- **LOGGING_STANDARDS.md** - Logging best practices
+- **ERROR_HANDLING.md** - Error handling patterns
+
+### Current Status
+- **`/docs/MVP_STATUS.md`** - Current MVP implementation status
+- **`/docs/TEST_COVERAGE_ANALYSIS.md`** - Test coverage and improvement plan
+- **`/docs/TEST_DATA.md`** - Detailed test fixture documentation
+
+---
+
+## Coding Standards (Quick Reference)
+
+### Go Backend
+- Define interfaces in `backend/pkg/core/interfaces.go` FIRST
+- Use compile-time verification: `var _ Interface = (*Implementation)(nil)`
+- Co-locate tests with implementation: `*_test.go`
+- Use table-driven tests for multiple scenarios
+- Mock dependencies using interfaces
+- Document all public functions
+
+### TypeScript Frontend
+- Enable TypeScript strict mode
+- One component per file
+- Co-locate tests: `ComponentName.test.tsx`
+- Test user interactions, not implementation details
+- Use React Testing Library with `screen` queries
+- Type all API client methods
+
+### General
+- **Tests are MANDATORY** for all features and bug fixes
+- Write tests BEFORE or ALONGSIDE implementation
+- Descriptive names (no abbreviations)
+- Follow language idioms (camelCase for TS, PascalCase for Go exports)
+- No hardcoded secrets or configuration
+
+**For complete coding standards, see context files in `.claude/context/`**
+
+---
+
+## Environment Variables
+
+Key variables in `.env`:
 - `DATABASE_URL` - PostgreSQL connection string
 - `JWT_SECRET` - JWT signing secret (change for production!)
 - `ENVIRONMENT` - development/staging/production
 - `LOG_LEVEL` - debug/info/warn/error
-- `SKIP_DB_TESTS` - Skip database tests if set to "true"
+- `SKIP_DB_TESTS` - Skip database tests if "true"
 
-### Go Backend (Primary)
-```bash
-# Database Management (Docker-based)
-just db_up                    # Start PostgreSQL Docker container
-just db_down                  # Stop PostgreSQL Docker container
-just db_reset                 # Reset database (restart container)
-just db_create                # Create actionphase and actionphase_test databases
-just db_setup                 # Complete database setup (start + create)
-just migrate_status           # Check migration status
+---
 
-# Database Migrations
-just make_migration <name>    # Create new migration
-just migrate                  # Apply migrations to main database
-just migrate_test             # Apply migrations to test database
-just rollback                 # Rollback migrations
+## Common Workflows
 
-# Development & Building
-just dev                      # Start backend with .env loading
-just run                      # Run Go server without auto-restart
-just build                    # Build all Go packages
-just lint                     # Format and vet Go code
-just tidy                     # Clean up Go modules
+### Adding a New Feature
+1. Read **`.claude/context/ARCHITECTURE.md`** for patterns
+2. Read **`.claude/context/TESTING.md`** for test requirements
+3. Create database migration if needed
+4. Implement backend with tests
+5. Implement frontend with tests
+6. Test manually in UI
+7. Update documentation
 
-# Code Generation
-just sqlgen                   # Generate Go code from SQL queries
+### Fixing a Bug
+1. Read **`.claude/context/TESTING.md`** for regression test requirements
+2. Write test that reproduces bug (should fail)
+3. Fix the bug
+4. Verify test passes
+5. Commit test and fix together
 
-# Testing (Multiple Strategies)
-just test-mocks               # Fast unit tests (no database) ~0.3s
-just test-integration         # Integration tests (requires database)
-just test                     # All tests (auto-skips DB if unavailable)
-just test-parallel            # All tests in parallel
-just test-coverage            # Generate test coverage report
-just test-race                # Run tests with race detection
-just test-bench               # Run benchmark tests
-just test-db-setup            # Setup test database
-just quick-test               # Run fast tests only
-just ci-test                  # Full CI test suite
+### Working with Test Data
+1. Read **`.claude/context/TEST_DATA.md`** for fixture overview
+2. Apply fixtures: `./backend/pkg/db/test_fixtures/apply_all.sh`
+3. Login as test user: `test_gm@example.com` / `testpassword123`
+4. Use Game #2 for action testing, Game #6 for pagination
+
+### Updating Database Schema
+1. Create migration: `just make_migration <name>`
+2. Write both `.up.sql` and `.down.sql`
+3. Update queries in `backend/pkg/db/queries/`
+4. Regenerate code: `just sqlgen`
+5. Update tests
+6. Apply migration: `just migrate`
+
+---
+
+## Maintaining AI Context
+
+**IMPORTANT: After making significant changes, update the `.claude/` context files to keep them current.**
+
+### When to Update Context Files
+
+**After implementing new patterns or architectural changes**:
+- Update **`.claude/context/ARCHITECTURE.md`** with new patterns
+- Document new interfaces, handlers, or request flows
+- Add examples if introducing a new architectural concept
+
+**After adding or changing test infrastructure**:
+- Update **`.claude/context/TESTING.md`** with new test patterns
+- Document new test utilities or fixtures
+- Update coverage status if significantly changed
+
+**After state management changes**:
+- Update **`.claude/context/STATE_MANAGEMENT.md`** with new patterns
+- Document new hooks, contexts, or query patterns
+- Add anti-patterns if discovered through bug fixes
+
+**After adding/modifying test fixtures**:
+- Update **`.claude/context/TEST_DATA.md`** with new test scenarios
+- Document new test users, games, or data patterns
+- Update fixture usage examples
+
+**After major refactors**:
+- Update relevant ADRs in **`/docs/adrs/`** if decisions changed
+- Add "Recent Changes" sections to context files with date
+- Update **`/docs/MVP_STATUS.md`** with current implementation status
+
+### What to Update
+
+**In Context Files** (`.claude/context/`):
+- ✅ Current patterns and best practices
+- ✅ Recent architectural changes (with dates)
+- ✅ New anti-patterns discovered
+- ✅ Updated examples reflecting current code
+- ✅ Coverage status and test counts
+
+**In Reference Files** (`.claude/reference/`):
+- ✅ Detailed implementation guides
+- ✅ API documentation for new endpoints
+- ✅ Logging standards if changed
+- ✅ Error handling patterns
+
+**In ADRs** (`/docs/adrs/`):
+- ✅ Add new ADRs for major architectural decisions
+- ✅ Update existing ADRs if decisions evolved
+- ✅ Add "Recent Architectural Evolution" sections (like ADR-005)
+
+### Example: After Frontend State Refactor
+
+```markdown
+When we completed the AuthContext centralization refactor:
+1. ✅ Updated .claude/context/STATE_MANAGEMENT.md with new patterns
+2. ✅ Updated /docs/adrs/005-frontend-state-management.md with evolution section
+3. ✅ Updated /docs/MVP_STATUS.md with completion status
+4. ✅ Documented isCheckingAuth pattern to prevent future bugs
 ```
 
-### React Frontend
-```bash
-# Setup & Dependencies
-just install-frontend         # Install npm dependencies
-just setup-frontend-tests     # Setup testing infrastructure
+### Quick Checklist After Major Changes
 
-# Development & Building
-just run-frontend             # Development server
-just build-frontend           # Build for production
-just preview-frontend         # Preview production build
-just lint-frontend            # Run ESLint
+- [ ] Updated relevant context file in `.claude/context/`
+- [ ] Added date to "Recent Changes" if applicable
+- [ ] Updated code examples to reflect current patterns
+- [ ] Documented new anti-patterns or gotchas discovered
+- [ ] Updated ADRs if architectural decisions changed
+- [ ] Verified all references and links still work
 
-# Testing
-just test-frontend            # Run frontend tests
-just test-frontend-watch      # Run tests in watch mode
-just test-frontend-coverage   # Generate test coverage
-```
+**Keeping context files current ensures consistent code quality and prevents pattern drift.**
 
-### Development Workflows
-```bash
-# Testing
-just ci-test                  # Backend CI test suite (lint + test + race)
-just full-test               # All tests (backend + frontend)
-just clean                   # Clean build artifacts
+---
 
-# Building
-just ci-build                # Build both backend and frontend
-```
+## Getting Help
 
+- **Project Setup**: See `/docs/DEVELOPER_ONBOARDING.md` (30-minute guide)
+- **Architecture Questions**: Read `/docs/architecture/SYSTEM_ARCHITECTURE.md`
+- **Testing Questions**: Read `.claude/context/TESTING.md`
+- **State Management**: Read `.claude/context/STATE_MANAGEMENT.md`
+- **All Documentation**: See `.claude/README.md` for complete index
 
-### Docker Development
-```bash
-# Full environment setup
-docker-compose build
-./start_server.sh
+---
 
-# Or if already built
-docker-compose up -d
-```
+## Critical Reminders
 
-## Database Management
+1. **Read context files BEFORE coding** - They contain essential patterns and requirements
+2. **Tests are mandatory** - No PRs without tests
+3. **Bug fixes need regression tests** - Always write the test first
+4. **Implement features end-to-end** - Backend + frontend together
+5. **Follow established patterns** - Consistency is key for AI comprehension
+6. **Check ADRs for decisions** - Understand the "why" behind architectural choices
+7. **Update context files after changes** - Keep `.claude/context/` current with new patterns
 
-The Go backend uses PostgreSQL with golang-migrate for schema management:
-- Migrations located in `backend/pkg/db/migrations/`
-- Use `just make_migration <name>` to create new migrations
-- Database queries in `backend/pkg/db/queries/` generate type-safe Go code via sqlc
-
-## Authentication Architecture
-
-The Go backend implements JWT-based authentication with:
-- Access tokens for API requests
-- Refresh tokens stored in database sessions
-- Automatic token refresh mechanism
-- Session management for security
-
-Key files:
-- `backend/pkg/auth/jwt.go` - JWT token handling
-- `backend/pkg/auth/refresh_token.go` - Token refresh logic
-- `backend/pkg/db/services/sessions.go` - Session management
-
-## API Endpoints (Go Backend)
-
-Current available endpoints:
-- `POST /api/v1/auth/register` - User registration
-- `POST /api/v1/auth/login` - User login
-- `GET /api/v1/auth/refresh` - Refresh JWT token (protected)
-- `GET /ping` - Health check
-
-## Frontend Architecture
-
-The React frontend (`frontend/`) uses:
-- **Vite** for fast development and building
-- **React Router** for client-side routing
-- **React Query** for server state management with automatic caching and refetching
-- **Axios** with interceptors for JWT token management
-- **Tailwind CSS** for utility-first styling
-- **TypeScript** for type safety
-
-Key features:
-- Automatic JWT token refresh
-- Protected routes
-- API health monitoring
-- Modern responsive UI
-
-## Testing Overview
-
-**Testing is MANDATORY for all new features and bug fixes.**
-
-### Backend Testing
-- **Framework**: Go standard library `testing` package
-- **Location**: Test files co-located with implementation (`*_test.go`)
-- **Coverage**: Comprehensive test coverage with interface mocks and database integration tests
-- **Commands**:
-  - `just test-mocks` - Fast unit tests (~300ms)
-  - `SKIP_DB_TESTS=false just test` - Integration tests with database
-  - `just test-coverage` - Generate coverage reports
-  - `just ci-test` - Full CI test suite
-
-### Frontend Testing
-- **Framework**: React Testing Library + Vitest
-- **Location**: Test files co-located with components (`*.test.tsx`)
-- **Focus**: User interactions, component behavior, custom hooks
-- **Commands**:
-  - `just test-frontend` - Run all frontend tests
-  - `just test-frontend-watch` - Watch mode for development
-  - `just test-frontend-coverage` - Generate coverage reports
-
-### Test Requirements
-1. **New Features**: Write tests BEFORE or alongside implementation
-2. **Bug Fixes**: ALWAYS add a regression test that reproduces the bug
-3. **Code Review**: PRs without tests will be rejected
-4. **Coverage**: Maintain >80% coverage on service layer and critical paths
-
-See **Testing Philosophy** section below for detailed testing approach and examples.
-
-## Project Structure Notes
-
-- `justfile` provides common development commands
-- Go backend uses `go.mod` for dependency management
-- Frontend uses `package.json` and npm for dependency management
-- Database migrations use golang-migrate with PostgreSQL
-- Frontend communicates with backend via REST API with JWT authentication
-
-## Key System Patterns & Best Practices
-
-### Request Processing Flow
-```
-HTTP Request → Middleware Stack → Handler → Service → Repository → Database
-     ↓              ↓               ↓         ↓          ↓           ↓
-Correlation ID  Auth/Rate Limit  Validate  Business   SQL Queries  PostgreSQL
-Request Trace   CORS/Security    Bind      Logic      Type-Safe    ACID Ops
-Metrics         Error Recovery   Error     Domain     Connection   Constraints
-                                Handling   Rules      Pooling
-```
-
-### Authentication Pattern
-- JWT access tokens (15min) + refresh tokens (7 days)
-- Automatic token refresh via axios interceptors
-- Server-side session management for security
-- Correlation ID propagation for request tracing
-
-### State Management Strategy
-- **Server State**: React Query for API data caching and synchronization
-- **Auth State**: React Context with localStorage persistence
-- **UI State**: Component-local useState/useReducer
-- **Global Settings**: React Context (sparingly)
-
-### Database Design Pattern
-- **Structured Data**: Traditional relational tables with foreign keys
-- **Flexible Data**: JSONB columns for game-specific data (character sheets, game config)
-- **Type Safety**: sqlc generates Go structs from SQL queries
-- **Migrations**: Version-controlled schema evolution with golang-migrate
-
-### Error Handling Strategy
-- **Typed Errors**: Domain-specific error types with context
-- **Structured Responses**: Consistent API error format with correlation IDs
-- **Graceful Degradation**: Handle failures without breaking user experience
-- **Comprehensive Logging**: All errors logged with full context
-
-### Testing Philosophy
-
-**Test-Driven Development (TDD) Approach**:
-- Write tests BEFORE implementing features when possible
-- Tests serve as living documentation of expected behavior
-- Tests prevent regressions and enable confident refactoring
-
-**Test Layers**:
-- **Unit Tests**: Fast tests with mocked dependencies (~300ms total)
-  - Test individual functions and methods in isolation
-  - Mock external dependencies (database, APIs, etc.)
-  - Run with: `just test-mocks`
-- **Integration Tests**: Database tests with transaction isolation
-  - Test service layer with real database
-  - Use test database with rollback after each test
-  - Run with: `SKIP_DB_TESTS=false just test`
-- **API Tests**: End-to-end HTTP endpoint testing
-  - Test complete request/response cycle
-  - Validate authentication, authorization, validation
-  - Test error responses and edge cases
-- **Frontend Tests**: Component and custom hook testing
-  - Test user interactions and visual feedback
-  - Test loading, error, and success states
-  - Run with: `just test-frontend`
-
-**Bug Fix Process (Mandatory)**:
-1. Reproduce bug in a failing test
-2. Fix the bug
-3. Verify test passes
-4. Commit both test and fix together
-5. This prevents the bug from ever coming back
-
-**Coverage Goals**:
-- Critical business logic: 100% coverage
-- Service layer: >80% coverage
-- API handlers: >80% coverage
-- Frontend components: Test all user-facing functionality
-
-## AI-Friendly Coding Standards
-
-To maintain AI comprehensibility as the codebase scales, follow these patterns:
-
-### Go Backend Standards
-
-#### Interface-First Development
-- **ALWAYS** define service interfaces in `backend/pkg/core/interfaces.go` before implementation
-- Use compile-time interface verification: `var _ InterfaceName = (*ImplementationType)(nil)`
-- Request/response types belong in `core` package for reuse across layers
-
-Example:
-```go
-// In backend/pkg/core/interfaces.go
-type UserServiceInterface interface {
-    CreateUser(ctx context.Context, user *User) (*User, error)
-    GetUser(ctx context.Context, id int) (*User, error)
-}
-
-// In backend/pkg/db/services/users.go
-var _ core.UserServiceInterface = (*UserService)(nil)
-
-type UserService struct {
-    DB *pgxpool.Pool
-}
-```
-
-#### Documentation Requirements
-- All public functions MUST have Go doc comments
-- Complex business logic MUST be documented inline
-- Package-level comments required for all packages
-
-#### Error Handling
-- Use typed errors with context information
-- Consistent error response formats via `core.APIError`
-- Return meaningful error messages for API consumers
-
-#### Testing Standards
-- **MANDATORY**: All new services MUST have unit tests with interface mocks
-- **MANDATORY**: Integration tests for all database operations
-- **MANDATORY**: API endpoint tests for all handlers
-- **MANDATORY**: Write regression tests for every bug fix
-- Test files should be co-located with implementation: `*_test.go`
-- Use table-driven tests for testing multiple scenarios
-- Mock external dependencies using interfaces
-- Example test structure:
-  ```go
-  func TestServiceMethod(t *testing.T) {
-      tests := []struct {
-          name    string
-          input   interface{}
-          want    interface{}
-          wantErr bool
-      }{
-          {"success case", validInput, expectedOutput, false},
-          {"error case", invalidInput, nil, true},
-      }
-      for _, tt := range tests {
-          t.Run(tt.name, func(t *testing.T) {
-              // Test implementation
-          })
-      }
-  }
-  ```
-
-### Frontend Standards
-
-#### TypeScript Requirements
-- Strict mode MUST be enabled
-- All components MUST have proper type definitions
-- API client methods MUST be type-safe
-
-#### Component Organization
-- One component per file
-- Props interfaces defined inline or in types file
-- Custom hooks in dedicated `hooks/` directory
-
-#### Testing Standards
-- **MANDATORY**: All new components MUST have tests using React Testing Library
-- **MANDATORY**: Custom hooks MUST have dedicated tests using `@testing-library/react-hooks`
-- **MANDATORY**: API integration tests for critical user flows
-- **MANDATORY**: Write regression tests for every bug fix
-- Test files should be co-located: `ComponentName.test.tsx`
-- Test user interactions, not implementation details
-- Use `screen` queries for accessibility-friendly tests
-- Example test structure:
-  ```typescript
-  describe('ComponentName', () => {
-    it('renders with initial state', () => {
-      render(<ComponentName />);
-      expect(screen.getByText('Expected Text')).toBeInTheDocument();
-    });
-
-    it('handles user interaction', async () => {
-      render(<ComponentName />);
-      await userEvent.click(screen.getByRole('button'));
-      expect(screen.getByText('Updated Text')).toBeInTheDocument();
-    });
-
-    it('handles error state', () => {
-      render(<ComponentName error={mockError} />);
-      expect(screen.getByText(/error/i)).toBeInTheDocument();
-    });
-  });
-  ```
-
-### General Standards
-
-#### Naming Conventions
-- Use descriptive, unambiguous names
-- Follow language idioms (camelCase for TS/JS, PascalCase for Go exported)
-- Database columns use snake_case, Go structs use PascalCase
-
-#### File Organization
-- Group related functionality in packages/directories
-- Keep files focused on single responsibility
-- Use consistent import ordering
-
-#### Configuration Management
-- Environment variables MUST be validated at startup
-- No hardcoded secrets or configuration values
-- Configuration structs with proper defaults
-
-## Documentation & Architecture References
-
-### Core Documentation
-- **[Developer Onboarding](docs/DEVELOPER_ONBOARDING.md)** - 30-minute setup guide for new developers
-- **[System Architecture](docs/architecture/SYSTEM_ARCHITECTURE.md)** - Complete system design overview
-- **[Component Interactions](docs/architecture/COMPONENT_INTERACTIONS.md)** - How system components communicate
-- **[Sequence Diagrams](docs/architecture/SEQUENCE_DIAGRAMS.md)** - Visual flows for complex processes
-
-### Architecture Decision Records (ADRs)
-All major architectural decisions are documented in `/docs/adrs/`:
-- **ADR-001**: Technology Stack Selection (Go, React, PostgreSQL)
-- **ADR-002**: Database Design Approach (Hybrid relational-document)
-- **ADR-003**: Authentication Strategy (JWT + refresh tokens)
-- **ADR-004**: API Design Principles (RESTful with modern enhancements)
-- **ADR-005**: Frontend State Management (React Query + Context hybrid)
-- **ADR-006**: Observability Approach (Structured logging, metrics, tracing)
-- **ADR-007**: Testing Strategy (Multi-layer testing pyramid)
-
-### Key Implementation Files
-- **Core Interfaces**: `backend/pkg/core/interfaces.go` - All service contracts
-- **Domain Models**: `backend/pkg/core/models.go` - Business entities
-- **HTTP Routing**: `backend/pkg/http/root.go` - API endpoints and middleware
-- **Database Queries**: `backend/pkg/db/queries/` - SQL queries (sqlc generates Go code)
-- **React API Client**: `frontend/src/lib/api.ts` - Frontend API integration
-- **Auth Context**: `frontend/src/contexts/AuthContext.tsx` - Authentication state
-- **Observability**: `backend/pkg/observability/` - Logging, metrics, and tracing
-
-### Development Patterns to Follow
-
-**IMPORTANT: Integrated Feature Development**
-Each feature should be implemented with BOTH backend and frontend components completed together before moving to the next feature. This enables manual UI testing to validate requirements and implementation correctness.
-
-1. **New Feature (Integrated Approach with Test-Driven Development)**:
-   - Backend:
-     1. Database migration (if needed)
-     2. SQL queries (sqlc)
-     3. Service interface definition
-     4. **Write unit tests first** (test-driven approach)
-     5. Service implementation
-     6. Handler implementation
-     7. **Write API endpoint tests**
-     8. Run tests: `just test` or `SKIP_DB_TESTS=false just test` for integration tests
-   - Frontend:
-     1. API client method
-     2. Custom hooks
-     3. **Write hook tests** (React Testing Library)
-     4. Components
-     5. **Write component tests**
-     6. Run tests: `just test-frontend`
-   - Manual Testing: Test the complete feature in the UI before moving to next feature
-   - Documentation: Update API docs and any relevant guides
-
-2. **Database Changes**: Create migration → Update queries → Regenerate sqlc → Write/update tests → Test
-
-3. **Bug Fixes (Regression Prevention)**:
-   - **ALWAYS** add or update tests when fixing bugs
-   - Write a test that reproduces the bug (it should fail)
-   - Fix the bug
-   - Verify the test now passes
-   - This prevents the same bug from recurring
-   - Example workflow:
-     ```bash
-     # 1. Write failing test
-     go test ./pkg/db/services -run TestBugFix -v  # Should fail
-     # 2. Fix the bug in code
-     # 3. Verify test passes
-     go test ./pkg/db/services -run TestBugFix -v  # Should pass
-     ```
-
-4. **Testing Requirements (MANDATORY for all new features)**:
-   - **Backend**:
-     - Unit tests for all service methods (use mocks where appropriate)
-     - Integration tests for database operations (use `SKIP_DB_TESTS=false`)
-     - API endpoint tests for all handlers
-     - Test edge cases, error conditions, and validation
-   - **Frontend**:
-     - Component tests using React Testing Library
-     - Custom hook tests using `@testing-library/react-hooks`
-     - Test user interactions and state changes
-     - Test error handling and loading states
-   - **Test Coverage Goals**:
-     - Backend: Aim for >80% coverage on critical paths
-     - Frontend: Test all user-facing functionality
-     - Use `just test-coverage` to check coverage metrics
-
-5. **Testing Strategy Summary**:
-   - Write tests for every new feature
-   - Add regression tests for every bug fix
-   - Run tests before committing: `just ci-test` (backend) and `just test-frontend`
-   - Tests are documentation - they show how code should be used
-   - Manual UI testing validates end-to-end user experience
-
-### Progress Tracking
-
-See `AI_FRIENDLY_IMPROVEMENTS.md` for current improvement status and roadmap.
+**For detailed guidance on any topic, start with `.claude/README.md`**

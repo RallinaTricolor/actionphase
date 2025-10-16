@@ -1,0 +1,109 @@
+# Claude AI Context Directory
+
+This directory contains all AI-specific context and instructions for working with the ActionPhase codebase.
+
+## Directory Structure
+
+### `/context/` - Read Before Coding
+**These files should be read before performing specific tasks:**
+
+- **TESTING.md** - Read before writing any tests (backend or frontend)
+- **ARCHITECTURE.md** - Read for architectural context and patterns
+- **STATE_MANAGEMENT.md** - Read before working on frontend state
+- **TEST_DATA.md** - Read when working with test data and fixtures
+
+### `/reference/` - Detailed Implementation Guides
+**Comprehensive guides for specific implementation topics:**
+
+- **BACKEND_ARCHITECTURE.md** - Detailed backend architecture guide
+- **FRONTEND_ERROR_HANDLING.md** - Frontend error handling patterns
+- **TESTING_GUIDE.md** - Testing implementation guide
+- **LOGGING_STANDARDS.md** - Logging best practices
+- **API_DOCUMENTATION.md** - API endpoint documentation
+- And more...
+
+### `/commands/` - Custom Slash Commands
+**Custom slash commands for specialized workflows**
+
+(Currently empty - add custom commands here as needed)
+
+## External Documentation References
+
+### Architecture Decision Records (ADRs)
+**Location**: `/docs/adrs/`
+
+Read ADRs for understanding architectural decisions:
+- ADR-001: Technology Stack Selection
+- ADR-002: Database Design Approach
+- ADR-003: Authentication Strategy
+- ADR-004: API Design Principles
+- ADR-005: Frontend State Management
+- ADR-006: Observability Approach
+- ADR-007: Testing Strategy
+
+### System Architecture
+**Location**: `/docs/architecture/`
+
+- SYSTEM_ARCHITECTURE.md - High-level system design
+- COMPONENT_INTERACTIONS.md - How components communicate
+- SEQUENCE_DIAGRAMS.md - Visual process flows
+
+### Project Status & Planning
+**Location**: `/docs/`
+
+- **TEST_COVERAGE_ANALYSIS.md** - Current test coverage and improvement plan (READ BEFORE WRITING TESTS)
+- TEST_DATA.md - Test fixtures and data setup
+- MVP_STATUS.md - Current MVP implementation status
+- ADR_UPDATE_RECOMMENDATIONS.md - Recent ADR review findings
+
+### Frontend Documentation
+**Location**: `/frontend/docs/`
+
+- STATE_MANAGEMENT.md - Frontend state management details
+- STATE_MANAGEMENT_ARCHITECTURE.md - In-depth architecture
+- STATE_MANAGEMENT_QUICK_REFERENCE.md - Quick lookup guide
+
+## Workflow: When to Read What
+
+### Before Writing Tests
+1. Read `.claude/context/TESTING.md`
+2. Review `/docs/TEST_COVERAGE_ANALYSIS.md`
+3. Reference `/docs/adrs/007-testing-strategy.md`
+4. Check `.claude/reference/TESTING_GUIDE.md` for implementation details
+
+### Before Implementing Features
+1. Read `.claude/context/ARCHITECTURE.md`
+2. Review relevant ADRs in `/docs/adrs/`
+3. Check `/docs/architecture/` for system design context
+
+### Before Frontend State Work
+1. Read `.claude/context/STATE_MANAGEMENT.md`
+2. Review `/docs/adrs/005-frontend-state-management.md`
+3. Reference `/frontend/docs/STATE_MANAGEMENT_QUICK_REFERENCE.md`
+
+### Before Working with Test Data
+1. Read `.claude/context/TEST_DATA.md`
+2. Review `/docs/TEST_DATA.md` for detailed fixture information
+3. Check `/backend/pkg/db/test_fixtures/` for actual fixtures
+
+### Before API Changes
+1. Review `/docs/adrs/004-api-design-principles.md`
+2. Check `.claude/reference/API_DOCUMENTATION.md`
+3. Review `.claude/reference/ERROR_HANDLING.md`
+
+## Quick Start for AI
+
+When starting a coding task:
+1. Check CLAUDE.md in project root for general instructions
+2. Identify the task type (testing, feature, frontend, etc.)
+3. Read the relevant context files from `.claude/context/`
+4. Reference detailed guides in `.claude/reference/` as needed
+5. Check relevant ADRs for architectural decisions
+
+## Maintenance
+
+- Keep context files concise (< 500 lines)
+- Update this README when adding new context files
+- Move detailed implementation guides to `/reference/`
+- Keep ADRs in `/docs/adrs/` (don't duplicate)
+- Update CLAUDE.md to reference new context files
