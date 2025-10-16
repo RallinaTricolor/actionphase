@@ -155,13 +155,21 @@ We implemented a **JWT + Refresh Token Strategy** with server-side session manag
 ### JWT Token Structure
 ```json
 {
-  "sub": "user-123",
-  "username": "player1",
+  "sub": "username",  // Username (not user-123)
   "exp": 1625097600,
   "iat": 1625096700,
   "jti": "token-uuid"
 }
 ```
+
+**Security Note**: User ID is intentionally **NOT included** in JWT payload to prevent
+client-side manipulation. The user ID is fetched server-side after token validation
+via the `/api/v1/auth/me` endpoint.
+
+This approach provides defense-in-depth:
+- JWT cannot be tampered to change user identity
+- User data is always authoritative from server
+- Eliminates client-side JWT decoding security risks
 
 ### Database Session Schema
 ```sql

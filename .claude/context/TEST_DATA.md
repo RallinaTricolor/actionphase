@@ -1,0 +1,343 @@
+# Test Data Context - Read Before Working with Test Data
+
+**IMPORTANT: Read this file before working with test data and fixtures.**
+
+## Test Fixture System
+
+ActionPhase uses SQL-based test fixtures for comprehensive test coverage across all game states and phases.
+
+### Fixture Location
+**Location**: `/backend/pkg/db/test_fixtures/`
+
+```
+test_fixtures/
+├── 00_reset.sql           # Cleans all test data
+├── 01_users.sql           # Creates test users
+├── 02_games_recruiting.sql # Creates recruiting games
+├── 03_games_running.sql   # Creates running games with phases
+├── 04_characters.sql      # Creates characters and NPCs
+├── 05_actions.sql         # Creates action submissions
+├── 06_results.sql         # Creates action results
+└── apply_all.sh           # Bash script to apply all fixtures
+```
+
+## Quick Commands
+
+### Apply All Fixtures
+```bash
+# From project root
+./backend/pkg/db/test_fixtures/apply_all.sh
+
+# Or using justfile
+just test-fixtures
+```
+
+### Reset Test Data
+```bash
+# Reset to clean state
+just reset-test-data
+
+# Then reapply
+just test-fixtures
+```
+
+## Test Users
+
+**All passwords**: `testpassword123`
+
+### User Types
+1. **Game Master**: `test_gm@example.com`
+   - Creates and manages games
+   - Controls NPCs
+
+2. **Players** (5 total):
+   - `test_player1@example.com`
+   - `test_player2@example.com`
+   - `test_player3@example.com`
+   - `test_player4@example.com`
+   - `test_player5@example.com`
+
+3. **Audience**: `test_audience@example.com`
+   - Observes games without direct participation
+
+## Test Game Coverage
+
+### 10 Games Covering All States
+
+| # | Name | Status | Phase Status | Purpose |
+|---|------|--------|--------------|---------|
+| 1 | Shadows Over Innsmouth | Running | Active Common Room | Test common room phase |
+| 2 | The Heist at Goldstone Bank | Running | Active Action (with submissions) | Test action submissions |
+| 3 | Starfall Station | Running | Active Results (with published results) | Test results display |
+| 4 | Court of Shadows | Running | Previous CR + Active Action | Test phase transitions |
+| 5 | The Dragon of Mount Krag | Running | 6 previous + Active CR | Test complex history |
+| 6 | Chronicles of Westmarch | Running | 11 previous + Active Results | Test pagination |
+| 7 | The Mystery of Blackwood Manor | Recruiting | No phases | Test recruitment |
+| 8 | On Hold: The Frozen North | Paused | 4 previous phases | Test paused state |
+| 9 | COMPLETED: Tales of the Arcane | Completed | 9 completed phases | Test completed |
+| 10 | Secret Campaign | Recruiting | No phases (private) | Test private games |
+
+### Game States Covered
+- **Recruiting** - Games #7, #10
+- **Running** - Games #1-6
+- **Paused** - Game #8
+- **Completed** - Game #9
+- **Cancelled** - (add if needed)
+
+### Phase Types Covered
+- **Common Room** - Games #1, #5 (active)
+- **Action** - Games #2, #4 (active, with submissions)
+- **Results** - Games #3, #6 (active, with published results)
+
+### Phase History Patterns
+- **No history** - Games #1, #7, #10
+- **Single previous phase** - Games #2, #4
+- **Mixed history (3-6 phases)** - Games #3, #5, #8
+- **Long history (10+ phases)** - Games #6, #9
+
+## Test Characters
+
+### Character Coverage
+- **30+ characters total**
+- **1 player character per player per game**
+- **Multiple GM NPCs per game**
+- **Character data examples** (public and private fields)
+
+### Character Types
+- `player_character` - Player-controlled characters
+- `npc_gm` - GM-controlled NPCs
+- `npc_player` - Player-controlled NPCs (future feature)
+
+### Example Characters
+
+**Game #2 (Heist)**:
+- Shade (Whisper) - Player 1
+- Rook (Hound) - Player 2
+- Vex (Leech) - Player 3
+- Silk (Spider) - Player 4
+- Inspector Dalton - GM NPC
+
+**Game #1 (Innsmouth)**:
+- Detective Marcus Kane - Player 1
+- Dr. Sarah Chen - Player 2
+- Father O'Brien - Player 3
+- Captain Obed Marsh - GM NPC
+
+## Test Actions and Results
+
+### Action Submissions (Game #2)
+- **3 submitted actions** (finalized)
+- **1 draft action** (work in progress)
+- Various submission times and content lengths
+
+### Action Results (Game #3)
+- **3 published results** (visible to players)
+- **1 draft result** (GM hasn't published yet)
+- Demonstrates storytelling and cliffhangers
+
+## Edge Cases Covered
+
+### ✅ Complete Coverage
+
+**Phase States**:
+- Active phases of all three types
+- Previous phases (completed)
+- No phases (recruiting games)
+- Mixed phase history
+- Long phase history (10+ phases)
+
+**Deadline Scenarios**:
+- Deadlines in near future (< 1 day)
+- Deadlines in far future (> 1 day)
+- No deadlines (common room, results phases)
+
+**Character Scenarios**:
+- Standard case (1 PC per player per game)
+- GM-only NPCs
+- Character data (public and private)
+
+**Action Submissions**:
+- Submitted (final) actions
+- Draft actions
+- Various submission times
+
+**Game States**:
+- All status types covered
+- Public and private visibility
+- Various creation dates
+
+**Participation**:
+- Active participants
+- Games with 2-6 players
+- Audience members (future)
+
+## Using Test Data in Tests
+
+### Backend Integration Tests
+
+```go
+func TestGameService_GetGame(t *testing.T) {
+    // Setup: Apply test fixtures first
+    db := setupTestDB(t)
+
+    // Game #2 has active action phase with submissions
+    game, err := service.GetGame(ctx, 2)
+
+    assert.NoError(t, err)
+    assert.Equal(t, "The Heist at Goldstone Bank", game.Title)
+    assert.Equal(t, "in_progress", game.State)
+}
+```
+
+### Frontend Component Tests
+
+```typescript
+test('displays recruiting games', async () => {
+  // Mock API response using test data structure
+  server.use(
+    rest.get('/api/v1/games/recruiting', (req, res, ctx) => {
+      return res(ctx.json({
+        data: [
+          { id: 7, title: 'The Mystery of Blackwood Manor', state: 'recruitment' },
+          { id: 10, title: 'Secret Campaign', state: 'recruitment', is_public: false }
+        ]
+      }));
+    })
+  );
+
+  render(<GamesList showRecruitingOnly={true} />);
+  expect(await screen.findByText('The Mystery of Blackwood Manor')).toBeInTheDocument();
+});
+```
+
+## Common Testing Scenarios
+
+### Testing Phase Transitions
+Use **Game #5** (Dragon of Mount Krag):
+- Has 6 previous phases (common_room, action, results pattern)
+- Active common room phase
+- Good for testing phase history and transitions
+
+### Testing Action Submissions
+Use **Game #2** (Heist at Goldstone Bank):
+- Active action phase
+- 3 submitted actions + 1 draft
+- Multiple characters with actions
+
+### Testing Results Display
+Use **Game #3** (Starfall Station):
+- Active results phase
+- 3 published results
+- 1 unpublished draft result
+
+### Testing Pagination
+Use **Game #6** (Chronicles of Westmarch):
+- 12 total phases (11 previous + 1 active)
+- Tests pagination for phase lists
+
+### Testing Recruitment
+Use **Game #7** (Blackwood Manor):
+- Recruiting state
+- No phases yet
+- Public visibility
+
+## Fixture Maintenance
+
+### Updating Fixtures
+
+1. Modify appropriate SQL file in `test_fixtures/`
+2. Run: `just reset-test-data && just test-fixtures`
+3. Verify changes in application
+4. Update this documentation if needed
+
+### Adding New Scenarios
+
+1. Identify fixture file to modify
+2. Add SQL following existing patterns
+3. Update test data summary
+4. Test the new scenario
+
+## Troubleshooting
+
+### Common Issues
+
+**Schema Drift**: If tests fail with "column does not exist" errors:
+```bash
+# Apply migrations to test database
+just migrate_test
+
+# Then reapply fixtures
+just test-fixtures
+```
+
+**Connection Errors**: Verify database is running:
+```bash
+docker ps | grep postgres
+```
+
+**Permission Errors**: Make script executable:
+```bash
+chmod +x backend/pkg/db/test_fixtures/apply_all.sh
+```
+
+**Unique Constraint Errors**: Reset first:
+```bash
+just reset-test-data && just test-fixtures
+```
+
+## Integration with Tests
+
+### Backend Tests
+When writing integration tests that use the database:
+
+1. **Setup**: Apply test fixtures before test suite
+2. **Transaction isolation**: Use transaction rollback pattern
+3. **Known IDs**: Reference fixture IDs (Game #2 = Heist, etc.)
+4. **Cleanup**: Rollback transactions after each test
+
+### Frontend Tests
+When writing component tests that display data:
+
+1. **Mock API**: Use MSW with test data structure
+2. **Consistent data**: Mirror fixture structure in mocks
+3. **Edge cases**: Test with various fixture scenarios
+4. **Loading states**: Use fixture data to test async loading
+
+## Quick Reference
+
+### Login as GM
+```
+Email: test_gm@example.com
+Password: testpassword123
+```
+
+### Login as Player
+```
+Email: test_player1@example.com
+Password: testpassword123
+```
+
+### View Active Action Phase
+Game #2: "The Heist at Goldstone Bank"
+
+### View Long Phase History
+Game #6: "Chronicles of Westmarch" (12 phases)
+
+### View Recruiting Game
+Game #7: "The Mystery of Blackwood Manor"
+
+## References
+
+- **Detailed Documentation**: `/docs/TEST_DATA.md` (comprehensive guide)
+- **Test Fixtures**: `/backend/pkg/db/test_fixtures/` (actual SQL files)
+- **Test Coverage Analysis**: `/docs/TEST_COVERAGE_ANALYSIS.md` (improvement plan)
+- **Testing Strategy ADR**: `/docs/adrs/007-testing-strategy.md`
+
+## Checklist Before Writing Tests
+
+- [ ] Test fixtures applied and current
+- [ ] Know which game/phase to use for test scenario
+- [ ] Understand test user credentials
+- [ ] Transaction isolation set up (for integration tests)
+- [ ] Mock data mirrors fixture structure (for frontend tests)
+- [ ] Edge cases identified from fixture coverage
