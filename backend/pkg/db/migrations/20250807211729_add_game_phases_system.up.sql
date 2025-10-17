@@ -1,3 +1,9 @@
+-- Drop existing tables if they exist (from earlier migration)
+DROP TABLE IF EXISTS phase_transitions CASCADE;
+DROP TABLE IF EXISTS action_results CASCADE;
+DROP TABLE IF EXISTS action_submissions CASCADE;
+DROP TABLE IF EXISTS game_phases CASCADE;
+
 -- Game phases table to track different phases within games
 CREATE TABLE game_phases (
     id SERIAL PRIMARY KEY,

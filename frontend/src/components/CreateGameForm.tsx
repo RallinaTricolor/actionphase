@@ -49,8 +49,11 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
 
       const response = await apiClient.createGame(gameData);
       onSuccess?.(response.data.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create game');
+    } catch (err: any) {
+      // Extract error message from Axios error response or use generic message
+      const errorMessage = err?.response?.data?.error ||
+        (err?.message && err.message !== 'Network Error' ? err.message : 'Failed to create game');
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

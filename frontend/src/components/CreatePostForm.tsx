@@ -37,8 +37,12 @@ export function CreatePostForm({ gameId, characters, onSubmit, isSubmitting }: C
     try {
       await onSubmit(selectedCharacterId, content.trim());
       setContent('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create post');
+    } catch (err: any) {
+      // Use fallback message for generic errors like "Network error"
+      const errorMessage = err instanceof Error && err.message !== 'Network error'
+        ? err.message
+        : 'Failed to create post';
+      setError(errorMessage);
     }
   };
 

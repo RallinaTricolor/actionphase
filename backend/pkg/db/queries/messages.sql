@@ -26,7 +26,7 @@ SELECT m.*,
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
-WHERE m.id = $1 AND m.is_deleted = false;
+WHERE m.id = $1;
 
 -- name: GetGamePosts :many
 SELECT m.*,
@@ -39,7 +39,7 @@ LEFT JOIN characters c ON m.character_id = c.id
 WHERE m.game_id = $1
   AND m.message_type = 'post'
   AND m.is_deleted = false
-  AND ($2::integer IS NULL OR m.phase_id = $2)
+  AND (CASE WHEN $2 = 0 THEN TRUE ELSE m.phase_id = $2 END)
 ORDER BY m.created_at DESC
 LIMIT $3 OFFSET $4;
 
@@ -99,7 +99,7 @@ SELECT m.*,
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
-WHERE m.id = $1 AND m.is_deleted = false;
+WHERE m.id = $1;
 
 -- name: GetPostComments :many
 -- Get direct comments for a specific post
@@ -146,7 +146,7 @@ FROM messages
 WHERE game_id = $1
   AND message_type = 'post'
   AND is_deleted = false
-  AND ($2::integer IS NULL OR phase_id = $2);
+  AND (CASE WHEN $2 = 0 THEN TRUE ELSE phase_id = $2 END);
 
 -- name: GetPostCommentCount :one
 SELECT COUNT(*)

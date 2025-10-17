@@ -278,13 +278,30 @@ Key variables in `.env`:
 ## Common Workflows
 
 ### Adding a New Feature
-1. Read **`.claude/context/ARCHITECTURE.md`** for patterns
-2. Read **`.claude/context/TESTING.md`** for test requirements
-3. Create database migration if needed
-4. Implement backend with tests
-5. Implement frontend with tests
-6. Test manually in UI
-7. Update documentation
+
+**RECOMMENDED: Start with a feature plan**
+
+1. **Create Feature Plan**
+   - Copy **`.claude/planning/FEATURE_PLAN_TEMPLATE.md`** to `.claude/planning/FEATURE_[name].md`
+   - Fill in all sections systematically (problem statement, design, API, tests, implementation phases)
+   - Review plan before starting implementation
+   - See `.claude/planning/README.md` for template usage guide
+
+2. **Implementation** (following the plan):
+   - Read **`.claude/context/ARCHITECTURE.md`** for patterns
+   - Read **`.claude/context/TESTING.md`** for test requirements
+   - Create database migration if needed
+   - Implement backend with tests (TDD)
+   - Implement frontend with tests
+   - Test manually in UI
+   - Update documentation
+
+**Benefits of planning first:**
+- ✅ Catches design issues before coding
+- ✅ Ensures all architectural layers considered
+- ✅ Documents business rules and edge cases
+- ✅ Provides session continuity for complex features
+- ✅ Creates rollback strategy upfront
 
 ### Fixing a Bug
 1. Read **`.claude/context/TESTING.md`** for regression test requirements

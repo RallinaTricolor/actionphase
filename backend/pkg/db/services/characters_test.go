@@ -521,3 +521,253 @@ func TestCharacterService_CanUserEditCharacter(t *testing.T) {
 		core.AssertError(t, err, "Should fail for nonexistent character")
 	})
 }
+
+func TestCharacterService_GetPlayerCharacters(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
+
+	// Setup test fixtures
+	fixtures := testDB.SetupFixtures(t)
+	characterService := &CharacterService{DB: testDB.Pool}
+
+	// Create test users
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+
+	// Create player characters
+	_, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        core.Int32Ptr(int32(player1.ID)),
+		Name:          "Player Character 1",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Failed to create player character 1")
+
+	_, err = characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        core.Int32Ptr(int32(player2.ID)),
+		Name:          "Player Character 2",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Failed to create player character 2")
+
+	// Create NPCs (should not be included)
+	_, err = characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        nil,
+		Name:          "GM NPC",
+		CharacterType: "npc_gm",
+	})
+	core.AssertNoError(t, err, "Failed to create GM NPC")
+
+	_, err = characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        nil,
+		Name:          "Audience NPC",
+		CharacterType: "npc_audience",
+	})
+	core.AssertNoError(t, err, "Failed to create audience NPC")
+
+	t.Run("returns only player characters", func(t *testing.T) {
+		playerChars, err := characterService.GetPlayerCharacters(context.Background(), fixtures.TestGame.ID)
+		core.AssertNoError(t, err, "Failed to get player characters")
+		core.AssertEqual(t, 2, len(playerChars), "Expected 2 player characters")
+
+		// Verify all are player_character type
+		for _, char := range playerChars {
+			core.AssertEqual(t, "player_character", char.CharacterType, "All characters should be player_character type")
+		}
+	})
+
+	t.Run("returns empty list for game with no player characters", func(t *testing.T) {
+		emptyGame := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Empty Game")
+		playerChars, err := characterService.GetPlayerCharacters(context.Background(), emptyGame.ID)
+		core.AssertNoError(t, err, "Failed to get player characters for empty game")
+		core.AssertEqual(t, 0, len(playerChars), "Expected 0 player characters")
+	})
+}
+
+func TestCharacterService_GetNPCs(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
+
+	// Setup test fixtures
+	fixtures := testDB.SetupFixtures(t)
+	characterService := &CharacterService{DB: testDB.Pool}
+
+	// Create player characters (should not be included)
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	_, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        core.Int32Ptr(int32(player.ID)),
+		Name:          "Player Character",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Failed to create player character")
+
+	// Create NPCs
+	_, err = characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        nil,
+		Name:          "GM NPC 1",
+		CharacterType: "npc_gm",
+	})
+	core.AssertNoError(t, err, "Failed to create GM NPC 1")
+
+	_, err = characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        nil,
+		Name:          "GM NPC 2",
+		CharacterType: "npc_gm",
+	})
+	core.AssertNoError(t, err, "Failed to create GM NPC 2")
+
+	_, err = characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        nil,
+		Name:          "Audience NPC 1",
+		CharacterType: "npc_audience",
+	})
+	core.AssertNoError(t, err, "Failed to create audience NPC 1")
+
+	t.Run("returns only NPCs", func(t *testing.T) {
+		npcs, err := characterService.GetNPCs(context.Background(), fixtures.TestGame.ID)
+		core.AssertNoError(t, err, "Failed to get NPCs")
+		core.AssertEqual(t, 3, len(npcs), "Expected 3 NPCs")
+
+		// Verify all are NPC types
+		for _, npc := range npcs {
+			isNPC := npc.CharacterType == "npc_gm" || npc.CharacterType == "npc_audience"
+			core.AssertEqual(t, true, isNPC, "All characters should be NPC types")
+		}
+	})
+
+	t.Run("returns empty list for game with no NPCs", func(t *testing.T) {
+		emptyGame := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Empty Game")
+		npcs, err := characterService.GetNPCs(context.Background(), emptyGame.ID)
+		core.AssertNoError(t, err, "Failed to get NPCs for empty game")
+		core.AssertEqual(t, 0, len(npcs), "Expected 0 NPCs")
+	})
+}
+
+func TestCharacterService_GetUserControllableCharacters(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
+
+	// Setup test fixtures
+	fixtures := testDB.SetupFixtures(t)
+	characterService := &CharacterService{DB: testDB.Pool}
+
+	// Create test users
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	otherPlayer := testDB.CreateTestUser(t, "otherplayer", "other@example.com")
+
+	// Create player character owned by player
+	playerChar, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        core.Int32Ptr(int32(player.ID)),
+		Name:          "Player Character",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Failed to create player character")
+
+	// Create player character owned by otherPlayer
+	_, err = characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        core.Int32Ptr(int32(otherPlayer.ID)),
+		Name:          "Other Player Character",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Failed to create other player character")
+
+	// Create NPC and assign to player
+	assignedNPC, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        nil,
+		Name:          "Assigned NPC",
+		CharacterType: "npc_audience",
+	})
+	core.AssertNoError(t, err, "Failed to create assigned NPC")
+
+	err = characterService.AssignNPCToUser(context.Background(), assignedNPC.ID, int32(player.ID), int32(fixtures.TestUser.ID))
+	core.AssertNoError(t, err, "Failed to assign NPC to player")
+
+	// Create unassigned NPC
+	_, err = characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        nil,
+		Name:          "Unassigned NPC",
+		CharacterType: "npc_gm",
+	})
+	core.AssertNoError(t, err, "Failed to create unassigned NPC")
+
+	t.Run("returns user's characters and assigned NPCs", func(t *testing.T) {
+		controllable, err := characterService.GetUserControllableCharacters(context.Background(), fixtures.TestGame.ID, int32(player.ID))
+		core.AssertNoError(t, err, "Failed to get user controllable characters")
+		core.AssertEqual(t, 2, len(controllable), "Expected 2 controllable characters (owned + assigned)")
+
+		// Verify the correct characters are returned
+		hasPlayerChar := false
+		hasAssignedNPC := false
+		for _, char := range controllable {
+			if char.ID == playerChar.ID {
+				hasPlayerChar = true
+			}
+			if char.ID == assignedNPC.ID {
+				hasAssignedNPC = true
+			}
+		}
+		core.AssertEqual(t, true, hasPlayerChar, "Should include player's own character")
+		core.AssertEqual(t, true, hasAssignedNPC, "Should include assigned NPC")
+	})
+
+	t.Run("returns only owned characters for user with no assignments", func(t *testing.T) {
+		controllable, err := characterService.GetUserControllableCharacters(context.Background(), fixtures.TestGame.ID, int32(otherPlayer.ID))
+		core.AssertNoError(t, err, "Failed to get user controllable characters")
+		core.AssertEqual(t, 1, len(controllable), "Expected 1 controllable character (owned only)")
+		core.AssertEqual(t, "player_character", controllable[0].CharacterType, "Should be player character")
+	})
+
+	t.Run("returns empty list for user with no characters", func(t *testing.T) {
+		userWithNoChars := testDB.CreateTestUser(t, "nocharuser", "nochars@example.com")
+		controllable, err := characterService.GetUserControllableCharacters(context.Background(), fixtures.TestGame.ID, int32(userWithNoChars.ID))
+		core.AssertNoError(t, err, "Failed to get user controllable characters")
+		core.AssertEqual(t, 0, len(controllable), "Expected 0 controllable characters")
+	})
+}
+
+func TestCharacterService_AssignNPCToUser_AudienceNPC(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
+
+	// Setup test fixtures
+	fixtures := testDB.SetupFixtures(t)
+	characterService := &CharacterService{DB: testDB.Pool}
+
+	// Create user for assignment
+	assignedUser := testDB.CreateTestUser(t, "assigneduser", "assigned@example.com")
+
+	t.Run("assign audience NPC to user", func(t *testing.T) {
+		// Create audience NPC
+		audienceNPC, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID:        fixtures.TestGame.ID,
+			UserID:        nil,
+			Name:          "Audience NPC",
+			CharacterType: "npc_audience",
+		})
+		core.AssertNoError(t, err, "Failed to create audience NPC")
+
+		// Assign to user
+		err = characterService.AssignNPCToUser(context.Background(), audienceNPC.ID, int32(assignedUser.ID), int32(fixtures.TestUser.ID))
+		core.AssertNoError(t, err, "Failed to assign audience NPC to user")
+
+		// Verify user can edit the NPC
+		canEdit, err := characterService.CanUserEditCharacter(context.Background(), audienceNPC.ID, int32(assignedUser.ID))
+		core.AssertNoError(t, err, "Failed to check edit permission")
+		core.AssertEqual(t, true, canEdit, "Assigned user should be able to edit audience NPC")
+	})
+}
