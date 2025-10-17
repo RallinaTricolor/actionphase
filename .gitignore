@@ -142,3 +142,7 @@ $RECYCLE.BIN/
 .settings/org.eclipse.core.resources.prefs
 /static/
 .idea/
+
+# Coverage Reports
+frontend/coverage/
+backend/coverage.out
