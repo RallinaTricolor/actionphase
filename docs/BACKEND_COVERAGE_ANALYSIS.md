@@ -199,4 +199,3 @@ Simple wrapper service, low value but would improve overall coverage metrics.
 4. Continue with game_applications.go and messages.go
 5. Polish conversations.go and games.go
 6. Add users.go tests (optional)
-
