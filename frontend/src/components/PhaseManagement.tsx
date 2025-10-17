@@ -287,7 +287,7 @@ function PhaseCard({
           <div>
             <h4 className="font-medium text-gray-900">{phaseLabel}</h4>
             <p className="text-sm text-gray-600">
-              {PHASE_TYPE_DESCRIPTIONS[phase.phase_type]}
+              {phase.description || PHASE_TYPE_DESCRIPTIONS[phase.phase_type]}
             </p>
           </div>
         </div>
@@ -493,10 +493,11 @@ function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhaseModalP
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="phase-type" className="block text-sm font-medium text-gray-700 mb-2">
                 Phase Type
               </label>
               <select
+                id="phase-type"
                 value={formData.phase_type}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
@@ -514,10 +515,11 @@ function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhaseModalP
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="phase-title" className="block text-sm font-medium text-gray-700 mb-2">
                 Title (Optional)
               </label>
               <input
+                id="phase-title"
                 type="text"
                 value={formData.title || ''}
                 onChange={(e) => setFormData(prev => ({
@@ -533,10 +535,11 @@ function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhaseModalP
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="phase-description" className="block text-sm font-medium text-gray-700 mb-2">
                 Description (Optional)
               </label>
               <textarea
+                id="phase-description"
                 value={formData.description || ''}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
@@ -549,10 +552,11 @@ function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhaseModalP
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="phase-deadline" className="block text-sm font-medium text-gray-700 mb-2">
                 Deadline (Optional)
               </label>
               <input
+                id="phase-deadline"
                 type="datetime-local"
                 value={formData.deadline || ''}
                 onChange={(e) => setFormData(prev => ({
@@ -646,10 +650,11 @@ function EditPhaseModal({ phase, onClose, onSubmit, isSubmitting }: EditPhaseMod
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="edit-phase-title" className="block text-sm font-medium text-gray-700 mb-2">
                 Title (Optional)
               </label>
               <input
+                id="edit-phase-title"
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({
@@ -665,10 +670,11 @@ function EditPhaseModal({ phase, onClose, onSubmit, isSubmitting }: EditPhaseMod
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="edit-phase-description" className="block text-sm font-medium text-gray-700 mb-2">
                 Description (Optional)
               </label>
               <textarea
+                id="edit-phase-description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
@@ -681,10 +687,11 @@ function EditPhaseModal({ phase, onClose, onSubmit, isSubmitting }: EditPhaseMod
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="edit-phase-deadline" className="block text-sm font-medium text-gray-700 mb-2">
                 Deadline (Optional)
               </label>
               <input
+                id="edit-phase-deadline"
                 type="datetime-local"
                 value={formData.deadline}
                 onChange={(e) => setFormData(prev => ({

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useErrorHandler } from '../hooks/useErrorHandler';
 import { ErrorDisplay } from './ErrorDisplay';
-import { errorHandlers } from '../lib/errors';
 import type { LoginRequest } from '../types/auth';
 
 interface LoginFormProps {
@@ -25,7 +24,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
       await login(formData);
       onSuccess?.();
     } catch (err) {
-      handleError(errorHandlers.authentication(err));
+      handleError(err);
     }
   };
 

@@ -15,18 +15,19 @@ interface MessageThreadProps {
 export function MessageThread({ gameId, conversationId, characters }: MessageThreadProps) {
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
   const [conversation, setConversation] = useState<ConversationWithDetails | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(true);
+  const [loadingConversation, setLoadingConversation] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  console.log('[MessageThread] Rendered with:', { gameId, conversationId, charactersCount: characters.length, loading, error });
+  const loading = loadingMessages || loadingConversation;
 
   // Filter characters to only show conversation participants
   const participantCharacters = useMemo(() => {
-    if (!conversation) return characters;
+    if (!conversation || !conversation.participants) return characters;
 
     const participantCharacterIds = conversation.participants
       .map(p => p.character_id)
@@ -55,25 +56,33 @@ export function MessageThread({ gameId, conversationId, characters }: MessageThr
   }, [messages]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (typeof messagesEndRef.current?.scrollIntoView === 'function') {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const loadConversation = async () => {
     try {
+      setLoadingConversation(true);
       const response = await apiClient.getConversation(gameId, conversationId);
       setConversation(response.data);
     } catch (err) {
       console.error('Failed to load conversation:', err);
       setError('Failed to load conversation');
+    } finally {
+      setLoadingConversation(false);
     }
   };
 
   const loadMessages = async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setLoadingMessages(true);
+      // Don't clear error if conversation loading failed
+      if (!error) {
+        setError(null);
+      }
       const response = await apiClient.getConversationMessages(gameId, conversationId);
-      setMessages(response.data.messages);
+      setMessages(response.data.messages || []);
 
       // Mark conversation as read
       await apiClient.markConversationAsRead(gameId, conversationId);
@@ -81,7 +90,7 @@ export function MessageThread({ gameId, conversationId, characters }: MessageThr
       console.error('Failed to load messages:', err);
       setError('Failed to load messages');
     } finally {
-      setLoading(false);
+      setLoadingMessages(false);
     }
   };
 
@@ -137,13 +146,13 @@ export function MessageThread({ gameId, conversationId, characters }: MessageThr
   return (
     <div className="flex flex-col h-full">
       {/* Conversation Header */}
-      {conversation && (
+      {conversation && conversation.conversation && (
         <div className="bg-white border-b border-gray-200 p-4">
           <h2 className="text-xl font-bold text-gray-900">
             {conversation.conversation.title || 'Untitled Conversation'}
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Participants: {conversation.participants.map(p => p.character_name || p.username).join(', ')}
+            Participants: {conversation.participants?.map(p => p.character_name || p.username).join(', ') || 'None'}
           </p>
         </div>
       )}

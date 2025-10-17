@@ -1,0 +1,936 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { server } from '../../mocks/server';
+import { renderWithProviders } from '../../test-utils/render';
+import { EditGameModal } from '../EditGameModal';
+import type { GameWithDetails } from '../../types/games';
+
+describe('EditGameModal', () => {
+  const mockOnClose = vi.fn();
+  const mockOnGameUpdated = vi.fn();
+
+  const mockGame: GameWithDetails = {
+    id: 1,
+    title: 'Test Game',
+    description: 'A test game description',
+    gm_user_id: 1,
+    gm_username: 'testgm',
+    state: 'setup',
+    genre: 'Fantasy',
+    max_players: 6,
+    recruitment_deadline: '2025-12-31T23:59:00Z',
+    start_date: '2026-01-01T00:00:00Z',
+    end_date: '2026-12-31T23:59:00Z',
+    is_anonymous: false,
+    current_players: 3,
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
+  };
+
+  const setupDefaultHandlers = () => {
+    server.use(
+      http.put('/api/v1/games/:id', async ({ request }) => {
+        const body = await request.json();
+        return HttpResponse.json({
+          ...mockGame,
+          ...body,
+          updated_at: new Date().toISOString(),
+        });
+      })
+    );
+  };
+
+  beforeEach(() => {
+    server.resetHandlers();
+    setupDefaultHandlers();
+    mockOnClose.mockClear();
+    mockOnGameUpdated.mockClear();
+  });
+
+  describe('Rendering', () => {
+    it('does not render when isOpen is false', () => {
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={false}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      expect(screen.queryByText('Edit Game')).not.toBeInTheDocument();
+    });
+
+    it('renders modal with heading when isOpen is true', () => {
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      expect(screen.getByText('Edit Game')).toBeInTheDocument();
+    });
+
+    it('displays backdrop and modal container', () => {
+      const { container } = renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const backdrop = container.querySelector('.bg-black.bg-opacity-50');
+      expect(backdrop).toBeInTheDocument();
+
+      const modalContainer = container.querySelector('.bg-white.rounded-lg');
+      expect(modalContainer).toBeInTheDocument();
+    });
+  });
+
+  describe('Form Fields', () => {
+    it('renders all form fields', () => {
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/genre/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/max players/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/recruitment deadline/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/end date/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/anonymous mode/i)).toBeInTheDocument();
+    });
+
+    it('marks required fields with asterisks', () => {
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      // Title and Description should be marked as required
+      expect(screen.getByText(/title \*/i)).toBeInTheDocument();
+      expect(screen.getByText(/description \*/i)).toBeInTheDocument();
+    });
+
+    it('has proper input types for each field', () => {
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const titleInput = screen.getByLabelText(/title/i);
+      expect(titleInput).toHaveAttribute('type', 'text');
+
+      const maxPlayersInput = screen.getByLabelText(/max players/i);
+      expect(maxPlayersInput).toHaveAttribute('type', 'number');
+
+      const recruitmentDeadlineInput = screen.getByLabelText(/recruitment deadline/i);
+      expect(recruitmentDeadlineInput).toHaveAttribute('type', 'datetime-local');
+
+      const isAnonymousInput = screen.getByLabelText(/anonymous mode/i);
+      expect(isAnonymousInput).toHaveAttribute('type', 'checkbox');
+    });
+  });
+
+  describe('Initial Values', () => {
+    it('populates form with game data when modal opens', () => {
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      expect(screen.getByLabelText(/title/i)).toHaveValue('Test Game');
+      expect(screen.getByLabelText(/description/i)).toHaveValue('A test game description');
+      expect(screen.getByLabelText(/genre/i)).toHaveValue('Fantasy');
+      expect(screen.getByLabelText(/max players/i)).toHaveValue(6);
+    });
+
+    it('handles games with missing optional fields', () => {
+      const gameWithMinimalData: GameWithDetails = {
+        ...mockGame,
+        genre: undefined,
+        max_players: undefined,
+        recruitment_deadline: undefined,
+        start_date: undefined,
+        end_date: undefined,
+      };
+
+      renderWithProviders(
+        <EditGameModal
+          game={gameWithMinimalData}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      expect(screen.getByLabelText(/genre/i)).toHaveValue('');
+      expect(screen.getByLabelText(/max players/i)).toHaveValue(null);
+      expect(screen.getByLabelText(/recruitment deadline/i)).toHaveValue('');
+    });
+
+    it('sets anonymous mode checkbox correctly', () => {
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const anonymousCheckbox = screen.getByLabelText(/anonymous mode/i);
+      expect(anonymousCheckbox).not.toBeChecked();
+    });
+
+    it('resets form when modal is reopened', () => {
+      const { rerender } = renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={false}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      // Open modal
+      rerender(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      expect(screen.getByLabelText(/title/i)).toHaveValue('Test Game');
+    });
+  });
+
+  describe('Form Interactions', () => {
+    it('allows user to type in title field', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const titleInput = screen.getByLabelText(/title/i);
+      await user.clear(titleInput);
+      await user.type(titleInput, 'Updated Game Title');
+
+      expect(titleInput).toHaveValue('Updated Game Title');
+    });
+
+    it('allows user to type in description field', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const descriptionInput = screen.getByLabelText(/description/i);
+      await user.clear(descriptionInput);
+      await user.type(descriptionInput, 'Updated description');
+
+      expect(descriptionInput).toHaveValue('Updated description');
+    });
+
+    it('allows user to change genre', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const genreInput = screen.getByLabelText(/genre/i);
+      await user.clear(genreInput);
+      await user.type(genreInput, 'Sci-Fi');
+
+      expect(genreInput).toHaveValue('Sci-Fi');
+    });
+
+    it('allows user to change max players', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const maxPlayersInput = screen.getByLabelText(/max players/i);
+      await user.clear(maxPlayersInput);
+      await user.type(maxPlayersInput, '8');
+
+      expect(maxPlayersInput).toHaveValue(8);
+    });
+
+    it('allows user to change datetime fields', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const startDateInput = screen.getByLabelText(/start date/i);
+      await user.clear(startDateInput);
+      await user.type(startDateInput, '2026-06-15T14:30');
+
+      expect(startDateInput).toHaveValue('2026-06-15T14:30');
+    });
+
+    it('allows user to toggle anonymous mode checkbox', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const anonymousCheckbox = screen.getByLabelText(/anonymous mode/i);
+      expect(anonymousCheckbox).not.toBeChecked();
+
+      await user.click(anonymousCheckbox);
+      expect(anonymousCheckbox).toBeChecked();
+
+      await user.click(anonymousCheckbox);
+      expect(anonymousCheckbox).not.toBeChecked();
+    });
+
+    it('allows clearing max players field', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const maxPlayersInput = screen.getByLabelText(/max players/i);
+      await user.clear(maxPlayersInput);
+
+      expect(maxPlayersInput).toHaveValue(null);
+    });
+  });
+
+  describe('Validation', () => {
+    it('shows error when title contains only whitespace', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const titleInput = screen.getByLabelText(/title/i);
+      await user.clear(titleInput);
+      await user.type(titleInput, '   ');
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Title is required')).toBeInTheDocument();
+      });
+    });
+
+    it('shows error when description contains only whitespace', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const descriptionInput = screen.getByLabelText(/description/i);
+      await user.clear(descriptionInput);
+      await user.type(descriptionInput, '   ');
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Description is required')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Form Submission', () => {
+    it('successfully updates game with valid data', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const titleInput = screen.getByLabelText(/title/i);
+      await user.clear(titleInput);
+      await user.type(titleInput, 'Updated Title');
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockOnGameUpdated).toHaveBeenCalled();
+        expect(mockOnClose).toHaveBeenCalled();
+      });
+    });
+
+    it('sends correct data to API', async () => {
+      const user = userEvent.setup();
+      let requestBody: any = null;
+
+      server.use(
+        http.put('/api/v1/games/:id', async ({ request }) => {
+          requestBody = await request.json();
+          return HttpResponse.json({ ...mockGame, ...requestBody });
+        })
+      );
+
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const titleInput = screen.getByLabelText(/title/i);
+      await user.clear(titleInput);
+      await user.type(titleInput, 'New Title');
+
+      const descriptionInput = screen.getByLabelText(/description/i);
+      await user.clear(descriptionInput);
+      await user.type(descriptionInput, 'New Description');
+
+      const maxPlayersInput = screen.getByLabelText(/max players/i);
+      await user.clear(maxPlayersInput);
+      await user.type(maxPlayersInput, '10');
+
+      const anonymousCheckbox = screen.getByLabelText(/anonymous mode/i);
+      await user.click(anonymousCheckbox);
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(requestBody).toEqual({
+          title: 'New Title',
+          description: 'New Description',
+          genre: 'Fantasy',
+          max_players: 10,
+          recruitment_deadline: expect.any(String),
+          start_date: expect.any(String),
+          end_date: expect.any(String),
+          is_public: true,
+          is_anonymous: true,
+        });
+      });
+    });
+
+    it('trims whitespace from title and description', async () => {
+      const user = userEvent.setup();
+      let requestBody: any = null;
+
+      server.use(
+        http.put('/api/v1/games/:id', async ({ request }) => {
+          requestBody = await request.json();
+          return HttpResponse.json({ ...mockGame, ...requestBody });
+        })
+      );
+
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const titleInput = screen.getByLabelText(/title/i);
+      await user.clear(titleInput);
+      await user.type(titleInput, '  Trimmed Title  ');
+
+      const descriptionInput = screen.getByLabelText(/description/i);
+      await user.clear(descriptionInput);
+      await user.type(descriptionInput, '  Trimmed Description  ');
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(requestBody.title).toBe('Trimmed Title');
+        expect(requestBody.description).toBe('Trimmed Description');
+      });
+    });
+
+    it('sends undefined for empty optional fields', async () => {
+      const user = userEvent.setup();
+      let requestBody: any = null;
+
+      server.use(
+        http.put('/api/v1/games/:id', async ({ request }) => {
+          requestBody = await request.json();
+          return HttpResponse.json({ ...mockGame, ...requestBody });
+        })
+      );
+
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const genreInput = screen.getByLabelText(/genre/i);
+      await user.clear(genreInput);
+
+      const maxPlayersInput = screen.getByLabelText(/max players/i);
+      await user.clear(maxPlayersInput);
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(requestBody.genre).toBeUndefined();
+        expect(requestBody.max_players).toBeUndefined();
+      });
+    });
+
+    it('handles empty genre by trimming and sending undefined', async () => {
+      const user = userEvent.setup();
+      let requestBody: any = null;
+
+      server.use(
+        http.put('/api/v1/games/:id', async ({ request }) => {
+          requestBody = await request.json();
+          return HttpResponse.json({ ...mockGame, ...requestBody });
+        })
+      );
+
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const genreInput = screen.getByLabelText(/genre/i);
+      await user.clear(genreInput);
+      await user.type(genreInput, '   ');
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(requestBody.genre).toBeUndefined();
+      });
+    });
+  });
+
+  describe('Loading States', () => {
+    it('shows loading state while submitting', async () => {
+      const user = userEvent.setup();
+
+      server.use(
+        http.put('/api/v1/games/:id', async () => {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          return HttpResponse.json(mockGame);
+        })
+      );
+
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      expect(screen.getByText('Saving...')).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(mockOnGameUpdated).toHaveBeenCalled();
+      });
+    });
+
+    it('disables submit button while loading', async () => {
+      const user = userEvent.setup();
+
+      server.use(
+        http.put('/api/v1/games/:id', async () => {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          return HttpResponse.json(mockGame);
+        })
+      );
+
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      expect(saveButton).toBeDisabled();
+
+      await waitFor(() => {
+        expect(mockOnGameUpdated).toHaveBeenCalled();
+      });
+    });
+
+    it('disables cancel button while loading', async () => {
+      const user = userEvent.setup();
+
+      server.use(
+        http.put('/api/v1/games/:id', async () => {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          return HttpResponse.json(mockGame);
+        })
+      );
+
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      expect(cancelButton).toBeDisabled();
+
+      await waitFor(() => {
+        expect(mockOnGameUpdated).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Close Behavior', () => {
+    it('calls onClose when cancel button is clicked', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      await user.click(cancelButton);
+
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not submit form when cancel is clicked', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const titleInput = screen.getByLabelText(/title/i);
+      await user.clear(titleInput);
+      await user.type(titleInput, 'Changed Title');
+
+      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      await user.click(cancelButton);
+
+      expect(mockOnGameUpdated).not.toHaveBeenCalled();
+    });
+
+    it('closes modal and clears error after successful update', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockOnClose).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Form Reset', () => {
+    it('resets form to initial values when reopened', () => {
+      const { rerender } = renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      // Close modal
+      rerender(
+        <EditGameModal
+          game={mockGame}
+          isOpen={false}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      // Reopen modal
+      rerender(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      expect(screen.getByLabelText(/title/i)).toHaveValue('Test Game');
+      expect(screen.queryByText(/error/i)).not.toBeInTheDocument();
+    });
+
+    it('clears errors when modal is reopened', () => {
+      const { rerender } = renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      // Close and reopen
+      rerender(
+        <EditGameModal
+          game={mockGame}
+          isOpen={false}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      rerender(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      expect(screen.queryByText(/error/i)).not.toBeInTheDocument();
+    });
+
+    it('updates form when game prop changes', () => {
+      const { rerender } = renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const updatedGame: GameWithDetails = {
+        ...mockGame,
+        title: 'Different Game',
+        description: 'Different description',
+      };
+
+      rerender(
+        <EditGameModal
+          game={updatedGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      expect(screen.getByLabelText(/title/i)).toHaveValue('Different Game');
+      expect(screen.getByLabelText(/description/i)).toHaveValue('Different description');
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('associates labels with inputs correctly', () => {
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      expect(screen.getByLabelText(/title/i)).toHaveAttribute('id', 'title');
+      expect(screen.getByLabelText(/description/i)).toHaveAttribute('id', 'description');
+      expect(screen.getByLabelText(/genre/i)).toHaveAttribute('id', 'genre');
+      expect(screen.getByLabelText(/max players/i)).toHaveAttribute('id', 'maxPlayers');
+    });
+
+    it('uses semantic button elements', () => {
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      expect(saveButton).toHaveAttribute('type', 'submit');
+
+      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      expect(cancelButton).toHaveAttribute('type', 'button');
+    });
+
+    it('marks required fields properly', () => {
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      expect(screen.getByLabelText(/title/i)).toBeRequired();
+      expect(screen.getByLabelText(/description/i)).toBeRequired();
+      expect(screen.getByLabelText(/genre/i)).not.toBeRequired();
+    });
+  });
+
+  describe('Integration', () => {
+    it('handles complete update workflow', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      // Update multiple fields
+      const titleInput = screen.getByLabelText(/title/i);
+      await user.clear(titleInput);
+      await user.type(titleInput, 'Epic Adventure');
+
+      const descriptionInput = screen.getByLabelText(/description/i);
+      await user.clear(descriptionInput);
+      await user.type(descriptionInput, 'An epic fantasy adventure awaits');
+
+      const genreInput = screen.getByLabelText(/genre/i);
+      await user.clear(genreInput);
+      await user.type(genreInput, 'High Fantasy');
+
+      const maxPlayersInput = screen.getByLabelText(/max players/i);
+      await user.clear(maxPlayersInput);
+      await user.type(maxPlayersInput, '8');
+
+      const anonymousCheckbox = screen.getByLabelText(/anonymous mode/i);
+      await user.click(anonymousCheckbox);
+
+      // Submit
+      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      await user.click(saveButton);
+
+      // Verify callbacks
+      await waitFor(() => {
+        expect(mockOnGameUpdated).toHaveBeenCalledTimes(1);
+        expect(mockOnClose).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+});

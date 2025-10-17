@@ -358,6 +358,280 @@ func BenchmarkGameService_GetGame(b *testing.B) {
 	}
 }
 
+func TestGameService_GetGamesByUser(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Create users
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	// Create games for GM - GM must be added as participant to show up in GetGamesByUser
+	game1 := testDB.CreateTestGame(t, int32(gm.ID), "GM Game 1")
+	_, err := gameService.AddGameParticipant(context.Background(), game1.ID, int32(gm.ID), "player")
+	core.AssertNoError(t, err, "Failed to add GM as participant")
+
+	game2 := testDB.CreateTestGame(t, int32(gm.ID), "GM Game 2")
+	_, err = gameService.AddGameParticipant(context.Background(), game2.ID, int32(gm.ID), "player")
+	core.AssertNoError(t, err, "Failed to add GM as participant")
+
+	// Create game where player is participant
+	game3 := testDB.CreateTestGame(t, int32(gm.ID), "Player Game")
+	_, err = gameService.AddGameParticipant(context.Background(), game3.ID, int32(gm.ID), "player")
+	core.AssertNoError(t, err, "Failed to add GM as participant")
+	_, err = gameService.AddGameParticipant(context.Background(), game3.ID, int32(player.ID), "player")
+	core.AssertNoError(t, err, "Failed to add player as participant")
+
+	t.Run("returns all games for GM", func(t *testing.T) {
+		games, err := gameService.GetGamesByUser(context.Background(), int32(gm.ID))
+
+		core.AssertNoError(t, err, "Failed to get games by user")
+		core.AssertTrue(t, len(games) >= 3, "GM should have at least 3 games")
+
+		// Verify our created games are in the list
+		gameIDs := make(map[int32]bool)
+		for _, g := range games {
+			gameIDs[g.ID] = true
+		}
+		core.AssertTrue(t, gameIDs[game1.ID], "Game1 should be in GM's games")
+		core.AssertTrue(t, gameIDs[game2.ID], "Game2 should be in GM's games")
+		core.AssertTrue(t, gameIDs[game3.ID], "Game3 should be in GM's games")
+	})
+
+	t.Run("returns games where user is participant", func(t *testing.T) {
+		games, err := gameService.GetGamesByUser(context.Background(), int32(player.ID))
+
+		core.AssertNoError(t, err, "Failed to get games by user")
+		core.AssertTrue(t, len(games) >= 1, "Player should have at least 1 game")
+
+		// Verify player's game is in the list
+		foundPlayerGame := false
+		for _, g := range games {
+			if g.ID == game3.ID {
+				foundPlayerGame = true
+				break
+			}
+		}
+		core.AssertTrue(t, foundPlayerGame, "Player's game should be in the list")
+	})
+
+	t.Run("returns empty list for user with no games", func(t *testing.T) {
+		noGameUser := testDB.CreateTestUser(t, "nogames", "nogames@example.com")
+		games, err := gameService.GetGamesByUser(context.Background(), int32(noGameUser.ID))
+
+		core.AssertNoError(t, err, "Failed to get games by user")
+		core.AssertEqual(t, 0, len(games), "User with no games should have empty list")
+	})
+
+	// Verify game1 and game2 are in GM's games
+	_ = game1
+	_ = game2
+}
+
+func TestGameService_GetAllGames(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games", "sessions", "users")
+
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Create test users
+	gm1 := testDB.CreateTestUser(t, "gm1", "gm1@example.com")
+	gm2 := testDB.CreateTestUser(t, "gm2", "gm2@example.com")
+
+	// Create several games
+	game1 := testDB.CreateTestGame(t, int32(gm1.ID), "Public Game 1")
+	game2 := testDB.CreateTestGame(t, int32(gm1.ID), "Public Game 2")
+	game3 := testDB.CreateTestGame(t, int32(gm2.ID), "Public Game 3")
+
+	t.Run("returns all games in the system", func(t *testing.T) {
+		games, err := gameService.GetAllGames(context.Background())
+
+		core.AssertNoError(t, err, "Failed to get all games")
+		core.AssertTrue(t, len(games) >= 3, "Should have at least 3 games")
+
+		// Verify our games are in the list
+		gameIDs := make(map[int32]bool)
+		for _, g := range games {
+			gameIDs[g.ID] = true
+		}
+
+		core.AssertTrue(t, gameIDs[game1.ID], "Game 1 should be in the list")
+		core.AssertTrue(t, gameIDs[game2.ID], "Game 2 should be in the list")
+		core.AssertTrue(t, gameIDs[game3.ID], "Game 3 should be in the list")
+	})
+}
+
+func TestGameService_GetRecruitingGames(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games", "sessions", "users")
+
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Create test user
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+
+	// Create games in different states
+	setupGame := testDB.CreateTestGame(t, int32(gm.ID), "Setup Game")
+	recruitingGame := testDB.CreateTestGame(t, int32(gm.ID), "Recruiting Game")
+	inProgressGame := testDB.CreateTestGame(t, int32(gm.ID), "In Progress Game")
+
+	// Update states
+	_, err := gameService.UpdateGameState(context.Background(), recruitingGame.ID, "recruitment")
+	core.AssertNoError(t, err, "Failed to set game to recruitment")
+
+	_, err = gameService.UpdateGameState(context.Background(), inProgressGame.ID, "recruitment")
+	core.AssertNoError(t, err, "Failed to set game to recruitment")
+	_, err = gameService.UpdateGameState(context.Background(), inProgressGame.ID, "in_progress")
+	core.AssertNoError(t, err, "Failed to set game to in_progress")
+
+	t.Run("returns only games in recruitment state", func(t *testing.T) {
+		games, err := gameService.GetRecruitingGames(context.Background())
+
+		core.AssertNoError(t, err, "Failed to get recruiting games")
+
+		// Verify recruiting game is in the list
+		foundRecruiting := false
+		foundSetup := false
+		foundInProgress := false
+
+		for _, g := range games {
+			if g.ID == recruitingGame.ID {
+				foundRecruiting = true
+			}
+			if g.ID == setupGame.ID {
+				foundSetup = true
+			}
+			if g.ID == inProgressGame.ID {
+				foundInProgress = true
+			}
+		}
+
+		core.AssertTrue(t, foundRecruiting, "Recruiting game should be in the list")
+		core.AssertEqual(t, false, foundSetup, "Setup game should NOT be in the list")
+		core.AssertEqual(t, false, foundInProgress, "In-progress game should NOT be in the list")
+	})
+}
+
+func TestGameService_GetGameWithDetails(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Create users
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+
+	// Create game
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Detailed Game")
+
+	// Add participants
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	core.AssertNoError(t, err, "Failed to add player1")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
+	core.AssertNoError(t, err, "Failed to add player2")
+
+	t.Run("returns game with GM username and participant count", func(t *testing.T) {
+		details, err := gameService.GetGameWithDetails(context.Background(), game.ID)
+
+		core.AssertNoError(t, err, "Failed to get game with details")
+		core.AssertEqual(t, game.ID, details.ID, "Game ID should match")
+		core.AssertEqual(t, gm.Username, details.GmUsername.String, "GM username should match")
+		core.AssertEqual(t, int64(2), details.CurrentPlayers, "Should have 2 participants")
+	})
+
+	t.Run("returns error for non-existent game", func(t *testing.T) {
+		_, err := gameService.GetGameWithDetails(context.Background(), 99999)
+
+		core.AssertError(t, err, "Should return error for non-existent game")
+	})
+}
+
+func TestGameService_CanUserJoinGame(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Create users
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	// Create game in recruitment state
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Join Test Game")
+	_, err := gameService.UpdateGameState(context.Background(), game.ID, "recruitment")
+	core.AssertNoError(t, err, "Failed to set game to recruitment")
+
+	t.Run("allows user to join game in recruitment", func(t *testing.T) {
+		result, err := gameService.CanUserJoinGame(context.Background(), game.ID, int32(player.ID))
+
+		core.AssertNoError(t, err, "Failed to check if user can join")
+		core.AssertEqual(t, "can_join", result, "User should be able to join recruiting game")
+	})
+
+	t.Run("prevents user from joining game they're already in", func(t *testing.T) {
+		// Add player to game
+		_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+		core.AssertNoError(t, err, "Failed to add player")
+
+		result, err := gameService.CanUserJoinGame(context.Background(), game.ID, int32(player.ID))
+
+		core.AssertNoError(t, err, "Failed to check if user can join")
+		core.AssertEqual(t, "already_joined", result, "User should not be able to join game they're in")
+	})
+}
+
+func TestGameService_RemoveGameParticipant(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Create users
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	// Create game
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Remove Test Game")
+
+	// Add participant
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	core.AssertNoError(t, err, "Failed to add participant")
+
+	t.Run("removes participant from game", func(t *testing.T) {
+		// Verify player is in game
+		inGame, err := gameService.IsUserInGame(context.Background(), game.ID, int32(player.ID))
+		core.AssertNoError(t, err, "Failed to check if user is in game")
+		core.AssertTrue(t, inGame, "Player should be in game before removal")
+
+		// Remove participant
+		err = gameService.RemoveGameParticipant(context.Background(), game.ID, int32(player.ID))
+		core.AssertNoError(t, err, "Failed to remove participant")
+
+		// Verify player is no longer in game
+		inGame, err = gameService.IsUserInGame(context.Background(), game.ID, int32(player.ID))
+		core.AssertNoError(t, err, "Failed to check if user is in game")
+		core.AssertEqual(t, false, inGame, "Player should not be in game after removal")
+	})
+
+	t.Run("handles removing non-existent participant gracefully", func(t *testing.T) {
+		// Try to remove player again (already removed)
+		err := gameService.RemoveGameParticipant(context.Background(), game.ID, int32(player.ID))
+
+		// Should not error (idempotent operation)
+		core.AssertNoError(t, err, "Removing non-existent participant should not error")
+	})
+}
+
 // Helper function for time pointers
 func timePtr(t time.Time) *time.Time {
 	return &t

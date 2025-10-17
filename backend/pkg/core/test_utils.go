@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	models "actionphase/pkg/db/models"
+	"actionphase/pkg/observability"
 )
 
 // TestDatabase provides utilities for database testing
@@ -431,4 +432,58 @@ func (td *TestDatabase) CreateTestUserWithCredentials(t TestingInterface, userna
 		Email:     dbUser.Email,
 		CreatedAt: &dbUser.CreatedAt.Time,
 	}, plainPassword
+}
+
+// NewTestConfig creates a Config instance suitable for testing
+// This provides all required configuration with test-appropriate defaults
+func NewTestConfig() *Config {
+	return &Config{
+		Database: DatabaseConfig{
+			URL:            "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable",
+			TestURL:        "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable",
+			MaxConnections: 10,
+			MaxIdleTime:    30 * time.Minute,
+		},
+		JWT: JWTConfig{
+			Secret:             "test_jwt_secret_for_unit_tests_only",
+			AccessTokenExpiry:  15 * time.Minute,
+			RefreshTokenExpiry: 7 * 24 * time.Hour,
+			Algorithm:          "HS256",
+		},
+		Server: ServerConfig{
+			Port:         3000,
+			Host:         "0.0.0.0",
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			IdleTimeout:  60 * time.Second,
+		},
+		App: AppConfig{
+			Environment:   "development",
+			LogLevel:      "info",
+			RunMigrations: false,
+			CORSEnabled:   true,
+			CORSOrigins:   []string{"http://localhost:5173"},
+		},
+	}
+}
+
+// NewTestApp creates a fully initialized App instance for testing
+// This includes all required fields: Pool, Logger, Config, ObsLogger, and Observability
+func NewTestApp(pool *pgxpool.Pool) *App {
+	logger := NewTestLogger()
+	config := NewTestConfig()
+
+	// Create observability logger for context-aware logging
+	obsLogger := observability.NewLogger("test", "error")
+
+	// Create observability instance with logger and metrics
+	obs := observability.New("test", "error")
+
+	return &App{
+		Pool:          pool,
+		Logger:        logger,
+		Config:        config,
+		ObsLogger:     obsLogger,
+		Observability: obs,
+	}
 }

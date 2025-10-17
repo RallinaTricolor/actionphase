@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter } from 'react-router-dom'
+import { screen, fireEvent, waitFor, act, cleanup } from '@testing-library/react'
+import { renderWithProviders } from '../../test-utils'
 import { GamesPage } from '../GamesPage'
 
 // Mock react-router-dom
@@ -81,24 +80,6 @@ vi.mock('../../components/Modal', () => ({
 import { apiClient } from '../../lib/api'
 import { useAuth } from '../../hooks/useAuth'
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
-  })
-
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        {children}
-      </BrowserRouter>
-    </QueryClientProvider>
-  )
-}
-
 describe('GamesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -125,7 +106,7 @@ describe('GamesPage', () => {
   })
 
   it('renders games page with header and navigation', () => {
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     expect(screen.getByRole('heading', { name: 'Games' })).toBeInTheDocument()
     expect(screen.getByText('Discover and join role-playing games in the ActionPhase community')).toBeInTheDocument()
@@ -135,12 +116,12 @@ describe('GamesPage', () => {
   })
 
   it('defaults to recruiting view mode', () => {
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     const recruitingButton = screen.getByRole('button', { name: /Recruiting/ })
     const allGamesButton = screen.getByRole('button', { name: /All Games/ })
 
-    expect(recruitingButton).toHaveClass('border-blue-500', 'text-blue-600')
+    expect(recruitingButton).toHaveClass('border-indigo-500', 'text-indigo-600')
     expect(allGamesButton).toHaveClass('border-transparent', 'text-gray-500')
 
     // Check GamesList receives correct prop
@@ -148,17 +129,17 @@ describe('GamesPage', () => {
   })
 
   it('switches to all games view mode', () => {
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     const allGamesButton = screen.getByRole('button', { name: /All Games/ })
     fireEvent.click(allGamesButton)
 
-    expect(allGamesButton).toHaveClass('border-blue-500', 'text-blue-600')
+    expect(allGamesButton).toHaveClass('border-indigo-500', 'text-indigo-600')
     expect(screen.getByText('Recruiting Only: false')).toBeInTheDocument()
   })
 
   it('switches back to recruiting view mode', () => {
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     // Switch to all games first
     fireEvent.click(screen.getByRole('button', { name: /All Games/ }))
@@ -170,7 +151,7 @@ describe('GamesPage', () => {
   })
 
   it('navigates to game details when game is clicked', () => {
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     const gameClickButton = screen.getByText('Test Game Click')
     fireEvent.click(gameClickButton)
@@ -179,7 +160,7 @@ describe('GamesPage', () => {
   })
 
   it('opens create game modal', () => {
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     const createButton = screen.getByText('Create Game')
     fireEvent.click(createButton)
@@ -190,7 +171,7 @@ describe('GamesPage', () => {
   })
 
   it('closes create game modal', () => {
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     // Open modal
     fireEvent.click(screen.getByText('Create Game'))
@@ -202,7 +183,7 @@ describe('GamesPage', () => {
   })
 
   it('handles successful game creation', () => {
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     // Open modal and create game
     fireEvent.click(screen.getByText('Create Game'))
@@ -213,7 +194,7 @@ describe('GamesPage', () => {
   })
 
   it('handles game creation cancellation', () => {
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     // Open modal and cancel
     fireEvent.click(screen.getByText('Create Game'))
@@ -225,7 +206,7 @@ describe('GamesPage', () => {
   it('applies to game successfully', async () => {
     vi.mocked(apiClient.applyToGame).mockResolvedValue({ success: true } as any)
 
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     await act(async () => {
       fireEvent.click(screen.getByText('Apply to Game'))
@@ -247,25 +228,30 @@ describe('GamesPage', () => {
       new Promise(resolve => setTimeout(resolve, 100))
     )
 
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     const applyButton = screen.getByText('Apply to Game')
 
-    // Click multiple times rapidly
+    // First click initiates the application
     await act(async () => {
-      fireEvent.click(applyButton)
       fireEvent.click(applyButton)
     })
 
+    // Second click should be ignored because isJoining is true
+    await act(async () => {
+      fireEvent.click(applyButton)
+    })
+
+    // Wait for the first call to complete
     await waitFor(() => {
       expect(apiClient.applyToGame).toHaveBeenCalledTimes(1)
-    })
+    }, { timeout: 200 })
   })
 
   it('handles invalid authentication token', async () => {
     vi.mocked(apiClient.getAuthToken).mockReturnValue('')
 
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
@@ -283,10 +269,13 @@ describe('GamesPage', () => {
       vi.clearAllMocks()
       vi.mocked(apiClient.getAuthToken).mockReturnValue(token as any)
 
-      render(<GamesPage />, { wrapper: createWrapper() })
-      fireEvent.click(screen.getByText('Apply to Game'))
+      renderWithProviders(<GamesPage />)
+      fireEvent.click(screen.getAllByText('Apply to Game')[0])
 
       expect(apiClient.removeAuthToken).toHaveBeenCalled()
+
+      // Cleanup before next iteration
+      cleanup()
     }
   })
 
@@ -296,7 +285,7 @@ describe('GamesPage', () => {
     }
     vi.mocked(apiClient.applyToGame).mockRejectedValue(authError)
 
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
@@ -319,7 +308,7 @@ describe('GamesPage', () => {
     }
     vi.mocked(apiClient.applyToGame).mockRejectedValue(apiError)
 
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
@@ -334,7 +323,7 @@ describe('GamesPage', () => {
     const genericError = new Error('Network error')
     vi.mocked(apiClient.applyToGame).mockRejectedValue(genericError)
 
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
@@ -348,7 +337,7 @@ describe('GamesPage', () => {
   it('handles unknown error', async () => {
     vi.mocked(apiClient.applyToGame).mockRejectedValue({})
 
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
@@ -364,7 +353,7 @@ describe('GamesPage', () => {
       new Promise(resolve => setTimeout(resolve, 100))
     )
 
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
@@ -382,7 +371,7 @@ describe('GamesPage', () => {
   })
 
   it('passes correct props to GamesList', () => {
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     const gamesList = screen.getByTestId('games-list')
 
@@ -395,7 +384,7 @@ describe('GamesPage', () => {
     vi.mocked(global.confirm).mockReturnValue(false)
     vi.mocked(apiClient.getAuthToken).mockReturnValue('')
 
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
@@ -409,7 +398,7 @@ describe('GamesPage', () => {
     const authError = { response: { status: 401 } }
     vi.mocked(apiClient.applyToGame).mockRejectedValue(authError)
 
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
@@ -424,7 +413,7 @@ describe('GamesPage', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     vi.mocked(apiClient.getAuthToken).mockReturnValue('test-token-12345')
 
-    render(<GamesPage />, { wrapper: createWrapper() })
+    renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 

@@ -19,10 +19,7 @@ func TestAuthAPI_RegistrationEndpoint(t *testing.T) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupAuthAPITestRouter(app)
 
@@ -142,10 +139,7 @@ func TestAuthAPI_LoginEndpoint(t *testing.T) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupAuthAPITestRouter(app)
 	fixtures := testDB.SetupFixtures(t)
@@ -258,10 +252,7 @@ func TestAuthAPI_RefreshEndpoint(t *testing.T) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupAuthAPITestRouter(app)
 	fixtures := testDB.SetupFixtures(t)
@@ -346,10 +337,7 @@ func TestAuthAPI_ContentTypeHandling(t *testing.T) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupAuthAPITestRouter(app)
 
@@ -421,10 +409,7 @@ func TestAuthAPI_RateLimiting(t *testing.T) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupAuthAPITestRouter(app)
 
@@ -454,7 +439,8 @@ func TestAuthAPI_RateLimiting(t *testing.T) {
 
 // setupAuthAPITestRouter creates a test router with auth routes configured for API testing
 func setupAuthAPITestRouter(app *core.App) *chi.Mux {
-	tokenAuth := jwtauth.New("HS256", []byte("SECRET"), nil)
+	// Use the same secret from app config for consistency
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
 
 	r := chi.NewRouter()
 
@@ -478,20 +464,13 @@ func setupAuthAPITestRouter(app *core.App) *chi.Mux {
 
 // createTestAuthToken creates a JWT token for testing purposes
 func createTestAuthToken(username string) (string, error) {
-	tokenAuth := jwtauth.New("HS256", []byte("SECRET"), nil)
-
-	claims := map[string]interface{}{
-		"username": username,
-		"exp":      time.Now().Add(time.Hour).Unix(),
-	}
-
-	_, tokenString, err := tokenAuth.Encode(claims)
-	return tokenString, err
+	return core.CreateTestJWTToken(username)
 }
 
 // createExpiredTestAuthToken creates an expired JWT token for testing purposes
 func createExpiredTestAuthToken(username string) (string, error) {
-	tokenAuth := jwtauth.New("HS256", []byte("SECRET"), nil)
+	config := core.LoadTestConfig()
+	tokenAuth := jwtauth.New("HS256", []byte(config.JWTSecret), nil)
 
 	claims := map[string]interface{}{
 		"username": username,
@@ -508,10 +487,7 @@ func BenchmarkAuthAPI_Registration(b *testing.B) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(b, "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupAuthAPITestRouter(app)
 
@@ -536,10 +512,7 @@ func BenchmarkAuthAPI_Login(b *testing.B) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(b, "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupAuthAPITestRouter(app)
 
@@ -576,10 +549,7 @@ func BenchmarkAuthAPI_TokenRefresh(b *testing.B) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(b, "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupAuthAPITestRouter(app)
 	fixtures := testDB.SetupFixtures(b)

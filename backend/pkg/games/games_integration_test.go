@@ -23,10 +23,7 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupGameTestRouter(app)
 	fixtures := testDB.SetupFixtures(t)
@@ -186,10 +183,7 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupGameTestRouter(app)
 	fixtures := testDB.SetupFixtures(t)
@@ -310,10 +304,7 @@ func TestGameAPI_ParticipantManagement(t *testing.T) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupGameTestRouter(app)
 	fixtures := testDB.SetupFixtures(t)
@@ -409,10 +400,7 @@ func TestGameAPI_Authorization(t *testing.T) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupGameTestRouter(app)
 	fixtures := testDB.SetupFixtures(t)
@@ -514,10 +502,7 @@ func TestGameAPI_ErrorHandling(t *testing.T) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupGameTestRouter(app)
 	fixtures := testDB.SetupFixtures(t)
@@ -694,10 +679,7 @@ func BenchmarkGameAPI_CreateGame(b *testing.B) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(b, "game_applications", "game_participants", "games", "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupGameTestRouter(app)
 	fixtures := testDB.SetupFixtures(b)
@@ -732,10 +714,7 @@ func BenchmarkGameAPI_GetAllGames(b *testing.B) {
 	defer testDB.Close()
 	defer testDB.CleanupTables(b, "game_applications", "game_participants", "games", "sessions", "users")
 
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	router := setupGameTestRouter(app)
 	fixtures := testDB.SetupFixtures(b)

@@ -269,7 +269,7 @@ SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.me
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
-WHERE m.id = $1 AND m.is_deleted = false
+WHERE m.id = $1
 `
 
 type GetCommentRow struct {
@@ -326,12 +326,12 @@ FROM messages
 WHERE game_id = $1
   AND message_type = 'post'
   AND is_deleted = false
-  AND ($2::integer IS NULL OR phase_id = $2)
+  AND (CASE WHEN $2 = 0 THEN TRUE ELSE phase_id = $2 END)
 `
 
 type GetGamePostCountParams struct {
-	GameID  int32 `json:"game_id"`
-	Column2 int32 `json:"column_2"`
+	GameID  int32       `json:"game_id"`
+	Column2 interface{} `json:"column_2"`
 }
 
 // ============================================================================
@@ -355,16 +355,16 @@ LEFT JOIN characters c ON m.character_id = c.id
 WHERE m.game_id = $1
   AND m.message_type = 'post'
   AND m.is_deleted = false
-  AND ($2::integer IS NULL OR m.phase_id = $2)
+  AND (CASE WHEN $2 = 0 THEN TRUE ELSE m.phase_id = $2 END)
 ORDER BY m.created_at DESC
 LIMIT $3 OFFSET $4
 `
 
 type GetGamePostsParams struct {
-	GameID  int32 `json:"game_id"`
-	Column2 int32 `json:"column_2"`
-	Limit   int32 `json:"limit"`
-	Offset  int32 `json:"offset"`
+	GameID  int32       `json:"game_id"`
+	Column2 interface{} `json:"column_2"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
 }
 
 type GetGamePostsRow struct {
@@ -558,7 +558,7 @@ SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.me
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
-WHERE m.id = $1 AND m.is_deleted = false
+WHERE m.id = $1
 `
 
 type GetPostRow struct {

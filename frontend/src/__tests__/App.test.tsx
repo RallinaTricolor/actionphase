@@ -395,7 +395,7 @@ describe('App', () => {
   })
 
   describe('Route navigation behavior', () => {
-    it('handles multiple route changes correctly', () => {
+    it('handles multiple routes with different initial entries', () => {
       vi.mocked(useAuth).mockReturnValue({
         isAuthenticated: true,
         user: { id: 1, username: 'testuser' },
@@ -404,15 +404,18 @@ describe('App', () => {
         isLoading: false,
       } as any)
 
-      const { rerender } = render(<TestAppRoutes initialEntries={['/dashboard']} />)
+      // Test dashboard route
+      const { unmount: unmount1 } = render(<TestAppRoutes initialEntries={['/dashboard']} />)
       expect(screen.getByTestId('dashboard-page')).toBeInTheDocument()
+      unmount1()
 
-      // Simulate navigation to games
-      rerender(<TestAppRoutes initialEntries={['/games']} />)
+      // Test games route
+      const { unmount: unmount2 } = render(<TestAppRoutes initialEntries={['/games']} />)
       expect(screen.getByTestId('games-page')).toBeInTheDocument()
+      unmount2()
 
-      // Simulate navigation to specific game
-      rerender(<TestAppRoutes initialEntries={['/games/456']} />)
+      // Test game details route
+      render(<TestAppRoutes initialEntries={['/games/456']} />)
       expect(screen.getByText('Game Details Page: 456')).toBeInTheDocument()
     })
   })

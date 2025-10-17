@@ -1,6 +1,9 @@
 help:
   @just --list
 
+claude:
+    CLAUDE_CONFIG_DIR="/Users/jhouser/.claude-personal" /Users/jhouser/.npm-global/bin/claude
+
 # === Database Commands ===
 db_up:
   docker-compose up -d db

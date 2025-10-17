@@ -115,6 +115,7 @@ func (s *MessageService) GetGamePosts(ctx context.Context, gameID int32, phaseID
 	queries := models.New(s.DB)
 
 	// Convert phaseID to int32 for use with Column2 parameter
+	// If nil, pass 0 to get all posts (CASE WHEN 0 THEN TRUE)
 	phaseIDValue := int32(0)
 	if phaseID != nil {
 		phaseIDValue = *phaseID
@@ -359,6 +360,7 @@ func (s *MessageService) GetGamePostCount(ctx context.Context, gameID int32, pha
 	queries := models.New(s.DB)
 
 	// Convert phaseID to int32 for use with Column2 parameter
+	// If nil, pass 0 to get all posts (CASE WHEN 0 THEN TRUE)
 	phaseIDValue := int32(0)
 	if phaseID != nil {
 		phaseIDValue = *phaseID

@@ -23,10 +23,7 @@ func TestCharacterAPI_CompleteCharacterLifecycle(t *testing.T) {
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "game_participants", "games", "sessions", "users")
 
 	// Setup application
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	// Create test users
 	gmUser := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -209,10 +206,7 @@ func TestCharacterAPI_NPCManagement(t *testing.T) {
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "game_participants", "games", "sessions", "users")
 
 	// Setup application
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	// Create test users
 	gmUser := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -320,10 +314,7 @@ func TestCharacterAPI_Authorization(t *testing.T) {
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "game_participants", "games", "sessions", "users")
 
 	// Setup application
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	// Create test users
 	gmUser := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -475,10 +466,7 @@ func TestCharacterAPI_ErrorHandling(t *testing.T) {
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "game_participants", "games", "sessions", "users")
 
 	// Setup application
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	// Create test user and game
 	gmUser := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -612,10 +600,7 @@ func TestCharacterAPI_UnauthenticatedAccess(t *testing.T) {
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup application
-	app := &core.App{
-		Pool:   testDB.Pool,
-		Logger: core.NewTestLogger(),
-	}
+	app := core.NewTestApp(testDB.Pool)
 
 	// Create test user (game not needed for this test)
 	gmUser := testDB.CreateTestUser(t, "gm", "gm@example.com")
