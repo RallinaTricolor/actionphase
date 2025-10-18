@@ -14,6 +14,16 @@ import { TEST_USERS, TestUser } from './test-users';
 export async function loginAs(page: Page, userKey: keyof typeof TEST_USERS) {
   const user = TEST_USERS[userKey];
 
+  // Navigate to login page first
+  await page.goto('/login');
+
+  // Clear any existing auth state
+  await page.evaluate(() => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+  });
+
+  // Refresh to ensure clean state
   await page.goto('/login');
 
   // Fill in login form

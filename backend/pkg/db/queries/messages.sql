@@ -12,9 +12,10 @@ INSERT INTO messages (
     character_id,
     content,
     message_type,
-    visibility
+    visibility,
+    mentioned_character_ids
 ) VALUES (
-    $1, $2, $3, $4, $5, 'post', $6
+    $1, $2, $3, $4, $5, 'post', $6, $7
 )
 RETURNING *;
 
@@ -85,9 +86,10 @@ INSERT INTO messages (
     content,
     message_type,
     parent_id,
-    visibility
+    visibility,
+    mentioned_character_ids
 ) VALUES (
-    $1, $2, $3, $4, $5, 'comment', $6, $7
+    $1, $2, $3, $4, $5, 'comment', $6, $7, $8
 )
 RETURNING *;
 

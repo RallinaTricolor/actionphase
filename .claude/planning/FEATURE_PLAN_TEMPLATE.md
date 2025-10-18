@@ -734,6 +734,26 @@ Reference: `.claude/planning/E2E_TESTING_PLAN.md` and `docs/testing/E2E_QUICK_ST
   - [ ] Test user(s) exist: [list users/roles needed]
   - [ ] Test data setup: [list any games, characters, etc. needed]
 
+#### Fixture Requirements
+
+**Test Fixtures Needed**:
+- **Option A**: Use existing fixtures from `backend/pkg/db/test_fixtures/`:
+  - `01_test_users.sql` - Test users
+  - `08_e2e_dedicated_games.sql` - E2E test games
+  - [List other existing fixtures used]
+
+- **Option B**: Create new fixture (if feature requires specific test data):
+  - [ ] Create `backend/pkg/db/test_fixtures/XX_[feature]_fixtures.sql`
+  - [ ] Add fixture to `apply_all.sh` script
+  - [ ] Document fixture in `.claude/context/TEST_DATA.md`
+
+**Note**: For features that create transient data (like notifications), fixtures may not be needed. Tests can create data dynamically during execution.
+
+**Test Data Setup**:
+- [Describe how test data is set up]
+- [List any helper functions used: getFixtureGameId(), etc.]
+- [Note any data cleanup requirements]
+
 **Test Pseudocode**:
 ```typescript
 test('should [accomplish goal]', async ({ page }) => {
