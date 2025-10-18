@@ -175,6 +175,34 @@ func (q *Queries) GetCharacter(ctx context.Context, id int32) (Character, error)
 	return i, err
 }
 
+const getCharacterByNameAndGame = `-- name: GetCharacterByNameAndGame :one
+SELECT id, game_id, user_id, name, character_type, status, created_at, updated_at FROM characters
+WHERE name = $1 AND game_id = $2
+LIMIT 1
+`
+
+type GetCharacterByNameAndGameParams struct {
+	Name   string `json:"name"`
+	GameID int32  `json:"game_id"`
+}
+
+// Look up a character by name within a specific game (for mention parsing)
+func (q *Queries) GetCharacterByNameAndGame(ctx context.Context, arg GetCharacterByNameAndGameParams) (Character, error) {
+	row := q.db.QueryRow(ctx, getCharacterByNameAndGame, arg.Name, arg.GameID)
+	var i Character
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.UserID,
+		&i.Name,
+		&i.CharacterType,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getCharacterData = `-- name: GetCharacterData :many
 SELECT id, character_id, module_type, field_name, field_value, field_type, is_public, created_at, updated_at FROM character_data
 WHERE character_id = $1

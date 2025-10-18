@@ -218,21 +218,22 @@ type GamePhase struct {
 }
 
 type Message struct {
-	ID          int32             `json:"id"`
-	GameID      int32             `json:"game_id"`
-	PhaseID     pgtype.Int4       `json:"phase_id"`
-	AuthorID    int32             `json:"author_id"`
-	CharacterID int32             `json:"character_id"`
-	Content     string            `json:"content"`
-	MessageType MessageType       `json:"message_type"`
-	ParentID    pgtype.Int4       `json:"parent_id"`
-	ThreadDepth int32             `json:"thread_depth"`
-	Visibility  MessageVisibility `json:"visibility"`
-	IsEdited    bool              `json:"is_edited"`
-	IsDeleted   bool              `json:"is_deleted"`
-	CreatedAt   pgtype.Timestamp  `json:"created_at"`
-	UpdatedAt   pgtype.Timestamp  `json:"updated_at"`
-	DeletedAt   pgtype.Timestamp  `json:"deleted_at"`
+	ID                    int32             `json:"id"`
+	GameID                int32             `json:"game_id"`
+	PhaseID               pgtype.Int4       `json:"phase_id"`
+	AuthorID              int32             `json:"author_id"`
+	CharacterID           int32             `json:"character_id"`
+	Content               string            `json:"content"`
+	MessageType           MessageType       `json:"message_type"`
+	ParentID              pgtype.Int4       `json:"parent_id"`
+	ThreadDepth           int32             `json:"thread_depth"`
+	Visibility            MessageVisibility `json:"visibility"`
+	MentionedCharacterIds []int32           `json:"mentioned_character_ids"`
+	IsEdited              bool              `json:"is_edited"`
+	IsDeleted             bool              `json:"is_deleted"`
+	CreatedAt             pgtype.Timestamp  `json:"created_at"`
+	UpdatedAt             pgtype.Timestamp  `json:"updated_at"`
+	DeletedAt             pgtype.Timestamp  `json:"deleted_at"`
 }
 
 type MessageReaction struct {

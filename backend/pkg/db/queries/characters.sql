@@ -123,3 +123,9 @@ WHERE c.game_id = $1
     (g.gm_user_id = $2 AND c.character_type IN ('npc_gm', 'npc_audience'))
   )
 ORDER BY c.character_type, c.name;
+
+-- name: GetCharacterByNameAndGame :one
+-- Look up a character by name within a specific game (for mention parsing)
+SELECT * FROM characters
+WHERE name = $1 AND game_id = $2
+LIMIT 1;

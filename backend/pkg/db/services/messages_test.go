@@ -949,6 +949,195 @@ func TestMessageService_GetMessageReactions(t *testing.T) {
 	})
 }
 
+// TestMessageService_PostWithMentions tests that posts with character mentions store the mentioned_character_ids
+func TestMessageService_PostWithMentions(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &MessageService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Setup
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	playerChar, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Hero",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	aragorn, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Aragorn",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	gandalf, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Gandalf",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	t.Run("post with single mention stores mentioned_character_ids", func(t *testing.T) {
+		req := core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: playerChar.ID,
+			Content:     "Hey @Aragorn, can you help?",
+			Visibility:  string(models.MessageVisibilityGame),
+		}
+
+		post, err := service.CreatePost(context.Background(), req)
+
+		require.NoError(t, err)
+		assert.NotNil(t, post)
+		assert.Len(t, post.MentionedCharacterIds, 1)
+		assert.Contains(t, post.MentionedCharacterIds, aragorn.ID)
+	})
+
+	t.Run("post with multiple mentions stores all mentioned_character_ids", func(t *testing.T) {
+		req := core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: playerChar.ID,
+			Content:     "Hey @Aragorn and @Gandalf, what do you think?",
+			Visibility:  string(models.MessageVisibilityGame),
+		}
+
+		post, err := service.CreatePost(context.Background(), req)
+
+		require.NoError(t, err)
+		assert.NotNil(t, post)
+		assert.Len(t, post.MentionedCharacterIds, 2)
+		assert.Contains(t, post.MentionedCharacterIds, aragorn.ID)
+		assert.Contains(t, post.MentionedCharacterIds, gandalf.ID)
+	})
+
+	t.Run("post without mentions has empty mentioned_character_ids", func(t *testing.T) {
+		req := core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: playerChar.ID,
+			Content:     "This is a regular post without any mentions",
+			Visibility:  string(models.MessageVisibilityGame),
+		}
+
+		post, err := service.CreatePost(context.Background(), req)
+
+		require.NoError(t, err)
+		assert.NotNil(t, post)
+		assert.Empty(t, post.MentionedCharacterIds)
+	})
+
+	t.Run("post with duplicate mentions deduplicates", func(t *testing.T) {
+		req := core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: playerChar.ID,
+			Content:     "@Aragorn said hello. Later @Aragorn said goodbye.",
+			Visibility:  string(models.MessageVisibilityGame),
+		}
+
+		post, err := service.CreatePost(context.Background(), req)
+
+		require.NoError(t, err)
+		assert.NotNil(t, post)
+		assert.Len(t, post.MentionedCharacterIds, 1, "Should deduplicate mentions")
+		assert.Contains(t, post.MentionedCharacterIds, aragorn.ID)
+	})
+}
+
+// TestMessageService_CommentWithMentions tests that comments with character mentions store the mentioned_character_ids
+func TestMessageService_CommentWithMentions(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &MessageService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Setup
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	playerChar, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Hero",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	legolas, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Legolas",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Create parent post
+	parentPost, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID:      game.ID,
+		AuthorID:    int32(player.ID),
+		CharacterID: playerChar.ID,
+		Content:     "Original post",
+		Visibility:  string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	t.Run("comment with mention stores mentioned_character_ids", func(t *testing.T) {
+		req := core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: playerChar.ID,
+			ParentID:    parentPost.ID,
+			Content:     "Hey @Legolas, check this out!",
+			Visibility:  string(models.MessageVisibilityGame),
+		}
+
+		comment, err := service.CreateComment(context.Background(), req)
+
+		require.NoError(t, err)
+		assert.NotNil(t, comment)
+		assert.Len(t, comment.MentionedCharacterIds, 1)
+		assert.Contains(t, comment.MentionedCharacterIds, legolas.ID)
+	})
+
+	t.Run("comment without mentions has empty mentioned_character_ids", func(t *testing.T) {
+		req := core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: playerChar.ID,
+			ParentID:    parentPost.ID,
+			Content:     "This is a regular comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		}
+
+		comment, err := service.CreateComment(context.Background(), req)
+
+		require.NoError(t, err)
+		assert.NotNil(t, comment)
+		assert.Empty(t, comment.MentionedCharacterIds)
+	})
+}
+
 // Helper function
 func int32Ptr(v int32) *int32 {
 	return &v

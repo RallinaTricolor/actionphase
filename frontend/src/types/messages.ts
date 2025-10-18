@@ -18,6 +18,7 @@ export interface Message {
   is_deleted: boolean;
   created_at: string;
   updated_at: string;
+  mentioned_character_ids?: number[];
 }
 
 export interface CreatePostRequest {

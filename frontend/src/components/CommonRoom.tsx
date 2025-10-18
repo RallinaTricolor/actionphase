@@ -20,7 +20,8 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
   const currentUserId = currentUser?.id;
 
   const [posts, setPosts] = useState<Message[]>([]);
-  const [characters, setCharacters] = useState<Character[]>([]);
+  const [controllableCharacters, setControllableCharacters] = useState<Character[]>([]);
+  const [allCharacters, setAllCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
@@ -34,14 +35,16 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
       setLoading(true);
       setError(null);
 
-      // Load posts and user's controllable characters in parallel
-      const [postsResponse, charactersResponse] = await Promise.all([
+      // Load posts, user's controllable characters, and all game characters in parallel
+      const [postsResponse, controllableCharsResponse, allCharsResponse] = await Promise.all([
         apiClient.getGamePosts(gameId, { phase_id: phaseId, limit: 50, offset: 0 }),
-        apiClient.getUserControllableCharacters(gameId)
+        apiClient.getUserControllableCharacters(gameId),
+        apiClient.getGameCharacters(gameId)
       ]);
 
       setPosts(postsResponse.data);
-      setCharacters(charactersResponse.data);
+      setControllableCharacters(controllableCharsResponse.data);
+      setAllCharacters(allCharsResponse.data);
     } catch (err) {
       console.error('Failed to load Common Room data:', err);
       setError('Failed to load Common Room. Please try again.');
@@ -124,7 +127,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
       {isCurrentPhase && isGM && (
         <CreatePostForm
           gameId={gameId}
-          characters={characters}
+          characters={controllableCharacters}
           onSubmit={handleCreatePost}
           isSubmitting={isCreatingPost}
         />
@@ -156,7 +159,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
               key={post.id}
               post={post}
               gameId={gameId}
-              characters={characters}
+              characters={allCharacters}
               onCreateComment={handleCreateComment}
               currentUserId={currentUserId}
             />
