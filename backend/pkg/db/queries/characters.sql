@@ -107,7 +107,7 @@ WHERE character_id = $1 AND module_type = $2;
 -- 1. Their own player characters (where user_id matches)
 -- 2. NPCs assigned to them via npc_assignments
 -- 3. If they're the GM, all NPCs (for emergency situations, GMs can control any NPC)
-SELECT DISTINCT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at
+SELECT DISTINCT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.avatar_url, c.created_at, c.updated_at
 FROM characters c
 LEFT JOIN npc_assignments na ON c.id = na.character_id
 LEFT JOIN games g ON c.game_id = g.id
@@ -129,3 +129,19 @@ ORDER BY c.character_type, c.name;
 SELECT * FROM characters
 WHERE name = $1 AND game_id = $2
 LIMIT 1;
+
+-- name: UpdateCharacterAvatar :one
+UPDATE characters
+SET avatar_url = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteCharacterAvatar :exec
+UPDATE characters
+SET avatar_url = NULL, updated_at = NOW()
+WHERE id = $1;
+
+-- name: GetCharactersWithAvatars :many
+-- For cleanup/maintenance: find all characters with avatars
+SELECT id, avatar_url FROM characters
+WHERE avatar_url IS NOT NULL;

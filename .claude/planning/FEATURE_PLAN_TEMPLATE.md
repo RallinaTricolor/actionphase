@@ -697,9 +697,52 @@ describe('useExamples', () => {
 
 ### 4.4 E2E Testing Requirements
 
-**E2E tests are REQUIRED for features that introduce new user journeys.**
+**⚠️ CRITICAL: READ BEFORE WRITING E2E TESTS**
 
-Reference: `.claude/planning/E2E_TESTING_PLAN.md` and `docs/testing/E2E_QUICK_START.md`
+E2E tests are REQUIRED for features that introduce new user journeys, BUT:
+
+**📚 MUST READ FIRST**: `.claude/reference/E2E_TESTING_LEARNINGS_CODIFIED.md`
+
+This document contains critical lessons learned from E2E debugging. Following this workflow will save hours of debugging time.
+
+**🏗️ THE TEST PYRAMID - BOTTOM TO TOP (ALWAYS)**
+
+```
+4. E2E Tests (Playwright)    ← LAST (20-30s, limited visibility)
+   ↑
+3. Component Tests (React)    ← Third (1-2s, full visibility)
+   ↑
+2. API Tests (curl)          ← Second (<1s, full visibility)
+   ↑
+1. Backend Unit Tests (Go)   ← FIRST (<1s, full visibility)
+```
+
+**THE GOLDEN RULE**: E2E tests are the **LAST** step, not the first!
+
+**BEFORE writing E2E tests, you MUST:**
+
+1. ✅ **Backend unit tests passing** → Run: `SKIP_DB_TESTS=true just test`
+2. ✅ **API verified with curl** → Test actual HTTP requests (see justfile for examples)
+3. ✅ **Frontend component tests passing** → Run: `just test-frontend`
+4. ✅ **Backend is running** → Verify: `curl http://localhost:3000/health`
+5. ✅ **Frontend is running** → Verify: `curl http://localhost:5173`
+
+**WHEN E2E TESTS FAIL - DEBUG DOWN THE PYRAMID:**
+
+DO NOT debug Playwright selectors or try to fix E2E tests directly! Instead:
+
+1. **Verify API layer**: Test with curl using token from `/tmp/api-token.txt`
+   - Example: `just api-login TestPlayer1 && curl -H "Authorization: Bearer $(cat /tmp/api-token.txt)" http://localhost:3000/api/v1/[endpoint]`
+2. **Check response structure**: Ensure API returns expected fields (e.g., `avatar_url`, not missing!)
+3. **Verify React Query cache keys**: Hook invalidations must match component query keys
+4. **Check browser console**: Add `page.on('console', msg => console.log(msg.text()))` to see frontend errors
+5. **Only then** check E2E test selectors
+
+**Why this works**: E2E tests have slow feedback loops and poor visibility. Lower layers give instant feedback and clear error messages.
+
+**Additional References:**
+- `.claude/planning/E2E_TESTING_PLAN.md` - Comprehensive E2E strategy
+- `docs/testing/E2E_QUICK_START.md` - Quick reference and commands
 
 #### User Journey Description
 

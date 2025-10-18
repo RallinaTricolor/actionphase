@@ -22,6 +22,8 @@ export const FIXTURE_GAMES = {
   E2E_CANCEL: 'E2E Test: Game to Cancel',         // For testing game cancellation
   E2E_PAUSE: 'E2E Test: Game to Pause',           // For testing pause/resume
   E2E_ACTION: 'E2E Test: Action Submission',      // For testing action submissions
+  E2E_PM: 'E2E Test: Action Submission',          // For testing private messages (alias)
+  E2E_MESSAGES: 'E2E Test: Action Submission',    // For testing messaging (alias)
 } as const;
 
 /**

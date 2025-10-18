@@ -2,6 +2,7 @@ package http
 
 import (
 	"actionphase/pkg/auth"
+	"actionphase/pkg/avatars"
 	"actionphase/pkg/characters"
 	"actionphase/pkg/conversations"
 	"actionphase/pkg/core"
@@ -11,6 +12,9 @@ import (
 	"actionphase/pkg/notifications"
 	"actionphase/pkg/phases"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -156,6 +160,7 @@ func (h *Handler) Start() {
 	charactersRouter := chi.NewRouter()
 	charactersRouter.Route("/", func(r chi.Router) {
 		characterHandler := characters.Handler{App: h.App}
+		avatarHandler := avatars.Handler{App: h.App}
 
 		// All character routes require authentication
 		r.Group(func(r chi.Router) {
@@ -169,6 +174,10 @@ func (h *Handler) Start() {
 			r.Post("/{id}/assign", characterHandler.AssignNPC)
 			r.Post("/{id}/data", characterHandler.SetCharacterData)
 			r.Get("/{id}/data", characterHandler.GetCharacterData)
+
+			// Avatar management
+			r.Post("/{id}/avatar", avatarHandler.UploadCharacterAvatar)
+			r.Delete("/{id}/avatar", avatarHandler.DeleteCharacterAvatar)
 		})
 	})
 	apiV1Router.Mount("/characters", charactersRouter)
@@ -219,6 +228,24 @@ func (h *Handler) Start() {
 	docsHandler.RegisterRoutes(apiV1Router)
 
 	r.Mount("/api/v1", apiV1Router)
+
+	// Serve static files for local storage (only when using LocalStorage backend)
+	// S3 storage serves files directly from S3, so we only need this for local development
+	if h.App.Config.Storage.Backend == "local" {
+		workDir, _ := os.Getwd()
+		filesDir := http.Dir(filepath.Join(workDir, h.App.Config.Storage.LocalPath))
+		h.App.Logger.Info("Serving static files",
+			"path", "/uploads",
+			"directory", filesDir)
+
+		// Use FileServer to serve files from the uploads directory
+		fileServer := http.FileServer(filesDir)
+		r.Get("/uploads/*", func(w http.ResponseWriter, r *http.Request) {
+			// Strip /uploads prefix and serve the file
+			r.URL.Path = strings.TrimPrefix(r.URL.Path, "/uploads")
+			fileServer.ServeHTTP(w, r)
+		})
+	}
 
 	// Create HTTP server with configuration
 	server := &http.Server{

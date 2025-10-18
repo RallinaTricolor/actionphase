@@ -25,6 +25,7 @@ type Config struct {
 	JWT      JWTConfig      `env:"JWT"`
 	Server   ServerConfig   `env:"SERVER"`
 	App      AppConfig      `env:"APP"`
+	Storage  StorageConfig  `env:"STORAGE"`
 }
 
 // DatabaseConfig contains database connection and behavior settings.
@@ -94,6 +95,26 @@ type AppConfig struct {
 	CORSOrigins []string `env:"CORS_ORIGINS"`
 }
 
+// StorageConfig contains file storage configuration.
+// Supports both local filesystem (dev/staging) and S3-compatible cloud storage (production).
+type StorageConfig struct {
+	// Backend specifies the storage backend ("local" or "s3")
+	Backend string `env:"STORAGE_BACKEND"`
+
+	// LocalPath is the filesystem path for local storage (e.g., "/var/uploads")
+	LocalPath string `env:"STORAGE_LOCAL_PATH"`
+
+	// PublicURL is the base URL for serving uploaded files
+	// For local: "http://localhost:3000/uploads"
+	// For S3 with CDN: "https://cdn.example.com"
+	PublicURL string `env:"STORAGE_PUBLIC_URL"`
+
+	// S3 configuration (only used when Backend = "s3")
+	S3Bucket   string `env:"STORAGE_S3_BUCKET"`
+	S3Region   string `env:"STORAGE_S3_REGION"`
+	S3Endpoint string `env:"STORAGE_S3_ENDPOINT"` // Optional, for S3-compatible services (MinIO, DigitalOcean Spaces)
+}
+
 // LoadConfig loads configuration from environment variables with sensible defaults.
 // It validates required fields and returns an error if critical configuration is missing.
 //
@@ -135,6 +156,14 @@ func LoadConfig() (*Config, error) {
 			CORSEnabled:   getEnvBool("CORS_ENABLED", true),
 			CORSOrigins:   getEnvStringSlice("CORS_ORIGINS", []string{"http://localhost:5173"}),
 		},
+		Storage: StorageConfig{
+			Backend:    getEnvString("STORAGE_BACKEND", "local"),
+			LocalPath:  getEnvString("STORAGE_LOCAL_PATH", "./uploads"),
+			PublicURL:  getEnvString("STORAGE_PUBLIC_URL", "http://localhost:3000/uploads"),
+			S3Bucket:   getEnvString("STORAGE_S3_BUCKET", ""),
+			S3Region:   getEnvString("STORAGE_S3_REGION", "us-east-1"),
+			S3Endpoint: getEnvString("STORAGE_S3_ENDPOINT", ""),
+		},
 	}
 
 	// Validate required configuration
@@ -170,6 +199,22 @@ func (c *Config) Validate() error {
 	validLogLevels := []string{"debug", "info", "warn", "error"}
 	if !contains(validLogLevels, c.App.LogLevel) {
 		return fmt.Errorf("LOG_LEVEL must be one of: %v", validLogLevels)
+	}
+
+	// Validate storage configuration
+	validStorageBackends := []string{"local", "s3"}
+	if !contains(validStorageBackends, c.Storage.Backend) {
+		return fmt.Errorf("STORAGE_BACKEND must be one of: %v", validStorageBackends)
+	}
+
+	// S3-specific validation
+	if c.Storage.Backend == "s3" {
+		if c.Storage.S3Bucket == "" {
+			return fmt.Errorf("STORAGE_S3_BUCKET is required when using S3 storage")
+		}
+		if c.Storage.S3Region == "" {
+			return fmt.Errorf("STORAGE_S3_REGION is required when using S3 storage")
+		}
 	}
 
 	return nil

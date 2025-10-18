@@ -3,6 +3,7 @@ package core
 import (
 	models "actionphase/pkg/db/models"
 	"context"
+	"io"
 	"time"
 )
 
@@ -687,4 +688,65 @@ type NotificationServiceInterface interface {
 
 	// NotifyCharacterStatusChange creates notification for character approval/rejection
 	NotifyCharacterStatusChange(ctx context.Context, playerUserID int32, gameID int32, characterID int32, characterName string, approved bool) error
+}
+
+// StorageBackendInterface defines the contract for file storage operations.
+// Supports both local filesystem and cloud storage (S3-compatible).
+//
+// Usage Example:
+//
+//	// Local storage
+//	localStorage := storage.NewLocalStorage("/var/uploads", "http://localhost:3000/uploads")
+//	avatarURL, err := localStorage.Upload(ctx, "avatars/characters/1/avatar.jpg", file, "image/jpeg")
+//
+//	// S3 storage
+//	s3Storage := storage.NewS3Storage("my-bucket", "us-east-1", "https://cdn.example.com")
+//	avatarURL, err := s3Storage.Upload(ctx, "avatars/characters/1/avatar.jpg", file, "image/jpeg")
+type StorageBackendInterface interface {
+	// Upload saves a file to storage and returns its public URL
+	// path: relative path within storage (e.g., "avatars/characters/1/avatar.jpg")
+	// file: the file data to upload
+	// contentType: MIME type of the file (e.g., "image/jpeg")
+	Upload(ctx context.Context, path string, file io.Reader, contentType string) (string, error)
+
+	// Delete removes a file from storage
+	// path: relative path within storage
+	Delete(ctx context.Context, path string) error
+
+	// GetURL returns the public URL for a file path
+	// path: relative path within storage
+	GetURL(path string) string
+}
+
+// AvatarServiceInterface defines the contract for avatar management operations.
+// Handles character avatar uploads, deletion, and storage cleanup.
+//
+// Usage Example:
+//
+//	avatarService := &services.AvatarService{
+//	    DB: pool,
+//	    Storage: localStorage,
+//	    CharacterService: characterService,
+//	}
+//
+//	// Upload character avatar
+//	avatarURL, err := avatarService.UploadCharacterAvatar(ctx, characterID, file, "avatar.jpg", "image/jpeg")
+//
+//	// Delete character avatar
+//	err := avatarService.DeleteCharacterAvatar(ctx, characterID)
+type AvatarServiceInterface interface {
+	// UploadCharacterAvatar uploads an avatar image for a character
+	// Returns the public URL of the uploaded avatar
+	// Validates file type (must be image/jpeg, image/png, or image/webp)
+	// Validates file size (must be <= 5MB)
+	// Deletes previous avatar if exists
+	UploadCharacterAvatar(ctx context.Context, characterID int32, file io.Reader, filename string, contentType string) (string, error)
+
+	// DeleteCharacterAvatar removes a character's avatar
+	// Deletes the file from storage and updates database
+	DeleteCharacterAvatar(ctx context.Context, characterID int32) error
+
+	// GetCharacterAvatarURL retrieves the avatar URL for a character
+	// Returns nil if character has no avatar
+	GetCharacterAvatarURL(ctx context.Context, characterID int32) (*string, error)
 }
