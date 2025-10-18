@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { screen, waitFor, fireEvent } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { GameDetailsPage } from '../GameDetailsPage'
+import { GameProvider } from '../../contexts/GameContext'
 import { renderWithProviders } from '../../test-utils/render'
 import { server } from '../../mocks/server'
 import type { GameWithDetails, GameParticipant } from '../../types/games'
@@ -108,6 +109,15 @@ describe('GameDetailsPage', () => {
     )
   }
 
+  // Helper to render GameDetailsPage with GameProvider
+  const renderGameDetailsPage = (gameId: number = 1, props?: Partial<React.ComponentProps<typeof GameDetailsPage>>) => {
+    return renderWithProviders(
+      <GameProvider gameId={gameId}>
+        <GameDetailsPage gameId={gameId} {...props} />
+      </GameProvider>
+    )
+  }
+
   beforeEach(() => {
     server.resetHandlers()
     localStorage.clear()
@@ -129,7 +139,7 @@ describe('GameDetailsPage', () => {
         })
       )
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Error')).toBeInTheDocument()
@@ -142,7 +152,7 @@ describe('GameDetailsPage', () => {
     it('should display game title, description, and basic info', async () => {
       setupDefaultHandlers()
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
@@ -155,7 +165,7 @@ describe('GameDetailsPage', () => {
     it('should display participant count', async () => {
       setupDefaultHandlers()
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         const playerCounts = screen.getAllByText(/2 \/ 5/)
@@ -168,7 +178,7 @@ describe('GameDetailsPage', () => {
     it('should show Apply to Join button for non-GM during recruitment', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 100) // Not GM, not participant
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /apply to join/i })).toBeInTheDocument()
@@ -178,7 +188,7 @@ describe('GameDetailsPage', () => {
     it('should not show GM controls for visitors', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 100)
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
@@ -192,7 +202,7 @@ describe('GameDetailsPage', () => {
     it('should display application status and withdraw button', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 100, true) // Has application
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
@@ -209,7 +219,7 @@ describe('GameDetailsPage', () => {
     it('should not show Apply to Join button when application exists', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 100, true)
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText(/your application status/i)).toBeInTheDocument()
@@ -223,7 +233,7 @@ describe('GameDetailsPage', () => {
     it('should show Edit Game button for GM', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 999) // GM user
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       // Wait for game to load first
       await waitFor(() => {
@@ -239,7 +249,7 @@ describe('GameDetailsPage', () => {
     it('should show state transition buttons for GM during recruitment', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 999)
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
@@ -254,7 +264,7 @@ describe('GameDetailsPage', () => {
     it('should not show Apply to Join button for GM', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 999)
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
@@ -272,7 +282,7 @@ describe('GameDetailsPage', () => {
     it('should show Leave Game button for participants', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 2) // player1
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
@@ -286,7 +296,7 @@ describe('GameDetailsPage', () => {
     it('should not show GM controls for participants', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 2)
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
@@ -300,7 +310,7 @@ describe('GameDetailsPage', () => {
     it('should show correct tabs for GM during recruitment', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 999)
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
@@ -316,7 +326,7 @@ describe('GameDetailsPage', () => {
     it('should display participants list when clicking Participants tab', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 999)
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         const participantsTab = screen.getByRole('button', { name: /participants/i })
@@ -335,7 +345,7 @@ describe('GameDetailsPage', () => {
       const inProgressGame = { ...mockGame, state: 'in_progress' as const }
       setupDefaultHandlers(inProgressGame, mockParticipants, 2) // player
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /submit action/i })).toBeInTheDocument()
@@ -349,7 +359,7 @@ describe('GameDetailsPage', () => {
       const inProgressGame = { ...mockGame, state: 'in_progress' as const }
       setupDefaultHandlers(inProgressGame, mockParticipants, 2)
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
@@ -369,7 +379,7 @@ describe('GameDetailsPage', () => {
       const setupGame = { ...mockGame, state: 'setup' as const }
       setupDefaultHandlers(setupGame, [], 999)
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
@@ -384,7 +394,7 @@ describe('GameDetailsPage', () => {
       const charCreationGame = { ...mockGame, state: 'character_creation' as const }
       setupDefaultHandlers(charCreationGame, mockParticipants, 999)
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
@@ -399,7 +409,7 @@ describe('GameDetailsPage', () => {
       const inProgressGame = { ...mockGame, state: 'in_progress' as const }
       setupDefaultHandlers(inProgressGame, mockParticipants, 999)
 
-      renderWithProviders(<GameDetailsPage gameId={1} />)
+      renderGameDetailsPage(1)
 
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()

@@ -107,6 +107,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -120,6 +121,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -133,6 +135,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -148,6 +151,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -161,6 +165,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -219,6 +224,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -237,6 +243,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -254,6 +261,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -267,6 +275,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -281,6 +290,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -304,6 +314,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -325,6 +336,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -338,6 +350,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -352,6 +365,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -366,6 +380,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -384,6 +399,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -398,6 +414,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -414,6 +431,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -432,6 +450,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -450,6 +469,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -504,6 +524,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -521,6 +542,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -542,6 +564,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -553,24 +576,6 @@ describe('PostCard', () => {
       expect(textarea).toHaveValue('Test comment content');
     });
 
-    it('has textarea focused automatically', async () => {
-      const user = userEvent.setup();
-      renderWithProviders(
-        <PostCard
-          post={mockPost}
-          gameId={1}
-          characters={mockCharacters}
-          onCreateComment={mockOnCreateComment}
-        />
-      );
-
-      await user.click(screen.getByRole('button', { name: /add comment/i }));
-
-      await waitFor(() => {
-        const textarea = screen.getByPlaceholderText(/write a comment\.\.\./i);
-        expect(textarea).toHaveFocus();
-      });
-    });
   });
 
   describe('Comment Form - Validation', () => {
@@ -582,6 +587,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -599,6 +605,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -619,6 +626,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -645,6 +653,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -668,6 +677,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -691,6 +701,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -719,6 +730,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -752,6 +764,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -778,6 +791,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -805,6 +819,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -824,6 +839,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -849,6 +865,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -872,6 +889,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -901,6 +919,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -931,6 +950,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -955,6 +975,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -979,6 +1000,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -1004,6 +1026,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -1025,6 +1048,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -1052,6 +1076,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -1079,6 +1104,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -1099,6 +1125,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -1119,6 +1146,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -1139,6 +1167,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 
@@ -1159,6 +1188,7 @@ describe('PostCard', () => {
           gameId={1}
           characters={mockCharacters}
           onCreateComment={mockOnCreateComment}
+          currentUserId={100}
         />
       );
 

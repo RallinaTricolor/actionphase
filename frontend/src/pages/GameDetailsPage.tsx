@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import type { GameWithDetails, GameParticipant, GameState, GameApplication } from '../types/games';
+import type { GameState, GameApplication } from '../types/games';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
 import { useAuth } from '../contexts/AuthContext';
+import { useGameContext } from '../contexts/GameContext';
 import { GameApplicationsList } from '../components/GameApplicationsList';
 import { ApplyToGameModal } from '../components/ApplyToGameModal';
 import { EditGameModal } from '../components/EditGameModal';
@@ -23,19 +24,31 @@ interface GameDetailsPageProps {
 }
 
 export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsPageProps) => {
-  // Get current user from AuthContext
+  // Get data from contexts
   const { currentUser, isCheckingAuth } = useAuth();
+  const {
+    game,
+    participants,
+    isLoadingGame,
+    isLoadingParticipants,
+    isGM,
+    isParticipant,
+    userCharacters,
+    refetchGameData,
+  } = useGameContext();
+
   const currentUserId = currentUser?.id ?? null;
 
-  const [game, setGame] = useState<GameWithDetails | null>(null);
-  const [participants, setParticipants] = useState<GameParticipant[]>([]);
+  // Local UI state only
   const [userApplication, setUserApplication] = useState<GameApplication | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('default');
+
+  // Combined loading state
+  const loading = isLoadingGame || isLoadingParticipants;
 
   // Get current phase data using react-query
   const { data: currentPhaseData } = useQuery({
@@ -45,65 +58,10 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
     refetchInterval: 30000, // Refetch every 30 seconds when game is in progress
   });
 
-  // Compute isGM and isParticipant early for use in queries
-  const isGM = useMemo(() => {
-    return isGMProp || Boolean(game && currentUserId && game.gm_user_id === currentUserId);
-  }, [isGMProp, game, currentUserId]);
-
-  const isParticipant = useMemo(() => {
-    return participants.some(p => p.user_id === currentUserId);
-  }, [participants, currentUserId]);
-
-  // Get user's controllable characters for private messaging
-  // Enable for everyone in in_progress games since they might have characters even if not in participants table yet
-  const { data: controllableCharacters = [], isLoading: controllableCharsLoading, error: controllableCharsError } = useQuery({
-    queryKey: ['controllableCharacters', gameId],
-    queryFn: async () => {
-      console.log('[GameDetailsPage] Fetching controllable characters for gameId:', gameId);
-      const result = await apiClient.getUserControllableCharacters(gameId);
-      console.log('[GameDetailsPage] Controllable characters result:', result.data);
-      return result.data;
-    },
-    enabled: !!gameId && !!game && game.state === 'in_progress',
-  });
-
-  // Debug logging for query state
+  // Fetch user's application if not GM and game is in recruitment
   useEffect(() => {
-    console.log('[GameDetailsPage] Controllable characters query state:', {
-      enabled: !!gameId && !!game && (isGM || isParticipant),
-      isGM,
-      isParticipant,
-      controllableCharacters,
-      isLoading: controllableCharsLoading,
-      error: controllableCharsError
-    });
-  }, [gameId, game, isGM, isParticipant, controllableCharacters, controllableCharsLoading, controllableCharsError]);
-
-  useEffect(() => {
-    // Refetch game data when gameId or currentUserId changes
-    // This ensures application status is fetched correctly after user ID is loaded
-    if (gameId) {
-      fetchGameData();
-    }
-  }, [gameId, currentUserId]);
-
-  const fetchGameData = async () => {
-    try {
-      setLoading(true);
-      const [gameResponse, participantsResponse] = await Promise.all([
-        apiClient.getGameWithDetails(gameId),
-        apiClient.getGameParticipants(gameId)
-      ]);
-
-      setGame(gameResponse.data);
-      setParticipants(participantsResponse.data || []);
-
-      // Only fetch user's application if they're not the GM and game is in recruitment
-      // Applications are only relevant during recruitment phase
-      // Note: currentUserId might not be available on first render, but fetchGameData is called
-      // again after state changes and we can rely on the user refreshing if needed
-      const isGameGM = gameResponse.data && currentUserId && gameResponse.data.gm_user_id === currentUserId;
-      if (!isGameGM && !isGMProp && gameResponse.data.state === 'recruitment' && currentUserId) {
+    const fetchUserApplication = async () => {
+      if (!isGM && game?.state === 'recruitment' && currentUserId) {
         try {
           const applicationResponse = await apiClient.getMyGameApplication(gameId);
           setUserApplication(applicationResponse.data);
@@ -114,14 +72,12 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
       } else {
         setUserApplication(null);
       }
+    };
 
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load game details');
-    } finally {
-      setLoading(false);
+    if (game) {
+      fetchUserApplication();
     }
-  };
+  }, [gameId, game, isGM, currentUserId]);
 
   const handleStateChange = async (newState: GameState) => {
     if (!game) return;
@@ -129,7 +85,7 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
     try {
       setActionLoading(true);
       await apiClient.updateGameState(gameId, { state: newState });
-      await fetchGameData(); // Refresh data
+      await refetchGameData(); // Refresh data from context
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update game state');
     } finally {
@@ -138,7 +94,7 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
   };
 
   const handleApplicationSubmitted = () => {
-    fetchGameData(); // Refresh data after application is submitted
+    refetchGameData(); // Refresh data from context
   };
 
   const handleWithdrawApplication = async () => {
@@ -147,7 +103,7 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
     try {
       setActionLoading(true);
       await apiClient.withdrawGameApplication(gameId);
-      await fetchGameData(); // Refresh data
+      await refetchGameData(); // Refresh data from context
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to withdraw application');
     } finally {
@@ -161,7 +117,7 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
     try {
       setActionLoading(true);
       await apiClient.leaveGame(gameId);
-      await fetchGameData(); // Refresh data
+      await refetchGameData(); // Refresh data from context
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to leave game');
     } finally {
@@ -596,7 +552,7 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
                 <div className="h-[600px]">
                   <PrivateMessages
                     gameId={gameId}
-                    characters={controllableCharacters}
+                    characters={userCharacters}
                     isAnonymous={game.is_anonymous || false}
                   />
                 </div>
@@ -624,7 +580,7 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
           game={game}
           isOpen={showEditModal}
           onClose={() => setShowEditModal(false)}
-          onGameUpdated={fetchGameData}
+          onGameUpdated={refetchGameData}
         />
       )}
     </div>

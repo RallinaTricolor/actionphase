@@ -124,7 +124,8 @@ describe('PhaseManagement', () => {
       await waitFor(() => {
         const activeTexts = screen.getAllByText('Currently Active')
         expect(activeTexts.length).toBeGreaterThan(0)
-        expect(screen.getByText(/Common Room \(Phase 1\)/i)).toBeInTheDocument()
+        // Mock data has title "Opening Discussion" with phase_number 1
+        expect(screen.getByText(/Opening Discussion \(Phase 1\)/i)).toBeInTheDocument()
       })
     })
 

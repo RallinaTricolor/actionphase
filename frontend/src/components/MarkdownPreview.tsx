@@ -103,15 +103,31 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       }
 
       let processedText = segment.text;
-      sortedCharacters.forEach(({ id, name }) => {
+
+      // Use placeholders to prevent nested replacements
+      // First pass: replace mentions with unique placeholders
+      const replacements: Array<{ placeholder: string; replacement: string }> = [];
+      sortedCharacters.forEach(({ id, name }, index) => {
         // Simple regex without lookbehind/lookahead since we already filtered out code blocks
         const mentionRegex = new RegExp(`@(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g');
+        const placeholder = `___MENTION_${index}_${id}___`;
 
-        // Replace with mark element
+        // Replace with placeholder
         processedText = processedText.replace(
           mentionRegex,
-          `<mark data-mention-id="${id}">@$1</mark>`
+          (match) => {
+            replacements.push({
+              placeholder,
+              replacement: `<mark data-mention-id="${id}">${match}</mark>`,
+            });
+            return placeholder;
+          }
         );
+      });
+
+      // Second pass: replace placeholders with actual mark elements
+      replacements.forEach(({ placeholder, replacement }) => {
+        processedText = processedText.replace(placeholder, replacement);
       });
 
       return processedText;

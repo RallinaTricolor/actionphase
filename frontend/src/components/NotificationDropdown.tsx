@@ -6,19 +6,24 @@ import NotificationItem from './NotificationItem';
 interface NotificationDropdownProps {
   isOpen: boolean;
   onClose: () => void;
+  bellButtonRef?: React.RefObject<HTMLButtonElement>;
 }
 
-export default function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
+export default function NotificationDropdown({ isOpen, onClose, bellButtonRef }: NotificationDropdownProps) {
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: notificationsData, isLoading, error } = useNotifications({ limit: 20 });
   const markAllAsRead = useMarkAllAsRead();
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside (but not on the bell button)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const clickedDropdown = dropdownRef.current && dropdownRef.current.contains(target);
+      const clickedBell = bellButtonRef?.current && bellButtonRef.current.contains(target);
+
+      if (!clickedDropdown && !clickedBell) {
         onClose();
       }
     };
@@ -30,7 +35,7 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, bellButtonRef]);
 
   if (!isOpen) return null;
 
