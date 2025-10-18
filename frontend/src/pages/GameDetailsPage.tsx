@@ -437,7 +437,7 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
               </button>
             )}
 
-            {!isGM && isParticipant && (
+            {!isGM && isParticipant && game.state !== 'completed' && game.state !== 'cancelled' && (
               <button
                 onClick={handleLeaveGame}
                 disabled={actionLoading}

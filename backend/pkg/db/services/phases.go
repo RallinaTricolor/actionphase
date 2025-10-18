@@ -280,7 +280,7 @@ func (ps *PhaseService) SubmitAction(ctx context.Context, req core.SubmitActionR
 	return &action, nil
 }
 
-func (ps *PhaseService) GetUserAction(ctx context.Context, gameID, userID, phaseID int32) (*models.ActionSubmission, error) {
+func (ps *PhaseService) GetUserAction(ctx context.Context, gameID, userID, phaseID int32) (*models.GetUserActionRow, error) {
 	queries := models.New(ps.DB)
 
 	params := models.GetUserActionParams{

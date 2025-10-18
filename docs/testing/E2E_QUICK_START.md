@@ -130,6 +130,97 @@ test.describe('Feature Name', () => {
 
 ---
 
+## 🗄️ Test Fixture Management
+
+**⚠️ IMPORTANT: Tests automatically reset fixtures before running**
+
+### Automatic Fixture Reset
+
+Fixtures are automatically reset before each test run via global setup:
+
+```bash
+# Just run tests - fixtures reset automatically!
+npm run test:e2e
+```
+
+The global setup script (`e2e/global-setup.ts`) runs `apply_all.sh` before tests start.
+
+### Manual Fixture Reset
+
+If you need to reset fixtures manually:
+
+```bash
+# From project root
+./backend/pkg/db/test_fixtures/apply_all.sh
+```
+
+### Shared vs Dedicated Fixtures
+
+**Shared Fixtures (READ-ONLY)**:
+- Use for tests that only VIEW data
+- Safe for parallel execution
+- Examples: "The Heist at Goldstone Bank", "Shadows Over Innsmouth"
+
+**Dedicated Fixtures (STATE-MODIFYING)**:
+- Use for tests that CHANGE game state
+- Reset automatically before each test run
+- Examples:
+  - `E2E_COMPLETE` → "E2E Test: Game to Complete"
+  - `E2E_CANCEL` → "E2E Test: Game to Cancel"
+  - `E2E_PAUSE` → "E2E Test: Game to Pause"
+  - `E2E_ACTION` → "E2E Test: Action Submission"
+
+### Looking Up Fixture Games
+
+**Always use `getFixtureGameId()` - never hardcode IDs!**
+
+```typescript
+import { getFixtureGameId, FIXTURE_GAMES } from '../fixtures/game-helpers';
+
+// ✅ GOOD: Look up by title (resilient to fixture resets)
+const gameId = await getFixtureGameId(page, 'E2E_COMPLETE');
+await page.goto(`/games/${gameId}`);
+
+// ❌ BAD: Hardcoded ID (breaks when fixtures reset)
+const gameId = 364;
+```
+
+**Available Fixture Game Constants**:
+```typescript
+FIXTURE_GAMES = {
+  // Shared (read-only)
+  HEIST: 'The Heist at Goldstone Bank',
+  WESTMARCH: 'Chronicles of Westmarch',
+  SHADOWS: 'Shadows Over Innsmouth',
+  DRAGON: 'The Dragon of Mount Krag',
+  MANOR: 'The Mystery of Blackwood Manor',
+  COMMON_ROOM_TEST: 'E2E Common Room Test Game',
+
+  // Dedicated (state-modifying - safe to modify)
+  E2E_COMPLETE: 'E2E Test: Game to Complete',
+  E2E_CANCEL: 'E2E Test: Game to Cancel',
+  E2E_PAUSE: 'E2E Test: Game to Pause',
+  E2E_ACTION: 'E2E Test: Action Submission',
+}
+```
+
+**Example Usage**:
+```typescript
+test('GM can complete a game', async ({ page }) => {
+  await loginAs(page, 'GM');
+
+  // Use dedicated E2E fixture (safe to modify)
+  const gameId = await getFixtureGameId(page, 'E2E_COMPLETE');
+  await page.goto(`/games/${gameId}`);
+
+  // Safe to complete this game - it resets before next test run
+  await page.click('button:has-text("Complete Game")');
+  await expect(page.locator('span:has-text("Completed")')).toBeVisible();
+});
+```
+
+---
+
 ## 🎯 When to Add E2E Tests
 
 **Always**:

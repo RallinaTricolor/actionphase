@@ -41,6 +41,9 @@ PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f 
 echo "💬 Creating Common Room test game..."
 PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$FIXTURES_DIR/07_common_room.sql"
 
+echo "🧪 Creating dedicated E2E test games..."
+PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$FIXTURES_DIR/08_e2e_dedicated_games.sql"
+
 echo "✅ Test data fixtures applied successfully!"
 echo ""
 echo "Test Accounts:"

@@ -9,12 +9,19 @@ import { Page, expect } from '@playwright/test';
  * Use these constants with getFixtureGameId() to avoid brittle hardcoded IDs
  */
 export const FIXTURE_GAMES = {
+  // Shared fixtures (READ-ONLY - do not modify in tests)
   HEIST: 'The Heist at Goldstone Bank',           // In-progress, has phases, characters
   WESTMARCH: 'Chronicles of Westmarch',           // In-progress, lots of phases (pagination test)
   SHADOWS: 'Shadows Over Innsmouth',              // In-progress, common room phase
   DRAGON: 'The Dragon of Mount Krag',             // In-progress, complex phase history
   MANOR: 'The Mystery of Blackwood Manor',        // Recruitment state
   COMMON_ROOM_TEST: 'E2E Common Room Test Game',  // Common room testing
+
+  // Dedicated E2E fixtures (STATE-MODIFYING - safe to complete/cancel/modify)
+  E2E_COMPLETE: 'E2E Test: Game to Complete',     // For testing game completion
+  E2E_CANCEL: 'E2E Test: Game to Cancel',         // For testing game cancellation
+  E2E_PAUSE: 'E2E Test: Game to Pause',           // For testing pause/resume
+  E2E_ACTION: 'E2E Test: Action Submission',      // For testing action submissions
 } as const;
 
 /**

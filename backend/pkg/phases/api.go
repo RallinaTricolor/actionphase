@@ -726,6 +726,10 @@ func (h *Handler) GetUserActions(w http.ResponseWriter, r *http.Request) {
 			actionResp.CharacterID = &action.CharacterID.Int32
 		}
 
+		if action.CharacterName.Valid {
+			actionResp.CharacterName = &action.CharacterName.String
+		}
+
 		response = append(response, actionResp)
 	}
 

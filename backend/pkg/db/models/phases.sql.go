@@ -803,8 +803,10 @@ func (q *Queries) GetUnpublishedResultsCount(ctx context.Context, phaseID int32)
 }
 
 const getUserAction = `-- name: GetUserAction :one
-SELECT id, game_id, user_id, phase_id, character_id, content, is_draft, submitted_at, updated_at FROM action_submissions
-WHERE game_id = $1 AND user_id = $2 AND phase_id = $3
+SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.is_draft, acts.submitted_at, acts.updated_at, c.name as character_name
+FROM action_submissions acts
+LEFT JOIN characters c ON acts.character_id = c.id
+WHERE acts.game_id = $1 AND acts.user_id = $2 AND acts.phase_id = $3
 `
 
 type GetUserActionParams struct {
@@ -813,9 +815,22 @@ type GetUserActionParams struct {
 	PhaseID int32 `json:"phase_id"`
 }
 
-func (q *Queries) GetUserAction(ctx context.Context, arg GetUserActionParams) (ActionSubmission, error) {
+type GetUserActionRow struct {
+	ID            int32              `json:"id"`
+	GameID        int32              `json:"game_id"`
+	UserID        int32              `json:"user_id"`
+	PhaseID       int32              `json:"phase_id"`
+	CharacterID   pgtype.Int4        `json:"character_id"`
+	Content       string             `json:"content"`
+	IsDraft       pgtype.Bool        `json:"is_draft"`
+	SubmittedAt   pgtype.Timestamptz `json:"submitted_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	CharacterName pgtype.Text        `json:"character_name"`
+}
+
+func (q *Queries) GetUserAction(ctx context.Context, arg GetUserActionParams) (GetUserActionRow, error) {
 	row := q.db.QueryRow(ctx, getUserAction, arg.GameID, arg.UserID, arg.PhaseID)
-	var i ActionSubmission
+	var i GetUserActionRow
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
@@ -826,14 +841,16 @@ func (q *Queries) GetUserAction(ctx context.Context, arg GetUserActionParams) (A
 		&i.IsDraft,
 		&i.SubmittedAt,
 		&i.UpdatedAt,
+		&i.CharacterName,
 	)
 	return i, err
 }
 
 const getUserActions = `-- name: GetUserActions :many
-SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.is_draft, acts.submitted_at, acts.updated_at, gp.phase_type, gp.phase_number
+SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.is_draft, acts.submitted_at, acts.updated_at, gp.phase_type, gp.phase_number, c.name as character_name
 FROM action_submissions acts
 JOIN game_phases gp ON acts.phase_id = gp.id
+LEFT JOIN characters c ON acts.character_id = c.id
 WHERE acts.game_id = $1 AND acts.user_id = $2
 ORDER BY gp.phase_number DESC
 `
@@ -844,17 +861,18 @@ type GetUserActionsParams struct {
 }
 
 type GetUserActionsRow struct {
-	ID          int32              `json:"id"`
-	GameID      int32              `json:"game_id"`
-	UserID      int32              `json:"user_id"`
-	PhaseID     int32              `json:"phase_id"`
-	CharacterID pgtype.Int4        `json:"character_id"`
-	Content     string             `json:"content"`
-	IsDraft     pgtype.Bool        `json:"is_draft"`
-	SubmittedAt pgtype.Timestamptz `json:"submitted_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	PhaseType   string             `json:"phase_type"`
-	PhaseNumber int32              `json:"phase_number"`
+	ID            int32              `json:"id"`
+	GameID        int32              `json:"game_id"`
+	UserID        int32              `json:"user_id"`
+	PhaseID       int32              `json:"phase_id"`
+	CharacterID   pgtype.Int4        `json:"character_id"`
+	Content       string             `json:"content"`
+	IsDraft       pgtype.Bool        `json:"is_draft"`
+	SubmittedAt   pgtype.Timestamptz `json:"submitted_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	PhaseType     string             `json:"phase_type"`
+	PhaseNumber   int32              `json:"phase_number"`
+	CharacterName pgtype.Text        `json:"character_name"`
 }
 
 func (q *Queries) GetUserActions(ctx context.Context, arg GetUserActionsParams) ([]GetUserActionsRow, error) {
@@ -878,6 +896,7 @@ func (q *Queries) GetUserActions(ctx context.Context, arg GetUserActionsParams) 
 			&i.UpdatedAt,
 			&i.PhaseType,
 			&i.PhaseNumber,
+			&i.CharacterName,
 		); err != nil {
 			return nil, err
 		}

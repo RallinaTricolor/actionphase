@@ -846,22 +846,54 @@ test('GM can create a game', async ({ page }) => {
 
 **Available Test Fixtures** (in `backend/pkg/db/test_fixtures/`):
 
-| Fixture | Description | When to Use |
-|---------|-------------|-------------|
-| **Test Users** | GM (test_gm), Player1-4 (test_player1-4) | All tests |
-| **Game #2** ("The Heist at Goldstone Bank") | in_progress state, active action phase, 4 participants with characters | Phase management, messaging, action submission tests |
-| **Game #1** ("Shadows Over Innsmouth") | in_progress state, active common room phase, 3 participants | Common room tests |
-| **Game #5** ("The Dragon of Mount Krag") | in_progress state, complex 7-phase history | Phase history viewing tests |
-| **Game #6** ("Chronicles of Westmarch") | in_progress state, 12 phases with results | Pagination, large phase history tests |
-| **Game #7** ("The Mystery of Blackwood Manor") | recruitment state | Application/recruitment tests |
+| Fixture File | Description | Fixture Type | When to Use |
+|--------------|-------------|--------------|-------------|
+| `01_users.sql` | Test users (GM, Player1-5, Audience) | Shared | All tests |
+| `02_games_recruiting.sql` | "The Mystery of Blackwood Manor" (recruitment state) | Shared (Read-only) | Application/recruitment viewing tests |
+| `03_games_running.sql` | "The Heist at Goldstone Bank", "Shadows", "Dragon", "Chronicles" | Shared (Read-only) | Phase viewing, messaging, general navigation |
+| `04_characters.sql` | Characters for shared games | Shared (Read-only) | Character viewing tests |
+| `05_actions.sql` | Action submissions for shared games | Shared (Read-only) | Action viewing tests |
+| `06_results.sql` | Action results for shared games | Shared (Read-only) | Results viewing tests |
+| `07_common_room.sql` | "E2E Common Room Test Game" | Shared (Read-only) | Common room tests |
+| `08_e2e_dedicated_games.sql` | **E2E Test: Game to Complete**<br>**E2E Test: Game to Cancel**<br>**E2E Test: Game to Pause**<br>**E2E Test: Action Submission** | **Dedicated (State-modifying)** | **Game completion tests**<br>**Game cancellation tests**<br>**Pause/resume tests**<br>**Action submission tests** |
 
-**Note**: After applying fixtures, Game #2 will have an ID around 165+ due to auto-increment sequences. Always verify the actual game ID after applying fixtures.
+**⚠️ IMPORTANT: Shared vs Dedicated Fixtures**
 
-**Fixture Application**:
-```bash
-# Apply all fixtures before running tests
-./backend/pkg/db/test_fixtures/apply_all.sh
-```
+- **Shared Fixtures (READ-ONLY)**: Use for tests that only VIEW data without modifying game state
+  - Safe for parallel test execution
+  - Do NOT complete games, cancel games, or make irreversible state changes
+  - Examples: Viewing phases, viewing messages, navigation
+
+- **Dedicated Fixtures (STATE-MODIFYING)**: Use for tests that CHANGE game state
+  - Each test gets its own game to modify
+  - Safe to complete, cancel, pause, or otherwise change
+  - Reset automatically before each test run via global setup
+  - Examples: Completing games, cancelling applications, submitting actions
+
+**Fixture Management Strategy**:
+
+1. **Automatic Reset (Recommended)**: Fixtures are automatically reset before running tests via Playwright's global setup (`frontend/e2e/global-setup.ts`)
+   ```bash
+   # Just run tests - fixtures reset automatically
+   npm run test:e2e
+   ```
+
+2. **Manual Reset**: If you need to reset fixtures manually between test runs:
+   ```bash
+   # Reset and apply all fixtures
+   ./backend/pkg/db/test_fixtures/apply_all.sh
+   ```
+
+3. **Fixture Lookup (No Hardcoded IDs)**: Always use `getFixtureGameId()` helper to look up games by title
+   ```typescript
+   import { getFixtureGameId, FIXTURE_GAMES } from '../fixtures/game-helpers';
+
+   // ✅ GOOD: Look up by title (resilient to ID changes)
+   const gameId = await getFixtureGameId(page, 'E2E_COMPLETE');
+
+   // ❌ BAD: Hardcoded ID (breaks when fixtures reset)
+   const gameId = 364;
+   ```
 
 **Test Pattern Examples**:
 

@@ -53,13 +53,16 @@ DO UPDATE SET content = $5, character_id = $4, is_draft = $6,
 RETURNING *;
 
 -- name: GetUserAction :one
-SELECT * FROM action_submissions
-WHERE game_id = $1 AND user_id = $2 AND phase_id = $3;
+SELECT acts.*, c.name as character_name
+FROM action_submissions acts
+LEFT JOIN characters c ON acts.character_id = c.id
+WHERE acts.game_id = $1 AND acts.user_id = $2 AND acts.phase_id = $3;
 
 -- name: GetUserActions :many
-SELECT acts.*, gp.phase_type, gp.phase_number
+SELECT acts.*, gp.phase_type, gp.phase_number, c.name as character_name
 FROM action_submissions acts
 JOIN game_phases gp ON acts.phase_id = gp.id
+LEFT JOIN characters c ON acts.character_id = c.id
 WHERE acts.game_id = $1 AND acts.user_id = $2
 ORDER BY gp.phase_number DESC;
 
