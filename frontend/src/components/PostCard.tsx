@@ -58,20 +58,19 @@ export function PostCard({ post, gameId, characters, onCreateComment, currentUse
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCharacterId || !replyContent.trim()) return;
+
+    if (!selectedCharacterId || !replyContent.trim()) {
+      return;
+    }
 
     try {
       setIsSubmitting(true);
-      console.log('[PostCard] Creating comment for post:', post.id);
       await onCreateComment(post.id, selectedCharacterId, replyContent.trim());
-      console.log('[PostCard] Comment created successfully');
       setReplyContent('');
       setIsCommenting(false);
       // Ensure comments are shown and reload to display the new one
       setShowComments(true);
-      console.log('[PostCard] Loading comments...');
       await loadComments();
-      console.log('[PostCard] Comments loaded:', topLevelComments.length);
     } catch (err) {
       console.error('Failed to submit comment:', err);
     } finally {

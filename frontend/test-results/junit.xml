@@ -1,0 +1,76 @@
+<testsuites id="" name="" tests="28" failures="0" skipped="0" errors="0" time="38.317586">
+<testsuite name="auth/login.spec.ts" timestamp="2025-10-18T00:49:41.472Z" hostname="chromium" tests="8" failures="0" skipped="0" time="19.132" errors="0">
+<testcase name="User Authentication › should successfully login and logout as GM" classname="auth/login.spec.ts" time="2.529">
+</testcase>
+<testcase name="User Authentication › should successfully login and logout as Player" classname="auth/login.spec.ts" time="2.965">
+</testcase>
+<testcase name="User Authentication › should allow re-login after logout" classname="auth/login.spec.ts" time="4.503">
+</testcase>
+<testcase name="User Authentication › should handle invalid credentials" classname="auth/login.spec.ts" time="1.131">
+</testcase>
+<testcase name="User Authentication › should redirect to login when accessing protected route while unauthenticated" classname="auth/login.spec.ts" time="1.502">
+</testcase>
+<testcase name="User Authentication › should redirect to dashboard when accessing login while authenticated" classname="auth/login.spec.ts" time="3.77">
+</testcase>
+<testcase name="User Authentication › should persist authentication across page reloads" classname="auth/login.spec.ts" time="1.52">
+</testcase>
+<testcase name="User Authentication › should navigate to games page after login" classname="auth/login.spec.ts" time="1.212">
+</testcase>
+</testsuite>
+<testsuite name="gameplay/character-creation-flow.spec.ts" timestamp="2025-10-18T00:49:41.472Z" hostname="chromium" tests="2" failures="0" skipped="0" time="16.464" errors="0">
+<testcase name="Character Creation Flow › Player can create a character after being approved" classname="gameplay/character-creation-flow.spec.ts" time="11.568">
+</testcase>
+<testcase name="Character Creation Flow › GM can create NPC characters" classname="gameplay/character-creation-flow.spec.ts" time="4.896">
+</testcase>
+</testsuite>
+<testsuite name="gameplay/phase-management.spec.ts" timestamp="2025-10-18T00:49:41.472Z" hostname="chromium" tests="3" failures="0" skipped="0" time="15.778" errors="0">
+<testcase name="Phase Management Flow › GM can create a phase" classname="gameplay/phase-management.spec.ts" time="4.896">
+</testcase>
+<testcase name="Phase Management Flow › GM can activate a phase" classname="gameplay/phase-management.spec.ts" time="7.839">
+</testcase>
+<testcase name="Phase Management Flow › GM can view phase history" classname="gameplay/phase-management.spec.ts" time="3.043">
+</testcase>
+</testsuite>
+<testsuite name="gameplay/player-views-phase-history.spec.ts" timestamp="2025-10-18T00:49:41.472Z" hostname="chromium" tests="3" failures="0" skipped="0" time="9.13" errors="0">
+<testcase name="Player Views Phase History › Player can view phase history list" classname="gameplay/player-views-phase-history.spec.ts" time="2.263">
+</testcase>
+<testcase name="Player Views Phase History › Player can view details of a common_room phase" classname="gameplay/player-views-phase-history.spec.ts" time="3.201">
+</testcase>
+<testcase name="Player Views Phase History › Player can navigate back from phase details" classname="gameplay/player-views-phase-history.spec.ts" time="3.666">
+</testcase>
+</testsuite>
+<testsuite name="games/gm-creates-and-recruits.spec.ts" timestamp="2025-10-18T00:49:41.472Z" hostname="chromium" tests="2" failures="0" skipped="0" time="2.651" errors="0">
+<testcase name="GM Creates Game &amp; Recruits Players › GM can create a game" classname="games/gm-creates-and-recruits.spec.ts" time="1.272">
+</testcase>
+<testcase name="GM Creates Game &amp; Recruits Players › GM can start recruitment for a game" classname="games/gm-creates-and-recruits.spec.ts" time="1.379">
+</testcase>
+</testsuite>
+<testsuite name="games/gm-edits-game-settings.spec.ts" timestamp="2025-10-18T00:49:41.472Z" hostname="chromium" tests="3" failures="0" skipped="0" time="12.488" errors="0">
+<testcase name="GM Edits Game Settings › GM can edit game title and description" classname="games/gm-edits-game-settings.spec.ts" time="3.739">
+</testcase>
+<testcase name="GM Edits Game Settings › GM can edit game settings (genre, max players)" classname="games/gm-edits-game-settings.spec.ts" time="4.242">
+</testcase>
+<testcase name="GM Edits Game Settings › GM can toggle anonymous mode" classname="games/gm-edits-game-settings.spec.ts" time="4.507">
+</testcase>
+</testsuite>
+<testsuite name="games/gm-manages-applications.spec.ts" timestamp="2025-10-18T00:49:41.472Z" hostname="chromium" tests="3" failures="0" skipped="0" time="34.661" errors="0">
+<testcase name="GM Manages Game Applications › GM can view pending applications" classname="games/gm-manages-applications.spec.ts" time="8.994">
+</testcase>
+<testcase name="GM Manages Game Applications › GM can approve multiple applications" classname="games/gm-manages-applications.spec.ts" time="14.689">
+</testcase>
+<testcase name="GM Manages Game Applications › GM can reject applications" classname="games/gm-manages-applications.spec.ts" time="10.978">
+</testcase>
+</testsuite>
+<testsuite name="messaging/common-room.spec.ts" timestamp="2025-10-18T00:49:41.472Z" hostname="chromium" tests="3" failures="0" skipped="0" time="25.498" errors="0">
+<testcase name="Common Room Flow › GM can create a post in Common Room" classname="messaging/common-room.spec.ts" time="4.731">
+</testcase>
+<testcase name="Common Room Flow › Player can view GM posts in Common Room" classname="messaging/common-room.spec.ts" time="6.938">
+</testcase>
+<testcase name="Common Room Flow › Player can comment on GM post" classname="messaging/common-room.spec.ts" time="13.829">
+</testcase>
+</testsuite>
+<testsuite name="messaging/private-messages-flow.spec.ts" timestamp="2025-10-18T00:49:41.472Z" hostname="chromium" tests="1" failures="0" skipped="0" time="16.923" errors="0">
+<testcase name="Private Messages Flow › Players can send private messages to each other" classname="messaging/private-messages-flow.spec.ts" time="16.923">
+</testcase>
+</testsuite>
+</testsuites>

@@ -17,7 +17,7 @@ The `.claude/` directory contains organized AI context and instructions:
 
 **Before Writing ANY Tests**:
 1. Read **`.claude/context/TESTING.md`** for testing philosophy and patterns
-2. Review **`/docs/TEST_COVERAGE_ANALYSIS.md`** for current coverage status
+2. Review **`/docs/testing/COVERAGE_STATUS.md`** for current coverage status
 3. Reference **`/docs/adrs/007-testing-strategy.md`** for strategy details
 4. Check **`.claude/context/TEST_DATA.md`** when using test fixtures
 
@@ -27,14 +27,19 @@ The `.claude/` directory contains organized AI context and instructions:
 3. Check **`/docs/architecture/`** for system design context
 
 **Before Frontend State Work**:
-1. Read **`.claude/context/STATE_MANAGEMENT.md`** for state management patterns
-2. Review **`/docs/adrs/005-frontend-state-management.md`** for architecture decisions
-3. Reference **`/frontend/docs/STATE_MANAGEMENT_QUICK_REFERENCE.md`** for quick lookups
+1. Read **`.claude/context/STATE_MANAGEMENT.md`** for state management patterns (quick reference)
+2. Review **`/docs/features/STATE_MANAGEMENT.md`** for comprehensive guide
+3. Check **`/docs/adrs/005-frontend-state-management.md`** for architecture decisions
 
 **Before Working with Test Data**:
 1. Read **`.claude/context/TEST_DATA.md`** for fixture overview
-2. Review **`/docs/TEST_DATA.md`** for detailed fixture documentation
+2. Review **`/docs/testing/TEST_DATA.md`** for detailed fixture documentation
 3. Check **`/backend/pkg/db/test_fixtures/`** for actual SQL files
+
+**Before E2E Testing**:
+1. Review **`.claude/planning/E2E_TESTING_PLAN.md`** for complete implementation plan (AI-focused)
+2. Check **`/docs/testing/E2E_QUICK_START.md`** for quick reference and commands (developer reference)
+3. Reference **`.claude/planning/FEATURE_PLAN_TEMPLATE.md`** section 4.4 for E2E requirements in new features
 
 ### Context File Quick Reference
 
@@ -228,10 +233,13 @@ Location: `.claude/reference/`
 - **LOGGING_STANDARDS.md** - Logging best practices
 - **ERROR_HANDLING.md** - Error handling patterns
 
-### Current Status
+### Current Status & Testing
 - **`.claude/planning/MVP_STATUS.md`** - Current MVP implementation status and development plan
-- **`/docs/TEST_COVERAGE_ANALYSIS.md`** - Test coverage and improvement plan
-- **`/docs/TEST_DATA.md`** - Detailed test fixture documentation
+- **`.claude/planning/E2E_TESTING_PLAN.md`** - E2E testing implementation plan (AI-focused)
+- **`/docs/testing/COVERAGE_STATUS.md`** - Test coverage status and recommendations
+- **`/docs/testing/TEST_DATA.md`** - Detailed test fixture documentation
+- **`/docs/testing/E2E_QUICK_START.md`** - Quick reference for E2E testing (developer reference)
+- **`/frontend/TESTING_NOTES.md`** - Frontend testing notes and intentionally untested components
 
 ---
 
@@ -402,10 +410,11 @@ When we completed the AuthContext centralization refactor:
 
 ## Getting Help
 
-- **Project Setup**: See `/docs/DEVELOPER_ONBOARDING.md` (30-minute guide)
+- **Project Setup**: See `/docs/getting-started/DEVELOPER_ONBOARDING.md` (30-minute guide)
 - **Architecture Questions**: Read `/docs/architecture/SYSTEM_ARCHITECTURE.md`
-- **Testing Questions**: Read `.claude/context/TESTING.md`
-- **State Management**: Read `.claude/context/STATE_MANAGEMENT.md`
+- **Testing Questions**: Read `.claude/context/TESTING.md` and `/docs/testing/COVERAGE_STATUS.md`
+- **E2E Testing**: Read `.claude/planning/E2E_TESTING_PLAN.md` (implementation plan) or `/docs/testing/E2E_QUICK_START.md` (quick reference)
+- **State Management**: Read `.claude/context/STATE_MANAGEMENT.md` or `/docs/features/STATE_MANAGEMENT.md`
 - **All Documentation**: See `.claude/README.md` for complete index
 
 ---

@@ -129,7 +129,7 @@ export function PhaseManagement({ gameId, className = '' }: PhaseManagementProps
               <div>
                 <h3 className="font-medium text-blue-900">Currently Active</h3>
                 <p className="text-sm text-blue-700">
-                  {PHASE_TYPE_LABELS[currentPhase.phase_type]} (Phase {currentPhase.phase_number})
+                  {currentPhase.title || PHASE_TYPE_LABELS[currentPhase.phase_type]} (Phase {currentPhase.phase_number})
                 </p>
               </div>
               {currentPhase.deadline && (
@@ -285,7 +285,14 @@ function PhaseCard({
             Phase {phase.phase_number}
           </span>
           <div>
-            <h4 className="font-medium text-gray-900">{phaseLabel}</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-medium text-gray-900">{phase.title || phaseLabel}</h4>
+              {phase.title && (
+                <span className={`px-2 py-0.5 text-xs rounded font-medium ${phaseColorClass}`}>
+                  {phaseLabel}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-600">
               {phase.description || PHASE_TYPE_DESCRIPTIONS[phase.phase_type]}
             </p>

@@ -114,7 +114,7 @@ export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: Phase
                       Phase {phase.phase_number}
                     </span>
                     <div>
-                      <h4 className="font-medium text-gray-900">{phaseLabel}</h4>
+                      <h4 className="font-medium text-gray-900">{phase.title || phaseLabel}</h4>
                       {phase.description && (
                         <p className="text-sm text-gray-600 mt-1">{phase.description}</p>
                       )}

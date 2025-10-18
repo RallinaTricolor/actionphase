@@ -22,10 +22,12 @@ type Handler struct {
 // Request/Response types
 
 type CreatePhaseRequest struct {
-	PhaseType string              `json:"phase_type" validate:"required"`
-	StartTime *core.LocalDateTime `json:"start_time,omitempty"`
-	EndTime   *core.LocalDateTime `json:"end_time,omitempty"`
-	Deadline  *core.LocalDateTime `json:"deadline,omitempty"`
+	PhaseType   string              `json:"phase_type" validate:"required"`
+	Title       string              `json:"title,omitempty"`
+	Description string              `json:"description,omitempty"`
+	StartTime   *core.LocalDateTime `json:"start_time,omitempty"`
+	EndTime     *core.LocalDateTime `json:"end_time,omitempty"`
+	Deadline    *core.LocalDateTime `json:"deadline,omitempty"`
 }
 
 func (r *CreatePhaseRequest) Bind(req *http.Request) error {
@@ -248,11 +250,13 @@ func (h *Handler) CreatePhase(w http.ResponseWriter, r *http.Request) {
 
 	// Create phase
 	req := core.CreatePhaseRequest{
-		GameID:    int32(gameID),
-		PhaseType: data.PhaseType,
-		StartTime: data.StartTime.ToTimePtr(),
-		EndTime:   data.EndTime.ToTimePtr(),
-		Deadline:  data.Deadline.ToTimePtr(),
+		GameID:      int32(gameID),
+		PhaseType:   data.PhaseType,
+		Title:       data.Title,
+		Description: data.Description,
+		StartTime:   data.StartTime.ToTimePtr(),
+		EndTime:     data.EndTime.ToTimePtr(),
+		Deadline:    data.Deadline.ToTimePtr(),
 	}
 
 	phase, err := phaseService.CreatePhase(r.Context(), req)
