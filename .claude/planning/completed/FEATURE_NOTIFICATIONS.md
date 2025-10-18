@@ -1404,7 +1404,8 @@ test('should notify player of action result and navigate when clicked', async ({
   - [x] No badge when notification count is zero
   - [x] API error handling
   - [x] Bell present on all authenticated pages
-- [x] Run E2E tests - **ALL 7 TESTS PASSING** ✅
+  - [x] **API integration test** - verifies API endpoints return 200 and no error messages shown
+- [x] Run E2E tests - **ALL 8 TESTS PASSING** ✅
 - [ ] Write integration E2E tests (DEFERRED - requires full feature implementation):
   - [ ] Player receives private message notification (requires PM UI)
   - [ ] User receives comment reply notification (requires common room UI)
@@ -1433,14 +1434,15 @@ test('should notify player of action result and navigate when clicked', async ({
 
 **Acceptance Criteria:**
 - [x] E2E smoke tests written for notification UI components
-- [x] All E2E smoke tests passing (7/7 tests pass) ✅
+- [x] All E2E smoke tests passing (8/8 tests pass) ✅
+- [x] API integration verification - test confirms API endpoints work correctly
 - [ ] Integration E2E tests (deferred until PM/common room UI is built)
 - [ ] All manual test scenarios pass
 - [ ] Performance meets requirements (<500ms API response) - to be verified in load testing
 - [x] Security review complete
 - [ ] Documentation updated
 
-**Status**: E2E smoke tests complete and passing. Integration tests deferred until other UI features (private messages, common room) are fully implemented. The notification system backend and frontend components are fully functional.
+**Status**: E2E smoke tests complete and passing (8/8). Integration tests deferred until other UI features (private messages, common room) are fully implemented. The notification system backend and frontend components are fully functional. API integration test added to catch backend integration issues.
 
 ---
 
