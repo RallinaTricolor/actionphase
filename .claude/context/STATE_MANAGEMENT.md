@@ -2,365 +2,138 @@
 
 **IMPORTANT: Read this file before working on frontend state management.**
 
+**Comprehensive Documentation:** `/docs/features/STATE_MANAGEMENT.md` (single source of truth)
+
+This file provides quick context for AI. For complete details, see the comprehensive doc.
+
+---
+
 ## State Management Strategy
 
-ActionPhase uses a **Hybrid State Management Strategy** with specialized tools for different types of state:
+ActionPhase uses a **Hybrid State Management Strategy**:
 
-### 1. Server State: React Query (TanStack Query)
-**For all API communication and server data caching**
+1. **Server State**: React Query (TanStack Query) - API communication and caching
+2. **Authentication State**: AuthContext + React Query - Centralized auth with single source of truth
+3. **Game Context**: GameContext - Game-specific state and permissions
+4. **UI State**: React useState/useReducer - Component-local state
+5. **Global UI State**: React Context (sparingly) - Only for truly global concerns
 
-- Automatic background refetching
-- Intelligent caching with stale-while-revalidate
-- Optimistic updates for mutations
-- Automatic retry logic
-- Request deduplication
+---
 
-### 2. Authentication State: AuthContext + React Query
-**Centralized authentication with single source of truth**
+## October 2025 Refactor
 
-- JWT token management
-- User session state
-- Login/logout orchestration
-- Automatic token refresh
-- **isCheckingAuth flag** prevents race conditions
-
-### 3. UI State: React useState + useReducer
-**Component-local state for forms and interactions**
-
-- Form inputs and validation
-- Modal visibility
-- Loading states
-- Temporary UI state
-
-### 4. Global UI State: React Context (Sparingly)
-**Only for truly global state**
-
-- Theme preferences
-- User settings
-- Notification management
-- Navigation state
-
-## Core Pattern: Centralized AuthContext
-
-### The Problem (Before October 2025)
+### Problems Solved
 - **15+ components** independently fetching user data
-- Each component decoded JWT client-side
 - **60-70% duplicate API calls**
+- Client-side JWT decoding (security risk)
 - Race conditions and inconsistent loading states
-- Security risk from client-side JWT parsing
-
-### The Solution (October 2025 Refactor)
-
-**Single AuthContext with React Query integration**
-
-```typescript
-// frontend/src/contexts/AuthContext.tsx
-
-interface AuthContextValue {
-  currentUser: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  isCheckingAuth: boolean;  // CRITICAL: Prevents premature renders
-  login: (data: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
-  logout: () => void;
-  error: Error | null;
-}
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  // Single query for authentication state
-  const { data: isAuthenticated, isLoading: isCheckingAuth } = useQuery({
-    queryKey: ['auth'],
-    queryFn: () => !!apiClient.getAuthToken(),
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  });
-
-  // Single query for user data
-  const { data: currentUser, isLoading: isLoadingUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: async () => {
-      const response = await apiClient.getCurrentUser();
-      return response.data;
-    },
-    enabled: isAuthenticated === true,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-
-  const isLoading = isCheckingAuth || isLoadingUser;
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-```
+- Scattered permission calculations
 
 ### Results
-- **60-70% reduction** in `/auth/me` API calls
+- **60-70% reduction** in API calls
 - **Zero client-side JWT decoding** (security improvement)
+- **Single source of truth** for authentication
 - **Consistent loading states** across all components
-- **Single source of truth** eliminates race conditions
+- **Centralized permission logic**
 
-## Using AuthContext in Components
+---
 
-### Basic Usage
+## Critical Patterns
+
+### 1. AuthContext - Get Current User
 
 ```typescript
 import { useAuth } from '../contexts/AuthContext';
 
-export function MyComponent() {
-  const { currentUser, isCheckingAuth, isAuthenticated } = useAuth();
+const { currentUser, isCheckingAuth, isAuthenticated } = useAuth();
 
-  // Always check auth state first
-  if (isCheckingAuth) {
-    return <LoadingSpinner />;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-
-  // Safe to use currentUser here
-  const userId = currentUser?.id;
-  const username = currentUser?.username;
-
-  return <div>Welcome, {username}!</div>;
+// Always check auth state first
+if (isCheckingAuth) {
+  return <LoadingSpinner />;
 }
+
+// Safe to use currentUser
+const userId = currentUser?.id;
+const username = currentUser?.username;
 ```
 
-### Critical: isCheckingAuth Flag
-
-**ALWAYS use `isCheckingAuth` to prevent premature rendering**
+**CRITICAL: Always use `isCheckingAuth` flag**
 
 ```typescript
-// ❌ BAD: Button may render before auth state is known
-{!isGM && game.state === 'recruitment' && (
-  <button onClick={handleApply}>Apply to Join</button>
-)}
+// ❌ BAD: Race condition
+{!isGM && <button>Apply</button>}
 
-// ✅ GOOD: Wait for auth state before rendering
-{!isGM && !isCheckingAuth && game.state === 'recruitment' && (
-  <button onClick={handleApply}>Apply to Join</button>
-)}
+// ✅ GOOD: Wait for auth
+{!isGM && !isCheckingAuth && <button>Apply</button>}
 ```
 
-**Why**: Without `isCheckingAuth`, buttons/UI may briefly appear before auth is confirmed, causing UX issues and potential bugs (e.g., GM seeing "Apply to Join" on their own game).
+### 2. GameContext - Game Permissions
 
-### Getting User ID
+**Option 1: Full Context (for game pages)**
+```typescript
+import { GameProvider, useGameContext } from '../contexts/GameContext';
+
+<GameProvider gameId={gameId}>
+  <GameContent />
+</GameProvider>
+
+// In child component:
+const { game, isGM, isParticipant, userCharacters, isUserCharacter } = useGameContext();
+```
+
+**Option 2: Hooks (for smaller components)**
+```typescript
+import { useGamePermissions, useUserCharacters } from '../hooks';
+
+const { isGM, canEditGame } = useGamePermissions(gameId);
+const { characters } = useUserCharacters(gameId);
+```
+
+### 3. Getting User ID
 
 ```typescript
-// ✅ CORRECT: Use nullish coalescing
+// ✅ CORRECT: Use AuthContext
+const { currentUser } = useAuth();
+const userId = currentUser?.id;
+
+// ✅ CORRECT: Nullish coalescing
 const currentUserId = currentUser?.id ?? null;
 
-// ✅ CORRECT: Direct comparison
-const isGM = game.gm_user_id === currentUser?.id;
-
-// ❌ WRONG: Don't decode JWT client-side
-const decoded = decodeJWT(token);  // NEVER DO THIS
+// ❌ WRONG: Never decode JWT client-side
+const decoded = decodeJWT(token);  // SECURITY RISK
 ```
 
-## React Query Patterns
+---
 
-### Query Configuration
-
-```typescript
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: (failureCount, error) => {
-        // Don't retry on auth errors
-        if (error.status === 401) return false;
-        return failureCount < 3;
-      },
-    },
-    mutations: {
-      retry: false, // Don't retry mutations by default
-    },
-  },
-});
-```
-
-### Custom Query Hooks
-
-```typescript
-export function useGame(gameId: number) {
-  return useQuery({
-    queryKey: ['games', gameId],
-    queryFn: () => apiClient.getGame(gameId),
-    enabled: !!gameId, // Only run if gameId exists
-  });
-}
-
-export function useGames() {
-  return useQuery({
-    queryKey: ['games'],
-    queryFn: () => apiClient.getAllGames(),
-  });
-}
-```
-
-### Mutation Hooks with Cache Invalidation
-
-```typescript
-export function useCreateGame() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: CreateGameRequest) => apiClient.createGame(data),
-    onSuccess: (newGame) => {
-      // Invalidate and refetch games list
-      queryClient.invalidateQueries(['games']);
-
-      // Optionally set the new game in cache
-      queryClient.setQueryData(['games', newGame.id], newGame);
-    },
-    onError: (error) => {
-      console.error('Failed to create game:', error);
-    },
-  });
-}
-```
-
-### Optimistic Updates
-
-```typescript
-export function useUpdateGame(gameId: number) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (updates: Partial<Game>) =>
-      apiClient.updateGame(gameId, updates),
-
-    // Optimistic update
-    onMutate: async (updates) => {
-      // Cancel outgoing queries
-      await queryClient.cancelQueries(['games', gameId]);
-
-      // Save current value for rollback
-      const previousGame = queryClient.getQueryData(['games', gameId]);
-
-      // Optimistically update cache
-      queryClient.setQueryData(['games', gameId], (old: Game) => ({
-        ...old,
-        ...updates,
-      }));
-
-      return { previousGame };
-    },
-
-    // Rollback on error
-    onError: (error, updates, context) => {
-      queryClient.setQueryData(['games', gameId], context.previousGame);
-    },
-
-    // Refetch on success
-    onSuccess: () => {
-      queryClient.invalidateQueries(['games', gameId]);
-      queryClient.invalidateQueries(['games']); // Refresh list too
-    },
-  });
-}
-```
-
-## Common Patterns
-
-### Loading States
-
-```typescript
-export function MyComponent() {
-  const { data: game, isLoading, error } = useGame(gameId);
-
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-
-  if (error) {
-    return <ErrorDisplay error={error} />;
-  }
-
-  if (!game) {
-    return <NotFound />;
-  }
-
-  return <GameDisplay game={game} />;
-}
-```
-
-### Dependent Queries
-
-```typescript
-export function CharacterSheet({ characterId }: Props) {
-  // First query: Get character
-  const { data: character } = useQuery({
-    queryKey: ['characters', characterId],
-    queryFn: () => apiClient.getCharacter(characterId),
-  });
-
-  // Second query: Get character's game (only runs if character exists)
-  const { data: game } = useQuery({
-    queryKey: ['games', character?.game_id],
-    queryFn: () => apiClient.getGame(character!.game_id),
-    enabled: !!character?.game_id, // Only run if we have game_id
-  });
-
-  return <div>...</div>;
-}
-```
-
-### Polling for Real-time Updates
-
-```typescript
-export function useGamePhase(gameId: number) {
-  return useQuery({
-    queryKey: ['games', gameId, 'phase'],
-    queryFn: () => apiClient.getCurrentPhase(gameId),
-    refetchInterval: 10000, // Poll every 10 seconds
-    refetchIntervalInBackground: true, // Continue polling in background
-  });
-}
-```
-
-## State Management Anti-Patterns
+## Anti-Patterns (NEVER DO)
 
 ### ❌ Don't Decode JWT Client-Side
-
 ```typescript
-// ❌ WRONG: Security risk
+// ❌ WRONG
 const token = localStorage.getItem('access_token');
 const decoded = JSON.parse(atob(token.split('.')[1]));
 const userId = decoded.user_id;
 
-// ✅ CORRECT: Use AuthContext
+// ✅ CORRECT
 const { currentUser } = useAuth();
 const userId = currentUser?.id;
 ```
 
-### ❌ Don't Fetch User Data in Multiple Places
-
+### ❌ Don't Fetch User Data Manually
 ```typescript
-// ❌ WRONG: Duplicate API calls
-export function MyComponent() {
-  const [user, setUser] = useState(null);
-  useEffect(() => {
-    apiClient.getCurrentUser().then(setUser);
-  }, []);
-  // ...
-}
+// ❌ WRONG
+const [user, setUser] = useState(null);
+useEffect(() => {
+  apiClient.getCurrentUser().then(setUser);
+}, []);
 
-// ✅ CORRECT: Use centralized AuthContext
-export function MyComponent() {
-  const { currentUser } = useAuth();
-  // ...
-}
+// ✅ CORRECT
+const { currentUser } = useAuth();
 ```
 
 ### ❌ Don't Forget isCheckingAuth
-
 ```typescript
-// ❌ WRONG: Race condition
+// ❌ WRONG: Premature render
 {!isGM && <button>Apply</button>}
 
 // ✅ CORRECT: Wait for auth
@@ -368,55 +141,99 @@ export function MyComponent() {
 ```
 
 ### ❌ Don't Store Server Data in useState
-
 ```typescript
-// ❌ WRONG: Manual state management
+// ❌ WRONG
 const [games, setGames] = useState([]);
 useEffect(() => {
   apiClient.getGames().then(setGames);
 }, []);
 
-// ✅ CORRECT: Use React Query
+// ✅ CORRECT
 const { data: games } = useQuery({
   queryKey: ['games'],
   queryFn: () => apiClient.getGames(),
 });
 ```
 
-## Testing State Management
+---
 
-### Testing Components with AuthContext
+## Quick Reference
 
+### Import Statements
 ```typescript
-import { render, screen } from '@testing-library/react';
-import { AuthContext } from '../contexts/AuthContext';
+// Auth
+import { useAuth } from '../contexts/AuthContext';
 
+// Game Context
+import { GameProvider, useGameContext, useOptionalGameContext } from '../contexts/GameContext';
+
+// Hooks
+import { useGamePermissions } from '../hooks/useGamePermissions';
+import { useUserCharacters } from '../hooks/useUserCharacters';
+import { useCharacterOwnership } from '../hooks/useCharacterOwnership';
+```
+
+### When to Use What
+
+| Use Case | Solution |
+|----------|----------|
+| Get current user anywhere | `useAuth()` |
+| Game detail page | Wrap with `GameProvider` |
+| Check game permissions | `useGamePermissions(gameId)` |
+| List user's characters | `useUserCharacters(gameId)` |
+| Check character ownership | `useCharacterOwnership(gameId)` |
+| Small component needing game info | Use specific hook |
+| Complex page with multiple game queries | Wrap with `GameProvider` |
+
+---
+
+## React Query Patterns
+
+### Query Keys
+```typescript
+// Auth
+['auth'] - Authentication state
+['currentUser'] - Current user data
+
+// Game
+['gameDetails', gameId] - Game details
+['gameParticipants', gameId] - Participants
+['userControllableCharacters', gameId] - User's characters
+```
+
+### Invalidate After Mutations
+```typescript
+import { useQueryClient } from '@tanstack/react-query';
+
+const queryClient = useQueryClient();
+await queryClient.invalidateQueries({ queryKey: ['gameDetails', gameId] });
+```
+
+---
+
+## Testing
+
+### With AuthContext
+```typescript
 const mockAuthValue = {
   currentUser: { id: 1, username: 'testuser' },
   isAuthenticated: true,
   isLoading: false,
   isCheckingAuth: false,
   login: jest.fn(),
-  register: jest.fn(),
   logout: jest.fn(),
   error: null,
 };
 
-test('renders with authenticated user', () => {
-  render(
-    <AuthContext.Provider value={mockAuthValue}>
-      <MyComponent />
-    </AuthContext.Provider>
-  );
-  expect(screen.getByText('Welcome, testuser!')).toBeInTheDocument();
-});
+render(
+  <AuthContext.Provider value={mockAuthValue}>
+    <MyComponent />
+  </AuthContext.Provider>
+);
 ```
 
-### Testing Components with React Query
-
+### With React Query
 ```typescript
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -431,18 +248,15 @@ const createWrapper = () => {
   );
 };
 
-test('loads and displays game', async () => {
-  render(<GameDetails gameId={1} />, { wrapper: createWrapper() });
-  expect(await screen.findByText('Game Title')).toBeInTheDocument();
-});
+render(<GameDetails gameId={1} />, { wrapper: createWrapper() });
 ```
+
+---
 
 ## References
 
-- **ADR**: `/docs/adrs/005-frontend-state-management.md` (includes October 2025 refactor details)
-- **Quick Reference**: `/frontend/docs/STATE_MANAGEMENT_QUICK_REFERENCE.md`
-- **Detailed Architecture**: `/frontend/docs/STATE_MANAGEMENT_ARCHITECTURE.md`
-- **Implementation Details**: `/frontend/docs/STATE_MANAGEMENT.md`
+- **Comprehensive Guide**: `/docs/features/STATE_MANAGEMENT.md` - Single source of truth
+- **ADR**: `/docs/adrs/005-frontend-state-management.md` - Architectural decisions
 
 ## Quick Checklist
 

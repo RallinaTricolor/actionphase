@@ -1,0 +1,242 @@
+import { Page, expect } from '@playwright/test';
+
+/**
+ * Game Management Helper Functions for E2E Tests
+ */
+
+/**
+ * Well-known test fixture games
+ * Use these constants with getFixtureGameId() to avoid brittle hardcoded IDs
+ */
+export const FIXTURE_GAMES = {
+  HEIST: 'The Heist at Goldstone Bank',           // In-progress, has phases, characters
+  WESTMARCH: 'Chronicles of Westmarch',           // In-progress, lots of phases (pagination test)
+  SHADOWS: 'Shadows Over Innsmouth',              // In-progress, common room phase
+  DRAGON: 'The Dragon of Mount Krag',             // In-progress, complex phase history
+  MANOR: 'The Mystery of Blackwood Manor',        // Recruitment state
+  COMMON_ROOM_TEST: 'E2E Common Room Test Game',  // Common room testing
+} as const;
+
+/**
+ * Get a game ID by its title (resilient to fixture resets)
+ * @param page - Playwright page object
+ * @param title - Game title to search for
+ * @returns Game ID or null if not found
+ */
+export async function getGameIdByTitle(page: Page, title: string): Promise<number | null> {
+  // Use the API to fetch all games and find the one with matching title
+  const response = await page.request.get('/api/v1/games/public');
+
+  if (!response.ok()) {
+    throw new Error(`Failed to fetch games: ${response.status()}`);
+  }
+
+  const games = await response.json();
+  const game = games.find((g: any) => g.title === title);
+
+  return game ? game.id : null;
+}
+
+/**
+ * Get the ID for a well-known fixture game
+ * @param page - Playwright page object
+ * @param gameKey - Key from FIXTURE_GAMES
+ * @returns Game ID
+ * @throws Error if game not found
+ */
+export async function getFixtureGameId(
+  page: Page,
+  gameKey: keyof typeof FIXTURE_GAMES
+): Promise<number> {
+  const title = FIXTURE_GAMES[gameKey];
+  const gameId = await getGameIdByTitle(page, title);
+
+  if (gameId === null) {
+    throw new Error(`Fixture game not found: ${title}. Did you apply test fixtures?`);
+  }
+
+  return gameId;
+}
+
+export interface CreateGameOptions {
+  title: string;
+  description?: string;
+  maxPlayers?: number;
+  isPublic?: boolean;
+}
+
+/**
+ * Create a new game
+ * @param page - Playwright page object
+ * @param options - Game creation options
+ * @returns Object with gameId
+ */
+export async function createGame(
+  page: Page,
+  options: CreateGameOptions
+): Promise<{ gameId: number }> {
+  await page.goto('/games');
+
+  // Click create game button
+  await page.click('text=Create Game');
+
+  // Fill in game details
+  await page.fill('input[name="title"]', options.title);
+
+  if (options.description) {
+    await page.fill('textarea[name="description"]', options.description);
+  }
+
+  if (options.maxPlayers) {
+    await page.fill('input[name="maxPlayers"]', options.maxPlayers.toString());
+  }
+
+  // Submit form
+  await page.click('button:has-text("Create")');
+
+  // Wait for navigation to game details page
+  await page.waitForURL(/\/games\/\d+/, { timeout: 10000 });
+
+  // Extract game ID from URL
+  const url = page.url();
+  const gameId = parseInt(url.match(/\/games\/(\d+)/)?.[1] || '0');
+
+  return { gameId };
+}
+
+/**
+ * Start recruitment for a game
+ * @param page - Playwright page object
+ * @param gameId - Game ID
+ */
+export async function startRecruitment(page: Page, gameId: number) {
+  await page.goto(`/games/${gameId}`);
+
+  // Click start recruitment button
+  await page.click('button:has-text("Start Recruitment")');
+
+  // Wait for state change confirmation
+  await expect(page.locator('text=Recruitment')).toBeVisible({ timeout: 5000 });
+}
+
+/**
+ * Apply to join a game
+ * @param page - Playwright page object
+ * @param gameId - Game ID
+ */
+export async function applyToGame(page: Page, gameId: number) {
+  await page.goto(`/games/${gameId}`);
+
+  // Click apply to join button
+  await page.click('button:has-text("Apply to Join")');
+
+  // Wait for confirmation
+  await expect(page.locator('text=Application Submitted')).toBeVisible({ timeout: 5000 });
+}
+
+/**
+ * Approve a player's application to join a game
+ * @param page - Playwright page object (must be logged in as GM)
+ * @param gameId - Game ID
+ * @param playerUsername - Username of player to approve
+ */
+export async function approveApplication(
+  page: Page,
+  gameId: number,
+  playerUsername: string
+) {
+  await page.goto(`/games/${gameId}`);
+
+  // Open applications tab/section
+  await page.click('text=Applications');
+
+  // Find the player's application row and approve
+  const applicationRow = page.locator(`tr:has-text("${playerUsername}")`);
+  await applicationRow.locator('button:has-text("Approve")').click();
+
+  // Wait for confirmation
+  await expect(page.locator(`text=${playerUsername}`).first()).toBeVisible();
+}
+
+/**
+ * Navigate to game details page
+ * @param page - Playwright page object
+ * @param gameId - Game ID
+ */
+export async function goToGame(page: Page, gameId: number) {
+  await page.goto(`/games/${gameId}`);
+  await page.waitForLoadState('networkidle');
+}
+
+/**
+ * Navigate to games list page
+ * @param page - Playwright page object
+ */
+export async function goToGamesList(page: Page) {
+  await page.goto('/games');
+  await page.waitForLoadState('networkidle');
+}
+
+/**
+ * Check if game is visible in games list
+ * @param page - Playwright page object
+ * @param gameTitle - Title of the game to find
+ */
+export async function isGameVisible(page: Page, gameTitle: string): Promise<boolean> {
+  await goToGamesList(page);
+
+  try {
+    await page.waitForSelector(`text=${gameTitle}`, { timeout: 2000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Create a phase for a game
+ * @param page - Playwright page object (must be logged in as GM)
+ * @param gameId - Game ID
+ * @param phaseType - Type of phase ('common_room', 'action', 'results')
+ * @param options - Phase creation options
+ */
+export async function createPhase(
+  page: Page,
+  gameId: number,
+  phaseType: 'common_room' | 'action' | 'results',
+  options: {
+    title: string;
+    description?: string;
+    deadline?: Date;
+  }
+) {
+  await page.goto(`/games/${gameId}`);
+
+  // Open phase management tab
+  await page.click('[role="tab"]:has-text("Phase Management")');
+
+  // Click create phase button
+  await page.click('button:has-text("Create Phase")');
+
+  // Select phase type
+  await page.selectOption('select[name="phaseType"]', phaseType);
+
+  // Fill in phase details
+  await page.fill('input[name="title"]', options.title);
+
+  if (options.description) {
+    await page.fill('textarea[name="description"]', options.description);
+  }
+
+  if (options.deadline) {
+    // Format date for input (YYYY-MM-DDTHH:mm)
+    const formatted = options.deadline.toISOString().slice(0, 16);
+    await page.fill('input[name="deadline"]', formatted);
+  }
+
+  // Submit form
+  await page.click('button:has-text("Create")');
+
+  // Wait for phase to appear in list
+  await expect(page.locator(`text=${options.title}`)).toBeVisible({ timeout: 5000 });
+}

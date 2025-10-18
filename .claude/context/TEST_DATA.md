@@ -45,19 +45,21 @@ just test-fixtures
 
 **All passwords**: `testpassword123`
 
+**IMPORTANT**: Usernames are **case-sensitive** and use **PascalCase** (TestGM, TestPlayer1, etc.)
+
 ### User Types
-1. **Game Master**: `test_gm@example.com`
+1. **Game Master**: `TestGM` / `test_gm@example.com`
    - Creates and manages games
    - Controls NPCs
 
 2. **Players** (5 total):
-   - `test_player1@example.com`
-   - `test_player2@example.com`
-   - `test_player3@example.com`
-   - `test_player4@example.com`
-   - `test_player5@example.com`
+   - `TestPlayer1` / `test_player1@example.com`
+   - `TestPlayer2` / `test_player2@example.com`
+   - `TestPlayer3` / `test_player3@example.com`
+   - `TestPlayer4` / `test_player4@example.com`
+   - `TestPlayer5` / `test_player5@example.com`
 
-3. **Audience**: `test_audience@example.com`
+3. **Audience**: `TestAudience` / `test_audience@example.com`
    - Observes games without direct participation
 
 ## Test Game Coverage
@@ -307,12 +309,14 @@ When writing component tests that display data:
 
 ### Login as GM
 ```
+Username: TestGM
 Email: test_gm@example.com
 Password: testpassword123
 ```
 
 ### Login as Player
 ```
+Username: TestPlayer1
 Email: test_player1@example.com
 Password: testpassword123
 ```

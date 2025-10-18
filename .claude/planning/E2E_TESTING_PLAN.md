@@ -789,7 +789,137 @@ test.afterEach(async ({ page }) => {
 });
 ```
 
-### 5.4 Handling Flakiness
+### 5.4 Using Test Fixtures for Speed and Reliability
+
+**⚠️ IMPORTANT: Prefer test fixtures over creating data from scratch**
+
+Test fixtures provide pre-configured database state, significantly reducing test execution time and improving reliability.
+
+**Benefits of Test Fixtures**:
+- ✅ **Faster execution** - No need to create games, recruit players, approve applications, etc.
+- ✅ **Reliable state** - Known, consistent data for every test run
+- ✅ **Reduced flakiness** - Fewer state transitions = fewer failure points
+- ✅ **Focus on testing the feature** - Not the entire setup workflow
+
+**When to Use Fixtures** vs **When to Create from Scratch**:
+
+```typescript
+// ✅ GOOD: Use fixtures for tests that need existing state
+test('GM can edit game settings', async ({ page }) => {
+  // Use existing game from fixtures (Game #165)
+  const gameId = 165;
+  await loginAs(page, 'GM');
+  await page.goto(`/games/${gameId}`);
+
+  // Test the actual feature (editing)
+  await page.click('button:has-text("Edit Game")');
+  // ... rest of test
+});
+
+// ❌ BAD: Creating entire game from scratch when not testing creation
+test('GM can edit game settings', async ({ page }) => {
+  await loginAs(page, 'GM');
+
+  // Creating game from scratch (slow, not testing creation flow)
+  await page.click('a[href="/games"]');
+  await page.click('button:has-text("Create Game")');
+  await page.fill('#title', 'Test Game');
+  await page.fill('#description', 'Description');
+  await page.click('form button[type="submit"]');
+  await page.waitForURL(/\/games\/\d+/);
+
+  // Finally testing the actual feature (editing)
+  await page.click('button:has-text("Edit Game")');
+  // ... rest of test
+});
+
+// ✅ GOOD: Create from scratch when testing the creation flow
+test('GM can create a game', async ({ page }) => {
+  await loginAs(page, 'GM');
+
+  // This test IS about creation, so create from scratch
+  await page.click('a[href="/games"]');
+  await page.click('button:has-text("Create Game")');
+  // ... test creation flow
+});
+```
+
+**Available Test Fixtures** (in `backend/pkg/db/test_fixtures/`):
+
+| Fixture | Description | When to Use |
+|---------|-------------|-------------|
+| **Test Users** | GM (test_gm), Player1-4 (test_player1-4) | All tests |
+| **Game #2** ("The Heist at Goldstone Bank") | in_progress state, active action phase, 4 participants with characters | Phase management, messaging, action submission tests |
+| **Game #1** ("Shadows Over Innsmouth") | in_progress state, active common room phase, 3 participants | Common room tests |
+| **Game #5** ("The Dragon of Mount Krag") | in_progress state, complex 7-phase history | Phase history viewing tests |
+| **Game #6** ("Chronicles of Westmarch") | in_progress state, 12 phases with results | Pagination, large phase history tests |
+| **Game #7** ("The Mystery of Blackwood Manor") | recruitment state | Application/recruitment tests |
+
+**Note**: After applying fixtures, Game #2 will have an ID around 165+ due to auto-increment sequences. Always verify the actual game ID after applying fixtures.
+
+**Fixture Application**:
+```bash
+# Apply all fixtures before running tests
+./backend/pkg/db/test_fixtures/apply_all.sh
+```
+
+**Test Pattern Examples**:
+
+```typescript
+// Example 1: Testing phase management (needs in_progress game)
+test('GM can create a phase', async ({ page }) => {
+  const gameId = 165; // Use fixture game in "in_progress" state
+  await loginAs(page, 'GM');
+  await page.goto(`/games/${gameId}`);
+  await page.click('button:has-text("Phases")');
+  await page.click('button:has-text("New Phase")');
+  // ... test phase creation
+});
+
+// Example 2: Testing private messages (needs game with characters)
+test('Players can send private messages', async ({ browser }) => {
+  const gameId = 165; // Fixture has Shade and Rook characters
+  const player1Context = await browser.newContext();
+  const player2Context = await browser.newContext();
+
+  // Test message flow without creating entire game setup
+  // ...
+});
+
+// Example 3: Testing character creation (needs character_creation state)
+test('Player can create character', async ({ page }) => {
+  const gameId = 167; // Fixture in character_creation state
+  await loginAs(page, 'PLAYER_1');
+  await page.goto(`/games/${gameId}`);
+  await page.click('button:has-text("Create Character")');
+  // ... test character creation
+});
+```
+
+**Performance Impact**:
+- Creating game from scratch: ~5-8 seconds
+- Using fixture game: ~0.5-1 seconds
+- **Savings**: ~4-7 seconds per test
+
+For a suite with 10 tests, this saves **40-70 seconds total execution time**.
+
+**Current Fixture Usage Status** (as of 2025-10-17):
+
+| Journey | Test File | Uses Fixtures? | Notes |
+|---------|-----------|----------------|-------|
+| Journey 1 | `e2e/auth/login.spec.ts` | N/A | No fixtures needed (auth only) |
+| Journey 2 | `e2e/games/gm-creates-and-recruits.spec.ts` | ❌ | Must create from scratch (testing game creation) |
+| Journey 3 | `e2e/gameplay/character-creation-flow.spec.ts` | ⚠️ Partial | Test 1: Creates from scratch (full workflow test)<br>Test 2: ✅ Uses Game #165 for NPC creation |
+| Journey 4 | `e2e/gameplay/phase-management.spec.ts` | ✅ | All 3 tests use Game #165 (~14s faster) |
+| Journey 5 | `e2e/messaging/private-messages-flow.spec.ts` | ✅ | Uses Game #165 with existing characters |
+| Journey 6 | `e2e/games/gm-edits-game-settings.spec.ts` | ✅ | All 3 tests use Game #165 |
+
+**Performance Summary**:
+- **Before fixture optimization**: 30.0 seconds total
+- **After fixture optimization**: 27.8 seconds total
+- **Improvement**: 2.2 seconds (7% faster)
+
+### 5.5 Handling Flakiness
 
 **Common causes & solutions**:
 

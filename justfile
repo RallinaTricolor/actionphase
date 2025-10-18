@@ -188,6 +188,31 @@ test-frontend-file file:
 lint-frontend:
   cd frontend && npm run lint
 
+# === E2E Testing Commands ===
+# Run E2E tests (headless)
+e2e:
+  cd frontend && npm run test:e2e
+
+# Run E2E tests with UI (interactive mode)
+e2e-ui:
+  cd frontend && npm run test:e2e:ui
+
+# Run E2E tests with browser visible
+e2e-headed:
+  cd frontend && npm run test:e2e:headed
+
+# Debug E2E tests (step-through mode)
+e2e-debug:
+  cd frontend && npm run test:e2e:debug
+
+# Show E2E test report
+e2e-report:
+  cd frontend && npm run test:e2e:report
+
+# Run specific E2E test file
+e2e-test file:
+  cd frontend && npx playwright test {{file}}
+
 # === Development Workflows ===
 
 # Complete setup for new developers

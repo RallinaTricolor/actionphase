@@ -695,6 +695,153 @@ describe('useExamples', () => {
    - **Test**: `TestExampleService_Delete_PreventsCascadeFailure`
    - **Location**: `backend/pkg/db/services/example_test.go:150`
 
+### 4.4 E2E Testing Requirements
+
+**E2E tests are REQUIRED for features that introduce new user journeys.**
+
+Reference: `.claude/planning/E2E_TESTING_PLAN.md` and `docs/testing/E2E_QUICK_START.md`
+
+#### User Journey Description
+
+**Journey Name**: [Descriptive name of complete user workflow]
+
+**User Goal**: [What the user is trying to accomplish end-to-end]
+
+**Journey Steps**:
+1. [First action user takes]
+2. [Next action]
+3. [Next action]
+4. [Final outcome user sees]
+
+**Example**:
+> Journey: Player submits action and receives result
+> 1. Player logs in and navigates to game
+> 2. Views current phase details
+> 3. Clicks "Submit Action" button
+> 4. Fills out action form and submits
+> 5. Sees confirmation message
+> 6. GM publishes result
+> 7. Player receives notification and views result
+
+#### E2E Test Specification
+
+**Test File**: `frontend/e2e/[category]/[feature-name].spec.ts`
+
+**Happy Path Test**:
+- [ ] Test name: `should [accomplish user goal]`
+- [ ] Estimated duration: [X seconds] (target: <180s)
+- [ ] Preconditions:
+  - [ ] Test user(s) exist: [list users/roles needed]
+  - [ ] Test data setup: [list any games, characters, etc. needed]
+
+**Test Pseudocode**:
+```typescript
+test('should [accomplish goal]', async ({ page }) => {
+  // 1. Setup - Login as [role]
+  await loginAs(page, 'test_user');
+
+  // 2. Navigate to starting point
+  await page.goto('/feature/path');
+
+  // 3. Perform user actions
+  await page.click('button:has-text("Action")');
+  await page.fill('[name="field"]', 'value');
+  await page.click('button[type="submit"]');
+
+  // 4. Verify outcome
+  await expect(page.locator('text=Success')).toBeVisible();
+  await expect(page).toHaveURL('/expected/path');
+});
+```
+
+#### Error Scenario Tests
+
+- [ ] **Validation Error Test**: `should show error for invalid input`
+  - Test client-side validation
+  - Test server-side validation errors
+
+- [ ] **Permission Error Test**: `should prevent unauthorized access`
+  - Test that users without permission see error/redirect
+
+- [ ] **Network Error Test**: `should handle network failure gracefully`
+  - Test error messaging when API fails
+
+**Error Test Example**:
+```typescript
+test('should show error for invalid input', async ({ page }) => {
+  await loginAs(page, 'test_user');
+  await page.goto('/feature/path');
+
+  // Submit form with invalid data
+  await page.click('button[type="submit"]');
+
+  // Verify error message
+  await expect(page.locator('text=[Error Message]')).toBeVisible();
+});
+```
+
+#### Multi-User Interaction Tests
+
+**Required if**: Feature involves GM-Player interactions or real-time collaboration
+
+- [ ] **Multi-User Test**: `should [handle interaction between users]`
+
+**Test Pseudocode**:
+```typescript
+test('GM and Player interaction', async ({ browser }) => {
+  const gmContext = await browser.newContext();
+  const playerContext = await browser.newContext();
+
+  const gmPage = await gmContext.newPage();
+  const playerPage = await playerContext.newPage();
+
+  // Player performs action
+  await loginAs(playerPage, 'test_player');
+  // ... player actions
+
+  // GM responds
+  await loginAs(gmPage, 'test_gm');
+  // ... GM actions
+
+  // Verify both users see expected state
+  await playerPage.reload();
+  // ... verify player sees result
+
+  await gmContext.close();
+  await playerContext.close();
+});
+```
+
+#### Integration with Existing Journeys
+
+**Affected Journeys**: [List any existing E2E tests this feature impacts]
+
+- [ ] **Journey 1**: [How this feature affects existing journey]
+  - [ ] Update test: [description of changes needed]
+
+#### E2E Test Implementation Checklist
+
+- [ ] Test file created in `frontend/e2e/[category]/`
+- [ ] Happy path test written and passing
+- [ ] Error scenario tests written and passing
+- [ ] Multi-user tests written (if applicable)
+- [ ] Test duration < 3 minutes (180 seconds)
+- [ ] Test uses helper functions (auth, setup, etc.)
+- [ ] Test has descriptive comments
+- [ ] Screenshots captured on failure (automatic with Playwright)
+- [ ] Test added to E2E Test Catalog (create `docs/testing/E2E_TEST_CATALOG.md` if needed)
+
+#### E2E Acceptance Criteria
+
+- [ ] ✅ All E2E tests passing locally
+- [ ] ✅ All E2E tests passing in CI
+- [ ] ✅ No flaky behavior (run 10x to verify)
+- [ ] ✅ Test execution time acceptable
+- [ ] ✅ Helper functions created for reusable actions
+- [ ] ✅ Test catalog updated with new test entry
+
+**Note**: If this feature doesn't introduce a new user journey, explain why E2E tests are not needed.
+
 ---
 
 ## 5. Implementation Plan
