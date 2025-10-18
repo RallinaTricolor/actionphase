@@ -37,6 +37,7 @@ type CharacterResponse struct {
 	Name          string    `json:"name"`
 	CharacterType string    `json:"character_type"`
 	Status        string    `json:"status"`
+	AvatarURL     *string   `json:"avatar_url,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
@@ -53,6 +54,7 @@ type CharacterWithUserResponse struct {
 	Name          string    `json:"name"`
 	CharacterType string    `json:"character_type"`
 	Status        string    `json:"status"`
+	AvatarURL     *string   `json:"avatar_url,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
@@ -286,6 +288,10 @@ func (h *Handler) GetCharacter(w http.ResponseWriter, r *http.Request) {
 		response.UserID = &character.UserID.Int32
 	}
 
+	if character.AvatarUrl.Valid {
+		response.AvatarURL = &character.AvatarUrl.String
+	}
+
 	render.Render(w, r, response)
 }
 
@@ -325,6 +331,9 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 		}
 		if char.OwnerUsername.Valid {
 			charData["username"] = char.OwnerUsername.String
+		}
+		if char.AvatarUrl.Valid {
+			charData["avatar_url"] = char.AvatarUrl.String
 		}
 
 		response = append(response, charData)

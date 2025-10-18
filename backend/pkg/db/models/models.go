@@ -126,6 +126,7 @@ type Character struct {
 	Name          string             `json:"name"`
 	CharacterType string             `json:"character_type"`
 	Status        pgtype.Text        `json:"status"`
+	AvatarUrl     pgtype.Text        `json:"avatar_url"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }

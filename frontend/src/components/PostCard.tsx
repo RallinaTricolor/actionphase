@@ -7,6 +7,7 @@ import type { Character } from '../types/characters';
 import { ThreadedComment } from './ThreadedComment';
 import { apiClient } from '../lib/api';
 import { CommentEditor } from './CommentEditor';
+import CharacterAvatar from './CharacterAvatar';
 
 interface PostCardProps {
   post: Message;
@@ -102,18 +103,25 @@ export function PostCard({ post, gameId, characters, onCreateComment, currentUse
   const isLongContent = post.content.length > 500;
 
   return (
-    <div className="mb-6 border-b-4 border-gray-200 pb-6">
+    <div data-testid="post-card" className="mb-6 border-b-4 border-gray-200 pb-6">
       {/* Collapsible GM Post Section */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg shadow-lg">
         {/* Post Header - Always visible */}
         <div className="p-4 bg-white bg-opacity-90 border-b border-blue-200">
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                </svg>
-                <h3 className="font-bold text-xl text-gray-900">GM Post: {post.character_name}</h3>
+              <div className="flex items-center gap-3">
+                <CharacterAvatar
+                  avatarUrl={post.character_avatar_url}
+                  characterName={post.character_name}
+                  size="md"
+                />
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                  </svg>
+                  <h3 className="font-bold text-xl text-gray-900">GM Post: {post.character_name}</h3>
+                </div>
               </div>
               <p className="text-sm text-gray-600 mt-1">
                 Posted by @{post.author_username} · {formatDate(post.created_at)}

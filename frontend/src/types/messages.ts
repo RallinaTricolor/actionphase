@@ -12,6 +12,7 @@ export interface Message {
   thread_depth: number;
   author_username: string;
   character_name: string;
+  character_avatar_url?: string | null;
   comment_count?: number;
   reply_count?: number;
   is_edited: boolean;

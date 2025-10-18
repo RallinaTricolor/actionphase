@@ -38,11 +38,17 @@ type App struct {
 	// Pool provides database connection pooling for PostgreSQL
 	Pool *pgxpool.Pool
 
+	// DB is an alias for Pool for compatibility with services expecting DB
+	DB *pgxpool.Pool
+
 	// Config holds all application configuration loaded from environment
 	Config *Config
 
 	// Observability provides unified logging, metrics, and tracing
 	Observability *observability.Observability
+
+	// Storage provides file storage backend (local filesystem or S3)
+	Storage StorageBackendInterface
 }
 
 // Logger interface for dependency injection in middleware and services.

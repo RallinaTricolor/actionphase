@@ -17,6 +17,7 @@ import (
 	"actionphase/pkg/core"
 	"actionphase/pkg/http"
 	"actionphase/pkg/observability"
+	"actionphase/pkg/storage"
 )
 
 func main() {
@@ -81,13 +82,50 @@ func main() {
 
 	logger.Info("Database connection established")
 
+	// Initialize storage backend based on configuration
+	var storageBackend core.StorageBackendInterface
+	if config.Storage.Backend == "s3" {
+		// S3 storage for production
+		s3Storage, err := storage.NewS3Storage(
+			config.Storage.S3Bucket,
+			config.Storage.S3Region,
+			config.Storage.PublicURL,
+			config.Storage.S3Endpoint,
+		)
+		if err != nil {
+			logger.Error("Failed to initialize S3 storage", "error", err)
+			os.Exit(1)
+		}
+		storageBackend = s3Storage
+		logger.Info("Using S3 storage",
+			"bucket", config.Storage.S3Bucket,
+			"region", config.Storage.S3Region)
+	} else {
+		// Local filesystem storage for development/staging
+		storageBackend = storage.NewLocalStorage(
+			config.Storage.LocalPath,
+			config.Storage.PublicURL,
+		)
+		logger.Info("Using local filesystem storage",
+			"path", config.Storage.LocalPath,
+			"public_url", config.Storage.PublicURL)
+
+		// Ensure upload directory exists
+		if err := os.MkdirAll(config.Storage.LocalPath, 0755); err != nil {
+			logger.Error("Failed to create upload directory", "error", err)
+			os.Exit(1)
+		}
+	}
+
 	// Initialize application context with observability
 	app := &core.App{
 		Logger:        *logger,
 		ObsLogger:     obs.Logger,
 		Pool:          pool,
+		DB:            pool, // Alias for compatibility
 		Config:        config,
 		Observability: obs,
+		Storage:       storageBackend,
 	}
 
 	// Run database migrations if configured

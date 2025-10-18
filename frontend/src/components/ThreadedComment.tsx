@@ -4,6 +4,7 @@ import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
+import CharacterAvatar from './CharacterAvatar';
 
 interface ThreadedCommentProps {
   comment: Message;
@@ -112,10 +113,15 @@ export function ThreadedComment({
   const borderColor = depth > 0 ? borderColors[depth % borderColors.length] : '';
 
   return (
-    <div className={`${depth > 0 ? 'ml-6 border-l-2 pl-3 ' + borderColor : ''}`}>
+    <div data-testid="threaded-comment" className={`${depth > 0 ? 'ml-6 border-l-2 pl-3 ' + borderColor : ''}`}>
       {/* Comment Header and Content */}
       <div className="py-2">
         <div className="flex items-start gap-2 mb-1">
+          <CharacterAvatar
+            avatarUrl={comment.character_avatar_url}
+            characterName={comment.character_name}
+            size="sm"
+          />
           <div className="flex-1">
             <span className="font-semibold text-sm text-gray-900">{comment.character_name}</span>
             <span className="text-xs text-gray-500 ml-2">

@@ -8,6 +8,7 @@ export interface Character {
   name: string;
   character_type: 'player_character' | 'npc_gm' | 'npc_audience';
   status: 'pending' | 'approved' | 'rejected' | 'active' | 'dead';
+  avatar_url?: string | null;
   created_at: string;
   updated_at: string;
 }
