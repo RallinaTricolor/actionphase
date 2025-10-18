@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -150,21 +151,22 @@ func (s *MessageService) GetGamePosts(ctx context.Context, gameID int32, phaseID
 
 		result[i] = core.MessageWithDetails{
 			Message: models.Message{
-				ID:          post.ID,
-				GameID:      post.GameID,
-				PhaseID:     post.PhaseID,
-				AuthorID:    post.AuthorID,
-				CharacterID: post.CharacterID,
-				Content:     post.Content,
-				MessageType: post.MessageType,
-				ParentID:    post.ParentID,
-				ThreadDepth: post.ThreadDepth,
-				Visibility:  post.Visibility,
-				IsEdited:    post.IsEdited,
-				IsDeleted:   post.IsDeleted,
-				CreatedAt:   post.CreatedAt,
-				UpdatedAt:   post.UpdatedAt,
-				DeletedAt:   post.DeletedAt,
+				ID:                    post.ID,
+				GameID:                post.GameID,
+				PhaseID:               post.PhaseID,
+				AuthorID:              post.AuthorID,
+				CharacterID:           post.CharacterID,
+				Content:               post.Content,
+				MessageType:           post.MessageType,
+				ParentID:              post.ParentID,
+				ThreadDepth:           post.ThreadDepth,
+				Visibility:            post.Visibility,
+				MentionedCharacterIds: post.MentionedCharacterIds,
+				IsEdited:              post.IsEdited,
+				IsDeleted:             post.IsDeleted,
+				CreatedAt:             post.CreatedAt,
+				UpdatedAt:             post.UpdatedAt,
+				DeletedAt:             post.DeletedAt,
 			},
 			AuthorUsername: post.AuthorUsername,
 			CharacterName:  post.CharacterName.String,
@@ -320,28 +322,31 @@ func (s *MessageService) GetPostComments(ctx context.Context, parentID int32) ([
 
 	result := make([]core.MessageWithDetails, len(comments))
 	for i, comment := range comments {
+		slog.Info("GetPostComments conversion", "comment_id", comment.ID, "mentioned_ids", comment.MentionedCharacterIds)
 		result[i] = core.MessageWithDetails{
 			Message: models.Message{
-				ID:          comment.ID,
-				GameID:      comment.GameID,
-				PhaseID:     comment.PhaseID,
-				AuthorID:    comment.AuthorID,
-				CharacterID: comment.CharacterID,
-				Content:     comment.Content,
-				MessageType: comment.MessageType,
-				ParentID:    comment.ParentID,
-				ThreadDepth: comment.ThreadDepth,
-				Visibility:  comment.Visibility,
-				IsEdited:    comment.IsEdited,
-				IsDeleted:   comment.IsDeleted,
-				CreatedAt:   comment.CreatedAt,
-				UpdatedAt:   comment.UpdatedAt,
-				DeletedAt:   comment.DeletedAt,
+				ID:                    comment.ID,
+				GameID:                comment.GameID,
+				PhaseID:               comment.PhaseID,
+				AuthorID:              comment.AuthorID,
+				CharacterID:           comment.CharacterID,
+				Content:               comment.Content,
+				MessageType:           comment.MessageType,
+				ParentID:              comment.ParentID,
+				ThreadDepth:           comment.ThreadDepth,
+				Visibility:            comment.Visibility,
+				MentionedCharacterIds: comment.MentionedCharacterIds,
+				IsEdited:              comment.IsEdited,
+				IsDeleted:             comment.IsDeleted,
+				CreatedAt:             comment.CreatedAt,
+				UpdatedAt:             comment.UpdatedAt,
+				DeletedAt:             comment.DeletedAt,
 			},
 			AuthorUsername: comment.AuthorUsername,
 			CharacterName:  comment.CharacterName.String,
 			ReplyCount:     comment.ReplyCount,
 		}
+		slog.Info("GetPostComments result", "comment_id", result[i].ID, "mentioned_ids", result[i].MentionedCharacterIds)
 	}
 
 	return result, nil

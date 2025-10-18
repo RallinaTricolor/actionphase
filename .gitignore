@@ -150,3 +150,5 @@ frontend/test-results/
 frontend/playwright-report/
 backend/coverage.out
 backend/test-results
+
+backend/actionphase

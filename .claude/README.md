@@ -20,6 +20,8 @@ This directory contains all AI-specific context and instructions for working wit
 - **TESTING_GUIDE.md** - Testing implementation guide
 - **LOGGING_STANDARDS.md** - Logging best practices
 - **API_DOCUMENTATION.md** - API endpoint documentation
+- **API_TESTING_WITH_CURL.md** - Complete curl-based API testing guide
+- **JUSTFILE_QUICK_REFERENCE.md** - Quick reference for justfile commands
 - And more...
 
 ### `/commands/` - Custom Slash Commands
@@ -101,6 +103,23 @@ Read ADRs for understanding architectural decisions:
 1. Review `/docs/adrs/004-api-design-principles.md`
 2. Check `.claude/reference/API_DOCUMENTATION.md`
 3. Review `.claude/reference/ERROR_HANDLING.md`
+
+### Before Writing E2E Tests (CRITICAL)
+**⚠️ E2E tests are the LAST step, NEVER the first!**
+
+**Mandatory Pre-E2E Checklist:**
+1. ✅ Backend unit test passes: `SKIP_DB_TESTS=true go test ./pkg/... -v`
+2. ✅ API returns correct data: `curl http://localhost:3000/api/v1/... | jq`
+3. ✅ Component test passes: `npm test -- Component.test.tsx`
+4. ✅ Systems running: `curl http://localhost:3000/health && curl http://localhost:5173`
+
+**E2E Test Rules:**
+- Run synchronously: `npx playwright test --reporter=list` (NO `&`)
+- One concern per test
+- Use `data-testid` selectors
+- Wait for specific conditions, not arbitrary timeouts
+
+**See**: `context/TESTING.md` E2E section and `planning/AI_E2E_TESTING_STRATEGY.md`
 
 ## Quick Start for AI
 

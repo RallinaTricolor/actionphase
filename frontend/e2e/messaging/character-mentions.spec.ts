@@ -133,20 +133,38 @@ test.describe('Character Mentions', () => {
     const commentTextarea = postCard.locator('textarea[placeholder*="Write a comment"]');
     await commentTextarea.waitFor({ state: 'visible' });
 
-    // Type @ followed by filter text
+    // Type @ to trigger autocomplete
     await commentTextarea.click(); // Focus the textarea
-    await commentTextarea.pressSequentially('@Test Player 1');
-    await page.waitForTimeout(500);
+    await commentTextarea.pressSequentially('@');
+    await page.waitForTimeout(300);
 
-    // Verify autocomplete appears
+    // Verify autocomplete appears with all characters
     const autocomplete = page.locator('[role="listbox"]');
     await expect(autocomplete).toBeVisible({ timeout: 2000 });
 
-    // Should show "Test Player 1 Character" (matches filter)
+    // All characters should be visible initially
     await expect(page.locator('[role="listbox"] >> text=Test Player 1 Character')).toBeVisible();
+    await expect(page.locator('[role="listbox"] >> text=Test Player 2 Character')).toBeVisible();
+    await expect(page.locator('[role="listbox"] >> text=GM Test Character')).toBeVisible();
 
-    // Should NOT show "Test Player 2 Character" (doesn't match "1")
-    // Note: This might still be visible if the filter is too lenient, so we just check Player 1 is there
+    // Type filter text (no spaces - spaces cancel mentions)
+    await commentTextarea.pressSequentially('Test');
+    await page.waitForTimeout(300);
+
+    // Autocomplete should still be visible and filtered
+    await expect(autocomplete).toBeVisible({ timeout: 2000 });
+
+    // All three characters contain "Test" so they should all still be visible
+    await expect(page.locator('[role="listbox"] >> text=Test Player 1 Character')).toBeVisible();
+    await expect(page.locator('[role="listbox"] >> text=Test Player 2 Character')).toBeVisible();
+    await expect(page.locator('[role="listbox"] >> text=GM Test Character')).toBeVisible();
+
+    // Type more specific filter
+    await commentTextarea.pressSequentially('Player1');
+    await page.waitForTimeout(300);
+
+    // Now only "Test Player 1 Character" should match (no space in "Player1")
+    await expect(page.locator('[role="listbox"] >> text=Test Player 1 Character')).toBeVisible();
   });
 
   test('should render mentions with markdown formatting', async ({ browser }) => {

@@ -29,12 +29,18 @@ Create planning documents when:
 
 ## File Organization
 
-Suggested naming conventions:
-- `FEATURE_<name>.md` - Feature implementation plans
+**Active Plans** (in this directory):
+- `FEATURE_<name>.md` - Feature implementation plans (in progress)
 - `REFACTOR_<name>.md` - Refactoring plans and progress
 - `TESTING_<area>.md` - Test coverage improvement plans
 - `EXPLORATION_<topic>.md` - Architectural exploration notes
 - `TODO_<category>.md` - Categorized task lists
+
+**Completed Plans** (`planning/completed/`):
+- Move plans here when feature/task is complete
+- Preserves historical context for future reference
+- E2E_TESTING_PLAN.md - Original E2E testing implementation plan
+- AI_E2E_TESTING_STRATEGY.md - Comprehensive E2E testing strategy for AI development
 
 ## Using the Feature Plan Template
 
@@ -45,7 +51,7 @@ Suggested naming conventions:
 3. Delete sections that aren't relevant (e.g., if no database changes, remove schema section)
 4. Work through implementation phases in order
 5. Update session log after each coding session
-6. Archive to `planning/archive/` when complete
+6. Move to `planning/completed/` when complete
 
 **Template Benefits:**
 - ✅ Ensures all architectural aspects considered (database, API, frontend, tests)
@@ -60,6 +66,7 @@ Suggested naming conventions:
 ## Maintenance
 
 - Update plans at the end of each session
-- Archive completed plans to `planning/archive/` (create as needed)
+- Move completed plans to `planning/completed/` to keep this directory clean
 - Reference related docs in `/docs/` and `.claude/context/`
 - Keep plans concise and actionable
+- Document learnings in `.claude/reference/` (e.g., E2E_TESTING_LEARNINGS_CODIFIED.md)
