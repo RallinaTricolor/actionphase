@@ -8,6 +8,7 @@ import (
 	"actionphase/pkg/docs"
 	"actionphase/pkg/games"
 	"actionphase/pkg/messages"
+	"actionphase/pkg/notifications"
 	"actionphase/pkg/phases"
 	"net/http"
 
@@ -190,6 +191,28 @@ func (h *Handler) Start() {
 		})
 	})
 	apiV1Router.Mount("/phases", phasesRouter)
+
+	// Notifications API
+	notificationsRouter := chi.NewRouter()
+	notificationsRouter.Route("/", func(r chi.Router) {
+		notificationHandler := notifications.Handler{App: h.App}
+
+		// All notification routes require authentication
+		r.Group(func(r chi.Router) {
+			tokenAuth := h.getTokenAuth()
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+
+			// Notification management
+			r.Get("/", notificationHandler.GetNotifications)
+			r.Get("/unread-count", notificationHandler.GetUnreadCount)
+			r.Put("/mark-all-read", notificationHandler.MarkAllAsRead)
+			r.Get("/{id}", notificationHandler.GetNotification)
+			r.Put("/{id}/mark-read", notificationHandler.MarkNotificationAsRead)
+			r.Delete("/{id}", notificationHandler.DeleteNotification)
+		})
+	})
+	apiV1Router.Mount("/notifications", notificationsRouter)
 
 	// API Documentation routes (public)
 	docsHandler := &docs.Handler{}
