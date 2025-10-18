@@ -9,6 +9,7 @@ import { GamesPage } from './pages/GamesPage';
 import { GameDetailsPage } from './pages/GameDetailsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { GameProvider } from './contexts/GameContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,7 +77,13 @@ function GameDetailsPageWrapper() {
     return <Navigate to="/games" replace />;
   }
 
-  return <GameDetailsPage gameId={parseInt(gameId, 10)} />;
+  const gameIdNum = parseInt(gameId, 10);
+
+  return (
+    <GameProvider gameId={gameIdNum}>
+      <GameDetailsPage gameId={gameIdNum} />
+    </GameProvider>
+  );
 }
 
 function App() {

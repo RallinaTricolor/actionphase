@@ -206,9 +206,11 @@ describe('NotificationItem', () => {
 
   it('deletes notification when delete button is clicked', async () => {
     const notification = createMockNotification();
+    let deleteApiCalled = false;
 
     server.use(
-      http.delete('/api/v1/notifications/:id', () => {
+      http.delete('http://localhost:3000/api/v1/notifications/:id', () => {
+        deleteApiCalled = true;
         return HttpResponse.json({ success: true });
       })
     );
@@ -227,8 +229,7 @@ describe('NotificationItem', () => {
 
     // Should call API
     await waitFor(() => {
-      // Verify the mutation was triggered
-      expect(queryClient.isMutating()).toBeGreaterThan(0);
+      expect(deleteApiCalled).toBe(true);
     });
   });
 

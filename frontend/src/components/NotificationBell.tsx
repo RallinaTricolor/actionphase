@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useUnreadCount } from '../hooks/useNotifications';
 import NotificationDropdown from './NotificationDropdown';
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const { data: unreadCount } = useUnreadCount();
+  const bellButtonRef = useRef<HTMLButtonElement>(null);
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
@@ -17,6 +18,7 @@ export default function NotificationBell() {
     <div className="relative">
       {/* Bell Button */}
       <button
+        ref={bellButtonRef}
         onClick={toggleDropdown}
         className="relative p-2 text-gray-300 hover:text-white transition-colors"
         aria-label="Notifications"
@@ -44,7 +46,7 @@ export default function NotificationBell() {
       </button>
 
       {/* Dropdown */}
-      <NotificationDropdown isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <NotificationDropdown isOpen={isOpen} onClose={() => setIsOpen(false)} bellButtonRef={bellButtonRef} />
     </div>
   );
 }
