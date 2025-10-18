@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationBell from './NotificationBell';
 
 interface LayoutProps {
   children: ReactNode;
@@ -53,6 +54,9 @@ export const Layout = ({ children }: LayoutProps) => {
 
               {/* User Menu */}
               <div className="flex items-center space-x-4">
+                {/* Notification Bell */}
+                <NotificationBell />
+
                 <button
                   onClick={handleLogout}
                   className="px-4 py-2 text-sm font-medium text-white bg-indigo-700 hover:bg-indigo-800 rounded-md"

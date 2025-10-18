@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	models "actionphase/pkg/db/models"
@@ -213,6 +214,9 @@ func (s *ConversationService) SendMessage(ctx context.Context, req SendMessageRe
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Trigger notifications for all participants except sender (fire-and-forget)
+	go s.notifyPrivateMessage(context.Background(), req.ConversationID, req.SenderUserID, req.SenderCharacterID, msg.ID)
+
 	return &msg, nil
 }
 
@@ -310,4 +314,51 @@ func (s *ConversationService) AddParticipant(ctx context.Context, conversationID
 	}
 
 	return nil
+}
+
+// notifyPrivateMessage triggers notifications for all conversation participants except the sender
+// This runs in a goroutine and should not fail the parent operation
+func (s *ConversationService) notifyPrivateMessage(ctx context.Context, conversationID, senderUserID, senderCharacterID int32, messageID int32) {
+	notificationService := &NotificationService{DB: s.DB}
+
+	// Get conversation details to find game_id
+	conv, err := s.Queries.GetConversation(ctx, conversationID)
+	if err != nil {
+		slog.Error("Failed to get conversation for notifications", "error", err, "conversation_id", conversationID)
+		return
+	}
+
+	// Get sender character name
+	senderCharName := "Unknown"
+	if senderCharacterID != 0 {
+		senderChar, err := s.Queries.GetCharacter(ctx, senderCharacterID)
+		if err == nil {
+			senderCharName = senderChar.Name
+		}
+	}
+
+	// Get all participants
+	participants, err := s.Queries.GetConversationParticipants(ctx, conversationID)
+	if err != nil {
+		slog.Error("Failed to get conversation participants for notifications", "error", err, "conversation_id", conversationID)
+		return
+	}
+
+	// Notify each participant except the sender
+	for _, participant := range participants {
+		if participant.UserID == senderUserID {
+			continue // Don't notify the sender
+		}
+
+		err = notificationService.NotifyPrivateMessage(
+			ctx,
+			participant.UserID,
+			messageID,
+			conv.GameID,
+			senderCharName,
+		)
+		if err != nil {
+			slog.Error("Failed to send private message notification", "error", err, "recipient_user_id", participant.UserID)
+		}
+	}
 }

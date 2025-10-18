@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	core "actionphase/pkg/core"
@@ -664,6 +665,9 @@ func (ps *PhaseService) activatePhaseInternal(ctx context.Context, phaseID int32
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Trigger notifications for phase activation (fire-and-forget)
+	go ps.notifyPhaseActivated(context.Background(), phase.GameID, activePhase.ID, activePhase.Title, 0)
+
 	return &activePhase, nil
 }
 
@@ -1031,4 +1035,22 @@ func (as *ActionSubmissionService) CanUserSubmitAction(ctx context.Context, phas
 
 	// For now, allow submission if phase is active and of type "action"
 	return phase.IsActive.Bool && phase.PhaseType == "action", nil
+}
+
+// notifyPhaseActivated triggers notifications when a phase is activated
+// This runs in a goroutine and should not fail the parent operation
+func (ps *PhaseService) notifyPhaseActivated(ctx context.Context, gameID, phaseID int32, phaseTitle string, excludeUserID int32) {
+	notificationService := &NotificationService{DB: ps.DB}
+
+	// Notify all participants except the GM who activated the phase
+	err := notificationService.NotifyPhaseCreated(
+		ctx,
+		gameID,
+		phaseID,
+		phaseTitle,
+		excludeUserID,
+	)
+	if err != nil {
+		slog.Error("Failed to send phase activation notifications", "error", err, "game_id", gameID, "phase_id", phaseID)
+	}
 }

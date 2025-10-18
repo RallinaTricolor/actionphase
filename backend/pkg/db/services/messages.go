@@ -66,6 +66,11 @@ func (s *MessageService) CreatePost(ctx context.Context, req core.CreatePostRequ
 		return nil, fmt.Errorf("failed to create post: %w", err)
 	}
 
+	// Trigger notifications for character mentions (fire-and-forget)
+	if len(mentionedIDs) > 0 {
+		go s.notifyCharacterMentions(context.Background(), mentionedIDs, req.CharacterID, req.AuthorID, req.GameID, message.ID)
+	}
+
 	return &message, nil
 }
 
@@ -274,6 +279,14 @@ func (s *MessageService) CreateComment(ctx context.Context, req core.CreateComme
 	if err != nil {
 		return nil, fmt.Errorf("failed to create comment: %w", err)
 	}
+
+	// Trigger notifications for character mentions (fire-and-forget)
+	if len(mentionedIDs) > 0 {
+		go s.notifyCharacterMentions(context.Background(), mentionedIDs, req.CharacterID, req.AuthorID, req.GameID, message.ID)
+	}
+
+	// Trigger notification for comment reply (fire-and-forget)
+	go s.notifyCommentReply(context.Background(), req.ParentID, req.CharacterID, req.AuthorID, req.GameID, message.ID)
 
 	return &message, nil
 }
@@ -551,4 +564,101 @@ func (s *MessageService) ValidateCharacterOwnership(ctx context.Context, charact
 	}
 
 	return errors.New("character does not belong to this user")
+}
+
+// notifyCharacterMentions triggers notifications for all characters mentioned in a message
+// This runs in a goroutine and should not fail the parent operation
+func (s *MessageService) notifyCharacterMentions(ctx context.Context, mentionedCharacterIDs []int32, authorCharacterID, authorUserID, gameID, messageID int32) {
+	if len(mentionedCharacterIDs) == 0 {
+		return
+	}
+
+	queries := models.New(s.DB)
+	notificationService := &NotificationService{DB: s.DB}
+
+	// Get the author character's name
+	authorChar, err := queries.GetCharacter(ctx, authorCharacterID)
+	if err != nil {
+		slog.Error("Failed to get author character for mention notifications", "error", err, "character_id", authorCharacterID)
+		return
+	}
+
+	// For each mentioned character, notify the owner
+	for _, mentionedCharID := range mentionedCharacterIDs {
+		mentionedChar, err := queries.GetCharacter(ctx, mentionedCharID)
+		if err != nil {
+			slog.Error("Failed to get mentioned character", "error", err, "character_id", mentionedCharID)
+			continue
+		}
+
+		// Don't notify if user is mentioning their own character
+		var characterOwnerID int32
+		if mentionedChar.UserID.Valid {
+			characterOwnerID = mentionedChar.UserID.Int32
+		} else {
+			// NPC - notify the GM
+			game, err := queries.GetGame(ctx, gameID)
+			if err != nil {
+				slog.Error("Failed to get game for NPC mention notification", "error", err, "game_id", gameID)
+				continue
+			}
+			characterOwnerID = game.GmUserID
+		}
+
+		// Skip if author is the character owner (don't notify self)
+		if characterOwnerID == authorUserID {
+			continue
+		}
+
+		// Trigger notification
+		err = notificationService.NotifyCharacterMention(
+			ctx,
+			characterOwnerID,
+			messageID,
+			gameID,
+			authorChar.Name,
+			mentionedChar.Name,
+		)
+		if err != nil {
+			slog.Error("Failed to send character mention notification", "error", err, "mentioned_character_id", mentionedCharID)
+		}
+	}
+}
+
+// notifyCommentReply triggers a notification when someone replies to a comment
+// This runs in a goroutine and should not fail the parent operation
+func (s *MessageService) notifyCommentReply(ctx context.Context, parentMessageID, replierCharacterID, replierUserID, gameID, replyMessageID int32) {
+	queries := models.New(s.DB)
+	notificationService := &NotificationService{DB: s.DB}
+
+	// Get the parent message
+	parentMessage, err := queries.GetComment(ctx, parentMessageID)
+	if err != nil {
+		slog.Error("Failed to get parent message for reply notification", "error", err, "parent_id", parentMessageID)
+		return
+	}
+
+	// Don't notify if replying to own comment
+	if parentMessage.AuthorID == replierUserID {
+		return
+	}
+
+	// Get the replier character's name
+	replierChar, err := queries.GetCharacter(ctx, replierCharacterID)
+	if err != nil {
+		slog.Error("Failed to get replier character", "error", err, "character_id", replierCharacterID)
+		return
+	}
+
+	// Trigger notification to the parent comment author
+	err = notificationService.NotifyCommentReply(
+		ctx,
+		parentMessage.AuthorID,
+		replyMessageID,
+		gameID,
+		replierChar.Name,
+	)
+	if err != nil {
+		slog.Error("Failed to send comment reply notification", "error", err, "parent_author_id", parentMessage.AuthorID)
+	}
 }
