@@ -1,6 +1,6 @@
 # ActionPhase MVP Status & Development Plan
 
-**Last Updated:** 2025-10-15
+**Last Updated:** 2025-10-18
 
 This document tracks the status of the ActionPhase MVP, including completed features, in-progress work, pending tasks, and the post-MVP roadmap.
 
@@ -17,11 +17,12 @@ This document tracks the status of the ActionPhase MVP, including completed feat
 | Action Submission | ✅ Complete | 100% |
 | Common Room (Posts/Comments) | ✅ Complete | 100% |
 | Private Messaging | ✅ Complete | 100% |
+| **Notification System** | ✅ Complete | 100% |
 | Security Hardening | ✅ Complete | 100% |
 | State Management Refactor | 🔄 Ready for Integration | 0% |
 | Documentation | ✅ Complete | 100% |
 
-**MVP Completion:** ~95% (core features complete, optimization ready)
+**MVP Completion:** ~98% (all core features complete, optimization ready)
 
 ---
 
@@ -90,6 +91,28 @@ This document tracks the status of the ActionPhase MVP, including completed feat
 - ✅ Unread message indicators
 - ✅ Mark conversations as read
 - ✅ Anonymous mode support
+
+### Notification System
+- ✅ **Notification Infrastructure (2025-10-18)**
+  - Database schema with notification types, read status, and links
+  - Backend API endpoints for notifications (list, unread count, mark read, delete)
+  - Fire-and-forget notification creation (goroutines for performance)
+- ✅ **Frontend Components (2025-10-18)**
+  - Notification bell with unread badge in header
+  - Dropdown notification list with relative timestamps
+  - Automatic polling for unread count (15s interval)
+  - Click-to-navigate for notification links
+  - Mark as read on interaction
+- ✅ **Notification Types**
+  - Private message notifications
+  - Comment reply notifications
+  - Character mention notifications (@mentions in posts)
+  - Phase activation notifications
+  - Action result notifications (planned, not yet triggering)
+- ✅ **E2E Testing (2025-10-18)**
+  - 8 smoke tests for notification UI
+  - API integration verification
+  - Character mention detection and notification
 
 ### Frontend Architecture
 - ✅ React + TypeScript + Vite
@@ -453,6 +476,19 @@ A comprehensive unified state management system to consolidate duplicated logic 
 ---
 
 ## 📝 Development Session Log
+
+### 2025-10-18 - Notification System
+- Implemented comprehensive notification system (backend + frontend)
+- Created database schema for notifications with read tracking
+- Built notification API endpoints (list, unread count, mark read, delete)
+- Implemented notification bell with unread badge in header
+- Added notification dropdown with click-to-navigate functionality
+- Integrated notifications for private messages, comment replies, and character mentions
+- Created character mention detection system (@mentions in posts/comments)
+- Implemented automatic polling for unread notifications (15s interval)
+- Added E2E smoke tests (8 tests) for notification UI and API
+- Fixed E2E test coverage gap (API integration verification)
+- **Result:** Complete notification system with E2E testing, all core MVP features now complete
 
 ### 2025-10-15 - Security Hardening & State Management
 - Fixed conversation participant names display issue

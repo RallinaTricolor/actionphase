@@ -24,6 +24,44 @@ test.describe('Notification System - Smoke Tests', () => {
     await expect(notificationBell).toBeVisible();
   });
 
+  test('should successfully fetch notifications from API', async ({ page }) => {
+    // This test verifies the API is actually working, not just the UI
+    await loginAs(page, 'PLAYER_1');
+
+    // Set up API response listener
+    let apiCalled = false;
+    let apiSucceeded = false;
+
+    page.on('response', response => {
+      if (response.url().includes('/api/v1/notifications/unread-count')) {
+        apiCalled = true;
+        if (response.status() === 200) {
+          apiSucceeded = true;
+        }
+      }
+    });
+
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Wait a bit for API call
+    await page.waitForTimeout(2000);
+
+    // Verify API was called and succeeded
+    expect(apiCalled).toBe(true);
+    expect(apiSucceeded).toBe(true);
+
+    // Verify no error message is displayed
+    const notificationBell = page.locator('[data-testid="notification-bell"]');
+    await notificationBell.click();
+
+    const dropdown = page.locator('[data-testid="notification-dropdown"]');
+    await expect(dropdown).toBeVisible();
+
+    // Should NOT see "Failed to load notifications"
+    await expect(dropdown.locator('text=Failed to load notifications')).not.toBeVisible();
+  });
+
   test('should open notification dropdown when bell is clicked', async ({ page }) => {
     await loginAs(page, 'PLAYER_1');
     await page.goto('/dashboard');
