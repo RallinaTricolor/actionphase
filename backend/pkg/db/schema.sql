@@ -261,6 +261,7 @@ CREATE TABLE messages (
     parent_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
     thread_depth INTEGER NOT NULL DEFAULT 0,
     visibility message_visibility NOT NULL DEFAULT 'game',
+    mentioned_character_ids INTEGER[] NOT NULL DEFAULT '{}',
     is_edited BOOLEAN NOT NULL DEFAULT false,
     is_deleted BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -294,6 +295,7 @@ CREATE INDEX idx_messages_parent_id ON messages(parent_id);
 CREATE INDEX idx_messages_created_at ON messages(created_at DESC);
 CREATE INDEX idx_messages_game_phase ON messages(game_id, phase_id);
 CREATE INDEX idx_messages_thread ON messages(game_id, parent_id, created_at) WHERE is_deleted = false;
+CREATE INDEX idx_messages_mentioned_characters ON messages USING GIN (mentioned_character_ids);
 CREATE INDEX idx_message_recipients_message_id ON message_recipients(message_id);
 CREATE INDEX idx_message_recipients_recipient_id ON message_recipients(recipient_id);
 CREATE INDEX idx_message_recipients_unread ON message_recipients(recipient_id, is_read) WHERE is_read = false;

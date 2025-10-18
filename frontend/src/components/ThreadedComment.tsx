@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
+import { MarkdownPreview } from './MarkdownPreview';
+import { CommentEditor } from './CommentEditor';
 
 interface ThreadedCommentProps {
   comment: Message;
   gameId: number;
-  characters: Character[];
+  characters: Character[]; // All game characters (for autocomplete)
   onCreateReply: (parentId: number, characterId: number, content: string) => Promise<void>;
   currentUserId?: number;
   depth?: number;
@@ -20,6 +22,8 @@ export function ThreadedComment({
   currentUserId,
   depth = 0
 }: ThreadedCommentProps) {
+  // Filter to only characters the current user can control (for "Reply as" dropdown)
+  const controllableCharacters = characters.filter(char => char.user_id === currentUserId);
   const [replies, setReplies] = useState<Message[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [showReplies, setShowReplies] = useState(true); // Start expanded
@@ -33,10 +37,10 @@ export function ThreadedComment({
 
   // Auto-select first character
   useEffect(() => {
-    if (characters.length > 0 && selectedCharacterId === null) {
-      setSelectedCharacterId(characters[0].id);
+    if (controllableCharacters.length > 0 && selectedCharacterId === null) {
+      setSelectedCharacterId(controllableCharacters[0].id);
     }
-  }, [characters, selectedCharacterId]);
+  }, [controllableCharacters, selectedCharacterId]);
 
   // Load replies immediately when component mounts if there are replies
   useEffect(() => {
@@ -124,7 +128,15 @@ export function ThreadedComment({
           </div>
         </div>
 
-        <p className="text-sm text-gray-800 whitespace-pre-wrap mb-2">{comment.content}</p>
+        <div className="text-sm text-gray-800 mb-2">
+          <MarkdownPreview
+            content={comment.content}
+            mentionedCharacters={comment.mentioned_character_ids?.map(id => {
+              const char = characters.find(c => c.id === id);
+              return char ? { id: char.id, name: char.name } : null;
+            }).filter((c): c is { id: number; name: string } => c !== null) || []}
+          />
+        </div>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 text-xs text-gray-500">
@@ -151,16 +163,16 @@ export function ThreadedComment({
       {isReplying && (
         <div className="mb-3 bg-gray-50 rounded p-3 border border-gray-200">
           <form onSubmit={handleSubmitReply}>
-            {characters.length > 0 ? (
+            {controllableCharacters.length > 0 ? (
               <>
-                {characters.length > 1 && (
+                {controllableCharacters.length > 1 && (
                   <select
                     value={selectedCharacterId || ''}
                     onChange={(e) => setSelectedCharacterId(Number(e.target.value))}
                     className="w-full mb-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                     disabled={isSubmitting}
                   >
-                    {characters.map((char) => (
+                    {controllableCharacters.map((char) => (
                       <option key={char.id} value={char.id}>
                         Reply as {char.name}
                       </option>
@@ -168,14 +180,15 @@ export function ThreadedComment({
                   </select>
                 )}
 
-                <textarea
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 mb-2"
-                  rows={3}
-                  placeholder="Write a reply..."
-                  disabled={isSubmitting}
-                />
+                <div className="mb-2">
+                  <CommentEditor
+                    value={replyContent}
+                    onChange={setReplyContent}
+                    placeholder="Write a reply..."
+                    disabled={isSubmitting}
+                    characters={characters}
+                  />
+                </div>
 
                 <div className="flex gap-2">
                   <button

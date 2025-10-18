@@ -43,14 +43,23 @@ func (s *MessageService) CreatePost(ctx context.Context, req core.CreatePostRequ
 		return nil, fmt.Errorf("character validation failed: %w", err)
 	}
 
+	// Extract character mentions from content
+	mentionedIDs, err := s.extractCharacterMentions(ctx, req.Content, req.GameID)
+	if err != nil {
+		// Log error but don't fail the post creation
+		// Mention extraction is a non-critical feature
+		mentionedIDs = []int32{}
+	}
+
 	// Create the post using sqlc-generated query
 	message, err := queries.CreatePost(ctx, models.CreatePostParams{
-		GameID:      req.GameID,
-		PhaseID:     int32ToPgInt4(req.PhaseID),
-		AuthorID:    req.AuthorID,
-		CharacterID: req.CharacterID,
-		Content:     req.Content,
-		Visibility:  models.MessageVisibility(req.Visibility),
+		GameID:                req.GameID,
+		PhaseID:               int32ToPgInt4(req.PhaseID),
+		AuthorID:              req.AuthorID,
+		CharacterID:           req.CharacterID,
+		Content:               req.Content,
+		Visibility:            models.MessageVisibility(req.Visibility),
+		MentionedCharacterIds: mentionedIDs,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create post: %w", err)
@@ -240,15 +249,25 @@ func (s *MessageService) CreateComment(ctx context.Context, req core.CreateComme
 		return nil, fmt.Errorf("character validation failed: %w", err)
 	}
 
+	// Extract character mentions from content
+	mentionedIDs, err := s.extractCharacterMentions(ctx, req.Content, req.GameID)
+	if err != nil {
+		// Log error but don't fail the comment creation
+		// Mention extraction is a non-critical feature
+		slog.Error("Failed to extract mentions", "error", err, "content", req.Content)
+		mentionedIDs = []int32{}
+	}
+
 	// Create the comment using sqlc-generated query
 	message, err := queries.CreateComment(ctx, models.CreateCommentParams{
-		GameID:      req.GameID,
-		PhaseID:     int32ToPgInt4(req.PhaseID),
-		AuthorID:    req.AuthorID,
-		CharacterID: req.CharacterID,
-		Content:     req.Content,
-		ParentID:    int32ValueToPgInt4(req.ParentID),
-		Visibility:  models.MessageVisibility(req.Visibility),
+		GameID:                req.GameID,
+		PhaseID:               int32ToPgInt4(req.PhaseID),
+		AuthorID:              req.AuthorID,
+		CharacterID:           req.CharacterID,
+		Content:               req.Content,
+		ParentID:              int32ValueToPgInt4(req.ParentID),
+		Visibility:            models.MessageVisibility(req.Visibility),
+		MentionedCharacterIds: mentionedIDs,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create comment: %w", err)

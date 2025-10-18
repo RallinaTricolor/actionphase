@@ -2,10 +2,12 @@
 
 **Status**: Planning
 **Created**: 2025-10-17
-**Last Updated**: 2025-10-17
+**Last Updated**: 2025-10-18
 **Owner**: AI Session
 **Related ADRs**: None yet (may create ADR-008: Notification Delivery Strategy)
 **Related Issues**: N/A
+
+**IMPORTANT NAMING CONVENTION**: All notification messages that reference another user's action (e.g., "X did Y") MUST use the **character name**, not the username. This maintains immersion and consistency with the character-centric gameplay. Only use usernames for system/account-related notifications (application approvals, etc.).
 
 ---
 
@@ -116,13 +118,13 @@ So that I can continue the conversation
 Acceptance Criteria:
 - Given I posted a comment in the common room (as myself or as a character I control)
   When another user replies to that comment
-  Then I see a notification "User X replied to your comment" or "User X replied to [Character Name]'s comment"
+  Then I see a notification "[Character Name] replied to your comment" or "[Character Name] replied to [Your Character]'s comment" (using character names, not usernames)
 - Given I click on the reply notification
   When I navigate to the common room
   Then I see the comment thread with the new reply highlighted
 - Given the GM posted as one of their NPCs
   When a player replies to that NPC's comment
-  Then the GM receives a notification
+  Then the GM receives a notification with the replying character's name
 ```
 
 ```gherkin
@@ -186,7 +188,7 @@ So that I know my character has been mentioned or needs to respond
 Acceptance Criteria:
 - Given I control a character in a game
   When another user tags my character in a comment (e.g., @CharacterName)
-  Then I see a notification "[User] mentioned [Character Name] in a comment"
+  Then I see a notification "[Mentioning Character] mentioned [Your Character] in a comment" (using character names, not usernames)
 - Given I click on the character mention notification
   When I navigate to the comment
   Then I see the comment with my character's mention highlighted

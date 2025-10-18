@@ -42,23 +42,24 @@ func (r *CreateCommentRequest) Bind(req *http.Request) error {
 
 // Response Types
 type MessageResponse struct {
-	ID             int32     `json:"id"`
-	GameID         int32     `json:"game_id"`
-	PhaseID        *int32    `json:"phase_id,omitempty"`
-	AuthorID       int32     `json:"author_id"`
-	CharacterID    int32     `json:"character_id"`
-	Content        string    `json:"content"`
-	MessageType    string    `json:"message_type"`
-	ParentID       *int32    `json:"parent_id,omitempty"`
-	ThreadDepth    int32     `json:"thread_depth"`
-	AuthorUsername string    `json:"author_username"`
-	CharacterName  string    `json:"character_name"`
-	CommentCount   int64     `json:"comment_count,omitempty"`
-	ReplyCount     int64     `json:"reply_count,omitempty"`
-	IsEdited       bool      `json:"is_edited"`
-	IsDeleted      bool      `json:"is_deleted"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID                    int32     `json:"id"`
+	GameID                int32     `json:"game_id"`
+	PhaseID               *int32    `json:"phase_id,omitempty"`
+	AuthorID              int32     `json:"author_id"`
+	CharacterID           int32     `json:"character_id"`
+	Content               string    `json:"content"`
+	MessageType           string    `json:"message_type"`
+	ParentID              *int32    `json:"parent_id,omitempty"`
+	ThreadDepth           int32     `json:"thread_depth"`
+	AuthorUsername        string    `json:"author_username"`
+	CharacterName         string    `json:"character_name"`
+	CommentCount          int64     `json:"comment_count,omitempty"`
+	ReplyCount            int64     `json:"reply_count,omitempty"`
+	IsEdited              bool      `json:"is_edited"`
+	IsDeleted             bool      `json:"is_deleted"`
+	MentionedCharacterIds []int32   `json:"mentioned_character_ids,omitempty"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
 }
 
 func (rd *MessageResponse) Render(w http.ResponseWriter, r *http.Request) error {
@@ -89,19 +90,20 @@ func getUserIDFromToken(r *http.Request, app *core.App) (int32, string, error) {
 // Helper function to convert MessageWithDetails to MessageResponse
 func messageWithDetailsToResponse(msg *core.MessageWithDetails) *MessageResponse {
 	response := &MessageResponse{
-		ID:             msg.ID,
-		GameID:         msg.GameID,
-		AuthorID:       msg.AuthorID,
-		CharacterID:    msg.CharacterID,
-		Content:        msg.Content,
-		MessageType:    string(msg.MessageType),
-		ThreadDepth:    msg.ThreadDepth,
-		AuthorUsername: msg.AuthorUsername,
-		CharacterName:  msg.CharacterName,
-		IsEdited:       msg.IsEdited,
-		IsDeleted:      msg.IsDeleted,
-		CreatedAt:      msg.CreatedAt.Time,
-		UpdatedAt:      msg.UpdatedAt.Time,
+		ID:                    msg.ID,
+		GameID:                msg.GameID,
+		AuthorID:              msg.AuthorID,
+		CharacterID:           msg.CharacterID,
+		Content:               msg.Content,
+		MessageType:           string(msg.MessageType),
+		ThreadDepth:           msg.ThreadDepth,
+		AuthorUsername:        msg.AuthorUsername,
+		CharacterName:         msg.CharacterName,
+		IsEdited:              msg.IsEdited,
+		IsDeleted:             msg.IsDeleted,
+		MentionedCharacterIds: msg.MentionedCharacterIds,
+		CreatedAt:             msg.CreatedAt.Time,
+		UpdatedAt:             msg.UpdatedAt.Time,
 	}
 
 	if msg.PhaseID.Valid {

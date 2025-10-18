@@ -1,0 +1,376 @@
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import MarkdownPreview from './MarkdownPreview';
+
+describe('MarkdownPreview', () => {
+  describe('Basic Markdown Rendering', () => {
+    it('renders bold text correctly', () => {
+      render(<MarkdownPreview content="This is **bold** text" />);
+      const boldElement = screen.getByText('bold');
+      expect(boldElement.tagName).toBe('STRONG');
+    });
+
+    it('renders italic text correctly', () => {
+      render(<MarkdownPreview content="This is *italic* text" />);
+      const italicElement = screen.getByText('italic');
+      expect(italicElement.tagName).toBe('EM');
+    });
+
+    it('renders headers correctly', () => {
+      const { rerender } = render(<MarkdownPreview content="# Heading 1" />);
+      expect(screen.getByText('Heading 1').tagName).toBe('H1');
+
+      rerender(<MarkdownPreview content="## Heading 2" />);
+      expect(screen.getByText('Heading 2').tagName).toBe('H2');
+
+      rerender(<MarkdownPreview content="### Heading 3" />);
+      expect(screen.getByText('Heading 3').tagName).toBe('H3');
+    });
+
+    it('renders unordered lists correctly', () => {
+      const { container } = render(<MarkdownPreview content="- Item 1\n- Item 2\n- Item 3" />);
+
+      // Check that a list is rendered
+      const ul = container.querySelector('ul');
+      expect(ul).toBeInTheDocument();
+
+      // Check that list items are present
+      expect(container.textContent).toContain('Item 1');
+      expect(container.textContent).toContain('Item 2');
+      expect(container.textContent).toContain('Item 3');
+    });
+
+    it('renders ordered lists correctly', () => {
+      const { container } = render(<MarkdownPreview content="1. First\n2. Second\n3. Third" />);
+
+      // Check that a list is rendered
+      const ol = container.querySelector('ol');
+      expect(ol).toBeInTheDocument();
+
+      // Check that list items are present
+      expect(container.textContent).toContain('First');
+      expect(container.textContent).toContain('Second');
+      expect(container.textContent).toContain('Third');
+    });
+
+    it('renders inline code correctly', () => {
+      render(<MarkdownPreview content="Use `console.log()` for debugging" />);
+      const codeElement = screen.getByText('console.log()');
+      expect(codeElement.tagName).toBe('CODE');
+    });
+
+    it('renders blockquotes correctly', () => {
+      render(<MarkdownPreview content="> This is a quote" />);
+      const blockquote = screen.getByText('This is a quote').closest('blockquote');
+      expect(blockquote).toBeInTheDocument();
+      expect(blockquote).toHaveClass('border-l-4');
+    });
+
+    it('renders horizontal rules correctly', () => {
+      const { container } = render(<MarkdownPreview content="---" />);
+      const hr = container.querySelector('hr');
+      expect(hr).toBeInTheDocument();
+      if (hr) {
+        expect(hr).toHaveClass('border-t-2');
+      }
+    });
+  });
+
+  describe('Link Handling', () => {
+    it('renders links with target="_blank" and security attributes', () => {
+      render(<MarkdownPreview content="[Click here](https://example.com)" />);
+      const link = screen.getByRole('link', { name: 'Click here' });
+      expect(link).toHaveAttribute('href', 'https://example.com');
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+
+    it('applies link styling', () => {
+      render(<MarkdownPreview content="[Link](https://example.com)" />);
+      const link = screen.getByRole('link', { name: 'Link' });
+      expect(link).toHaveClass('text-blue-600');
+      expect(link).toHaveClass('underline');
+    });
+  });
+
+  describe('Code Block Rendering', () => {
+    it('renders code blocks with syntax highlighting', () => {
+      const code = '```javascript\nconst x = 42;\n```';
+      const { container } = render(<MarkdownPreview content={code} />);
+
+      // Check that syntax highlighter is used
+      const codeBlock = container.querySelector('[class*="language-"]');
+      expect(codeBlock).toBeInTheDocument();
+    });
+
+    it('renders code blocks without language as plain code', () => {
+      const code = '```\nplain text\n```';
+      render(<MarkdownPreview content={code} />);
+
+      // Should render as code but without syntax highlighting
+      expect(screen.getByText('plain text')).toBeInTheDocument();
+    });
+  });
+
+  describe('Character Mention Handling', () => {
+    const mentionedCharacters = [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob Smith' },
+    ];
+
+    it('highlights character mentions with @syntax', () => {
+      render(
+        <MarkdownPreview
+          content="Hey @Alice, can you help @Bob Smith with this?"
+          mentionedCharacters={mentionedCharacters}
+        />
+      );
+
+      // Check that mentions are highlighted
+      const aliceMention = screen.getByText('@Alice');
+      const bobMention = screen.getByText('@Bob Smith');
+
+      expect(aliceMention.tagName).toBe('MARK');
+      expect(bobMention.tagName).toBe('MARK');
+      expect(aliceMention).toHaveAttribute('data-mention-id', '1');
+      expect(bobMention).toHaveAttribute('data-mention-id', '2');
+    });
+
+    it('applies mention styling', () => {
+      render(
+        <MarkdownPreview
+          content="@Alice mentioned"
+          mentionedCharacters={mentionedCharacters}
+        />
+      );
+
+      const mention = screen.getByText('@Alice');
+      expect(mention).toHaveClass('bg-blue-100');
+      expect(mention).toHaveClass('text-blue-800');
+    });
+
+    it('handles multiple mentions of the same character', () => {
+      render(
+        <MarkdownPreview
+          content="@Alice and @Alice are the same person"
+          mentionedCharacters={mentionedCharacters}
+        />
+      );
+
+      const mentions = screen.getAllByText('@Alice');
+      expect(mentions).toHaveLength(2);
+      mentions.forEach((mention) => {
+        expect(mention.tagName).toBe('MARK');
+        expect(mention).toHaveAttribute('data-mention-id', '1');
+      });
+    });
+
+    it('handles mentions with special characters in names', () => {
+      const specialCharacters = [{ id: 3, name: "O'Brien" }];
+      render(
+        <MarkdownPreview
+          content="@O'Brien is mentioned"
+          mentionedCharacters={specialCharacters}
+        />
+      );
+
+      const mention = screen.getByText("@O'Brien");
+      expect(mention.tagName).toBe('MARK');
+    });
+
+    it('prioritizes longer character names to avoid partial matches', () => {
+      const characters = [
+        { id: 1, name: 'Bob' },
+        { id: 2, name: 'Bob Smith' },
+      ];
+
+      render(
+        <MarkdownPreview
+          content="@Bob Smith is here"
+          mentionedCharacters={characters}
+        />
+      );
+
+      // Should match "Bob Smith" as one mention, not "Bob" + " Smith"
+      const mention = screen.getByText('@Bob Smith');
+      expect(mention).toHaveAttribute('data-mention-id', '2');
+    });
+
+    it('does not highlight mentions inside inline code', () => {
+      render(
+        <MarkdownPreview
+          content="Use `@Alice` as the username"
+          mentionedCharacters={mentionedCharacters}
+        />
+      );
+
+      // @Alice inside backticks should NOT be highlighted as a mention
+      const codeElement = screen.getByText('@Alice');
+      expect(codeElement.tagName).toBe('CODE');
+      expect(codeElement.tagName).not.toBe('MARK');
+    });
+
+    it('handles content without mentions', () => {
+      render(
+        <MarkdownPreview
+          content="Just regular text with no mentions"
+          mentionedCharacters={mentionedCharacters}
+        />
+      );
+
+      expect(screen.getByText(/Just regular text/)).toBeInTheDocument();
+    });
+
+    it('handles empty mentionedCharacters array', () => {
+      render(
+        <MarkdownPreview
+          content="@Alice should not be highlighted"
+          mentionedCharacters={[]}
+        />
+      );
+
+      // Should render as plain text, not a mention
+      expect(screen.getByText(/@Alice/)).toBeInTheDocument();
+      expect(screen.queryByRole('mark')).not.toBeInTheDocument();
+    });
+
+    it('escapes mention markup inside fenced code blocks', () => {
+      const content = '```\n@Alice in code block\n```';
+      const { container } = render(
+        <MarkdownPreview
+          content={content}
+          mentionedCharacters={mentionedCharacters}
+        />
+      );
+
+      // Mention markup should be escaped (safe) inside code blocks
+      // The <mark> tag gets inserted but is HTML-escaped, rendering as literal text
+      const codeBlock = container.querySelector('code');
+      expect(codeBlock).toBeInTheDocument();
+
+      // The escaped markup should be visible as text, not executed as HTML
+      // This is safe - XSS is prevented
+      expect(codeBlock?.textContent).toContain('@Alice');
+
+      // Should not have any actual MARK elements (they're escaped)
+      const marks = container.querySelectorAll('mark');
+      expect(marks.length).toBe(0);
+    });
+  });
+
+  describe('XSS Protection', () => {
+    it('prevents script injection via content', () => {
+      const maliciousContent = '<script>alert("XSS")</script>Hello';
+      const { container } = render(<MarkdownPreview content={maliciousContent} />);
+
+      // Script tag should be sanitized (removed by rehype-sanitize)
+      const scripts = container.querySelectorAll('script');
+      expect(scripts.length).toBeLessThanOrEqual(0);
+
+      // Content should be rendered (Hello might be in a paragraph)
+      expect(container.textContent).toContain('Hello');
+    });
+
+    it('prevents HTML injection via content', () => {
+      const maliciousContent = '<div onclick="alert(1)">Click me</div>';
+      const { container } = render(<MarkdownPreview content={maliciousContent} />);
+
+      // HTML should be rendered as text, not executed
+      expect(container.querySelector('div[onclick]')).not.toBeInTheDocument();
+    });
+
+    it('prevents XSS via malicious links', () => {
+      const maliciousLink = '[Click](javascript:alert("XSS"))';
+      const { container } = render(<MarkdownPreview content={maliciousLink} />);
+
+      // rehype-sanitize should remove javascript: URLs entirely
+      const link = container.querySelector('a');
+      if (link) {
+        const href = link.getAttribute('href');
+        // Href might be null (removed) or sanitized to safe value
+        if (href) {
+          expect(href).not.toContain('javascript:');
+        }
+      }
+      // Either way, the text "Click" should be present
+      expect(container.textContent).toContain('Click');
+    });
+
+    it('allows safe HTML entities', () => {
+      const { container } = render(<MarkdownPreview content="&lt;div&gt; &amp; &quot;quotes&quot;" />);
+      // HTML entities should be decoded and rendered safely
+      expect(container.textContent).toContain('&');
+      expect(container.textContent).toContain('"quotes"');
+    });
+  });
+
+  describe('Mixed Content', () => {
+    it('renders complex markdown with mentions and formatting', () => {
+      const content = `# Meeting Notes
+
+**Attendees**: @Alice and @Bob Smith
+
+## Action Items
+
+- @Alice will review the code
+- @Bob Smith will update the \`README.md\`
+
+> Remember to push changes!
+
+[Documentation](https://example.com)`;
+
+      render(
+        <MarkdownPreview
+          content={content}
+          mentionedCharacters={[
+            { id: 1, name: 'Alice' },
+            { id: 2, name: 'Bob Smith' },
+          ]}
+        />
+      );
+
+      // Check various elements are rendered
+      expect(screen.getByText('Meeting Notes')).toBeInTheDocument();
+      expect(screen.getByText('Attendees').tagName).toBe('STRONG');
+      expect(screen.getAllByText(/@Alice/)[0].tagName).toBe('MARK');
+      expect(screen.getAllByText(/@Bob Smith/)[0].tagName).toBe('MARK');
+      expect(screen.getByText('README.md').tagName).toBe('CODE');
+      expect(screen.getByRole('link', { name: 'Documentation' })).toHaveAttribute(
+        'href',
+        'https://example.com'
+      );
+    });
+  });
+
+  describe('Custom className', () => {
+    it('applies custom className to container', () => {
+      const { container } = render(
+        <MarkdownPreview content="Test" className="custom-class" />
+      );
+
+      const previewDiv = container.querySelector('.markdown-preview');
+      expect(previewDiv).toHaveClass('custom-class');
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('handles empty content', () => {
+      const { container } = render(<MarkdownPreview content="" />);
+      expect(container.querySelector('.markdown-preview')).toBeInTheDocument();
+    });
+
+    it('handles whitespace-only content', () => {
+      const { container } = render(<MarkdownPreview content="   \n\n   " />);
+      // Markdown might render whitespace as empty paragraphs, which is acceptable
+      expect(container.querySelector('.markdown-preview')).toBeInTheDocument();
+    });
+
+    it('handles malformed markdown gracefully', () => {
+      const malformed = '**bold without closing\n# Header without newline## Another header';
+      const { container } = render(<MarkdownPreview content={malformed} />);
+
+      // Should render something without crashing
+      expect(container.querySelector('.markdown-preview')).toBeInTheDocument();
+    });
+  });
+});

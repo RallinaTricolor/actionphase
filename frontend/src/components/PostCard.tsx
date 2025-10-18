@@ -6,16 +6,19 @@ import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { ThreadedComment } from './ThreadedComment';
 import { apiClient } from '../lib/api';
+import { CommentEditor } from './CommentEditor';
 
 interface PostCardProps {
   post: Message;
   gameId: number;
-  characters: Character[];
+  characters: Character[]; // All game characters (for autocomplete)
   onCreateComment: (postId: number, characterId: number, content: string) => Promise<void>;
   currentUserId?: number;
 }
 
 export function PostCard({ post, gameId, characters, onCreateComment, currentUserId }: PostCardProps) {
+  // Filter to only characters the current user can control (for "Reply as" dropdown)
+  const controllableCharacters = characters.filter(char => char.user_id === currentUserId);
   const [showComments, setShowComments] = useState(true);
   const [isCommenting, setIsCommenting] = useState(false);
   const [topLevelComments, setTopLevelComments] = useState<Message[]>([]);
@@ -25,12 +28,12 @@ export function PostCard({ post, gameId, characters, onCreateComment, currentUse
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPostCollapsed, setIsPostCollapsed] = useState(false);
 
-  // Auto-select first character
+  // Auto-select first controllable character
   useEffect(() => {
-    if (characters.length > 0 && selectedCharacterId === null) {
-      setSelectedCharacterId(characters[0].id);
+    if (controllableCharacters.length > 0 && selectedCharacterId === null) {
+      setSelectedCharacterId(controllableCharacters[0].id);
     }
-  }, [characters, selectedCharacterId]);
+  }, [controllableCharacters, selectedCharacterId]);
 
   // Load top-level comments when showing comments
   useEffect(() => {
@@ -194,16 +197,16 @@ export function PostCard({ post, gameId, characters, onCreateComment, currentUse
         {isCommenting && (
           <div className="mt-4">
             <form onSubmit={handleSubmitComment} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            {characters.length > 0 ? (
+            {controllableCharacters.length > 0 ? (
               <>
-                {characters.length > 1 && (
+                {controllableCharacters.length > 1 && (
                   <select
                     value={selectedCharacterId || ''}
                     onChange={(e) => setSelectedCharacterId(Number(e.target.value))}
                     className="w-full mb-3 px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     disabled={isSubmitting}
                   >
-                    {characters.map((char) => (
+                    {controllableCharacters.map((char) => (
                       <option key={char.id} value={char.id}>
                         Reply as {char.name}
                       </option>
@@ -211,15 +214,15 @@ export function PostCard({ post, gameId, characters, onCreateComment, currentUse
                   </select>
                 )}
 
-                <textarea
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
-                  rows={4}
-                  placeholder="Write a comment..."
-                  disabled={isSubmitting}
-                  autoFocus
-                />
+                <div className="mb-3">
+                  <CommentEditor
+                    value={replyContent}
+                    onChange={setReplyContent}
+                    placeholder="Write a comment..."
+                    disabled={isSubmitting}
+                    characters={characters}
+                  />
+                </div>
 
                 <div className="flex gap-2">
                   <button

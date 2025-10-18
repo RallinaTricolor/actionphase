@@ -144,5 +144,9 @@ $RECYCLE.BIN/
 .idea/
 
 # Coverage Reports
+test-results/
 frontend/coverage/
+frontend/test-results/
+frontend/playwright-report/
 backend/coverage.out
+backend/test-results
