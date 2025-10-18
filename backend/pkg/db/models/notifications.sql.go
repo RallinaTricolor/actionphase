@@ -12,42 +12,46 @@ import (
 )
 
 const createNotification = `-- name: CreateNotification :one
-INSERT INTO notifications (user_id, game_id, notification_type, title, content, related_entity_type, related_entity_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, user_id, game_id, related_entity_type, related_entity_id, notification_type, title, content, is_read, created_at
+INSERT INTO notifications (user_id, game_id, type, title, content, related_type, related_id, link_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, user_id, game_id, type, title, content, related_type, related_id, link_url, is_read, read_at, created_at
 `
 
 type CreateNotificationParams struct {
-	UserID            int32       `json:"user_id"`
-	GameID            pgtype.Int4 `json:"game_id"`
-	NotificationType  string      `json:"notification_type"`
-	Title             string      `json:"title"`
-	Content           pgtype.Text `json:"content"`
-	RelatedEntityType pgtype.Text `json:"related_entity_type"`
-	RelatedEntityID   pgtype.Int4 `json:"related_entity_id"`
+	UserID      int32       `json:"user_id"`
+	GameID      pgtype.Int4 `json:"game_id"`
+	Type        string      `json:"type"`
+	Title       string      `json:"title"`
+	Content     pgtype.Text `json:"content"`
+	RelatedType pgtype.Text `json:"related_type"`
+	RelatedID   pgtype.Int4 `json:"related_id"`
+	LinkUrl     pgtype.Text `json:"link_url"`
 }
 
 func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error) {
 	row := q.db.QueryRow(ctx, createNotification,
 		arg.UserID,
 		arg.GameID,
-		arg.NotificationType,
+		arg.Type,
 		arg.Title,
 		arg.Content,
-		arg.RelatedEntityType,
-		arg.RelatedEntityID,
+		arg.RelatedType,
+		arg.RelatedID,
+		arg.LinkUrl,
 	)
 	var i Notification
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.GameID,
-		&i.RelatedEntityType,
-		&i.RelatedEntityID,
-		&i.NotificationType,
+		&i.Type,
 		&i.Title,
 		&i.Content,
+		&i.RelatedType,
+		&i.RelatedID,
+		&i.LinkUrl,
 		&i.IsRead,
+		&i.ReadAt,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -79,7 +83,7 @@ func (q *Queries) DeleteOldNotifications(ctx context.Context) error {
 }
 
 const getGameNotifications = `-- name: GetGameNotifications :many
-SELECT n.id, n.user_id, n.game_id, n.related_entity_type, n.related_entity_id, n.notification_type, n.title, n.content, n.is_read, n.created_at, u.username
+SELECT n.id, n.user_id, n.game_id, n.type, n.title, n.content, n.related_type, n.related_id, n.link_url, n.is_read, n.read_at, n.created_at, u.username
 FROM notifications n
 JOIN users u ON n.user_id = u.id
 WHERE n.game_id = $1
@@ -94,17 +98,19 @@ type GetGameNotificationsParams struct {
 }
 
 type GetGameNotificationsRow struct {
-	ID                int32              `json:"id"`
-	UserID            int32              `json:"user_id"`
-	GameID            pgtype.Int4        `json:"game_id"`
-	RelatedEntityType pgtype.Text        `json:"related_entity_type"`
-	RelatedEntityID   pgtype.Int4        `json:"related_entity_id"`
-	NotificationType  string             `json:"notification_type"`
-	Title             string             `json:"title"`
-	Content           pgtype.Text        `json:"content"`
-	IsRead            pgtype.Bool        `json:"is_read"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	Username          string             `json:"username"`
+	ID          int32              `json:"id"`
+	UserID      int32              `json:"user_id"`
+	GameID      pgtype.Int4        `json:"game_id"`
+	Type        string             `json:"type"`
+	Title       string             `json:"title"`
+	Content     pgtype.Text        `json:"content"`
+	RelatedType pgtype.Text        `json:"related_type"`
+	RelatedID   pgtype.Int4        `json:"related_id"`
+	LinkUrl     pgtype.Text        `json:"link_url"`
+	IsRead      pgtype.Bool        `json:"is_read"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Username    string             `json:"username"`
 }
 
 func (q *Queries) GetGameNotifications(ctx context.Context, arg GetGameNotificationsParams) ([]GetGameNotificationsRow, error) {
@@ -120,12 +126,14 @@ func (q *Queries) GetGameNotifications(ctx context.Context, arg GetGameNotificat
 			&i.ID,
 			&i.UserID,
 			&i.GameID,
-			&i.RelatedEntityType,
-			&i.RelatedEntityID,
-			&i.NotificationType,
+			&i.Type,
 			&i.Title,
 			&i.Content,
+			&i.RelatedType,
+			&i.RelatedID,
+			&i.LinkUrl,
 			&i.IsRead,
+			&i.ReadAt,
 			&i.CreatedAt,
 			&i.Username,
 		); err != nil {
@@ -152,7 +160,7 @@ func (q *Queries) GetUnreadNotificationCount(ctx context.Context, userID int32) 
 }
 
 const getUnreadNotifications = `-- name: GetUnreadNotifications :many
-SELECT n.id, n.user_id, n.game_id, n.related_entity_type, n.related_entity_id, n.notification_type, n.title, n.content, n.is_read, n.created_at, g.title as game_title
+SELECT n.id, n.user_id, n.game_id, n.type, n.title, n.content, n.related_type, n.related_id, n.link_url, n.is_read, n.read_at, n.created_at, g.title as game_title
 FROM notifications n
 LEFT JOIN games g ON n.game_id = g.id
 WHERE n.user_id = $1 AND n.is_read = false
@@ -160,17 +168,19 @@ ORDER BY n.created_at DESC
 `
 
 type GetUnreadNotificationsRow struct {
-	ID                int32              `json:"id"`
-	UserID            int32              `json:"user_id"`
-	GameID            pgtype.Int4        `json:"game_id"`
-	RelatedEntityType pgtype.Text        `json:"related_entity_type"`
-	RelatedEntityID   pgtype.Int4        `json:"related_entity_id"`
-	NotificationType  string             `json:"notification_type"`
-	Title             string             `json:"title"`
-	Content           pgtype.Text        `json:"content"`
-	IsRead            pgtype.Bool        `json:"is_read"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	GameTitle         pgtype.Text        `json:"game_title"`
+	ID          int32              `json:"id"`
+	UserID      int32              `json:"user_id"`
+	GameID      pgtype.Int4        `json:"game_id"`
+	Type        string             `json:"type"`
+	Title       string             `json:"title"`
+	Content     pgtype.Text        `json:"content"`
+	RelatedType pgtype.Text        `json:"related_type"`
+	RelatedID   pgtype.Int4        `json:"related_id"`
+	LinkUrl     pgtype.Text        `json:"link_url"`
+	IsRead      pgtype.Bool        `json:"is_read"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	GameTitle   pgtype.Text        `json:"game_title"`
 }
 
 func (q *Queries) GetUnreadNotifications(ctx context.Context, userID int32) ([]GetUnreadNotificationsRow, error) {
@@ -186,12 +196,14 @@ func (q *Queries) GetUnreadNotifications(ctx context.Context, userID int32) ([]G
 			&i.ID,
 			&i.UserID,
 			&i.GameID,
-			&i.RelatedEntityType,
-			&i.RelatedEntityID,
-			&i.NotificationType,
+			&i.Type,
 			&i.Title,
 			&i.Content,
+			&i.RelatedType,
+			&i.RelatedID,
+			&i.LinkUrl,
 			&i.IsRead,
+			&i.ReadAt,
 			&i.CreatedAt,
 			&i.GameTitle,
 		); err != nil {
@@ -206,7 +218,7 @@ func (q *Queries) GetUnreadNotifications(ctx context.Context, userID int32) ([]G
 }
 
 const getUserNotifications = `-- name: GetUserNotifications :many
-SELECT n.id, n.user_id, n.game_id, n.related_entity_type, n.related_entity_id, n.notification_type, n.title, n.content, n.is_read, n.created_at, g.title as game_title
+SELECT n.id, n.user_id, n.game_id, n.type, n.title, n.content, n.related_type, n.related_id, n.link_url, n.is_read, n.read_at, n.created_at, g.title as game_title
 FROM notifications n
 LEFT JOIN games g ON n.game_id = g.id
 WHERE n.user_id = $1
@@ -221,17 +233,19 @@ type GetUserNotificationsParams struct {
 }
 
 type GetUserNotificationsRow struct {
-	ID                int32              `json:"id"`
-	UserID            int32              `json:"user_id"`
-	GameID            pgtype.Int4        `json:"game_id"`
-	RelatedEntityType pgtype.Text        `json:"related_entity_type"`
-	RelatedEntityID   pgtype.Int4        `json:"related_entity_id"`
-	NotificationType  string             `json:"notification_type"`
-	Title             string             `json:"title"`
-	Content           pgtype.Text        `json:"content"`
-	IsRead            pgtype.Bool        `json:"is_read"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	GameTitle         pgtype.Text        `json:"game_title"`
+	ID          int32              `json:"id"`
+	UserID      int32              `json:"user_id"`
+	GameID      pgtype.Int4        `json:"game_id"`
+	Type        string             `json:"type"`
+	Title       string             `json:"title"`
+	Content     pgtype.Text        `json:"content"`
+	RelatedType pgtype.Text        `json:"related_type"`
+	RelatedID   pgtype.Int4        `json:"related_id"`
+	LinkUrl     pgtype.Text        `json:"link_url"`
+	IsRead      pgtype.Bool        `json:"is_read"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	GameTitle   pgtype.Text        `json:"game_title"`
 }
 
 func (q *Queries) GetUserNotifications(ctx context.Context, arg GetUserNotificationsParams) ([]GetUserNotificationsRow, error) {
@@ -247,12 +261,14 @@ func (q *Queries) GetUserNotifications(ctx context.Context, arg GetUserNotificat
 			&i.ID,
 			&i.UserID,
 			&i.GameID,
-			&i.RelatedEntityType,
-			&i.RelatedEntityID,
-			&i.NotificationType,
+			&i.Type,
 			&i.Title,
 			&i.Content,
+			&i.RelatedType,
+			&i.RelatedID,
+			&i.LinkUrl,
 			&i.IsRead,
+			&i.ReadAt,
 			&i.CreatedAt,
 			&i.GameTitle,
 		); err != nil {
@@ -268,8 +284,8 @@ func (q *Queries) GetUserNotifications(ctx context.Context, arg GetUserNotificat
 
 const markAllNotificationsRead = `-- name: MarkAllNotificationsRead :exec
 UPDATE notifications
-SET is_read = true
-WHERE user_id = $1
+SET is_read = true, read_at = NOW()
+WHERE user_id = $1 AND is_read = FALSE
 `
 
 func (q *Queries) MarkAllNotificationsRead(ctx context.Context, userID int32) error {
@@ -279,8 +295,8 @@ func (q *Queries) MarkAllNotificationsRead(ctx context.Context, userID int32) er
 
 const markGameNotificationsRead = `-- name: MarkGameNotificationsRead :exec
 UPDATE notifications
-SET is_read = true
-WHERE user_id = $1 AND game_id = $2
+SET is_read = true, read_at = NOW()
+WHERE user_id = $1 AND game_id = $2 AND is_read = FALSE
 `
 
 type MarkGameNotificationsReadParams struct {
@@ -295,9 +311,9 @@ func (q *Queries) MarkGameNotificationsRead(ctx context.Context, arg MarkGameNot
 
 const markNotificationRead = `-- name: MarkNotificationRead :one
 UPDATE notifications
-SET is_read = true
+SET is_read = true, read_at = NOW()
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, game_id, related_entity_type, related_entity_id, notification_type, title, content, is_read, created_at
+RETURNING id, user_id, game_id, type, title, content, related_type, related_id, link_url, is_read, read_at, created_at
 `
 
 type MarkNotificationReadParams struct {
@@ -312,103 +328,111 @@ func (q *Queries) MarkNotificationRead(ctx context.Context, arg MarkNotification
 		&i.ID,
 		&i.UserID,
 		&i.GameID,
-		&i.RelatedEntityType,
-		&i.RelatedEntityID,
-		&i.NotificationType,
+		&i.Type,
 		&i.Title,
 		&i.Content,
+		&i.RelatedType,
+		&i.RelatedID,
+		&i.LinkUrl,
 		&i.IsRead,
+		&i.ReadAt,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const notifyAudienceMembers = `-- name: NotifyAudienceMembers :exec
-INSERT INTO notifications (user_id, game_id, notification_type, title, content, related_entity_type, related_entity_id)
-SELECT gp.user_id, $1, $2, $3, $4, $5, $6
+INSERT INTO notifications (user_id, game_id, type, title, content, related_type, related_id, link_url)
+SELECT gp.user_id, $1, $2, $3, $4, $5, $6, $7
 FROM game_participants gp
-WHERE gp.game_id = $1 AND gp.role = 'audience' AND gp.status = 'active' AND gp.user_id != $7
+WHERE gp.game_id = $1 AND gp.role = 'audience' AND gp.status = 'active' AND gp.user_id != $8
 `
 
 type NotifyAudienceMembersParams struct {
-	GameID            pgtype.Int4 `json:"game_id"`
-	NotificationType  string      `json:"notification_type"`
-	Title             string      `json:"title"`
-	Content           pgtype.Text `json:"content"`
-	RelatedEntityType pgtype.Text `json:"related_entity_type"`
-	RelatedEntityID   pgtype.Int4 `json:"related_entity_id"`
-	UserID            int32       `json:"user_id"`
+	GameID      pgtype.Int4 `json:"game_id"`
+	Type        string      `json:"type"`
+	Title       string      `json:"title"`
+	Content     pgtype.Text `json:"content"`
+	RelatedType pgtype.Text `json:"related_type"`
+	RelatedID   pgtype.Int4 `json:"related_id"`
+	LinkUrl     pgtype.Text `json:"link_url"`
+	UserID      int32       `json:"user_id"`
 }
 
 func (q *Queries) NotifyAudienceMembers(ctx context.Context, arg NotifyAudienceMembersParams) error {
 	_, err := q.db.Exec(ctx, notifyAudienceMembers,
 		arg.GameID,
-		arg.NotificationType,
+		arg.Type,
 		arg.Title,
 		arg.Content,
-		arg.RelatedEntityType,
-		arg.RelatedEntityID,
+		arg.RelatedType,
+		arg.RelatedID,
+		arg.LinkUrl,
 		arg.UserID,
 	)
 	return err
 }
 
 const notifyGM = `-- name: NotifyGM :exec
-INSERT INTO notifications (user_id, game_id, notification_type, title, content, related_entity_type, related_entity_id)
-SELECT g.gm_user_id, $1, $2, $3, $4, $5, $6
+INSERT INTO notifications (user_id, game_id, type, title, content, related_type, related_id, link_url)
+SELECT g.gm_user_id, $1, $2, $3, $4, $5, $6, $7
 FROM games g
-WHERE g.id = $1 AND g.gm_user_id != $7
+WHERE g.id = $1 AND g.gm_user_id != $8
 `
 
 type NotifyGMParams struct {
-	GameID            pgtype.Int4 `json:"game_id"`
-	NotificationType  string      `json:"notification_type"`
-	Title             string      `json:"title"`
-	Content           pgtype.Text `json:"content"`
-	RelatedEntityType pgtype.Text `json:"related_entity_type"`
-	RelatedEntityID   pgtype.Int4 `json:"related_entity_id"`
-	GmUserID          int32       `json:"gm_user_id"`
+	GameID      pgtype.Int4 `json:"game_id"`
+	Type        string      `json:"type"`
+	Title       string      `json:"title"`
+	Content     pgtype.Text `json:"content"`
+	RelatedType pgtype.Text `json:"related_type"`
+	RelatedID   pgtype.Int4 `json:"related_id"`
+	LinkUrl     pgtype.Text `json:"link_url"`
+	GmUserID    int32       `json:"gm_user_id"`
 }
 
 func (q *Queries) NotifyGM(ctx context.Context, arg NotifyGMParams) error {
 	_, err := q.db.Exec(ctx, notifyGM,
 		arg.GameID,
-		arg.NotificationType,
+		arg.Type,
 		arg.Title,
 		arg.Content,
-		arg.RelatedEntityType,
-		arg.RelatedEntityID,
+		arg.RelatedType,
+		arg.RelatedID,
+		arg.LinkUrl,
 		arg.GmUserID,
 	)
 	return err
 }
 
 const notifyGameParticipants = `-- name: NotifyGameParticipants :exec
-INSERT INTO notifications (user_id, game_id, notification_type, title, content, related_entity_type, related_entity_id)
-SELECT gp.user_id, $1, $2, $3, $4, $5, $6
+INSERT INTO notifications (user_id, game_id, type, title, content, related_type, related_id, link_url)
+SELECT gp.user_id, $1, $2, $3, $4, $5, $6, $7
 FROM game_participants gp
-WHERE gp.game_id = $1 AND gp.status = 'active' AND gp.user_id != $7
+WHERE gp.game_id = $1 AND gp.status = 'active' AND gp.user_id != $8
 `
 
 type NotifyGameParticipantsParams struct {
-	GameID            pgtype.Int4 `json:"game_id"`
-	NotificationType  string      `json:"notification_type"`
-	Title             string      `json:"title"`
-	Content           pgtype.Text `json:"content"`
-	RelatedEntityType pgtype.Text `json:"related_entity_type"`
-	RelatedEntityID   pgtype.Int4 `json:"related_entity_id"`
-	UserID            int32       `json:"user_id"`
+	GameID      pgtype.Int4 `json:"game_id"`
+	Type        string      `json:"type"`
+	Title       string      `json:"title"`
+	Content     pgtype.Text `json:"content"`
+	RelatedType pgtype.Text `json:"related_type"`
+	RelatedID   pgtype.Int4 `json:"related_id"`
+	LinkUrl     pgtype.Text `json:"link_url"`
+	UserID      int32       `json:"user_id"`
 }
 
 // Helper queries for creating notifications
 func (q *Queries) NotifyGameParticipants(ctx context.Context, arg NotifyGameParticipantsParams) error {
 	_, err := q.db.Exec(ctx, notifyGameParticipants,
 		arg.GameID,
-		arg.NotificationType,
+		arg.Type,
 		arg.Title,
 		arg.Content,
-		arg.RelatedEntityType,
-		arg.RelatedEntityID,
+		arg.RelatedType,
+		arg.RelatedID,
+		arg.LinkUrl,
 		arg.UserID,
 	)
 	return err

@@ -32,9 +32,10 @@ export function CharacterAutocomplete({
 }: CharacterAutocompleteProps) {
   const listRef = useRef<HTMLUListElement>(null);
 
-  // Filter characters based on query
+  // Filter characters based on query (space-insensitive matching)
+  // This allows "@TestPlayer1" to match "Test Player 1 Character"
   const filteredCharacters = characters.filter((char) =>
-    char.name.toLowerCase().includes(query.toLowerCase())
+    char.name.toLowerCase().replace(/\s+/g, '').includes(query.toLowerCase().replace(/\s+/g, ''))
   );
 
   // Scroll selected item into view

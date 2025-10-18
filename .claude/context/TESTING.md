@@ -93,6 +93,123 @@ func TestServiceWithDB(t *testing.T) {
 - Test success paths with proper status codes
 - Test edge cases and boundary conditions
 
+#### 3. E2E Tests (Playwright)
+**⚠️ CRITICAL: READ BEFORE WRITING E2E TESTS**
+
+**THE GOLDEN RULE: E2E tests are the LAST step, not the first.**
+
+E2E tests have long feedback loops (~20-30 seconds) and limited debugging visibility. They are expensive to run and debug. **NEVER write E2E tests until lower-level tests pass.**
+
+**MANDATORY Pre-E2E Test Checklist:**
+```bash
+# 1. Backend unit test MUST pass
+SKIP_DB_TESTS=true go test ./pkg/db/services -run TestFeature -v
+
+# 2. API endpoint MUST return correct data
+curl -X POST http://localhost:3000/api/v1/endpoint -d '...' | jq '.field'
+
+# 3. Frontend component MUST render correctly
+npm test -- ComponentName.test.tsx
+
+# 4. System verification MUST pass
+curl -sf http://localhost:3000/health  # Backend
+curl -sf http://localhost:5173         # Frontend
+```
+
+**Only after ALL four pass, write E2E test.**
+
+**E2E Test Structure Rules:**
+
+1. **One Concern Per Test**
+   ```typescript
+   // ❌ BAD: Multiple concerns
+   test('feature works', async () => {
+     // autocomplete + submission + rendering + validation
+   });
+
+   // ✅ GOOD: Single concern
+   test('autocomplete appears when typing trigger character', async () => {
+     await input.pressSequentially('@');
+     await expect(dropdown).toBeVisible();
+   });
+   ```
+
+2. **Synchronous Execution (No Background &)**
+   ```bash
+   # ❌ BAD: Background execution - cannot see output
+   npx playwright test feature.spec.ts &
+
+   # ✅ GOOD: Foreground with output capture
+   npx playwright test feature.spec.ts --reporter=list 2>&1 | tee /tmp/e2e.log
+   ```
+
+3. **Explicit Waits (Not Arbitrary Timeouts)**
+   ```typescript
+   // ❌ BAD: Arbitrary timeout
+   await page.waitForTimeout(3000);
+
+   // ✅ GOOD: Wait for specific condition
+   await page.waitForSelector('[data-testid="element"]', { state: 'visible' });
+   await page.waitForResponse(resp => resp.url().includes('/api/'));
+   ```
+
+4. **Semantic Selectors with data-testid**
+   ```typescript
+   // ❌ BAD: Generic/fragile selectors
+   const button = page.locator('button').first();
+   const element = page.locator('.class-name');
+
+   // ✅ GOOD: Explicit test IDs
+   const submitBtn = page.locator('[data-testid="submit-button"]');
+   const mention = page.locator('[data-mention-id="123"]');
+   ```
+
+5. **Debugging Visibility**
+   ```typescript
+   // Add to test setup
+   page.on('console', msg => console.log(`BROWSER: ${msg.text()}`));
+   page.on('pageerror', err => console.log(`ERROR: ${err.message}`));
+   page.on('response', resp => {
+     if (resp.url().includes('/api/')) {
+       console.log(`API: ${resp.status()} ${resp.url()}`);
+     }
+   });
+   ```
+
+**E2E Development Workflow:**
+```typescript
+// Step 1: Just navigation (verify routing works)
+test('can navigate to page', async ({ page }) => {
+  await page.goto('http://localhost:5173/path');
+  await expect(page.locator('h1')).toContainText('Expected Title');
+});
+
+// Step 2: Add interaction (once Step 1 passes)
+test('can type in input', async ({ page }) => {
+  await page.goto('http://localhost:5173/path');
+  await page.fill('[data-testid="input"]', 'test');
+  await expect(page.locator('[data-testid="input"]')).toHaveValue('test');
+});
+
+// Step 3: Add behavior (once Step 2 passes)
+test('shows result when submitting', async ({ page }) => {
+  // ... build on previous steps
+});
+```
+
+**Common E2E Failures & Solutions:**
+
+| Failure | Likely Cause | Fix |
+|---------|-------------|-----|
+| Element not found | Generic selector, element not rendered | Use data-testid, verify component test passes |
+| Timeout waiting | API slow, data not loaded | Wait for API response, check network logs |
+| Flaky test | Race condition, async state | Use explicit waits, verify event handlers |
+| Element not visible | Wrong selector, CSS hiding element | Inspect screenshot, verify element exists in DOM |
+
+**See**: `.claude/planning/AI_E2E_TESTING_STRATEGY.md` for comprehensive guide
+
+**Run**: `npx playwright test --reporter=list`
+
 ### Frontend Testing
 
 #### 1. Component Tests (React Testing Library)

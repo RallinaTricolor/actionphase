@@ -606,3 +606,85 @@ type MessageWithDetails struct {
 	CommentCount   int64 // For posts
 	ReplyCount     int64 // For comments
 }
+
+// NotificationServiceInterface defines the contract for notification operations.
+// Handles creating, retrieving, and managing user notifications.
+//
+// Usage Example:
+//
+//	notificationService := &services.NotificationService{DB: pool}
+//
+//	// Create a notification
+//	notification, err := notificationService.CreateNotification(ctx, &CreateNotificationRequest{
+//	    UserID: 123,
+//	    GameID: &gameID,
+//	    Type:   NotificationTypeActionResult,
+//	    Title:  "You received an action result",
+//	    LinkURL: &linkURL,
+//	})
+//
+//	// Get unread count
+//	count, err := notificationService.GetUnreadCount(ctx, userID)
+//
+//	// Mark as read
+//	err := notificationService.MarkAsRead(ctx, notificationID, userID)
+type NotificationServiceInterface interface {
+	// CreateNotification creates a new notification for a user
+	CreateNotification(ctx context.Context, req *CreateNotificationRequest) (*Notification, error)
+
+	// CreateBulkNotifications creates notifications for multiple users at once
+	// Used for game-wide notifications (e.g., new phase, new post)
+	CreateBulkNotifications(ctx context.Context, userIDs []int32, req *CreateNotificationRequest) error
+
+	// GetUserNotifications retrieves a user's notifications with pagination
+	GetUserNotifications(ctx context.Context, userID int32, limit, offset int) ([]*Notification, error)
+
+	// GetUnreadCount returns the count of unread notifications for a user
+	GetUnreadCount(ctx context.Context, userID int32) (int64, error)
+
+	// GetUnreadNotifications retrieves only unread notifications for a user
+	GetUnreadNotifications(ctx context.Context, userID int32, limit int) ([]*Notification, error)
+
+	// MarkAsRead marks a notification as read
+	MarkAsRead(ctx context.Context, notificationID, userID int32) error
+
+	// MarkAllAsRead marks all of a user's unread notifications as read
+	MarkAllAsRead(ctx context.Context, userID int32) error
+
+	// DeleteNotification deletes a notification (user must own it)
+	DeleteNotification(ctx context.Context, notificationID, userID int32) error
+
+	// DeleteOldReadNotifications cleans up read notifications older than 30 days
+	// Called by background job
+	DeleteOldReadNotifications(ctx context.Context) error
+
+	// Helper methods for common notification scenarios
+	// These methods handle the creation logic for specific notification types
+
+	// NotifyPrivateMessage creates a notification for a new private message
+	NotifyPrivateMessage(ctx context.Context, recipientUserID int32, messageID int32, gameID int32, senderCharacterName string) error
+
+	// NotifyCommentReply creates a notification when someone replies to a comment
+	NotifyCommentReply(ctx context.Context, originalCommentAuthorID int32, replyID int32, gameID int32, replierCharacterName string) error
+
+	// NotifyCharacterMention creates a notification when a character is mentioned
+	NotifyCharacterMention(ctx context.Context, characterOwnerID int32, commentID int32, gameID int32, mentioningCharacterName string, mentionedCharacterName string) error
+
+	// NotifyActionSubmitted creates a notification for GM when player submits action
+	NotifyActionSubmitted(ctx context.Context, gmUserID int32, actionID int32, gameID int32, characterName string) error
+
+	// NotifyActionResult creates a notification for player when GM publishes result
+	NotifyActionResult(ctx context.Context, playerUserID int32, resultID int32, gameID int32, actionTitle string) error
+
+	// NotifyCommonRoomPost creates notifications for all game participants about new post
+	NotifyCommonRoomPost(ctx context.Context, gameID int32, postID int32, postTitle string, excludeUserID int32) error
+
+	// NotifyPhaseCreated creates notifications for all participants when phase created
+	NotifyPhaseCreated(ctx context.Context, gameID int32, phaseID int32, phaseTitle string, excludeUserID int32) error
+
+	// NotifyApplicationStatusChange creates notification for application approval/rejection
+	NotifyApplicationStatusChange(ctx context.Context, playerUserID int32, gameID int32, gameTitle string, approved bool) error
+
+	// NotifyCharacterStatusChange creates notification for character approval/rejection
+	NotifyCharacterStatusChange(ctx context.Context, playerUserID int32, gameID int32, characterID int32, characterName string, approved bool) error
+}

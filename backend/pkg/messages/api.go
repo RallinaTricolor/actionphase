@@ -89,6 +89,7 @@ func getUserIDFromToken(r *http.Request, app *core.App) (int32, string, error) {
 
 // Helper function to convert MessageWithDetails to MessageResponse
 func messageWithDetailsToResponse(msg *core.MessageWithDetails) *MessageResponse {
+	fmt.Printf("API messageWithDetailsToResponse: msg.ID=%d, msg.MentionedCharacterIds=%v\n", msg.ID, msg.MentionedCharacterIds)
 	response := &MessageResponse{
 		ID:                    msg.ID,
 		GameID:                msg.GameID,
@@ -105,6 +106,7 @@ func messageWithDetailsToResponse(msg *core.MessageWithDetails) *MessageResponse
 		CreatedAt:             msg.CreatedAt.Time,
 		UpdatedAt:             msg.UpdatedAt.Time,
 	}
+	fmt.Printf("API messageWithDetailsToResponse: response.ID=%d, response.MentionedCharacterIds=%v\n", response.ID, response.MentionedCharacterIds)
 
 	if msg.PhaseID.Valid {
 		phaseID := msg.PhaseID.Int32
@@ -369,20 +371,21 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 	response := make([]map[string]interface{}, 0)
 	for _, comment := range comments {
 		commentData := map[string]interface{}{
-			"id":              comment.ID,
-			"game_id":         comment.GameID,
-			"author_id":       comment.AuthorID,
-			"character_id":    comment.CharacterID,
-			"content":         comment.Content,
-			"message_type":    string(comment.MessageType),
-			"thread_depth":    comment.ThreadDepth,
-			"author_username": comment.AuthorUsername,
-			"character_name":  comment.CharacterName,
-			"reply_count":     comment.ReplyCount,
-			"is_edited":       comment.IsEdited,
-			"is_deleted":      comment.IsDeleted,
-			"created_at":      comment.CreatedAt,
-			"updated_at":      comment.UpdatedAt,
+			"id":                      comment.ID,
+			"game_id":                 comment.GameID,
+			"author_id":               comment.AuthorID,
+			"character_id":            comment.CharacterID,
+			"content":                 comment.Content,
+			"message_type":            string(comment.MessageType),
+			"thread_depth":            comment.ThreadDepth,
+			"author_username":         comment.AuthorUsername,
+			"character_name":          comment.CharacterName,
+			"reply_count":             comment.ReplyCount,
+			"is_edited":               comment.IsEdited,
+			"is_deleted":              comment.IsDeleted,
+			"mentioned_character_ids": comment.MentionedCharacterIds,
+			"created_at":              comment.CreatedAt,
+			"updated_at":              comment.UpdatedAt,
 		}
 
 		if comment.PhaseID.Valid {

@@ -21,6 +21,16 @@ The `.claude/` directory contains organized AI context and instructions:
 3. Reference **`/docs/adrs/007-testing-strategy.md`** for strategy details
 4. Check **`.claude/context/TEST_DATA.md`** when using test fixtures
 
+**⚠️ BEFORE WRITING E2E TESTS - CRITICAL**:
+**E2E tests are the LAST step, NEVER the first!** Follow the test pyramid:
+1. ✅ Backend unit test passes
+2. ✅ API endpoint returns correct data (verify with curl)
+3. ✅ Frontend component test passes
+4. ✅ System verification complete (backend + frontend running)
+5. **THEN** write E2E test
+
+**See `.claude/context/TESTING.md` section "E2E Tests (Playwright)" for mandatory checklist.**
+
 **Before Implementing Features**:
 1. Read **`.claude/context/ARCHITECTURE.md`** for architectural patterns
 2. Review relevant ADRs in **`/docs/adrs/`** for architectural decisions
@@ -124,15 +134,34 @@ just migrate_test             # Apply migrations to test database
 
 ### Quick Testing Guide
 
+**Test Pyramid (Bottom to Top)**:
+```
+4. E2E Tests (Playwright)          ← Slow, expensive, LAST
+   ↑
+3. Component Tests (React)          ← Medium speed
+   ↑
+2. API Integration Tests (curl)     ← Fast verification
+   ↑
+1. Unit Tests (Go/TypeScript)       ← Fastest, FIRST
+```
+
 **Backend**:
-- Unit tests with mocks: `just test-mocks`
+- Unit tests with mocks: `just test-mocks` (FAST - run first)
 - Integration tests with DB: `SKIP_DB_TESTS=false just test`
+- API verification: `curl http://localhost:3000/api/v1/endpoint | jq`
 - Target: >80% coverage on service layer
 
 **Frontend**:
-- Component tests: `just test-frontend`
+- Component tests: `just test-frontend` (run before E2E)
 - Watch mode: `just test-frontend-watch`
 - Test user interactions, not implementation
+
+**E2E Tests**:
+- **ONLY after unit + API + component tests pass**
+- Run synchronously: `npx playwright test --reporter=list` (NO `&`)
+- One concern per test
+- Use `data-testid` selectors, not class names
+- See `.claude/context/TESTING.md` E2E section for rules
 
 ### Bug Fix Process (Mandatory)
 1. Write test that reproduces bug (should fail)

@@ -222,6 +222,71 @@ var ValidApplicationStatuses = []string{
 	ApplicationStatusRejected,
 }
 
+// NotificationTypes define all valid notification types.
+const (
+	// NotificationTypePrivateMessage - User received a private message
+	NotificationTypePrivateMessage = "private_message"
+
+	// NotificationTypeCommentReply - User's comment received a reply
+	NotificationTypeCommentReply = "comment_reply"
+
+	// NotificationTypeCharacterMention - Character was mentioned in a comment
+	NotificationTypeCharacterMention = "character_mention"
+
+	// NotificationTypeActionSubmitted - Player submitted an action (for GM)
+	NotificationTypeActionSubmitted = "action_submitted"
+
+	// NotificationTypeActionResult - GM published an action result (for Player)
+	NotificationTypeActionResult = "action_result"
+
+	// NotificationTypeCommonRoomPost - New post in common room
+	NotificationTypeCommonRoomPost = "common_room_post"
+
+	// NotificationTypePhaseCreated - New phase was created and activated
+	NotificationTypePhaseCreated = "phase_created"
+
+	// NotificationTypeApplicationApproved - Game application was approved
+	NotificationTypeApplicationApproved = "application_approved"
+
+	// NotificationTypeApplicationRejected - Game application was rejected
+	NotificationTypeApplicationRejected = "application_rejected"
+
+	// NotificationTypeCharacterApproved - Character was approved by GM
+	NotificationTypeCharacterApproved = "character_approved"
+
+	// NotificationTypeCharacterRejected - Character was rejected by GM
+	NotificationTypeCharacterRejected = "character_rejected"
+
+	// NotificationTypeGameStateChanged - Game state changed (paused, resumed, etc.)
+	NotificationTypeGameStateChanged = "game_state_changed"
+)
+
+// ValidNotificationTypes contains all valid notification types for validation.
+var ValidNotificationTypes = []string{
+	NotificationTypePrivateMessage,
+	NotificationTypeCommentReply,
+	NotificationTypeCharacterMention,
+	NotificationTypeActionSubmitted,
+	NotificationTypeActionResult,
+	NotificationTypeCommonRoomPost,
+	NotificationTypePhaseCreated,
+	NotificationTypeApplicationApproved,
+	NotificationTypeApplicationRejected,
+	NotificationTypeCharacterApproved,
+	NotificationTypeCharacterRejected,
+	NotificationTypeGameStateChanged,
+}
+
+// IsValidNotificationType checks if the given type is a valid notification type.
+func IsValidNotificationType(notifType string) bool {
+	for _, validType := range ValidNotificationTypes {
+		if notifType == validType {
+			return true
+		}
+	}
+	return false
+}
+
 // DatabaseTableNames defines table names for consistent referencing.
 // Useful for cleanup operations and migrations.
 const (

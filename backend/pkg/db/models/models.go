@@ -254,16 +254,18 @@ type MessageRecipient struct {
 }
 
 type Notification struct {
-	ID                int32              `json:"id"`
-	UserID            int32              `json:"user_id"`
-	GameID            pgtype.Int4        `json:"game_id"`
-	RelatedEntityType pgtype.Text        `json:"related_entity_type"`
-	RelatedEntityID   pgtype.Int4        `json:"related_entity_id"`
-	NotificationType  string             `json:"notification_type"`
-	Title             string             `json:"title"`
-	Content           pgtype.Text        `json:"content"`
-	IsRead            pgtype.Bool        `json:"is_read"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	ID          int32              `json:"id"`
+	UserID      int32              `json:"user_id"`
+	GameID      pgtype.Int4        `json:"game_id"`
+	Type        string             `json:"type"`
+	Title       string             `json:"title"`
+	Content     pgtype.Text        `json:"content"`
+	RelatedType pgtype.Text        `json:"related_type"`
+	RelatedID   pgtype.Int4        `json:"related_id"`
+	LinkUrl     pgtype.Text        `json:"link_url"`
+	IsRead      pgtype.Bool        `json:"is_read"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type NpcAssignment struct {

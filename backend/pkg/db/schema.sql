@@ -219,12 +219,14 @@ CREATE TABLE notifications (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     game_id INTEGER REFERENCES games(id) ON DELETE CASCADE,
-    related_entity_type VARCHAR(50),
-    related_entity_id INTEGER,
-    notification_type VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL,
     title VARCHAR(255) NOT NULL,
     content TEXT,
+    related_type VARCHAR(50),
+    related_id INTEGER,
+    link_url VARCHAR(500),
     is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

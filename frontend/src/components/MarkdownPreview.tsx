@@ -55,10 +55,39 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   }, []);
 
   // Replace @CharacterName mentions with highlighted spans
+  // BUT skip mentions inside code blocks (inline or fenced)
   const processedContent = React.useMemo(() => {
     if (!mentionedCharacters.length) return content;
 
-    let processedText = content;
+    // Split content into code and non-code segments
+    // This regex matches:
+    // - Fenced code blocks (```lang\ncode\n``` or ```code```)
+    // - Inline code (`code`)
+    const codeBlockRegex = /(```[\s\S]*?```|`[^`\n]+?`)/g;
+
+    const segments: Array<{ text: string; isCode: boolean }> = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = codeBlockRegex.exec(content)) !== null) {
+      // Add non-code text before this code block
+      if (match.index > lastIndex) {
+        segments.push({ text: content.substring(lastIndex, match.index), isCode: false });
+      }
+      // Add code block
+      segments.push({ text: match[0], isCode: true });
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining non-code text
+    if (lastIndex < content.length) {
+      segments.push({ text: content.substring(lastIndex), isCode: false });
+    }
+
+    // If no segments were created (no code blocks), treat entire content as non-code
+    if (segments.length === 0) {
+      segments.push({ text: content, isCode: false });
+    }
 
     // Sort by name length (descending) to handle longer names first
     // This prevents "Bob Smith" from being partially matched as just "Bob"
@@ -66,23 +95,29 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       (a, b) => b.name.length - a.name.length
     );
 
-    sortedCharacters.forEach(({ id, name }) => {
-      // Match @CharacterName but not inside code blocks (` or ```)
-      // AND not inside <mark> tags (to prevent nested marks)
-      // This regex looks for @Name outside of backticks and mark tags
-      const mentionRegex = new RegExp(
-        `(?<![\`]|<mark[^>]*>)@(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(?![\`]|</mark>)`,
-        'g'
-      );
+    // Process each segment
+    const processedSegments = segments.map((segment) => {
+      if (segment.isCode) {
+        // Don't process mentions inside code blocks
+        return segment.text;
+      }
 
-      // Replace with a special marker that won't be affected by markdown parsing
-      processedText = processedText.replace(
-        mentionRegex,
-        `<mark data-mention-id="${id}">@$1</mark>`
-      );
+      let processedText = segment.text;
+      sortedCharacters.forEach(({ id, name }) => {
+        // Simple regex without lookbehind/lookahead since we already filtered out code blocks
+        const mentionRegex = new RegExp(`@(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g');
+
+        // Replace with mark element
+        processedText = processedText.replace(
+          mentionRegex,
+          `<mark data-mention-id="${id}">@$1</mark>`
+        );
+      });
+
+      return processedText;
     });
 
-    return processedText;
+    return processedSegments.join('');
   }, [content, mentionedCharacters]);
 
   return (

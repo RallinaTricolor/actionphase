@@ -93,6 +93,80 @@ lint: fmt vet
 run:
   cd backend && go run main.go
 
+# Build backend binary to /tmp for faster restarts
+build-binary:
+  @echo "Building backend binary..."
+  cd backend && go build -o /tmp/actionphase-backend main.go
+  @echo "✅ Binary built: /tmp/actionphase-backend"
+
+# Kill the backend process
+kill-backend:
+  @echo "Stopping backend..."
+  -pkill -f "actionphase-backend" || true
+  -pkill -f "go run main.go" || true
+  @sleep 1
+  @echo "✅ Backend stopped"
+
+# Kill process on a specific port (default: 3000)
+kill-port port="3000":
+  @echo "Killing process on port {{port}}..."
+  -lsof -i :{{port}} | grep LISTEN | awk '{print $2}' | xargs kill -9 2>/dev/null || echo "No process found on port {{port}}"
+  @sleep 1
+
+# Restart backend (kill, rebuild, start)
+restart-backend:
+  @echo "🔄 Restarting backend..."
+  @just kill-backend
+  @just kill-port 3000
+  @just build-binary
+  @echo "Starting backend..."
+  @cd backend && /tmp/actionphase-backend > /tmp/backend.log 2>&1 &
+  @sleep 3
+  @if curl -sf http://localhost:3000/health > /dev/null; then \
+    echo "✅ Backend is running on http://localhost:3000"; \
+  else \
+    echo "❌ Backend failed to start. Check logs: just logs-backend"; \
+    exit 1; \
+  fi
+
+# Quick restart using go run (slower but simpler)
+restart-backend-dev:
+  @echo "🔄 Restarting backend (dev mode)..."
+  @just kill-backend
+  @just kill-port 3000
+  @echo "Starting backend with go run..."
+  @cd backend && go run main.go > /tmp/backend.log 2>&1 &
+  @sleep 4
+  @if curl -sf http://localhost:3000/health > /dev/null; then \
+    echo "✅ Backend is running on http://localhost:3000"; \
+  else \
+    echo "❌ Backend failed to start. Check logs: just logs-backend"; \
+  fi
+
+# View backend logs
+logs-backend lines="50":
+  @tail -{{lines}} /tmp/backend.log
+
+# Follow backend logs (live)
+logs-backend-follow:
+  @tail -f /tmp/backend.log
+
+# Check if backend is running
+ps-backend:
+  @echo "=== Backend Processes ==="
+  @pgrep -fl "actionphase-backend|go run main.go" || echo "No backend process found"
+  @echo ""
+  @echo "=== Port 3000 Usage ==="
+  @lsof -i :3000 | head -2 || echo "Port 3000 is free"
+  @echo ""
+  @echo "=== Health Check ==="
+  @if curl -sf http://localhost:3000/health > /dev/null; then \
+    echo "✅ Backend is healthy"; \
+    curl -s http://localhost:3000/health | jq .; \
+  else \
+    echo "❌ Backend is not responding"; \
+  fi
+
 # === Backend Testing Commands ===
 test:
   cd backend && go test -p 1 ./...
@@ -147,6 +221,51 @@ install-frontend:
 
 run-frontend:
   cd frontend && npm run dev
+
+# Kill frontend dev server
+kill-frontend:
+  @echo "Stopping frontend..."
+  -pkill -f "vite" || true
+  -pkill -f "npm run dev" || true
+  @sleep 1
+  @echo "✅ Frontend stopped"
+
+# Restart frontend dev server
+restart-frontend:
+  @echo "🔄 Restarting frontend..."
+  @just kill-frontend
+  @just kill-port 5173
+  @echo "Starting frontend..."
+  @cd frontend && npm run dev > /tmp/frontend.log 2>&1 &
+  @sleep 3
+  @if curl -sf http://localhost:5173 > /dev/null; then \
+    echo "✅ Frontend is running on http://localhost:5173"; \
+  else \
+    echo "❌ Frontend failed to start. Check logs: just logs-frontend"; \
+  fi
+
+# View frontend logs
+logs-frontend lines="50":
+  @tail -{{lines}} /tmp/frontend.log
+
+# Follow frontend logs (live)
+logs-frontend-follow:
+  @tail -f /tmp/frontend.log
+
+# Check if frontend is running
+ps-frontend:
+  @echo "=== Frontend Processes ==="
+  @pgrep -fl "vite|npm run dev" || echo "No frontend process found"
+  @echo ""
+  @echo "=== Port 5173 Usage ==="
+  @lsof -i :5173 | head -2 || echo "Port 5173 is free"
+  @echo ""
+  @echo "=== Health Check ==="
+  @if curl -sf http://localhost:5173 > /dev/null; then \
+    echo "✅ Frontend is responding"; \
+  else \
+    echo "❌ Frontend is not responding"; \
+  fi
 
 build-frontend:
   cd frontend && npm run build
@@ -212,6 +331,167 @@ e2e-report:
 # Run specific E2E test file
 e2e-test file:
   cd frontend && npx playwright test {{file}}
+
+# === API Testing Commands (curl) ===
+# Login and save token for API testing
+api-login user="TestPlayer1":
+  #!/usr/bin/env bash
+  TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"username":"{{user}}","password":"testpassword123"}' \
+    | jq -r '.Token')
+  echo "$TOKEN" > /tmp/api-token.txt
+  echo "✅ Logged in as {{user}}"
+  echo "Token saved to /tmp/api-token.txt"
+  echo "Token: ${TOKEN:0:30}..."
+
+# Login as GM and save token
+api-login-gm:
+  @just api-login TestGM
+
+# Login as Player1 and save token
+api-login-player:
+  @just api-login TestPlayer1
+
+# Test API health endpoint
+api-health:
+  @curl -sf http://localhost:3000/health && echo "✅ Backend is healthy" || echo "❌ Backend is down"
+
+# Test if current token is valid
+api-test-token:
+  #!/usr/bin/env bash
+  if [ ! -f /tmp/api-token.txt ]; then
+    echo "❌ No token found. Run 'just api-login' first"
+    exit 1
+  fi
+  RESPONSE=$(curl -s -H "Authorization: Bearer $(cat /tmp/api-token.txt)" \
+    http://localhost:3000/api/v1/auth/me)
+  if echo "$RESPONSE" | jq -e '.username' > /dev/null 2>&1; then
+    USERNAME=$(echo "$RESPONSE" | jq -r '.username')
+    echo "✅ Token is valid for user: $USERNAME"
+  else
+    echo "❌ Token is invalid or expired. Run 'just api-login' to get a new token"
+  fi
+
+# Get games list
+api-games:
+  #!/usr/bin/env bash
+  if [ ! -f /tmp/api-token.txt ]; then
+    echo "❌ No token found. Run 'just api-login' first"
+    exit 1
+  fi
+  curl -s -H "Authorization: Bearer $(cat /tmp/api-token.txt)" \
+    http://localhost:3000/api/v1/games | jq '.'
+
+# Get game details by ID (default: 164 - E2E Common Room Test Game)
+api-game id="164":
+  #!/usr/bin/env bash
+  if [ ! -f /tmp/api-token.txt ]; then
+    echo "❌ No token found. Run 'just api-login' first"
+    exit 1
+  fi
+  curl -s -H "Authorization: Bearer $(cat /tmp/api-token.txt)" \
+    http://localhost:3000/api/v1/games/{{id}} | jq '.'
+
+# Get characters in game (default: 164)
+api-characters game_id="164":
+  #!/usr/bin/env bash
+  if [ ! -f /tmp/api-token.txt ]; then
+    echo "❌ No token found. Run 'just api-login' first"
+    exit 1
+  fi
+  curl -s -H "Authorization: Bearer $(cat /tmp/api-token.txt)" \
+    http://localhost:3000/api/v1/games/{{game_id}}/characters | jq '.'
+
+# Get posts for game (default: 164)
+api-posts game_id="164":
+  #!/usr/bin/env bash
+  if [ ! -f /tmp/api-token.txt ]; then
+    echo "❌ No token found. Run 'just api-login' first"
+    exit 1
+  fi
+  curl -s -H "Authorization: Bearer $(cat /tmp/api-token.txt)" \
+    http://localhost:3000/api/v1/games/{{game_id}}/posts | jq '.'
+
+# Get comments for a post
+api-comments post_id:
+  #!/usr/bin/env bash
+  if [ ! -f /tmp/api-token.txt ]; then
+    echo "❌ No token found. Run 'just api-login' first"
+    exit 1
+  fi
+  # Get game_id from the post first
+  curl -s -H "Authorization: Bearer $(cat /tmp/api-token.txt)" \
+    http://localhost:3000/api/v1/games/164/posts/{{post_id}}/comments | jq '.'
+
+# Create a test post with mentions
+api-create-post game_id="164" character_id="1319" content="Test post with @Test Player 2 Character mention":
+  #!/usr/bin/env bash
+  if [ ! -f /tmp/api-token.txt ]; then
+    echo "❌ No token found. Run 'just api-login' first"
+    exit 1
+  fi
+  curl -s -X POST -H "Authorization: Bearer $(cat /tmp/api-token.txt)" \
+    -H "Content-Type: application/json" \
+    http://localhost:3000/api/v1/games/{{game_id}}/posts \
+    -d "{\"character_id\": {{character_id}}, \"content\": \"{{content}}\"}" | jq '.'
+
+# Create a test comment with mentions
+api-create-comment post_id character_id="1319" content="Test comment with @Test Player 2 Character":
+  #!/usr/bin/env bash
+  if [ ! -f /tmp/api-token.txt ]; then
+    echo "❌ No token found. Run 'just api-login' first"
+    exit 1
+  fi
+  curl -s -X POST -H "Authorization: Bearer $(cat /tmp/api-token.txt)" \
+    -H "Content-Type: application/json" \
+    http://localhost:3000/api/v1/games/164/posts/{{post_id}}/comments \
+    -d "{\"character_id\": {{character_id}}, \"content\": \"{{content}}\"}" | jq '.'
+
+# Test character mentions feature end-to-end
+api-test-mentions:
+  #!/usr/bin/env bash
+  echo "=== Testing Character Mentions Feature ==="
+  echo ""
+
+  # 1. Login
+  echo "1. Logging in as TestPlayer1..."
+  just api-login-player
+  echo ""
+
+  # 2. Get characters
+  echo "2. Getting available characters..."
+  just api-characters 164 | jq '.[] | {id, name}' | head -20
+  echo ""
+
+  # 3. Get latest post
+  echo "3. Getting latest post..."
+  POST_ID=$(just api-posts 164 | jq -r '.[0].id')
+  echo "Latest post ID: $POST_ID"
+  echo ""
+
+  # 4. Create comment with mention
+  echo "4. Creating comment with mention..."
+  COMMENT=$(just api-create-comment "$POST_ID" 1319 "Hey @Test Player 2 Character, testing mentions!")
+  echo "$COMMENT" | jq '.'
+  echo ""
+
+  # 5. Check if mentioned_character_ids is present
+  echo "5. Checking mentioned_character_ids field..."
+  MENTIONED_IDS=$(echo "$COMMENT" | jq '.mentioned_character_ids')
+  if [ "$MENTIONED_IDS" != "null" ] && [ "$MENTIONED_IDS" != "[]" ]; then
+    echo "✅ mentioned_character_ids found: $MENTIONED_IDS"
+  else
+    echo "❌ mentioned_character_ids is missing or empty: $MENTIONED_IDS"
+  fi
+
+# Quick API status check
+api-status:
+  @echo "=== API Status Check ==="
+  @just api-health
+  @echo ""
+  @echo "=== Token Status ==="
+  @just api-test-token || echo "No valid token"
 
 # === Development Workflows ===
 
@@ -281,13 +561,73 @@ clean: test-clean
 quick-test:
   cd backend && go test -short ./...
 
+# Complete system status check
 status:
+  @echo "═══════════════════════════════════════════════════════════"
+  @echo "            ActionPhase System Status"
+  @echo "═══════════════════════════════════════════════════════════"
+  @echo ""
+  @echo "=== Services ==="
+  @just ps-backend
+  @echo ""
+  @just ps-frontend
+  @echo ""
+  @echo "=== Database ==="
+  @if docker ps | grep -q actionphase-db; then \
+    echo "✅ Database container is running"; \
+  else \
+    echo "❌ Database container is not running"; \
+  fi
+  @echo ""
+  @just migrate_status || echo "Database connection failed"
+  @echo ""
   @echo "=== Git Status ==="
-  git status --short
+  @git status --short | head -10
   @echo ""
-  @echo "=== Database Status ==="
-  -just migrate_status
+  @echo "═══════════════════════════════════════════════════════════"
+
+# Restart both backend and frontend
+restart-all:
+  @echo "🔄 Restarting all services..."
+  @just restart-backend
   @echo ""
-  @echo "=== Go Modules ==="
-  cd backend && go list -m all | head -5
-  @echo "..."
+  @just restart-frontend
+  @echo ""
+  @echo "✅ All services restarted!"
+
+# Kill all development processes
+kill-all:
+  @echo "Stopping all services..."
+  @just kill-backend
+  @just kill-frontend
+  @echo "✅ All services stopped"
+
+# View all logs (last 20 lines from each)
+logs-all:
+  @echo "=== Backend Logs (last 20 lines) ==="
+  @just logs-backend 20
+  @echo ""
+  @echo "=== Frontend Logs (last 20 lines) ==="
+  @just logs-frontend 20
+
+# Quick health check of all services
+health:
+  @echo "=== Health Check ==="
+  @echo -n "Backend:  "
+  @if curl -sf http://localhost:3000/health > /dev/null; then \
+    echo "✅ Healthy"; \
+  else \
+    echo "❌ Down"; \
+  fi
+  @echo -n "Frontend: "
+  @if curl -sf http://localhost:5173 > /dev/null; then \
+    echo "✅ Healthy"; \
+  else \
+    echo "❌ Down"; \
+  fi
+  @echo -n "Database: "
+  @if docker ps | grep -q actionphase-db; then \
+    echo "✅ Running"; \
+  else \
+    echo "❌ Down"; \
+  fi
