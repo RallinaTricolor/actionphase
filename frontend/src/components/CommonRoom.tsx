@@ -160,6 +160,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
               post={post}
               gameId={gameId}
               characters={allCharacters}
+              controllableCharacters={controllableCharacters}
               onCreateComment={handleCreateComment}
               currentUserId={currentUserId}
             />

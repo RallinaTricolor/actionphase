@@ -276,21 +276,50 @@ VALUES (1000, 'Test Player 1 Character', 164);
 
 **Why**: AI can reference exact IDs in tests. Failures are reproducible.
 
-#### 5.2 Minimal Test Data
+#### 5.2 Fixtures for Infrastructure, Dynamic Creation for Content
+
+**Pattern**: Use fixtures for stable infrastructure, create test-specific content dynamically.
+
 ```typescript
-// ❌ BAD: Relies on complex fixture setup
+// ✅ GOOD: Use fixture for infrastructure
 test('mentions work', async () => {
-  // Depends on Game #164 with Phase #1440 with 3 specific characters...
+  const gameId = 164; // From fixture - Game #164 has characters and active phase
+
+  // Create test-specific content dynamically
+  const postContent = `Test Post ${Date.now()}`;
+  await gmPage.fill('textarea#content', postContent);
+  await gmPage.click('button:has-text("Create GM Post")');
+
+  // Now interact with YOUR post
+  await expect(page.locator(`text=${postContent}`)).toBeVisible();
 });
 
-// ✅ GOOD: Creates own test data
+// ❌ BAD: Creating entire game infrastructure per test
 test('mentions work', async () => {
-  const { gameId, characterId } = await setupTestGame();
-  // ...
+  const { gameId, characterId } = await createGame();
+  await createPhase(gameId);
+  await createCharacters(gameId);
+  // Too slow, too complex, hard to debug
 });
 ```
 
-**Why**: Tests are isolated. Fixture changes don't break tests.
+**Fixtures Should Provide**:
+- ✅ Users (test_player1@example.com, etc.)
+- ✅ Games with specific states (recruiting, in_progress, completed)
+- ✅ Characters for test users
+- ✅ Active phases (but **published = true** to avoid UI filtering issues)
+- ✅ Pre-existing state data (draft actions, applications)
+
+**Tests Should Create**:
+- ✅ Posts/messages with unique timestamps (`${Date.now()}`)
+- ✅ Comments/replies specific to the test
+- ✅ Any content that needs to be uniquely identified
+
+**Why**:
+- Fixtures are reliable once configured correctly
+- Dynamic creation makes tests independent (no pollution)
+- Unique content (timestamps) enables specific assertions
+- Matches established codebase pattern (see `action-submission-flow.spec.ts`)
 
 #### 5.3 Test Data Documentation
 ```typescript
@@ -457,89 +486,129 @@ verify-change() {
 - ✅ Separate test database
 - ✅ Playwright configuration
 - ✅ Test isolation (each test resets fixtures)
+- ✅ Dynamic content creation pattern (posts with `${Date.now()}`)
+- ✅ Multi-context pattern for user interactions
 
-### What Needs Work
+### Lessons Learned (October 2025)
+
+**Problem**: 3 E2E tests failing (avatar, autocomplete, notification)
+**Root Causes Found**:
+1. **Fixture misconfiguration**: `is_published = false` on common_room phase prevented posts from showing in UI
+2. **Test pattern mismatch**: Tests were trying to use static fixture posts instead of creating dynamic content
+3. **Real-time dependencies**: Notification test relied on 15-second polling intervals (too slow for E2E)
+
+**Solutions Applied**:
+1. ✅ Fixed fixture: Set `is_published = true` on phases
+2. ✅ Adopted dynamic creation: GM creates post during test with unique timestamp
+3. ✅ Used multi-context pattern: Separate browser contexts for GM and Player
+4. ✅ Simplified notification test: Test UI interaction instead of real-time polling
+5. ✅ Removed fixture post: Tests create their own content, fixture provides only infrastructure
+
+**Key Insight**:
+- **Fixtures ARE reliable** - the issue was a config bug, not fixture unreliability
+- **Dynamic creation is still best** for content-heavy tests (matches existing codebase pattern)
+- **Test the UI, not the backend** - E2E tests should focus on browser interactions, not real-time server behaviors
+
+### Common Pitfalls to Avoid
+
+1. **Modal Overlays Blocking Clicks**
+   - ❌ Problem: Modals don't close properly, blocking subsequent clicks
+   - ✅ Solution: Reload page after complex interactions OR use explicit close button clicks
+
+2. **Published State Filtering**
+   - ❌ Problem: `is_published = false` on phases hides content in UI
+   - ✅ Solution: Always set `is_published = true` in test fixtures
+
+3. **Hardcoding Game IDs**
+   - ✅ Acceptable: `const gameId = 164;` when using dedicated test fixture
+   - ❌ Bad: Using production game IDs that might change
+
+4. **Waiting for Real-Time Updates**
+   - ❌ Problem: Polling intervals (15s) cause test timeouts
+   - ✅ Solution: Reload page to check state OR test only UI components
+
+### What Still Needs Work
 - ❌ Tests running in background make debugging hard
 - ❌ No pre-test system verification
 - ❌ Limited console/network logging
-- ❌ Tests are too broad (multiple concerns)
-- ❌ No data-testid attributes on components
-
-### Immediate Priority
-1. Fix current mention rendering test (3 failing)
-2. Add data-testid to CommentEditor, CharacterAutocomplete
-3. Create verify-e2e-ready.sh
-4. Split multi-concern tests into focused tests
+- ❌ Some tests are too broad (multiple concerns)
+- ❌ Inconsistent use of data-testid attributes
 
 ---
 
-## Example: Good E2E Test
+## Example: Good E2E Test (Updated Pattern)
 
 ```typescript
 import { test, expect } from '@playwright/test';
-import { TEST_FIXTURES } from './fixtures';
+import { loginAs } from './fixtures/auth-helpers';
 
 test.describe('Character Mentions - Autocomplete', () => {
-  test.beforeEach(async ({ page }) => {
-    // Setup logging
-    page.on('console', msg => console.log(`BROWSER: ${msg.text()}`));
-    page.on('pageerror', err => console.log(`ERROR: ${err.message}`));
+  test('shows autocomplete when typing @ in comment', async ({ browser }) => {
+    const gameId = 164; // Fixture provides Game #164 with characters and active phase
 
-    // Login and navigate
-    await page.goto('http://localhost:5173');
-    await page.fill('[data-testid="email-input"]', TEST_FIXTURES.PLAYER1.email);
-    await page.fill('[data-testid="password-input"]', TEST_FIXTURES.PLAYER1.password);
-    await page.click('[data-testid="login-button"]');
-    await page.waitForURL(/\/games/);
+    const gmContext = await browser.newContext();
+    const playerContext = await browser.newContext();
 
-    // Navigate to test game common room
-    await page.goto(`http://localhost:5173/games/${TEST_FIXTURES.GAME_164.id}/common-room`);
-    await page.waitForSelector('[data-testid="common-room-loaded"]');
-  });
+    const gmPage = await gmContext.newPage();
+    const playerPage = await playerContext.newPage();
 
-  test('shows autocomplete when typing @ character', async ({ page }) => {
-    const textarea = page.locator('[data-testid="comment-textarea"]');
-    await textarea.click();
-    await textarea.pressSequentially('@');
+    try {
+      // Setup logging
+      playerPage.on('console', msg => console.log(`BROWSER: ${msg.text()}`));
+      playerPage.on('pageerror', err => console.log(`ERROR: ${err.message}`));
 
-    // Wait for autocomplete to appear
-    const autocomplete = page.locator('[data-testid="character-autocomplete"]');
-    await expect(autocomplete).toBeVisible({ timeout: 2000 });
-  });
+      // GM creates a post (dynamic content with unique timestamp)
+      await loginAs(gmPage, 'GM');
+      await gmPage.goto(`/games/${gameId}`);
+      await gmPage.waitForLoadState('networkidle');
+      await gmPage.click('button:has-text("Common Room")');
 
-  test('autocomplete shows all game characters', async ({ page }) => {
-    // Assumes autocomplete is visible (from previous test or fixture)
-    const autocomplete = page.locator('[data-testid="character-autocomplete"]');
+      const postContent = `Mission Brief ${Date.now()}`;
+      await gmPage.fill('textarea#content', postContent);
+      await gmPage.click('button:has-text("Create GM Post")');
+      await expect(gmPage.locator(`text=${postContent}`)).toBeVisible();
 
-    // Verify specific characters appear
-    await expect(autocomplete).toContainText(TEST_FIXTURES.GAME_164.characters[0].name);
-    await expect(autocomplete).toContainText(TEST_FIXTURES.GAME_164.characters[1].name);
-    await expect(autocomplete).toContainText(TEST_FIXTURES.GAME_164.characters[2].name);
-  });
+      // Player views post and adds comment
+      await loginAs(playerPage, 'PLAYER_1');
+      await playerPage.goto(`/games/${gameId}`);
+      await playerPage.waitForLoadState('networkidle');
+      await playerPage.click('button:has-text("Common Room")');
+      await expect(playerPage.locator(`text=${postContent}`)).toBeVisible();
 
-  test('filters autocomplete when typing character name', async ({ page }) => {
-    const textarea = page.locator('[data-testid="comment-textarea"]');
-    await textarea.pressSequentially('@Test Player 1');
+      // Open comment form
+      const postCard = playerPage.locator(`div:has-text("${postContent}")`).first();
+      await postCard.locator('button:has-text("Add Comment")').click();
 
-    const autocomplete = page.locator('[data-testid="character-autocomplete"]');
+      // Type @ to trigger autocomplete
+      const textarea = postCard.locator('textarea[placeholder*="Write a comment"]');
+      await textarea.click();
+      await textarea.pressSequentially('@');
 
-    // Should show Player 1
-    await expect(autocomplete).toContainText('Test Player 1 Character');
+      // Verify autocomplete appears with characters
+      const autocomplete = playerPage.locator('[role="listbox"]');
+      await expect(autocomplete).toBeVisible({ timeout: 2000 });
+      await expect(autocomplete).toContainText('Test Player 1 Character');
+      await expect(autocomplete).toContainText('Test Player 2 Character');
+      await expect(autocomplete).toContainText('GM Test Character');
 
-    // Should NOT show Player 2
-    const player2Option = autocomplete.locator('text=Test Player 2 Character');
-    await expect(player2Option).not.toBeVisible();
+    } finally {
+      await gmContext.close();
+      await playerContext.close();
+    }
   });
 });
 ```
 
 **Why This Works:**
-- ✅ One concern per test
-- ✅ Explicit data-testid selectors
-- ✅ Console logging enabled
-- ✅ Documents assumptions (comments)
-- ✅ Uses constants for test data
-- ✅ Short and focused
+- ✅ Uses fixture for infrastructure (Game #164, characters, phase)
+- ✅ Creates dynamic content per test (post with timestamp)
+- ✅ Multi-context pattern (GM and Player in separate browsers)
+- ✅ One focused concern (autocomplete visibility)
+- ✅ Console logging enabled for debugging
+- ✅ Explicit waits with timeouts
+- ✅ Clean resource management (finally block)
+- ✅ Uses semantic selectors (role="listbox")
+- ✅ Verifies specific, expected content
 
 ---
 

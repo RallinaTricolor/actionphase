@@ -292,7 +292,7 @@ func (s *NotificationService) NotifyPrivateMessage(ctx context.Context, recipien
 		Title:       fmt.Sprintf("New message from %s", senderCharacterName),
 		RelatedType: stringPtr("message"),
 		RelatedID:   &messageID,
-		LinkURL:     stringPtr(fmt.Sprintf("/games/%d#messages", gameID)),
+		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=messages", gameID)),
 	})
 	return err
 }
@@ -306,7 +306,7 @@ func (s *NotificationService) NotifyCommentReply(ctx context.Context, originalCo
 		Title:       fmt.Sprintf("%s replied to your comment", replierCharacterName),
 		RelatedType: stringPtr("comment"),
 		RelatedID:   &replyID,
-		LinkURL:     stringPtr(fmt.Sprintf("/games/%d#comment-%d", gameID, replyID)),
+		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=common-room", gameID)),
 	})
 	return err
 }
@@ -320,7 +320,7 @@ func (s *NotificationService) NotifyCharacterMention(ctx context.Context, charac
 		Title:       fmt.Sprintf("%s mentioned %s", mentioningCharacterName, mentionedCharacterName),
 		RelatedType: stringPtr("comment"),
 		RelatedID:   &commentID,
-		LinkURL:     stringPtr(fmt.Sprintf("/games/%d#comment-%d", gameID, commentID)),
+		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=common-room", gameID)),
 	})
 	return err
 }
@@ -334,7 +334,7 @@ func (s *NotificationService) NotifyActionSubmitted(ctx context.Context, gmUserI
 		Title:       fmt.Sprintf("%s submitted an action", characterName),
 		RelatedType: stringPtr("action"),
 		RelatedID:   &actionID,
-		LinkURL:     stringPtr(fmt.Sprintf("/games/%d/actions/%d", gameID, actionID)),
+		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=actions", gameID)),
 	})
 	return err
 }
@@ -348,7 +348,7 @@ func (s *NotificationService) NotifyActionResult(ctx context.Context, playerUser
 		Title:       fmt.Sprintf("Action result: %s", actionTitle),
 		RelatedType: stringPtr("action_result"),
 		RelatedID:   &resultID,
-		LinkURL:     stringPtr(fmt.Sprintf("/games/%d/results/%d", gameID, resultID)),
+		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=actions", gameID)),
 	})
 	return err
 }
@@ -365,7 +365,7 @@ func (s *NotificationService) NotifyCommonRoomPost(ctx context.Context, gameID i
 		Content:     pgtype.Text{Valid: false},
 		RelatedType: toPgText(stringPtr("post")),
 		RelatedID:   toPgInt4(&postID),
-		LinkUrl:     toPgText(stringPtr(fmt.Sprintf("/games/%d#post-%d", gameID, postID))),
+		LinkUrl:     toPgText(stringPtr(fmt.Sprintf("/games/%d?tab=common-room", gameID))),
 		UserID:      excludeUserID,
 	})
 
@@ -387,7 +387,7 @@ func (s *NotificationService) NotifyPhaseCreated(ctx context.Context, gameID int
 		Content:     pgtype.Text{Valid: false},
 		RelatedType: toPgText(stringPtr("phase")),
 		RelatedID:   toPgInt4(&phaseID),
-		LinkUrl:     toPgText(stringPtr(fmt.Sprintf("/games/%d/phases/%d", gameID, phaseID))),
+		LinkUrl:     toPgText(stringPtr(fmt.Sprintf("/games/%d?tab=phases", gameID))),
 		UserID:      excludeUserID,
 	})
 
@@ -443,7 +443,7 @@ func (s *NotificationService) NotifyCharacterStatusChange(ctx context.Context, p
 		Title:       title,
 		RelatedType: stringPtr("character"),
 		RelatedID:   &characterID,
-		LinkURL:     stringPtr(fmt.Sprintf("/games/%d/characters/%d", gameID, characterID)),
+		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=characters", gameID)),
 	})
 	return err
 }

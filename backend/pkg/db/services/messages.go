@@ -101,6 +101,11 @@ func (s *MessageService) GetPost(ctx context.Context, postID int32) (*core.Messa
 		return nil, fmt.Errorf("failed to get comment count: %w", err)
 	}
 
+	var avatarURL *string
+	if post.CharacterAvatarUrl.Valid {
+		avatarURL = &post.CharacterAvatarUrl.String
+	}
+
 	return &core.MessageWithDetails{
 		Message: models.Message{
 			ID:          post.ID,
@@ -119,9 +124,10 @@ func (s *MessageService) GetPost(ctx context.Context, postID int32) (*core.Messa
 			UpdatedAt:   post.UpdatedAt,
 			DeletedAt:   post.DeletedAt,
 		},
-		AuthorUsername: post.AuthorUsername,
-		CharacterName:  post.CharacterName.String,
-		CommentCount:   totalComments,
+		AuthorUsername:     post.AuthorUsername,
+		CharacterName:      post.CharacterName.String,
+		CharacterAvatarUrl: avatarURL,
+		CommentCount:       totalComments,
 	}, nil
 }
 
@@ -154,6 +160,11 @@ func (s *MessageService) GetGamePosts(ctx context.Context, gameID int32, phaseID
 			return nil, fmt.Errorf("failed to get comment count for post %d: %w", post.ID, err)
 		}
 
+		var avatarURL *string
+		if post.CharacterAvatarUrl.Valid {
+			avatarURL = &post.CharacterAvatarUrl.String
+		}
+
 		result[i] = core.MessageWithDetails{
 			Message: models.Message{
 				ID:                    post.ID,
@@ -173,9 +184,10 @@ func (s *MessageService) GetGamePosts(ctx context.Context, gameID int32, phaseID
 				UpdatedAt:             post.UpdatedAt,
 				DeletedAt:             post.DeletedAt,
 			},
-			AuthorUsername: post.AuthorUsername,
-			CharacterName:  post.CharacterName.String,
-			CommentCount:   totalComments,
+			AuthorUsername:     post.AuthorUsername,
+			CharacterName:      post.CharacterName.String,
+			CharacterAvatarUrl: avatarURL,
+			CommentCount:       totalComments,
 		}
 	}
 
@@ -193,6 +205,11 @@ func (s *MessageService) GetPhasePosts(ctx context.Context, phaseID int32) ([]co
 
 	result := make([]core.MessageWithDetails, len(posts))
 	for i, post := range posts {
+		var avatarURL *string
+		if post.CharacterAvatarUrl.Valid {
+			avatarURL = &post.CharacterAvatarUrl.String
+		}
+
 		result[i] = core.MessageWithDetails{
 			Message: models.Message{
 				ID:          post.ID,
@@ -211,9 +228,10 @@ func (s *MessageService) GetPhasePosts(ctx context.Context, phaseID int32) ([]co
 				UpdatedAt:   post.UpdatedAt,
 				DeletedAt:   post.DeletedAt,
 			},
-			AuthorUsername: post.AuthorUsername,
-			CharacterName:  post.CharacterName.String,
-			CommentCount:   post.CommentCount,
+			AuthorUsername:     post.AuthorUsername,
+			CharacterName:      post.CharacterName.String,
+			CharacterAvatarUrl: avatarURL,
+			CommentCount:       post.CommentCount,
 		}
 	}
 
@@ -300,6 +318,11 @@ func (s *MessageService) GetComment(ctx context.Context, commentID int32) (*core
 		return nil, fmt.Errorf("failed to get comment: %w", err)
 	}
 
+	var avatarURL *string
+	if comment.CharacterAvatarUrl.Valid {
+		avatarURL = &comment.CharacterAvatarUrl.String
+	}
+
 	return &core.MessageWithDetails{
 		Message: models.Message{
 			ID:          comment.ID,
@@ -318,9 +341,10 @@ func (s *MessageService) GetComment(ctx context.Context, commentID int32) (*core
 			UpdatedAt:   comment.UpdatedAt,
 			DeletedAt:   comment.DeletedAt,
 		},
-		AuthorUsername: comment.AuthorUsername,
-		CharacterName:  comment.CharacterName.String,
-		ReplyCount:     comment.ReplyCount,
+		AuthorUsername:     comment.AuthorUsername,
+		CharacterName:      comment.CharacterName.String,
+		CharacterAvatarUrl: avatarURL,
+		ReplyCount:         comment.ReplyCount,
 	}, nil
 }
 
@@ -336,6 +360,10 @@ func (s *MessageService) GetPostComments(ctx context.Context, parentID int32) ([
 	result := make([]core.MessageWithDetails, len(comments))
 	for i, comment := range comments {
 		slog.Info("GetPostComments conversion", "comment_id", comment.ID, "mentioned_ids", comment.MentionedCharacterIds)
+		var avatarURL *string
+		if comment.CharacterAvatarUrl.Valid {
+			avatarURL = &comment.CharacterAvatarUrl.String
+		}
 		result[i] = core.MessageWithDetails{
 			Message: models.Message{
 				ID:                    comment.ID,
@@ -355,9 +383,10 @@ func (s *MessageService) GetPostComments(ctx context.Context, parentID int32) ([
 				UpdatedAt:             comment.UpdatedAt,
 				DeletedAt:             comment.DeletedAt,
 			},
-			AuthorUsername: comment.AuthorUsername,
-			CharacterName:  comment.CharacterName.String,
-			ReplyCount:     comment.ReplyCount,
+			AuthorUsername:     comment.AuthorUsername,
+			CharacterName:      comment.CharacterName.String,
+			CharacterAvatarUrl: avatarURL,
+			ReplyCount:         comment.ReplyCount,
 		}
 		slog.Info("GetPostComments result", "comment_id", result[i].ID, "mentioned_ids", result[i].MentionedCharacterIds)
 	}
@@ -440,6 +469,11 @@ func (s *MessageService) GetUserPostsInGame(ctx context.Context, gameID, userID 
 
 	result := make([]core.MessageWithDetails, len(posts))
 	for i, post := range posts {
+		var avatarURL *string
+		if post.CharacterAvatarUrl.Valid {
+			avatarURL = &post.CharacterAvatarUrl.String
+		}
+
 		result[i] = core.MessageWithDetails{
 			Message: models.Message{
 				ID:          post.ID,
@@ -458,9 +492,10 @@ func (s *MessageService) GetUserPostsInGame(ctx context.Context, gameID, userID 
 				UpdatedAt:   post.UpdatedAt,
 				DeletedAt:   post.DeletedAt,
 			},
-			AuthorUsername: post.AuthorUsername,
-			CharacterName:  post.CharacterName.String,
-			CommentCount:   post.CommentCount,
+			AuthorUsername:     post.AuthorUsername,
+			CharacterName:      post.CharacterName.String,
+			CharacterAvatarUrl: avatarURL,
+			CommentCount:       post.CommentCount,
 		}
 	}
 

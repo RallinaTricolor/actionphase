@@ -354,6 +354,96 @@ test.describe('Character Avatar Feature', () => {
     });
   });
 
+  test.describe('Avatar in Posts and Comments', () => {
+    test('should display character avatar in common room posts and comments', async ({ browser }) => {
+      const gameId = 164; // COMMON_ROOM_TEST
+
+      const gmContext = await browser.newContext();
+      const playerContext = await browser.newContext();
+
+      const gmPage = await gmContext.newPage();
+      const playerPage = await playerContext.newPage();
+
+      try {
+        // 1. Player uploads avatar
+        await loginAs(playerPage, 'PLAYER_1');
+        await playerPage.goto(`/games/${gameId}`);
+        await playerPage.waitForLoadState('networkidle');
+
+        await playerPage.click('button:has-text("Characters")');
+        await playerPage.waitForTimeout(500);
+
+        const editButton = playerPage.locator('button:has-text("Edit Sheet")').first();
+        await editButton.click();
+        await playerPage.waitForTimeout(500);
+
+        const uploadButton = playerPage.locator('button[title="Upload Avatar"]');
+        await uploadButton.click();
+        await playerPage.waitForTimeout(500);
+
+        const removeButton = playerPage.locator('button:has-text("Remove Avatar")');
+        const hasAvatar = await removeButton.isVisible();
+
+        if (!hasAvatar) {
+          const testImagePath = path.join(__dirname, '../fixtures/test-avatar.jpg');
+          const fileInput = playerPage.locator('input[type="file"]');
+          await fileInput.setInputFiles(testImagePath);
+
+          await playerPage.locator('button:has-text("Upload")').last().click();
+          await expect(playerPage.locator('text=Upload Avatar for')).not.toBeVisible({ timeout: 10000 });
+        }
+
+        // Reload to close modals
+        await playerPage.reload();
+        await playerPage.waitForLoadState('networkidle');
+
+        // 2. GM creates a post
+        await loginAs(gmPage, 'GM');
+        await gmPage.goto(`/games/${gameId}`);
+        await gmPage.waitForLoadState('networkidle');
+
+        await gmPage.click('button:has-text("Common Room")');
+        await gmPage.waitForTimeout(1000);
+
+        const postContent = `Avatar Test Post ${Date.now()}`;
+        await gmPage.fill('textarea#content', postContent);
+        await gmPage.waitForTimeout(500);
+        await gmPage.click('button:has-text("Create GM Post")');
+        await gmPage.waitForTimeout(2000);
+
+        await expect(gmPage.locator(`text=${postContent}`).first()).toBeVisible({ timeout: 5000 });
+
+        // 3. Player comments on the post
+        await playerPage.click('button:has-text("Common Room")');
+        await playerPage.waitForTimeout(1000);
+
+        await expect(playerPage.locator(`text=${postContent}`).first()).toBeVisible({ timeout: 5000 });
+
+        const postCard = playerPage.locator(`div:has-text("${postContent}")`).first();
+        await postCard.locator('button:has-text("Add Comment")').first().click();
+        await playerPage.waitForTimeout(1000);
+
+        const testCommentContent = `Avatar test comment ${Date.now()}`;
+        const commentTextarea = postCard.locator('textarea[placeholder*="Write a comment"]');
+        await commentTextarea.fill(testCommentContent);
+
+        const form = postCard.locator('form').first();
+        await form.evaluate((f: HTMLFormElement) => f.requestSubmit());
+        await playerPage.waitForTimeout(2000);
+
+        // 4. Verify comment was posted successfully
+        const comment = playerPage.locator(`text=${testCommentContent}`).first();
+        await expect(comment).toBeVisible({ timeout: 5000 });
+
+        // Verify the character name appears on the page (indicating attribution worked)
+        await expect(playerPage.locator('text=Test Player 1 Character').first()).toBeVisible();
+      } finally {
+        await gmContext.close();
+        await playerContext.close();
+      }
+    });
+  });
+
   test.describe('Integration Tests', () => {
     test('complete avatar workflow: upload, verify, delete', async ({ page }) => {
       await loginAs(page, 'PLAYER_3');

@@ -10,6 +10,7 @@ interface ThreadedCommentProps {
   comment: Message;
   gameId: number;
   characters: Character[]; // All game characters (for autocomplete)
+  controllableCharacters: Character[]; // Characters the user can control (for "Reply as" dropdown)
   onCreateReply: (parentId: number, characterId: number, content: string) => Promise<void>;
   currentUserId?: number;
   depth?: number;
@@ -19,12 +20,11 @@ export function ThreadedComment({
   comment,
   gameId,
   characters,
+  controllableCharacters,
   onCreateReply,
   currentUserId,
   depth = 0
 }: ThreadedCommentProps) {
-  // Filter to only characters the current user can control (for "Reply as" dropdown)
-  const controllableCharacters = characters.filter(char => char.user_id === currentUserId);
   const [replies, setReplies] = useState<Message[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [showReplies, setShowReplies] = useState(true); // Start expanded
@@ -236,6 +236,7 @@ export function ThreadedComment({
                 comment={reply}
                 gameId={gameId}
                 characters={characters}
+                controllableCharacters={controllableCharacters}
                 onCreateReply={onCreateReply}
                 currentUserId={currentUserId}
                 depth={depth + 1}

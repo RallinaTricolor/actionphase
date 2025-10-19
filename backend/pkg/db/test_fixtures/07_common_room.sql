@@ -51,7 +51,7 @@ BEGIN
     NOW() - INTERVAL '1 hour',
     NOW() + INTERVAL '23 hours',
     true,
-    false,
+    true,
     NOW() - INTERVAL '1 hour'
   ) RETURNING id INTO phase_id;
 
@@ -69,6 +69,21 @@ BEGIN
   VALUES
     (game_id, p1_id, 'Test Player 1 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
     (game_id, p2_id, 'Test Player 2 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
+
+  -- ============================================
+  -- GM POSTS for testing
+  -- ============================================
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, content, message_type, created_at, updated_at)
+  VALUES (
+    game_id,
+    phase_id,
+    gm_id,
+    (SELECT c.id FROM characters c WHERE c.game_id = 164 AND c.character_type = 'npc_gm' LIMIT 1),
+    'Welcome to the Common Room! This is a test post for E2E testing.',
+    'post',
+    NOW() - INTERVAL '30 minutes',
+    NOW() - INTERVAL '30 minutes'
+  );
 
   RAISE NOTICE 'Created Game #164: E2E Common Room Test Game with active common_room phase';
 

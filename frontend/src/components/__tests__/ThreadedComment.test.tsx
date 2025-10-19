@@ -119,6 +119,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -133,6 +134,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -147,6 +149,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -161,6 +164,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -176,6 +180,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -196,6 +201,7 @@ describe('ThreadedComment', () => {
           comment={ownComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -210,6 +216,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -229,6 +236,7 @@ describe('ThreadedComment', () => {
           comment={editedComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -243,6 +251,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -257,6 +266,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
           depth={1}
@@ -274,6 +284,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
           depth={0}
@@ -290,6 +301,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
           depth={1}
@@ -301,6 +313,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
           depth={2}
@@ -322,6 +335,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -341,6 +355,7 @@ describe('ThreadedComment', () => {
           comment={commentWithOneReply}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -355,6 +370,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -369,6 +385,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -384,6 +401,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -403,6 +421,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -418,6 +437,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -436,6 +456,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -457,6 +478,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -477,6 +499,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -497,6 +520,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={[mockCharacters[0]]}
+          controllableCharacters={[mockCharacters[0]]}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -515,6 +539,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={[]}
+          controllableCharacters={[]}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -533,6 +558,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -554,6 +580,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -575,6 +602,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -596,6 +624,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -618,6 +647,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -640,6 +670,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -657,6 +688,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -678,6 +710,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -706,6 +739,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -734,6 +768,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -762,6 +797,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -792,6 +828,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -820,6 +857,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -848,6 +886,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -882,6 +921,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -906,6 +946,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -926,6 +967,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -955,6 +997,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -973,6 +1016,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
           depth={1}
@@ -999,6 +1043,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -1023,6 +1068,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -1056,6 +1102,7 @@ describe('ThreadedComment', () => {
           comment={recentComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -1076,6 +1123,7 @@ describe('ThreadedComment', () => {
           comment={recentComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -1096,6 +1144,7 @@ describe('ThreadedComment', () => {
           comment={recentComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -1116,6 +1165,7 @@ describe('ThreadedComment', () => {
           comment={recentComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -1136,6 +1186,7 @@ describe('ThreadedComment', () => {
           comment={oldComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -1162,6 +1213,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -1184,6 +1236,7 @@ describe('ThreadedComment', () => {
           comment={mockComment}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -1219,6 +1272,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
         />
@@ -1273,6 +1327,7 @@ describe('ThreadedComment', () => {
           comment={mockCommentWithReplies}
           gameId={mockGameId}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
           currentUserId={mockCurrentUserId}
           depth={1}

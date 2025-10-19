@@ -275,6 +275,7 @@ const getComment = `-- name: GetComment :one
 SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as reply_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
@@ -301,6 +302,7 @@ type GetCommentRow struct {
 	DeletedAt             pgtype.Timestamp  `json:"deleted_at"`
 	AuthorUsername        string            `json:"author_username"`
 	CharacterName         pgtype.Text       `json:"character_name"`
+	CharacterAvatarUrl    pgtype.Text       `json:"character_avatar_url"`
 	ReplyCount            int64             `json:"reply_count"`
 }
 
@@ -326,6 +328,7 @@ func (q *Queries) GetComment(ctx context.Context, id int32) (GetCommentRow, erro
 		&i.DeletedAt,
 		&i.AuthorUsername,
 		&i.CharacterName,
+		&i.CharacterAvatarUrl,
 		&i.ReplyCount,
 	)
 	return i, err
@@ -360,6 +363,7 @@ const getGamePosts = `-- name: GetGamePosts :many
 SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
@@ -398,6 +402,7 @@ type GetGamePostsRow struct {
 	DeletedAt             pgtype.Timestamp  `json:"deleted_at"`
 	AuthorUsername        string            `json:"author_username"`
 	CharacterName         pgtype.Text       `json:"character_name"`
+	CharacterAvatarUrl    pgtype.Text       `json:"character_avatar_url"`
 	CommentCount          int64             `json:"comment_count"`
 }
 
@@ -434,6 +439,7 @@ func (q *Queries) GetGamePosts(ctx context.Context, arg GetGamePostsParams) ([]G
 			&i.DeletedAt,
 			&i.AuthorUsername,
 			&i.CharacterName,
+			&i.CharacterAvatarUrl,
 			&i.CommentCount,
 		); err != nil {
 			return nil, err
@@ -494,6 +500,7 @@ const getPhasePosts = `-- name: GetPhasePosts :many
 SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
@@ -523,6 +530,7 @@ type GetPhasePostsRow struct {
 	DeletedAt             pgtype.Timestamp  `json:"deleted_at"`
 	AuthorUsername        string            `json:"author_username"`
 	CharacterName         pgtype.Text       `json:"character_name"`
+	CharacterAvatarUrl    pgtype.Text       `json:"character_avatar_url"`
 	CommentCount          int64             `json:"comment_count"`
 }
 
@@ -554,6 +562,7 @@ func (q *Queries) GetPhasePosts(ctx context.Context, phaseID pgtype.Int4) ([]Get
 			&i.DeletedAt,
 			&i.AuthorUsername,
 			&i.CharacterName,
+			&i.CharacterAvatarUrl,
 			&i.CommentCount,
 		); err != nil {
 			return nil, err
@@ -570,6 +579,7 @@ const getPost = `-- name: GetPost :one
 SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
@@ -596,6 +606,7 @@ type GetPostRow struct {
 	DeletedAt             pgtype.Timestamp  `json:"deleted_at"`
 	AuthorUsername        string            `json:"author_username"`
 	CharacterName         pgtype.Text       `json:"character_name"`
+	CharacterAvatarUrl    pgtype.Text       `json:"character_avatar_url"`
 	CommentCount          int64             `json:"comment_count"`
 }
 
@@ -621,6 +632,7 @@ func (q *Queries) GetPost(ctx context.Context, id int32) (GetPostRow, error) {
 		&i.DeletedAt,
 		&i.AuthorUsername,
 		&i.CharacterName,
+		&i.CharacterAvatarUrl,
 		&i.CommentCount,
 	)
 	return i, err
@@ -644,6 +656,7 @@ const getPostComments = `-- name: GetPostComments :many
 SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as reply_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
@@ -673,6 +686,7 @@ type GetPostCommentsRow struct {
 	DeletedAt             pgtype.Timestamp  `json:"deleted_at"`
 	AuthorUsername        string            `json:"author_username"`
 	CharacterName         pgtype.Text       `json:"character_name"`
+	CharacterAvatarUrl    pgtype.Text       `json:"character_avatar_url"`
 	ReplyCount            int64             `json:"reply_count"`
 }
 
@@ -706,6 +720,7 @@ func (q *Queries) GetPostComments(ctx context.Context, parentID pgtype.Int4) ([]
 			&i.DeletedAt,
 			&i.AuthorUsername,
 			&i.CharacterName,
+			&i.CharacterAvatarUrl,
 			&i.ReplyCount,
 		); err != nil {
 			return nil, err
@@ -754,6 +769,7 @@ const getUserPostsInGame = `-- name: GetUserPostsInGame :many
 SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
@@ -789,6 +805,7 @@ type GetUserPostsInGameRow struct {
 	DeletedAt             pgtype.Timestamp  `json:"deleted_at"`
 	AuthorUsername        string            `json:"author_username"`
 	CharacterName         pgtype.Text       `json:"character_name"`
+	CharacterAvatarUrl    pgtype.Text       `json:"character_avatar_url"`
 	CommentCount          int64             `json:"comment_count"`
 }
 
@@ -820,6 +837,7 @@ func (q *Queries) GetUserPostsInGame(ctx context.Context, arg GetUserPostsInGame
 			&i.DeletedAt,
 			&i.AuthorUsername,
 			&i.CharacterName,
+			&i.CharacterAvatarUrl,
 			&i.CommentCount,
 		); err != nil {
 			return nil, err

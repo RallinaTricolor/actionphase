@@ -1,0 +1,8 @@
+- Code organization
+- Code duplication
+- File structure
+- Large files
+- Large functions or methods
+- Status of documentation
+- Number of justfile commands and their relevance
+- Fixture management vs demo/test data for UI based testing

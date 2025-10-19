@@ -106,6 +106,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -120,6 +121,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -134,6 +136,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -150,6 +153,7 @@ describe('PostCard', () => {
           post={mockEditedPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -164,6 +168,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -180,6 +185,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -194,6 +200,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={999}
         />
@@ -208,6 +215,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
         />
       );
@@ -223,6 +231,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -242,6 +251,7 @@ describe('PostCard', () => {
           post={markdownPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -260,6 +270,7 @@ describe('PostCard', () => {
           post={mockLongPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -274,6 +285,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -289,6 +301,7 @@ describe('PostCard', () => {
           post={mockLongPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -313,6 +326,7 @@ describe('PostCard', () => {
           post={mockLongPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -335,6 +349,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -349,6 +364,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -364,6 +380,7 @@ describe('PostCard', () => {
           post={postWithoutCount}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -379,6 +396,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -398,6 +416,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -413,6 +432,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -430,6 +450,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -449,6 +470,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -468,6 +490,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -488,6 +511,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={[mockCharacters[0]]}
+          controllableCharacters={[mockCharacters[0]]}
           onCreateComment={mockOnCreateComment}
         />
       );
@@ -504,6 +528,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={[]}
+          controllableCharacters={[]}
           onCreateComment={mockOnCreateComment}
         />
       );
@@ -523,6 +548,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -541,6 +567,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -563,6 +590,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -586,6 +614,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -604,6 +633,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -625,6 +655,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -652,6 +683,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -676,6 +708,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -700,6 +733,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -729,6 +763,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -763,6 +798,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -790,6 +826,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -818,6 +855,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -838,6 +876,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -864,6 +903,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -888,6 +928,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -918,6 +959,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -949,6 +991,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -974,6 +1017,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -999,6 +1043,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -1025,6 +1070,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -1047,6 +1093,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -1075,6 +1122,7 @@ describe('PostCard', () => {
           post={postWithoutComments}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -1103,6 +1151,7 @@ describe('PostCard', () => {
           post={recentPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -1124,6 +1173,7 @@ describe('PostCard', () => {
           post={recentPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -1145,6 +1195,7 @@ describe('PostCard', () => {
           post={recentPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -1166,6 +1217,7 @@ describe('PostCard', () => {
           post={recentPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -1187,6 +1239,7 @@ describe('PostCard', () => {
           post={oldPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />
@@ -1208,6 +1261,7 @@ describe('PostCard', () => {
           post={mockPost}
           gameId={1}
           characters={mockCharacters}
+          controllableCharacters={mockCharacters}
           onCreateComment={mockOnCreateComment}
           currentUserId={100}
         />

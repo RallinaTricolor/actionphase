@@ -46,40 +46,50 @@ export function CommentEditor({
 
   // Calculate cursor position for autocomplete dropdown
   const getCaretCoordinates = (element: HTMLTextAreaElement, position: number) => {
+    // Get the textarea's position in viewport
+    const rect = element.getBoundingClientRect();
+
     // Create a mirror div to measure text position
     const computed = window.getComputedStyle(element);
     const div = document.createElement('div');
 
-    // Copy styles
+    // Copy styles from textarea
     const styles = [
       'fontSize', 'fontFamily', 'fontWeight', 'wordWrap',
       'whiteSpace', 'borderWidth', 'paddingLeft', 'paddingRight',
+      'paddingTop', 'paddingBottom', 'lineHeight',
     ];
     styles.forEach(style => {
       div.style[style as any] = computed[style as any];
     });
 
+    // Position the mirror div at the same place as textarea
     div.style.position = 'absolute';
+    div.style.top = '0px';
+    div.style.left = '0px';
     div.style.visibility = 'hidden';
     div.style.whiteSpace = 'pre-wrap';
-    div.style.width = element.offsetWidth + 'px';
+    div.style.wordWrap = 'break-word';
+    div.style.width = element.clientWidth + 'px';
     div.textContent = element.value.substring(0, position);
 
+    // Add a span at cursor position
     const span = document.createElement('span');
-    span.textContent = element.value.substring(position) || '.';
+    span.textContent = '|'; // Cursor marker
     div.appendChild(span);
 
     document.body.appendChild(div);
 
-    const rect = element.getBoundingClientRect();
     const spanRect = span.getBoundingClientRect();
+    const divRect = div.getBoundingClientRect();
 
     document.body.removeChild(div);
 
-    return {
-      top: rect.top + (spanRect.top - div.getBoundingClientRect().top) + element.scrollTop + 20,
-      left: rect.left + (spanRect.left - div.getBoundingClientRect().left),
-    };
+    // Calculate position relative to viewport
+    const top = rect.top + (spanRect.top - divRect.top) - element.scrollTop + 20;
+    const left = rect.left + (spanRect.left - divRect.left);
+
+    return { top, left };
   };
 
   // Detect @ and trigger autocomplete

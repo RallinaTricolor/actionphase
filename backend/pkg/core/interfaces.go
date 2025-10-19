@@ -602,10 +602,11 @@ type CreateCommentRequest struct {
 // MessageWithDetails represents a message with additional metadata
 type MessageWithDetails struct {
 	models.Message
-	AuthorUsername string
-	CharacterName  string
-	CommentCount   int64 // For posts
-	ReplyCount     int64 // For comments
+	AuthorUsername     string
+	CharacterName      string
+	CharacterAvatarUrl *string // Optional - character's avatar URL
+	CommentCount       int64   // For posts
+	ReplyCount         int64   // For comments
 }
 
 // NotificationServiceInterface defines the contract for notification operations.

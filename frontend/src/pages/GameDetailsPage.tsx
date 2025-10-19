@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 import type { GameState, GameApplication } from '../types/games';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
@@ -24,6 +25,10 @@ interface GameDetailsPageProps {
 }
 
 export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsPageProps) => {
+  // Get search params for tab navigation
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
   // Get data from contexts
   const { currentUser, isCheckingAuth } = useAuth();
   const {
@@ -45,7 +50,7 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
   const [actionLoading, setActionLoading] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('default');
+  const [activeTab, setActiveTab] = useState<string>(tabParam || 'default');
 
   // Combined loading state
   const loading = isLoadingGame || isLoadingParticipants;
@@ -176,6 +181,13 @@ export const GameDetailsPage = ({ gameId, isGM: isGMProp = false }: GameDetailsP
 
     return tabList;
   }, [game, isGM, participants.length, currentPhaseData?.phase?.phase_type]);
+
+  // Update active tab when URL parameter changes
+  useEffect(() => {
+    if (tabParam && tabs.find(t => t.id === tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam, tabs]);
 
   // Set default tab when tabs change
   useEffect(() => {

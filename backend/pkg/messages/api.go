@@ -249,20 +249,21 @@ func (h *Handler) GetGamePosts(w http.ResponseWriter, r *http.Request) {
 	response := make([]map[string]interface{}, 0)
 	for _, post := range posts {
 		postData := map[string]interface{}{
-			"id":              post.ID,
-			"game_id":         post.GameID,
-			"author_id":       post.AuthorID,
-			"character_id":    post.CharacterID,
-			"content":         post.Content,
-			"message_type":    string(post.MessageType),
-			"thread_depth":    post.ThreadDepth,
-			"author_username": post.AuthorUsername,
-			"character_name":  post.CharacterName,
-			"comment_count":   post.CommentCount,
-			"is_edited":       post.IsEdited,
-			"is_deleted":      post.IsDeleted,
-			"created_at":      post.CreatedAt,
-			"updated_at":      post.UpdatedAt,
+			"id":                   post.ID,
+			"game_id":              post.GameID,
+			"author_id":            post.AuthorID,
+			"character_id":         post.CharacterID,
+			"content":              post.Content,
+			"message_type":         string(post.MessageType),
+			"thread_depth":         post.ThreadDepth,
+			"author_username":      post.AuthorUsername,
+			"character_name":       post.CharacterName,
+			"character_avatar_url": post.CharacterAvatarUrl,
+			"comment_count":        post.CommentCount,
+			"is_edited":            post.IsEdited,
+			"is_deleted":           post.IsDeleted,
+			"created_at":           post.CreatedAt,
+			"updated_at":           post.UpdatedAt,
 		}
 
 		if post.PhaseID.Valid {
@@ -380,6 +381,7 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 			"thread_depth":            comment.ThreadDepth,
 			"author_username":         comment.AuthorUsername,
 			"character_name":          comment.CharacterName,
+			"character_avatar_url":    comment.CharacterAvatarUrl,
 			"reply_count":             comment.ReplyCount,
 			"is_edited":               comment.IsEdited,
 			"is_deleted":              comment.IsDeleted,
