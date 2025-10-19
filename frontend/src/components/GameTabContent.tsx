@@ -1,0 +1,197 @@
+import { GameApplicationsList } from './GameApplicationsList';
+import { CharactersList } from './CharactersList';
+import { PhaseManagement } from './PhaseManagement';
+import { ActionSubmission } from './ActionSubmission';
+import { ActionsList } from './ActionsList';
+import { ActionResultsList } from './ActionResultsList';
+import { CommonRoom } from './CommonRoom';
+import { PrivateMessages } from './PrivateMessages';
+import { PhaseHistoryView } from './PhaseHistoryView';
+import type { Game, Participant, Character } from '../types/games';
+import type { GamePhase } from '../types/phases';
+
+interface GameTabContentProps {
+  activeTab: string;
+  gameId: number;
+  game: Game;
+  participants: Participant[];
+  currentPhaseData?: { phase: GamePhase };
+  isGM: boolean;
+  isParticipant: boolean;
+  currentUserId: number | null;
+  userCharacters: Character[];
+}
+
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'Not set';
+  return new Date(dateString).toLocaleString();
+};
+
+export function GameTabContent({
+  activeTab,
+  gameId,
+  game,
+  participants,
+  currentPhaseData,
+  isGM,
+  isParticipant,
+  currentUserId,
+  userCharacters,
+}: GameTabContentProps) {
+  // Applications Tab (Recruitment - GM only)
+  if (activeTab === 'applications' && game.state === 'recruitment' && isGM) {
+    return <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} />;
+  }
+
+  // Applications Tab (Character Creation - GM only, collapsed)
+  if (activeTab === 'applications' && game.state === 'character_creation' && isGM) {
+    return <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} />;
+  }
+
+  // Participants Tab
+  if (activeTab === 'participants') {
+    return (
+      <>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Participants</h2>
+        {participants.length === 0 ? (
+          <p className="text-gray-500">No participants yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {['player', 'co_gm', 'audience'].map((role) => {
+              const roleParticipants = participants.filter(p => p.role === role);
+              if (roleParticipants.length === 0) return null;
+              return (
+                <div key={role}>
+                  <h3 className="font-semibold text-gray-900 mb-2 capitalize">
+                    {role.replace('_', ' ')}s ({roleParticipants.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {roleParticipants.map((participant) => (
+                      <div key={participant.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="font-medium text-gray-900">{participant.username}</div>
+                        <div className="text-sm text-gray-500">
+                          Joined {new Date(participant.joined_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Game Info Tab (Recruitment & other states)
+  if (activeTab === 'info') {
+    return (
+      <>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Game Information</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-2">Genre</h3>
+            <p className="text-gray-600">{game.genre || 'Not specified'}</p>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-2">Players</h3>
+            <p className="text-gray-600">
+              {game.current_players} / {game.max_players || 'Unlimited'}
+            </p>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-2">Recruitment Deadline</h3>
+            <p className="text-gray-600">{formatDate(game.recruitment_deadline)}</p>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-2">Start Date</h3>
+            <p className="text-gray-600">{formatDate(game.start_date)}</p>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-2">End Date</h3>
+            <p className="text-gray-600">{formatDate(game.end_date)}</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Characters Tab
+  if (activeTab === 'characters') {
+    return (
+      <CharactersList
+        gameId={gameId}
+        userRole={isGM ? 'gm' : (isParticipant ? 'player' : 'audience')}
+        currentUserId={currentUserId || undefined}
+        gameState={game.state}
+        isAnonymous={game.is_anonymous || false}
+      />
+    );
+  }
+
+  // Common Room Tab (In Progress - common_room phases)
+  if (activeTab === 'common-room' && game.state === 'in_progress' && currentPhaseData?.phase?.phase_type === 'common_room') {
+    return (
+      <CommonRoom
+        gameId={gameId}
+        phaseId={currentPhaseData?.phase?.id}
+        phaseTitle={currentPhaseData?.phase?.title || `Phase ${currentPhaseData?.phase?.phase_number}`}
+        isCurrentPhase={true}
+        isGM={isGM}
+      />
+    );
+  }
+
+  // Phases Tab (In Progress - GM only)
+  if (activeTab === 'phases' && game.state === 'in_progress' && isGM) {
+    return <PhaseManagement gameId={gameId} />;
+  }
+
+  // Actions Tab (In Progress)
+  if (activeTab === 'actions' && game.state === 'in_progress') {
+    return (
+      <>
+        {isGM ? (
+          <ActionsList
+            gameId={gameId}
+            currentPhase={currentPhaseData?.phase}
+          />
+        ) : (
+          <>
+            <div className="mb-6">
+              <ActionSubmission
+                gameId={gameId}
+                currentPhase={currentPhaseData?.phase}
+              />
+            </div>
+            <div className="mb-6">
+              <ActionResultsList gameId={gameId} />
+            </div>
+          </>
+        )}
+      </>
+    );
+  }
+
+  // Phase History Tab (In Progress)
+  if (activeTab === 'phase-history' && game.state === 'in_progress') {
+    return <PhaseHistoryView gameId={gameId} currentPhaseId={currentPhaseData?.phase?.id} isGM={isGM} />;
+  }
+
+  // Private Messages Tab (In Progress)
+  if (activeTab === 'messages' && game.state === 'in_progress') {
+    return (
+      <div className="h-[600px]">
+        <PrivateMessages
+          gameId={gameId}
+          characters={userCharacters}
+          isAnonymous={game.is_anonymous || false}
+        />
+      </div>
+    );
+  }
+
+  // Default fallback
+  return null;
+}

@@ -37,10 +37,32 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
 
   // Load top-level comments when showing comments
   useEffect(() => {
-    if (showComments && topLevelComments.length === 0) {
-      loadComments();
-    }
-  }, [showComments]);
+    let isMounted = true;
+
+    const loadInitialComments = async () => {
+      if (showComments && topLevelComments.length === 0) {
+        try {
+          if (isMounted) setLoadingComments(true);
+          const response = await apiClient.getPostComments(gameId, post.id);
+          if (isMounted) {
+            setTopLevelComments(response.data);
+          }
+        } catch (err) {
+          if (isMounted) {
+            console.error('Failed to load comments:', err);
+          }
+        } finally {
+          if (isMounted) setLoadingComments(false);
+        }
+      }
+    };
+
+    loadInitialComments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [showComments, topLevelComments.length, gameId, post.id]);
 
   const loadComments = async (delayMs: number = 0) => {
     try {

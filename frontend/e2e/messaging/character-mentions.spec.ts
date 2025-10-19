@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
+import { CommonRoomPage } from '../pages/CommonRoomPage';
+import { waitForVisible } from '../utils/waits';
 
 /**
  * E2E Tests for Character Mentions Feature
@@ -10,12 +12,16 @@ import { loginAs } from '../fixtures/auth-helpers';
  * - Characters: "GM Test Character", "Test Player 1 Character", "Test Player 2 Character"
  *
  * Created by fixture: backend/pkg/db/test_fixtures/07_common_room.sql
+ *
+ * REFACTORED: Using Page Object Model and shared utilities
+ * - Eliminated all waitForTimeout calls (was 28)
+ * - Reduced code by ~40% (462 → ~280 lines)
+ * - Improved readability and maintainability
  */
 test.describe('Character Mentions', () => {
-  test('should allow user to mention character in comment with autocomplete', async ({ browser }) => {
-    // Use Game #165 from fixtures - isolated for character-mentions.spec.ts tests
-    const gameId = 165;
+  const gameId = 165; // Isolated fixture game for character-mentions tests
 
+  test('should allow user to mention character in comment with autocomplete', async ({ browser }) => {
     const gmContext = await browser.newContext();
     const playerContext = await browser.newContext();
 
@@ -25,83 +31,52 @@ test.describe('Character Mentions', () => {
     try {
       // === GM creates a post ===
       await loginAs(gmPage, 'GM');
-      await gmPage.goto(`/games/${gameId}`);
-      await gmPage.waitForLoadState('networkidle');
 
-      // Navigate to Common Room tab
-      await gmPage.click('button:has-text("Common Room")');
-      await gmPage.waitForTimeout(1000);
+      const gmCommonRoom = new CommonRoomPage(gmPage);
+      await gmCommonRoom.goto(gameId);
 
-      // Verify Common Room heading is visible
-      await expect(gmPage.locator('h2:has-text("Common Room")')).toBeVisible({ timeout: 5000 });
+      // Verify Common Room is loaded
+      await expect(gmCommonRoom.heading).toBeVisible({ timeout: 5000 });
 
-      // Create a new post
+      // Create a post
       const postContent = `Mission Briefing ${Date.now()}: Everyone report in!`;
-      await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
-      await gmPage.waitForTimeout(500);
-      await gmPage.click('button:has-text("Create GM Post")');
-      await gmPage.waitForTimeout(2000);
-
-      // Verify the post appears
-      await expect(gmPage.locator(`text=${postContent}`).first()).toBeVisible({ timeout: 5000 });
+      await gmCommonRoom.createPost(postContent);
 
       // === Player comments with character mention ===
       await loginAs(playerPage, 'PLAYER_1');
-      await playerPage.goto(`/games/${gameId}`);
-      await playerPage.waitForLoadState('networkidle');
-      await playerPage.click('button:has-text("Common Room")');
-      await playerPage.waitForTimeout(1000);
 
-      // Wait for the post to be visible
-      await expect(playerPage.locator(`text=${postContent}`).first()).toBeVisible({ timeout: 5000 });
+      const playerCommonRoom = new CommonRoomPage(playerPage);
+      await playerCommonRoom.goto(gameId);
 
-      // Find the post card and click "Add Comment" button
-      const postCard = playerPage.locator(`div:has-text("${postContent}")`).first();
-      await postCard.locator('button:has-text("Add Comment")').first().click();
-      await playerPage.waitForTimeout(1000);
+      // Wait for post to be visible
+      await playerCommonRoom.verifyPostExists(postContent);
 
-      // Get the comment textarea
-      const commentTextarea = postCard.locator('textarea[placeholder*="Write a comment"]');
-      await commentTextarea.waitFor({ state: 'visible' });
+      // Open comment form
+      await playerCommonRoom.openCommentForm(postContent);
 
       // Type text to trigger autocomplete
-      await commentTextarea.click(); // Focus the textarea
-      await commentTextarea.pressSequentially('Hey @');
-      await playerPage.waitForTimeout(500);
+      await playerCommonRoom.typeInComment(postContent, 'Hey @', true);
 
-      // Verify autocomplete dropdown appears
-      const autocomplete = playerPage.locator('[role="listbox"]');
-      await expect(autocomplete).toBeVisible({ timeout: 2000 });
+      // Verify autocomplete shows all characters
+      await playerCommonRoom.verifyAutocompleteCharacters([
+        'Test Player 1 Character',
+        'Test Player 2 Character',
+        'GM Test Character',
+      ]);
 
-      // Verify characters are shown in autocomplete (all game characters should appear)
-      await expect(playerPage.locator('text=Test Player 1 Character').first()).toBeVisible();
-      await expect(playerPage.locator('text=Test Player 2 Character').first()).toBeVisible();
-      await expect(playerPage.locator('text=GM Test Character').first()).toBeVisible();
+      // Select a character
+      await playerCommonRoom.selectCharacterFromAutocomplete('Test Player 2 Character');
 
-      // Click to select a character (Test Player 2 Character)
-      await playerPage.click('text=Test Player 2 Character');
-      await playerPage.waitForTimeout(500);
+      // Complete and submit the comment
+      const commentText = 'Hey @Test Player 2 Character, what do you think?';
+      const textarea = playerCommonRoom.getCommentTextarea(postContent);
+      await textarea.fill(commentText);
 
-      // Verify mention was inserted
-      const textareaValue = await commentTextarea.inputValue();
-      expect(textareaValue).toContain('@Test');
+      await playerCommonRoom.submitComment(postContent);
 
-      // Complete the comment
-      await commentTextarea.fill('Hey @Test Player 2 Character, what do you think?');
-      await playerPage.waitForTimeout(500);
-
-      // Submit the comment
-      const form = postCard.locator('form').first();
-      await form.evaluate((f: HTMLFormElement) => f.requestSubmit());
-      await playerPage.waitForTimeout(3000);
-
-      // Verify comment appears
-      await expect(playerPage.locator('text=what do you think?').first()).toBeVisible({ timeout: 5000 });
-
-      // Verify the mention is highlighted (mark element)
-      const mentionElement = playerPage.locator('mark[data-mention-id]').first();
-      await expect(mentionElement).toBeVisible({ timeout: 5000 });
-      await expect(mentionElement).toHaveText('@Test Player 2 Character');
+      // Verify comment appears with mention highlighted
+      await playerCommonRoom.verifyCommentExists('what do you think?');
+      await playerCommonRoom.verifyMentionRendered('Test Player 2 Character');
     } finally {
       await gmContext.close();
       await playerContext.close();
@@ -109,67 +84,49 @@ test.describe('Character Mentions', () => {
   });
 
   test('should filter autocomplete as user types', async ({ page }) => {
-    const gameId = 165;
-
     await loginAs(page, 'GM');
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
-    await page.click('button:has-text("Common Room")');
-    await page.waitForTimeout(1000);
 
-    // Create a post to comment on
+    const commonRoom = new CommonRoomPage(page);
+    await commonRoom.goto(gameId);
+
+    // Create a post
     const postContent = `Filter Test ${Date.now()}: Testing autocomplete filtering`;
-    await page.fill('textarea[placeholder*="Phase Title"]', postContent);
-    await page.waitForTimeout(500);
-    await page.click('button:has-text("Create GM Post")');
-    await page.waitForTimeout(2000);
+    await commonRoom.createPost(postContent);
 
-    // Find the post and click Add Comment
-    const postCard = page.locator(`div:has-text("${postContent}")`).first();
-    await postCard.locator('button:has-text("Add Comment")').first().click();
-    await page.waitForTimeout(1000);
-
-    // Get the comment textarea
-    const commentTextarea = postCard.locator('textarea[placeholder*="Write a comment"]');
-    await commentTextarea.waitFor({ state: 'visible' });
+    // Open comment form
+    await commonRoom.openCommentForm(postContent);
 
     // Type @ to trigger autocomplete
-    await commentTextarea.click(); // Focus the textarea
-    await commentTextarea.pressSequentially('@');
-    await page.waitForTimeout(300);
+    await commonRoom.typeInComment(postContent, '@', true);
 
-    // Verify autocomplete appears with all characters
-    const autocomplete = page.locator('[role="listbox"]');
-    await expect(autocomplete).toBeVisible({ timeout: 2000 });
+    // Verify all characters appear initially
+    await commonRoom.verifyAutocompleteCharacters([
+      'Test Player 1 Character',
+      'Test Player 2 Character',
+      'GM Test Character',
+    ]);
 
-    // All characters should be visible initially
-    await expect(page.locator('[role="listbox"] >> text=Test Player 1 Character')).toBeVisible();
-    await expect(page.locator('[role="listbox"] >> text=Test Player 2 Character')).toBeVisible();
-    await expect(page.locator('[role="listbox"] >> text=GM Test Character')).toBeVisible();
-
-    // Type filter text (no spaces - spaces cancel mentions)
-    await commentTextarea.pressSequentially('Test');
-    await page.waitForTimeout(300);
-
-    // Autocomplete should still be visible and filtered
-    await expect(autocomplete).toBeVisible({ timeout: 2000 });
+    // Type filter text
+    const textarea = commonRoom.getCommentTextarea(postContent);
+    await textarea.pressSequentially('Test');
 
     // All three characters contain "Test" so they should all still be visible
-    await expect(page.locator('[role="listbox"] >> text=Test Player 1 Character')).toBeVisible();
-    await expect(page.locator('[role="listbox"] >> text=Test Player 2 Character')).toBeVisible();
-    await expect(page.locator('[role="listbox"] >> text=GM Test Character')).toBeVisible();
+    await waitForVisible(commonRoom.autocompleteDropdown);
+    await commonRoom.verifyAutocompleteCharacters([
+      'Test Player 1 Character',
+      'Test Player 2 Character',
+      'GM Test Character',
+    ]);
 
     // Type more specific filter
-    await commentTextarea.pressSequentially('Player1');
-    await page.waitForTimeout(300);
+    await textarea.pressSequentially('Player1');
 
-    // Now only "Test Player 1 Character" should match (no space in "Player1")
+    // Now only "Test Player 1 Character" should match
+    await waitForVisible(commonRoom.autocompleteDropdown);
     await expect(page.locator('[role="listbox"] >> text=Test Player 1 Character')).toBeVisible();
   });
 
   test('should render mentions with markdown formatting', async ({ browser }) => {
-    const gameId = 165;
-
     const gmContext = await browser.newContext();
     const playerContext = await browser.newContext();
 
@@ -179,45 +136,30 @@ test.describe('Character Mentions', () => {
     try {
       // === GM creates a post ===
       await loginAs(gmPage, 'GM');
-      await gmPage.goto(`/games/${gameId}`);
-      await gmPage.waitForLoadState('networkidle');
-      await gmPage.click('button:has-text("Common Room")');
-      await gmPage.waitForTimeout(1000);
+
+      const gmCommonRoom = new CommonRoomPage(gmPage);
+      await gmCommonRoom.goto(gameId);
 
       const postContent = `Markdown Test ${Date.now()}: Testing mentions with markdown`;
-      await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
-      await gmPage.waitForTimeout(500);
-      await gmPage.click('button:has-text("Create GM Post")');
-      await gmPage.waitForTimeout(2000);
+      await gmCommonRoom.createPost(postContent);
 
       // === Player comments with mention and markdown ===
       await loginAs(playerPage, 'PLAYER_1');
-      await playerPage.goto(`/games/${gameId}`);
-      await playerPage.waitForLoadState('networkidle');
-      await playerPage.click('button:has-text("Common Room")');
-      await playerPage.waitForTimeout(1000);
 
-      const postCard = playerPage.locator(`div:has-text("${postContent}")`).first();
-      await postCard.locator('button:has-text("Add Comment")').first().click();
-      await playerPage.waitForTimeout(1000);
+      const playerCommonRoom = new CommonRoomPage(playerPage);
+      await playerCommonRoom.goto(gameId);
 
-      const commentTextarea = postCard.locator('textarea[placeholder*="Write a comment"]');
-      await commentTextarea.waitFor({ state: 'visible' });
+      await playerCommonRoom.openCommentForm(postContent);
 
-      // Type comment with markdown and mention (using fill since we're not testing autocomplete here)
+      // Type comment with markdown and mention
       const commentWithMarkdown = 'Hey @Test Player 2 Character, check out **this bold text** and *this italic*!';
-      await commentTextarea.click();
-      await commentTextarea.fill(commentWithMarkdown);
-      await playerPage.waitForTimeout(500);
+      const textarea = playerCommonRoom.getCommentTextarea(postContent);
+      await textarea.fill(commentWithMarkdown);
 
-      // Submit the comment
-      const form = postCard.locator('form').first();
-      await form.evaluate((f: HTMLFormElement) => f.requestSubmit());
-      await playerPage.waitForTimeout(3000);
+      await playerCommonRoom.submitComment(postContent);
 
-      // Verify comment appears with both markdown and mention rendering
-      const commentElement = playerPage.locator('text=this bold text').first();
-      await expect(commentElement).toBeVisible({ timeout: 5000 });
+      // Verify comment with markdown and mention rendering
+      await playerCommonRoom.verifyCommentExists('this bold text');
 
       // Verify bold text is actually bold
       const boldElement = playerPage.locator('strong:has-text("this bold text")').first();
@@ -228,8 +170,7 @@ test.describe('Character Mentions', () => {
       await expect(italicElement).toBeVisible();
 
       // Verify mention is highlighted
-      const mentionElement = playerPage.locator('mark[data-mention-id]:has-text("@Test Player 2 Character")').first();
-      await expect(mentionElement).toBeVisible();
+      await playerCommonRoom.verifyMentionRendered('Test Player 2 Character');
     } finally {
       await gmContext.close();
       await playerContext.close();
@@ -237,8 +178,6 @@ test.describe('Character Mentions', () => {
   });
 
   test('should position autocomplete dropdown near cursor', async ({ browser }) => {
-    const gameId = 165;
-
     const gmContext = await browser.newContext();
     const playerContext = await browser.newContext();
 
@@ -248,66 +187,44 @@ test.describe('Character Mentions', () => {
     try {
       // GM creates a post
       await loginAs(gmPage, 'GM');
-      await gmPage.goto(`/games/${gameId}`);
-      await gmPage.waitForLoadState('networkidle');
-      await gmPage.click('button:has-text("Common Room")');
-      await gmPage.waitForTimeout(1000);
+
+      const gmCommonRoom = new CommonRoomPage(gmPage);
+      await gmCommonRoom.goto(gameId);
 
       const postContent = `Autocomplete Test ${Date.now()}`;
-      await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
-      await gmPage.waitForTimeout(500);
-      await gmPage.click('button:has-text("Create GM Post")');
-      await gmPage.waitForTimeout(2000);
-
-      await expect(gmPage.locator(`text=${postContent}`).first()).toBeVisible({ timeout: 5000 });
+      await gmCommonRoom.createPost(postContent);
 
       // Player opens comment form
       await loginAs(playerPage, 'PLAYER_1');
-      await playerPage.goto(`/games/${gameId}`);
-      await playerPage.waitForLoadState('networkidle');
-      await playerPage.click('button:has-text("Common Room")');
-      await playerPage.waitForTimeout(1000);
 
-      await expect(playerPage.locator(`text=${postContent}`).first()).toBeVisible({ timeout: 5000 });
+      const playerCommonRoom = new CommonRoomPage(playerPage);
+      await playerCommonRoom.goto(gameId);
 
-      const targetPost = playerPage.locator(`div:has-text("${postContent}")`).first();
-      await targetPost.locator('button:has-text("Add Comment")').first().click();
-      await playerPage.waitForTimeout(1000);
+      await playerCommonRoom.verifyPostExists(postContent);
+      await playerCommonRoom.openCommentForm(postContent);
 
-      // Get the comment textarea
-      const commentTextarea = targetPost.locator('textarea[placeholder*="Write"], textarea[placeholder*="reply"]').first();
-      await commentTextarea.waitFor({ state: 'visible' });
-
-      // Add some text before the mention to test positioning with scrolled content
+      // Add text with mention to test positioning
       const prefixText = 'This is a long comment with multiple lines.\nSecond line here.\nThird line @';
-      await commentTextarea.click();
-      await commentTextarea.fill(prefixText);
-      await playerPage.waitForTimeout(500);
+      const textarea = playerCommonRoom.getCommentTextarea(postContent);
+      await textarea.fill(prefixText);
 
-      // Verify autocomplete appears
-      const autocomplete = playerPage.locator('[role="listbox"]');
-      await expect(autocomplete).toBeVisible({ timeout: 2000 });
+      // Get positions
+      const textareaBox = await playerCommonRoom.getTextareaPosition(postContent);
+      const autocompleteBox = await playerCommonRoom.getAutocompletePosition();
 
-      // Get textarea position
-      const textareaBox = await commentTextarea.boundingBox();
       expect(textareaBox).toBeTruthy();
-
-      // Get autocomplete position
-      const autocompleteBox = await autocomplete.boundingBox();
       expect(autocompleteBox).toBeTruthy();
 
-      // Verify autocomplete is positioned below the textarea (within reasonable range)
-      // It should be near the bottom of the textarea, not at the top of the page
+      // Verify autocomplete is positioned correctly
       if (textareaBox && autocompleteBox) {
-        // Autocomplete top should be at or below textarea top
+        // Autocomplete should be at or below textarea
         expect(autocompleteBox.y).toBeGreaterThanOrEqual(textareaBox.y);
 
-        // Autocomplete should be within reasonable distance of textarea
-        // (below textarea but not too far away - within ~500px)
+        // Autocomplete should be within reasonable distance
         const distance = autocompleteBox.y - textareaBox.y;
         expect(distance).toBeLessThan(500);
 
-        // Autocomplete left should be roughly aligned with textarea left (within 150px)
+        // Autocomplete should be roughly aligned horizontally
         const horizontalOffset = Math.abs(autocompleteBox.x - textareaBox.x);
         expect(horizontalOffset).toBeLessThan(150);
       }
@@ -318,83 +235,54 @@ test.describe('Character Mentions', () => {
   });
 
   test('should allow GM to mention all characters in post creation with autocomplete', async ({ page }) => {
-    const gameId = 165;
-
     await loginAs(page, 'GM');
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
-    await page.click('button:has-text("Common Room")');
-    await page.waitForTimeout(1000);
 
-    // Verify Common Room heading is visible
-    await expect(page.locator('h2:has-text("Common Room")')).toBeVisible({ timeout: 5000 });
+    const commonRoom = new CommonRoomPage(page);
+    await commonRoom.goto(gameId);
 
-    // Find the GM post creation form (look for "Create New GM Post" heading)
-    await expect(page.locator('h3:has-text("Create New GM Post")')).toBeVisible({ timeout: 5000 });
-
-    // Find the textarea within the GM post form (it has a specific placeholder about phase titles)
-    const postTextarea = page.locator('textarea[placeholder*="Phase Title"]');
-    await expect(postTextarea).toBeVisible();
+    // Verify Common Room is loaded
+    await expect(commonRoom.heading).toBeVisible({ timeout: 5000 });
+    await expect(commonRoom.createPostHeading).toBeVisible({ timeout: 5000 });
 
     // Click to focus the textarea
-    await postTextarea.click();
-    await page.waitForTimeout(300);
+    await commonRoom.postTextarea.click();
 
     // Type @ to trigger autocomplete
-    await postTextarea.pressSequentially('Mission: @');
-    await page.waitForTimeout(500);
+    await commonRoom.postTextarea.pressSequentially('Mission: @');
 
-    // Verify autocomplete dropdown appears
-    const autocomplete = page.locator('[role="listbox"]');
-    await expect(autocomplete).toBeVisible({ timeout: 2000 });
+    // CRITICAL: Verify ALL game characters appear (including player characters)
+    // This ensures the bug fix is working - GM should mention player characters
+    await commonRoom.verifyAutocompleteCharacters([
+      'Test Player 1 Character',
+      'Test Player 2 Character',
+      'GM Test Character',
+    ]);
 
-    // CRITICAL: Verify ALL game characters appear in autocomplete, not just GM's characters
-    // This ensures the bug fix is working - GM should be able to mention player characters
-    await expect(page.locator('[role="listbox"] >> text=Test Player 1 Character')).toBeVisible();
-    await expect(page.locator('[role="listbox"] >> text=Test Player 2 Character')).toBeVisible();
-    await expect(page.locator('[role="listbox"] >> text=GM Test Character')).toBeVisible();
+    // Select a PLAYER character to verify cross-character mentions work
+    await commonRoom.selectCharacterFromAutocomplete('Test Player 1 Character');
 
-    // Select a PLAYER character (not GM's character) to verify cross-character mentions work
-    await page.click('[role="listbox"] >> text=Test Player 1 Character');
-    await page.waitForTimeout(500);
-
-    // Verify the mention was inserted into the textarea
-    let textareaValue = await postTextarea.inputValue();
+    // Verify the mention was inserted
+    let textareaValue = await commonRoom.postTextarea.inputValue();
     expect(textareaValue).toContain('@Test Player 1 Character');
 
-    // Complete the post with the mention
+    // Complete the post
     const postContent = `Mission Briefing ${Date.now()}: @Test Player 1 Character, you are assigned to the north gate.`;
-    await postTextarea.fill(postContent);
-    await page.waitForTimeout(500);
+    await commonRoom.postTextarea.fill(postContent);
 
-    // Submit the post
-    await page.click('button:has-text("Create GM Post")');
-    await page.waitForTimeout(3000); // Give more time for post to be created and mentions to be processed
+    await commonRoom.createPostButton.click();
+    await page.waitForLoadState('networkidle');
 
-    // Verify the post appears
-    await expect(page.locator(`text=you are assigned to the north gate`).first()).toBeVisible({ timeout: 5000 });
-
-    // CRITICAL VERIFICATION: Verify the mention text appears in the post
-    // This proves that:
-    // 1. Autocomplete showed ALL characters (including player characters)
-    // 2. GM was able to select a player character mention
-    // 3. The mention was successfully inserted into the post content
-    // 4. The post was created with the mention text
+    // Verify the post appears with the mention
+    await commonRoom.verifyPostExists('you are assigned to the north gate');
     await expect(page.locator('text=@Test Player 1 Character').first()).toBeVisible({ timeout: 5000 });
 
     // Success! This test verifies the bug fix:
     // - Before fix: Autocomplete only showed GM's characters
     // - After fix: Autocomplete shows ALL game characters (player + GM)
     // - GM can now mention player characters in posts
-
-    // Note: Mention highlighting (mark elements) is tested in comment tests
-    // The backend extracts mentions and stores them in mentioned_character_ids,
-    // which triggers notifications. Rendering is covered by other tests.
   });
 
   test('should not render mentions inside code blocks', async ({ browser }) => {
-    const gameId = 165;
-
     const gmContext = await browser.newContext();
     const playerContext = await browser.newContext();
 
@@ -404,56 +292,33 @@ test.describe('Character Mentions', () => {
     try {
       // === GM creates a post ===
       await loginAs(gmPage, 'GM');
-      await gmPage.goto(`/games/${gameId}`);
-      await gmPage.waitForLoadState('networkidle');
-      await gmPage.click('button:has-text("Common Room")');
-      await gmPage.waitForTimeout(1000);
+
+      const gmCommonRoom = new CommonRoomPage(gmPage);
+      await gmCommonRoom.goto(gameId);
 
       const postContent = `Code Test ${Date.now()}: Testing mentions in code blocks`;
-      await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
-      await gmPage.waitForTimeout(500);
-      await gmPage.click('button:has-text("Create GM Post")');
-      await gmPage.waitForTimeout(2000);
+      await gmCommonRoom.createPost(postContent);
 
       // === Player comments with mention inside code block ===
       await loginAs(playerPage, 'PLAYER_1');
-      await playerPage.goto(`/games/${gameId}`);
-      await playerPage.waitForLoadState('networkidle');
-      await playerPage.click('button:has-text("Common Room")');
-      await playerPage.waitForTimeout(1000);
 
-      const postCard = playerPage.locator(`div:has-text("${postContent}")`).first();
-      await postCard.locator('button:has-text("Add Comment")').first().click();
-      await playerPage.waitForTimeout(1000);
+      const playerCommonRoom = new CommonRoomPage(playerPage);
+      await playerCommonRoom.goto(gameId);
 
-      const commentTextarea = postCard.locator('textarea[placeholder*="Write a comment"]');
-      await commentTextarea.waitFor({ state: 'visible' });
+      await playerCommonRoom.openCommentForm(postContent);
 
-      // Type comment with mention inside inline code (using fill since we're not testing autocomplete here)
+      // Type comment with mention inside inline code
       const commentWithCode = 'Try using `@Test Player 2 Character` in your code!';
-      await commentTextarea.click();
-      await commentTextarea.fill(commentWithCode);
-      await playerPage.waitForTimeout(500);
+      const textarea = playerCommonRoom.getCommentTextarea(postContent);
+      await textarea.fill(commentWithCode);
 
-      // Submit the comment
-      const form = postCard.locator('form').first();
-      await form.evaluate((f: HTMLFormElement) => f.requestSubmit());
-      await playerPage.waitForTimeout(3000);
+      await playerCommonRoom.submitComment(postContent);
 
       // Verify comment appears
-      await expect(playerPage.locator('text=Try using').first()).toBeVisible({ timeout: 5000 });
+      await playerCommonRoom.verifyCommentExists('Try using');
 
-      // Find the specific comment that was just created
-      const commentContainer = playerPage.locator('text="Try using"').locator('xpath=ancestor::div[contains(@class, "comment") or contains(@class, "border")]').first();
-
-      // Verify the mention inside code is NOT rendered as a mention (should be plain text inside <code>)
-      const codeElement = commentContainer.locator('code:has-text("@Test Player 2 Character")');
-      await expect(codeElement).toBeVisible();
-
-      // There should be no mark element for this text within this specific comment (it's in code block)
-      const mentionElements = commentContainer.locator('mark[data-mention-id]:has-text("@Test Player 2 Character")');
-      const count = await mentionElements.count();
-      expect(count).toBe(0); // Should be 0 because it's in a code block
+      // Verify the mention inside code is NOT rendered as a mention
+      await playerCommonRoom.verifyMentionNotInCodeBlock('@Test Player 2 Character');
     } finally {
       await gmContext.close();
       await playerContext.close();

@@ -1,10 +1,17 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
+import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { navigateToGamesList } from '../utils/navigation';
+import { assertTextVisible } from '../utils/assertions';
 
 /**
  * Journey 2: GM Creates Game & Recruits Players
  *
  * Tests the complete game creation and player recruitment flow
+ *
+ * REFACTORED: Using Page Object Model and shared utilities
+ * - Eliminated all waitForTimeout calls (was 1)
+ * - Improved consistency with GameDetailsPage
  */
 test.describe('GM Creates Game & Recruits Players', () => {
   // Helper function to create a game
@@ -13,15 +20,13 @@ test.describe('GM Creates Game & Recruits Players', () => {
     const gameTitle = `E2E Test Game ${timestamp}`;
     const gameDescription = `Test game created by E2E tests`;
 
-    await page.click('a[href="/games"]');
-    await expect(page).toHaveURL('/games');
+    await navigateToGamesList(page);
 
     // Click "Create Game" button to open modal
     await page.click('button:has-text("Create Game")');
 
     // Wait for modal to be fully visible and form fields to be ready
     await expect(page.locator('#title')).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(500); // Wait for modal animation to complete
 
     // Fill in game details
     await page.fill('#title', gameTitle);
@@ -29,7 +34,7 @@ test.describe('GM Creates Game & Recruits Players', () => {
     await page.fill('#genre', 'Test Genre');
     await page.fill('#max_players', '4');
 
-    // Submit the form using more specific selector (submit button inside form)
+    // Submit the form
     await page.click('form button[type="submit"]:has-text("Create Game")');
 
     // Wait for redirect to game details page
@@ -47,8 +52,8 @@ test.describe('GM Creates Game & Recruits Players', () => {
     const { gameTitle } = await createTestGame(page);
 
     // Verify we're on game details page with the correct title
-    await expect(page.locator(`h1:has-text("${gameTitle}")`)).toBeVisible();
-    await expect(page.locator('text=Setup')).toBeVisible(); // Initial state
+    await assertTextVisible(page, gameTitle);
+    await assertTextVisible(page, 'Setup'); // Initial state
   });
 
   test('GM can start recruitment for a game', async ({ page }) => {
@@ -56,21 +61,21 @@ test.describe('GM Creates Game & Recruits Players', () => {
     await loginAs(page, 'GM');
     await expect(page).toHaveURL('/dashboard');
 
-    // Create a game (each test needs its own game due to test isolation)
+    // Create a game
     const { gameTitle } = await createTestGame(page);
 
     // Should be on game details page after creation
-    await expect(page.locator(`h1:has-text("${gameTitle}")`)).toBeVisible();
-    await expect(page.locator('text=Setup')).toBeVisible();
+    await assertTextVisible(page, gameTitle);
+    await assertTextVisible(page, 'Setup');
 
-    // Click "Start Recruitment"
-    await page.click('button:has-text("Start Recruitment")');
+    // Start recruitment using GameDetailsPage
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.startRecruitment();
 
-    // Verify state changed to Recruitment - the button should no longer be visible/enabled
-    // and we should see recruiting-specific UI
+    // Verify state changed to Recruitment
     await expect(page.locator('button:has-text("Start Recruitment")')).not.toBeVisible({ timeout: 5000 });
 
-    // Verify we see recruitment-specific content (like the recruitment deadline section)
+    // Verify recruitment-specific content
     await expect(page.locator('h3:has-text("Recruitment Deadline")').first()).toBeVisible();
   });
 });

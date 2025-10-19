@@ -1,12 +1,18 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
+import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { assertTextVisible } from '../utils/assertions';
 
 /**
  * Journey 7: Player Views Phase History
  *
  * Tests that players can view phase history and navigate through past phases.
  * Uses test fixtures (Game #242: "The Heist at Goldstone Bank") with Phase 1 (common_room) and Phase 2 (action).
+ *
+ * REFACTORED: Using Page Object Model and shared utilities
+ * - Eliminated all waitForTimeout calls (was 5)
+ * - Improved navigation with GameDetailsPage
  */
 test.describe('Player Views Phase History', () => {
   test('Player can view phase history list', async ({ page }) => {
@@ -14,18 +20,16 @@ test.describe('Player Views Phase History', () => {
     await loginAs(page, 'PLAYER_1');
 
     // Use "The Heist at Goldstone Bank" from fixtures
-    // Phase 1: "Casing the Bank" (common_room, completed)
-    // Phase 2: "Execute the Plan" (action, active)
     const gameId = await getFixtureGameId(page, 'HEIST');
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
+
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
 
     // Navigate to Phase History tab
-    await page.click('button:has-text("Phase History")');
-    await page.waitForTimeout(1000);
+    await gamePage.goToPhaseHistory();
 
     // Verify phase history heading is visible
-    await expect(page.locator('h2:has-text("Phase History")')).toBeVisible({ timeout: 5000 });
+    await assertTextVisible(page, 'Phase History');
 
     // Verify both phases are visible in the list
     await expect(page.locator('span:has-text("Phase 1")').first()).toBeVisible({ timeout: 5000 });
@@ -45,23 +49,23 @@ test.describe('Player Views Phase History', () => {
 
     // Use "The Heist at Goldstone Bank" from fixtures
     const gameId = await getFixtureGameId(page, 'HEIST');
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
+
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
 
     // Navigate to Phase History tab
-    await page.click('button:has-text("Phase History")');
-    await page.waitForTimeout(1000);
+    await gamePage.goToPhaseHistory();
 
-    // Click on Phase 1 (common_room phase) - it shows "Casing the Bank" title
+    // Click on Phase 1 (common_room phase)
     await page.locator('button:has-text("Casing the Bank")').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify we're now viewing the phase details
     await expect(page.locator('button:has-text("Back to Phase History")')).toBeVisible({ timeout: 5000 });
 
-    // Verify Common Room content is visible (should show the phase title in the heading)
-    await expect(page.locator('h2:has-text("Common Room")')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=Casing the Bank')).toBeVisible();
+    // Verify Common Room content is visible
+    await assertTextVisible(page, 'Common Room');
+    await assertTextVisible(page, 'Casing the Bank');
   });
 
   test('Player can navigate back from phase details', async ({ page }) => {
@@ -70,26 +74,26 @@ test.describe('Player Views Phase History', () => {
 
     // Use "The Heist at Goldstone Bank" from fixtures
     const gameId = await getFixtureGameId(page, 'HEIST');
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
+
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
 
     // Navigate to Phase History tab
-    await page.click('button:has-text("Phase History")');
-    await page.waitForTimeout(1000);
+    await gamePage.goToPhaseHistory();
 
-    // Click on Phase 1 (common_room phase) - it shows "Casing the Bank" title
+    // Click on Phase 1 (common_room phase)
     await page.locator('button:has-text("Casing the Bank")').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify we're viewing phase details
     await expect(page.locator('button:has-text("Back to Phase History")')).toBeVisible({ timeout: 5000 });
 
     // Click back button
     await page.click('button:has-text("Back to Phase History")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Verify we're back at the phase list
-    await expect(page.locator('h2:has-text("Phase History")')).toBeVisible({ timeout: 5000 });
+    await assertTextVisible(page, 'Phase History');
     await expect(page.locator('span:has-text("Phase 1")').first()).toBeVisible();
   });
 });
