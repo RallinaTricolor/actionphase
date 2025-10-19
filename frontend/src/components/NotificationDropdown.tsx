@@ -37,8 +37,6 @@ export default function NotificationDropdown({ isOpen, onClose, bellButtonRef }:
     };
   }, [isOpen, onClose, bellButtonRef]);
 
-  if (!isOpen) return null;
-
   const handleNavigate = (url: string) => {
     navigate(url);
     onClose();

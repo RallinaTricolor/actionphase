@@ -15,12 +15,18 @@ DECLARE
   gm_id INTEGER;
   p1_id INTEGER;
   p2_id INTEGER;
+  p3_id INTEGER;
+  p4_id INTEGER;
+  p5_id INTEGER;
   phase_id INTEGER;
 BEGIN
   -- Get user IDs
   SELECT id INTO gm_id FROM users WHERE email = 'test_gm@example.com';
   SELECT id INTO p1_id FROM users WHERE email = 'test_player1@example.com';
   SELECT id INTO p2_id FROM users WHERE email = 'test_player2@example.com';
+  SELECT id INTO p3_id FROM users WHERE email = 'test_player3@example.com';
+  SELECT id INTO p4_id FROM users WHERE email = 'test_player4@example.com';
+  SELECT id INTO p5_id FROM users WHERE email = 'test_player5@example.com';
 
   -- ============================================
   -- GAME #164: Common Room Posts (common-room.spec.ts)
@@ -130,7 +136,9 @@ BEGIN
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
   VALUES
     (166, p1_id, 'player', 'active', NOW() - INTERVAL '4 days'),
-    (166, p2_id, 'player', 'active', NOW() - INTERVAL '4 days');
+    (166, p2_id, 'player', 'active', NOW() - INTERVAL '4 days'),
+    (166, p3_id, 'player', 'active', NOW() - INTERVAL '4 days'),
+    (166, p4_id, 'player', 'active', NOW() - INTERVAL '4 days');
 
   INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
   VALUES (
@@ -150,7 +158,9 @@ BEGIN
   VALUES
     (166, gm_id, 'GM Test Character', 'npc_gm', 'approved', NOW() - INTERVAL '4 days', NOW()),
     (166, p1_id, 'Test Player 1 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
-    (166, p2_id, 'Test Player 2 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
+    (166, p2_id, 'Test Player 2 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
+    (166, p3_id, 'Test Player 3 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
+    (166, p4_id, 'Test Player 4 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
 
   RAISE NOTICE 'Created Game #166: E2E Common Room - Notifications';
 
@@ -173,8 +183,7 @@ BEGIN
 
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
   VALUES
-    (167, p1_id, 'player', 'active', NOW() - INTERVAL '4 days'),
-    (167, p2_id, 'player', 'active', NOW() - INTERVAL '4 days');
+    (167, p5_id, 'player', 'active', NOW() - INTERVAL '4 days');
 
   INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
   VALUES (
@@ -193,8 +202,7 @@ BEGIN
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
     (167, gm_id, 'GM Test Character', 'npc_gm', 'approved', NOW() - INTERVAL '4 days', NOW()),
-    (167, p1_id, 'Test Player 1 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
-    (167, p2_id, 'Test Player 2 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
+    (167, p5_id, 'Test Player 5 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
 
   RAISE NOTICE 'Created Game #167: E2E Common Room - Misc';
 
