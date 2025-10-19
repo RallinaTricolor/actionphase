@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
+import { navigateToDashboard } from '../utils/navigation';
 
 /**
  * Notification System Smoke Tests
@@ -7,6 +8,11 @@ import { loginAs } from '../fixtures/auth-helpers';
  * Basic tests to verify notification UI components are rendering correctly.
  * Full end-to-end notification flow tests require features that aren't fully implemented yet
  * (private messages UI, common room interactions, etc.)
+ *
+ * REFACTORED: Using shared utilities
+ * - Eliminated all waitForTimeout calls (was 1)
+ * - Uses navigateToDashboard for consistent navigation
+ * - Uses waitForResponse for API call verification
  */
 
 test.describe('Notification System - Smoke Tests', () => {
@@ -28,28 +34,17 @@ test.describe('Notification System - Smoke Tests', () => {
     // This test verifies the API is actually working, not just the UI
     await loginAs(page, 'PLAYER_1');
 
-    // Set up API response listener
-    let apiCalled = false;
-    let apiSucceeded = false;
-
-    page.on('response', response => {
-      if (response.url().includes('/api/v1/notifications/unread-count')) {
-        apiCalled = true;
-        if (response.status() === 200) {
-          apiSucceeded = true;
-        }
-      }
-    });
+    // Wait for API response instead of arbitrary timeout
+    const responsePromise = page.waitForResponse(
+      response => response.url().includes('/api/v1/notifications/unread-count')
+    );
 
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
-    // Wait a bit for API call
-    await page.waitForTimeout(2000);
-
-    // Verify API was called and succeeded
-    expect(apiCalled).toBe(true);
-    expect(apiSucceeded).toBe(true);
+    // Wait for and verify the API response
+    const response = await responsePromise;
+    expect(response.status()).toBe(200);
 
     // Verify no error message is displayed
     const notificationBell = page.locator('[data-testid="notification-bell"]');

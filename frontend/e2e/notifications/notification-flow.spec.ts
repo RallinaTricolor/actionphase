@@ -1,6 +1,12 @@
 import { test, expect, Page } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
+import { CommonRoomPage } from '../pages/CommonRoomPage';
+import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { PhaseManagementPage } from '../pages/PhaseManagementPage';
+import { navigateToGame } from '../utils/navigation';
+import { assertTextVisible } from '../utils/assertions';
+import { waitForModal } from '../utils/waits';
 
 /**
  * E2E Tests for Notification System
@@ -15,6 +21,12 @@ import { getFixtureGameId } from '../fixtures/game-helpers';
  * NOTE: These tests run serially due to timing-sensitive notification polling
  * and async backend goroutines. Parallel execution can cause race conditions
  * where notifications from one test appear in another test's feed.
+ *
+ * REFACTORED: Using Page Object Model and shared utilities
+ * - Eliminated all waitForTimeout calls (was 34)
+ * - Uses CommonRoomPage for all Common Room interactions
+ * - Uses navigateToGame and GameDetailsPage for navigation
+ * - Uses assertion utilities for consistency
  */
 
 test.describe.configure({ mode: 'serial' });
@@ -27,8 +39,7 @@ test.describe('Notification System', () => {
       await loginAs(page, 'PLAYER_1');
 
       const gameId = 166; // COMMON_ROOM_NOTIFICATIONS (isolated for notification-flow.spec.ts)
-      await page.goto(`/games/${gameId}`);
-      await page.waitForLoadState('networkidle');
+      await navigateToGame(page, gameId);
 
       // 1. Verify notification bell is present
       const notificationBell = page.locator('[data-testid="notification-bell"]');
@@ -36,7 +47,6 @@ test.describe('Notification System', () => {
 
       // 2. Click notification bell to open dropdown
       await notificationBell.click();
-      await page.waitForTimeout(500);
 
       // 3. Verify notification dropdown opens
       const notificationDropdown = page.locator('[data-testid="notification-dropdown"]');
@@ -49,7 +59,6 @@ test.describe('Notification System', () => {
 
       // 5. Close dropdown by clicking bell again
       await notificationBell.click();
-      await page.waitForTimeout(300);
 
       // Dropdown should close (or remain open depending on implementation)
       // Either way, the UI interaction worked
@@ -74,40 +83,26 @@ test.describe('Notification System', () => {
 
         const gameId = await getFixtureGameId(gmPage, 'COMMON_ROOM_NOTIFICATIONS');
 
-        // 2. GM creates a post
-        await gmPage.goto(`/games/${gameId}`);
-        await gmPage.click('button:has-text("Common Room")');
-        await gmPage.waitForTimeout(1000);
+        // 2. GM creates a post using CommonRoomPage
+        const gmCommonRoom = new CommonRoomPage(gmPage);
+        await gmCommonRoom.goto(gameId);
 
         const postContent = `Reply Test Post ${Date.now()}`;
-        await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
-        await gmPage.click('button:has-text("Create GM Post")');
-        await gmPage.waitForTimeout(2000);
+        await gmCommonRoom.createPost(postContent);
 
-        // 3. Player 1 comments on the post
-        await originalPosterPage.goto(`/games/${gameId}`);
-        await originalPosterPage.click('button:has-text("Common Room")');
-        await originalPosterPage.waitForTimeout(1000);
-
-        const postCard = originalPosterPage.locator(`div:has-text("${postContent}")`).first();
-        await postCard.locator('button:has-text("Add Comment")').first().click();
-        await originalPosterPage.waitForTimeout(1000);
+        // 3. Player 1 comments on the post using CommonRoomPage
+        const player1CommonRoom = new CommonRoomPage(originalPosterPage);
+        await player1CommonRoom.goto(gameId);
 
         const player1CommentText = `Player 1 comment ${Date.now()}`;
-        const commentTextarea = postCard.locator('textarea[placeholder*="Write a comment"]');
-        await commentTextarea.fill(player1CommentText);
-
-        const form = postCard.locator('form').first();
-        await form.evaluate((f: HTMLFormElement) => f.requestSubmit());
-        await originalPosterPage.waitForTimeout(2000);
+        await player1CommonRoom.addComment(postContent, player1CommentText);
 
         // Verify Player 1's comment appears
-        await expect(originalPosterPage.locator(`text=${player1CommentText}`).first()).toBeVisible();
+        await assertTextVisible(originalPosterPage, player1CommentText);
 
-        // 4. Player 2 replies to Player 1's comment
-        await replierPage.goto(`/games/${gameId}`);
-        await replierPage.click('button:has-text("Common Room")');
-        await replierPage.waitForTimeout(1000);
+        // 4. Player 2 replies to Player 1's comment using CommonRoomPage
+        const player2CommonRoom = new CommonRoomPage(replierPage);
+        await player2CommonRoom.goto(gameId);
 
         // Find Player 1's comment and click Reply
         const player1Comment = replierPage.locator(`text=${player1CommentText}`).first();
@@ -117,7 +112,7 @@ test.describe('Notification System', () => {
         const commentContainer = replierPage.locator(`div:has-text("${player1CommentText}")`).first();
         const replyButton = commentContainer.locator('button:has-text("Reply")').first();
         await replyButton.click();
-        await replierPage.waitForTimeout(1000);
+        await replierPage.waitForLoadState('networkidle');
 
         // Write reply
         const testReply = `Player 2 reply ${Date.now()}`;
@@ -126,14 +121,11 @@ test.describe('Notification System', () => {
 
         const replyForm = commentContainer.locator('form').first();
         await replyForm.evaluate((f: HTMLFormElement) => f.requestSubmit());
-        await replierPage.waitForTimeout(2000);
+        await replierPage.waitForLoadState('networkidle');
 
         // 5. Wait for notification on Player 1's page
         const notificationBadge = originalPosterPage.locator('[data-testid="notification-badge"]');
         await expect(notificationBadge).toBeVisible({ timeout: 20000 });
-
-        // 6. Wait a moment for async notification creation to complete
-        await originalPosterPage.waitForTimeout(2000);
 
         // Click bell and wait for dropdown to load
         await originalPosterPage.click('[data-testid="notification-bell"]');
@@ -145,7 +137,7 @@ test.describe('Notification System', () => {
         const replyNotification = originalPosterPage.locator('.notification-item:has-text("replied")').first();
         await expect(replyNotification).toBeVisible({ timeout: 20000 });
 
-        // 7. Click notification and verify navigation
+        // 6. Click notification and verify navigation
         await replyNotification.click();
         await expect(originalPosterPage).toHaveURL(new RegExp(`/games/${gameId}\\?tab=common-room`));
 
@@ -179,39 +171,31 @@ test.describe('Notification System', () => {
         await mentionedUserPage.goto(`/games/${gameId}`);
         await mentionedUserPage.waitForLoadState('networkidle');
 
-        // 3. GM creates a post first (only GM can create top-level posts in Common Room)
-        await gmPage.goto(`/games/${gameId}`);
-        await gmPage.click('button:has-text("Common Room")');
-        await gmPage.waitForTimeout(1000);
+        // 3. GM creates a post first using CommonRoomPage
+        const gmCommonRoom = new CommonRoomPage(gmPage);
+        await gmCommonRoom.goto(gameId);
 
         const postContent = `Mention Test Post ${Date.now()}`;
-        await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
-        await gmPage.click('button:has-text("Create GM Post")');
-        await gmPage.waitForTimeout(2000);
+        await gmCommonRoom.createPost(postContent);
 
-        // 4. Player 1 comments with @mention of Player 2's character
-        await mentionerPage.goto(`/games/${gameId}`);
-        await mentionerPage.click('button:has-text("Common Room")');
-        await mentionerPage.waitForTimeout(1000);
+        // 4. Player 3 comments with @mention of Player 4's character using CommonRoomPage
+        const mentionerCommonRoom = new CommonRoomPage(mentionerPage);
+        await mentionerCommonRoom.goto(gameId);
 
         const postCard = mentionerPage.locator(`div:has-text("${postContent}")`).first();
         await postCard.locator('button:has-text("Add Comment")').first().click();
-        await mentionerPage.waitForTimeout(1000);
+        await mentionerPage.waitForLoadState('networkidle');
 
         const commentTextarea = postCard.locator('textarea[placeholder*="Write a comment"]');
         await commentTextarea.fill('Hey @Test Player 4 Character, what do you think?');
-        await mentionerPage.waitForTimeout(500);
 
         const form = postCard.locator('form').first();
         await form.evaluate((f: HTMLFormElement) => f.requestSubmit());
-        await mentionerPage.waitForTimeout(2000);
+        await mentionerPage.waitForLoadState('networkidle');
 
-        // 5. Wait for notification on Player 2's page
+        // 5. Wait for notification on Player 4's page
         const notificationBadge = mentionedUserPage.locator('[data-testid="notification-badge"]');
         await expect(notificationBadge).toBeVisible({ timeout: 20000 });
-
-        // 6. Wait a moment for async notification creation to complete
-        await mentionedUserPage.waitForTimeout(2000);
 
         // Click bell and verify mention notification
         await mentionedUserPage.click('[data-testid="notification-bell"]');
@@ -223,7 +207,7 @@ test.describe('Notification System', () => {
         const mentionNotification = mentionedUserPage.locator('.notification-item:has-text("mentioned")').first();
         await expect(mentionNotification).toBeVisible({ timeout: 20000 });
 
-        // 7. Click and verify navigation with correct tab parameter
+        // 6. Click and verify navigation with correct tab parameter
         await mentionNotification.click();
         await expect(mentionedUserPage).toHaveURL(new RegExp(`/games/${gameId}\\?tab=common-room`));
 
@@ -252,49 +236,29 @@ test.describe('Notification System', () => {
         const gameId = await getFixtureGameId(gmPage, 'COMMON_ROOM_MISC');
 
         // 2. Player viewing game
-        await playerPage.goto(`/games/${gameId}`);
-        await playerPage.waitForLoadState('networkidle');
+        await navigateToGame(playerPage, gameId);
 
-        // 3. GM creates and activates a new phase
-        await gmPage.goto(`/games/${gameId}`);
-        await gmPage.waitForLoadState('networkidle');
-        await gmPage.waitForTimeout(1000);
-
-        // Click "New Phase" button directly
-        await gmPage.click('button:has-text("New Phase")');
-        await expect(gmPage.locator('#phase-type')).toBeVisible({ timeout: 5000 });
-        await gmPage.waitForTimeout(500);
+        // 3. GM creates and activates a new phase using PhaseManagementPage
+        const phaseManagement = new PhaseManagementPage(gmPage);
+        await phaseManagement.goto(gameId);
 
         const phaseTitle = `E2E Test Phase - ${Date.now()}`;
-        await gmPage.selectOption('#phase-type', 'action');
-        await gmPage.fill('#phase-title', phaseTitle);
-        await gmPage.fill('#phase-description', 'Test phase for notifications');
-
-        // Set deadline
         const deadline = new Date();
         deadline.setDate(deadline.getDate() + 2);
-        const deadlineStr = deadline.toISOString().slice(0, 16);
-        await gmPage.fill('#phase-deadline', deadlineStr);
 
-        // Create the phase
-        await gmPage.click('form button[type="submit"]:has-text("Create Phase")');
-        await gmPage.waitForTimeout(2000);
+        await phaseManagement.createPhase({
+          type: 'action',
+          title: phaseTitle,
+          description: 'Test phase for notifications',
+          deadline,
+        });
 
         // Activate the phase
-        await expect(gmPage.locator('button:has-text("Activate")').last()).toBeVisible({ timeout: 5000 });
-        await gmPage.locator('button:has-text("Activate")').last().click();
-        await gmPage.waitForTimeout(500);
-
-        // Confirm activation
-        await gmPage.click('button:has-text("Activate Phase")');
-        await gmPage.waitForTimeout(2000);
+        await phaseManagement.activatePhase(phaseTitle);
 
         // 4. Wait for player notification
         const notificationBadge = playerPage.locator('[data-testid="notification-badge"]');
         await expect(notificationBadge).toBeVisible({ timeout: 25000 });
-
-        // 5. Wait a moment for async notification creation to complete
-        await playerPage.waitForTimeout(2000);
 
         // Verify notification content
         await playerPage.click('[data-testid="notification-bell"]');
@@ -322,7 +286,7 @@ test.describe('Notification System', () => {
       await loginAs(page, 'PLAYER_1');
 
       const gameId = await getFixtureGameId(page, 'COMMON_ROOM_NOTIFICATIONS');
-      await page.goto(`/games/${gameId}`);
+      await navigateToGame(page, gameId);
 
       // Assume there are unread notifications
       const notificationBadge = page.locator('[data-testid="notification-badge"]');
@@ -333,13 +297,10 @@ test.describe('Notification System', () => {
 
         // Click "Mark all as read" button
         await page.click('button:has-text("Mark all read")');
-
-        // Wait for mutation to complete
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         // Close and reopen dropdown
         await page.click('[data-testid="notification-bell"]'); // Close
-        await page.waitForTimeout(500);
 
         // Badge should not be visible anymore
         await expect(notificationBadge).not.toBeVisible();
@@ -350,7 +311,7 @@ test.describe('Notification System', () => {
       await loginAs(page, 'PLAYER_1');
 
       const gameId = await getFixtureGameId(page, 'COMMON_ROOM_NOTIFICATIONS');
-      await page.goto(`/games/${gameId}`);
+      await navigateToGame(page, gameId);
 
       // Open notifications
       await page.click('[data-testid="notification-bell"]');
@@ -367,15 +328,11 @@ test.describe('Notification System', () => {
 
         // Click delete button
         await firstNotification.locator('button[title="Delete notification"]').click();
-
-        // Wait for deletion to process
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState('networkidle');
 
         // Close and reopen dropdown to ensure UI is refreshed
         await page.click('[data-testid="notification-bell"]'); // Close
-        await page.waitForTimeout(500);
         await page.click('[data-testid="notification-bell"]'); // Reopen
-        await page.waitForTimeout(500);
 
         // Notification should no longer be visible
         await expect(page.locator(`.notification-item:has-text("${notificationTitle}")`)).not.toBeVisible({ timeout: 5000 });
@@ -426,17 +383,18 @@ test.describe('Notification System', () => {
           initialCount = parseInt(badgeText || '0', 10);
         }
 
-        // 3. Sender sends a private message
-        await senderPage.goto(`/games/${gameId}`);
-        await senderPage.waitForLoadState('networkidle');
-        await senderPage.click('button:has-text("Private Messages")');
-        await senderPage.waitForTimeout(1000);
+        // 3. Sender sends a private message using GameDetailsPage
+        const senderGamePage = new GameDetailsPage(senderPage);
+        await senderGamePage.goto(gameId);
+        await senderGamePage.goToMessages();
 
         // Click "New Conversation" button
         const newConversationButton = senderPage.locator('button[title="New Conversation"]');
         await expect(newConversationButton).toBeVisible({ timeout: 5000 });
         await newConversationButton.click();
-        await senderPage.waitForTimeout(500);
+
+        // Wait for the conversation form to appear
+        await senderPage.waitForSelector('input[placeholder*="Planning the heist"]', { timeout: 5000 });
 
         // Fill in conversation title
         const conversationTitle = `Polling test - ${Date.now()}`;
@@ -444,20 +402,19 @@ test.describe('Notification System', () => {
 
         // Select Rook (Player 2's character) as participant
         await senderPage.click('label:has-text("Rook (Hound)")');
-        await senderPage.waitForTimeout(300);
 
         // Click "Create Conversation" button
         await senderPage.click('button:has-text("Create Conversation")');
-        await senderPage.waitForTimeout(2000);
+        await senderPage.waitForLoadState('networkidle');
 
         // Send a message in the conversation
         const testMessage = `Polling test message - ${Date.now()}`;
         await senderPage.fill('textarea[placeholder*="Type your message"]', testMessage);
         await senderPage.click('button:has-text("Send")');
-        await senderPage.waitForTimeout(2000);
+        await senderPage.waitForLoadState('networkidle');
 
         // Verify message was sent
-        await expect(senderPage.locator(`text=${testMessage}`).first()).toBeVisible({ timeout: 5000 });
+        await assertTextVisible(senderPage, testMessage);
 
         // 4. Recipient's notification count should update automatically (polling interval is 15s)
         // Wait up to 25 seconds for the polling to pick it up

@@ -1,30 +1,45 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
+import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { waitForModal } from '../utils/waits';
 
 /**
  * Journey 6: GM Edits Game Settings
  *
  * Tests the GM's ability to edit game details after creation.
- * Uses test fixtures (Game #165: "The Heist at Goldstone Bank").
+ * Uses dedicated E2E test game for state-modifying operations.
  * This journey tests the game update functionality.
+ *
+ * REFACTORED: Using Page Object Model and shared utilities
+ * - Eliminated all waitForTimeout calls (was 9)
+ * - Uses GameDetailsPage for navigation
+ * - Uses smart waits for modals
+ * - Uses dedicated E2E_ACTION game (safe to modify)
+ *
+ * NOTE: Tests run serially to prevent race conditions when modifying the same game
  */
-test.describe('GM Edits Game Settings', () => {
+test.describe.serial('GM Edits Game Settings', () => {
+  let gameId: number;
+
+  test.beforeAll(async ({ browser }) => {
+    // Look up game ID once before all tests
+    const page = await browser.newPage();
+    await loginAs(page, 'GM');
+    gameId = await getFixtureGameId(page, 'E2E_ACTION');
+    await page.close();
+  });
+
   test('GM can edit game title and description', async ({ page }) => {
     // Login as GM
     await loginAs(page, 'GM');
 
-    // Use "The Heist at Goldstone Bank" from fixtures
-    const gameId = await getFixtureGameId(page, 'HEIST');
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
 
     // Click "Edit Game" button
     await page.click('button:has-text("Edit Game")');
-    await page.waitForTimeout(500);
-
-    // Verify modal is open
-    await expect(page.locator('h2:has-text("Edit Game")')).toBeVisible();
+    await waitForModal(page, 'Edit Game');
 
     // Update game title and description
     const newTitle = `Updated Game Title ${Date.now()}`;
@@ -35,7 +50,7 @@ test.describe('GM Edits Game Settings', () => {
 
     // Click "Save Changes" button
     await page.click('button:has-text("Save Changes")');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Verify modal is closed and changes are visible
     await expect(page.locator('h2:has-text("Edit Game")')).not.toBeVisible();
@@ -46,14 +61,12 @@ test.describe('GM Edits Game Settings', () => {
     // Login as GM
     await loginAs(page, 'GM');
 
-    // Use "The Heist at Goldstone Bank" from fixtures
-    const gameId = await getFixtureGameId(page, 'HEIST');
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
 
     // Click "Edit Game" button
     await page.click('button:has-text("Edit Game")');
-    await page.waitForTimeout(500);
+    await waitForModal(page, 'Edit Game');
 
     // Update genre and max players
     const newGenre = `Fantasy ${Date.now()}`;
@@ -62,11 +75,11 @@ test.describe('GM Edits Game Settings', () => {
 
     // Click "Save Changes" button
     await page.click('button:has-text("Save Changes")');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Verify changes by opening edit modal again
     await page.click('button:has-text("Edit Game")');
-    await page.waitForTimeout(500);
+    await waitForModal(page, 'Edit Game');
 
     // Verify genre and max players were saved
     await expect(page.locator('#genre')).toHaveValue(newGenre);
@@ -74,20 +87,19 @@ test.describe('GM Edits Game Settings', () => {
 
     // Close modal
     await page.click('button:has-text("Cancel")');
+    await page.waitForLoadState('networkidle');
   });
 
   test('GM can toggle anonymous mode', async ({ page }) => {
     // Login as GM
     await loginAs(page, 'GM');
 
-    // Use "The Heist at Goldstone Bank" from fixtures
-    const gameId = await getFixtureGameId(page, 'HEIST');
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
 
     // Click "Edit Game" button
     await page.click('button:has-text("Edit Game")');
-    await page.waitForTimeout(500);
+    await waitForModal(page, 'Edit Game');
 
     // Get current state of anonymous checkbox
     const anonymousCheckbox = page.locator('#isAnonymous');
@@ -95,15 +107,14 @@ test.describe('GM Edits Game Settings', () => {
 
     // Toggle anonymous mode
     await anonymousCheckbox.click();
-    await page.waitForTimeout(300);
 
     // Click "Save Changes" button
     await page.click('button:has-text("Save Changes")');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Verify change by opening edit modal again
     await page.click('button:has-text("Edit Game")');
-    await page.waitForTimeout(500);
+    await waitForModal(page, 'Edit Game');
 
     // Verify checkbox state changed
     const isNowChecked = await page.locator('#isAnonymous').isChecked();
@@ -111,5 +122,6 @@ test.describe('GM Edits Game Settings', () => {
 
     // Close modal
     await page.click('button:has-text("Cancel")');
+    await page.waitForLoadState('networkidle');
   });
 });

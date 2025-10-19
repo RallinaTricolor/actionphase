@@ -1,0 +1,62 @@
+package phases
+
+import (
+	"actionphase/pkg/core"
+	"net/http"
+)
+
+// CreatePhaseRequest represents the request to create a new phase
+type CreatePhaseRequest struct {
+	PhaseType   string              `json:"phase_type" validate:"required"`
+	Title       string              `json:"title,omitempty"`
+	Description string              `json:"description,omitempty"`
+	StartTime   *core.LocalDateTime `json:"start_time,omitempty"`
+	EndTime     *core.LocalDateTime `json:"end_time,omitempty"`
+	Deadline    *core.LocalDateTime `json:"deadline,omitempty"`
+}
+
+func (r *CreatePhaseRequest) Bind(req *http.Request) error {
+	return nil
+}
+
+// UpdateDeadlineRequest represents the request to update a phase deadline
+type UpdateDeadlineRequest struct {
+	Deadline core.LocalDateTime `json:"deadline" validate:"required"`
+}
+
+func (r *UpdateDeadlineRequest) Bind(req *http.Request) error {
+	return nil
+}
+
+// UpdatePhaseRequest represents the request to update phase details
+type UpdatePhaseRequest struct {
+	Title       *string             `json:"title,omitempty"`
+	Description *string             `json:"description,omitempty"`
+	Deadline    *core.LocalDateTime `json:"deadline,omitempty"`
+}
+
+func (r *UpdatePhaseRequest) Bind(req *http.Request) error {
+	return nil
+}
+
+// SubmitActionRequest represents the request to submit an action
+type SubmitActionRequest struct {
+	CharacterID *int32 `json:"character_id,omitempty"`
+	Content     string `json:"content" validate:"required"`
+	IsDraft     bool   `json:"is_draft,omitempty"`
+}
+
+func (r *SubmitActionRequest) Bind(req *http.Request) error {
+	return nil
+}
+
+// CreateActionResultRequest represents the request to create an action result
+type CreateActionResultRequest struct {
+	UserID      int32  `json:"user_id" validate:"required"`
+	Content     string `json:"content" validate:"required"`
+	IsPublished bool   `json:"is_published,omitempty"`
+}
+
+func (r *CreateActionResultRequest) Bind(req *http.Request) error {
+	return nil
+}

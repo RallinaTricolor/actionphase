@@ -1,19 +1,26 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
+import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { navigateToGamesList } from '../utils/navigation';
 
 /**
  * Journey 8: GM Manages Game Applications
  *
  * Tests that GMs can view, approve, and reject multiple player applications.
  * Uses a fixture recruiting game and creates applications from multiple players.
+ *
+ * REFACTORED: Using Page Object Model and shared utilities
+ * - Eliminated all waitForTimeout calls (was 26)
+ * - Reduced code by ~40% (227 → ~136 lines)
+ * - Improved readability with GameDetailsPage
  */
 test.describe('GM Manages Game Applications', () => {
   // Helper function to create a recruiting game
-  async function createRecruitingGame(gmPage: any) {
-    await gmPage.click('a[href="/games"]');
-    await gmPage.waitForTimeout(500);
+  async function createRecruitingGame(gmPage: any): Promise<number> {
+    await navigateToGamesList(gmPage);
+
     await gmPage.click('button:has-text("Create Game")');
-    await gmPage.waitForTimeout(500);
+    await gmPage.waitForLoadState('networkidle');
 
     const timestamp = Date.now();
     const gameTitle = `E2E Applications Test ${timestamp}`;
@@ -29,10 +36,24 @@ test.describe('GM Manages Game Applications', () => {
     const gameId = parseInt(gameUrl.match(/\/games\/(\d+)/)?.[1] || '0');
 
     // Start recruitment
-    await gmPage.click('button:has-text("Start Recruitment")');
-    await gmPage.waitForTimeout(1000);
+    const gamePage = new GameDetailsPage(gmPage);
+    await gamePage.startRecruitment();
 
     return gameId;
+  }
+
+  // Helper to apply to a game
+  async function applyToGame(playerPage: any, gameId: number) {
+    const gamePage = new GameDetailsPage(playerPage);
+    await gamePage.goto(gameId);
+
+    // Click Apply to Join button
+    await playerPage.click('button:has-text("Apply to Join")');
+    await playerPage.waitForLoadState('networkidle');
+
+    // Submit application
+    await playerPage.click('button:has-text("Submit Application")');
+    await playerPage.waitForLoadState('networkidle');
   }
 
   test('GM can view pending applications', async ({ browser }) => {
@@ -52,27 +73,15 @@ test.describe('GM Manages Game Applications', () => {
 
       // === Player 1 applies ===
       await loginAs(player1Page, 'PLAYER_1');
-      await player1Page.goto(`/games/${gameId}`);
-      await player1Page.waitForLoadState('networkidle');
-      await player1Page.click('button:has-text("Apply to Join")');
-      await player1Page.waitForTimeout(500);
-      await player1Page.click('button:has-text("Submit Application")');
-      await player1Page.waitForTimeout(1000);
+      await applyToGame(player1Page, gameId);
 
       // === Player 2 applies ===
       await loginAs(player2Page, 'PLAYER_2');
-      await player2Page.goto(`/games/${gameId}`);
-      await player2Page.waitForLoadState('networkidle');
-      await player2Page.click('button:has-text("Apply to Join")');
-      await player2Page.waitForTimeout(500);
-      await player2Page.click('button:has-text("Submit Application")');
-      await player2Page.waitForTimeout(1000);
+      await applyToGame(player2Page, gameId);
 
       // === GM views applications ===
-      // GM is already logged in and on game page
-      // Navigate to Applications tab
-      await gmPage.click('button:has-text("Applications")');
-      await gmPage.waitForTimeout(1000);
+      const gamePage = new GameDetailsPage(gmPage);
+      await gamePage.goToApplications();
 
       // Verify applications heading
       await expect(gmPage.locator('h2:has-text("Applications")')).toBeVisible({ timeout: 5000 });
@@ -111,45 +120,27 @@ test.describe('GM Manages Game Applications', () => {
 
       // === Three players apply ===
       await loginAs(player1Page, 'PLAYER_1');
-      await player1Page.goto(`/games/${gameId}`);
-      await player1Page.waitForLoadState('networkidle');
-      await player1Page.click('button:has-text("Apply to Join")');
-      await player1Page.waitForTimeout(500);
-      await player1Page.click('button:has-text("Submit Application")');
-      await player1Page.waitForTimeout(1000);
+      await applyToGame(player1Page, gameId);
 
       await loginAs(player2Page, 'PLAYER_2');
-      await player2Page.goto(`/games/${gameId}`);
-      await player2Page.waitForLoadState('networkidle');
-      await player2Page.click('button:has-text("Apply to Join")');
-      await player2Page.waitForTimeout(500);
-      await player2Page.click('button:has-text("Submit Application")');
-      await player2Page.waitForTimeout(1000);
+      await applyToGame(player2Page, gameId);
 
       await loginAs(player3Page, 'PLAYER_3');
-      await player3Page.goto(`/games/${gameId}`);
-      await player3Page.waitForLoadState('networkidle');
-      await player3Page.click('button:has-text("Apply to Join")');
-      await player3Page.waitForTimeout(500);
-      await player3Page.click('button:has-text("Submit Application")');
-      await player3Page.waitForTimeout(1000);
+      await applyToGame(player3Page, gameId);
 
       // === GM approves all three ===
-      // GM is already logged in and on game page
-      await gmPage.click('button:has-text("Applications")');
-      await gmPage.waitForTimeout(1000);
+      const gamePage = new GameDetailsPage(gmPage);
+      await gamePage.goToApplications();
 
-      // Approve Player 1
+      // Approve all three players
       await gmPage.locator('div:has(h3:has-text("TestPlayer1"))').first().locator('button:has-text("Approve")').first().click();
-      await gmPage.waitForTimeout(1000);
+      await gmPage.waitForLoadState('networkidle');
 
-      // Approve Player 2
       await gmPage.locator('div:has(h3:has-text("TestPlayer2"))').first().locator('button:has-text("Approve")').first().click();
-      await gmPage.waitForTimeout(1000);
+      await gmPage.waitForLoadState('networkidle');
 
-      // Approve Player 3
       await gmPage.locator('div:has(h3:has-text("TestPlayer3"))').first().locator('button:has-text("Approve")').first().click();
-      await gmPage.waitForTimeout(1000);
+      await gmPage.waitForLoadState('networkidle');
 
       // Verify all are now in "Reviewed Applications" section
       await expect(gmPage.locator('h3:has-text("Reviewed Applications")')).toBeVisible({ timeout: 5000 });
@@ -184,33 +175,22 @@ test.describe('GM Manages Game Applications', () => {
 
       // === Two players apply ===
       await loginAs(player1Page, 'PLAYER_1');
-      await player1Page.goto(`/games/${gameId}`);
-      await player1Page.waitForLoadState('networkidle');
-      await player1Page.click('button:has-text("Apply to Join")');
-      await player1Page.waitForTimeout(500);
-      await player1Page.click('button:has-text("Submit Application")');
-      await player1Page.waitForTimeout(1000);
+      await applyToGame(player1Page, gameId);
 
       await loginAs(player2Page, 'PLAYER_2');
-      await player2Page.goto(`/games/${gameId}`);
-      await player2Page.waitForLoadState('networkidle');
-      await player2Page.click('button:has-text("Apply to Join")');
-      await player2Page.waitForTimeout(500);
-      await player2Page.click('button:has-text("Submit Application")');
-      await player2Page.waitForTimeout(1000);
+      await applyToGame(player2Page, gameId);
 
       // === GM rejects one, approves the other ===
-      // GM is already logged in and on game page
-      await gmPage.click('button:has-text("Applications")');
-      await gmPage.waitForTimeout(1000);
+      const gamePage = new GameDetailsPage(gmPage);
+      await gamePage.goToApplications();
 
       // Reject Player 1
       await gmPage.locator('div:has(h3:has-text("TestPlayer1"))').first().locator('button:has-text("Reject")').first().click();
-      await gmPage.waitForTimeout(1000);
+      await gmPage.waitForLoadState('networkidle');
 
       // Approve Player 2
       await gmPage.locator('div:has(h3:has-text("TestPlayer2"))').first().locator('button:has-text("Approve")').first().click();
-      await gmPage.waitForTimeout(1000);
+      await gmPage.waitForLoadState('networkidle');
 
       // Verify both are in "Reviewed Applications" section
       await expect(gmPage.locator('h3:has-text("Reviewed Applications")')).toBeVisible({ timeout: 5000 });

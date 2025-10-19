@@ -49,6 +49,10 @@ export default function NotificationDropdown({ isOpen, onClose, bellButtonRef }:
   const notifications = notificationsData?.data || [];
   const hasUnread = notifications.some(n => !n.is_read);
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
     <div
       ref={dropdownRef}
