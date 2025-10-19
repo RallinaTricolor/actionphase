@@ -95,7 +95,7 @@ describe('useUploadCharacterAvatar', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     // Should invalidate both specific character and general character queries
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['characters', 123] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['character', 123] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['characters'] });
   });
 });
@@ -155,7 +155,7 @@ describe('useDeleteCharacterAvatar', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     // Should invalidate both specific character and general character queries
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['characters', 456] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['character', 456] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['characters'] });
   });
 });

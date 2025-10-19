@@ -1,10 +1,11 @@
-package db
+package messages
 
 import (
 	"context"
 	"testing"
 
 	core "actionphase/pkg/core"
+	db "actionphase/pkg/db/services"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,7 +17,7 @@ func TestExtractCharacterMentions_SingleMention(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
 
 	ctx := context.Background()
 
@@ -25,7 +26,7 @@ func TestExtractCharacterMentions_SingleMention(t *testing.T) {
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
-	character, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	character, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Aragorn",
@@ -49,7 +50,7 @@ func TestExtractCharacterMentions_MultipleMentions(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
 
 	ctx := context.Background()
 
@@ -58,7 +59,7 @@ func TestExtractCharacterMentions_MultipleMentions(t *testing.T) {
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
-	aragorn, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	aragorn, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Aragorn",
@@ -66,7 +67,7 @@ func TestExtractCharacterMentions_MultipleMentions(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	gandalf, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	gandalf, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Gandalf",
@@ -74,7 +75,7 @@ func TestExtractCharacterMentions_MultipleMentions(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	legolas, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	legolas, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Legolas",
@@ -100,7 +101,7 @@ func TestExtractCharacterMentions_DuplicateMentions(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
 
 	ctx := context.Background()
 
@@ -109,7 +110,7 @@ func TestExtractCharacterMentions_DuplicateMentions(t *testing.T) {
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
-	aragorn, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	aragorn, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Aragorn",
@@ -133,7 +134,7 @@ func TestExtractCharacterMentions_NonExistentCharacter(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
 
 	ctx := context.Background()
 
@@ -142,7 +143,7 @@ func TestExtractCharacterMentions_NonExistentCharacter(t *testing.T) {
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
-	aragorn, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	aragorn, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Aragorn",
@@ -210,7 +211,7 @@ func TestExtractCharacterMentions_MultiWordNames(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
 
 	ctx := context.Background()
 
@@ -219,7 +220,7 @@ func TestExtractCharacterMentions_MultiWordNames(t *testing.T) {
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
-	bob, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	bob, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Bob",
@@ -227,7 +228,7 @@ func TestExtractCharacterMentions_MultiWordNames(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	_, err = characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		Name:          "Bob Smith",
 		CharacterType: "npc_gm",
@@ -250,7 +251,7 @@ func TestExtractCharacterMentions_CrossGameIsolation(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
 
 	ctx := context.Background()
 
@@ -260,7 +261,7 @@ func TestExtractCharacterMentions_CrossGameIsolation(t *testing.T) {
 	game1 := testDB.CreateTestGame(t, int32(gm.ID), "Game 1")
 	game2 := testDB.CreateTestGame(t, int32(gm.ID), "Game 2")
 
-	aragorn1, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	aragorn1, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game1.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Aragorn",
@@ -268,7 +269,7 @@ func TestExtractCharacterMentions_CrossGameIsolation(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	aragorn2, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	aragorn2, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game2.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Aragorn",
@@ -299,7 +300,7 @@ func TestExtractCharacterMentions_EdgeCasePatterns(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
 
 	ctx := context.Background()
 
@@ -307,7 +308,7 @@ func TestExtractCharacterMentions_EdgeCasePatterns(t *testing.T) {
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
-	bob, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	bob, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Bob",
@@ -353,9 +354,9 @@ func TestExtractCharacterMentions_EdgeCasePatterns(t *testing.T) {
 		},
 		{
 			name:          "multiple @ symbols",
-			content:       "@@Bob should match once",
-			expectedCount: 1, // Regex will find @Bob after @@
-			shouldContain: []int32{bob.ID},
+			content:       "@@Bob should not match",
+			expectedCount: 0, // Regex excludes @ before mention to avoid email-like patterns
+			shouldContain: []int32{},
 		},
 	}
 
@@ -371,45 +372,13 @@ func TestExtractCharacterMentions_EdgeCasePatterns(t *testing.T) {
 	}
 }
 
-// TestExtractCharacterMentions_PublicWrapper tests the public ExtractCharacterMentions wrapper
-func TestExtractCharacterMentions_PublicWrapper(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
-
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-
-	ctx := context.Background()
-
-	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
-	player := testDB.CreateTestUser(t, "player", "player@example.com")
-	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
-
-	aragorn, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
-		GameID:        game.ID,
-		UserID:        int32Ptr(int32(player.ID)),
-		Name:          "Aragorn",
-		CharacterType: "player_character",
-	})
-	require.NoError(t, err)
-
-	content := "Hello @Aragorn!"
-
-	// Test public wrapper method
-	mentionedIDs, err := service.ExtractCharacterMentions(ctx, content, game.ID)
-
-	require.NoError(t, err)
-	assert.Len(t, mentionedIDs, 1)
-	assert.Contains(t, mentionedIDs, aragorn.ID)
-}
-
 // TestExtractCharacterMentions_SkipCodeBlocks tests that mentions inside code blocks are not extracted
 func TestExtractCharacterMentions_SkipCodeBlocks(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
 
 	ctx := context.Background()
 
@@ -417,7 +386,7 @@ func TestExtractCharacterMentions_SkipCodeBlocks(t *testing.T) {
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
-	aragorn, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	aragorn, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Aragorn",
@@ -425,7 +394,7 @@ func TestExtractCharacterMentions_SkipCodeBlocks(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	gandalf, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+	gandalf, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Gandalf",

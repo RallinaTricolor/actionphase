@@ -68,42 +68,22 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Validate request using validator
-	if data.Title == "" {
+	// Validate required fields
+	if errResp := core.ValidateRequired(data.Title, "title"); errResp != nil {
 		h.App.ObsLogger.Warn(ctx, "Game creation rejected: missing title")
-		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("title is required")))
+		render.Render(w, r, errResp)
 		return
 	}
 
 	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(ctx)
-	if err != nil {
-		h.App.ObsLogger.LogError(ctx, err, "No valid JWT token found")
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		h.App.ObsLogger.Error(ctx, "Username not found in JWT token")
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
 	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.ObsLogger.LogError(ctx, err, "Failed to get user by username",
-			"username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
+	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
+	if errResp != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
+		render.Render(w, r, errResp)
 		return
 	}
-
-	h.App.ObsLogger.Info(ctx, "Found user for game creation",
-		"username", username,
-		"user_id", user.ID)
-	userID := int32(user.ID)
+	h.App.ObsLogger.Info(ctx, "Authenticated user for game creation", "user_id", userID)
 
 	gameService := &db.GameService{DB: h.App.Pool}
 
@@ -178,7 +158,7 @@ func (h *Handler) GetGame(w http.ResponseWriter, r *http.Request) {
 	game, err := gameService.GetGame(r.Context(), int32(gameID))
 	if err != nil {
 		h.App.Logger.Error("Failed to get game", "error", err, "game_id", gameID)
-		render.Render(w, r, core.ErrInternalError(err))
+		render.Render(w, r, core.HandleDBErrorWithID(err, "game", gameID))
 		return
 	}
 
@@ -358,28 +338,14 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
 	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
+	userID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
+	if errResp != nil {
+		h.App.Logger.Error("Failed to authenticate user from JWT")
+		render.Render(w, r, errResp)
 		return
 	}
 
-	userID := int32(user.ID)
 	gameService := &db.GameService{DB: h.App.Pool}
 
 	// Verify user is GM of this game
@@ -464,28 +430,14 @@ func (h *Handler) UpdateGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
 	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
+	userID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
+	if errResp != nil {
+		h.App.Logger.Error("Failed to authenticate user from JWT")
+		render.Render(w, r, errResp)
 		return
 	}
 
-	userID := int32(user.ID)
 	gameService := &db.GameService{DB: h.App.Pool}
 
 	// Verify user is GM of this game
@@ -562,28 +514,14 @@ func (h *Handler) DeleteGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
 	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
+	userID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
+	if errResp != nil {
+		h.App.Logger.Error("Failed to authenticate user from JWT")
+		render.Render(w, r, errResp)
 		return
 	}
 
-	userID := int32(user.ID)
 	gameService := &db.GameService{DB: h.App.Pool}
 
 	// Verify user is GM of this game
@@ -720,28 +658,14 @@ func (h *Handler) LeaveGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
 	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
+	userID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
+	if errResp != nil {
+		h.App.Logger.Error("Failed to authenticate user from JWT")
+		render.Render(w, r, errResp)
 		return
 	}
 
-	userID := int32(user.ID)
 	gameService := &db.GameService{DB: h.App.Pool}
 	applicationService := &db.GameApplicationService{DB: h.App.Pool}
 

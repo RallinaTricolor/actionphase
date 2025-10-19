@@ -11,6 +11,7 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
+      '**/e2e/**', // Exclude Playwright E2E tests
       'src/lib/__tests__/api.auth.test.ts',
       'src/lib/__tests__/api.games.test.ts',
       // CharacterSheet.test.tsx has module transformation issues in vitest

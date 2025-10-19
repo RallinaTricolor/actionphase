@@ -173,7 +173,7 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 		getW := httptest.NewRecorder()
 
 		router.ServeHTTP(getW, getReq)
-		core.AssertEqual(t, 500, getW.Code, "Getting deleted game should fail")
+		core.AssertEqual(t, 404, getW.Code, "Getting deleted game should return 404")
 	})
 }
 
@@ -546,8 +546,8 @@ func TestGameAPI_ErrorHandling(t *testing.T) {
 			endpoint:       "/api/v1/games/99999",
 			payload:        nil,
 			requiresAuth:   true,
-			expectedStatus: 500, // sqlc returns error for non-existent records
-			description:    "Getting non-existent game should fail",
+			expectedStatus: 404, // Non-existent resources should return 404
+			description:    "Getting non-existent game should return 404",
 		},
 		{
 			name:           "invalid_game_id",

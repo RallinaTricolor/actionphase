@@ -811,3 +811,8 @@ func TestConversationService_EdgeCases(t *testing.T) {
 		assert.False(t, conv.Title.Valid)
 	})
 }
+
+// Helper function
+func int32Ptr(v int32) *int32 {
+	return &v
+}

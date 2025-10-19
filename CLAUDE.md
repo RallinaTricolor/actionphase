@@ -211,6 +211,10 @@ just migrate_test             # Apply migrations to test database
 - `backend/pkg/http/root.go` - API routing and middleware
 - `backend/pkg/db/queries/` - SQL queries (generates code via sqlc)
 - `backend/pkg/db/services/` - Service implementations
+  - `phases/` - Phase service (decomposed into 6 focused files)
+  - `actions/` - Action submission service (decomposed into 5 files)
+  - `messages/` - Message service (decomposed into 6 files)
+  - Other services (games, characters, users, sessions, notifications)
 
 ### Frontend Core
 - `frontend/src/lib/api.ts` - API client with JWT interceptors

@@ -1,4 +1,4 @@
-package db
+package messages
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
+	db "actionphase/pkg/db/services"
+	phasesvc "actionphase/pkg/db/services/phases"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,8 +18,8 @@ func TestMessageService_CreatePost(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -29,7 +31,7 @@ func TestMessageService_CreatePost(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create character for player
-	char, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Test Character",
@@ -58,7 +60,7 @@ func TestMessageService_CreatePost(t *testing.T) {
 
 	t.Run("rejects post from non-owned character", func(t *testing.T) {
 		// Try to post as player using GM's character
-		gmChar, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		gmChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 			GameID:        game.ID,
 			UserID:        int32Ptr(int32(gm.ID)),
 			Name:          "GM Character",
@@ -86,8 +88,8 @@ func TestMessageService_CreateComment(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup test data
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -98,7 +100,7 @@ func TestMessageService_CreateComment(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create character
-	char, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Test Character",
@@ -170,8 +172,8 @@ func TestMessageService_GetGamePosts(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup test data
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -180,7 +182,7 @@ func TestMessageService_GetGamePosts(t *testing.T) {
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	require.NoError(t, err)
 
-	char, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Test Character",
@@ -225,8 +227,8 @@ func TestMessageService_UpdateAndDelete(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -235,7 +237,7 @@ func TestMessageService_UpdateAndDelete(t *testing.T) {
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	require.NoError(t, err)
 
-	char, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Test Character",
@@ -277,8 +279,8 @@ func TestMessageService_Reactions(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup
 	user1 := testDB.CreateTestUser(t, "user1", "user1@example.com")
@@ -288,7 +290,7 @@ func TestMessageService_Reactions(t *testing.T) {
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(user1.ID), "player")
 	require.NoError(t, err)
 
-	char, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(user1.ID)),
 		Name:          "Test Character",
@@ -351,7 +353,7 @@ func TestMessageService_ValidateCharacterOwnership(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -359,7 +361,7 @@ func TestMessageService_ValidateCharacterOwnership(t *testing.T) {
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
 	// Create player character
-	playerChar, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	playerChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Player Character",
@@ -368,7 +370,7 @@ func TestMessageService_ValidateCharacterOwnership(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create GM NPC
-	gmNPC, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	gmNPC, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		Name:          "GM NPC",
 		CharacterType: "npc_gm",
@@ -410,8 +412,8 @@ func TestMessageService_GetComment(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -420,7 +422,7 @@ func TestMessageService_GetComment(t *testing.T) {
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	require.NoError(t, err)
 
-	char, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Test Character",
@@ -471,8 +473,8 @@ func TestMessageService_CommentCRUD(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -481,7 +483,7 @@ func TestMessageService_CommentCRUD(t *testing.T) {
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	require.NoError(t, err)
 
-	char, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Test Character",
@@ -547,8 +549,8 @@ func TestMessageService_GetPostComments(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -557,7 +559,7 @@ func TestMessageService_GetPostComments(t *testing.T) {
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	require.NoError(t, err)
 
-	char, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Test Character",
@@ -652,9 +654,9 @@ func TestMessageService_GetPhasePosts(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	phaseService := &PhaseService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -663,7 +665,7 @@ func TestMessageService_GetPhasePosts(t *testing.T) {
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(gm.ID), "player")
 	require.NoError(t, err)
 
-	char, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(gm.ID)),
 		Name:          "Test Character",
@@ -728,8 +730,8 @@ func TestMessageService_PostCounts(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -738,7 +740,7 @@ func TestMessageService_PostCounts(t *testing.T) {
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	require.NoError(t, err)
 
-	char, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Test Character",
@@ -802,8 +804,8 @@ func TestMessageService_GetUserPostsInGame(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup
 	user1 := testDB.CreateTestUser(t, "user1", "user1@example.com")
@@ -815,7 +817,7 @@ func TestMessageService_GetUserPostsInGame(t *testing.T) {
 	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(user2.ID), "player")
 	require.NoError(t, err)
 
-	char1, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char1, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(user1.ID)),
 		Name:          "User1 Character",
@@ -823,7 +825,7 @@ func TestMessageService_GetUserPostsInGame(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	char2, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char2, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(user2.ID)),
 		Name:          "User2 Character",
@@ -882,8 +884,8 @@ func TestMessageService_GetMessageReactions(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup
 	user1 := testDB.CreateTestUser(t, "user1", "user1@example.com")
@@ -893,7 +895,7 @@ func TestMessageService_GetMessageReactions(t *testing.T) {
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(user1.ID), "player")
 	require.NoError(t, err)
 
-	char, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(user1.ID)),
 		Name:          "Test Character",
@@ -955,8 +957,8 @@ func TestMessageService_PostWithMentions(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -966,7 +968,7 @@ func TestMessageService_PostWithMentions(t *testing.T) {
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	require.NoError(t, err)
 
-	playerChar, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	playerChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Hero",
@@ -974,7 +976,7 @@ func TestMessageService_PostWithMentions(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	aragorn, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	aragorn, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Aragorn",
@@ -982,7 +984,7 @@ func TestMessageService_PostWithMentions(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	gandalf, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	gandalf, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Gandalf",
@@ -1065,8 +1067,8 @@ func TestMessageService_CommentWithMentions(t *testing.T) {
 	defer testDB.Close()
 
 	service := &MessageService{DB: testDB.Pool}
-	characterService := &CharacterService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -1076,7 +1078,7 @@ func TestMessageService_CommentWithMentions(t *testing.T) {
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	require.NoError(t, err)
 
-	playerChar, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	playerChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Hero",
@@ -1084,7 +1086,7 @@ func TestMessageService_CommentWithMentions(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	legolas, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+	legolas, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        int32Ptr(int32(player.ID)),
 		Name:          "Legolas",

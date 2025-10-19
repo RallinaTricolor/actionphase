@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/services"
+	messagesvc "actionphase/pkg/db/services/messages"
 )
 
 type Handler struct {
@@ -67,24 +67,13 @@ func (rd *MessageResponse) Render(w http.ResponseWriter, r *http.Request) error 
 }
 
 // Helper function to get user ID from JWT token
-func getUserIDFromToken(r *http.Request, app *core.App) (int32, string, error) {
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		return 0, "", fmt.Errorf("no valid token found")
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		return 0, "", fmt.Errorf("username not found in token")
-	}
-
+func getUserIDFromToken(r *http.Request, app *core.App) (int32, error) {
 	userService := &db.UserService{DB: app.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		return 0, "", fmt.Errorf("user not found: %w", err)
+	userID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
+	if errResp != nil {
+		return 0, fmt.Errorf("authentication failed")
 	}
-
-	return int32(user.ID), username.(string), nil
+	return userID, nil
 }
 
 // Helper function to convert MessageWithDetails to MessageResponse
@@ -144,7 +133,7 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, username, err := getUserIDFromToken(r, h.App)
+	userID, err := getUserIDFromToken(r, h.App)
 	if err != nil {
 		h.App.Logger.Error("Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
@@ -161,12 +150,12 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if userRole != "gm" {
-		h.App.Logger.Warn("Non-GM user attempted to create post", "user_id", userID, "username", username, "game_id", gameID)
+		h.App.Logger.Warn("Non-GM user attempted to create post", "user_id", userID, "game_id", gameID)
 		render.Render(w, r, core.ErrForbidden("Only the Game Master can create posts"))
 		return
 	}
 
-	messageService := &db.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 
 	post, err := messageService.CreatePost(ctx, core.CreatePostRequest{
 		GameID:      int32(gameID),
@@ -178,12 +167,12 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		h.App.Logger.Error("Failed to create post", "error", err, "game_id", gameID, "username", username)
+		h.App.Logger.Error("Failed to create post", "error", err, "game_id", gameID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("Post created successfully", "post_id", post.ID, "game_id", gameID, "author", username)
+	h.App.Logger.Info("Post created successfully", "post_id", post.ID, "game_id", gameID, "author_id", userID)
 
 	// Fetch full post details to return with metadata
 	postDetails, err := messageService.GetPost(ctx, post.ID)
@@ -237,7 +226,7 @@ func (h *Handler) GetGamePosts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	messageService := &db.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 	posts, err := messageService.GetGamePosts(ctx, int32(gameID), phaseID, limit, offset)
 	if err != nil {
 		h.App.Logger.Error("Failed to get game posts", "error", err, "game_id", gameID)
@@ -303,14 +292,14 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, username, err := getUserIDFromToken(r, h.App)
+	userID, err := getUserIDFromToken(r, h.App)
 	if err != nil {
 		h.App.Logger.Error("Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
 
-	messageService := &db.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 
 	comment, err := messageService.CreateComment(ctx, core.CreateCommentRequest{
 		GameID:      int32(gameID),
@@ -323,12 +312,12 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		h.App.Logger.Error("Failed to create comment", "error", err, "game_id", gameID, "post_id", postID, "username", username)
+		h.App.Logger.Error("Failed to create comment", "error", err, "game_id", gameID, "post_id", postID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("Comment created successfully", "comment_id", comment.ID, "post_id", postID, "author", username)
+	h.App.Logger.Info("Comment created successfully", "comment_id", comment.ID, "post_id", postID, "author_id", userID)
 
 	// Fetch full comment details
 	commentDetails, err := messageService.GetComment(ctx, comment.ID)
@@ -360,7 +349,7 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messageService := &db.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 	comments, err := messageService.GetPostComments(ctx, int32(postID))
 	if err != nil {
 		h.App.Logger.Error("Failed to get post comments", "error", err, "post_id", postID)

@@ -106,6 +106,7 @@ export function CreatePostForm({ gameId, characters, allCharacters, onSubmit, is
           Post Content (Markdown supported):
         </label>
         <CommentEditor
+          id="content"
           value={content}
           onChange={setContent}
           placeholder="# Phase Title&#10;&#10;## Important Information&#10;&#10;Your phase description here...&#10;&#10;- Bullet point 1&#10;- Bullet point 2&#10;&#10;**Remember:** This post will be visible to all players.&#10;&#10;💡 Use @CharacterName to mention characters"

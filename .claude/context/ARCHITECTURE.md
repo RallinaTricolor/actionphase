@@ -2,6 +2,30 @@
 
 **IMPORTANT: Read this file before implementing new features or making architectural changes.**
 
+## Recent Changes (2025-10-19)
+
+### Backend Service Decomposition
+As part of the Week 1-3 refactoring initiative, large monolithic service files have been decomposed into focused, single-responsibility modules:
+
+- **Phase Service**: 1056-line `phases.go` → `phases/` package (6 files: crud, transitions, validation, history, converters, service)
+- **Action Service**: Extracted from phases → `actions/` package (5 files: submissions, results, validation, queries, service)
+- **Message Service**: 699-line `messages.go` → `messages/` package (6 files: posts, comments, reactions, validation, service, tests)
+
+**Impact**: All service files now < 500 lines, improved testability, clearer separation of concerns.
+
+**Import paths updated**:
+```go
+// OLD
+import "actionphase/pkg/db/services"
+phaseService := &services.PhaseService{DB: pool}
+
+// NEW
+import phasesvc "actionphase/pkg/db/services/phases"
+phaseService := &phasesvc.PhaseService{DB: pool}
+```
+
+**See**: `.claude/planning/REFACTOR_00_MASTER_PLAN.md` for complete refactoring details.
+
 ## Core Architectural Principles
 
 ActionPhase follows **Clean Architecture** with clear separation of concerns:
@@ -312,7 +336,11 @@ log.Info().
 - `backend/pkg/http/root.go` - API routing and middleware
 
 **Backend Services**:
-- `backend/pkg/db/services/*.go` - Service implementations
+- `backend/pkg/db/services/` - Service implementations
+  - `phases/` - Phase service (decomposed: crud, transitions, validation, history)
+  - `actions/` - Action submission service (decomposed: submissions, results, validation, queries)
+  - `messages/` - Message service (decomposed: posts, comments, reactions, validation)
+  - `*.go` - Other services (games, characters, users, sessions, notifications)
 - `backend/pkg/db/queries/*.sql` - SQL queries (generates models/)
 - `backend/pkg/db/migrations/*.sql` - Database migrations
 
