@@ -11,7 +11,7 @@ export default defineConfig({
   /* Global setup - runs once before all tests to reset fixtures */
   globalSetup: './e2e/global-setup.ts',
 
-  /* Run tests in files in parallel */
+  /* Run test files in parallel - tests are isolated with dedicated fixture games */
   fullyParallel: true,
 
   /* Fail the build on CI if you accidentally left test.only in the source code. */

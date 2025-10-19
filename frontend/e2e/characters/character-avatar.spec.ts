@@ -356,7 +356,7 @@ test.describe('Character Avatar Feature', () => {
 
   test.describe('Avatar in Posts and Comments', () => {
     test('should display character avatar in common room posts and comments', async ({ browser }) => {
-      const gameId = 164; // COMMON_ROOM_TEST
+      const gameId = 167; // COMMON_ROOM_MISC (isolated for character-avatar.spec.ts)
 
       const gmContext = await browser.newContext();
       const playerContext = await browser.newContext();
@@ -406,7 +406,7 @@ test.describe('Character Avatar Feature', () => {
         await gmPage.waitForTimeout(1000);
 
         const postContent = `Avatar Test Post ${Date.now()}`;
-        await gmPage.fill('textarea#content', postContent);
+        await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
         await gmPage.waitForTimeout(500);
         await gmPage.click('button:has-text("Create GM Post")');
         await gmPage.waitForTimeout(2000);

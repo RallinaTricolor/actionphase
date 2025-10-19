@@ -402,3 +402,83 @@ func TestExtractCharacterMentions_PublicWrapper(t *testing.T) {
 	assert.Len(t, mentionedIDs, 1)
 	assert.Contains(t, mentionedIDs, aragorn.ID)
 }
+
+// TestExtractCharacterMentions_SkipCodeBlocks tests that mentions inside code blocks are not extracted
+func TestExtractCharacterMentions_SkipCodeBlocks(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &MessageService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool}
+
+	ctx := context.Background()
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	aragorn, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Aragorn",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	gandalf, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Gandalf",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		content       string
+		expectedCount int
+		shouldContain []int32
+	}{
+		{
+			name:          "inline code block",
+			content:       "Try using `@Aragorn` in your code!",
+			expectedCount: 0,
+			shouldContain: []int32{},
+		},
+		{
+			name:          "fenced code block",
+			content:       "Here's an example:\n```\n@Aragorn says hello\n```",
+			expectedCount: 0,
+			shouldContain: []int32{},
+		},
+		{
+			name:          "mention outside code block",
+			content:       "Hey @Aragorn, check this code: `function test() {}`",
+			expectedCount: 1,
+			shouldContain: []int32{aragorn.ID},
+		},
+		{
+			name:          "mixed mentions",
+			content:       "@Gandalf wrote `@Aragorn` in the variable name",
+			expectedCount: 1,
+			shouldContain: []int32{gandalf.ID},
+		},
+		{
+			name:          "multiple code blocks",
+			content:       "Use `@Aragorn` or `@Gandalf` as placeholders",
+			expectedCount: 0,
+			shouldContain: []int32{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mentionedIDs, err := service.extractCharacterMentions(ctx, tt.content, game.ID)
+			require.NoError(t, err)
+			assert.Len(t, mentionedIDs, tt.expectedCount, "Expected %d mentions for: %s", tt.expectedCount, tt.content)
+			for _, id := range tt.shouldContain {
+				assert.Contains(t, mentionedIDs, id)
+			}
+		})
+	}
+}

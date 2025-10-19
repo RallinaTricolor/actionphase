@@ -16,12 +16,14 @@ This document tracks major development initiatives for ActionPhase. Each initiat
 
 ## 1. Avatar Implementation
 
-**Status**: Not Started
+**Status**: ✅ Completed
 **Priority**: High
-**Estimated Effort**: 2-3 days
+**Completed**: Before 2025-10-18
 
 ### Overview
 Add user and character avatar support throughout the application, including upload functionality, storage, and display in all relevant UI components.
+
+**Note**: This feature has been fully implemented. Backend has `/api/v1/characters/:id/avatar` endpoints, `avatars` package with service and storage layers, and database schema includes `characters.avatar_url` column. Frontend has avatar components and E2E test fixture (`test-avatar.jpg`) available.
 
 ### Backend Implementation
 
@@ -351,76 +353,78 @@ Improve user experience through better feedback, responsive design, and polish. 
 
 ## 4. Demo/Test Data Refresh
 
-**Status**: Not Started
+**Status**: In Progress (Revised 2025-10-18)
 **Priority**: High (blocks testing of new features)
 **Estimated Effort**: 2-3 days
 
 ### Overview
 Update test fixtures to include all new features implemented since initial fixture creation. Ensure comprehensive test data for manual testing and E2E tests.
 
-### New Fixtures Needed
+**IMPORTANT**: Based on October 2025 learnings, fixtures should provide **infrastructure only**, not test-specific content. E2E tests create their own dynamic content (posts, messages, etc.) with timestamps.
 
-#### Character Mentions
-- [ ] `07_character_mentions.sql`
-  - Update existing messages/posts to use @mentions
-  - Add posts with multiple mentions
-  - Add posts with mentions of characters from different games
-  - Add edge cases (mention at start, end, middle)
-  - Update `messages.mentioned_character_ids` arrays
+### Fixture Strategy (Revised)
 
-#### Notifications
-- [ ] `08_notifications.sql`
-  - Create notifications for each type:
-    - Private message received
-    - Phase transition
-    - Action result posted
-    - Character mentioned in post
-    - Game invitation
-  - Mix of read and unread notifications
-  - Multiple notifications for same user
-  - Notifications spanning different games
+#### E2E Test Fixtures (Infrastructure Only)
+**Purpose**: Provide stable environment for automated tests. **Do NOT include test-specific content.**
 
-#### Private Messages
-- [ ] `09_private_messages.sql`
-  - Update existing private messages to include:
-    - Character mentions in messages
-    - Rich markdown formatting
-    - Longer conversation threads
-  - Add group conversations (multiple participants)
-  - Add messages from different time periods
+- [x] ✅ `07_common_room.sql` - **Already complete**
+  - Game #164 with active common_room phase (**is_published = true**)
+  - GM and 2 player characters
+  - **NO posts** (E2E tests create their own)
+  - Used by: character-mentions, autocomplete, notification tests
 
-#### Rich Content Posts
-- [ ] `10_rich_content_posts.sql`
-  - Posts with complex markdown:
-    - Headers, lists, blockquotes
-    - Code blocks
-    - Links
-    - Character mentions
-  - Long-form posts (multiple paragraphs)
-  - Posts with comments that also use mentions
+**What E2E fixtures should NOT include**:
+- ❌ Posts with specific content (tests create dynamically with `${Date.now()}`)
+- ❌ Comments or replies (tests create during test execution)
+- ❌ Notifications (too timing-dependent for fixtures)
+- ❌ Private messages (tests create as needed)
 
-#### Action Submissions
-- [ ] Update `05_actions.sql`
-  - Add draft actions (not yet finalized)
-  - Add actions in different phases
-  - Add complex action content (markdown, mentions)
-  - Add action results with rich formatting
-  - Add actions for all character types (PC, NPC)
+#### Manual Testing Fixtures (Sample Content)
+**Purpose**: Provide realistic data for developers to manually test features.
 
-#### Phase History
-- [ ] Update `04_phases.sql`
-  - Add more phase transitions for Game #2
-  - Add phases with different durations
-  - Add phases in various statuses
-  - Ensure proper progression through phase sequence
+- [ ] `08_demo_content.sql` - **New fixture for manual testing only**
+  - Sample posts with character mentions
+  - Sample private message conversations
+  - Sample action results with rich markdown
+  - **Used for**: Manual UI exploration, not E2E tests
+  - **Note**: This data is for humans, not automated tests
 
-### Fixture Updates
+**What demo fixtures should include**:
+- ✅ Varied content showcasing all features
+- ✅ Edge cases for manual verification
+- ✅ Realistic conversation threads
+- ✅ Rich markdown examples
+- ✅ Character mentions in different contexts
 
-#### Existing Files to Update
-- [ ] `01_users.sql` - Add avatar_url once implemented
-- [ ] `02_games.sql` - Add more game variety, different statuses
-- [ ] `03_characters.sql` - Add avatar_url once implemented
-- [ ] `06_posts.sql` - Update to use character mentions
+#### Existing Fixtures to Update
+
+- [x] ✅ `01_users.sql` - **Complete** (provides test users)
+- [x] ✅ `02_games.sql` - **Complete** (provides game scenarios)
+- [x] ✅ `03_characters.sql` - **Complete** (provides characters)
+- [x] ✅ `04_phases.sql` - **Complete** (provides phase infrastructure)
+- [x] ✅ `05_actions.sql` - **Complete** (provides draft actions for state testing)
+- [ ] `06_action_results.sql` - Add more result examples
+- [x] ✅ `07_common_room.sql` - **Complete** (E2E infrastructure)
+
+### Next Steps
+
+#### Immediate (For Manual Testing)
+1. [ ] Create `08_demo_content.sql` with rich sample content
+   - Posts showcasing markdown features
+   - Character mentions in various contexts
+   - Private message conversations
+   - Action results with complex formatting
+   - Comments with replies and mentions
+
+2. [ ] Remove GM post from `07_common_room.sql` (lines 76-86)
+   - E2E tests create their own posts
+   - Keep only infrastructure (game, phase, characters)
+
+#### Future (Avatar Feature Available)
+- [ ] Update `08_demo_content.sql` - Include sample avatar_url values for characters
+  - Can reference test-avatar.jpg or create sample avatar URLs
+  - Note: `characters.avatar_url` column exists and is ready
+  - E2E tests already use `frontend/e2e/fixtures/test-avatar.jpg` for uploads
 
 ### Test User Scenarios
 
@@ -444,23 +448,39 @@ Update test fixtures to include all new features implemented since initial fixtu
 
 ### Testing Scenarios
 
-#### Game Scenarios
-- **Game #2** (Active Game)
-  - Current phase with pending actions
-  - Rich post history with mentions
-  - Active private message threads
-  - Mix of draft and submitted actions
+#### Current E2E Test Games
+- **Game #164** (COMMON_ROOM_TEST) - ✅ Already exists
+  - Active common_room phase (is_published = true)
+  - 3 characters (GM + 2 players)
+  - **Infrastructure only** - no posts
+  - Used by: character-mentions, autocomplete, notification UI tests
 
-- **Game #6** (Pagination Test)
-  - 50+ posts for pagination testing
-  - Multiple pages of comments
-  - Extensive phase history
-  - Large character roster
+#### Manual Testing Games (From Existing Fixtures)
+- **Game #2** ("The Heist at Goldstone Bank")
+  - Active game with action phase
+  - Has draft and submitted actions
+  - Multiple characters with abilities
+  - Good for testing action submission flow
 
-- **Game #7** (Recruiting)
-  - Open for applications
-  - Some pending applications
-  - Minimal content (just starting)
+- **Game #4** ("Court of Shadows")
+  - Active game with phase history
+  - Has action submissions
+  - Good for testing phase transitions
+
+- **Game #1** ("Westmarch Adventure")
+  - Recruiting game
+  - Good for testing applications flow
+
+#### Games That Need Demo Content (Via `08_demo_content.sql`)
+- **Game #2** - Add sample Common Room posts
+  - Posts with character mentions
+  - Comments with markdown
+  - Threaded conversations
+
+- **Game #4** - Add rich action results
+  - Complex markdown formatting
+  - Character mentions in results
+  - Multiple result types
 
 ### Data Quality
 
@@ -487,18 +507,55 @@ Update test fixtures to include all new features implemented since initial fixtu
 - [ ] Document fixture dependencies
 
 ### Documentation
-- [ ] Update `.claude/context/TEST_DATA.md` with new fixtures
+- [x] ✅ Updated `.claude/planning/completed/AI_E2E_TESTING_STRATEGY.md` with fixture learnings
+- [ ] Update `.claude/context/TEST_DATA.md` when `08_demo_content.sql` is created
 - [ ] Document test scenarios in `/docs/testing/TEST_DATA.md`
-- [ ] Add fixture usage examples
+- [ ] Add fixture usage examples for new developers
 - [ ] Create "Test User Guide" for manual testing
+
+### Progress Summary (2025-10-18)
+
+#### Completed Today
+1. ✅ Fixed `07_common_room.sql` - Set `is_published = true` on phase
+2. ✅ Added GM post to fixture (lines 76-86) - **Note: Should be removed per new strategy**
+3. ✅ Fixed 3 failing E2E tests (avatar, autocomplete, notification)
+4. ✅ Documented fixture strategy in `AI_E2E_TESTING_STRATEGY.md`
+5. ✅ Revised this plan based on learnings
+
+#### Key Learnings
+- **Fixtures ARE reliable** - issue was config bug (is_published = false)
+- **Separate concerns**: E2E fixtures (infrastructure) vs Demo fixtures (sample content)
+- **Dynamic creation best** for test-specific content (posts, messages)
+- **Multi-context pattern** works well for user interaction tests
+- **Test UI, not backend** - avoid timing-dependent backend behaviors in E2E
+
+#### Next Priority
+1. **Create `08_demo_content.sql`** for manual testing
+   - Rich posts with markdown and mentions
+   - Sample conversations
+   - Edge cases for visual verification
+2. **Clean up `07_common_room.sql`** - remove GM post (optional)
 
 ---
 
 ## Cross-Initiative Dependencies
 
-- Avatar implementation should complete before Demo Data Refresh (need avatar_url columns)
+- ✅ Avatar implementation complete (avatar_url columns exist, can be used in Demo Data)
 - UI/UX improvements can proceed in parallel with other initiatives
-- Major refactor should wait for stable test suite (after Demo Data Refresh)
+- Major refactor should wait for stable test suite (Demo Data Refresh optional, current fixtures sufficient for E2E)
+
+## Status Summary (2025-10-18)
+
+### Completed
+1. ✅ **Avatar Implementation** - Fully functional with uploads, storage, and display
+2. ✅ **E2E Test Infrastructure** - Common Room fixture, 3 passing tests, documented strategy
+
+### In Progress
+1. 🔄 **Demo/Test Data Refresh** - E2E fixtures complete, manual testing fixtures optional
+
+### Not Started
+1. ⏸️ **Major Refactor Using Opus** - Waiting for stable test suite
+2. ⏸️ **UI/UX Improvements** - Can start anytime, incremental approach
 
 ## Notes
 

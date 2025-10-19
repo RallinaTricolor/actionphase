@@ -15,7 +15,6 @@ export const FIXTURE_GAMES = {
   SHADOWS: 'Shadows Over Innsmouth',              // In-progress, common room phase
   DRAGON: 'The Dragon of Mount Krag',             // In-progress, complex phase history
   MANOR: 'The Mystery of Blackwood Manor',        // Recruitment state
-  COMMON_ROOM_TEST: 'E2E Common Room Test Game',  // Common room testing
 
   // Dedicated E2E fixtures (STATE-MODIFYING - safe to complete/cancel/modify)
   E2E_COMPLETE: 'E2E Test: Game to Complete',     // For testing game completion
@@ -24,6 +23,15 @@ export const FIXTURE_GAMES = {
   E2E_ACTION: 'E2E Test: Action Submission',      // For testing action submissions
   E2E_PM: 'E2E Test: Action Submission',          // For testing private messages (alias)
   E2E_MESSAGES: 'E2E Test: Action Submission',    // For testing messaging (alias)
+
+  // Isolated Common Room games for parallel E2E testing (one per test file)
+  COMMON_ROOM_POSTS: 'E2E Common Room - Posts',           // Game #164 - for common-room.spec.ts
+  COMMON_ROOM_MENTIONS: 'E2E Common Room - Mentions',     // Game #165 - for character-mentions.spec.ts
+  COMMON_ROOM_NOTIFICATIONS: 'E2E Common Room - Notifications', // Game #166 - for notification-flow.spec.ts
+  COMMON_ROOM_MISC: 'E2E Common Room - Misc',             // Game #167 - for character-avatar.spec.ts and misc
+
+  // Legacy alias (deprecated - use COMMON_ROOM_POSTS instead)
+  COMMON_ROOM_TEST: 'E2E Common Room - Posts',    // Alias for Game #164
 } as const;
 
 /**

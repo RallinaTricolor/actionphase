@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import type { Character } from '../types/characters';
+import { CommentEditor } from './CommentEditor';
 
 interface CreatePostFormProps {
   gameId: number;
-  characters: Character[];
+  characters: Character[]; // Characters the user can post as
+  allCharacters?: Character[]; // All characters for autocomplete mentions
   onSubmit: (characterId: number, content: string) => Promise<void>;
   isSubmitting: boolean;
 }
 
-export function CreatePostForm({ gameId, characters, onSubmit, isSubmitting }: CreatePostFormProps) {
+export function CreatePostForm({ gameId, characters, allCharacters, onSubmit, isSubmitting }: CreatePostFormProps) {
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [content, setContent] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export function CreatePostForm({ gameId, characters, onSubmit, isSubmitting }: C
 
       <div className="bg-blue-100 border border-blue-300 rounded-lg p-3 mb-4">
         <p className="text-sm text-blue-800">
-          <strong>💡 Tip:</strong> You can use Markdown formatting for rich text, including headers, lists, links, tables, and more.
+          <strong>💡 Tip:</strong> You can use Markdown formatting for rich text. Type <code className="bg-blue-200 px-1 rounded">@</code> to mention characters and trigger autocomplete.
         </p>
       </div>
 
@@ -103,14 +105,14 @@ export function CreatePostForm({ gameId, characters, onSubmit, isSubmitting }: C
         <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
           Post Content (Markdown supported):
         </label>
-        <textarea
-          id="content"
+        <CommentEditor
           value={content}
-          onChange={(e) => setContent(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-          rows={12}
-          placeholder="# Phase Title&#10;&#10;## Important Information&#10;&#10;Your phase description here...&#10;&#10;- Bullet point 1&#10;- Bullet point 2&#10;&#10;**Remember:** This post will be visible to all players."
+          onChange={setContent}
+          placeholder="# Phase Title&#10;&#10;## Important Information&#10;&#10;Your phase description here...&#10;&#10;- Bullet point 1&#10;- Bullet point 2&#10;&#10;**Remember:** This post will be visible to all players.&#10;&#10;💡 Use @CharacterName to mention characters"
           disabled={isSubmitting}
+          rows={12}
+          characters={allCharacters || characters}
+          showPreviewByDefault={false}
         />
         <p className="text-xs text-gray-500 mt-1">
           {content.length} characters (longer posts will be collapsible for players)
