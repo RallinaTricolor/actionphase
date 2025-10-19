@@ -11,6 +11,10 @@ export function useNotifications(params?: GetNotificationsParams) {
     },
     // Poll every 30 seconds for new notifications
     refetchInterval: 30000,
+    // Always refetch when component mounts to ensure fresh data when dropdown opens
+    refetchOnMount: 'always',
+    // Refetch when window regains focus
+    refetchOnWindowFocus: true,
   });
 }
 

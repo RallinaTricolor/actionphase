@@ -11,7 +11,13 @@ import { getFixtureGameId } from '../fixtures/game-helpers';
  * - Viewing notifications in dropdown
  * - Marking notifications as read
  * - Navigating via notification links
+ *
+ * NOTE: These tests run serially due to timing-sensitive notification polling
+ * and async backend goroutines. Parallel execution can cause race conditions
+ * where notifications from one test appear in another test's feed.
  */
+
+test.describe.configure({ mode: 'serial' });
 
 test.describe('Notification System', () => {
 
@@ -162,10 +168,10 @@ test.describe('Notification System', () => {
       const mentionedUserPage = await mentionedUserContext.newPage();
 
       try {
-        // 1. All users log in
+        // 1. All users log in (using PLAYER_3 and PLAYER_4 to avoid cross-contamination)
         await loginAs(gmPage, 'GM');
-        await loginAs(mentionerPage, 'PLAYER_1');
-        await loginAs(mentionedUserPage, 'PLAYER_2');
+        await loginAs(mentionerPage, 'PLAYER_3');
+        await loginAs(mentionedUserPage, 'PLAYER_4');
 
         const gameId = await getFixtureGameId(gmPage, 'COMMON_ROOM_NOTIFICATIONS');
 
@@ -193,7 +199,7 @@ test.describe('Notification System', () => {
         await mentionerPage.waitForTimeout(1000);
 
         const commentTextarea = postCard.locator('textarea[placeholder*="Write a comment"]');
-        await commentTextarea.fill('Hey @Test Player 2 Character, what do you think?');
+        await commentTextarea.fill('Hey @Test Player 4 Character, what do you think?');
         await mentionerPage.waitForTimeout(500);
 
         const form = postCard.locator('form').first();
@@ -238,11 +244,12 @@ test.describe('Notification System', () => {
       const playerPage = await playerContext.newPage();
 
       try {
-        // 1. Login as GM and Player
+        // 1. Login as GM and Player (using PLAYER_5 to avoid cross-contamination)
         await loginAs(gmPage, 'GM');
-        await loginAs(playerPage, 'PLAYER_1');
+        await loginAs(playerPage, 'PLAYER_5');
 
-        const gameId = await getFixtureGameId(gmPage, 'COMMON_ROOM_NOTIFICATIONS');
+        // Use COMMON_ROOM_MISC (game 167) to avoid interfering with other notification tests
+        const gameId = await getFixtureGameId(gmPage, 'COMMON_ROOM_MISC');
 
         // 2. Player viewing game
         await playerPage.goto(`/games/${gameId}`);

@@ -45,8 +45,10 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown */}
-      <NotificationDropdown isOpen={isOpen} onClose={() => setIsOpen(false)} bellButtonRef={bellButtonRef} />
+      {/* Dropdown - only render when open to ensure fresh data on mount */}
+      {isOpen && (
+        <NotificationDropdown isOpen={isOpen} onClose={() => setIsOpen(false)} bellButtonRef={bellButtonRef} />
+      )}
     </div>
   );
 }
