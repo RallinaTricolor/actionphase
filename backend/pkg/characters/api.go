@@ -379,13 +379,18 @@ func (h *Handler) GetUserControllableCharacters(w http.ResponseWriter, r *http.R
 			"game_id":        char.GameID,
 			"name":           char.Name,
 			"character_type": char.CharacterType,
-			"status":         char.Status.String,
 			"created_at":     char.CreatedAt.Time,
 			"updated_at":     char.UpdatedAt.Time,
 		}
 
 		if char.UserID.Valid {
 			charData["user_id"] = char.UserID.Int32
+		}
+		if char.Status.Valid {
+			charData["status"] = char.Status.String
+		}
+		if char.AvatarUrl.Valid {
+			charData["avatar_url"] = char.AvatarUrl.String
 		}
 
 		response = append(response, charData)

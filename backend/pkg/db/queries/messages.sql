@@ -23,6 +23,7 @@ RETURNING *;
 SELECT m.*,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
@@ -33,6 +34,7 @@ WHERE m.id = $1;
 SELECT m.*,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
@@ -48,6 +50,7 @@ LIMIT $3 OFFSET $4;
 SELECT m.*,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
@@ -97,6 +100,7 @@ RETURNING *;
 SELECT m.*,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as reply_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
@@ -109,6 +113,7 @@ WHERE m.id = $1;
 SELECT m.*,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as reply_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
@@ -176,6 +181,7 @@ SELECT comment_id as id FROM comment_tree;
 SELECT m.*,
        u.username as author_username,
        c.name as character_name,
+       c.avatar_url as character_avatar_url,
        (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id

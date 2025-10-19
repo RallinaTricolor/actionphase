@@ -13,13 +13,12 @@ interface PostCardProps {
   post: Message;
   gameId: number;
   characters: Character[]; // All game characters (for autocomplete)
+  controllableCharacters: Character[]; // Characters the user can control (for "Reply as" dropdown)
   onCreateComment: (postId: number, characterId: number, content: string) => Promise<void>;
   currentUserId?: number;
 }
 
-export function PostCard({ post, gameId, characters, onCreateComment, currentUserId }: PostCardProps) {
-  // Filter to only characters the current user can control (for "Reply as" dropdown)
-  const controllableCharacters = characters.filter(char => char.user_id === currentUserId);
+export function PostCard({ post, gameId, characters, controllableCharacters, onCreateComment, currentUserId }: PostCardProps) {
   const [showComments, setShowComments] = useState(true);
   const [isCommenting, setIsCommenting] = useState(false);
   const [topLevelComments, setTopLevelComments] = useState<Message[]>([]);
@@ -275,6 +274,7 @@ export function PostCard({ post, gameId, characters, onCreateComment, currentUse
                   comment={comment}
                   gameId={gameId}
                   characters={characters}
+                  controllableCharacters={controllableCharacters}
                   onCreateReply={onCreateComment}
                   currentUserId={currentUserId}
                   depth={0}

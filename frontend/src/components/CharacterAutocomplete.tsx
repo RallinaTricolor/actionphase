@@ -52,8 +52,9 @@ export function CharacterAutocomplete({
   if (filteredCharacters.length === 0) {
     return (
       <div
-        className="absolute z-50 bg-white border border-gray-300 rounded-md shadow-lg py-2 px-3 text-sm text-gray-500"
+        className="z-50 bg-white border border-gray-300 rounded-md shadow-lg py-2 px-3 text-sm text-gray-500"
         style={{
+          position: 'fixed',
           top: `${position.top}px`,
           left: `${position.left}px`,
           minWidth: '200px',
@@ -68,8 +69,9 @@ export function CharacterAutocomplete({
     <ul
       ref={listRef}
       role="listbox"
-      className="absolute z-50 bg-white border border-gray-300 rounded-md shadow-lg py-1 max-h-48 overflow-y-auto"
+      className="z-50 bg-white border border-gray-300 rounded-md shadow-lg py-1 max-h-48 overflow-y-auto"
       style={{
+        position: 'fixed',
         top: `${position.top}px`,
         left: `${position.left}px`,
         minWidth: '200px',

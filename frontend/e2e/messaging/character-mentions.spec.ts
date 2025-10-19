@@ -236,6 +236,87 @@ test.describe('Character Mentions', () => {
     }
   });
 
+  test('should position autocomplete dropdown near cursor', async ({ browser }) => {
+    const gameId = 164;
+
+    const gmContext = await browser.newContext();
+    const playerContext = await browser.newContext();
+
+    const gmPage = await gmContext.newPage();
+    const playerPage = await playerContext.newPage();
+
+    try {
+      // GM creates a post
+      await loginAs(gmPage, 'GM');
+      await gmPage.goto(`/games/${gameId}`);
+      await gmPage.waitForLoadState('networkidle');
+      await gmPage.click('button:has-text("Common Room")');
+      await gmPage.waitForTimeout(1000);
+
+      const postContent = `Autocomplete Test ${Date.now()}`;
+      await gmPage.fill('textarea#content', postContent);
+      await gmPage.waitForTimeout(500);
+      await gmPage.click('button:has-text("Create GM Post")');
+      await gmPage.waitForTimeout(2000);
+
+      await expect(gmPage.locator(`text=${postContent}`).first()).toBeVisible({ timeout: 5000 });
+
+      // Player opens comment form
+      await loginAs(playerPage, 'PLAYER_1');
+      await playerPage.goto(`/games/${gameId}`);
+      await playerPage.waitForLoadState('networkidle');
+      await playerPage.click('button:has-text("Common Room")');
+      await playerPage.waitForTimeout(1000);
+
+      await expect(playerPage.locator(`text=${postContent}`).first()).toBeVisible({ timeout: 5000 });
+
+      const targetPost = playerPage.locator(`div:has-text("${postContent}")`).first();
+      await targetPost.locator('button:has-text("Add Comment")').first().click();
+      await playerPage.waitForTimeout(1000);
+
+      // Get the comment textarea
+      const commentTextarea = targetPost.locator('textarea[placeholder*="Write"], textarea[placeholder*="reply"]').first();
+      await commentTextarea.waitFor({ state: 'visible' });
+
+      // Add some text before the mention to test positioning with scrolled content
+      const prefixText = 'This is a long comment with multiple lines.\nSecond line here.\nThird line @';
+      await commentTextarea.click();
+      await commentTextarea.fill(prefixText);
+      await playerPage.waitForTimeout(500);
+
+      // Verify autocomplete appears
+      const autocomplete = playerPage.locator('[role="listbox"]');
+      await expect(autocomplete).toBeVisible({ timeout: 2000 });
+
+      // Get textarea position
+      const textareaBox = await commentTextarea.boundingBox();
+      expect(textareaBox).toBeTruthy();
+
+      // Get autocomplete position
+      const autocompleteBox = await autocomplete.boundingBox();
+      expect(autocompleteBox).toBeTruthy();
+
+      // Verify autocomplete is positioned below the textarea (within reasonable range)
+      // It should be near the bottom of the textarea, not at the top of the page
+      if (textareaBox && autocompleteBox) {
+        // Autocomplete top should be at or below textarea top
+        expect(autocompleteBox.y).toBeGreaterThanOrEqual(textareaBox.y);
+
+        // Autocomplete should be within reasonable distance of textarea
+        // (below textarea but not too far away - within ~500px)
+        const distance = autocompleteBox.y - textareaBox.y;
+        expect(distance).toBeLessThan(500);
+
+        // Autocomplete left should be roughly aligned with textarea left (within 150px)
+        const horizontalOffset = Math.abs(autocompleteBox.x - textareaBox.x);
+        expect(horizontalOffset).toBeLessThan(150);
+      }
+    } finally {
+      await gmContext.close();
+      await playerContext.close();
+    }
+  });
+
   test('should not render mentions inside code blocks', async ({ browser }) => {
     const gameId = 164;
 
