@@ -128,6 +128,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
         <CreatePostForm
           gameId={gameId}
           characters={controllableCharacters}
+          allCharacters={allCharacters}
           onSubmit={handleCreatePost}
           isSubmitting={isCreatingPost}
         />

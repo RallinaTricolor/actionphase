@@ -6,3 +6,6 @@
 - Status of documentation
 - Number of justfile commands and their relevance
 - Fixture management vs demo/test data for UI based testing
+- Comment system to support direct linking to comments from notifications
+- Test pyramid and shifting more value into unit/integration tests (?)
+- Smaller set of E2E tests with critical paths + multiple validations (?)

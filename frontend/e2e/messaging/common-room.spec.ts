@@ -31,8 +31,8 @@ test.describe('Common Room Flow', () => {
     // Create a new post
     const postContent = `GM Post ${Date.now()}: Important mission briefing!`;
 
-    // Fill in the post content - using textarea with ID
-    await page.fill('textarea#content', postContent);
+    // Fill in the post content - using textarea with placeholder
+    await page.fill('textarea[placeholder*="Phase Title"]', postContent);
     await page.waitForTimeout(500);
 
     // Submit the post
@@ -61,7 +61,7 @@ test.describe('Common Room Flow', () => {
       await gmPage.waitForTimeout(1000);
 
       const postContent = `Test Post ${Date.now()}: Mission update for all crew`;
-      await gmPage.fill('textarea#content', postContent);
+      await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
       await gmPage.waitForTimeout(500);
       await gmPage.click('button:has-text("Create GM Post")');
       await gmPage.waitForTimeout(2000);
@@ -105,7 +105,7 @@ test.describe('Common Room Flow', () => {
       await gmPage.waitForTimeout(1000);
 
       const postContent = `Discussion Post ${Date.now()}: Let's plan our approach`;
-      await gmPage.fill('textarea#content', postContent);
+      await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
       await gmPage.waitForTimeout(500);
       await gmPage.click('button:has-text("Create GM Post")');
       await gmPage.waitForTimeout(2000);

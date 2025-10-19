@@ -5,7 +5,7 @@ import { loginAs } from '../fixtures/auth-helpers';
  * E2E Tests for Character Mentions Feature
  *
  * Tests character mention autocomplete and rendering in Common Room posts.
- * Uses test fixture Game #164 ("E2E Common Room Test Game") with:
+ * Uses test fixture Game #165 ("E2E Common Room - Mentions") with:
  * - Active common_room phase
  * - Characters: "GM Test Character", "Test Player 1 Character", "Test Player 2 Character"
  *
@@ -13,8 +13,8 @@ import { loginAs } from '../fixtures/auth-helpers';
  */
 test.describe('Character Mentions', () => {
   test('should allow user to mention character in comment with autocomplete', async ({ browser }) => {
-    // Use Game #164 from fixtures - dedicated Common Room test game
-    const gameId = 164;
+    // Use Game #165 from fixtures - isolated for character-mentions.spec.ts tests
+    const gameId = 165;
 
     const gmContext = await browser.newContext();
     const playerContext = await browser.newContext();
@@ -37,7 +37,7 @@ test.describe('Character Mentions', () => {
 
       // Create a new post
       const postContent = `Mission Briefing ${Date.now()}: Everyone report in!`;
-      await gmPage.fill('textarea#content', postContent);
+      await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
       await gmPage.waitForTimeout(500);
       await gmPage.click('button:has-text("Create GM Post")');
       await gmPage.waitForTimeout(2000);
@@ -109,7 +109,7 @@ test.describe('Character Mentions', () => {
   });
 
   test('should filter autocomplete as user types', async ({ page }) => {
-    const gameId = 164;
+    const gameId = 165;
 
     await loginAs(page, 'GM');
     await page.goto(`/games/${gameId}`);
@@ -119,7 +119,7 @@ test.describe('Character Mentions', () => {
 
     // Create a post to comment on
     const postContent = `Filter Test ${Date.now()}: Testing autocomplete filtering`;
-    await page.fill('textarea#content', postContent);
+    await page.fill('textarea[placeholder*="Phase Title"]', postContent);
     await page.waitForTimeout(500);
     await page.click('button:has-text("Create GM Post")');
     await page.waitForTimeout(2000);
@@ -168,7 +168,7 @@ test.describe('Character Mentions', () => {
   });
 
   test('should render mentions with markdown formatting', async ({ browser }) => {
-    const gameId = 164;
+    const gameId = 165;
 
     const gmContext = await browser.newContext();
     const playerContext = await browser.newContext();
@@ -185,7 +185,7 @@ test.describe('Character Mentions', () => {
       await gmPage.waitForTimeout(1000);
 
       const postContent = `Markdown Test ${Date.now()}: Testing mentions with markdown`;
-      await gmPage.fill('textarea#content', postContent);
+      await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
       await gmPage.waitForTimeout(500);
       await gmPage.click('button:has-text("Create GM Post")');
       await gmPage.waitForTimeout(2000);
@@ -237,7 +237,7 @@ test.describe('Character Mentions', () => {
   });
 
   test('should position autocomplete dropdown near cursor', async ({ browser }) => {
-    const gameId = 164;
+    const gameId = 165;
 
     const gmContext = await browser.newContext();
     const playerContext = await browser.newContext();
@@ -254,7 +254,7 @@ test.describe('Character Mentions', () => {
       await gmPage.waitForTimeout(1000);
 
       const postContent = `Autocomplete Test ${Date.now()}`;
-      await gmPage.fill('textarea#content', postContent);
+      await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
       await gmPage.waitForTimeout(500);
       await gmPage.click('button:has-text("Create GM Post")');
       await gmPage.waitForTimeout(2000);
@@ -317,8 +317,83 @@ test.describe('Character Mentions', () => {
     }
   });
 
+  test('should allow GM to mention all characters in post creation with autocomplete', async ({ page }) => {
+    const gameId = 165;
+
+    await loginAs(page, 'GM');
+    await page.goto(`/games/${gameId}`);
+    await page.waitForLoadState('networkidle');
+    await page.click('button:has-text("Common Room")');
+    await page.waitForTimeout(1000);
+
+    // Verify Common Room heading is visible
+    await expect(page.locator('h2:has-text("Common Room")')).toBeVisible({ timeout: 5000 });
+
+    // Find the GM post creation form (look for "Create New GM Post" heading)
+    await expect(page.locator('h3:has-text("Create New GM Post")')).toBeVisible({ timeout: 5000 });
+
+    // Find the textarea within the GM post form (it has a specific placeholder about phase titles)
+    const postTextarea = page.locator('textarea[placeholder*="Phase Title"]');
+    await expect(postTextarea).toBeVisible();
+
+    // Click to focus the textarea
+    await postTextarea.click();
+    await page.waitForTimeout(300);
+
+    // Type @ to trigger autocomplete
+    await postTextarea.pressSequentially('Mission: @');
+    await page.waitForTimeout(500);
+
+    // Verify autocomplete dropdown appears
+    const autocomplete = page.locator('[role="listbox"]');
+    await expect(autocomplete).toBeVisible({ timeout: 2000 });
+
+    // CRITICAL: Verify ALL game characters appear in autocomplete, not just GM's characters
+    // This ensures the bug fix is working - GM should be able to mention player characters
+    await expect(page.locator('[role="listbox"] >> text=Test Player 1 Character')).toBeVisible();
+    await expect(page.locator('[role="listbox"] >> text=Test Player 2 Character')).toBeVisible();
+    await expect(page.locator('[role="listbox"] >> text=GM Test Character')).toBeVisible();
+
+    // Select a PLAYER character (not GM's character) to verify cross-character mentions work
+    await page.click('[role="listbox"] >> text=Test Player 1 Character');
+    await page.waitForTimeout(500);
+
+    // Verify the mention was inserted into the textarea
+    let textareaValue = await postTextarea.inputValue();
+    expect(textareaValue).toContain('@Test Player 1 Character');
+
+    // Complete the post with the mention
+    const postContent = `Mission Briefing ${Date.now()}: @Test Player 1 Character, you are assigned to the north gate.`;
+    await postTextarea.fill(postContent);
+    await page.waitForTimeout(500);
+
+    // Submit the post
+    await page.click('button:has-text("Create GM Post")');
+    await page.waitForTimeout(3000); // Give more time for post to be created and mentions to be processed
+
+    // Verify the post appears
+    await expect(page.locator(`text=you are assigned to the north gate`).first()).toBeVisible({ timeout: 5000 });
+
+    // CRITICAL VERIFICATION: Verify the mention text appears in the post
+    // This proves that:
+    // 1. Autocomplete showed ALL characters (including player characters)
+    // 2. GM was able to select a player character mention
+    // 3. The mention was successfully inserted into the post content
+    // 4. The post was created with the mention text
+    await expect(page.locator('text=@Test Player 1 Character').first()).toBeVisible({ timeout: 5000 });
+
+    // Success! This test verifies the bug fix:
+    // - Before fix: Autocomplete only showed GM's characters
+    // - After fix: Autocomplete shows ALL game characters (player + GM)
+    // - GM can now mention player characters in posts
+
+    // Note: Mention highlighting (mark elements) is tested in comment tests
+    // The backend extracts mentions and stores them in mentioned_character_ids,
+    // which triggers notifications. Rendering is covered by other tests.
+  });
+
   test('should not render mentions inside code blocks', async ({ browser }) => {
-    const gameId = 164;
+    const gameId = 165;
 
     const gmContext = await browser.newContext();
     const playerContext = await browser.newContext();
@@ -335,7 +410,7 @@ test.describe('Character Mentions', () => {
       await gmPage.waitForTimeout(1000);
 
       const postContent = `Code Test ${Date.now()}: Testing mentions in code blocks`;
-      await gmPage.fill('textarea#content', postContent);
+      await gmPage.fill('textarea[placeholder*="Phase Title"]', postContent);
       await gmPage.waitForTimeout(500);
       await gmPage.click('button:has-text("Create GM Post")');
       await gmPage.waitForTimeout(2000);
@@ -368,12 +443,15 @@ test.describe('Character Mentions', () => {
       // Verify comment appears
       await expect(playerPage.locator('text=Try using').first()).toBeVisible({ timeout: 5000 });
 
+      // Find the specific comment that was just created
+      const commentContainer = playerPage.locator('text="Try using"').locator('xpath=ancestor::div[contains(@class, "comment") or contains(@class, "border")]').first();
+
       // Verify the mention inside code is NOT rendered as a mention (should be plain text inside <code>)
-      const codeElement = playerPage.locator('code:has-text("@Test Player 2 Character")').first();
+      const codeElement = commentContainer.locator('code:has-text("@Test Player 2 Character")');
       await expect(codeElement).toBeVisible();
 
-      // There should be no mark element for this text (it's in code block)
-      const mentionElements = playerPage.locator('mark[data-mention-id]:has-text("@Test Player 2 Character")');
+      // There should be no mark element for this text within this specific comment (it's in code block)
+      const mentionElements = commentContainer.locator('mark[data-mention-id]:has-text("@Test Player 2 Character")');
       const count = await mentionElements.count();
       expect(count).toBe(0); // Should be 0 because it's in a code block
     } finally {
