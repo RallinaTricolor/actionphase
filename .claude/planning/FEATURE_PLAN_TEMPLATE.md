@@ -35,8 +35,11 @@
 - [ ] User can [specific action]
 - [ ] System handles [edge case]
 - [ ] Performance: [metric] under [threshold]
-- [ ] Test coverage: >80% for new code
+- [ ] Unit test coverage: >80% for service layer
+- [ ] Integration tests: All API endpoints tested
+- [ ] Component test coverage: >80% for frontend
 - [ ] All regression tests passing
+- [ ] Manual UI testing complete with documented flows
 
 ---
 
@@ -528,6 +531,27 @@ export interface ExampleFilters {
 
 ## 4. Testing Strategy
 
+**Testing Philosophy**: This project emphasizes **unit tests** and **integration tests** as the primary quality gates. Manual UI testing validates user experience. E2E tests are deferred to dedicated user story implementations.
+
+**Test Pyramid Focus**:
+```
+Manual UI Testing     ← Developer validates flows in browser
+   ↑
+Integration Tests     ← API endpoints with real database (<5s)
+   ↑
+Unit Tests           ← Service logic with mocks (<1s)
+```
+
+**Manual Testing Expectation**: After implementing backend and frontend, **manually test all user flows in the running application** to verify:
+- UI renders correctly
+- User interactions work as expected
+- Error states display properly
+- Loading states appear appropriately
+
+**E2E Test Strategy**: E2E tests (Playwright) will be written as part of dedicated user story refinement, not during feature implementation. Focus on comprehensive unit/integration coverage instead.
+
+---
+
 ### 4.1 Backend Tests
 
 **Test Files:**
@@ -695,56 +719,63 @@ describe('useExamples', () => {
    - **Test**: `TestExampleService_Delete_PreventsCascadeFailure`
    - **Location**: `backend/pkg/db/services/example_test.go:150`
 
-### 4.4 E2E Testing Requirements
+### 4.4 Manual UI Testing Checklist
 
-**⚠️ CRITICAL: READ BEFORE WRITING E2E TESTS**
+**After implementation, manually verify the following in the running application:**
 
-E2E tests are REQUIRED for features that introduce new user journeys, BUT:
+**Happy Path Testing:**
+- [ ] Navigate to the feature in the UI
+- [ ] Verify all data displays correctly
+- [ ] Complete the primary user flow successfully
+- [ ] Verify success messages display
+- [ ] Check that data persists after page refresh
 
-**📚 MUST READ FIRST**: `.claude/reference/E2E_TESTING_LEARNINGS_CODIFIED.md`
+**Error Handling Testing:**
+- [ ] Submit invalid data → Verify validation errors display
+- [ ] Test with missing required fields → Verify error messages
+- [ ] Test with edge case inputs (very long strings, special characters, etc.)
+- [ ] Simulate API errors (stop backend) → Verify error states
+- [ ] Test unauthorized access → Verify appropriate messaging
 
-This document contains critical lessons learned from E2E debugging. Following this workflow will save hours of debugging time.
+**UI/UX Testing:**
+- [ ] Loading states display during API calls
+- [ ] Buttons disable appropriately to prevent double-submission
+- [ ] Forms clear/reset after successful submission
+- [ ] Navigation works as expected
+- [ ] Responsive design works on mobile/tablet
+- [ ] Accessibility: keyboard navigation works, screen reader labels present
 
-**🏗️ THE TEST PYRAMID - BOTTOM TO TOP (ALWAYS)**
+**Integration Testing:**
+- [ ] Test with multiple browser tabs open → Verify no conflicts
+- [ ] Test as different user roles (GM, Player, etc.)
+- [ ] Verify permissions enforcement in UI
+- [ ] Test interaction with related features
 
+**Performance Testing:**
+- [ ] Page loads quickly (< 2 seconds)
+- [ ] No console errors or warnings
+- [ ] Network tab shows reasonable request sizes
+- [ ] No memory leaks after repeated actions
+
+**Notes Section:**
 ```
-4. E2E Tests (Playwright)    ← LAST (20-30s, limited visibility)
-   ↑
-3. Component Tests (React)    ← Third (1-2s, full visibility)
-   ↑
-2. API Tests (curl)          ← Second (<1s, full visibility)
-   ↑
-1. Backend Unit Tests (Go)   ← FIRST (<1s, full visibility)
+[Add notes about specific scenarios tested, edge cases discovered, or issues found during manual testing]
 ```
 
-**THE GOLDEN RULE**: E2E tests are the **LAST** step, not the first!
+---
 
-**BEFORE writing E2E tests, you MUST:**
+## 5. User Stories for E2E Testing (Future)
 
-1. ✅ **Backend unit tests passing** → Run: `SKIP_DB_TESTS=true just test`
-2. ✅ **API verified with curl** → Test actual HTTP requests (see justfile for examples)
-3. ✅ **Frontend component tests passing** → Run: `just test-frontend`
-4. ✅ **Backend is running** → Verify: `curl http://localhost:3000/health`
-5. ✅ **Frontend is running** → Verify: `curl http://localhost:5173`
+**Purpose**: Document user journeys that should have E2E tests created in a dedicated test implementation phase.
 
-**WHEN E2E TESTS FAIL - DEBUG DOWN THE PYRAMID:**
+**When to create E2E tests**: After manual testing confirms the feature works correctly, create a separate user story/task to implement automated E2E tests for critical user journeys.
 
-DO NOT debug Playwright selectors or try to fix E2E tests directly! Instead:
-
-1. **Verify API layer**: Test with curl using token from `/tmp/api-token.txt`
-   - Example: `just api-login TestPlayer1 && curl -H "Authorization: Bearer $(cat /tmp/api-token.txt)" http://localhost:3000/api/v1/[endpoint]`
-2. **Check response structure**: Ensure API returns expected fields (e.g., `avatar_url`, not missing!)
-3. **Verify React Query cache keys**: Hook invalidations must match component query keys
-4. **Check browser console**: Add `page.on('console', msg => console.log(msg.text()))` to see frontend errors
-5. **Only then** check E2E test selectors
-
-**Why this works**: E2E tests have slow feedback loops and poor visibility. Lower layers give instant feedback and clear error messages.
-
-**Additional References:**
+**E2E Test Resources**:
+- `.claude/reference/E2E_TESTING_LEARNINGS_CODIFIED.md` - Critical lessons for E2E test implementation
 - `.claude/planning/E2E_TESTING_PLAN.md` - Comprehensive E2E strategy
 - `docs/testing/E2E_QUICK_START.md` - Quick reference and commands
 
-#### User Journey Description
+### User Journey Documentation
 
 **Journey Name**: [Descriptive name of complete user workflow]
 
@@ -757,157 +788,32 @@ DO NOT debug Playwright selectors or try to fix E2E tests directly! Instead:
 4. [Final outcome user sees]
 
 **Example**:
-> Journey: Player submits action and receives result
-> 1. Player logs in and navigates to game
-> 2. Views current phase details
-> 3. Clicks "Submit Action" button
-> 4. Fills out action form and submits
-> 5. Sees confirmation message
-> 6. GM publishes result
-> 7. Player receives notification and views result
-
-#### E2E Test Specification
-
-**Test File**: `frontend/e2e/[category]/[feature-name].spec.ts`
-
-**Happy Path Test**:
-- [ ] Test name: `should [accomplish user goal]`
-- [ ] Estimated duration: [X seconds] (target: <180s)
-- [ ] Preconditions:
-  - [ ] Test user(s) exist: [list users/roles needed]
-  - [ ] Test data setup: [list any games, characters, etc. needed]
-
-#### Fixture Requirements
-
-**Test Fixtures Needed**:
-- **Option A**: Use existing fixtures from `backend/pkg/db/test_fixtures/`:
-  - `01_test_users.sql` - Test users
-  - `08_e2e_dedicated_games.sql` - E2E test games
-  - [List other existing fixtures used]
-
-- **Option B**: Create new fixture (if feature requires specific test data):
-  - [ ] Create `backend/pkg/db/test_fixtures/XX_[feature]_fixtures.sql`
-  - [ ] Add fixture to `apply_all.sh` script
-  - [ ] Document fixture in `.claude/context/TEST_DATA.md`
-
-**Note**: For features that create transient data (like notifications), fixtures may not be needed. Tests can create data dynamically during execution.
-
-**Test Data Setup**:
-- [Describe how test data is set up]
-- [List any helper functions used: getFixtureGameId(), etc.]
-- [Note any data cleanup requirements]
-
-**Test Pseudocode**:
-```typescript
-test('should [accomplish goal]', async ({ page }) => {
-  // 1. Setup - Login as [role]
-  await loginAs(page, 'test_user');
-
-  // 2. Navigate to starting point
-  await page.goto('/feature/path');
-
-  // 3. Perform user actions
-  await page.click('button:has-text("Action")');
-  await page.fill('[name="field"]', 'value');
-  await page.click('button[type="submit"]');
-
-  // 4. Verify outcome
-  await expect(page.locator('text=Success')).toBeVisible();
-  await expect(page).toHaveURL('/expected/path');
-});
+```
+Journey: Player creates character and submits for approval
+1. Player logs in and navigates to game
+2. Clicks "Create Character" button
+3. Fills out character form with name and attributes
+4. Submits character for GM approval
+5. Sees "Character pending approval" message
+6. GM approves character
+7. Player receives notification and can use character
 ```
 
-#### Error Scenario Tests
+**Critical User Flows to Test** (E2E candidates):
+- [ ] **Flow 1**: [Primary happy path description]
+- [ ] **Flow 2**: [Key error scenario description]
+- [ ] **Flow 3**: [Multi-user interaction description]
 
-- [ ] **Validation Error Test**: `should show error for invalid input`
-  - Test client-side validation
-  - Test server-side validation errors
+**E2E Test Priority**: High / Medium / Low
 
-- [ ] **Permission Error Test**: `should prevent unauthorized access`
-  - Test that users without permission see error/redirect
-
-- [ ] **Network Error Test**: `should handle network failure gracefully`
-  - Test error messaging when API fails
-
-**Error Test Example**:
-```typescript
-test('should show error for invalid input', async ({ page }) => {
-  await loginAs(page, 'test_user');
-  await page.goto('/feature/path');
-
-  // Submit form with invalid data
-  await page.click('button[type="submit"]');
-
-  // Verify error message
-  await expect(page.locator('text=[Error Message]')).toBeVisible();
-});
+**Notes for Future E2E Implementation**:
 ```
-
-#### Multi-User Interaction Tests
-
-**Required if**: Feature involves GM-Player interactions or real-time collaboration
-
-- [ ] **Multi-User Test**: `should [handle interaction between users]`
-
-**Test Pseudocode**:
-```typescript
-test('GM and Player interaction', async ({ browser }) => {
-  const gmContext = await browser.newContext();
-  const playerContext = await browser.newContext();
-
-  const gmPage = await gmContext.newPage();
-  const playerPage = await playerContext.newPage();
-
-  // Player performs action
-  await loginAs(playerPage, 'test_player');
-  // ... player actions
-
-  // GM responds
-  await loginAs(gmPage, 'test_gm');
-  // ... GM actions
-
-  // Verify both users see expected state
-  await playerPage.reload();
-  // ... verify player sees result
-
-  await gmContext.close();
-  await playerContext.close();
-});
+[Add notes about edge cases, multi-user interactions, or specific scenarios that should be covered in E2E tests]
 ```
-
-#### Integration with Existing Journeys
-
-**Affected Journeys**: [List any existing E2E tests this feature impacts]
-
-- [ ] **Journey 1**: [How this feature affects existing journey]
-  - [ ] Update test: [description of changes needed]
-
-#### E2E Test Implementation Checklist
-
-- [ ] Test file created in `frontend/e2e/[category]/`
-- [ ] Happy path test written and passing
-- [ ] Error scenario tests written and passing
-- [ ] Multi-user tests written (if applicable)
-- [ ] Test duration < 3 minutes (180 seconds)
-- [ ] Test uses helper functions (auth, setup, etc.)
-- [ ] Test has descriptive comments
-- [ ] Screenshots captured on failure (automatic with Playwright)
-- [ ] Test added to E2E Test Catalog (create `docs/testing/E2E_TEST_CATALOG.md` if needed)
-
-#### E2E Acceptance Criteria
-
-- [ ] ✅ All E2E tests passing locally
-- [ ] ✅ All E2E tests passing in CI
-- [ ] ✅ No flaky behavior (run 10x to verify)
-- [ ] ✅ Test execution time acceptable
-- [ ] ✅ Helper functions created for reusable actions
-- [ ] ✅ Test catalog updated with new test entry
-
-**Note**: If this feature doesn't introduce a new user journey, explain why E2E tests are not needed.
 
 ---
 
-## 5. Implementation Plan
+## 6. Implementation Plan
 
 ### Phase 1: Database & Backend Foundation
 **Estimated Time**: [X hours/days]
@@ -974,34 +880,38 @@ test('GM and Player interaction', async ({ browser }) => {
 - [ ] All frontend tests passing
 - [ ] Responsive design works
 
-### Phase 4: Integration & Testing
+### Phase 4: Manual Testing & Documentation
 **Estimated Time**: [X hours/days]
 
-- [ ] Manual end-to-end testing
+- [ ] **Manual UI testing** (use checklist from Section 4.4)
   - [ ] Happy path: [Describe flow]
   - [ ] Error scenarios: [List key errors to test]
   - [ ] Edge cases: [List edge cases]
+  - [ ] Multi-user scenarios (if applicable)
 - [ ] Performance testing
-  - [ ] Load testing with [N] concurrent users
-  - [ ] Query performance analysis
+  - [ ] Page load times < 2 seconds
+  - [ ] No console errors or warnings
+  - [ ] Network requests reasonable
 - [ ] Security review
-  - [ ] Authorization checks
-  - [ ] Input validation
-  - [ ] SQL injection prevention
+  - [ ] Authorization checks work in UI
+  - [ ] Input validation displays properly
+  - [ ] Permissions enforced correctly
 - [ ] Documentation updates
   - [ ] Update API documentation
   - [ ] Add user guide (if needed)
   - [ ] Update ADRs (if architectural decision made)
+  - [ ] Document user journeys for future E2E tests (Section 5)
 
 **Acceptance Criteria:**
-- [ ] All manual test scenarios pass
+- [ ] All manual test scenarios pass (Section 4.4 checklist complete)
 - [ ] Performance meets requirements
 - [ ] Security review complete
 - [ ] Documentation updated
+- [ ] User journeys documented for future E2E test implementation
 
 ---
 
-## 6. Rollout Strategy
+## 7. Rollout Strategy
 
 ### Deployment Checklist
 - [ ] Database migrations tested in staging
@@ -1026,7 +936,7 @@ test('GM and Player interaction', async ({ browser }) => {
 
 ---
 
-## 7. Monitoring & Observability
+## 8. Monitoring & Observability
 
 ### Metrics to Track
 - [ ] API endpoint latency (p50, p95, p99)
@@ -1046,7 +956,7 @@ test('GM and Player interaction', async ({ browser }) => {
 
 ---
 
-## 8. Documentation
+## 9. Documentation
 
 ### User Documentation
 - [ ] Feature guide added to docs
@@ -1060,7 +970,7 @@ test('GM and Player interaction', async ({ browser }) => {
 
 ---
 
-## 9. Open Questions
+## 10. Open Questions
 
 **Technical Questions:**
 - [ ] Question 1: [Question] → [Decision/Status]
@@ -1074,7 +984,7 @@ test('GM and Player interaction', async ({ browser }) => {
 
 ---
 
-## 10. Risks & Mitigations
+## 11. Risks & Mitigations
 
 ### Technical Risks
 
@@ -1093,7 +1003,7 @@ test('GM and Player interaction', async ({ browser }) => {
 
 ---
 
-## 11. Future Enhancements
+## 12. Future Enhancements
 
 **Post-MVP Ideas:**
 - Enhancement 1: [Description]
@@ -1106,7 +1016,7 @@ test('GM and Player interaction', async ({ browser }) => {
 
 ---
 
-## 12. References
+## 13. References
 
 ### Related Documentation
 - ADR-XXX: [Link to related ADR]
@@ -1144,15 +1054,23 @@ test('GM and Player interaction', async ({ browser }) => {
 
 **Before marking feature complete:**
 
-- [ ] All phases implemented
-- [ ] All tests passing (>80% coverage)
+- [ ] All implementation phases complete (database, backend, API, frontend)
+- [ ] All unit tests passing (>80% coverage on service layer)
+- [ ] All integration tests passing (API endpoints tested with database)
+- [ ] All frontend component tests passing
+- [ ] Manual UI testing checklist complete (Section 4.4)
+- [ ] User journeys documented for future E2E tests (Section 5)
 - [ ] Code reviewed
 - [ ] Documentation updated
 - [ ] Deployed to staging
-- [ ] User acceptance testing complete
+- [ ] Manual testing in staging environment complete
 - [ ] Deployed to production
 - [ ] Monitoring confirmed working
 - [ ] Team notified
 - [ ] Feature marked complete in tracking system
+
+**Post-Completion (Optional):**
+- [ ] Create user story for E2E test implementation
+- [ ] Schedule E2E test development as separate task
 
 **Archive this plan to** `.claude/planning/archive/` **when complete.**

@@ -11,6 +11,7 @@ interface CommentEditorProps {
   rows?: number;
   showPreviewByDefault?: boolean;
   characters?: Character[]; // Characters available for mention autocomplete
+  id?: string; // HTML id for label association
 }
 
 /**
@@ -33,6 +34,7 @@ export function CommentEditor({
   rows = 4,
   showPreviewByDefault = false,
   characters = [],
+  id,
 }: CommentEditorProps) {
   const [showPreview, setShowPreview] = useState(showPreviewByDefault);
   const [showHelp, setShowHelp] = useState(false);
@@ -268,6 +270,7 @@ export function CommentEditor({
         {/* Textarea */}
         <div className="relative">
           <textarea
+            id={id}
             ref={textareaRef}
             value={value}
             onChange={handleChange}

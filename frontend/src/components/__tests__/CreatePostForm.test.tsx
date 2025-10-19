@@ -137,7 +137,7 @@ describe('CreatePostForm', () => {
         />
       );
 
-      expect(screen.getByText(/0 characters/i)).toBeInTheDocument();
+      expect(screen.getByText(/0 characters \(longer posts will be collapsible for players\)/i)).toBeInTheDocument();
     });
 
     it('has placeholder text in textarea', () => {
@@ -266,7 +266,7 @@ describe('CreatePostForm', () => {
       const textarea = screen.getByLabelText(/post content/i);
       await user.type(textarea, 'Hello');
 
-      expect(screen.getByText(/5 characters/i)).toBeInTheDocument();
+      expect(screen.getByText(/5 characters \(longer posts will be collapsible for players\)/i)).toBeInTheDocument();
     });
 
     it('allows markdown formatting in content', async () => {
@@ -657,7 +657,7 @@ describe('CreatePostForm', () => {
       await user.type(textarea, '# Important Update\n\nThis is a test post');
 
       // Verify character count updates
-      expect(screen.getByText(/39 characters/i)).toBeInTheDocument();
+      expect(screen.getByText(/39 characters \(longer posts will be collapsible for players\)/i)).toBeInTheDocument();
 
       // Submit
       const submitButton = screen.getByRole('button', { name: /create gm post/i });

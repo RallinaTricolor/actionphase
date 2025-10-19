@@ -9,6 +9,8 @@ import (
 
 	"actionphase/pkg/core"
 	services "actionphase/pkg/db/services"
+	actionsvc "actionphase/pkg/db/services/actions"
+	phasesvc "actionphase/pkg/db/services/phases"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
@@ -235,7 +237,7 @@ func (h *Handler) CreatePhase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check permissions
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to check phase management permission", "error", err)
@@ -294,7 +296,7 @@ func (h *Handler) GetCurrentPhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	phase, err := phaseService.GetActivePhase(r.Context(), int32(gameID))
 	if err != nil {
 		h.App.Logger.Error("Failed to get active phase", "error", err, "game_id", gameID)
@@ -336,7 +338,7 @@ func (h *Handler) GetGamePhases(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	phases, err := phaseService.GetGamePhases(r.Context(), int32(gameID))
 	if err != nil {
 		h.App.Logger.Error("Failed to get game phases", "error", err, "game_id", gameID)
@@ -384,7 +386,7 @@ func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 
 	// Get phase to check game ID
 	phase, err := phaseService.GetPhase(r.Context(), int32(phaseID))
@@ -464,7 +466,7 @@ func (h *Handler) UpdatePhaseDeadline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 
 	// Get phase to check game ID
 	phase, err := phaseService.GetPhase(r.Context(), int32(phaseID))
@@ -536,7 +538,7 @@ func (h *Handler) UpdatePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 
 	// Get phase to check game ID
 	phase, err := phaseService.GetPhase(r.Context(), int32(phaseID))
@@ -621,7 +623,8 @@ func (h *Handler) SubmitAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
 
 	// Check if user can submit actions
 	canSubmit, err := phaseService.CanUserSubmitActions(r.Context(), int32(gameID), int32(user.ID))
@@ -659,26 +662,29 @@ func (h *Handler) SubmitAction(w http.ResponseWriter, r *http.Request) {
 		IsDraft:     data.IsDraft,
 	}
 
-	action, err := phaseService.SubmitAction(r.Context(), req)
+	action, err := actionService.SubmitAction(r.Context(), req)
 	if err != nil {
 		h.App.Logger.Error("Failed to submit action", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	// Convert to response format
-	response := phaseService.ConvertActionToResponse(action)
+	// Convert action model to response format
+	var characterID *int32
+	if action.CharacterID.Valid {
+		characterID = &action.CharacterID.Int32
+	}
 
 	render.Status(r, http.StatusCreated)
 	render.Render(w, r, &ActionResponse{
-		ID:          response.ID,
-		GameID:      response.GameID,
-		UserID:      response.UserID,
-		PhaseID:     response.PhaseID,
-		CharacterID: response.CharacterID,
-		Content:     response.Content,
-		SubmittedAt: response.SubmittedAt,
-		UpdatedAt:   response.UpdatedAt,
+		ID:          action.ID,
+		GameID:      action.GameID,
+		UserID:      action.UserID,
+		PhaseID:     action.PhaseID,
+		CharacterID: characterID,
+		Content:     action.Content,
+		SubmittedAt: action.SubmittedAt.Time,
+		UpdatedAt:   action.UpdatedAt.Time,
 	})
 }
 
@@ -699,8 +705,9 @@ func (h *Handler) GetUserActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &services.PhaseService{DB: h.App.Pool}
-	actions, err := phaseService.GetUserActions(r.Context(), int32(gameID), int32(user.ID))
+	// TODO: Migrate GetUserActions to actions package
+	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
+	actions, err := legacyActionService.GetUserActions(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to get user actions", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
@@ -755,7 +762,7 @@ func (h *Handler) GetGameActions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check permissions
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to check phase management permission", "error", err)
@@ -768,7 +775,9 @@ func (h *Handler) GetGameActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	actions, err := phaseService.GetGameActions(r.Context(), int32(gameID))
+	// TODO: Migrate GetGameActions to actions package
+	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
+	actions, err := legacyActionService.GetGameActions(r.Context(), int32(gameID))
 	if err != nil {
 		h.App.Logger.Error("Failed to get game actions", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
@@ -830,7 +839,7 @@ func (h *Handler) CreateActionResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check permissions - must be GM
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(gmUser.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to check phase management permission", "error", err)
@@ -857,7 +866,7 @@ func (h *Handler) CreateActionResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create action result using ActionSubmissionService
-	actionService := &services.ActionSubmissionService{DB: h.App.Pool}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
 	req := core.CreateActionResultRequest{
 		GameID:      int32(gameID),
 		UserID:      data.UserID,
@@ -910,8 +919,9 @@ func (h *Handler) GetUserActionResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &services.PhaseService{DB: h.App.Pool}
-	results, err := phaseService.GetUserResults(r.Context(), int32(gameID), int32(user.ID))
+	// TODO: Migrate GetUserResults to actions package
+	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
+	results, err := legacyActionService.GetUserResults(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to get user action results", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
@@ -963,7 +973,7 @@ func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check permissions - must be GM
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to check phase management permission", "error", err)
@@ -976,7 +986,9 @@ func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := phaseService.GetGameResults(r.Context(), int32(gameID))
+	// TODO: Migrate GetGameResults to actions package
+	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
+	results, err := legacyActionService.GetGameResults(r.Context(), int32(gameID))
 	if err != nil {
 		h.App.Logger.Error("Failed to get game action results", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
@@ -1035,7 +1047,7 @@ func (h *Handler) PublishAllPhaseResults(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Check permissions - must be GM
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to check phase management permission", "error", err)
@@ -1049,7 +1061,7 @@ func (h *Handler) PublishAllPhaseResults(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Publish all unpublished results for the phase
-	actionService := &services.ActionSubmissionService{DB: h.App.Pool}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
 	err = actionService.PublishAllPhaseResults(r.Context(), int32(phaseID))
 	if err != nil {
 		h.App.Logger.Error("Failed to publish all phase results", "error", err)
@@ -1088,7 +1100,7 @@ func (h *Handler) GetUnpublishedResultsCount(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Check permissions - must be GM
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to check phase management permission", "error", err)
@@ -1102,7 +1114,7 @@ func (h *Handler) GetUnpublishedResultsCount(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Get count of unpublished results
-	actionService := &services.ActionSubmissionService{DB: h.App.Pool}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
 	count, err := actionService.GetUnpublishedResultsCount(r.Context(), int32(phaseID))
 	if err != nil {
 		h.App.Logger.Error("Failed to get unpublished results count", "error", err)
@@ -1151,7 +1163,7 @@ func (h *Handler) UpdateActionResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check permissions - must be GM
-	phaseService := &services.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to check phase management permission", "error", err)
@@ -1165,7 +1177,7 @@ func (h *Handler) UpdateActionResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the action result
-	actionService := &services.ActionSubmissionService{DB: h.App.Pool}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
 	result, err := actionService.UpdateActionResult(r.Context(), int32(resultID), data.Content)
 	if err != nil {
 		h.App.Logger.Error("Failed to update action result", "error", err)

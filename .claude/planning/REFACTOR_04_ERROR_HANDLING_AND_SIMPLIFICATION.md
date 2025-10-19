@@ -4,26 +4,36 @@
 **Estimated Effort**: 3-4 days
 
 ## Problem Statement
-- 125+ instances of repetitive error handling patterns
+- 281+ instances of repetitive error handling patterns (JWT extraction, DB errors)
 - 66 justfile commands causing cognitive overload
-- Inconsistent error messages across services
-- No standardized error types
-- Duplicate helper functions across packages
+- JWT extraction duplicated ~30 times (29 lines each)
+- Database error handling duplicated ~50 times (8 lines each)
+- Validation logic scattered across handlers
 
 ## Success Criteria
-✅ Centralized error handling utilities
+✅ Utility functions for common patterns
 ✅ < 30 justfile commands at root level
-✅ Consistent error format across API
-✅ Reduced code duplication by 30%
-✅ All errors properly wrapped with context
+✅ JWT extraction: 29 lines → 7 lines (76% reduction)
+✅ Reduced code duplication by 30% (~850 lines)
+✅ Gradual migration path for existing code
+
+## ⚠️ IMPORTANT: Existing Error System Analysis
+
+**ActionPhase already has a well-designed error system** in `backend/pkg/core/api_errors.go`:
+- Structured `ErrResponse` with proper HTTP status codes
+- `render.Renderer` interface integration
+- Comprehensive error types: `ErrInvalidRequest`, `ErrUnauthorized`, `ErrForbidden`, etc.
+- Application-specific error codes
+
+**DO NOT create a new error package.** Instead, create utilities that work WITH the existing system.
 
 ---
 
-## Part A: Error Handling Standardization
+## Part A: Handler Utility Functions (✅ COMPLETED)
 
-### Step 1: Create Error Package
+### Step 1: Create Database Error Utilities
 
-**Create file**: `backend/pkg/core/errors/types.go`
+**Created file**: `backend/pkg/core/db_utils.go`
 ```go
 package errors
 

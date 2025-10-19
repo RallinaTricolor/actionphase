@@ -2,7 +2,7 @@
 
 This document tracks major development initiatives for ActionPhase. Each initiative includes a status, priority, and detailed implementation plan.
 
-**Last Updated**: 2025-10-18
+**Last Updated**: 2025-10-19
 
 ---
 
@@ -154,81 +154,89 @@ Add user and character avatar support throughout the application, including uplo
 
 ---
 
-## 2. Major Refactor Using Opus
+## 2. Major Refactoring Initiative
 
-**Status**: Not Started
-**Priority**: Medium
-**Estimated Effort**: 1-2 weeks
+**Status**: Week 4 - Final Documentation & Polish (Week 3 Complete)
+**Priority**: High
+**Estimated Effort**: 4-5 weeks (Week 4 of 4-5 in progress)
+**Tracking**: See `.claude/planning/REFACTOR_00_MASTER_PLAN.md`
 
 ### Overview
-Use Claude Opus for complex architectural decisions and refactoring of critical backend services. Focus on areas with high complexity or technical debt.
+Comprehensive refactoring to address code duplication, test brittleness, and service complexity. Using systematic approach with measurable goals.
 
-### Phase 1: Identify Refactor Candidates
+**Master Plan**: `.claude/planning/REFACTOR_00_MASTER_PLAN.md`
+**Week 4 Plan**: `.claude/planning/WEEK_4_DOCUMENTATION_PLAN.md`
 
-#### Analysis Tasks
-- [ ] Review test coverage report for low-coverage areas
-- [ ] Analyze service complexity (lines of code, cyclomatic complexity)
-- [ ] Identify duplicate code patterns
-- [ ] Review ADR compliance across codebase
-- [ ] Collect developer pain points (from commit messages, TODO comments)
+### Phase 1: Analysis & Planning ✅ COMPLETED (2025-01-20)
 
-#### Priority Targets
-1. **Phase Management Service** (`backend/pkg/db/services/phases.go`)
-   - Complex state machine logic
-   - Multiple transition paths
-   - Validation rules spread across service
-   - Consider extracting state machine to separate package
+#### Analysis Tasks Completed
+- [x] Review test coverage report for low-coverage areas
+- [x] Analyze service complexity (lines of code, cyclomatic complexity)
+- [x] Identify duplicate code patterns (found 281 instances)
+- [x] Analyzed existing error handling system (found it's well-designed)
+- [x] Created comprehensive refactoring plans
 
-2. **Action Submission Flow** (`backend/pkg/db/services/actions.go`)
-   - Draft vs final submission logic
-   - Phase validation intertwined
-   - Result generation mixed with storage
-   - Consider splitting into ActionDraftService + ActionSubmissionService
+**Key Findings**:
+- **Large files**: phases.go (1056 lines), games/api.go (1307 lines)
+- **Repetitive patterns**: JWT extraction (30×), DB errors (50×), validation (20×)
+- **E2E test issues**: Brittleness, hardcoded waits, fixture dependencies
+- **Documentation sprawl**: 61+ files with duplication
 
-3. **Character Service** (`backend/pkg/db/services/characters.go`)
-   - NPC assignment logic
-   - Permission checks scattered
-   - Consider CharacterPermissionService
+### Phase 2: Code Reduction Utilities ✅ COMPLETED (Day 1)
 
-4. **Notification Service** (`backend/pkg/db/services/notifications.go`)
-   - Multiple notification types
-   - Template logic inline
-   - Consider NotificationTemplateService
+#### Created Utilities
+- [x] Database error conversion (`core.HandleDBError`)
+- [x] JWT extraction helpers (`core.GetUserIDFromJWT`)
+- [x] Validation utilities (`core.ValidateRequired`)
+- [x] Complete documentation (`backend/pkg/core/UTILITIES_GUIDE.md`)
 
-### Phase 2: Refactor Execution
+**Impact Metrics**:
+- JWT extraction: 29 lines → 7 lines (76% reduction)
+- DB error handling: 8 lines → 5 lines (37% reduction)
+- **Estimated total**: ~850 lines of code can be eliminated
 
-#### For Each Target Service
-- [ ] Create detailed refactor plan with Opus
-  - Current architecture analysis
-  - Proposed new structure
-  - Migration strategy (incremental vs big bang)
-  - Risk assessment
-- [ ] Write new tests for desired behavior
-- [ ] Implement refactor incrementally
-- [ ] Ensure all tests pass
-- [ ] Update documentation
-- [ ] Code review before merge
+### Phase 3: Backend Service Decomposition ✅ COMPLETED (Weeks 1-3)
 
-#### Architectural Improvements to Consider
-- [ ] Extract validation logic to separate validators
-- [ ] Implement command pattern for complex operations
-- [ ] Add domain events for cross-service communication
-- [ ] Create specification pattern for complex queries
-- [ ] Implement repository pattern more consistently
+#### Week 1: Utility Creation & Testing Infrastructure ✅
+- [x] Migrate 3 handlers to use new utilities (111 lines eliminated)
+- [x] Create integration test infrastructure
+- [x] Messages API fully tested at integration level
 
-### Phase 3: Frontend Refactors
+**Handlers migrated**:
+1. `backend/pkg/games/api.go` - 76 lines reduced
+2. `backend/pkg/characters/api.go` - 23 lines reduced
+3. `backend/pkg/messages/api.go` - 12 lines reduced
 
-#### Potential Targets
-- [ ] Form handling patterns (consider react-hook-form)
-- [ ] Error boundary implementation
-- [ ] Loading state management
-- [ ] Modal management (global modal context?)
-- [ ] Optimistic updates pattern consistency
+#### Week 2: Phase Service Decomposition ✅
+- [x] phases.go (1056 lines) → 10 focused files (~800 lines)
+- [x] 6 implementation files for phases/ + 6 test files
+- [x] 4 implementation files for actions/ + 3 test files
+- [x] All files < 250 lines
+- [x] 17 comprehensive test functions, all passing
 
-### Documentation
-- [ ] Update ADRs with refactor decisions
-- [ ] Document new patterns in `.claude/context/ARCHITECTURE.md`
-- [ ] Create refactor retrospective doc
+#### Week 3: Message Service Decomposition ✅
+- [x] messages.go (699 lines) → 5 focused files (~600 lines)
+- [x] 15 test functions, all passing
+- [x] API handlers updated
+- [x] Full cleanup completed (6 legacy files deleted)
+
+**Remaining Services** - All appropriately sized (< 500 lines):
+- notification_service.go (454 lines)
+- conversations.go (364 lines)
+- game_applications.go (354 lines)
+- games.go (298 lines)
+- characters.go (223 lines)
+
+### Phase 4: Documentation & Polish (IN PROGRESS - Week 4)
+
+#### Week 4 Goals
+- [ ] Delete session files (reduce docs/ from 27 to 20 files)
+- [ ] Verify and update key documentation files
+- [ ] Simplify Justfile commands (target < 30)
+- [ ] Create refactoring retrospective
+- [ ] Final testing and verification
+
+**See**: `.claude/planning/WEEK_4_DOCUMENTATION_PLAN.md`
 
 ---
 
@@ -544,18 +552,26 @@ Update test fixtures to include all new features implemented since initial fixtu
 - UI/UX improvements can proceed in parallel with other initiatives
 - Major refactor should wait for stable test suite (Demo Data Refresh optional, current fixtures sufficient for E2E)
 
-## Status Summary (2025-10-18)
+## Status Summary (Last Updated: 2025-10-19)
 
 ### Completed
 1. ✅ **Avatar Implementation** - Fully functional with uploads, storage, and display
 2. ✅ **E2E Test Infrastructure** - Common Room fixture, 3 passing tests, documented strategy
+3. ✅ **Backend Service Decomposition** - Weeks 1-3 complete
+   - Phase service: 1056 lines → 10 files
+   - Message service: 699 lines → 5 files
+   - Action service: Extracted to separate package
+   - All remaining services < 500 lines
 
 ### In Progress
-1. 🔄 **Demo/Test Data Refresh** - E2E fixtures complete, manual testing fixtures optional
+1. 🔄 **Major Refactoring Initiative - Week 4** - Documentation & Polish
+   - See `.claude/planning/WEEK_4_DOCUMENTATION_PLAN.md`
+   - Session files deleted (docs/ reduced to 20 files)
+   - Documentation verification in progress
+2. 🔄 **Demo/Test Data Refresh** - E2E fixtures complete, manual testing fixtures optional
 
 ### Not Started
-1. ⏸️ **Major Refactor Using Opus** - Waiting for stable test suite
-2. ⏸️ **UI/UX Improvements** - Can start anytime, incremental approach
+1. ⏸️ **UI/UX Improvements** - Can start anytime, incremental approach
 
 ## Notes
 

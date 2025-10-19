@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 )
 
@@ -109,24 +108,13 @@ func (r *AssignNPCRequest) Bind(req *http.Request) error {
 
 // Helper functions
 
-func (h *Handler) getUserFromToken(r *http.Request) (*core.User, error) {
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		return nil, fmt.Errorf("no valid token found")
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		return nil, fmt.Errorf("username not found in token")
-	}
-
+func (h *Handler) getUserIDFromToken(r *http.Request) (int32, error) {
 	userService := &services.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		return nil, fmt.Errorf("user not found: %w", err)
+	userID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
+	if errResp != nil {
+		return 0, fmt.Errorf("authentication failed")
 	}
-
-	return user, nil
+	return userID, nil
 }
 
 // API Handlers
@@ -166,15 +154,13 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token
-	user, err := h.getUserFromToken(r)
+	// Get user ID from token
+	userID, err := h.getUserIDFromToken(r)
 	if err != nil {
 		h.App.Logger.Error("Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
-
-	userID := int32(user.ID)
 
 	// Verify user can create characters for this game
 	gameService := &services.GameService{DB: h.App.Pool}
@@ -352,15 +338,13 @@ func (h *Handler) GetUserControllableCharacters(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Get user from token
-	user, err := h.getUserFromToken(r)
+	// Get user ID from token
+	userID, err := h.getUserIDFromToken(r)
 	if err != nil {
 		h.App.Logger.Error("Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
-
-	userID := int32(user.ID)
 
 	characterService := &services.CharacterService{DB: h.App.Pool}
 	characters, err := characterService.GetUserControllableCharacters(r.Context(), int32(gameID), userID)
@@ -421,15 +405,13 @@ func (h *Handler) ApproveCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token
-	user, err := h.getUserFromToken(r)
+	// Get user ID from token
+	userID, err := h.getUserIDFromToken(r)
 	if err != nil {
 		h.App.Logger.Error("Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
-
-	userID := int32(user.ID)
 
 	// Verify user is GM of this game
 	characterService := &services.CharacterService{DB: h.App.Pool}
@@ -500,15 +482,13 @@ func (h *Handler) AssignNPC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token
-	user, err := h.getUserFromToken(r)
+	// Get user ID from token
+	userID, err := h.getUserIDFromToken(r)
 	if err != nil {
 		h.App.Logger.Error("Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
-
-	userID := int32(user.ID)
 
 	// Verify user is GM
 	characterService := &services.CharacterService{DB: h.App.Pool}
@@ -558,15 +538,13 @@ func (h *Handler) SetCharacterData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token
-	user, err := h.getUserFromToken(r)
+	// Get user ID from token
+	userID, err := h.getUserIDFromToken(r)
 	if err != nil {
 		h.App.Logger.Error("Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
-
-	userID := int32(user.ID)
 
 	// Verify user can edit this character
 	characterService := &services.CharacterService{DB: h.App.Pool}
@@ -610,11 +588,10 @@ func (h *Handler) GetCharacterData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token (optional for public data)
+	// Get user ID from token (optional for public data)
 	var userID *int32
-	user, err := h.getUserFromToken(r)
+	id, err := h.getUserIDFromToken(r)
 	if err == nil {
-		id := int32(user.ID)
 		userID = &id
 	}
 
