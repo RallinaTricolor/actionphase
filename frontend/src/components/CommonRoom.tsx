@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { CreatePostForm } from './CreatePostForm';
 import { PostCard } from './PostCard';
+import { ThreadViewModal } from './ThreadViewModal';
 
 interface CommonRoomProps {
   gameId: number;
@@ -19,16 +21,75 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
   const { currentUser } = useAuth();
   const currentUserId = currentUser?.id;
 
+  // URL search params for deep linking to comments
+  const [searchParams, setSearchParams] = useSearchParams();
+  const commentIdParam = searchParams.get('comment');
+
   const [posts, setPosts] = useState<Message[]>([]);
   const [controllableCharacters, setControllableCharacters] = useState<Character[]>([]);
   const [allCharacters, setAllCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
+  const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadData();
   }, [gameId, phaseId]);
+
+  // Auto-scroll to comment from URL parameter
+  useEffect(() => {
+    if (!commentIdParam || loading) return;
+
+    // Wait for DOM to be ready, then try to scroll to comment
+    const timer = setTimeout(async () => {
+      const element = document.getElementById(`comment-${commentIdParam}`);
+      if (element) {
+        // Comment is visible in the DOM - scroll to it
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Highlight the comment briefly
+        element.classList.add('ring-4', 'ring-yellow-400', 'ring-opacity-75');
+        setTimeout(() => {
+          element.classList.remove('ring-4', 'ring-yellow-400', 'ring-opacity-75');
+        }, 3000);
+
+        // Clear the comment parameter from URL after scrolling
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('comment');
+        setSearchParams(newParams, { replace: true });
+      } else {
+        // Comment not found in DOM - likely nested deep (beyond depth 5)
+        // Fetch the comment and open it in ThreadViewModal
+        console.log(`[CommonRoom] Comment ${commentIdParam} not found in DOM, fetching and opening modal...`);
+
+        const fetchAndShowComment = async () => {
+          try {
+            // Fetch the specific comment (or nested comment)
+            const response = await apiClient.messages.getMessage(gameId, parseInt(commentIdParam));
+            const comment = response.data;
+
+            // Open the comment in ThreadViewModal
+            setThreadModalComment(comment);
+
+            // Clear the comment parameter from URL
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('comment');
+            setSearchParams(newParams, { replace: true });
+          } catch (err) {
+            console.error(`[CommonRoom] Failed to fetch comment ${commentIdParam}:`, err);
+            // If fetch fails, navigate to ThreadViewPage as fallback
+            navigate(`/games/${gameId}/common-room/thread/${commentIdParam}`);
+          }
+        };
+
+        fetchAndShowComment();
+      }
+    }, 500); // Wait for comments to load and expand
+
+    return () => clearTimeout(timer);
+  }, [commentIdParam, loading, searchParams, setSearchParams, gameId, navigate]);
 
   const loadData = async () => {
     try {
@@ -167,6 +228,19 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
             />
           ))}
         </div>
+      )}
+
+      {/* Thread View Modal for deep-linked comments */}
+      {threadModalComment && (
+        <ThreadViewModal
+          gameId={gameId}
+          comment={threadModalComment}
+          characters={allCharacters}
+          controllableCharacters={controllableCharacters}
+          onClose={() => setThreadModalComment(null)}
+          onCreateReply={handleCreateComment}
+          currentUserId={currentUserId}
+        />
       )}
     </div>
   );

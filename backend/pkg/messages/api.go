@@ -333,6 +333,35 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, r, response)
 }
 
+// GetMessage retrieves a single message by ID (for deep linking)
+func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	gameIDStr := chi.URLParam(r, "gameId")
+	_, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	messageIDStr := chi.URLParam(r, "messageId")
+	messageID, err := strconv.ParseInt(messageIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid message ID")))
+		return
+	}
+
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	message, err := messageService.GetMessage(ctx, int32(messageID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get message", "error", err, "message_id", messageID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	response := messageWithDetailsToResponse(message)
+	render.Render(w, r, response)
+}
+
 // GetPostComments retrieves direct comments for a post
 func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

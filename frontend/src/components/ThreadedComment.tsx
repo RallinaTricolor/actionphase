@@ -43,6 +43,7 @@ export function ThreadedComment({
   const hasReplies = (comment.reply_count || 0) > 0;
   const isUnread = unreadCommentIDs.includes(comment.id);
   const isAtMaxDepth = depth >= maxDepth;
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Auto-select first character
   useEffect(() => {
@@ -67,6 +68,20 @@ export function ThreadedComment({
       console.error('Failed to load replies:', err);
     } finally {
       setLoadingReplies(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/games/${gameId}?tab=common-room&comment=${comment.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      // Reset after 2 seconds
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      // Fallback: show alert if clipboard API fails
+      alert(`Link: ${url}`);
     }
   };
 
@@ -178,6 +193,41 @@ export function ThreadedComment({
               <span>{showReplies ? '▼' : '▶'}</span>
               <span>{comment.reply_count} {comment.reply_count === 1 ? 'reply' : 'replies'}</span>
             </button>
+          )}
+
+          <button
+            onClick={handleCopyLink}
+            className="hover:text-blue-600 font-medium transition-colors flex items-center gap-1"
+            title="Copy link to this comment"
+          >
+            {linkCopied ? (
+              <>
+                <svg className="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-green-600">Copied!</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                <span>Copy link</span>
+              </>
+            )}
+          </button>
+
+          {comment.parent_id && (
+            <a
+              href={`/games/${gameId}?tab=common-room&comment=${comment.parent_id}`}
+              className="hover:text-blue-600 font-medium transition-colors flex items-center gap-1"
+              title="Go to parent comment"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>Parent</span>
+            </a>
           )}
         </div>
       </div>

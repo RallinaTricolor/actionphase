@@ -485,6 +485,71 @@ func (q *Queries) GetGamePosts(ctx context.Context, arg GetGamePostsParams) ([]G
 	return items, nil
 }
 
+const getMessage = `-- name: GetMessage :one
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at,
+       u.username as author_username,
+       c.name as character_name,
+       c.avatar_url as character_avatar_url,
+       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as reply_count
+FROM messages m
+JOIN users u ON m.author_id = u.id
+LEFT JOIN characters c ON m.character_id = c.id
+WHERE m.id = $1
+  AND m.is_deleted = false
+`
+
+type GetMessageRow struct {
+	ID                    int32             `json:"id"`
+	GameID                int32             `json:"game_id"`
+	PhaseID               pgtype.Int4       `json:"phase_id"`
+	AuthorID              int32             `json:"author_id"`
+	CharacterID           int32             `json:"character_id"`
+	Content               string            `json:"content"`
+	MessageType           MessageType       `json:"message_type"`
+	ParentID              pgtype.Int4       `json:"parent_id"`
+	ThreadDepth           int32             `json:"thread_depth"`
+	Visibility            MessageVisibility `json:"visibility"`
+	MentionedCharacterIds []int32           `json:"mentioned_character_ids"`
+	IsEdited              bool              `json:"is_edited"`
+	IsDeleted             bool              `json:"is_deleted"`
+	CreatedAt             pgtype.Timestamp  `json:"created_at"`
+	UpdatedAt             pgtype.Timestamp  `json:"updated_at"`
+	DeletedAt             pgtype.Timestamp  `json:"deleted_at"`
+	AuthorUsername        string            `json:"author_username"`
+	CharacterName         pgtype.Text       `json:"character_name"`
+	CharacterAvatarUrl    pgtype.Text       `json:"character_avatar_url"`
+	ReplyCount            int64             `json:"reply_count"`
+}
+
+// Get any message by ID (post or comment) - used for deep linking
+func (q *Queries) GetMessage(ctx context.Context, id int32) (GetMessageRow, error) {
+	row := q.db.QueryRow(ctx, getMessage, id)
+	var i GetMessageRow
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.PhaseID,
+		&i.AuthorID,
+		&i.CharacterID,
+		&i.Content,
+		&i.MessageType,
+		&i.ParentID,
+		&i.ThreadDepth,
+		&i.Visibility,
+		&i.MentionedCharacterIds,
+		&i.IsEdited,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.AuthorUsername,
+		&i.CharacterName,
+		&i.CharacterAvatarUrl,
+		&i.ReplyCount,
+	)
+	return i, err
+}
+
 const getMessageReactions = `-- name: GetMessageReactions :many
 SELECT mr.id, mr.message_id, mr.user_id, mr.reaction_type, mr.created_at, u.username
 FROM message_reactions mr

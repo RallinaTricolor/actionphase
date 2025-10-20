@@ -156,6 +156,7 @@ func (h *Handler) Start() {
 			r.Get("/{gameId}/posts", messageHandler.GetGamePosts)
 			r.Post("/{gameId}/posts/{postId}/comments", messageHandler.CreateComment)
 			r.Get("/{gameId}/posts/{postId}/comments", messageHandler.GetPostComments)
+			r.Get("/{gameId}/messages/{messageId}", messageHandler.GetMessage) // For deep linking to nested comments
 
 			// Read tracking for common room
 			r.Post("/{gameId}/posts/{postId}/mark-read", messageHandler.MarkPostRead)
