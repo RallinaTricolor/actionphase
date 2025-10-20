@@ -1,0 +1,18 @@
+Ask me questions about the following feature requests to clarify requirements:
+- GMs need to be able to add/remove players from games regardless of game state
+- Audience participation
+  - Users should be able to join games as audience members even after the game has started
+  - Audience members can view game progress but cannot take actions
+  - GMs can assign NPCs to audience members, which allows them to participate (but without action submissions)
+  - Audience members (and the GM) should have a separate view to see all private messages belonging to *all* characters
+  - Audience members should be able to view common room posts and comment as their assigned NPCs
+  - GMs should be able to control audience characters in case an audience member is unavailable
+  - Audience members should receive notifications for private messages and common room activity
+  - Audience members should appear in the game roster with a special "Audience" label
+  - Audience members should have the same read comment tracking as regular players
+- Players need a way to see all the new comments outside threading order
+  - Should likely be a separate tab in the common room tab
+  - Should show all new comments since the player's last visit, regardless of which post they belong to
+  - Each comment should indicate which post it belongs to, with a link to jump to that
+  - Each comment should render the parent comment as well for context
+  - There should be a "Mark all as read" button to clear the new comments list

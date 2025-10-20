@@ -3,6 +3,7 @@ package messages
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -387,6 +388,205 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 		}
 
 		response = append(response, commentData)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// ============================================================================
+// READ TRACKING HANDLERS
+// ============================================================================
+
+// MarkPostRead marks a post (and optionally a specific comment) as read
+// POST /api/v1/games/:gameId/posts/:postId/mark-read
+func (h *Handler) MarkPostRead(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse game ID
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Parse post ID
+	postIDStr := chi.URLParam(r, "postId")
+	postID, err := strconv.ParseInt(postIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid post ID")))
+		return
+	}
+
+	// Get user ID from JWT
+	userID, err := getUserIDFromToken(r, h.App)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	// Parse request body for optional last_read_comment_id
+	var requestBody struct {
+		LastReadCommentID *int32 `json:"last_read_comment_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil && err != io.EOF {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid request body")))
+		return
+	}
+
+	// Mark as read
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	readMarker, err := messageService.MarkPostAsRead(ctx, userID, int32(gameID), int32(postID), requestBody.LastReadCommentID)
+	if err != nil {
+		h.App.Logger.Error("Failed to mark post as read", "error", err, "game_id", gameID, "post_id", postID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Return the read marker
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"id":                   readMarker.ID,
+		"user_id":              readMarker.UserID,
+		"game_id":              readMarker.GameID,
+		"post_id":              readMarker.PostID,
+		"last_read_comment_id": readMarker.LastReadCommentID,
+		"last_read_at":         readMarker.LastReadAt,
+		"created_at":           readMarker.CreatedAt,
+		"updated_at":           readMarker.UpdatedAt,
+	})
+}
+
+// GetGameReadMarkers gets all read markers for the current user in a game
+// GET /api/v1/games/:gameId/read-markers
+func (h *Handler) GetGameReadMarkers(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse game ID
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Get user ID from JWT
+	userID, err := getUserIDFromToken(r, h.App)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	// Get read markers
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	readMarkers, err := messageService.GetUserReadMarkersForGame(ctx, userID, int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get read markers", "error", err, "game_id", gameID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	response := make([]map[string]interface{}, 0, len(readMarkers))
+	for _, marker := range readMarkers {
+		response = append(response, map[string]interface{}{
+			"id":                   marker.ID,
+			"user_id":              marker.UserID,
+			"game_id":              marker.GameID,
+			"post_id":              marker.PostID,
+			"last_read_comment_id": marker.LastReadCommentID,
+			"last_read_at":         marker.LastReadAt,
+			"created_at":           marker.CreatedAt,
+			"updated_at":           marker.UpdatedAt,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetPostsUnreadInfo gets post metadata to determine unread status
+// GET /api/v1/games/:gameId/posts-unread-info
+func (h *Handler) GetPostsUnreadInfo(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse game ID
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Get posts unread info
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	postsInfo, err := messageService.GetPostsWithUnreadInfo(ctx, int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get posts unread info", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	response := make([]map[string]interface{}, 0, len(postsInfo))
+	for _, info := range postsInfo {
+		postData := map[string]interface{}{
+			"post_id":         info.PostID,
+			"post_created_at": info.PostCreatedAt,
+			"total_comments":  info.TotalComments,
+		}
+
+		if info.LatestCommentAt != nil {
+			postData["latest_comment_at"] = info.LatestCommentAt
+		}
+
+		response = append(response, postData)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetUnreadCommentIDs gets the specific IDs of unread comments for all posts in a game
+// GET /api/v1/games/:gameId/unread-comment-ids
+func (h *Handler) GetUnreadCommentIDs(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse game ID
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Get user ID from JWT
+	userID, err := getUserIDFromToken(r, h.App)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	// Get unread comment IDs
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	unreadComments, err := messageService.GetUnreadCommentIDsForPosts(ctx, userID, int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get unread comment IDs", "error", err, "game_id", gameID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	response := make([]map[string]interface{}, 0, len(unreadComments))
+	for _, uc := range unreadComments {
+		response = append(response, map[string]interface{}{
+			"post_id":            uc.PostID,
+			"unread_comment_ids": uc.UnreadCommentIDs,
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -304,3 +304,20 @@ CREATE INDEX idx_message_recipients_recipient_id ON message_recipients(recipient
 CREATE INDEX idx_message_recipients_unread ON message_recipients(recipient_id, is_read) WHERE is_read = false;
 CREATE INDEX idx_message_reactions_message_id ON message_reactions(message_id);
 CREATE INDEX idx_message_reactions_user_id ON message_reactions(user_id);
+
+-- Common Room Read Tracking
+CREATE TABLE user_common_room_reads (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    post_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    last_read_comment_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
+    last_read_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, post_id)
+);
+
+CREATE INDEX idx_user_common_room_reads_user_game ON user_common_room_reads(user_id, game_id);
+CREATE INDEX idx_user_common_room_reads_post ON user_common_room_reads(post_id);
+CREATE INDEX idx_user_common_room_reads_updated ON user_common_room_reads(updated_at DESC);

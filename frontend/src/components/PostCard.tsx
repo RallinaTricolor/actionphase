@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
@@ -8,6 +8,7 @@ import { ThreadedComment } from './ThreadedComment';
 import { apiClient } from '../lib/api';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
+import { useMarkPostAsRead, usePostUnreadCommentIDs } from '../hooks/useReadTracking';
 
 interface PostCardProps {
   post: Message;
@@ -28,12 +29,51 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPostCollapsed, setIsPostCollapsed] = useState(false);
 
+  // Get unread comment IDs for this post
+  const unreadCommentIDs = usePostUnreadCommentIDs(gameId, post.id);
+
+  // Mutation for marking post as read
+  const markAsReadMutation = useMarkPostAsRead();
+
+  // Ref for the post container (for intersection observer)
+  const postRef = useRef<HTMLDivElement>(null);
+
+  // Track if we've already marked this post as read in this session
+  const hasMarkedAsRead = useRef(false);
+
   // Auto-select first controllable character
   useEffect(() => {
     if (controllableCharacters.length > 0 && selectedCharacterId === null) {
       setSelectedCharacterId(controllableCharacters[0].id);
     }
   }, [controllableCharacters, selectedCharacterId]);
+
+  // Ref to store the mark-as-read callback to avoid re-creating the observer
+  const markAsReadRef = useRef<() => void>();
+
+  // Update the callback ref whenever dependencies change
+  useEffect(() => {
+    markAsReadRef.current = () => {
+      if (hasMarkedAsRead.current) return;
+      // Only mark as read if there are unread comments
+      if (unreadCommentIDs.length === 0) return;
+
+      // Find the newest comment ID if comments are loaded
+      // Comments are sorted DESC (newest first), so the newest is at index 0
+      const newestCommentId = topLevelComments.length > 0
+        ? topLevelComments[0].id
+        : undefined;
+
+      // Mark as read
+      markAsReadMutation.mutate({
+        gameId,
+        postId: post.id,
+        data: newestCommentId ? { last_read_comment_id: newestCommentId } : {}
+      });
+
+      hasMarkedAsRead.current = true;
+    };
+  }, [gameId, post.id, topLevelComments, markAsReadMutation, unreadCommentIDs]);
 
   // Load top-level comments when showing comments
   useEffect(() => {
@@ -46,6 +86,15 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
           const response = await apiClient.messages.getPostComments(gameId, post.id);
           if (isMounted) {
             setTopLevelComments(response.data);
+
+            // Mark as read after comments load successfully (if there are unread comments)
+            // This is better UX than waiting for viewport intersection
+            if (unreadCommentIDs.length > 0 && !hasMarkedAsRead.current) {
+              // Use setTimeout to allow state to settle
+              setTimeout(() => {
+                markAsReadRef.current?.();
+              }, 100);
+            }
           }
         } catch (err) {
           if (isMounted) {
@@ -62,7 +111,24 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
     return () => {
       isMounted = false;
     };
-  }, [showComments, topLevelComments.length, gameId, post.id]);
+  }, [showComments, topLevelComments.length, gameId, post.id, unreadCommentIDs.length]);
+
+  // Mark as read when comments are shown with unread items
+  // This handles the case where comments are already loaded (e.g., from cache or previous view)
+  useEffect(() => {
+    // Only mark as read if:
+    // 1. Comments are visible
+    // 2. There are unread comments
+    // 3. Comments have loaded (not currently loading)
+    // 4. We haven't already marked this post as read
+    if (showComments && unreadCommentIDs.length > 0 && !loadingComments && topLevelComments.length > 0 && !hasMarkedAsRead.current) {
+      const timer = setTimeout(() => {
+        markAsReadRef.current?.();
+      }, 1000); // 1 second delay to ensure user is actually viewing
+
+      return () => clearTimeout(timer);
+    }
+  }, [showComments, unreadCommentIDs.length, loadingComments, topLevelComments.length]);
 
   const loadComments = async (delayMs: number = 0) => {
     try {
@@ -78,6 +144,10 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
     } finally {
       setLoadingComments(false);
     }
+  };
+
+  const handleShowComments = () => {
+    setShowComments(!showComments);
   };
 
 
@@ -124,9 +194,9 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   const isLongContent = post.content.length > 500;
 
   return (
-    <div data-testid="post-card" className="mb-6 border-b-4 border-gray-200 pb-6">
+    <div ref={postRef} data-testid="post-card" className="mb-6 pb-6 border-b-4 border-gray-200">
       {/* Collapsible GM Post Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg shadow-lg">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-lg border-2 border-blue-200">
         {/* Post Header - Always visible */}
         <div className="p-4 bg-white bg-opacity-90 border-b border-blue-200">
           <div className="flex items-start justify-between mb-2">
@@ -137,11 +207,16 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                   characterName={post.character_name}
                   size="md"
                 />
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1">
                   <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                   </svg>
                   <h3 className="font-bold text-xl text-gray-900">GM Post: {post.character_name}</h3>
+                  {unreadCommentIDs.length > 0 && (
+                    <span className="ml-2 px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded">
+                      {unreadCommentIDs.length} new {unreadCommentIDs.length === 1 ? 'comment' : 'comments'}
+                    </span>
+                  )}
                 </div>
               </div>
               <p className="text-sm text-gray-600 mt-1">
@@ -196,9 +271,9 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
 
       {/* Comments Section */}
       <div className="mt-4">
-        <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+        <div className="flex items-center gap-4 text-sm text-gray-600 mb-3 flex-wrap">
           <button
-            onClick={() => setShowComments(!showComments)}
+            onClick={handleShowComments}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,6 +375,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                   onCreateReply={onCreateComment}
                   currentUserId={currentUserId}
                   depth={0}
+                  unreadCommentIDs={unreadCommentIDs}
                 />
               ))}
             </div>

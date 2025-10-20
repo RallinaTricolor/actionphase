@@ -234,6 +234,39 @@ func (q *Queries) DeletePost(ctx context.Context, id int32) (Message, error) {
 	return i, err
 }
 
+const deleteReadMarkersForGame = `-- name: DeleteReadMarkersForGame :exec
+DELETE FROM user_common_room_reads
+WHERE game_id = $1
+`
+
+// Delete all read markers for a game (e.g., when game is deleted or completed)
+func (q *Queries) DeleteReadMarkersForGame(ctx context.Context, gameID int32) error {
+	_, err := q.db.Exec(ctx, deleteReadMarkersForGame, gameID)
+	return err
+}
+
+const deleteReadMarkersForPost = `-- name: DeleteReadMarkersForPost :exec
+DELETE FROM user_common_room_reads
+WHERE post_id = $1
+`
+
+// Delete all read markers for a post (e.g., when post is deleted)
+func (q *Queries) DeleteReadMarkersForPost(ctx context.Context, postID int32) error {
+	_, err := q.db.Exec(ctx, deleteReadMarkersForPost, postID)
+	return err
+}
+
+const deleteReadMarkersForUser = `-- name: DeleteReadMarkersForUser :exec
+DELETE FROM user_common_room_reads
+WHERE user_id = $1
+`
+
+// Delete all read markers for a user (e.g., when user account is deleted)
+func (q *Queries) DeleteReadMarkersForUser(ctx context.Context, userID int32) error {
+	_, err := q.db.Exec(ctx, deleteReadMarkersForUser, userID)
+	return err
+}
+
 const getAllDescendantComments = `-- name: GetAllDescendantComments :many
 WITH RECURSIVE comment_tree AS (
   SELECT messages.id as comment_id
@@ -664,7 +697,7 @@ LEFT JOIN characters c ON m.character_id = c.id
 WHERE m.parent_id = $1
   AND m.message_type = 'comment'
   AND m.is_deleted = false
-ORDER BY m.created_at ASC
+ORDER BY m.created_at DESC
 `
 
 type GetPostCommentsRow struct {
@@ -692,6 +725,7 @@ type GetPostCommentsRow struct {
 
 // Get direct comments for a specific post
 // For threaded display, call this recursively on the frontend
+// Sorted newest first (DESC) for better UX - users see latest comments at top
 func (q *Queries) GetPostComments(ctx context.Context, parentID pgtype.Int4) ([]GetPostCommentsRow, error) {
 	rows, err := q.db.Query(ctx, getPostComments, parentID)
 	if err != nil {
@@ -733,6 +767,55 @@ func (q *Queries) GetPostComments(ctx context.Context, parentID pgtype.Int4) ([]
 	return items, nil
 }
 
+const getPostsWithUnreadCount = `-- name: GetPostsWithUnreadCount :many
+SELECT
+    m.id as post_id,
+    m.created_at as post_created_at,
+    COUNT(c.id) as total_comments,
+    MAX(c.created_at) as latest_comment_at
+FROM messages m
+LEFT JOIN messages c ON c.parent_id = m.id AND c.is_deleted = false
+WHERE m.game_id = $1
+  AND m.message_type = 'post'
+  AND m.is_deleted = false
+GROUP BY m.id, m.created_at
+ORDER BY m.created_at DESC
+`
+
+type GetPostsWithUnreadCountRow struct {
+	PostID          int32            `json:"post_id"`
+	PostCreatedAt   pgtype.Timestamp `json:"post_created_at"`
+	TotalComments   int64            `json:"total_comments"`
+	LatestCommentAt interface{}      `json:"latest_comment_at"`
+}
+
+// Get posts with their total comment count and last comment timestamp
+// Frontend will compare these with read markers to determine unread status
+func (q *Queries) GetPostsWithUnreadCount(ctx context.Context, gameID int32) ([]GetPostsWithUnreadCountRow, error) {
+	rows, err := q.db.Query(ctx, getPostsWithUnreadCount, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPostsWithUnreadCountRow
+	for rows.Next() {
+		var i GetPostsWithUnreadCountRow
+		if err := rows.Scan(
+			&i.PostID,
+			&i.PostCreatedAt,
+			&i.TotalComments,
+			&i.LatestCommentAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getReactionCounts = `-- name: GetReactionCounts :many
 SELECT reaction_type, COUNT(*) as count
 FROM message_reactions
@@ -755,6 +838,58 @@ func (q *Queries) GetReactionCounts(ctx context.Context, messageID int32) ([]Get
 	for rows.Next() {
 		var i GetReactionCountsRow
 		if err := rows.Scan(&i.ReactionType, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUnreadCommentIDsForPosts = `-- name: GetUnreadCommentIDsForPosts :many
+SELECT
+    m.id as post_id,
+    COALESCE(
+        array_agg(c.id ORDER BY c.created_at DESC) FILTER (
+            WHERE ucr.last_read_at IS NULL OR c.created_at > ucr.last_read_at
+        ),
+        '{}'::integer[]
+    ) as unread_comment_ids
+FROM messages m
+LEFT JOIN user_common_room_reads ucr ON ucr.post_id = m.id AND ucr.user_id = $1
+LEFT JOIN messages c ON c.parent_id = m.id AND c.is_deleted = false
+WHERE m.game_id = $2
+  AND m.message_type = 'post'
+  AND m.is_deleted = false
+GROUP BY m.id, ucr.last_read_at
+ORDER BY m.created_at DESC
+`
+
+type GetUnreadCommentIDsForPostsParams struct {
+	UserID int32 `json:"user_id"`
+	GameID int32 `json:"game_id"`
+}
+
+type GetUnreadCommentIDsForPostsRow struct {
+	PostID           int32       `json:"post_id"`
+	UnreadCommentIds interface{} `json:"unread_comment_ids"`
+}
+
+// Get unread comment IDs for each post in a game for a specific user
+// Returns post_id and array of comment IDs that are "new since last visit"
+// A comment is new if it was created after the user's last_read_at timestamp
+func (q *Queries) GetUnreadCommentIDsForPosts(ctx context.Context, arg GetUnreadCommentIDsForPostsParams) ([]GetUnreadCommentIDsForPostsRow, error) {
+	rows, err := q.db.Query(ctx, getUnreadCommentIDsForPosts, arg.UserID, arg.GameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUnreadCommentIDsForPostsRow
+	for rows.Next() {
+		var i GetUnreadCommentIDsForPostsRow
+		if err := rows.Scan(&i.PostID, &i.UnreadCommentIds); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -848,6 +983,128 @@ func (q *Queries) GetUserPostsInGame(ctx context.Context, arg GetUserPostsInGame
 		return nil, err
 	}
 	return items, nil
+}
+
+const getUserReadMarker = `-- name: GetUserReadMarker :one
+SELECT id, user_id, game_id, post_id, last_read_comment_id, last_read_at, created_at, updated_at FROM user_common_room_reads
+WHERE user_id = $1 AND post_id = $2
+`
+
+type GetUserReadMarkerParams struct {
+	UserID int32 `json:"user_id"`
+	PostID int32 `json:"post_id"`
+}
+
+// Get the read tracking info for a specific user and post
+func (q *Queries) GetUserReadMarker(ctx context.Context, arg GetUserReadMarkerParams) (UserCommonRoomRead, error) {
+	row := q.db.QueryRow(ctx, getUserReadMarker, arg.UserID, arg.PostID)
+	var i UserCommonRoomRead
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.GameID,
+		&i.PostID,
+		&i.LastReadCommentID,
+		&i.LastReadAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserReadMarkersForGame = `-- name: GetUserReadMarkersForGame :many
+SELECT id, user_id, game_id, post_id, last_read_comment_id, last_read_at, created_at, updated_at FROM user_common_room_reads
+WHERE user_id = $1 AND game_id = $2
+ORDER BY last_read_at DESC
+`
+
+type GetUserReadMarkersForGameParams struct {
+	UserID int32 `json:"user_id"`
+	GameID int32 `json:"game_id"`
+}
+
+// Get all read markers for a user in a specific game
+// Used to batch-check which posts have unread content
+func (q *Queries) GetUserReadMarkersForGame(ctx context.Context, arg GetUserReadMarkersForGameParams) ([]UserCommonRoomRead, error) {
+	rows, err := q.db.Query(ctx, getUserReadMarkersForGame, arg.UserID, arg.GameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UserCommonRoomRead
+	for rows.Next() {
+		var i UserCommonRoomRead
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.GameID,
+			&i.PostID,
+			&i.LastReadCommentID,
+			&i.LastReadAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markPostRead = `-- name: MarkPostRead :one
+
+INSERT INTO user_common_room_reads (
+    user_id,
+    game_id,
+    post_id,
+    last_read_comment_id,
+    last_read_at,
+    updated_at
+) VALUES (
+    $1, $2, $3, $4, NOW(), NOW()
+)
+ON CONFLICT (user_id, post_id)
+DO UPDATE SET
+    last_read_comment_id = EXCLUDED.last_read_comment_id,
+    last_read_at = NOW(),
+    updated_at = NOW()
+RETURNING id, user_id, game_id, post_id, last_read_comment_id, last_read_at, created_at, updated_at
+`
+
+type MarkPostReadParams struct {
+	UserID            int32       `json:"user_id"`
+	GameID            int32       `json:"game_id"`
+	PostID            int32       `json:"post_id"`
+	LastReadCommentID pgtype.Int4 `json:"last_read_comment_id"`
+}
+
+// ============================================================================
+// READ TRACKING (Common Room)
+// ============================================================================
+// Mark a post (and optionally a specific comment) as read by a user
+// This is an upsert - creates new record or updates existing one
+func (q *Queries) MarkPostRead(ctx context.Context, arg MarkPostReadParams) (UserCommonRoomRead, error) {
+	row := q.db.QueryRow(ctx, markPostRead,
+		arg.UserID,
+		arg.GameID,
+		arg.PostID,
+		arg.LastReadCommentID,
+	)
+	var i UserCommonRoomRead
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.GameID,
+		&i.PostID,
+		&i.LastReadCommentID,
+		&i.LastReadAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const removeReaction = `-- name: RemoveReaction :exec

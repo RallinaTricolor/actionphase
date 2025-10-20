@@ -340,3 +340,14 @@ type User struct {
 	EmailNotifications pgtype.Bool      `json:"email_notifications"`
 	HighContrast       pgtype.Bool      `json:"high_contrast"`
 }
+
+type UserCommonRoomRead struct {
+	ID                int32              `json:"id"`
+	UserID            int32              `json:"user_id"`
+	GameID            int32              `json:"game_id"`
+	PostID            int32              `json:"post_id"`
+	LastReadCommentID pgtype.Int4        `json:"last_read_comment_id"`
+	LastReadAt        pgtype.Timestamptz `json:"last_read_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}

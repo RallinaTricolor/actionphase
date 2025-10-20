@@ -69,6 +69,9 @@ ActionPhase is a modern gaming platform with Clean Architecture principles:
 - **Go Backend**: JWT-based API using Chi router, PostgreSQL with sqlc
 - **React Frontend**: React/TypeScript SPA with Vite, Tailwind CSS, React Query
 - **Database**: PostgreSQL with hybrid relational-document design (JSONB for game data)
+  - **CRITICAL**: Database name is **`actionphase`**, NOT `database`
+  - All PostgreSQL connections MUST use: `postgres://postgres:example@localhost:5432/actionphase`
+  - The justfile commands use the correct `actionphase` database
 
 ### Core Principles
 - **Interface-First Development** - Define interfaces before implementation
@@ -110,6 +113,17 @@ just test-mocks               # Fast unit tests (~300ms)
 just ci-test                  # Full CI test suite (lint + test + race)
 ```
 
+**API Testing with curl**:
+```bash
+# ALWAYS use this pattern for authenticated API requests:
+curl -s -H "Authorization: Bearer $(cat /tmp/api-token.txt)" "http://localhost:3000/api/v1/endpoint" | jq '.'
+
+# Login first to get token:
+./scripts/api-test.sh login-player  # Token saved to /tmp/api-token.txt
+
+# See scripts/api-test.sh for reference patterns
+```
+
 **Frontend Development**:
 ```bash
 just run-frontend             # Start development server
@@ -120,8 +134,12 @@ just test-frontend-watch      # Watch mode for development
 **Database Management**:
 ```bash
 just make_migration <name>    # Create new migration
-just migrate                  # Apply migrations
+just migrate                  # Apply migrations to actionphase database
 just migrate_test             # Apply migrations to test database
+
+# ⚠️ CRITICAL: Always use 'actionphase' database name
+# Correct:   postgres://postgres:example@localhost:5432/actionphase
+# WRONG:     postgres://postgres:example@localhost:5432/database
 ```
 
 **For complete command reference, see justfile or run `just --list`**

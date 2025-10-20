@@ -110,6 +110,7 @@ WHERE m.id = $1;
 -- name: GetPostComments :many
 -- Get direct comments for a specific post
 -- For threaded display, call this recursively on the frontend
+-- Sorted newest first (DESC) for better UX - users see latest comments at top
 SELECT m.*,
        u.username as author_username,
        c.name as character_name,
@@ -121,7 +122,7 @@ LEFT JOIN characters c ON m.character_id = c.id
 WHERE m.parent_id = $1
   AND m.message_type = 'comment'
   AND m.is_deleted = false
-ORDER BY m.created_at ASC;
+ORDER BY m.created_at DESC;
 
 -- NOTE: GetCommentThread with recursive CTE is not supported by sqlc
 -- Use GetPostComments recursively on the frontend to build the tree
@@ -218,3 +219,91 @@ SELECT reaction_type, COUNT(*) as count
 FROM message_reactions
 WHERE message_id = $1
 GROUP BY reaction_type;
+
+-- ============================================================================
+-- READ TRACKING (Common Room)
+-- ============================================================================
+
+-- name: MarkPostRead :one
+-- Mark a post (and optionally a specific comment) as read by a user
+-- This is an upsert - creates new record or updates existing one
+INSERT INTO user_common_room_reads (
+    user_id,
+    game_id,
+    post_id,
+    last_read_comment_id,
+    last_read_at,
+    updated_at
+) VALUES (
+    $1, $2, $3, $4, NOW(), NOW()
+)
+ON CONFLICT (user_id, post_id)
+DO UPDATE SET
+    last_read_comment_id = EXCLUDED.last_read_comment_id,
+    last_read_at = NOW(),
+    updated_at = NOW()
+RETURNING *;
+
+-- name: GetUserReadMarker :one
+-- Get the read tracking info for a specific user and post
+SELECT * FROM user_common_room_reads
+WHERE user_id = $1 AND post_id = $2;
+
+-- name: GetUserReadMarkersForGame :many
+-- Get all read markers for a user in a specific game
+-- Used to batch-check which posts have unread content
+SELECT * FROM user_common_room_reads
+WHERE user_id = $1 AND game_id = $2
+ORDER BY last_read_at DESC;
+
+-- name: GetPostsWithUnreadCount :many
+-- Get posts with their total comment count and last comment timestamp
+-- Frontend will compare these with read markers to determine unread status
+SELECT
+    m.id as post_id,
+    m.created_at as post_created_at,
+    COUNT(c.id) as total_comments,
+    MAX(c.created_at) as latest_comment_at
+FROM messages m
+LEFT JOIN messages c ON c.parent_id = m.id AND c.is_deleted = false
+WHERE m.game_id = $1
+  AND m.message_type = 'post'
+  AND m.is_deleted = false
+GROUP BY m.id, m.created_at
+ORDER BY m.created_at DESC;
+
+-- name: DeleteReadMarkersForPost :exec
+-- Delete all read markers for a post (e.g., when post is deleted)
+DELETE FROM user_common_room_reads
+WHERE post_id = $1;
+
+-- name: DeleteReadMarkersForGame :exec
+-- Delete all read markers for a game (e.g., when game is deleted or completed)
+DELETE FROM user_common_room_reads
+WHERE game_id = $1;
+
+-- name: DeleteReadMarkersForUser :exec
+-- Delete all read markers for a user (e.g., when user account is deleted)
+DELETE FROM user_common_room_reads
+WHERE user_id = $1;
+
+-- name: GetUnreadCommentIDsForPosts :many
+-- Get unread comment IDs for each post in a game for a specific user
+-- Returns post_id and array of comment IDs that are "new since last visit"
+-- A comment is new if it was created after the user's last_read_at timestamp
+SELECT
+    m.id as post_id,
+    COALESCE(
+        array_agg(c.id ORDER BY c.created_at DESC) FILTER (
+            WHERE ucr.last_read_at IS NULL OR c.created_at > ucr.last_read_at
+        ),
+        '{}'::integer[]
+    ) as unread_comment_ids
+FROM messages m
+LEFT JOIN user_common_room_reads ucr ON ucr.post_id = m.id AND ucr.user_id = $1
+LEFT JOIN messages c ON c.parent_id = m.id AND c.is_deleted = false
+WHERE m.game_id = $2
+  AND m.message_type = 'post'
+  AND m.is_deleted = false
+GROUP BY m.id, ucr.last_read_at
+ORDER BY m.created_at DESC;

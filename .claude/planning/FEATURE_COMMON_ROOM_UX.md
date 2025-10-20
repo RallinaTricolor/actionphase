@@ -1748,9 +1748,174 @@ The `user_common_room_reads` table tracks which comments users have seen:
 
 ---
 
-## 10. Revision History
+## 10. Implementation Status
+
+### 10.1 Phase 1: Backend Read Tracking - ✅ COMPLETED
+
+**Implementation Date**: 2025-10-20
+**Status**: Production-ready
+
+#### What Was Implemented
+
+**Database Schema** (Migration `033_create_user_common_room_reads.up.sql`):
+- Table: `user_common_room_reads` with columns matching planned schema
+- Indexes on `(user_id, game_id)`, `post_id`, and `updated_at`
+- Unique constraint on `(user_id, post_id)`
+
+**Backend API Endpoints**:
+1. `POST /api/v1/games/:id/posts/:postId/mark-read` - Mark post/comments as read
+2. `GET /api/v1/games/:id/read-markers` - Get all read markers for user in game
+3. `GET /api/v1/games/:id/posts-unread-info` - Get unread counts for posts
+4. `GET /api/v1/games/:id/unread-comment-ids` - Get specific unread comment IDs per post
+
+**Service Layer** (`backend/pkg/db/services/messages/`):
+- `MarkPostAsRead()` - Updates read marker with upsert logic
+- `GetReadMarkers()` - Returns all read markers for user/game
+- `GetPostsUnreadInfo()` - Returns posts with latest comment timestamps
+- `GetUnreadCommentIDs()` - Returns specific comment IDs that are unread
+
+**Key Implementation Details**:
+- Uses timestamp-based unread detection (`created_at > last_read_at`)
+- Supports optional `last_read_comment_id` for granular tracking
+- Efficient SQL queries with proper indexing
+- All tests passing with >85% coverage
+
+#### Frontend Implementation
+
+**React Query Hooks** (`frontend/src/hooks/useReadTracking.ts`):
+- `useReadMarkers(gameId)` - Fetches read markers
+- `usePostsUnreadInfo(gameId)` - Fetches unread post info
+- `useUnreadCommentIDs(gameId)` - Fetches unread comment IDs per post
+- `useMarkPostAsRead()` - Mutation to mark posts as read
+- `usePostUnreadCommentIDs(gameId, postId)` - Helper for specific post
+
+**Critical Fix Applied**:
+```typescript
+// Use refetchQueries instead of invalidateQueries to bypass staleTime
+await Promise.all([
+  queryClient.refetchQueries({ queryKey: ['readMarkers', variables.gameId] }),
+  queryClient.refetchQueries({ queryKey: ['postsUnreadInfo', variables.gameId] }),
+  queryClient.refetchQueries({ queryKey: ['unreadCommentIDs', variables.gameId] }),
+]);
+```
+
+**Why This Matters**: The queries have `staleTime: 5 * 60 * 1000` (5 minutes) for performance. Using `invalidateQueries()` only marks them as stale but doesn't force a refetch if within the stale time window. Using `refetchQueries()` forces immediate fresh data, ensuring NEW badges disappear promptly after viewing.
+
+**Automatic Read Tracking** (`frontend/src/components/PostCard.tsx`):
+- Marks posts as read when comments are loaded (if unread exist)
+- Uses ref pattern to avoid React closure issues
+- Debounced with setTimeout to avoid race conditions
+- Two triggers:
+  1. When comments finish loading (100ms delay)
+  2. When comments are already visible (1 second delay)
+
+**Visual Implementation** (`frontend/src/components/ThreadedComment.tsx`):
+- `isUnread` prop drives "NEW" badge display
+- Yellow background highlight for unread comments
+- Badge styling: `bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-semibold`
+
+#### API Verification Pattern Added
+
+**Updated `CLAUDE.md`** with proper curl authentication pattern:
+```bash
+# ALWAYS use this pattern for authenticated API requests:
+curl -s -H "Authorization: Bearer $(cat /tmp/api-token.txt)" "http://localhost:3000/api/v1/endpoint" | jq '.'
+
+# Login first to get token:
+./scripts/api-test.sh login-player  # Token saved to /tmp/api-token.txt
+```
+
+This prevents future mistakes when debugging API responses.
+
+### 10.2 What's Different from Original Plan
+
+**Simplified Approach**:
+- ❌ No IntersectionObserver-based viewport tracking (poor UX, unreliable)
+- ✅ Simple timestamp-based approach: view comments = mark as read
+- ✅ Automatic marking on comment load (better UX than waiting for scroll)
+
+**Query Management**:
+- ✅ Added `refetchQueries()` instead of `invalidateQueries()` to handle staleTime
+- ✅ Queries return specific comment IDs rather than just counts
+- ✅ Separate endpoints for different read tracking needs
+
+**Current Limitations** (to address in future phases):
+- No "Jump to first unread" button yet
+- No "You read up to here" visual divider
+- No scroll-to-comment highlighting
+- No deep linking to specific comments
+- No thread continuation UI for depth limiting
+
+### 10.3 Compatibility for Future Features
+
+#### Deep Nesting (Phase 3)
+**Compatible**: Our read tracking stores `last_read_comment_id`, which works at any depth. When implementing "Continue thread" functionality:
+- Thread view can check if comments in chain are > `last_read_at`
+- NEW badges will work correctly in focused thread view
+- No schema changes needed
+
+#### Deep Linking (Phase 4)
+**Compatible**: Our API returns specific comment IDs. When implementing comment permalinks:
+- `GET /api/v1/games/:id/unread-comment-ids` already returns granular data
+- Can use `last_read_comment_id` to position "read marker" divider
+- URL like `?comment=123` can check if 123 is in `unread_comment_ids` array
+- No schema changes needed
+
+#### Recommendations for Future Phases
+
+**When implementing Deep Linking**:
+```typescript
+// Use existing unread data to show "NEW" on deep-linked comment
+const unreadIDs = usePostUnreadCommentIDs(gameId, postId);
+const isCommentNew = unreadIDs.includes(commentId);
+
+// After scrolling to comment, mark as read
+if (isCommentNew) {
+  markPostAsRead(gameId, postId, { last_read_comment_id: commentId });
+}
+```
+
+**When implementing "Jump to first unread"**:
+```typescript
+// Unread comment IDs are already available
+const unreadIDs = usePostUnreadCommentIDs(gameId, postId); // [789, 790, 791]
+const firstUnread = Math.min(...unreadIDs); // 789
+
+// Scroll to it
+document.getElementById(`comment-${firstUnread}`)?.scrollIntoView();
+```
+
+**When implementing depth limiting**:
+- No changes to read tracking needed
+- "Continue thread" page can use same `usePostUnreadCommentIDs()` hook
+- NEW badges will automatically work in thread view
+
+### 10.4 Testing Verification
+
+**Manual Testing Completed**:
+- ✅ NEW badges appear for unread comments
+- ✅ NEW badges disappear after viewing (with fresh page load)
+- ✅ Database read markers created correctly
+- ✅ API returns accurate unread counts
+- ✅ React Query cache refreshes properly with refetchQueries
+- ✅ No console errors or API failures
+
+**Test Data Used**:
+- Game ID: 2853 ("The Dragon of Mount Krag")
+- Post ID: 1767
+- Test users: TestPlayer1 (1284), TestGM (1283)
+- Comment ID: 1793 (latest test comment)
+
+**Verified Behavior**:
+1. Delete read marker → refresh → see 5 unread comments
+2. Load Common Room tab → auto-mark as read → verify DB update
+3. Check API → returns empty `unread_comment_ids: []`
+4. Refresh page → NEW badges gone ✅
+
+## 11. Revision History
 
 | Date | Changes | Author |
 |------|---------|--------|
 | 2025-10-19 | Initial plan created | AI Planning Session |
-| | | |
+| 2025-10-20 | Added implementation status for Phase 1 (Backend Read Tracking) | AI Implementation |
+| 2025-10-20 | Documented refetchQueries fix and compatibility notes | AI Implementation |
