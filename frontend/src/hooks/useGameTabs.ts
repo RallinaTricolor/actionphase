@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, createElement } from 'react';
+import { useState, useEffect, useMemo, createElement, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Tab } from '../components/TabNavigation';
 import type { GameState } from '../types/games';
@@ -42,9 +42,11 @@ export function useGameTabs({
   participantCount,
   currentPhaseType,
 }: UseGameTabsOptions) {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<string>(tabParam || 'default');
+  const [userSelectedTab, setUserSelectedTab] = useState(false); // Track if user manually selected a tab
+  const hasProcessedUrlParam = useRef(false); // Track if we've already processed the initial URL param
 
   // Phase-aware tab configuration
   const tabs: Tab[] = useMemo(() => {
@@ -63,22 +65,31 @@ export function useGameTabs({
         tabList.push({ id: 'applications', label: 'Applications', icon: icons.applications });
       }
     } else if (gameState === 'in_progress') {
-      // Common Room is primary when it's a common_room phase
+      // Common Room tab - only during common_room phases
       if (currentPhaseType === 'common_room') {
         tabList.push({ id: 'common-room', label: 'Common Room', icon: icons.commonRoom });
       }
+
       // Phases tab (GM only)
       if (isGM) {
         tabList.push({ id: 'phases', label: 'Phases', icon: icons.phases });
       }
-      // Actions tab
-      tabList.push({ id: 'actions', label: isGM ? 'Actions' : 'Submit Action', icon: icons.actions });
+
+      // Actions tab - only during action phases
+      if (currentPhaseType === 'action') {
+        tabList.push({ id: 'actions', label: isGM ? 'Actions' : 'Submit Action', icon: icons.actions });
+      }
+
       // Characters
       tabList.push({ id: 'characters', label: 'Characters', icon: icons.characters });
+
       // Messages
       tabList.push({ id: 'messages', label: 'Messages', icon: icons.messages });
-      // Phase History
-      tabList.push({ id: 'phase-history', label: 'Phase History', icon: icons.phaseHistory });
+
+      // Phase History - context-aware label
+      // During action phases, label as "Previous Common Rooms" to set expectations
+      const phaseHistoryLabel = currentPhaseType === 'action' ? 'Previous Common Rooms' : 'Phase History';
+      tabList.push({ id: 'phase-history', label: phaseHistoryLabel, icon: icons.phaseHistory });
     } else if (gameState === 'completed' || gameState === 'cancelled') {
       // Post-game tabs
       tabList.push({ id: 'phase-history', label: 'Phase History', icon: icons.phaseHistory });
@@ -93,33 +104,86 @@ export function useGameTabs({
     return tabList;
   }, [gameState, isGM, participantCount, currentPhaseType]);
 
-  // Default tab selection logic
+  // Smart default tab selection logic based on game context
   const defaultTab = useMemo(() => {
     if (tabs.length === 0) return 'info';
 
-    // Prefer Common Room when it's available
-    if (tabs.some(t => t.id === 'common-room')) return 'common-room';
+    // Priority 1: In-progress game - phase-aware defaults
+    if (gameState === 'in_progress' && currentPhaseType) {
+      if (currentPhaseType === 'common_room') {
+        // Common room phase - everyone goes to common room
+        if (tabs.some(t => t.id === 'common-room')) return 'common-room';
+      } else if (currentPhaseType === 'action') {
+        // Action phase - different default for GM vs players
+        // Both GM and players benefit from seeing Actions tab first
+        // GM: See pending submissions
+        // Players: Submit or review their action
+        if (tabs.some(t => t.id === 'actions')) return 'actions';
+      }
+    }
 
-    // Otherwise use first tab
+    // Priority 2: Recruitment - applications for GM, info for players
+    if (gameState === 'recruitment') {
+      if (isGM && tabs.some(t => t.id === 'applications')) {
+        return 'applications';
+      }
+      // Players see game info during recruitment
+      if (tabs.some(t => t.id === 'info')) return 'info';
+    }
+
+    // Priority 3: Character creation - go to characters
+    if (gameState === 'character_creation') {
+      if (tabs.some(t => t.id === 'characters')) return 'characters';
+    }
+
+    // Priority 4: Completed/cancelled games - phase history
+    if (gameState === 'completed' || gameState === 'cancelled') {
+      if (tabs.some(t => t.id === 'phase-history')) return 'phase-history';
+    }
+
+    // Fallback: First tab
     return tabs[0].id;
-  }, [tabs]);
+  }, [tabs, gameState, currentPhaseType, isGM]);
 
-  // Sync with URL params and default tab
+  // Process initial URL parameter only once on mount
   useEffect(() => {
     const paramTab = searchParams.get('tab');
 
-    if (paramTab && tabs.some(t => t.id === paramTab)) {
-      // Valid tab in URL - use it
+    // Only process URL param on initial mount
+    if (!hasProcessedUrlParam.current && paramTab && tabs.some(t => t.id === paramTab)) {
       setActiveTab(paramTab);
-    } else if (activeTab === 'default' || !tabs.some(t => t.id === activeTab)) {
-      // No valid tab selected - use default
-      setActiveTab(defaultTab);
+      setUserSelectedTab(true); // URL param counts as user selection
+      hasProcessedUrlParam.current = true;
     }
-  }, [searchParams, tabs, defaultTab, activeTab]);
+  }, [searchParams, tabs]);
+
+  // Apply smart default when phase data loads (if user hasn't selected a tab)
+  useEffect(() => {
+    if (!userSelectedTab && (activeTab === 'default' || activeTab !== defaultTab)) {
+      // User hasn't manually selected a tab - apply smart default
+      // This allows the default to update when phase data loads
+      setActiveTab(defaultTab);
+    } else if (!tabs.some(t => t.id === activeTab)) {
+      // Current tab is no longer valid (e.g., action phase ended) - reset to default
+      setActiveTab(defaultTab);
+      setUserSelectedTab(false);
+    }
+  }, [tabs, defaultTab, activeTab, userSelectedTab]);
+
+  // Wrapper for setActiveTab that tracks user selection and updates URL
+  const handleSetActiveTab = (tabId: string) => {
+    setActiveTab(tabId);
+    setUserSelectedTab(true);
+
+    // Update URL with new tab parameter
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('tab', tabId);
+    setSearchParams(newParams, { replace: true });
+  };
 
   return {
     tabs,
     activeTab: activeTab === 'default' ? defaultTab : activeTab,
-    setActiveTab,
+    setActiveTab: handleSetActiveTab,
   };
 }

@@ -1558,16 +1558,22 @@ And I can see parent comments for context
   - Comments section now has `bg-gray-50 border-t border-gray-200` background
   - Action buttons in separate section with `p-4 border-b border-gray-200`
   - Comments area has `p-4` padding with `space-y-3` between threads
-- `frontend/src/components/ThreadedComment.tsx` (lines 128-136, colored borders; 145, unread highlighting; 161-163, NEW badge)
+- `frontend/src/components/ThreadedComment.tsx` (lines 127-153, major readability improvements)
+  - Added alternating background colors array: `['', 'bg-white', 'bg-gray-50', 'bg-white', 'bg-gray-50', 'bg-white']`
+  - Applied depth-based background color selection
+  - Added `py-3 my-2 rounded-r-lg` for nested comments (depth > 0) for better visual separation
+  - Kept colored left borders for thread tracking
+  - Maintained NEW badge and unread highlighting
 
 **Key Design Decisions:**
 - **Card-Based Design**: Post + comments are one cohesive visual unit, meeting spec requirement "Comment threads visually nested within post card"
-- **Visual Hierarchy**: Gray background for comments distinguishes them from white post content
-- **Proper Spacing**: 32px between posts (exceeds spec minimum of 24px) for clear separation
+- **Alternating Backgrounds**: Primary readability enhancement - players spend most time reading threads, so white/gray alternation makes it easy to distinguish comment boundaries
+- **Visual Hierarchy**: Multiple levels (card background, alternating comment backgrounds, colored borders)
+- **Proper Spacing**: 32px between posts (exceeds spec minimum of 24px) + vertical spacing between nested comments
 - **GM posts**: Gradient + megaphone icon stands out as official announcements while still part of unified card
-- **Color-coded nesting**: Helps users track conversation depth at a glance
+- **Color-coded borders**: Provides secondary visual tracking cue alongside backgrounds
 - **Yellow theme for "NEW"**: Attention-grabbing color vs blue theme for GM posts
-- **Mobile-first**: Card design works perfectly on 375px screens with no layout issues
+- **Mobile-first**: Card design + alternating backgrounds work perfectly on 375px screens with no horizontal scroll or readability issues
 
 ### 4.6 Phase 6: Integration & Polish (Days 7-10)
 
