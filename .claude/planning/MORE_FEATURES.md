@@ -16,3 +16,5 @@ Ask me questions about the following feature requests to clarify requirements:
   - Each comment should indicate which post it belongs to, with a link to jump to that
   - Each comment should render the parent comment as well for context
   - There should be a "Mark all as read" button to clear the new comments list
+- Admin view
+- GM Handouts / Informational Documents

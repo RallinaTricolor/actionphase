@@ -3,16 +3,18 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { apiClient } from '../lib/api';
-import type { PrivateMessage, ConversationWithDetails } from '../types/conversations';
+import type { PrivateMessage, ConversationWithDetails, ConversationListItem } from '../types/conversations';
 import type { Character } from '../types/characters';
 
 interface MessageThreadProps {
   gameId: number;
   conversationId: number;
   characters: Character[];
+  onMarkedAsRead?: () => void;
+  conversationInfo?: ConversationListItem; // For read tracking info
 }
 
-export function MessageThread({ gameId, conversationId, characters }: MessageThreadProps) {
+export function MessageThread({ gameId, conversationId, characters, onMarkedAsRead, conversationInfo }: MessageThreadProps) {
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
   const [conversation, setConversation] = useState<ConversationWithDetails | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(true);
@@ -22,6 +24,8 @@ export function MessageThread({ gameId, conversationId, characters }: MessageThr
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const firstUnreadRef = useRef<HTMLDivElement>(null);
+  const [hasScrolledToUnread, setHasScrolledToUnread] = useState(false);
 
   const loading = loadingMessages || loadingConversation;
 
@@ -51,14 +55,94 @@ export function MessageThread({ gameId, conversationId, characters }: MessageThr
     loadMessages();
   }, [gameId, conversationId]);
 
+  // Scroll to first unread message or bottom
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (messages.length > 0 && !hasScrolledToUnread) {
+      console.log('[MessageThread] Scroll effect triggered:', {
+        messagesCount: messages.length,
+        hasConversationInfo: !!conversationInfo,
+        unreadCount: conversationInfo?.unread_count,
+        lastReadAt: conversationInfo?.last_read_at,
+      });
+
+      // If there are unread messages and we have read tracking info, scroll to first unread
+      if (conversationInfo && conversationInfo.unread_count > 0 && conversationInfo.last_read_at) {
+        console.log('[MessageThread] Scrolling to first unread, unread_count:', conversationInfo.unread_count);
+        scrollToFirstUnread();
+      } else {
+        // Otherwise scroll to bottom (no unreads, or no tracking info yet)
+        console.log('[MessageThread] Scrolling to bottom (no unreads or no tracking info)');
+        // Use setTimeout to ensure DOM is fully rendered
+        setTimeout(() => scrollToBottom(), 50);
+      }
+      setHasScrolledToUnread(true);
+
+      // Mark as read AFTER scrolling
+      markAsRead();
+    }
+  }, [messages, hasScrolledToUnread, conversationInfo]);
+
+  // Reset scroll state when conversation changes
+  useEffect(() => {
+    setHasScrolledToUnread(false);
+  }, [conversationId]);
+
+  const markAsRead = async () => {
+    try {
+      await apiClient.conversations.markConversationAsRead(gameId, conversationId);
+      console.log('[MessageThread] Marked conversation as read:', conversationId);
+      // Notify parent to refresh conversation list
+      if (onMarkedAsRead) {
+        onMarkedAsRead();
+      }
+    } catch (err) {
+      console.error('Failed to mark conversation as read:', err);
+      // Don't show error to user - this is a background operation
+    }
+  };
 
   const scrollToBottom = () => {
+    console.log('[MessageThread] scrollToBottom called, ref exists:', !!messagesEndRef.current);
     if (typeof messagesEndRef.current?.scrollIntoView === 'function') {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      console.log('[MessageThread] Scrolled to bottom');
+    } else {
+      console.warn('[MessageThread] messagesEndRef not available for scrolling');
     }
+  };
+
+  const scrollToFirstUnread = () => {
+    if (typeof firstUnreadRef.current?.scrollIntoView === 'function') {
+      firstUnreadRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      console.log('[MessageThread] Scrolled to first unread message');
+    } else {
+      // Fallback to bottom if ref not set
+      scrollToBottom();
+    }
+  };
+
+  // Find the first unread message based on last_read_at timestamp
+  const getFirstUnreadIndex = () => {
+    if (!conversationInfo || !conversationInfo.last_read_at) {
+      console.log('[MessageThread] No conversation info or last_read_at:', { conversationInfo });
+      return -1; // No read tracking info
+    }
+
+    const lastReadTime = new Date(conversationInfo.last_read_at).getTime();
+    const firstUnreadIndex = messages.findIndex(msg => {
+      const msgTime = new Date(msg.created_at).getTime();
+      return msgTime > lastReadTime;
+    });
+
+    console.log('[MessageThread] getFirstUnreadIndex:', {
+      lastReadTime: new Date(lastReadTime).toISOString(),
+      firstUnreadIndex,
+      messagesCount: messages.length,
+      firstMessage: messages[0]?.created_at,
+      lastMessage: messages[messages.length - 1]?.created_at,
+    });
+
+    return firstUnreadIndex;
   };
 
   const loadConversation = async () => {
@@ -84,8 +168,7 @@ export function MessageThread({ gameId, conversationId, characters }: MessageThr
       const response = await apiClient.conversations.getConversationMessages(gameId, conversationId);
       setMessages(response.data.messages || []);
 
-      // Mark conversation as read
-      await apiClient.conversations.markConversationAsRead(gameId, conversationId);
+      // DON'T mark as read here - we'll do it after scrolling in the effect
     } catch (err) {
       console.error('Failed to load messages:', err);
       setError('Failed to load messages');
@@ -107,6 +190,9 @@ export function MessageThread({ gameId, conversationId, characters }: MessageThr
 
       setNewMessage('');
       await loadMessages();
+
+      // Scroll to bottom after sending (use setTimeout to ensure messages are rendered)
+      setTimeout(() => scrollToBottom(), 100);
     } catch (err) {
       console.error('Failed to send message:', err);
       alert('Failed to send message. Please try again.');
@@ -167,26 +253,43 @@ export function MessageThread({ gameId, conversationId, characters }: MessageThr
             </div>
           </div>
         ) : (
-          messages.map((message) => (
-            <div key={message.id} className="flex flex-col">
-              <div className="flex items-baseline gap-2 mb-1">
-                <span className="font-semibold text-gray-900">
-                  {message.sender_character_name || message.sender_username}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {formatTimestamp(message.created_at)}
-                </span>
+          messages.map((message, index) => {
+            const isFirstUnread = index === getFirstUnreadIndex();
+
+            return (
+              <div key={message.id}>
+                {/* "New messages" divider */}
+                {isFirstUnread && (
+                  <div ref={firstUnreadRef} className="flex items-center gap-3 my-6">
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-300 to-blue-300"></div>
+                    <span className="text-sm font-semibold text-blue-600 px-3 py-1 bg-blue-50 rounded-full border border-blue-200">
+                      New messages
+                    </span>
+                    <div className="flex-1 h-px bg-gradient-to-l from-transparent via-blue-300 to-blue-300"></div>
+                  </div>
+                )}
+
+                <div className="flex flex-col">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="font-semibold text-gray-900">
+                      {message.sender_character_name || message.sender_username}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {formatTimestamp(message.created_at)}
+                    </span>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3 prose prose-sm max-w-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeSanitize]}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                </div>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 prose prose-sm max-w-none">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeSanitize]}
-                >
-                  {message.content}
-                </ReactMarkdown>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

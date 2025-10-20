@@ -524,9 +524,11 @@ func (q *Queries) GetThreadPosts(ctx context.Context, threadID int32) ([]GetThre
 const getUnreadMessageCount = `-- name: GetUnreadMessageCount :one
 SELECT COUNT(*)
 FROM private_messages pm
-JOIN conversation_participants cp ON pm.conversation_id = cp.conversation_id
-WHERE cp.user_id = $1 AND cp.conversation_id = $2
-  AND pm.created_at > cp.last_read_at
+WHERE pm.conversation_id = $2
+  AND pm.created_at > COALESCE(
+    (SELECT last_read_at FROM conversation_reads WHERE user_id = $1 AND conversation_id = $2),
+    '1970-01-01'::timestamptz
+  )
   AND pm.sender_user_id != $1
 `
 
@@ -563,9 +565,19 @@ SELECT c.id, c.game_id, c.conversation_type, c.title, c.created_by_user_id, c.cr
                   OR chars.user_id IS NULL
               )),
            ''
-       )::text as participant_names
+       )::text as participant_names,
+       COALESCE(
+           (SELECT COUNT(*)
+            FROM private_messages pm
+            WHERE pm.conversation_id = c.id
+              AND pm.created_at > COALESCE(cr.last_read_at, '1970-01-01'::timestamptz)),
+           0
+       )::bigint as unread_count,
+       cr.last_read_message_id,
+       cr.last_read_at
 FROM conversations c
 JOIN conversation_participants cp ON c.id = cp.conversation_id
+LEFT JOIN conversation_reads cr ON c.id = cr.conversation_id AND cr.user_id = $1
 LEFT JOIN LATERAL (
     SELECT content as last_message, created_at as last_message_at
     FROM private_messages
@@ -574,7 +586,13 @@ LEFT JOIN LATERAL (
     LIMIT 1
 ) lm ON true
 WHERE cp.user_id = $1 AND c.game_id = $2
-ORDER BY c.updated_at DESC
+ORDER BY COALESCE(
+    (SELECT COUNT(*)
+     FROM private_messages pm
+     WHERE pm.conversation_id = c.id
+       AND pm.created_at > COALESCE(cr.last_read_at, '1970-01-01'::timestamptz)),
+    0
+)::bigint DESC NULLS LAST, c.updated_at DESC
 `
 
 type GetUserConversationsParams struct {
@@ -583,17 +601,20 @@ type GetUserConversationsParams struct {
 }
 
 type GetUserConversationsRow struct {
-	ID               int32              `json:"id"`
-	GameID           int32              `json:"game_id"`
-	ConversationType string             `json:"conversation_type"`
-	Title            pgtype.Text        `json:"title"`
-	CreatedByUserID  int32              `json:"created_by_user_id"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
-	ParticipantCount int64              `json:"participant_count"`
-	LastMessage      string             `json:"last_message"`
-	LastMessageAt    pgtype.Timestamptz `json:"last_message_at"`
-	ParticipantNames string             `json:"participant_names"`
+	ID                int32              `json:"id"`
+	GameID            int32              `json:"game_id"`
+	ConversationType  string             `json:"conversation_type"`
+	Title             pgtype.Text        `json:"title"`
+	CreatedByUserID   int32              `json:"created_by_user_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ParticipantCount  int64              `json:"participant_count"`
+	LastMessage       string             `json:"last_message"`
+	LastMessageAt     pgtype.Timestamptz `json:"last_message_at"`
+	ParticipantNames  string             `json:"participant_names"`
+	UnreadCount       int64              `json:"unread_count"`
+	LastReadMessageID pgtype.Int4        `json:"last_read_message_id"`
+	LastReadAt        pgtype.Timestamptz `json:"last_read_at"`
 }
 
 func (q *Queries) GetUserConversations(ctx context.Context, arg GetUserConversationsParams) ([]GetUserConversationsRow, error) {
@@ -617,6 +638,9 @@ func (q *Queries) GetUserConversations(ctx context.Context, arg GetUserConversat
 			&i.LastMessage,
 			&i.LastMessageAt,
 			&i.ParticipantNames,
+			&i.UnreadCount,
+			&i.LastReadMessageID,
+			&i.LastReadAt,
 		); err != nil {
 			return nil, err
 		}

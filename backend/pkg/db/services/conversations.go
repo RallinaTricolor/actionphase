@@ -210,6 +210,18 @@ func (s *ConversationService) SendMessage(ctx context.Context, req SendMessageRe
 		return nil, fmt.Errorf("failed to update conversation activity: %w", err)
 	}
 
+	// Mark conversation as read for the sender (they just sent a message, so they've "read" it)
+	if _, err := qtx.UpsertConversationRead(ctx, models.UpsertConversationReadParams{
+		UserID:         req.SenderUserID,
+		ConversationID: req.ConversationID,
+		LastReadMessageID: pgtype.Int4{
+			Int32: msg.ID,
+			Valid: true,
+		},
+	}); err != nil {
+		return nil, fmt.Errorf("failed to mark conversation as read for sender: %w", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -256,10 +268,23 @@ func (s *ConversationService) MarkConversationAsRead(ctx context.Context, conver
 		return fmt.Errorf("user is not a participant in this conversation")
 	}
 
-	if err := s.Queries.UpdateLastReadTime(ctx, models.UpdateLastReadTimeParams{
-		ConversationID: conversationID,
-		UserID:         userID,
-	}); err != nil {
+	// Get all messages in the conversation (ordered by created_at)
+	messages, err := s.Queries.GetConversationMessages(ctx, conversationID)
+	if err != nil {
+		return fmt.Errorf("failed to get messages: %w", err)
+	}
+
+	// If no messages, nothing to mark as read
+	if len(messages) == 0 {
+		return nil
+	}
+
+	// Get the latest message (last in the slice since they're ordered by created_at ASC)
+	lastMessageID := messages[len(messages)-1].ID
+
+	// Mark conversation as read up to the latest message
+	_, err = s.MarkConversationRead(ctx, userID, conversationID, lastMessageID)
+	if err != nil {
 		return fmt.Errorf("failed to mark conversation as read: %w", err)
 	}
 
@@ -361,4 +386,69 @@ func (s *ConversationService) notifyPrivateMessage(ctx context.Context, conversa
 			slog.Error("Failed to send private message notification", "error", err, "recipient_user_id", participant.UserID)
 		}
 	}
+}
+
+// MarkConversationRead marks messages in a conversation as read up to a specific message
+func (s *ConversationService) MarkConversationRead(ctx context.Context, userID int32, conversationID int32, lastReadMessageID int32) (*models.ConversationRead, error) {
+	read, err := s.Queries.UpsertConversationRead(ctx, models.UpsertConversationReadParams{
+		UserID:            userID,
+		ConversationID:    conversationID,
+		LastReadMessageID: pgtype.Int4{Int32: lastReadMessageID, Valid: true},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to mark conversation as read: %w", err)
+	}
+
+	return &read, nil
+}
+
+// GetConversationUnreadCount returns the number of unread messages in a conversation for a user
+func (s *ConversationService) GetConversationUnreadCount(ctx context.Context, userID int32, conversationID int32) (int64, error) {
+	count, err := s.Queries.GetConversationUnreadCount(ctx, models.GetConversationUnreadCountParams{
+		ConversationID: conversationID,
+		UserID:         userID,
+	})
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to get unread count: %w", err)
+	}
+
+	return count, nil
+}
+
+// GetFirstUnreadMessageID returns the ID of the first unread message in a conversation for a user
+func (s *ConversationService) GetFirstUnreadMessageID(ctx context.Context, userID int32, conversationID int32) (*int32, error) {
+	messageID, err := s.Queries.GetFirstUnreadMessageID(ctx, models.GetFirstUnreadMessageIDParams{
+		ConversationID: conversationID,
+		UserID:         userID,
+	})
+
+	if err != nil {
+		// No unread messages is not an error
+		if err.Error() == "no rows in result set" {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get first unread message: %w", err)
+	}
+
+	return &messageID, nil
+}
+
+// GetUserConversationRead returns the read tracking info for a user and conversation
+func (s *ConversationService) GetUserConversationRead(ctx context.Context, userID int32, conversationID int32) (*models.ConversationRead, error) {
+	read, err := s.Queries.GetUserConversationRead(ctx, models.GetUserConversationReadParams{
+		UserID:         userID,
+		ConversationID: conversationID,
+	})
+
+	if err != nil {
+		// No read marker is not an error - user hasn't read anything yet
+		if err.Error() == "no rows in result set" {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get conversation read info: %w", err)
+	}
+
+	return &read, nil
 }

@@ -103,9 +103,19 @@ SELECT c.*,
                   OR chars.user_id IS NULL
               )),
            ''
-       )::text as participant_names
+       )::text as participant_names,
+       COALESCE(
+           (SELECT COUNT(*)
+            FROM private_messages pm
+            WHERE pm.conversation_id = c.id
+              AND pm.created_at > COALESCE(cr.last_read_at, '1970-01-01'::timestamptz)),
+           0
+       )::bigint as unread_count,
+       cr.last_read_message_id,
+       cr.last_read_at
 FROM conversations c
 JOIN conversation_participants cp ON c.id = cp.conversation_id
+LEFT JOIN conversation_reads cr ON c.id = cr.conversation_id AND cr.user_id = $1
 LEFT JOIN LATERAL (
     SELECT content as last_message, created_at as last_message_at
     FROM private_messages
@@ -114,7 +124,13 @@ LEFT JOIN LATERAL (
     LIMIT 1
 ) lm ON true
 WHERE cp.user_id = $1 AND c.game_id = $2
-ORDER BY c.updated_at DESC;
+ORDER BY COALESCE(
+    (SELECT COUNT(*)
+     FROM private_messages pm
+     WHERE pm.conversation_id = c.id
+       AND pm.created_at > COALESCE(cr.last_read_at, '1970-01-01'::timestamptz)),
+    0
+)::bigint DESC NULLS LAST, c.updated_at DESC;
 
 -- name: AddConversationParticipant :one
 INSERT INTO conversation_participants (conversation_id, user_id, character_id)
@@ -162,9 +178,11 @@ WHERE conversation_id = $1 AND user_id = $2;
 -- name: GetUnreadMessageCount :one
 SELECT COUNT(*)
 FROM private_messages pm
-JOIN conversation_participants cp ON pm.conversation_id = cp.conversation_id
-WHERE cp.user_id = $1 AND cp.conversation_id = $2
-  AND pm.created_at > cp.last_read_at
+WHERE pm.conversation_id = $2
+  AND pm.created_at > COALESCE(
+    (SELECT last_read_at FROM conversation_reads WHERE user_id = $1 AND conversation_id = $2),
+    '1970-01-01'::timestamptz
+  )
   AND pm.sender_user_id != $1;
 
 -- name: UpdateConversationActivity :exec

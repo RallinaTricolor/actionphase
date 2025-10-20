@@ -162,6 +162,16 @@ type ConversationParticipant struct {
 	LastReadAt     pgtype.Timestamptz `json:"last_read_at"`
 }
 
+type ConversationRead struct {
+	ID                int32              `json:"id"`
+	UserID            int32              `json:"user_id"`
+	ConversationID    int32              `json:"conversation_id"`
+	LastReadMessageID pgtype.Int4        `json:"last_read_message_id"`
+	LastReadAt        pgtype.Timestamptz `json:"last_read_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Game struct {
 	ID                  int32              `json:"id"`
 	Title               string             `json:"title"`

@@ -191,6 +191,17 @@ CREATE TABLE private_messages (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE TABLE conversation_reads (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    last_read_message_id INTEGER REFERENCES private_messages(id) ON DELETE SET NULL,
+    last_read_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, conversation_id)
+);
+
 -- Threads (for common room discussions)
 CREATE TABLE threads (
     id SERIAL PRIMARY KEY,
@@ -248,6 +259,8 @@ CREATE INDEX idx_conversations_game_id ON conversations(game_id);
 CREATE INDEX idx_conversation_participants_conversation_id ON conversation_participants(conversation_id);
 CREATE INDEX idx_conversation_participants_user_id ON conversation_participants(user_id);
 CREATE INDEX idx_private_messages_conversation_id ON private_messages(conversation_id);
+CREATE INDEX idx_conversation_reads_user_conversation ON conversation_reads(user_id, conversation_id);
+CREATE INDEX idx_conversation_reads_conversation ON conversation_reads(conversation_id);
 
 -- Messages System (Common Room and Private Messages)
 CREATE TYPE message_visibility AS ENUM ('game', 'private');
