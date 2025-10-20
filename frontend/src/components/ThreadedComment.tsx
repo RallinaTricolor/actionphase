@@ -135,14 +135,25 @@ export function ThreadedComment({
   ];
   const borderColor = depth > 0 ? borderColors[depth % borderColors.length] : '';
 
+  // Alternating background colors for better visual separation between comment levels
+  const backgroundColors = [
+    '', // depth 0 - no background (uses parent's gray-50)
+    'bg-white', // depth 1 - white
+    'bg-gray-50', // depth 2 - light gray
+    'bg-white', // depth 3 - white
+    'bg-gray-50', // depth 4 - light gray
+    'bg-white', // depth 5 - white
+  ];
+  const bgColor = backgroundColors[depth % backgroundColors.length];
+
   return (
     <div
       id={`comment-${comment.id}`}
       data-testid="threaded-comment"
-      className={`${depth > 0 ? 'ml-6 border-l-2 pl-3 ' + borderColor : ''}`}
+      className={`${depth > 0 ? 'ml-6 border-l-2 pl-3 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2 rounded-r-lg' : 'py-2'}`}
     >
       {/* Comment Header and Content */}
-      <div className={`py-2 ${isUnread ? 'border-2 border-yellow-400 bg-yellow-50 rounded-lg p-3 -ml-3' : ''}`}>
+      <div className={`${isUnread ? 'border-2 border-yellow-400 bg-yellow-50 rounded-lg p-3 -ml-3' : ''}`}>
         <div className="flex items-start gap-2 mb-1">
           <CharacterAvatar
             avatarUrl={comment.character_avatar_url}
