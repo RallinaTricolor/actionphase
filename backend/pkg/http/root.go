@@ -157,6 +157,12 @@ func (h *Handler) Start() {
 			r.Post("/{gameId}/posts/{postId}/comments", messageHandler.CreateComment)
 			r.Get("/{gameId}/posts/{postId}/comments", messageHandler.GetPostComments)
 
+			// Read tracking for common room
+			r.Post("/{gameId}/posts/{postId}/mark-read", messageHandler.MarkPostRead)
+			r.Get("/{gameId}/read-markers", messageHandler.GetGameReadMarkers)
+			r.Get("/{gameId}/posts-unread-info", messageHandler.GetPostsUnreadInfo)
+			r.Get("/{gameId}/unread-comment-ids", messageHandler.GetUnreadCommentIDs)
+
 			// Private messages (conversations)
 			conversationHandler := &conversations.Handler{App: h.App}
 			conversationHandler.RegisterRoutes(r)

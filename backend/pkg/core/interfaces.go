@@ -612,6 +612,33 @@ type MessageWithDetails struct {
 	ReplyCount         int64   // For comments
 }
 
+// ReadMarker tracks which comments a user has read in a common room post
+type ReadMarker struct {
+	ID                int32
+	UserID            int32
+	GameID            int32
+	PostID            int32
+	LastReadCommentID *int32    // The most recent comment read (nil if only post read)
+	LastReadAt        time.Time // When the user last viewed this thread
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+// PostUnreadInfo contains aggregated data about a post's comments
+// Used to determine if a post has unread content
+type PostUnreadInfo struct {
+	PostID          int32
+	PostCreatedAt   time.Time
+	TotalComments   int64
+	LatestCommentAt *time.Time // Nil if no comments exist
+}
+
+// PostUnreadComments contains the specific unread comment IDs for a post
+type PostUnreadComments struct {
+	PostID           int32
+	UnreadCommentIDs []int32 // IDs of comments that are unread (greater than last_read_comment_id)
+}
+
 // NotificationServiceInterface defines the contract for notification operations.
 // Handles creating, retrieving, and managing user notifications.
 //

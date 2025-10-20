@@ -14,6 +14,7 @@ interface ThreadedCommentProps {
   onCreateReply: (parentId: number, characterId: number, content: string) => Promise<void>;
   currentUserId?: number;
   depth?: number;
+  unreadCommentIDs?: number[]; // IDs of comments that are "new since last visit"
 }
 
 export function ThreadedComment({
@@ -23,7 +24,8 @@ export function ThreadedComment({
   controllableCharacters,
   onCreateReply,
   currentUserId,
-  depth = 0
+  depth = 0,
+  unreadCommentIDs = []
 }: ThreadedCommentProps) {
   const [replies, setReplies] = useState<Message[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
@@ -35,6 +37,7 @@ export function ThreadedComment({
 
   const isAuthor = currentUserId === comment.author_id;
   const hasReplies = (comment.reply_count || 0) > 0;
+  const isUnread = unreadCommentIDs.includes(comment.id);
 
   // Auto-select first character
   useEffect(() => {
@@ -113,9 +116,13 @@ export function ThreadedComment({
   const borderColor = depth > 0 ? borderColors[depth % borderColors.length] : '';
 
   return (
-    <div data-testid="threaded-comment" className={`${depth > 0 ? 'ml-6 border-l-2 pl-3 ' + borderColor : ''}`}>
+    <div
+      id={`comment-${comment.id}`}
+      data-testid="threaded-comment"
+      className={`${depth > 0 ? 'ml-6 border-l-2 pl-3 ' + borderColor : ''}`}
+    >
       {/* Comment Header and Content */}
-      <div className="py-2">
+      <div className={`py-2 ${isUnread ? 'border-2 border-yellow-400 bg-yellow-50 rounded-lg p-3 -ml-3' : ''}`}>
         <div className="flex items-start gap-2 mb-1">
           <CharacterAvatar
             avatarUrl={comment.character_avatar_url}
@@ -130,6 +137,9 @@ export function ThreadedComment({
             </span>
             {isAuthor && (
               <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">You</span>
+            )}
+            {isUnread && (
+              <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-semibold">NEW</span>
             )}
           </div>
         </div>
@@ -240,6 +250,7 @@ export function ThreadedComment({
                 onCreateReply={onCreateReply}
                 currentUserId={currentUserId}
                 depth={depth + 1}
+                unreadCommentIDs={unreadCommentIDs}
               />
             ))
           )}
