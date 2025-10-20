@@ -145,20 +145,28 @@ export function useGameTabs({
     return tabs[0].id;
   }, [tabs, gameState, currentPhaseType, isGM]);
 
-  // Process initial URL parameter only once on mount
+  // Process URL parameter changes (including from notifications)
   useEffect(() => {
     const paramTab = searchParams.get('tab');
 
-    // Only process URL param on initial mount
-    if (!hasProcessedUrlParam.current && paramTab && tabs.some(t => t.id === paramTab)) {
-      setActiveTab(paramTab);
-      setUserSelectedTab(true); // URL param counts as user selection
+    // If there's a tab parameter in the URL and it's a valid tab
+    if (paramTab && tabs.some(t => t.id === paramTab)) {
+      // Only switch if it's different from current tab
+      if (activeTab !== paramTab) {
+        setActiveTab(paramTab);
+        setUserSelectedTab(true); // URL param counts as user selection
+      }
       hasProcessedUrlParam.current = true;
     }
-  }, [searchParams, tabs]);
+  }, [searchParams, tabs, activeTab]);
 
   // Apply smart default when phase data loads (if user hasn't selected a tab)
   useEffect(() => {
+    // Don't override if we've already processed a URL param
+    if (hasProcessedUrlParam.current) {
+      return;
+    }
+
     if (!userSelectedTab && (activeTab === 'default' || activeTab !== defaultTab)) {
       // User hasn't manually selected a tab - apply smart default
       // This allows the default to update when phase data loads

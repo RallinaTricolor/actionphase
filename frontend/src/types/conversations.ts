@@ -42,6 +42,9 @@ export interface ConversationListItem {
   participant_names?: string;
   last_message?: string;
   last_message_at?: string;
+  unread_count: number;
+  last_read_message_id?: number;
+  last_read_at?: string;
 }
 
 export interface ConversationWithDetails {
@@ -62,4 +65,11 @@ export interface SendMessageRequest {
 
 export interface AddParticipantRequest {
   character_id: number;
+}
+
+// Read tracking types
+export interface ConversationReadInfo {
+  conversation_id: number;
+  unread_count: number;
+  first_unread_message_id?: number;
 }

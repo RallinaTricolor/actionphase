@@ -512,8 +512,15 @@ var CleanupPresets = map[string][]string{
 	// Game participants and applications
 	"participants": {"game_participants", "game_applications", "games", "sessions", "users"},
 
+	// Conversation cleanup (private messages)
+	"conversations": {"conversation_reads", "private_messages", "conversation_participants", "conversations", "characters", "games", "sessions", "users"},
+
 	// Complete cleanup (all tables)
 	"all": {
+		"conversation_reads",
+		"private_messages",
+		"conversation_participants",
+		"conversations",
 		"message_reactions",
 		"messages",
 		"action_results",

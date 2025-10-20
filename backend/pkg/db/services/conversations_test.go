@@ -3,8 +3,10 @@ package db
 import (
 	"context"
 	"testing"
+	"time"
 
 	"actionphase/pkg/core"
+	dbmodels "actionphase/pkg/db/models"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -815,4 +817,310 @@ func TestConversationService_EdgeCases(t *testing.T) {
 // Helper function
 func int32Ptr(v int32) *int32 {
 	return &v
+}
+
+// ============================================================================
+// CONVERSATION READ TRACKING TESTS
+// ============================================================================
+
+func TestConversationService_MarkConversationRead(t *testing.T) {
+	suite := NewTestSuite(t).
+		WithCleanup("conversations").
+		Setup()
+	defer suite.Cleanup()
+
+	ctx := context.Background()
+	service := NewConversationService(suite.Pool())
+
+	// Create test users (using factory auto-generation for unique names)
+	user1 := suite.Factory().NewUser().Create()
+	user2 := suite.Factory().NewUser().Create()
+	gm := suite.Factory().NewUser().Create()
+
+	// Create game
+	game := suite.Factory().NewGame().WithGM(gm.ID).Create()
+
+	// Create characters
+	char1 := suite.Factory().NewCharacter().InGame(game).OwnedBy(user1).WithName("Char 1").Create()
+	char2 := suite.Factory().NewCharacter().InGame(game).OwnedBy(user2).WithName("Char 2").Create()
+
+	// Create conversation
+	conv, err := service.CreateConversation(ctx, CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Read Test Conv",
+		CreatedByUserID: user1.ID,
+		ParticipantIDs:  []int32{char1.ID, char2.ID},
+	})
+	require.NoError(t, err)
+
+	// Send some messages
+	msg1, err := service.SendMessage(ctx, SendMessageRequest{
+		ConversationID:    conv.ID,
+		SenderUserID:      user1.ID,
+		SenderCharacterID: char1.ID,
+		Content:           "First message",
+	})
+	require.NoError(t, err)
+
+	time.Sleep(10 * time.Millisecond)
+
+	msg2, err := service.SendMessage(ctx, SendMessageRequest{
+		ConversationID:    conv.ID,
+		SenderUserID:      user2.ID,
+		SenderCharacterID: char2.ID,
+		Content:           "Second message",
+	})
+	require.NoError(t, err)
+
+	t.Run("mark specific message as read", func(t *testing.T) {
+		read, err := service.MarkConversationRead(ctx, user2.ID, conv.ID, msg1.ID)
+		require.NoError(t, err)
+		require.NotNil(t, read)
+
+		assert.Equal(t, user2.ID, read.UserID)
+		assert.Equal(t, conv.ID, read.ConversationID)
+		assert.Equal(t, msg1.ID, read.LastReadMessageID.Int32)
+		assert.True(t, read.LastReadMessageID.Valid)
+	})
+
+	t.Run("update read marker to later message", func(t *testing.T) {
+		read, err := service.MarkConversationRead(ctx, user2.ID, conv.ID, msg2.ID)
+		require.NoError(t, err)
+		assert.Equal(t, msg2.ID, read.LastReadMessageID.Int32)
+
+		// Verify no duplicate records
+		readInfo, err := service.GetUserConversationRead(ctx, user2.ID, conv.ID)
+		require.NoError(t, err)
+		require.NotNil(t, readInfo)
+		assert.Equal(t, msg2.ID, readInfo.LastReadMessageID.Int32)
+	})
+
+	t.Run("mark all messages as read", func(t *testing.T) {
+		err := service.MarkConversationAsRead(ctx, conv.ID, user1.ID)
+		require.NoError(t, err)
+
+		read, err := service.GetUserConversationRead(ctx, user1.ID, conv.ID)
+		require.NoError(t, err)
+		require.NotNil(t, read)
+		assert.Equal(t, msg2.ID, read.LastReadMessageID.Int32)
+	})
+}
+
+func TestConversationService_GetConversationUnreadCount(t *testing.T) {
+	suite := NewTestSuite(t).
+		WithCleanup("conversations").
+		Setup()
+	defer suite.Cleanup()
+
+	ctx := context.Background()
+	service := NewConversationService(suite.Pool())
+
+	user1 := suite.Factory().NewUser().Create()
+	user2 := suite.Factory().NewUser().Create()
+	gm := suite.Factory().NewUser().Create()
+	game := suite.Factory().NewGame().WithGM(gm.ID).Create()
+	char1 := suite.Factory().NewCharacter().InGame(game).OwnedBy(user1).WithName("C1").Create()
+	char2 := suite.Factory().NewCharacter().InGame(game).OwnedBy(user2).WithName("C2").Create()
+
+	conv, err := service.CreateConversation(ctx, CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Unread Count Test",
+		CreatedByUserID: user1.ID,
+		ParticipantIDs:  []int32{char1.ID, char2.ID},
+	})
+	require.NoError(t, err)
+
+	t.Run("no unread when no messages", func(t *testing.T) {
+		count, err := service.GetConversationUnreadCount(ctx, user2.ID, conv.ID)
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), count)
+	})
+
+	// Send 3 messages
+	for i := 1; i <= 3; i++ {
+		_, err := service.SendMessage(ctx, SendMessageRequest{
+			ConversationID:    conv.ID,
+			SenderUserID:      user1.ID,
+			SenderCharacterID: char1.ID,
+			Content:           "Msg",
+		})
+		require.NoError(t, err)
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	t.Run("counts all unread", func(t *testing.T) {
+		count, err := service.GetConversationUnreadCount(ctx, user2.ID, conv.ID)
+		require.NoError(t, err)
+		assert.Equal(t, int64(3), count)
+	})
+
+	t.Run("unread count after marking as read", func(t *testing.T) {
+		err := service.MarkConversationAsRead(ctx, conv.ID, user2.ID)
+		require.NoError(t, err)
+
+		count, err := service.GetConversationUnreadCount(ctx, user2.ID, conv.ID)
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), count)
+	})
+}
+
+func TestConversationService_GetFirstUnreadMessageID(t *testing.T) {
+	suite := NewTestSuite(t).
+		WithCleanup("conversations").
+		Setup()
+	defer suite.Cleanup()
+
+	ctx := context.Background()
+	service := NewConversationService(suite.Pool())
+
+	user1 := suite.Factory().NewUser().Create()
+	user2 := suite.Factory().NewUser().Create()
+	gm := suite.Factory().NewUser().Create()
+	game := suite.Factory().NewGame().WithGM(gm.ID).Create()
+	char1 := suite.Factory().NewCharacter().InGame(game).OwnedBy(user1).Create()
+	char2 := suite.Factory().NewCharacter().InGame(game).OwnedBy(user2).Create()
+
+	conv, err := service.CreateConversation(ctx, CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "First Unread",
+		CreatedByUserID: user1.ID,
+		ParticipantIDs:  []int32{char1.ID, char2.ID},
+	})
+	require.NoError(t, err)
+
+	t.Run("nil when no messages", func(t *testing.T) {
+		firstUnread, err := service.GetFirstUnreadMessageID(ctx, user2.ID, conv.ID)
+		require.NoError(t, err)
+		assert.Nil(t, firstUnread)
+	})
+
+	var msg1, msg2 *dbmodels.PrivateMessage
+	msg1, _ = service.SendMessage(ctx, SendMessageRequest{
+		ConversationID:    conv.ID,
+		SenderUserID:      user1.ID,
+		SenderCharacterID: char1.ID,
+		Content:           "Msg1",
+	})
+	time.Sleep(10 * time.Millisecond)
+
+	msg2, _ = service.SendMessage(ctx, SendMessageRequest{
+		ConversationID:    conv.ID,
+		SenderUserID:      user1.ID,
+		SenderCharacterID: char1.ID,
+		Content:           "Msg2",
+	})
+	time.Sleep(10 * time.Millisecond)
+
+	service.SendMessage(ctx, SendMessageRequest{
+		ConversationID:    conv.ID,
+		SenderUserID:      user1.ID,
+		SenderCharacterID: char1.ID,
+		Content:           "Msg3",
+	})
+
+	t.Run("returns first when all unread", func(t *testing.T) {
+		firstUnread, err := service.GetFirstUnreadMessageID(ctx, user2.ID, conv.ID)
+		require.NoError(t, err)
+		require.NotNil(t, firstUnread)
+		assert.Equal(t, msg1.ID, *firstUnread)
+	})
+
+	t.Run("returns correct first after partial read", func(t *testing.T) {
+		_, err := service.MarkConversationRead(ctx, user2.ID, conv.ID, msg1.ID)
+		require.NoError(t, err)
+
+		firstUnread, err := service.GetFirstUnreadMessageID(ctx, user2.ID, conv.ID)
+		require.NoError(t, err)
+		require.NotNil(t, firstUnread)
+		assert.Equal(t, msg2.ID, *firstUnread)
+	})
+
+	t.Run("nil when all read", func(t *testing.T) {
+		err := service.MarkConversationAsRead(ctx, conv.ID, user2.ID)
+		require.NoError(t, err)
+
+		firstUnread, err := service.GetFirstUnreadMessageID(ctx, user2.ID, conv.ID)
+		require.NoError(t, err)
+		assert.Nil(t, firstUnread)
+	})
+}
+
+func TestConversationService_GetUserConversations_UnreadCounts(t *testing.T) {
+	suite := NewTestSuite(t).
+		WithCleanup("conversations").
+		Setup()
+	defer suite.Cleanup()
+
+	ctx := context.Background()
+	service := NewConversationService(suite.Pool())
+
+	user1 := suite.Factory().NewUser().Create()
+	user2 := suite.Factory().NewUser().Create()
+	gm := suite.Factory().NewUser().Create()
+	game := suite.Factory().NewGame().WithGM(gm.ID).Create()
+	char1 := suite.Factory().NewCharacter().InGame(game).OwnedBy(user1).Create()
+	char2 := suite.Factory().NewCharacter().InGame(game).OwnedBy(user2).Create()
+
+	conv1, err := service.CreateConversation(ctx, CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Conv1",
+		CreatedByUserID: user1.ID,
+		ParticipantIDs:  []int32{char1.ID, char2.ID},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, conv1)
+
+	conv2, err := service.CreateConversation(ctx, CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Conv2",
+		CreatedByUserID: user1.ID,
+		ParticipantIDs:  []int32{char1.ID, char2.ID},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, conv2)
+
+	// 5 messages in conv1
+	for i := 0; i < 5; i++ {
+		service.SendMessage(ctx, SendMessageRequest{
+			ConversationID:    conv1.ID,
+			SenderUserID:      user1.ID,
+			SenderCharacterID: char1.ID,
+			Content:           "M",
+		})
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	// 2 messages in conv2
+	for i := 0; i < 2; i++ {
+		service.SendMessage(ctx, SendMessageRequest{
+			ConversationID:    conv2.ID,
+			SenderUserID:      user1.ID,
+			SenderCharacterID: char1.ID,
+			Content:           "M",
+		})
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	t.Run("sorted by unread count", func(t *testing.T) {
+		conversations, err := service.GetUserConversations(ctx, game.ID, user2.ID)
+		require.NoError(t, err)
+		require.Len(t, conversations, 2)
+
+		assert.Equal(t, conv1.ID, conversations[0].ID)
+		assert.Equal(t, int64(5), conversations[0].UnreadCount)
+		assert.Equal(t, conv2.ID, conversations[1].ID)
+		assert.Equal(t, int64(2), conversations[1].UnreadCount)
+	})
+
+	t.Run("counts update after read", func(t *testing.T) {
+		service.MarkConversationAsRead(ctx, conv1.ID, user2.ID)
+
+		conversations, err := service.GetUserConversations(ctx, game.ID, user2.ID)
+		require.NoError(t, err)
+
+		assert.Equal(t, conv2.ID, conversations[0].ID)
+		assert.Equal(t, int64(2), conversations[0].UnreadCount)
+		assert.Equal(t, conv1.ID, conversations[1].ID)
+		assert.Equal(t, int64(0), conversations[1].UnreadCount)
+	})
 }
