@@ -51,11 +51,7 @@ function AppRoutes() {
           />
           <Route
             path="/games/recruiting"
-            element={
-              <ProtectedRoute>
-                <GamesPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/games?states=recruitment" replace />}
           />
           <Route
             path="/games/:gameId"

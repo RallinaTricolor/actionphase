@@ -1,0 +1,394 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { EnhancedGameCard } from './EnhancedGameCard';
+import type { EnrichedGameListItem } from '../types/games';
+
+describe('EnhancedGameCard', () => {
+  const mockGame: EnrichedGameListItem = {
+    id: 1,
+    title: 'Test Game',
+    description: 'A test game description',
+    gm_user_id: 99,
+    gm_username: 'test_gm',
+    state: 'recruitment',
+    genre: 'Fantasy',
+    current_players: 3,
+    max_players: 6,
+    deadline_urgency: 'normal',
+    has_recent_activity: false,
+    user_relationship: 'none',
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
+    is_public: true,
+    is_anonymous: false,
+  };
+
+  describe('Basic Rendering', () => {
+    it('should render game title and description', () => {
+      render(<EnhancedGameCard game={mockGame} />);
+
+      expect(screen.getByText('Test Game')).toBeInTheDocument();
+      expect(screen.getByText('A test game description')).toBeInTheDocument();
+    });
+
+    it('should render GM username', () => {
+      render(<EnhancedGameCard game={mockGame} />);
+
+      expect(screen.getByText(/test_gm/)).toBeInTheDocument();
+    });
+
+    it('should render player count', () => {
+      render(<EnhancedGameCard game={mockGame} />);
+
+      expect(screen.getByText(/3 \/ 6/)).toBeInTheDocument();
+    });
+
+    it('should render state badge', () => {
+      render(<EnhancedGameCard game={mockGame} />);
+
+      expect(screen.getByText('Recruiting Players')).toBeInTheDocument();
+    });
+
+    it('should render genre badge when genre exists', () => {
+      render(<EnhancedGameCard game={mockGame} />);
+
+      expect(screen.getByText('Fantasy')).toBeInTheDocument();
+    });
+
+    it('should not render genre badge when genre is null', () => {
+      const gameWithoutGenre = { ...mockGame, genre: null };
+      render(<EnhancedGameCard game={gameWithoutGenre} />);
+
+      // Should still render title but no genre badge
+      expect(screen.getByText('Test Game')).toBeInTheDocument();
+      expect(screen.queryByText('Fantasy')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('User Relationship Badges', () => {
+    it('should show "You are GM" badge for GM', () => {
+      const gmGame = { ...mockGame, user_relationship: 'gm' as const };
+      render(<EnhancedGameCard game={gmGame} />);
+
+      expect(screen.getByText('You are GM')).toBeInTheDocument();
+    });
+
+    it('should show "You are playing" badge for participant', () => {
+      const participantGame = { ...mockGame, user_relationship: 'participant' as const };
+      render(<EnhancedGameCard game={participantGame} />);
+
+      expect(screen.getByText('You are playing')).toBeInTheDocument();
+    });
+
+    it('should show "Application pending" badge for applied', () => {
+      const appliedGame = { ...mockGame, user_relationship: 'applied' as const };
+      render(<EnhancedGameCard game={appliedGame} />);
+
+      expect(screen.getByText('Application pending')).toBeInTheDocument();
+    });
+
+    it('should not show badge for none relationship', () => {
+      render(<EnhancedGameCard game={mockGame} />);
+
+      expect(screen.queryByText('You are GM')).not.toBeInTheDocument();
+      expect(screen.queryByText('You are playing')).not.toBeInTheDocument();
+      expect(screen.queryByText('Application pending')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Urgency Badges', () => {
+    it('should show critical urgency badge', () => {
+      const urgentGame = {
+        ...mockGame,
+        deadline_urgency: 'critical' as const,
+        recruitment_deadline: '2025-10-20T23:59:59Z',
+      };
+      render(<EnhancedGameCard game={urgentGame} />);
+
+      expect(screen.getByText(/⚠️ Urgent/)).toBeInTheDocument();
+    });
+
+    it('should show warning urgency badge', () => {
+      const warningGame = {
+        ...mockGame,
+        deadline_urgency: 'warning' as const,
+        recruitment_deadline: '2025-10-22T23:59:59Z',
+      };
+      render(<EnhancedGameCard game={warningGame} />);
+
+      expect(screen.getByText(/⏰ Soon/)).toBeInTheDocument();
+    });
+
+    it('should not show urgency badge for normal urgency', () => {
+      const normalGame = {
+        ...mockGame,
+        deadline_urgency: 'normal' as const,
+        recruitment_deadline: '2025-11-01T23:59:59Z',
+      };
+      render(<EnhancedGameCard game={normalGame} />);
+
+      expect(screen.queryByText(/⚠️ Urgent/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/⏰ Soon/)).not.toBeInTheDocument();
+    });
+
+    it('should not show urgency badge when no deadline', () => {
+      render(<EnhancedGameCard game={mockGame} />);
+
+      expect(screen.queryByText(/⚠️ Urgent/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/⏰ Soon/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Recent Activity Indicator', () => {
+    it('should show recent activity badge when has_recent_activity is true', () => {
+      const activeGame = { ...mockGame, has_recent_activity: true };
+      render(<EnhancedGameCard game={activeGame} />);
+
+      expect(screen.getByText('New Activity')).toBeInTheDocument();
+    });
+
+    it('should not show recent activity badge when has_recent_activity is false', () => {
+      render(<EnhancedGameCard game={mockGame} />);
+
+      expect(screen.queryByText('New Activity')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Visual Styling', () => {
+    it('should have blue border for participant games', () => {
+      const participantGame = { ...mockGame, user_relationship: 'participant' as const };
+      const { container } = render(<EnhancedGameCard game={participantGame} />);
+
+      const card = container.firstChild as HTMLElement;
+      expect(card.className).toContain('border-blue-400');
+      expect(card.className).toContain('bg-blue-50/30');
+    });
+
+    it('should have yellow border for applied games', () => {
+      const appliedGame = { ...mockGame, user_relationship: 'applied' as const };
+      const { container } = render(<EnhancedGameCard game={appliedGame} />);
+
+      const card = container.firstChild as HTMLElement;
+      expect(card.className).toContain('border-yellow-400');
+      expect(card.className).toContain('bg-yellow-50/30');
+    });
+
+    it('should have gray border for non-user games', () => {
+      const { container } = render(<EnhancedGameCard game={mockGame} />);
+
+      const card = container.firstChild as HTMLElement;
+      expect(card.className).toContain('border-gray-200');
+    });
+
+    it('should be clickable when onClick is provided', () => {
+      const { container } = render(<EnhancedGameCard game={mockGame} onClick={vi.fn()} />);
+
+      const card = container.firstChild as HTMLElement;
+      expect(card.className).toContain('cursor-pointer');
+    });
+  });
+
+  describe('Open Spots Indicator', () => {
+    it('should show "✓ Open" for recruiting games with available spots', () => {
+      render(<EnhancedGameCard game={mockGame} />);
+
+      expect(screen.getByText('✓ Open')).toBeInTheDocument();
+    });
+
+    it('should not show "✓ Open" for full games', () => {
+      const fullGame = { ...mockGame, current_players: 6, max_players: 6 };
+      render(<EnhancedGameCard game={fullGame} />);
+
+      expect(screen.queryByText('✓ Open')).not.toBeInTheDocument();
+    });
+
+    it('should not show "✓ Open" for non-recruiting games', () => {
+      const inProgressGame = { ...mockGame, state: 'in_progress' as const };
+      render(<EnhancedGameCard game={inProgressGame} />);
+
+      expect(screen.queryByText('✓ Open')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Deadline Display', () => {
+    it('should show recruitment deadline for recruiting games', () => {
+      const gameWithDeadline = {
+        ...mockGame,
+        recruitment_deadline: '2025-10-25T23:59:59Z',
+      };
+      render(<EnhancedGameCard game={gameWithDeadline} />);
+
+      expect(screen.getByText('Application Deadline:')).toBeInTheDocument();
+    });
+
+    it('should show phase deadline for in-progress games', () => {
+      const gameWithPhaseDeadline = {
+        ...mockGame,
+        state: 'in_progress' as const,
+        current_phase_type: 'action' as const,
+        current_phase_deadline: '2025-10-25T23:59:59Z',
+      };
+      render(<EnhancedGameCard game={gameWithPhaseDeadline} />);
+
+      expect(screen.getByText('Phase Deadline:')).toBeInTheDocument();
+    });
+
+    it('should not show deadline when none exists', () => {
+      render(<EnhancedGameCard game={mockGame} />);
+
+      expect(screen.queryByText(/Deadline:/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Apply Button', () => {
+    it('should show Apply button when showApplyButton is true', () => {
+      render(
+        <EnhancedGameCard
+          game={mockGame}
+          onApplyClick={vi.fn()}
+          showApplyButton={true}
+        />
+      );
+
+      expect(screen.getByText('Apply to Join')).toBeInTheDocument();
+    });
+
+    it('should not show Apply button when showApplyButton is false', () => {
+      render(
+        <EnhancedGameCard
+          game={mockGame}
+          onApplyClick={vi.fn()}
+          showApplyButton={false}
+        />
+      );
+
+      expect(screen.queryByText('Apply to Join')).not.toBeInTheDocument();
+    });
+
+    it('should not show Apply button for user\'s own game', () => {
+      const userGame = { ...mockGame, user_relationship: 'participant' as const };
+      render(
+        <EnhancedGameCard
+          game={userGame}
+          onApplyClick={vi.fn()}
+          showApplyButton={true}
+        />
+      );
+
+      expect(screen.queryByText('Apply to Join')).not.toBeInTheDocument();
+    });
+
+    it('should not show Apply button for applied games', () => {
+      const appliedGame = { ...mockGame, user_relationship: 'applied' as const };
+      render(
+        <EnhancedGameCard
+          game={appliedGame}
+          onApplyClick={vi.fn()}
+          showApplyButton={true}
+        />
+      );
+
+      expect(screen.queryByText('Apply to Join')).not.toBeInTheDocument();
+    });
+
+    it('should call onApplyClick when Apply button is clicked', () => {
+      const handleApply = vi.fn();
+      render(
+        <EnhancedGameCard
+          game={mockGame}
+          onApplyClick={handleApply}
+          showApplyButton={true}
+        />
+      );
+
+      fireEvent.click(screen.getByText('Apply to Join'));
+
+      expect(handleApply).toHaveBeenCalledTimes(1);
+    });
+
+    it('should show "Applying..." when isJoining is true', () => {
+      render(
+        <EnhancedGameCard
+          game={mockGame}
+          onApplyClick={vi.fn()}
+          showApplyButton={true}
+          isJoining={true}
+        />
+      );
+
+      expect(screen.getByText('Applying...')).toBeInTheDocument();
+    });
+
+    it('should disable Apply button when isJoining is true', () => {
+      render(
+        <EnhancedGameCard
+          game={mockGame}
+          onApplyClick={vi.fn()}
+          showApplyButton={true}
+          isJoining={true}
+        />
+      );
+
+      const button = screen.getByText('Applying...') as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+    });
+
+    it('should stop propagation when Apply button is clicked', () => {
+      const handleClick = vi.fn();
+      const handleApply = vi.fn();
+
+      render(
+        <EnhancedGameCard
+          game={mockGame}
+          onClick={handleClick}
+          onApplyClick={handleApply}
+          showApplyButton={true}
+        />
+      );
+
+      fireEvent.click(screen.getByText('Apply to Join'));
+
+      expect(handleApply).toHaveBeenCalledTimes(1);
+      expect(handleClick).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Click Interaction', () => {
+    it('should call onClick when card is clicked', () => {
+      const handleClick = vi.fn();
+      const { container } = render(
+        <EnhancedGameCard game={mockGame} onClick={handleClick} />
+      );
+
+      const card = container.firstChild as HTMLElement;
+      fireEvent.click(card);
+
+      expect(handleClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not be clickable when onClick is not provided', () => {
+      const { container } = render(<EnhancedGameCard game={mockGame} />);
+
+      const card = container.firstChild as HTMLElement;
+      expect(card.className).not.toContain('cursor-pointer');
+    });
+  });
+
+  describe('Start Date Display', () => {
+    it('should show start date when present', () => {
+      const gameWithStartDate = {
+        ...mockGame,
+        start_date: '2025-11-01T00:00:00Z',
+      };
+      render(<EnhancedGameCard game={gameWithStartDate} />);
+
+      expect(screen.getByText('Starts:')).toBeInTheDocument();
+    });
+
+    it('should not show start date when not present', () => {
+      render(<EnhancedGameCard game={mockGame} />);
+
+      expect(screen.queryByText('Starts:')).not.toBeInTheDocument();
+    });
+  });
+});

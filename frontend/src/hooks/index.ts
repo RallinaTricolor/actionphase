@@ -21,5 +21,7 @@ export {
   type CharacterOwnershipResult,
 } from './useCharacterOwnership';
 
+export { useGameListing } from './useGameListing';
+
 // Legacy auth hook (deprecated - use useAuth from contexts instead)
 export { useAuth as useAuthLegacy, usePing } from './useAuth';

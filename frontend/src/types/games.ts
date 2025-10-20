@@ -125,3 +125,61 @@ export const APPLICATION_STATUS_COLORS: Record<ApplicationStatus, string> = {
   rejected: 'bg-red-100 text-red-800',
   withdrawn: 'bg-gray-100 text-gray-800'
 };
+
+// Enhanced game listing types
+
+export type UserRelationship = 'gm' | 'participant' | 'applied' | 'none';
+export type DeadlineUrgency = 'critical' | 'warning' | 'normal';
+export type PhaseType = 'action' | 'common_room';
+
+export interface EnrichedGameListItem extends Game {
+  gm_username: string;
+  current_players: number;
+  is_public: boolean;
+  user_relationship?: UserRelationship;
+  current_phase_type?: PhaseType;
+  current_phase_deadline?: string;
+  deadline_urgency: DeadlineUrgency;
+  has_recent_activity: boolean;
+}
+
+export interface GameListingMetadata {
+  total_count: number;
+  filtered_count: number;
+  available_states: GameState[];
+}
+
+export interface GameListingResponse {
+  games: EnrichedGameListItem[];
+  metadata: GameListingMetadata;
+}
+
+export type ParticipationFilter = 'my_games' | 'applied' | 'not_joined';
+export type SortBy = 'recent_activity' | 'created' | 'start_date' | 'alphabetical';
+
+export interface GameListingFilters {
+  states?: GameState[];
+  participation?: ParticipationFilter;
+  has_open_spots?: boolean;
+  sort_by?: SortBy;
+}
+
+export const DEADLINE_URGENCY_COLORS: Record<DeadlineUrgency, string> = {
+  critical: 'bg-red-100 text-red-800 border-red-300',
+  warning: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  normal: 'bg-gray-100 text-gray-800 border-gray-300'
+};
+
+export const USER_RELATIONSHIP_LABELS: Record<UserRelationship, string> = {
+  gm: 'You are GM',
+  participant: 'You are playing',
+  applied: 'Application pending',
+  none: ''
+};
+
+export const SORT_BY_LABELS: Record<SortBy, string> = {
+  recent_activity: 'Recent Activity',
+  created: 'Recently Created',
+  start_date: 'Starting Soon',
+  alphabetical: 'Alphabetical'
+};

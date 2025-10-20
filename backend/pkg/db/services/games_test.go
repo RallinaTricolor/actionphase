@@ -636,3 +636,286 @@ func TestGameService_RemoveGameParticipant(t *testing.T) {
 func timePtr(t time.Time) *time.Time {
 	return &t
 }
+
+func TestGameService_GetFilteredGames(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "game_applications", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool}
+	ctx := context.Background()
+
+	// Create test users
+	gm := testDB.CreateTestUser(t, "testgm", "gm@example.com")
+	player := fixtures.TestUser
+
+	// Create test games with different states and genres
+	fantasyGame, err := gameService.CreateGame(ctx, core.CreateGameRequest{
+		Title:       "Fantasy Adventure",
+		Description: "An epic fantasy quest",
+		GMUserID:    int32(gm.ID),
+		Genre:       "Fantasy",
+		IsPublic:    true,
+		MaxPlayers:  5,
+	})
+	core.AssertNoError(t, err, "Failed to create fantasy game")
+
+	scifiGame, err := gameService.CreateGame(ctx, core.CreateGameRequest{
+		Title:       "Space Odyssey",
+		Description: "A sci-fi adventure",
+		GMUserID:    int32(gm.ID),
+		Genre:       "Sci-Fi",
+		IsPublic:    true,
+		MaxPlayers:  4,
+	})
+	core.AssertNoError(t, err, "Failed to create sci-fi game")
+
+	_, err = gameService.CreateGame(ctx, core.CreateGameRequest{
+		Title:       "Haunted Mansion",
+		Description: "A horror investigation",
+		GMUserID:    int32(gm.ID),
+		Genre:       "Horror",
+		IsPublic:    true,
+		MaxPlayers:  3,
+	})
+	core.AssertNoError(t, err, "Failed to create horror game")
+
+	// Transition fantasy game to recruitment
+	_, err = gameService.UpdateGameState(ctx, fantasyGame.ID, "recruitment")
+	core.AssertNoError(t, err, "Failed to update fantasy game state")
+
+	// Transition sci-fi game to in_progress
+	_, err = gameService.UpdateGameState(ctx, scifiGame.ID, "recruitment")
+	core.AssertNoError(t, err, "Failed to update sci-fi game to recruitment")
+	_, err = gameService.UpdateGameState(ctx, scifiGame.ID, "in_progress")
+	core.AssertNoError(t, err, "Failed to update sci-fi game to in_progress")
+
+	// Add player to sci-fi game
+	_, err = gameService.AddGameParticipant(ctx, scifiGame.ID, int32(player.ID), "player")
+	core.AssertNoError(t, err, "Failed to add player to sci-fi game")
+
+	t.Run("returns all public games when no filters", func(t *testing.T) {
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+			SortBy: "recent_activity",
+		})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+		core.AssertTrue(t, len(result.Games) >= 3, "Should return at least 3 games")
+		core.AssertTrue(t, result.Metadata.TotalCount >= 3, "Total count should be at least 3")
+		core.AssertTrue(t, len(result.Metadata.AvailableGenres) >= 3, "Should have at least 3 genres")
+	})
+
+	t.Run("filters by state - recruitment only", func(t *testing.T) {
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+			States: []string{"recruitment"},
+			SortBy: "recent_activity",
+		})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+		core.AssertTrue(t, len(result.Games) >= 1, "Should return at least 1 recruitment game")
+
+		// Verify all returned games are in recruitment
+		for _, game := range result.Games {
+			core.AssertEqual(t, "recruitment", game.State, "Game should be in recruitment state")
+		}
+	})
+
+	t.Run("filters by genre - Fantasy only", func(t *testing.T) {
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+			Genres: []string{"Fantasy"},
+			SortBy: "recent_activity",
+		})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+		core.AssertTrue(t, len(result.Games) >= 1, "Should return at least 1 Fantasy game")
+
+		// Verify all returned games are Fantasy
+		for _, game := range result.Games {
+			core.AssertTrue(t, game.Genre != nil, "Genre should not be nil")
+			core.AssertEqual(t, "Fantasy", *game.Genre, "Game should be Fantasy genre")
+		}
+	})
+
+	t.Run("filters by multiple genres", func(t *testing.T) {
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+			Genres: []string{"Fantasy", "Sci-Fi"},
+			SortBy: "recent_activity",
+		})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+		core.AssertTrue(t, len(result.Games) >= 2, "Should return at least 2 games")
+
+		// Verify all returned games are either Fantasy or Sci-Fi
+		for _, game := range result.Games {
+			core.AssertTrue(t, game.Genre != nil, "Genre should not be nil")
+			isValid := *game.Genre == "Fantasy" || *game.Genre == "Sci-Fi"
+			core.AssertTrue(t, isValid, "Game should be Fantasy or Sci-Fi")
+		}
+	})
+
+	t.Run("filters by participation - my_games", func(t *testing.T) {
+		playerID := int32(player.ID)
+		participationFilter := "my_games"
+
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+			UserID:              &playerID,
+			ParticipationFilter: &participationFilter,
+			SortBy:              "recent_activity",
+		})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+		core.AssertTrue(t, len(result.Games) >= 1, "Player should have at least 1 game")
+
+		// Verify player is participant in all returned games
+		for _, game := range result.Games {
+			core.AssertTrue(t, game.UserRelationship != nil, "UserRelationship should not be nil")
+			isParticipant := *game.UserRelationship == "participant" || *game.UserRelationship == "gm"
+			core.AssertTrue(t, isParticipant, "Game should show user as participant or gm")
+		}
+	})
+
+	t.Run("filters by participation - not_joined", func(t *testing.T) {
+		playerID := int32(player.ID)
+		participationFilter := "not_joined"
+
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+			UserID:              &playerID,
+			ParticipationFilter: &participationFilter,
+			SortBy:              "recent_activity",
+		})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+
+		// Verify player is not in any returned games
+		for _, game := range result.Games {
+			if game.UserRelationship != nil {
+				core.AssertTrue(t, *game.UserRelationship == "none", "User should not be in game")
+			}
+		}
+	})
+
+	t.Run("filters by has_open_spots", func(t *testing.T) {
+		hasOpenSpots := true
+
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+			HasOpenSpots: &hasOpenSpots,
+			SortBy:       "recent_activity",
+		})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+
+		// Verify all returned games have open spots
+		for _, game := range result.Games {
+			if game.MaxPlayers != nil {
+				hasSpots := game.CurrentPlayers < *game.MaxPlayers
+				core.AssertTrue(t, hasSpots, "Game should have open spots")
+			}
+		}
+	})
+
+	t.Run("sorts by alphabetical", func(t *testing.T) {
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+			SortBy: "alphabetical",
+		})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+		core.AssertTrue(t, len(result.Games) >= 2, "Should have at least 2 games to verify sorting")
+
+		// Verify games are sorted alphabetically
+		if len(result.Games) >= 2 {
+			for i := 0; i < len(result.Games)-1; i++ {
+				current := result.Games[i].Title
+				next := result.Games[i+1].Title
+				if current > next {
+					t.Logf("Found out-of-order games:")
+					t.Logf("  [%d] %s", i, current)
+					t.Logf("  [%d] %s", i+1, next)
+					t.Logf("All titles in order:")
+					for j, g := range result.Games {
+						t.Logf("  [%d] %s", j, g.Title)
+					}
+					t.Fatalf("Games should be sorted alphabetically: %s > %s", current, next)
+				}
+			}
+		}
+	})
+
+	t.Run("enriches with user relationship when authenticated", func(t *testing.T) {
+		playerID := int32(player.ID)
+
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+			UserID: &playerID,
+			SortBy: "recent_activity",
+		})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+
+		// Find the sci-fi game (where player is participant)
+		var scifiGameResult *core.EnrichedGameListItem
+		for _, game := range result.Games {
+			if game.ID == scifiGame.ID {
+				scifiGameResult = game
+				break
+			}
+		}
+
+		core.AssertTrue(t, scifiGameResult != nil, "Should find sci-fi game in results")
+		core.AssertTrue(t, scifiGameResult.UserRelationship != nil, "UserRelationship should not be nil")
+		core.AssertEqual(t, "participant", *scifiGameResult.UserRelationship, "Player should be participant")
+	})
+
+	t.Run("returns correct metadata", func(t *testing.T) {
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+			SortBy: "recent_activity",
+		})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+
+		// Verify metadata structure
+		core.AssertTrue(t, result.Metadata.TotalCount > 0, "TotalCount should be positive")
+		core.AssertEqual(t, len(result.Games), result.Metadata.FilteredCount, "FilteredCount should match games length")
+		core.AssertTrue(t, len(result.Metadata.AvailableGenres) > 0, "Should have available genres")
+		core.AssertTrue(t, len(result.Metadata.AvailableStates) > 0, "Should have available states")
+
+		// Verify genres include our test genres
+		genreMap := make(map[string]bool)
+		for _, genre := range result.Metadata.AvailableGenres {
+			genreMap[genre] = true
+		}
+		core.AssertTrue(t, genreMap["Fantasy"], "Should include Fantasy genre")
+		core.AssertTrue(t, genreMap["Sci-Fi"], "Should include Sci-Fi genre")
+		core.AssertTrue(t, genreMap["Horror"], "Should include Horror genre")
+	})
+
+	t.Run("combines multiple filters", func(t *testing.T) {
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+			States: []string{"setup", "recruitment"},
+			Genres: []string{"Fantasy", "Horror"},
+			SortBy: "alphabetical",
+		})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+
+		// Verify all games match the combined filters
+		for _, game := range result.Games {
+			// Check state
+			stateValid := game.State == "setup" || game.State == "recruitment"
+			core.AssertTrue(t, stateValid, "Game should be in setup or recruitment")
+
+			// Check genre
+			if game.Genre != nil {
+				genreValid := *game.Genre == "Fantasy" || *game.Genre == "Horror"
+				core.AssertTrue(t, genreValid, "Game should be Fantasy or Horror")
+			}
+		}
+	})
+
+	t.Run("defaults to recent_activity sort when not specified", func(t *testing.T) {
+		result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{})
+
+		core.AssertNoError(t, err, "Failed to get filtered games")
+		core.AssertTrue(t, len(result.Games) > 0, "Should return games")
+		// Default sort is applied internally, just verify it doesn't error
+	})
+}
