@@ -5,7 +5,6 @@ import type { GameState, ParticipationFilter, SortBy } from '../types/games';
 
 describe('FilterBar', () => {
   const mockOnStatesChange = vi.fn();
-  const mockOnGenresChange = vi.fn();
   const mockOnParticipationChange = vi.fn();
   const mockOnHasOpenSpotsChange = vi.fn();
   const mockOnSortByChange = vi.fn();
@@ -13,14 +12,11 @@ describe('FilterBar', () => {
 
   const defaultProps = {
     selectedStates: [] as GameState[],
-    selectedGenres: [] as string[],
     participation: undefined as ParticipationFilter | undefined,
     hasOpenSpots: undefined as boolean | undefined,
     sortBy: 'recent_activity' as SortBy,
     availableStates: ['recruitment', 'in_progress', 'completed'] as GameState[],
-    availableGenres: ['Fantasy', 'Sci-Fi', 'Horror'] as string[],
     onStatesChange: mockOnStatesChange,
-    onGenresChange: mockOnGenresChange,
     onParticipationChange: mockOnParticipationChange,
     onHasOpenSpotsChange: mockOnHasOpenSpotsChange,
     onSortByChange: mockOnSortByChange,
@@ -43,11 +39,10 @@ describe('FilterBar', () => {
       expect(screen.getByRole('button', { name: 'Not Joined' })).toBeInTheDocument();
     });
 
-    it('renders state and genre dropdowns', () => {
+    it('renders state dropdown', () => {
       render(<FilterBar {...defaultProps} />);
 
       expect(screen.getByRole('button', { name: /State/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Genre/i })).toBeInTheDocument();
     });
 
     it('renders has open spots toggle', () => {
@@ -193,72 +188,6 @@ describe('FilterBar', () => {
     });
   });
 
-  describe('Genre Dropdown', () => {
-    it('shows badge with count when genres are selected', () => {
-      render(<FilterBar {...defaultProps} selectedGenres={['Fantasy', 'Sci-Fi']} />);
-
-      const genreButton = screen.getByRole('button', { name: /Genre/i });
-      expect(within(genreButton).getByText('2')).toBeInTheDocument();
-    });
-
-    it('opens dropdown when genre button clicked', () => {
-      render(<FilterBar {...defaultProps} />);
-
-      const genreButton = screen.getByRole('button', { name: /Genre/i });
-      fireEvent.click(genreButton);
-
-      expect(screen.getByLabelText('Fantasy')).toBeInTheDocument();
-      expect(screen.getByLabelText('Sci-Fi')).toBeInTheDocument();
-      expect(screen.getByLabelText('Horror')).toBeInTheDocument();
-    });
-
-    it('checks selected genres in dropdown', () => {
-      render(<FilterBar {...defaultProps} selectedGenres={['Fantasy']} />);
-
-      const genreButton = screen.getByRole('button', { name: /Genre/i });
-      fireEvent.click(genreButton);
-
-      const fantasyCheckbox = screen.getByLabelText('Fantasy') as HTMLInputElement;
-      expect(fantasyCheckbox.checked).toBe(true);
-    });
-
-    it('calls onGenresChange when genre checkbox toggled', () => {
-      render(<FilterBar {...defaultProps} />);
-
-      const genreButton = screen.getByRole('button', { name: /Genre/i });
-      fireEvent.click(genreButton);
-
-      const fantasyCheckbox = screen.getByLabelText('Fantasy');
-      fireEvent.click(fantasyCheckbox);
-
-      expect(mockOnGenresChange).toHaveBeenCalledWith(['Fantasy']);
-    });
-
-    it('adds genre when unchecked genre is clicked', () => {
-      render(<FilterBar {...defaultProps} selectedGenres={['Fantasy']} />);
-
-      const genreButton = screen.getByRole('button', { name: /Genre/i });
-      fireEvent.click(genreButton);
-
-      const sciFiCheckbox = screen.getByLabelText('Sci-Fi');
-      fireEvent.click(sciFiCheckbox);
-
-      expect(mockOnGenresChange).toHaveBeenCalledWith(['Fantasy', 'Sci-Fi']);
-    });
-
-    it('removes genre when checked genre is clicked', () => {
-      render(<FilterBar {...defaultProps} selectedGenres={['Fantasy', 'Sci-Fi']} />);
-
-      const genreButton = screen.getByRole('button', { name: /Genre/i });
-      fireEvent.click(genreButton);
-
-      const fantasyCheckbox = screen.getByLabelText('Fantasy');
-      fireEvent.click(fantasyCheckbox);
-
-      expect(mockOnGenresChange).toHaveBeenCalledWith(['Sci-Fi']);
-    });
-  });
-
   describe('Has Open Spots Toggle', () => {
     it('shows inactive state when hasOpenSpots is undefined', () => {
       render(<FilterBar {...defaultProps} />);
@@ -354,12 +283,6 @@ describe('FilterBar', () => {
       expect(screen.getByRole('button', { name: 'Clear Filters' })).toBeInTheDocument();
     });
 
-    it('shows clear button when genres are selected', () => {
-      render(<FilterBar {...defaultProps} selectedGenres={['Fantasy']} />);
-
-      expect(screen.getByRole('button', { name: 'Clear Filters' })).toBeInTheDocument();
-    });
-
     it('shows clear button when participation is selected', () => {
       render(<FilterBar {...defaultProps} participation="my_games" />);
 
@@ -427,17 +350,6 @@ describe('FilterBar', () => {
       expect(dropdown).toBeInTheDocument();
     });
 
-    it('handles empty available genres', () => {
-      render(<FilterBar {...defaultProps} availableGenres={[]} />);
-
-      const genreButton = screen.getByRole('button', { name: /Genre/i });
-      fireEvent.click(genreButton);
-
-      // Dropdown should still open but be empty
-      const dropdown = document.querySelectorAll('.absolute.z-10');
-      expect(dropdown.length).toBeGreaterThan(0);
-    });
-
     it('handles toggling dropdown multiple times', () => {
       render(<FilterBar {...defaultProps} />);
 
@@ -456,19 +368,6 @@ describe('FilterBar', () => {
       expect(screen.getByLabelText('Recruiting Players')).toBeInTheDocument();
     });
 
-    it('handles both dropdowns open at same time', () => {
-      render(<FilterBar {...defaultProps} />);
-
-      const stateButton = screen.getByRole('button', { name: /State/i });
-      const genreButton = screen.getByRole('button', { name: /Genre/i });
-
-      fireEvent.click(stateButton);
-      fireEvent.click(genreButton);
-
-      // Both dropdowns should be visible
-      expect(screen.getByLabelText('Recruiting Players')).toBeInTheDocument();
-      expect(screen.getByLabelText('Fantasy')).toBeInTheDocument();
-    });
   });
 
   describe('Integration', () => {
