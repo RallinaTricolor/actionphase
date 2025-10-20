@@ -1,0 +1,141 @@
+-- Dashboard Queries
+-- Comprehensive queries for user dashboard with game status, deadlines, and activity
+
+-- name: GetUserDashboardGames :many
+-- Get all games user participates in OR is GM of, with enriched metadata for dashboard
+SELECT
+  g.id,
+  g.title,
+  g.description,
+  g.state,
+  g.genre,
+  g.gm_user_id,
+  COALESCE(gp.role, 'gm') as user_role,
+  COALESCE(gp.status, 'active') as participant_status,
+  -- Current phase information
+  current_phase.id as current_phase_id,
+  current_phase.phase_type as current_phase_type,
+  current_phase.title as current_phase_title,
+  current_phase.deadline as current_phase_deadline,
+  -- Game Master information
+  gm_user.username as gm_username,
+  -- Counts and metrics
+  (SELECT COUNT(*)
+   FROM game_applications
+   WHERE game_id = g.id AND status = 'pending') as pending_applications_count,
+  (SELECT COUNT(*)
+   FROM notifications n
+   WHERE n.game_id = g.id AND n.user_id = $1 AND n.is_read = false) as unread_notifications_count,
+  -- Action submission status for current phase
+  CASE
+    WHEN current_phase.id IS NOT NULL AND current_phase.phase_type = 'action' THEN
+      (SELECT CASE WHEN COUNT(*) = 0 THEN true
+                   WHEN bool_or(is_draft = true) THEN true
+                   ELSE false END
+       FROM action_submissions
+       WHERE game_id = g.id
+         AND user_id = $1
+         AND phase_id = current_phase.id)
+    ELSE false
+  END as has_pending_action,
+  g.updated_at,
+  g.created_at
+FROM games g
+LEFT JOIN game_participants gp ON g.id = gp.game_id AND gp.user_id = $1 AND gp.status = 'active'
+LEFT JOIN game_phases current_phase ON g.id = current_phase.game_id AND current_phase.is_active = true
+LEFT JOIN users gm_user ON g.gm_user_id = gm_user.id
+WHERE (gp.user_id = $1 AND gp.status = 'active') OR g.gm_user_id = $1
+ORDER BY
+  -- Urgent games first: action phases with pending submissions and near deadlines
+  CASE
+    WHEN current_phase.phase_type = 'action'
+         AND current_phase.deadline IS NOT NULL
+         AND current_phase.deadline < NOW() + INTERVAL '24 hours'
+         AND (SELECT CASE WHEN COUNT(*) = 0 THEN true
+                          WHEN bool_or(is_draft = true) THEN true
+                          ELSE false END
+              FROM action_submissions
+              WHERE game_id = g.id
+                AND user_id = $1
+                AND phase_id = current_phase.id) THEN 0
+    ELSE 1
+  END,
+  -- Then by approaching deadlines
+  current_phase.deadline ASC NULLS LAST,
+  -- Then by unread activity
+  (SELECT COUNT(*)
+   FROM notifications n
+   WHERE n.game_id = g.id AND n.user_id = $1 AND n.is_read = false) DESC,
+  -- Finally by recently updated
+  g.updated_at DESC;
+
+-- name: GetUserRecentMessages :many
+-- Get recent messages from games user participates in OR is GM of (excluding their own messages)
+SELECT
+  m.id as message_id,
+  m.game_id,
+  m.content,
+  m.created_at,
+  g.title as game_title,
+  author.username as author_name,
+  character.name as character_name,
+  m.message_type,
+  m.phase_id
+FROM messages m
+INNER JOIN games g ON m.game_id = g.id
+LEFT JOIN game_participants gp ON g.id = gp.game_id AND gp.user_id = $1 AND gp.status = 'active'
+INNER JOIN users author ON m.author_id = author.id
+LEFT JOIN characters character ON m.character_id = character.id
+WHERE ((gp.user_id = $1 AND gp.status = 'active') OR g.gm_user_id = $1)
+  AND m.created_at > NOW() - INTERVAL '7 days'
+  AND m.author_id != $1
+  AND m.is_deleted = false
+ORDER BY m.created_at DESC
+LIMIT $2;
+
+-- name: GetUserUpcomingDeadlines :many
+-- Get upcoming phase deadlines across all user's games (participant or GM)
+SELECT
+  gp.id as phase_id,
+  gp.deadline as end_time,
+  gp.phase_type,
+  gp.title as phase_title,
+  gp.phase_number,
+  g.id as game_id,
+  g.title as game_title,
+  -- Check if user has pending submission for this phase
+  CASE
+    WHEN gp.phase_type = 'action' THEN
+      (SELECT CASE WHEN COUNT(*) = 0 THEN true
+                   WHEN bool_or(is_draft = true) THEN true
+                   ELSE false END
+       FROM action_submissions acts
+       WHERE acts.game_id = g.id
+         AND acts.user_id = $1
+         AND acts.phase_id = gp.id)
+    ELSE false
+  END as has_pending_submission,
+  -- Calculate hours remaining
+  CAST(EXTRACT(EPOCH FROM (gp.deadline - NOW())) / 3600 AS INTEGER) as hours_remaining
+FROM game_phases gp
+INNER JOIN games g ON gp.game_id = g.id
+LEFT JOIN game_participants part ON g.id = part.game_id AND part.user_id = $1 AND part.status = 'active'
+WHERE ((part.user_id = $1 AND part.status = 'active') OR g.gm_user_id = $1)
+  AND gp.is_active = true
+  AND gp.deadline IS NOT NULL
+  AND gp.deadline > NOW()
+ORDER BY gp.deadline ASC
+LIMIT $2;
+
+-- name: CountUserGames :one
+-- Count total games user participates in OR is GM of
+SELECT COUNT(DISTINCT g.id) as game_count
+FROM games g
+LEFT JOIN game_participants gp ON g.id = gp.game_id AND gp.user_id = $1 AND gp.status = 'active'
+WHERE (gp.user_id = $1 AND gp.status = 'active') OR g.gm_user_id = $1;
+
+-- name: GetDashboardUnreadCount :one
+-- Get count of all unread notifications for user (dashboard-specific)
+SELECT COUNT(*) as count
+FROM notifications
+WHERE user_id = $1 AND is_read = false;

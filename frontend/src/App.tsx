@@ -50,6 +50,14 @@ function AppRoutes() {
             }
           />
           <Route
+            path="/games/recruiting"
+            element={
+              <ProtectedRoute>
+                <GamesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/games/:gameId"
             element={
               <ProtectedRoute>
