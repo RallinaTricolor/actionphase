@@ -64,7 +64,7 @@ export function MessageThread({ gameId, conversationId, characters }: MessageThr
   const loadConversation = async () => {
     try {
       setLoadingConversation(true);
-      const response = await apiClient.getConversation(gameId, conversationId);
+      const response = await apiClient.conversations.getConversation(gameId, conversationId);
       setConversation(response.data);
     } catch (err) {
       console.error('Failed to load conversation:', err);
@@ -81,11 +81,11 @@ export function MessageThread({ gameId, conversationId, characters }: MessageThr
       if (!error) {
         setError(null);
       }
-      const response = await apiClient.getConversationMessages(gameId, conversationId);
+      const response = await apiClient.conversations.getConversationMessages(gameId, conversationId);
       setMessages(response.data.messages || []);
 
       // Mark conversation as read
-      await apiClient.markConversationAsRead(gameId, conversationId);
+      await apiClient.conversations.markConversationAsRead(gameId, conversationId);
     } catch (err) {
       console.error('Failed to load messages:', err);
       setError('Failed to load messages');
@@ -100,7 +100,7 @@ export function MessageThread({ gameId, conversationId, characters }: MessageThr
 
     try {
       setSending(true);
-      await apiClient.sendMessage(gameId, conversationId, {
+      await apiClient.conversations.sendMessage(gameId, conversationId, {
         character_id: selectedCharacterId,
         content: newMessage.trim(),
       });

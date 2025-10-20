@@ -41,7 +41,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   // Get current phase data
   const { data: currentPhaseData } = useQuery({
     queryKey: ['currentPhase', gameId],
-    queryFn: () => apiClient.getCurrentPhase(gameId).then(res => res.data),
+    queryFn: () => apiClient.phases.getCurrentPhase(gameId).then(res => res.data),
     enabled: !!gameId && game?.state === 'in_progress',
     refetchInterval: 30000, // Refetch every 30 seconds when game is in progress
   });

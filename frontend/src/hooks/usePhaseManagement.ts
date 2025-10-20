@@ -12,7 +12,7 @@ export function usePhaseManagement(gameId: number) {
   // Query for all game phases
   const { data: phasesData, isLoading } = useQuery({
     queryKey: ['gamePhases', gameId],
-    queryFn: () => apiClient.getGamePhases(gameId).then(res => res.data),
+    queryFn: () => apiClient.phases.getGamePhases(gameId).then(res => res.data),
     enabled: !!gameId,
     refetchOnMount: 'always',
     staleTime: 0
@@ -24,7 +24,7 @@ export function usePhaseManagement(gameId: number) {
   // Query for current active phase
   const { data: currentPhaseData } = useQuery({
     queryKey: ['currentPhase', gameId],
-    queryFn: () => apiClient.getCurrentPhase(gameId).then(res => res.data),
+    queryFn: () => apiClient.phases.getCurrentPhase(gameId).then(res => res.data),
     enabled: !!gameId,
     refetchOnMount: 'always',
     staleTime: 0
@@ -32,7 +32,7 @@ export function usePhaseManagement(gameId: number) {
 
   // Mutation for creating a new phase
   const createPhaseMutation = useMutation({
-    mutationFn: (data: CreatePhaseRequest) => apiClient.createPhase(gameId, data),
+    mutationFn: (data: CreatePhaseRequest) => apiClient.phases.createPhase(gameId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gamePhases', gameId] });
       queryClient.invalidateQueries({ queryKey: ['currentPhase', gameId] });
@@ -41,7 +41,7 @@ export function usePhaseManagement(gameId: number) {
 
   // Mutation for activating a phase
   const activatePhaseMutation = useMutation({
-    mutationFn: (phaseId: number) => apiClient.activatePhase(phaseId),
+    mutationFn: (phaseId: number) => apiClient.phases.activatePhase(phaseId),
     onSuccess: async () => {
       // Force immediate refetch instead of just invalidation
       await Promise.all([
@@ -58,7 +58,7 @@ export function usePhaseManagement(gameId: number) {
   // Mutation for updating phase deadline
   const updateDeadlineMutation = useMutation({
     mutationFn: ({ phaseId, data }: { phaseId: number; data: UpdateDeadlineRequest }) =>
-      apiClient.updatePhaseDeadline(phaseId, data),
+      apiClient.phases.updatePhaseDeadline(phaseId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gamePhases', gameId] });
       queryClient.invalidateQueries({ queryKey: ['currentPhase', gameId] });
@@ -68,7 +68,7 @@ export function usePhaseManagement(gameId: number) {
   // Mutation for updating phase details
   const updatePhaseMutation = useMutation({
     mutationFn: ({ phaseId, data }: { phaseId: number; data: UpdatePhaseRequest }) =>
-      apiClient.updatePhase(phaseId, data),
+      apiClient.phases.updatePhase(phaseId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gamePhases', gameId] });
       queryClient.invalidateQueries({ queryKey: ['currentPhase', gameId] });

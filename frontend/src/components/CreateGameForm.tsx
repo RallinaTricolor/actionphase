@@ -47,7 +47,7 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
         max_players: formData.max_players || undefined,
       };
 
-      const response = await apiClient.createGame(gameData);
+      const response = await apiClient.games.createGame(gameData);
       onSuccess?.(response.data.id);
     } catch (err: any) {
       // Extract error message from Axios error response or use generic message

@@ -21,7 +21,7 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.getUserConversations(gameId);
+      const response = await apiClient.conversations.getUserConversations(gameId);
       console.log('[ConversationList] Loaded conversations:', response.data.conversations);
 
       // Deduplicate conversations by ID (user may own multiple characters in same conversation)

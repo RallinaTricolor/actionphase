@@ -43,7 +43,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       if (showComments && topLevelComments.length === 0) {
         try {
           if (isMounted) setLoadingComments(true);
-          const response = await apiClient.getPostComments(gameId, post.id);
+          const response = await apiClient.messages.getPostComments(gameId, post.id);
           if (isMounted) {
             setTopLevelComments(response.data);
           }
@@ -71,7 +71,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       if (delayMs > 0) {
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
-      const response = await apiClient.getPostComments(gameId, post.id);
+      const response = await apiClient.messages.getPostComments(gameId, post.id);
       setTopLevelComments(response.data);
     } catch (err) {
       console.error('Failed to load comments:', err);

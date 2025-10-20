@@ -487,3 +487,45 @@ func NewTestApp(pool *pgxpool.Pool) *App {
 		Observability: obs,
 	}
 }
+
+// ========================================
+// Phase 4: Cleanup Presets
+// ========================================
+
+// Common table cleanup combinations used across tests
+var CleanupPresets = map[string][]string{
+	// Basic game cleanup
+	"games": {"games", "sessions", "users"},
+
+	// Character-related cleanup (includes all character dependencies)
+	"characters": {"character_data", "npc_assignments", "characters", "games", "sessions", "users"},
+
+	// Phase-related cleanup
+	"phases": {"game_phases", "games", "sessions", "users"},
+
+	// Message-related cleanup (posts and comments)
+	"messages": {"messages", "characters", "games", "sessions", "users"},
+
+	// Action submission cleanup
+	"actions": {"action_results", "action_submissions", "game_phases", "characters", "games", "sessions", "users"},
+
+	// Game participants and applications
+	"participants": {"game_participants", "game_applications", "games", "sessions", "users"},
+
+	// Complete cleanup (all tables)
+	"all": {
+		"message_reactions",
+		"messages",
+		"action_results",
+		"action_submissions",
+		"character_data",
+		"npc_assignments",
+		"characters",
+		"game_phases",
+		"game_participants",
+		"game_applications",
+		"games",
+		"sessions",
+		"users",
+	},
+}

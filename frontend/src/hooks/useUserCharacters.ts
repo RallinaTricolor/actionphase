@@ -34,7 +34,7 @@ export function useUserCharacters(gameId: number): UserCharactersResult {
     queryKey: ['userControllableCharacters', gameId],
     queryFn: async () => {
       console.log('[useUserCharacters] Fetching controllable characters for gameId:', gameId);
-      const response = await apiClient.getUserControllableCharacters(gameId);
+      const response = await apiClient.characters.getUserControllableCharacters(gameId);
       console.log('[useUserCharacters] Characters loaded:', response.data);
       return response.data || [];
     },

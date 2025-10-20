@@ -40,7 +40,7 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
   const loadAllCharacters = async () => {
     try {
       setLoadingCharacters(true);
-      const response = await apiClient.getGameCharacters(gameId);
+      const response = await apiClient.characters.getGameCharacters(gameId);
       setAllCharacters(response.data);
     } catch (err) {
       console.error('Failed to load characters:', err);
@@ -83,7 +83,7 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
       // Include your character + all selected participants
       const allParticipantIds = [yourCharacterId, ...Array.from(selectedParticipants)];
 
-      const response = await apiClient.createConversation(gameId, {
+      const response = await apiClient.conversations.createConversation(gameId, {
         title: title.trim(),
         character_ids: allParticipantIds,
       });

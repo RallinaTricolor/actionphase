@@ -47,7 +47,7 @@ export function useGamePermissions(gameId: number): GamePermissions {
   } = useQuery({
     queryKey: ['gameDetails', gameId],
     queryFn: async () => {
-      const response = await apiClient.getGameWithDetails(gameId);
+      const response = await apiClient.games.getGameWithDetails(gameId);
       return response.data;
     },
     enabled: !!gameId,
@@ -61,7 +61,7 @@ export function useGamePermissions(gameId: number): GamePermissions {
   } = useQuery({
     queryKey: ['gameParticipants', gameId],
     queryFn: async () => {
-      const response = await apiClient.getGameParticipants(gameId);
+      const response = await apiClient.games.getGameParticipants(gameId);
       return response.data || [];
     },
     enabled: !!gameId,

@@ -23,7 +23,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameAp
   const fetchApplications = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.getGameApplications(gameId);
+      const response = await apiClient.games.getGameApplications(gameId);
       setApplications(response.data);
       setError(null);
     } catch (err) {
@@ -35,7 +35,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameAp
 
   const handleApprove = async (applicationId: number) => {
     try {
-      await apiClient.reviewGameApplication(gameId, applicationId, { action: 'approve' });
+      await apiClient.games.reviewGameApplication(gameId, applicationId, { action: 'approve' });
       await fetchApplications(); // Refresh the list
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to approve application');
@@ -44,7 +44,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameAp
 
   const handleReject = async (applicationId: number) => {
     try {
-      await apiClient.reviewGameApplication(gameId, applicationId, { action: 'reject' });
+      await apiClient.games.reviewGameApplication(gameId, applicationId, { action: 'reject' });
       await fetchApplications(); // Refresh the list
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to reject application');

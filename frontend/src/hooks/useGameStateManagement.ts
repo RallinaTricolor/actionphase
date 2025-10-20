@@ -22,7 +22,7 @@ export function useGameStateManagement({
   const handleStateChange = async (newState: GameState) => {
     try {
       setActionLoading(true);
-      await apiClient.updateGameState(gameId, { state: newState });
+      await apiClient.games.updateGameState(gameId, { state: newState });
       await refetchGameData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update game state');
@@ -36,7 +36,7 @@ export function useGameStateManagement({
 
     try {
       setActionLoading(true);
-      await apiClient.leaveGame(gameId);
+      await apiClient.games.leaveGame(gameId);
       await refetchGameData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to leave game');

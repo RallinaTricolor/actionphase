@@ -7,7 +7,7 @@ export const useAuth = () => {
   const queryClient = useQueryClient();
 
   const loginMutation = useMutation({
-    mutationFn: (data: LoginRequest) => apiClient.login(data),
+    mutationFn: (data: LoginRequest) => apiClient.auth.login(data),
     onSuccess: (response) => {
       // Handle both Token (backend) and token (lowercase) formats
       const token = response.data.Token || response.data.token;
@@ -21,7 +21,7 @@ export const useAuth = () => {
   });
 
   const registerMutation = useMutation({
-    mutationFn: (data: RegisterRequest) => apiClient.register(data),
+    mutationFn: (data: RegisterRequest) => apiClient.auth.register(data),
     onSuccess: (response) => {
       // Handle both Token (backend) and token (lowercase) formats
       const token = response.data.Token || response.data.token;

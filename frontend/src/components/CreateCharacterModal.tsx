@@ -26,7 +26,7 @@ export function CreateCharacterModal({
 
   const createCharacterMutation = useMutation({
     mutationFn: (data: CreateCharacterRequest) =>
-      apiClient.createCharacter(gameId, data),
+      apiClient.characters.createCharacter(gameId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
       onClose();

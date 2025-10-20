@@ -42,7 +42,7 @@ export function CommentThread({
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.getPostComments(gameId, postId);
+      const response = await apiClient.messages.getPostComments(gameId, postId);
       setComments(response.data);
     } catch (err) {
       console.error('Failed to load comments:', err);

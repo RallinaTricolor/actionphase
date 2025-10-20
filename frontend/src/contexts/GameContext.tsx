@@ -54,7 +54,7 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     queryKey: ['gameDetails', gameId],
     queryFn: async () => {
       console.log('[GameContext] Fetching game details for gameId:', gameId);
-      const response = await apiClient.getGameWithDetails(gameId);
+      const response = await apiClient.games.getGameWithDetails(gameId);
       console.log('[GameContext] Game details loaded:', response.data);
       return response.data;
     },
@@ -71,7 +71,7 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     queryKey: ['gameParticipants', gameId],
     queryFn: async () => {
       console.log('[GameContext] Fetching participants for gameId:', gameId);
-      const response = await apiClient.getGameParticipants(gameId);
+      const response = await apiClient.games.getGameParticipants(gameId);
       console.log('[GameContext] Participants loaded:', response.data);
       return response.data || [];
     },
@@ -88,7 +88,7 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     queryKey: ['userControllableCharacters', gameId],
     queryFn: async () => {
       console.log('[GameContext] Fetching controllable characters for gameId:', gameId);
-      const response = await apiClient.getUserControllableCharacters(gameId);
+      const response = await apiClient.characters.getUserControllableCharacters(gameId);
       console.log('[GameContext] User characters loaded:', response.data);
       return response.data || [];
     },

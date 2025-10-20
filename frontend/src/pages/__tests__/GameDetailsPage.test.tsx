@@ -317,9 +317,9 @@ describe('GameDetailsPage', () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /applications/i })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /participants/i })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /game info/i })).toBeInTheDocument()
+        expect(screen.getByRole('tab', { name: /applications/i })).toBeInTheDocument()
+        expect(screen.getByRole('tab', { name: /participants/i })).toBeInTheDocument()
+        expect(screen.getByRole('tab', { name: /game info/i })).toBeInTheDocument()
       }, { timeout: 3000 })
     })
 
@@ -329,7 +329,7 @@ describe('GameDetailsPage', () => {
       renderGameDetailsPage(1)
 
       await waitFor(() => {
-        const participantsTab = screen.getByRole('button', { name: /participants/i })
+        const participantsTab = screen.getByRole('tab', { name: /participants/i })
         fireEvent.click(participantsTab)
       })
 
@@ -348,10 +348,10 @@ describe('GameDetailsPage', () => {
       renderGameDetailsPage(1)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /submit action/i })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /characters/i })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /private messages/i })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /phase history/i })).toBeInTheDocument()
+        expect(screen.getByRole('tab', { name: /submit action/i })).toBeInTheDocument()
+        expect(screen.getByRole('tab', { name: /characters/i })).toBeInTheDocument()
+        expect(screen.getByRole('tab', { name: /^messages$/i })).toBeInTheDocument()
+        expect(screen.getByRole('tab', { name: /phase history/i })).toBeInTheDocument()
       })
     })
 

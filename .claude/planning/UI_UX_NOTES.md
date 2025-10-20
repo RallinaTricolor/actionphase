@@ -1,0 +1,40 @@
+- Dashboard is not useful
+    - Dashboard should provide quick insights and easy navigation
+    - Should be focused on currently active games, messages, notifications
+    - Current dashboard is cluttered and not productive
+    - If a user is not in any games, redirect to games listing page instead
+      - Potentially can have the dashboard, but we'd need to figure out what content is useful for them
+- Game listing page also needs improvement
+    - Should highlight active games (especially if a user is in one), upcoming deadlines, recent activity
+    - Recruiting games tab is useful and should stay
+    - All games tab should have filters/sorting
+- Notifications
+  - Notifications box is dark on dark currently. Dark background, black text
+  - View all notifiations page is needed, current link is non-functional
+- Game Detail Page
+  - Default tab should always be the most relevant one (Actions for Action Phase, Common Room for Common Room Phase)
+  - Phase History is useless for Action Phases--should either be hidden, renamed to "Previous Common Rooms", or a way to display Actions/Results needs to be added
+  - Characters tab should show character avatar images
+  - GM Post Creation for common room tab is too prominent. Should be hidden if there is already a post for this phase
+- Private Messages
+  - Needs more screen real estate
+  - Should automatically scroll to the most recent unread message (or just the latest message depending on implementation difficulty)
+- Common Room
+  - Needs better visual separation between posts
+  - Should highlight new posts since last visit
+  - Should handle potentially very, very nested conversations (need a method to render these cleanly or link to a new view)
+  - Should be able to link directly to a comment (or use scroll to navigate to it)
+  - Need a way to display an individual comment (with its parent, ideally)
+    - Use case: "Show most recent comment" view
+- Dark mode support
+    - Entire app should support dark mode
+    - Should be toggleable in user settings
+    - Should remember preference across sessions
+- User preferences
+  - We currently have no way of tracking user preferences for UI/UX
+  - We should have a user settings page to manage preferences
+  - Preferences to consider:
+    - Dark/light mode (maybe other themes?)
+    - Timezone settings
+- Audience Support
+  - Separate plan document is needed for audience user experience

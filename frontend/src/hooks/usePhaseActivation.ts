@@ -11,7 +11,7 @@ export function usePhaseActivation(gameId: number, currentPhaseId: number | unde
   // Query for unpublished results count in the current phase
   const { data: unpublishedCountData } = useQuery({
     queryKey: ['unpublishedResultsCount', gameId, currentPhaseId],
-    queryFn: () => apiClient.getUnpublishedResultsCount(gameId, currentPhaseId!).then(res => res.data),
+    queryFn: () => apiClient.phases.getUnpublishedResultsCount(gameId, currentPhaseId!).then(res => res.data),
     enabled: !!gameId && !!currentPhaseId && enabled,
   });
 
@@ -19,7 +19,7 @@ export function usePhaseActivation(gameId: number, currentPhaseId: number | unde
 
   // Mutation for publishing all results
   const publishAllMutation = useMutation({
-    mutationFn: () => apiClient.publishAllPhaseResults(gameId, currentPhaseId!),
+    mutationFn: () => apiClient.phases.publishAllPhaseResults(gameId, currentPhaseId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unpublishedResultsCount'] });
       queryClient.invalidateQueries({ queryKey: ['userResults'] });

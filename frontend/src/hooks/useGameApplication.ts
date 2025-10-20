@@ -26,7 +26,7 @@ export function useGameApplication({
     const fetchUserApplication = async () => {
       if (!isGM && gameState === 'recruitment' && currentUserId) {
         try {
-          const applicationResponse = await apiClient.getMyGameApplication(gameId);
+          const applicationResponse = await apiClient.games.getMyGameApplication(gameId);
           setUserApplication(applicationResponse.data);
         } catch (appErr) {
           // User has no application - that's fine
@@ -49,7 +49,7 @@ export function useGameApplication({
 
     try {
       setActionLoading(true);
-      await apiClient.withdrawGameApplication(gameId);
+      await apiClient.games.withdrawGameApplication(gameId);
       await refetchGameData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to withdraw application');

@@ -8,8 +8,10 @@ import { apiClient } from '../lib/api';
 // Mock the API client
 vi.mock('../lib/api', () => ({
   apiClient: {
-    uploadCharacterAvatar: vi.fn(),
-    deleteCharacterAvatar: vi.fn(),
+    characters: {
+      uploadCharacterAvatar: vi.fn(),
+      deleteCharacterAvatar: vi.fn(),
+    },
   },
 }));
 
@@ -38,7 +40,7 @@ describe('useUploadCharacterAvatar', () => {
 
   it('uploads avatar successfully', async () => {
     const mockResponse = { data: { avatar_url: 'http://example.com/avatar.jpg' } };
-    vi.mocked(apiClient.uploadCharacterAvatar).mockResolvedValue(mockResponse);
+    vi.mocked(apiClient.characters.uploadCharacterAvatar).mockResolvedValue(mockResponse);
 
     const { result } = renderHook(() => useUploadCharacterAvatar(), {
       wrapper: createWrapper(),
@@ -50,12 +52,12 @@ describe('useUploadCharacterAvatar', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.data.avatar_url).toBe('http://example.com/avatar.jpg');
-    expect(apiClient.uploadCharacterAvatar).toHaveBeenCalledWith(1, file);
+    expect(apiClient.characters.uploadCharacterAvatar).toHaveBeenCalledWith(1, file);
   });
 
   it('handles upload error', async () => {
     const mockError = new Error('Upload failed');
-    vi.mocked(apiClient.uploadCharacterAvatar).mockRejectedValue(mockError);
+    vi.mocked(apiClient.characters.uploadCharacterAvatar).mockRejectedValue(mockError);
 
     const { result } = renderHook(() => useUploadCharacterAvatar(), {
       wrapper: createWrapper(),
@@ -71,7 +73,7 @@ describe('useUploadCharacterAvatar', () => {
 
   it('invalidates character queries on success', async () => {
     const mockResponse = { data: { avatar_url: 'http://example.com/avatar.jpg' } };
-    vi.mocked(apiClient.uploadCharacterAvatar).mockResolvedValue(mockResponse);
+    vi.mocked(apiClient.characters.uploadCharacterAvatar).mockResolvedValue(mockResponse);
 
     const queryClient = new QueryClient({
       defaultOptions: {
@@ -106,7 +108,7 @@ describe('useDeleteCharacterAvatar', () => {
   });
 
   it('deletes avatar successfully', async () => {
-    vi.mocked(apiClient.deleteCharacterAvatar).mockResolvedValue({ data: undefined });
+    vi.mocked(apiClient.characters.deleteCharacterAvatar).mockResolvedValue({ data: undefined });
 
     const { result } = renderHook(() => useDeleteCharacterAvatar(), {
       wrapper: createWrapper(),
@@ -115,12 +117,12 @@ describe('useDeleteCharacterAvatar', () => {
     result.current.mutate(1);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(apiClient.deleteCharacterAvatar).toHaveBeenCalledWith(1);
+    expect(apiClient.characters.deleteCharacterAvatar).toHaveBeenCalledWith(1);
   });
 
   it('handles delete error', async () => {
     const mockError = new Error('Delete failed');
-    vi.mocked(apiClient.deleteCharacterAvatar).mockRejectedValue(mockError);
+    vi.mocked(apiClient.characters.deleteCharacterAvatar).mockRejectedValue(mockError);
 
     const { result } = renderHook(() => useDeleteCharacterAvatar(), {
       wrapper: createWrapper(),
@@ -133,7 +135,7 @@ describe('useDeleteCharacterAvatar', () => {
   });
 
   it('invalidates character queries on success', async () => {
-    vi.mocked(apiClient.deleteCharacterAvatar).mockResolvedValue({ data: undefined });
+    vi.mocked(apiClient.characters.deleteCharacterAvatar).mockResolvedValue({ data: undefined });
 
     const queryClient = new QueryClient({
       defaultOptions: {

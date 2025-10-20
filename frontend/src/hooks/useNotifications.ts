@@ -6,7 +6,7 @@ export function useNotifications(params?: GetNotificationsParams) {
   return useQuery({
     queryKey: ['notifications', params],
     queryFn: async () => {
-      const response = await apiClient.getNotifications(params);
+      const response = await apiClient.notifications.getNotifications(params);
       return response.data;
     },
     // Poll every 30 seconds for new notifications
@@ -22,7 +22,7 @@ export function useUnreadCount() {
   return useQuery({
     queryKey: ['notifications', 'unreadCount'],
     queryFn: async () => {
-      const response = await apiClient.getUnreadCount();
+      const response = await apiClient.notifications.getUnreadCount();
       return response.data.unread_count;
     },
     // Poll every 15 seconds for unread count (more frequent for bell badge)
@@ -35,7 +35,7 @@ export function useMarkNotificationAsRead() {
 
   return useMutation({
     mutationFn: async (notificationId: number) => {
-      const response = await apiClient.markNotificationAsRead(notificationId);
+      const response = await apiClient.notifications.markNotificationAsRead(notificationId);
       return response.data;
     },
     onSuccess: () => {
@@ -50,7 +50,7 @@ export function useMarkAllAsRead() {
 
   return useMutation({
     mutationFn: async () => {
-      const response = await apiClient.markAllNotificationsAsRead();
+      const response = await apiClient.notifications.markAllNotificationsAsRead();
       return response.data;
     },
     onSuccess: () => {
@@ -65,7 +65,7 @@ export function useDeleteNotification() {
 
   return useMutation({
     mutationFn: async (notificationId: number) => {
-      await apiClient.deleteNotification(notificationId);
+      await apiClient.notifications.deleteNotification(notificationId);
     },
     onSuccess: () => {
       // Invalidate queries to refetch
