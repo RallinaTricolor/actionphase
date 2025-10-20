@@ -5,7 +5,7 @@ export function useUserActionResults(gameId: number) {
   return useQuery({
     queryKey: ['actionResults', 'user', gameId],
     queryFn: async () => {
-      const response = await apiClient.getUserResults(gameId);
+      const response = await apiClient.phases.getUserResults(gameId);
       return response.data;
     },
     enabled: !!gameId,
@@ -16,7 +16,7 @@ export function useGameActionResults(gameId: number) {
   return useQuery({
     queryKey: ['actionResults', 'game', gameId],
     queryFn: async () => {
-      const response = await apiClient.getGameResults(gameId);
+      const response = await apiClient.phases.getGameResults(gameId);
       return response.data;
     },
     enabled: !!gameId,
@@ -28,7 +28,7 @@ export function useCreateActionResult(gameId: number) {
 
   return useMutation({
     mutationFn: async (data: { user_id: number; content: string; is_published?: boolean }) => {
-      const response = await apiClient.createActionResult(gameId, data);
+      const response = await apiClient.phases.createActionResult(gameId, data);
       return response.data;
     },
     onSuccess: () => {
@@ -45,7 +45,7 @@ export function useUpdateActionResult(gameId: number) {
 
   return useMutation({
     mutationFn: async ({ resultId, content }: { resultId: number; content: string }) => {
-      const response = await apiClient.updateActionResult(gameId, resultId, { content });
+      const response = await apiClient.phases.updateActionResult(gameId, resultId, { content });
       return response.data;
     },
     onSuccess: () => {

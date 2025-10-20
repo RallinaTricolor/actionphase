@@ -31,19 +31,19 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
 
   const { data: character } = useQuery({
     queryKey: ['character', characterId],
-    queryFn: () => apiClient.getCharacter(characterId).then(res => res.data),
+    queryFn: () => apiClient.characters.getCharacter(characterId).then(res => res.data),
     enabled: !!characterId
   });
 
   const { data: characterData = [], isLoading } = useQuery({
     queryKey: ['characterData', characterId],
-    queryFn: () => apiClient.getCharacterData(characterId).then(res => res.data),
+    queryFn: () => apiClient.characters.getCharacterData(characterId).then(res => res.data),
     enabled: !!characterId
   });
 
   const saveCharacterDataMutation = useMutation({
     mutationFn: (data: CharacterDataRequest) =>
-      apiClient.setCharacterData(characterId, data),
+      apiClient.characters.setCharacterData(characterId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
       setEditingField(null);

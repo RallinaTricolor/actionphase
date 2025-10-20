@@ -6,69 +6,66 @@ import (
 	"time"
 
 	core "actionphase/pkg/core"
+	db "actionphase/pkg/db/services"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPhaseService_CreatePhase(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
+	suite := db.NewTestSuite(t).
+		WithCleanup("phases").
+		Setup()
+	defer suite.Cleanup()
 
-	phaseService := &PhaseService{DB: testDB.Pool}
+	phaseService := &PhaseService{DB: suite.Pool()}
+	factory := suite.Factory()
 
-	// Create test user
-	user := testDB.CreateTestUser(t, "testuser", "test@example.com")
+	// Create test user once for all subtests
+	user := factory.NewUser().Create()
 
 	t.Run("creates phase successfully", func(t *testing.T) {
-		game := testDB.CreateTestGame(t, int32(user.ID), "Test Game 1")
+		game := factory.NewGame().WithGM(user.ID).Create()
 
-		req := core.CreatePhaseRequest{
-			GameID:      game.ID,
-			PhaseType:   "common_room",
-			PhaseNumber: 1,
-			Title:       "Opening Scene",
-			Description: "The adventure begins...",
-			StartTime:   core.TimePtr(time.Now()),
-			EndTime:     core.TimePtr(time.Now().Add(48 * time.Hour)),
-		}
+		// Using PhaseBuilder instead of CreatePhaseRequest
+		phase := factory.NewPhase().
+			InGame(game).
+			CommonRoom().
+			WithTitle("Opening Scene").
+			WithDescription("The adventure begins...").
+			WithTimeRange(48 * time.Hour).
+			Create()
 
-		phase, err := phaseService.CreatePhase(context.Background(), req)
-		require.NoError(t, err)
-		assert.Equal(t, req.GameID, phase.GameID)
-		assert.Equal(t, req.PhaseType, phase.PhaseType)
-		assert.Equal(t, req.Title, phase.Title)
+		assert.Equal(t, game.ID, phase.GameID)
+		assert.Equal(t, "common_room", phase.PhaseType)
+		assert.Equal(t, "Opening Scene", phase.Title)
 		assert.True(t, phase.Description.Valid)
-		assert.Equal(t, req.Description, phase.Description.String)
+		assert.Equal(t, "The adventure begins...", phase.Description.String)
 	})
 
 	t.Run("assigns sequential phase numbers", func(t *testing.T) {
-		game := testDB.CreateTestGame(t, int32(user.ID), "Test Game 2")
+		game := factory.NewGame().WithGM(user.ID).Create()
 
-		// Create first phase
-		req1 := core.CreatePhaseRequest{
-			GameID:    game.ID,
-			PhaseType: "common_room",
-			Title:     "Phase 1",
-		}
-		phase1, err := phaseService.CreatePhase(context.Background(), req1)
-		require.NoError(t, err)
+		// Using fluent builders with auto-increment
+		phase1 := factory.NewPhase().
+			InGame(game).
+			CommonRoom().
+			WithTitle("Phase 1").
+			Create()
 
-		// Create second phase
-		req2 := core.CreatePhaseRequest{
-			GameID:    game.ID,
-			PhaseType: "action",
-			Title:     "Phase 2",
-		}
-		phase2, err := phaseService.CreatePhase(context.Background(), req2)
-		require.NoError(t, err)
+		phase2 := factory.NewPhase().
+			InGame(game).
+			ActionPhase().
+			WithTitle("Phase 2").
+			Create()
 
 		assert.Equal(t, phase1.PhaseNumber+1, phase2.PhaseNumber)
 	})
 
 	t.Run("validates phase type", func(t *testing.T) {
-		game := testDB.CreateTestGame(t, int32(user.ID), "Test Game 3")
+		game := factory.NewGame().WithGM(user.ID).Create()
 
+		// Still need to use service for validation tests
 		req := core.CreatePhaseRequest{
 			GameID:    game.ID,
 			PhaseType: "invalid_type",
@@ -82,14 +79,17 @@ func TestPhaseService_CreatePhase(t *testing.T) {
 }
 
 func TestPhaseService_GetActivePhase(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
+	suite := db.NewTestSuite(t).
+		WithCleanup("phases").
+		Setup()
+	defer suite.Cleanup()
 
-	phaseService := &PhaseService{DB: testDB.Pool}
+	phaseService := &PhaseService{DB: suite.Pool()}
+	factory := suite.Factory()
 
-	// Create test data
-	user := testDB.CreateTestUser(t, "testuser", "test@example.com")
-	game := testDB.CreateTestGame(t, int32(user.ID), "Test Game")
+	// Create test data once
+	user := factory.NewUser().Create()
+	game := factory.NewGame().WithGM(user.ID).Create()
 
 	t.Run("returns nil when no active phase", func(t *testing.T) {
 		phase, err := phaseService.GetActivePhase(context.Background(), game.ID)
@@ -98,17 +98,13 @@ func TestPhaseService_GetActivePhase(t *testing.T) {
 	})
 
 	t.Run("returns active phase", func(t *testing.T) {
-		// Create and activate a phase
-		req := core.CreatePhaseRequest{
-			GameID:    game.ID,
-			PhaseType: "common_room",
-			Title:     "Active Phase",
-		}
-		createdPhase, err := phaseService.CreatePhase(context.Background(), req)
-		require.NoError(t, err)
-
-		_, err = phaseService.activatePhaseInternal(context.Background(), createdPhase.ID)
-		require.NoError(t, err)
+		// Using builder with .Active() instead of manual activation
+		createdPhase := factory.NewPhase().
+			InGame(game).
+			CommonRoom().
+			WithTitle("Active Phase").
+			Active().
+			Create()
 
 		// Get active phase
 		activePhase, err := phaseService.GetActivePhase(context.Background(), game.ID)
@@ -120,14 +116,17 @@ func TestPhaseService_GetActivePhase(t *testing.T) {
 }
 
 func TestPhaseService_GetGamePhases(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
+	suite := db.NewTestSuite(t).
+		WithCleanup("phases").
+		Setup()
+	defer suite.Cleanup()
 
-	phaseService := &PhaseService{DB: testDB.Pool}
+	phaseService := &PhaseService{DB: suite.Pool()}
+	factory := suite.Factory()
 
 	// Create test data
-	user := testDB.CreateTestUser(t, "testuser", "test@example.com")
-	game := testDB.CreateTestGame(t, int32(user.ID), "Test Game")
+	user := factory.NewUser().Create()
+	game := factory.NewGame().WithGM(user.ID).Create()
 
 	t.Run("returns empty list when no phases exist", func(t *testing.T) {
 		phases, err := phaseService.GetGamePhases(context.Background(), game.ID)
@@ -136,22 +135,18 @@ func TestPhaseService_GetGamePhases(t *testing.T) {
 	})
 
 	t.Run("returns all phases for a game", func(t *testing.T) {
-		// Create multiple phases
-		req1 := core.CreatePhaseRequest{
-			GameID:    game.ID,
-			PhaseType: "common_room",
-			Title:     "Phase 1",
-		}
-		phase1, err := phaseService.CreatePhase(context.Background(), req1)
-		require.NoError(t, err)
+		// Using concise builders instead of verbose CreatePhaseRequest
+		phase1 := factory.NewPhase().
+			InGame(game).
+			CommonRoom().
+			WithTitle("Phase 1").
+			Create()
 
-		req2 := core.CreatePhaseRequest{
-			GameID:    game.ID,
-			PhaseType: "action",
-			Title:     "Phase 2",
-		}
-		phase2, err := phaseService.CreatePhase(context.Background(), req2)
-		require.NoError(t, err)
+		phase2 := factory.NewPhase().
+			InGame(game).
+			ActionPhase().
+			WithTitle("Phase 2").
+			Create()
 
 		// Get all phases
 		phases, err := phaseService.GetGamePhases(context.Background(), game.ID)
@@ -163,23 +158,24 @@ func TestPhaseService_GetGamePhases(t *testing.T) {
 }
 
 func TestPhaseService_UpdatePhase(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
+	suite := db.NewTestSuite(t).
+		WithCleanup("phases").
+		Setup()
+	defer suite.Cleanup()
 
-	phaseService := &PhaseService{DB: testDB.Pool}
+	phaseService := &PhaseService{DB: suite.Pool()}
+	factory := suite.Factory()
 
 	// Create test data
-	user := testDB.CreateTestUser(t, "testuser", "test@example.com")
-	game := testDB.CreateTestGame(t, int32(user.ID), "Test Game")
+	user := factory.NewUser().Create()
+	game := factory.NewGame().WithGM(user.ID).Create()
 
-	// Create a phase
-	createReq := core.CreatePhaseRequest{
-		GameID:    game.ID,
-		PhaseType: "common_room",
-		Title:     "Original Title",
-	}
-	phase, err := phaseService.CreatePhase(context.Background(), createReq)
-	require.NoError(t, err)
+	// Create a phase using builder
+	phase := factory.NewPhase().
+		InGame(game).
+		CommonRoom().
+		WithTitle("Original Title").
+		Create()
 
 	t.Run("updates phase successfully", func(t *testing.T) {
 		updateReq := core.UpdatePhaseRequest{

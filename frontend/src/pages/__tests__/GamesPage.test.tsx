@@ -18,7 +18,9 @@ vi.mock('../../lib/api', () => ({
   apiClient: {
     getAuthToken: vi.fn(),
     removeAuthToken: vi.fn(),
-    applyToGame: vi.fn(),
+    games: {
+      applyToGame: vi.fn(),
+    },
   },
 }))
 
@@ -204,7 +206,7 @@ describe('GamesPage', () => {
   })
 
   it('applies to game successfully', async () => {
-    vi.mocked(apiClient.applyToGame).mockResolvedValue({ success: true } as any)
+    vi.mocked(apiClient.games.applyToGame).mockResolvedValue({ success: true } as any)
 
     renderWithProviders(<GamesPage />)
 
@@ -213,7 +215,7 @@ describe('GamesPage', () => {
     })
 
     await waitFor(() => {
-      expect(apiClient.applyToGame).toHaveBeenCalledWith(456, {
+      expect(apiClient.games.applyToGame).toHaveBeenCalledWith(456, {
         role: 'player',
         message: undefined
       })
@@ -224,7 +226,7 @@ describe('GamesPage', () => {
   })
 
   it('prevents multiple simultaneous applications', async () => {
-    vi.mocked(apiClient.applyToGame).mockImplementation(() =>
+    vi.mocked(apiClient.games.applyToGame).mockImplementation(() =>
       new Promise(resolve => setTimeout(resolve, 100))
     )
 
@@ -244,7 +246,7 @@ describe('GamesPage', () => {
 
     // Wait for the first call to complete
     await waitFor(() => {
-      expect(apiClient.applyToGame).toHaveBeenCalledTimes(1)
+      expect(apiClient.games.applyToGame).toHaveBeenCalledTimes(1)
     }, { timeout: 200 })
   })
 
@@ -283,14 +285,14 @@ describe('GamesPage', () => {
     const authError = {
       response: { status: 401 }
     }
-    vi.mocked(apiClient.applyToGame).mockRejectedValue(authError)
+    vi.mocked(apiClient.games.applyToGame).mockRejectedValue(authError)
 
     renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
     await waitFor(() => {
-      expect(apiClient.applyToGame).toHaveBeenCalled()
+      expect(apiClient.games.applyToGame).toHaveBeenCalled()
     })
 
     expect(apiClient.removeAuthToken).toHaveBeenCalled()
@@ -306,14 +308,14 @@ describe('GamesPage', () => {
         data: { error: 'Game is full' }
       }
     }
-    vi.mocked(apiClient.applyToGame).mockRejectedValue(apiError)
+    vi.mocked(apiClient.games.applyToGame).mockRejectedValue(apiError)
 
     renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
     await waitFor(() => {
-      expect(apiClient.applyToGame).toHaveBeenCalled()
+      expect(apiClient.games.applyToGame).toHaveBeenCalled()
     })
 
     expect(global.alert).toHaveBeenCalledWith('Failed to join game: Game is full')
@@ -321,35 +323,35 @@ describe('GamesPage', () => {
 
   it('handles generic error with message', async () => {
     const genericError = new Error('Network error')
-    vi.mocked(apiClient.applyToGame).mockRejectedValue(genericError)
+    vi.mocked(apiClient.games.applyToGame).mockRejectedValue(genericError)
 
     renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
     await waitFor(() => {
-      expect(apiClient.applyToGame).toHaveBeenCalled()
+      expect(apiClient.games.applyToGame).toHaveBeenCalled()
     })
 
     expect(global.alert).toHaveBeenCalledWith('Failed to join game: Network error')
   })
 
   it('handles unknown error', async () => {
-    vi.mocked(apiClient.applyToGame).mockRejectedValue({})
+    vi.mocked(apiClient.games.applyToGame).mockRejectedValue({})
 
     renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
     await waitFor(() => {
-      expect(apiClient.applyToGame).toHaveBeenCalled()
+      expect(apiClient.games.applyToGame).toHaveBeenCalled()
     })
 
     expect(global.alert).toHaveBeenCalledWith('Failed to join game: Failed to join game. Please try again.')
   })
 
   it('shows joining state during application', async () => {
-    vi.mocked(apiClient.applyToGame).mockImplementation(() =>
+    vi.mocked(apiClient.games.applyToGame).mockImplementation(() =>
       new Promise(resolve => setTimeout(resolve, 100))
     )
 
@@ -361,7 +363,7 @@ describe('GamesPage', () => {
     expect(screen.getByText('Is Joining: true')).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(apiClient.applyToGame).toHaveBeenCalled()
+      expect(apiClient.games.applyToGame).toHaveBeenCalled()
     })
 
     // Should reset joining state after completion
@@ -396,14 +398,14 @@ describe('GamesPage', () => {
   it('handles user declining auth error redirect', async () => {
     vi.mocked(global.confirm).mockReturnValue(false)
     const authError = { response: { status: 401 } }
-    vi.mocked(apiClient.applyToGame).mockRejectedValue(authError)
+    vi.mocked(apiClient.games.applyToGame).mockRejectedValue(authError)
 
     renderWithProviders(<GamesPage />)
 
     fireEvent.click(screen.getByText('Apply to Game'))
 
     await waitFor(() => {
-      expect(apiClient.applyToGame).toHaveBeenCalled()
+      expect(apiClient.games.applyToGame).toHaveBeenCalled()
     })
 
     expect(window.location.href).toBe('') // Should not redirect

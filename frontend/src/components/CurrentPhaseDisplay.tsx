@@ -29,7 +29,7 @@ export function CurrentPhaseDisplay({
 
   const { data: currentPhaseData, isLoading, error } = useQuery({
     queryKey: ['currentPhase', gameId],
-    queryFn: () => apiClient.getCurrentPhase(gameId).then(res => res.data),
+    queryFn: () => apiClient.phases.getCurrentPhase(gameId).then(res => res.data),
     refetchInterval: 30000, // Refetch every 30 seconds
     refetchOnMount: 'always',
     staleTime: 0,
@@ -39,7 +39,7 @@ export function CurrentPhaseDisplay({
   // Get all phases for history
   const { data: allPhasesData } = useQuery({
     queryKey: ['gamePhases', gameId],
-    queryFn: () => apiClient.getGamePhases(gameId).then(res => res.data),
+    queryFn: () => apiClient.phases.getGamePhases(gameId).then(res => res.data),
     enabled: !!gameId && !isGM, // Only fetch for non-GM users
     refetchOnMount: 'always',
     staleTime: 0

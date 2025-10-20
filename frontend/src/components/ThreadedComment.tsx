@@ -53,7 +53,7 @@ export function ThreadedComment({
   const loadReplies = async () => {
     try {
       setLoadingReplies(true);
-      const response = await apiClient.getPostComments(gameId, comment.id);
+      const response = await apiClient.messages.getPostComments(gameId, comment.id);
       setReplies(response.data);
     } catch (err) {
       console.error('Failed to load replies:', err);

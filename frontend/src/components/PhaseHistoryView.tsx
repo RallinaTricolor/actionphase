@@ -16,7 +16,7 @@ export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: Phase
 
   const { data: phasesData, isLoading } = useQuery({
     queryKey: ['gamePhases', gameId],
-    queryFn: () => apiClient.getGamePhases(gameId).then(res => res.data),
+    queryFn: () => apiClient.phases.getGamePhases(gameId).then(res => res.data),
     enabled: !!gameId,
   });
 

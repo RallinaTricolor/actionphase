@@ -19,7 +19,7 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
   // Get all actions for the game
   const { data: actionsData, isLoading } = useQuery({
     queryKey: ['gameActions', gameId],
-    queryFn: () => apiClient.getGameActions(gameId).then(res => res.data),
+    queryFn: () => apiClient.phases.getGameActions(gameId).then(res => res.data),
     enabled: !!gameId,
     refetchInterval: 30000 // Refetch every 30 seconds
   });
@@ -27,7 +27,7 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
   // Get all phases for filtering
   const { data: phasesData } = useQuery({
     queryKey: ['gamePhases', gameId],
-    queryFn: () => apiClient.getGamePhases(gameId).then(res => res.data),
+    queryFn: () => apiClient.phases.getGamePhases(gameId).then(res => res.data),
     enabled: !!gameId
   });
 
@@ -35,14 +35,14 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
   const displayPhaseId = selectedPhase || currentPhase?.id;
   const { data: unpublishedCountData } = useQuery({
     queryKey: ['unpublishedResultsCount', gameId, displayPhaseId],
-    queryFn: () => apiClient.getUnpublishedResultsCount(gameId, displayPhaseId!).then(res => res.data),
+    queryFn: () => apiClient.phases.getUnpublishedResultsCount(gameId, displayPhaseId!).then(res => res.data),
     enabled: !!gameId && !!displayPhaseId,
     refetchInterval: 10000 // Refetch every 10 seconds
   });
 
   // Mutation for publishing all results
   const publishAllMutation = useMutation({
-    mutationFn: () => apiClient.publishAllPhaseResults(gameId, displayPhaseId!),
+    mutationFn: () => apiClient.phases.publishAllPhaseResults(gameId, displayPhaseId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unpublishedResultsCount', gameId, displayPhaseId] });
       queryClient.invalidateQueries({ queryKey: ['userResults', gameId] });

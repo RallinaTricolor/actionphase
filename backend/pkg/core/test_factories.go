@@ -462,3 +462,578 @@ func (f *TestDataFactory) CreateGamesInBatch(count int, gmUserID int32) []db.Gam
 
 	return games
 }
+
+// CharacterBuilder provides a fluent interface for building test characters
+type CharacterBuilder struct {
+	factory       *TestDataFactory
+	gameID        int32
+	userID        *int32
+	name          string
+	characterType string
+	status        string
+}
+
+// NewCharacter starts building a new character with default values
+func (f *TestDataFactory) NewCharacter() *CharacterBuilder {
+	seq := f.nextSequence()
+	return &CharacterBuilder{
+		factory:       f,
+		gameID:        1, // Default game ID
+		userID:        nil,
+		name:          fmt.Sprintf("Test Character %d", seq),
+		characterType: "player_character",
+		status:        "pending",
+	}
+}
+
+func (b *CharacterBuilder) InGame(game db.Game) *CharacterBuilder {
+	b.gameID = game.ID
+	return b
+}
+
+func (b *CharacterBuilder) ForGame(gameID int32) *CharacterBuilder {
+	b.gameID = gameID
+	return b
+}
+
+func (b *CharacterBuilder) OwnedBy(user db.User) *CharacterBuilder {
+	userID := user.ID
+	b.userID = &userID
+	return b
+}
+
+func (b *CharacterBuilder) WithUserID(userID int32) *CharacterBuilder {
+	b.userID = &userID
+	return b
+}
+
+func (b *CharacterBuilder) GMControlled() *CharacterBuilder {
+	b.userID = nil
+	return b
+}
+
+func (b *CharacterBuilder) WithName(name string) *CharacterBuilder {
+	b.name = name
+	return b
+}
+
+func (b *CharacterBuilder) WithCharacterType(characterType string) *CharacterBuilder {
+	b.characterType = characterType
+	return b
+}
+
+func (b *CharacterBuilder) PlayerCharacter() *CharacterBuilder {
+	b.characterType = "player_character"
+	return b
+}
+
+func (b *CharacterBuilder) NPCGMControlled() *CharacterBuilder {
+	b.characterType = "npc_gm"
+	b.userID = nil
+	return b
+}
+
+func (b *CharacterBuilder) NPCAudience() *CharacterBuilder {
+	b.characterType = "npc_audience"
+	b.userID = nil
+	return b
+}
+
+func (b *CharacterBuilder) WithStatus(status string) *CharacterBuilder {
+	b.status = status
+	return b
+}
+
+func (b *CharacterBuilder) Pending() *CharacterBuilder {
+	b.status = "pending"
+	return b
+}
+
+func (b *CharacterBuilder) Approved() *CharacterBuilder {
+	b.status = "approved"
+	return b
+}
+
+func (b *CharacterBuilder) Rejected() *CharacterBuilder {
+	b.status = "rejected"
+	return b
+}
+
+// Create persists the character to the database and returns the created character
+func (b *CharacterBuilder) Create() db.Character {
+	params := db.CreateCharacterParams{
+		GameID:        b.gameID,
+		Name:          b.name,
+		CharacterType: b.characterType,
+		Status:        pgtype.Text{String: b.status, Valid: true},
+	}
+
+	if b.userID != nil {
+		params.UserID = pgtype.Int4{Int32: *b.userID, Valid: true}
+	}
+
+	queries := db.New(b.factory.db.Pool)
+	character, err := queries.CreateCharacter(context.Background(), params)
+	if err != nil {
+		b.factory.t.Fatalf("Should be able to create test character: %v", err)
+	}
+
+	return character
+}
+
+// PhaseBuilder provides a fluent interface for building test game phases
+type PhaseBuilder struct {
+	factory     *TestDataFactory
+	gameID      int32
+	phaseType   string
+	phaseNumber *int32
+	title       string
+	description string
+	startTime   *time.Time
+	endTime     *time.Time
+	deadline    *time.Time
+	isActive    bool
+}
+
+// NewPhase starts building a new phase with default values
+func (f *TestDataFactory) NewPhase() *PhaseBuilder {
+	seq := f.nextSequence()
+	return &PhaseBuilder{
+		factory:     f,
+		gameID:      1, // Default game ID
+		phaseType:   "common_room",
+		phaseNumber: nil, // Will auto-increment if not set
+		title:       fmt.Sprintf("Test Phase %d", seq),
+		description: "",
+		isActive:    false,
+	}
+}
+
+func (b *PhaseBuilder) InGame(game db.Game) *PhaseBuilder {
+	b.gameID = game.ID
+	return b
+}
+
+func (b *PhaseBuilder) ForGame(gameID int32) *PhaseBuilder {
+	b.gameID = gameID
+	return b
+}
+
+func (b *PhaseBuilder) WithPhaseType(phaseType string) *PhaseBuilder {
+	b.phaseType = phaseType
+	return b
+}
+
+func (b *PhaseBuilder) CommonRoom() *PhaseBuilder {
+	b.phaseType = "common_room"
+	return b
+}
+
+func (b *PhaseBuilder) ActionPhase() *PhaseBuilder {
+	b.phaseType = "action"
+	return b
+}
+
+func (b *PhaseBuilder) WithPhaseNumber(number int32) *PhaseBuilder {
+	b.phaseNumber = &number
+	return b
+}
+
+func (b *PhaseBuilder) WithTitle(title string) *PhaseBuilder {
+	b.title = title
+	return b
+}
+
+func (b *PhaseBuilder) WithDescription(description string) *PhaseBuilder {
+	b.description = description
+	return b
+}
+
+func (b *PhaseBuilder) WithStartTime(startTime time.Time) *PhaseBuilder {
+	b.startTime = &startTime
+	return b
+}
+
+func (b *PhaseBuilder) WithEndTime(endTime time.Time) *PhaseBuilder {
+	b.endTime = &endTime
+	return b
+}
+
+func (b *PhaseBuilder) WithDeadline(deadline time.Time) *PhaseBuilder {
+	b.deadline = &deadline
+	return b
+}
+
+// WithDeadlineIn sets the deadline to a duration from now
+func (b *PhaseBuilder) WithDeadlineIn(duration time.Duration) *PhaseBuilder {
+	deadline := time.Now().Add(duration)
+	b.deadline = &deadline
+	return b
+}
+
+// WithTimeRange sets start time to now and end time to duration from now
+func (b *PhaseBuilder) WithTimeRange(duration time.Duration) *PhaseBuilder {
+	now := time.Now()
+	end := now.Add(duration)
+	b.startTime = &now
+	b.endTime = &end
+	return b
+}
+
+func (b *PhaseBuilder) Active() *PhaseBuilder {
+	b.isActive = true
+	return b
+}
+
+func (b *PhaseBuilder) Inactive() *PhaseBuilder {
+	b.isActive = false
+	return b
+}
+
+// Create persists the phase to the database and returns the created phase
+func (b *PhaseBuilder) Create() db.GamePhase {
+	// Auto-generate phase number if not set
+	phaseNumber := int32(1)
+	if b.phaseNumber != nil {
+		phaseNumber = *b.phaseNumber
+	} else {
+		// Get next phase number for this game
+		queries := db.New(b.factory.db.Pool)
+		phases, err := queries.GetGamePhases(context.Background(), b.gameID)
+		if err == nil && len(phases) > 0 {
+			// Find max phase number
+			maxPhaseNumber := int32(0)
+			for _, p := range phases {
+				if p.PhaseNumber > maxPhaseNumber {
+					maxPhaseNumber = p.PhaseNumber
+				}
+			}
+			phaseNumber = maxPhaseNumber + 1
+		}
+	}
+
+	params := db.CreateGamePhaseParams{
+		GameID:      b.gameID,
+		PhaseType:   b.phaseType,
+		PhaseNumber: phaseNumber,
+		Title:       b.title,
+	}
+
+	if b.description != "" {
+		params.Description = pgtype.Text{String: b.description, Valid: true}
+	}
+
+	if b.startTime != nil {
+		params.StartTime = pgtype.Timestamptz{Time: *b.startTime, Valid: true}
+	}
+
+	if b.endTime != nil {
+		params.EndTime = pgtype.Timestamptz{Time: *b.endTime, Valid: true}
+	}
+
+	if b.deadline != nil {
+		params.Deadline = pgtype.Timestamptz{Time: *b.deadline, Valid: true}
+	}
+
+	queries := db.New(b.factory.db.Pool)
+	phase, err := queries.CreateGamePhase(context.Background(), params)
+	if err != nil {
+		b.factory.t.Fatalf("Should be able to create test phase: %v", err)
+	}
+
+	// Activate if requested
+	if b.isActive {
+		phase, err = queries.ActivatePhase(context.Background(), phase.ID)
+		if err != nil {
+			b.factory.t.Fatalf("Should be able to activate test phase: %v", err)
+		}
+	}
+
+	return phase
+}
+
+// ActionSubmissionBuilder provides a fluent interface for building test action submissions
+type ActionSubmissionBuilder struct {
+	factory     *TestDataFactory
+	gameID      int32
+	userID      int32
+	phaseID     int32
+	characterID *int32
+	content     string
+	isDraft     bool
+}
+
+// NewActionSubmission starts building a new action submission with default values
+func (f *TestDataFactory) NewActionSubmission() *ActionSubmissionBuilder {
+	seq := f.nextSequence()
+	return &ActionSubmissionBuilder{
+		factory:     f,
+		gameID:      1, // Default game ID
+		userID:      1, // Default user ID
+		phaseID:     1, // Default phase ID
+		characterID: nil,
+		content:     fmt.Sprintf("Test action submission %d", seq),
+		isDraft:     false,
+	}
+}
+
+func (b *ActionSubmissionBuilder) InGame(game db.Game) *ActionSubmissionBuilder {
+	b.gameID = game.ID
+	return b
+}
+
+func (b *ActionSubmissionBuilder) ForGame(gameID int32) *ActionSubmissionBuilder {
+	b.gameID = gameID
+	return b
+}
+
+func (b *ActionSubmissionBuilder) ByUser(user db.User) *ActionSubmissionBuilder {
+	b.userID = user.ID
+	return b
+}
+
+func (b *ActionSubmissionBuilder) WithUserID(userID int32) *ActionSubmissionBuilder {
+	b.userID = userID
+	return b
+}
+
+func (b *ActionSubmissionBuilder) InPhase(phase db.GamePhase) *ActionSubmissionBuilder {
+	b.phaseID = phase.ID
+	b.gameID = phase.GameID // Also set game ID from phase
+	return b
+}
+
+func (b *ActionSubmissionBuilder) ForPhase(phaseID int32) *ActionSubmissionBuilder {
+	b.phaseID = phaseID
+	return b
+}
+
+func (b *ActionSubmissionBuilder) AsCharacter(character db.Character) *ActionSubmissionBuilder {
+	charID := character.ID
+	b.characterID = &charID
+	return b
+}
+
+func (b *ActionSubmissionBuilder) WithCharacterID(characterID int32) *ActionSubmissionBuilder {
+	b.characterID = &characterID
+	return b
+}
+
+func (b *ActionSubmissionBuilder) WithContent(content string) *ActionSubmissionBuilder {
+	b.content = content
+	return b
+}
+
+func (b *ActionSubmissionBuilder) Draft() *ActionSubmissionBuilder {
+	b.isDraft = true
+	return b
+}
+
+func (b *ActionSubmissionBuilder) Final() *ActionSubmissionBuilder {
+	b.isDraft = false
+	return b
+}
+
+// Create persists the action submission to the database and returns the created submission
+func (b *ActionSubmissionBuilder) Create() db.ActionSubmission {
+	params := db.SubmitActionParams{
+		GameID:  b.gameID,
+		UserID:  b.userID,
+		PhaseID: b.phaseID,
+		Content: b.content,
+		IsDraft: pgtype.Bool{Bool: b.isDraft, Valid: true},
+	}
+
+	if b.characterID != nil {
+		params.CharacterID = pgtype.Int4{Int32: *b.characterID, Valid: true}
+	}
+
+	queries := db.New(b.factory.db.Pool)
+	submission, err := queries.SubmitAction(context.Background(), params)
+	if err != nil {
+		b.factory.t.Fatalf("Should be able to create test action submission: %v", err)
+	}
+
+	return submission
+}
+
+// MessageBuilder provides a fluent interface for building test messages (posts and comments)
+type MessageBuilder struct {
+	factory               *TestDataFactory
+	gameID                int32
+	phaseID               *int32
+	authorID              int32
+	characterID           int32
+	content               string
+	messageType           string
+	parentID              *int32
+	visibility            string
+	mentionedCharacterIDs []int32
+}
+
+// NewPost starts building a new post with default values
+func (f *TestDataFactory) NewPost() *MessageBuilder {
+	seq := f.nextSequence()
+	return &MessageBuilder{
+		factory:               f,
+		gameID:                1, // Default game ID
+		phaseID:               nil,
+		authorID:              1, // Default author ID
+		characterID:           1, // Default character ID
+		content:               fmt.Sprintf("Test post %d", seq),
+		messageType:           "post",
+		parentID:              nil,
+		visibility:            "game",
+		mentionedCharacterIDs: []int32{},
+	}
+}
+
+// NewComment starts building a new comment with default values
+func (f *TestDataFactory) NewComment() *MessageBuilder {
+	seq := f.nextSequence()
+	return &MessageBuilder{
+		factory:               f,
+		gameID:                1, // Default game ID
+		phaseID:               nil,
+		authorID:              1, // Default author ID
+		characterID:           1, // Default character ID
+		content:               fmt.Sprintf("Test comment %d", seq),
+		messageType:           "comment",
+		parentID:              nil, // Must be set before Create()
+		visibility:            "game",
+		mentionedCharacterIDs: []int32{},
+	}
+}
+
+func (b *MessageBuilder) InGame(game db.Game) *MessageBuilder {
+	b.gameID = game.ID
+	return b
+}
+
+func (b *MessageBuilder) ForGame(gameID int32) *MessageBuilder {
+	b.gameID = gameID
+	return b
+}
+
+func (b *MessageBuilder) InPhase(phase db.GamePhase) *MessageBuilder {
+	phaseID := phase.ID
+	b.phaseID = &phaseID
+	b.gameID = phase.GameID // Also set game ID from phase
+	return b
+}
+
+func (b *MessageBuilder) WithPhaseID(phaseID int32) *MessageBuilder {
+	b.phaseID = &phaseID
+	return b
+}
+
+func (b *MessageBuilder) ByAuthor(user db.User) *MessageBuilder {
+	b.authorID = user.ID
+	return b
+}
+
+func (b *MessageBuilder) WithAuthorID(authorID int32) *MessageBuilder {
+	b.authorID = authorID
+	return b
+}
+
+func (b *MessageBuilder) ByCharacter(character db.Character) *MessageBuilder {
+	b.characterID = character.ID
+	return b
+}
+
+func (b *MessageBuilder) WithCharacterID(characterID int32) *MessageBuilder {
+	b.characterID = characterID
+	return b
+}
+
+func (b *MessageBuilder) WithContent(content string) *MessageBuilder {
+	b.content = content
+	return b
+}
+
+func (b *MessageBuilder) OnPost(post db.Message) *MessageBuilder {
+	parentID := post.ID
+	b.parentID = &parentID
+	b.gameID = post.GameID
+	b.messageType = "comment"
+	return b
+}
+
+func (b *MessageBuilder) WithParentID(parentID int32) *MessageBuilder {
+	b.parentID = &parentID
+	b.messageType = "comment"
+	return b
+}
+
+func (b *MessageBuilder) GameVisible() *MessageBuilder {
+	b.visibility = "game"
+	return b
+}
+
+func (b *MessageBuilder) Private() *MessageBuilder {
+	b.visibility = "private"
+	return b
+}
+
+func (b *MessageBuilder) WithVisibility(visibility string) *MessageBuilder {
+	b.visibility = visibility
+	return b
+}
+
+func (b *MessageBuilder) MentioningCharacters(characterIDs ...int32) *MessageBuilder {
+	b.mentionedCharacterIDs = characterIDs
+	return b
+}
+
+// Create persists the message to the database and returns the created message
+func (b *MessageBuilder) Create() db.Message {
+	queries := db.New(b.factory.db.Pool)
+
+	var message db.Message
+	var err error
+
+	if b.messageType == "post" {
+		params := db.CreatePostParams{
+			GameID:                b.gameID,
+			AuthorID:              b.authorID,
+			CharacterID:           b.characterID,
+			Content:               b.content,
+			Visibility:            db.MessageVisibility(b.visibility),
+			MentionedCharacterIds: b.mentionedCharacterIDs,
+		}
+
+		if b.phaseID != nil {
+			params.PhaseID = pgtype.Int4{Int32: *b.phaseID, Valid: true}
+		}
+
+		message, err = queries.CreatePost(context.Background(), params)
+	} else {
+		// comment
+		if b.parentID == nil {
+			b.factory.t.Fatalf("Comment must have a parent ID")
+		}
+
+		params := db.CreateCommentParams{
+			GameID:                b.gameID,
+			AuthorID:              b.authorID,
+			CharacterID:           b.characterID,
+			Content:               b.content,
+			ParentID:              pgtype.Int4{Int32: *b.parentID, Valid: true},
+			Visibility:            db.MessageVisibility(b.visibility),
+			MentionedCharacterIds: b.mentionedCharacterIDs,
+		}
+
+		if b.phaseID != nil {
+			params.PhaseID = pgtype.Int4{Int32: *b.phaseID, Valid: true}
+		}
+
+		message, err = queries.CreateComment(context.Background(), params)
+	}
+
+	if err != nil {
+		b.factory.t.Fatalf("Should be able to create test message: %v", err)
+	}
+
+	return message
+}

@@ -27,7 +27,7 @@ export function CharactersList({
 
   const { data: charactersData, isLoading } = useQuery({
     queryKey: ['gameCharacters', gameId],
-    queryFn: () => apiClient.getGameCharacters(gameId).then(res => res.data || []),
+    queryFn: () => apiClient.characters.getGameCharacters(gameId).then(res => res.data || []),
     refetchInterval: 30000 // Refetch every 30 seconds
   });
 
@@ -36,7 +36,7 @@ export function CharactersList({
 
   const approveCharacterMutation = useMutation({
     mutationFn: ({ characterId, status }: { characterId: number; status: 'approved' | 'rejected' }) =>
-      apiClient.approveCharacter(characterId, { status }),
+      apiClient.characters.approveCharacter(characterId, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
     }

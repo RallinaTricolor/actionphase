@@ -53,7 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     queryKey: ['currentUser'],
     queryFn: async () => {
       console.log('[AuthContext] Fetching current user data');
-      const response = await apiClient.getCurrentUser();
+      const response = await apiClient.auth.getCurrentUser();
       console.log('[AuthContext] Current user loaded:', response.data);
       return response.data;
     },
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loginMutation = useMutation({
     mutationFn: async (data: LoginRequest) => {
       console.log('[AuthContext] Attempting login');
-      const response = await apiClient.login(data);
+      const response = await apiClient.auth.login(data);
       return response;
     },
     onSuccess: (response) => {
@@ -99,7 +99,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterRequest) => {
       console.log('[AuthContext] Attempting registration');
-      const response = await apiClient.register(data);
+      const response = await apiClient.auth.register(data);
       return response;
     },
     onSuccess: (response) => {

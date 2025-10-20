@@ -37,9 +37,9 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
 
       // Load posts, user's controllable characters, and all game characters in parallel
       const [postsResponse, controllableCharsResponse, allCharsResponse] = await Promise.all([
-        apiClient.getGamePosts(gameId, { phase_id: phaseId, limit: 50, offset: 0 }),
-        apiClient.getUserControllableCharacters(gameId),
-        apiClient.getGameCharacters(gameId)
+        apiClient.messages.getGamePosts(gameId, { phase_id: phaseId, limit: 50, offset: 0 }),
+        apiClient.characters.getUserControllableCharacters(gameId),
+        apiClient.characters.getGameCharacters(gameId)
       ]);
 
       setPosts(postsResponse.data);
@@ -56,7 +56,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
   const handleCreatePost = async (characterId: number, content: string) => {
     try {
       setIsCreatingPost(true);
-      await apiClient.createPost(gameId, {
+      await apiClient.messages.createPost(gameId, {
         character_id: characterId,
         content,
         phase_id: phaseId
@@ -73,7 +73,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
 
   const handleCreateComment = async (postId: number, characterId: number, content: string) => {
     try {
-      await apiClient.createComment(gameId, postId, {
+      await apiClient.messages.createComment(gameId, postId, {
         character_id: characterId,
         content
       });

@@ -78,7 +78,7 @@ export function EditGameModal({ game, isOpen, onClose, onGameUpdated }: EditGame
         is_anonymous: isAnonymous,
       };
 
-      await apiClient.updateGame(game.id, updateData);
+      await apiClient.games.updateGame(game.id, updateData);
       onGameUpdated();
       onClose();
     } catch (err) {

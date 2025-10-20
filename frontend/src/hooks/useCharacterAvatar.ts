@@ -33,7 +33,7 @@ export function useUploadCharacterAvatar() {
 
   return useMutation({
     mutationFn: ({ characterId, file }: { characterId: number; file: File }) =>
-      apiClient.uploadCharacterAvatar(characterId, file),
+      apiClient.characters.uploadCharacterAvatar(characterId, file),
     onSuccess: (data, variables) => {
       // Invalidate character queries to refetch with new avatar
       queryClient.invalidateQueries({ queryKey: ['character', variables.characterId] });
@@ -70,7 +70,7 @@ export function useDeleteCharacterAvatar() {
 
   return useMutation({
     mutationFn: (characterId: number) =>
-      apiClient.deleteCharacterAvatar(characterId),
+      apiClient.characters.deleteCharacterAvatar(characterId),
     onSuccess: (_, characterId) => {
       // Invalidate character queries to refetch without avatar
       queryClient.invalidateQueries({ queryKey: ['character', characterId] });

@@ -26,14 +26,14 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
   // Get user's characters for this game
   const { data: characters = [] } = useQuery({
     queryKey: ['gameCharacters', gameId],
-    queryFn: () => apiClient.getGameCharacters(gameId).then(res => res.data),
+    queryFn: () => apiClient.characters.getGameCharacters(gameId).then(res => res.data),
     enabled: !!gameId
   });
 
   // Get user's previous actions
   const { data: userActionsData } = useQuery({
     queryKey: ['userActions', gameId],
-    queryFn: () => apiClient.getUserActions(gameId).then(res => res.data),
+    queryFn: () => apiClient.phases.getUserActions(gameId).then(res => res.data),
     enabled: !!gameId
   });
 
@@ -54,7 +54,7 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
   }, [characters, currentUserId]);
 
   const submitActionMutation = useMutation({
-    mutationFn: (data: ActionSubmissionRequest) => apiClient.submitAction(gameId, data),
+    mutationFn: (data: ActionSubmissionRequest) => apiClient.phases.submitAction(gameId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userActions', gameId] });
       setContent('');

@@ -26,10 +26,10 @@ This master plan coordinates 4 major refactoring initiatives to address:
 
 | Priority | Plan | Impact | Effort | Risk | Start Week |
 |----------|------|--------|--------|------|------------|
-| **P0** | [01: Test Pyramid](./REFACTOR_01_TEST_PYRAMID.md) | Critical | 1-2 weeks | Low | Week 1 |
-| **P0** | [04: Code Utilities](./REFACTOR_04_REVISED.md) ⭐ | High | 1-2 weeks | Low | Week 1 ✅ |
-| **P1** | [03: Backend Services](./REFACTOR_03_BACKEND_SERVICES.md) | High | 3 weeks | Medium | Week 2 |
-| **P2** | [02: Documentation](./REFACTOR_02_DOCUMENTATION.md) | Medium | 3-4 days | Low | Week 4 |
+| **P0** | [01: Test Pyramid](REFACTOR_01_TEST_PYRAMID.md) | Critical | 1-2 weeks | Low | Week 1 |
+| **P0** | [04: Code Utilities](REFACTOR_04_REVISED.md) ⭐ | High | 1-2 weeks | Low | Week 1 ✅ |
+| **P1** | [03: Backend Services](REFACTOR_03_BACKEND_SERVICES.md) | High | 3 weeks | Medium | Week 2 |
+| **P2** | [02: Documentation](REFACTOR_02_DOCUMENTATION.md) | Medium | 3-4 days | Low | Week 4 |
 
 ⭐ = Revised based on Day 1 learnings | ✅ = In progress
 
@@ -354,4 +354,4 @@ Deferred to future initiatives:
 
 **Status**: Core backend service refactoring successfully completed.
 
-**See**: [REFACTOR_RETROSPECTIVE.md](./REFACTOR_RETROSPECTIVE.md) for complete summary of achievements, learnings, and recommendations.
+**See**: [REFACTOR_RETROSPECTIVE.md](REFACTOR_RETROSPECTIVE.md) for complete summary of achievements, learnings, and recommendations.

@@ -51,7 +51,7 @@ export const GamesPage = () => {
 
     try {
       setIsJoining(true);
-      await apiClient.applyToGame(gameId, { role, message });
+      await apiClient.games.applyToGame(gameId, { role, message });
 
       // Show success message
       alert(`Successfully applied to game as ${role}!`);

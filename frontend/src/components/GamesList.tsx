@@ -31,8 +31,8 @@ export const GamesList = ({
       try {
         setLoading(true);
         const response = showRecruitingOnly
-          ? await apiClient.getRecruitingGames()
-          : await apiClient.getAllGames();
+          ? await apiClient.games.getRecruitingGames()
+          : await apiClient.games.getAllGames();
         setGames(response.data || []);
         setError(null);
       } catch (err) {

@@ -32,7 +32,7 @@ export const ApplyToGameModal = ({
       setSubmitting(true);
       setError(null);
 
-      await apiClient.applyToGame(gameId, {
+      await apiClient.games.applyToGame(gameId, {
         role: formData.role,
         message: formData.message?.trim() || undefined
       });
