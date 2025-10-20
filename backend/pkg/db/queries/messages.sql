@@ -30,6 +30,19 @@ JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
 WHERE m.id = $1;
 
+-- name: GetMessage :one
+-- Get any message by ID (post or comment) - used for deep linking
+SELECT m.*,
+       u.username as author_username,
+       c.name as character_name,
+       c.avatar_url as character_avatar_url,
+       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as reply_count
+FROM messages m
+JOIN users u ON m.author_id = u.id
+LEFT JOIN characters c ON m.character_id = c.id
+WHERE m.id = $1
+  AND m.is_deleted = false;
+
 -- name: GetGamePosts :many
 SELECT m.*,
        u.username as author_username,

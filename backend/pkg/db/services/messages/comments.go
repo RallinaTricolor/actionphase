@@ -104,6 +104,48 @@ func (s *MessageService) GetComment(ctx context.Context, commentID int32) (*core
 	}, nil
 }
 
+// GetMessage retrieves a single message by ID (used for deep linking)
+func (s *MessageService) GetMessage(ctx context.Context, messageID int32) (*core.MessageWithDetails, error) {
+	queries := models.New(s.DB)
+
+	message, err := queries.GetMessage(ctx, messageID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get message: %w", err)
+	}
+
+	var avatarURL *string
+	if message.CharacterAvatarUrl.Valid {
+		avatarURL = &message.CharacterAvatarUrl.String
+	}
+
+	result := &core.MessageWithDetails{
+		Message: models.Message{
+			ID:                    message.ID,
+			GameID:                message.GameID,
+			PhaseID:               message.PhaseID,
+			AuthorID:              message.AuthorID,
+			CharacterID:           message.CharacterID,
+			Content:               message.Content,
+			MessageType:           message.MessageType,
+			ParentID:              message.ParentID,
+			ThreadDepth:           message.ThreadDepth,
+			Visibility:            message.Visibility,
+			MentionedCharacterIds: message.MentionedCharacterIds,
+			IsEdited:              message.IsEdited,
+			IsDeleted:             message.IsDeleted,
+			CreatedAt:             message.CreatedAt,
+			UpdatedAt:             message.UpdatedAt,
+			DeletedAt:             message.DeletedAt,
+		},
+		AuthorUsername:     message.AuthorUsername,
+		CharacterName:      message.CharacterName.String,
+		CharacterAvatarUrl: avatarURL,
+		ReplyCount:         message.ReplyCount,
+	}
+
+	return result, nil
+}
+
 // GetPostComments retrieves direct child comments for a post or comment
 func (s *MessageService) GetPostComments(ctx context.Context, parentID int32) ([]core.MessageWithDetails, error) {
 	queries := models.New(s.DB)
