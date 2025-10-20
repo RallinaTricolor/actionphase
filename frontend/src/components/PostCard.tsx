@@ -5,6 +5,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { ThreadedComment } from './ThreadedComment';
+import { ThreadViewModal } from './ThreadViewModal';
 import { apiClient } from '../lib/api';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
@@ -28,6 +29,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPostCollapsed, setIsPostCollapsed] = useState(false);
+  const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
 
   // Get unread comment IDs for this post
   const unreadCommentIDs = usePostUnreadCommentIDs(gameId, post.id);
@@ -375,7 +377,9 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                   onCreateReply={onCreateComment}
                   currentUserId={currentUserId}
                   depth={0}
+                  maxDepth={5}
                   unreadCommentIDs={unreadCommentIDs}
+                  onOpenThread={(comment) => setThreadModalComment(comment)}
                 />
               ))}
             </div>
@@ -383,6 +387,20 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
           </div>
         )}
       </div>
+
+      {/* Thread View Modal */}
+      {threadModalComment !== null && (
+        <ThreadViewModal
+          gameId={gameId}
+          comment={threadModalComment}
+          characters={characters}
+          controllableCharacters={controllableCharacters}
+          onClose={() => setThreadModalComment(null)}
+          onCreateReply={onCreateComment}
+          currentUserId={currentUserId}
+          unreadCommentIDs={unreadCommentIDs}
+        />
+      )}
     </div>
   );
 }

@@ -14,7 +14,9 @@ interface ThreadedCommentProps {
   onCreateReply: (parentId: number, characterId: number, content: string) => Promise<void>;
   currentUserId?: number;
   depth?: number;
+  maxDepth?: number; // Maximum nesting depth before showing "Continue thread" button
   unreadCommentIDs?: number[]; // IDs of comments that are "new since last visit"
+  onOpenThread?: (comment: Message) => void; // Callback to open thread modal with comment object
 }
 
 export function ThreadedComment({
@@ -25,7 +27,9 @@ export function ThreadedComment({
   onCreateReply,
   currentUserId,
   depth = 0,
-  unreadCommentIDs = []
+  maxDepth = 5,
+  unreadCommentIDs = [],
+  onOpenThread
 }: ThreadedCommentProps) {
   const [replies, setReplies] = useState<Message[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
@@ -38,6 +42,7 @@ export function ThreadedComment({
   const isAuthor = currentUserId === comment.author_id;
   const hasReplies = (comment.reply_count || 0) > 0;
   const isUnread = unreadCommentIDs.includes(comment.id);
+  const isAtMaxDepth = depth >= maxDepth;
 
   // Auto-select first character
   useEffect(() => {
@@ -156,14 +161,16 @@ export function ThreadedComment({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 text-xs text-gray-500">
-          <button
-            onClick={() => setIsReplying(!isReplying)}
-            className="hover:text-blue-600 font-medium transition-colors"
-          >
-            Reply
-          </button>
+          {!isAtMaxDepth && (
+            <button
+              onClick={() => setIsReplying(!isReplying)}
+              className="hover:text-blue-600 font-medium transition-colors"
+            >
+              Reply
+            </button>
+          )}
 
-          {hasReplies && (
+          {hasReplies && !isAtMaxDepth && (
             <button
               onClick={() => setShowReplies(!showReplies)}
               className="hover:text-blue-600 font-medium transition-colors flex items-center gap-1"
@@ -234,8 +241,24 @@ export function ThreadedComment({
         </div>
       )}
 
-      {/* Nested Replies */}
-      {showReplies && (hasReplies || replies.length > 0) && (
+      {/* Continue Thread Button (if at max depth with replies) */}
+      {isAtMaxDepth && hasReplies && (
+        <div className="mt-2 ml-6">
+          <button
+            onClick={() => onOpenThread?.(comment)}
+            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            <span>Continue this thread</span>
+            <span className="text-gray-500">({comment.reply_count} {comment.reply_count === 1 ? 'reply' : 'replies'})</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Nested Replies (only if under max depth) */}
+      {!isAtMaxDepth && showReplies && (hasReplies || replies.length > 0) && (
         <div className="space-y-0">
           {loadingReplies ? (
             <div className="ml-6 py-2 text-xs text-gray-500">Loading replies...</div>
@@ -250,7 +273,9 @@ export function ThreadedComment({
                 onCreateReply={onCreateReply}
                 currentUserId={currentUserId}
                 depth={depth + 1}
+                maxDepth={maxDepth}
                 unreadCommentIDs={unreadCommentIDs}
+                onOpenThread={onOpenThread}
               />
             ))
           )}
