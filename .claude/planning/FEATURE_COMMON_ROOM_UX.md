@@ -1453,6 +1453,10 @@ And I can see parent comments for context
 - ✅ Added visual feedback for link copied (green checkmark + "Copied!" text)
 - ✅ ThreadViewPage route for shareable URLs (`/games/:gameId/common-room/thread/:commentId`)
 - ✅ Comment highlighting in ThreadViewPage (yellow background border)
+- ✅ Backend endpoint GET `/api/v1/games/:id/messages/:messageId` for fetching deeply nested comments
+- ✅ Frontend API client method `getMessage()` for deep linking support
+- ✅ ThreadViewModal auto-opens when deep-linked comment not visible in DOM
+- ✅ "Parent" link on comments for navigating thread hierarchy
 
 **What Actually Works:**
 - Every comment has a "Copy link" button in the action bar
@@ -1461,20 +1465,42 @@ And I can see parent comments for context
 - Fallback: Alert dialog if clipboard API unavailable
 - Pasting link navigates to game page with Common Room tab
 - Auto-scroll triggers after 500ms (allows comments to load and expand)
-- Comment gets yellow ring highlight (`ring-4 ring-yellow-400`) for 3 seconds
+- If comment visible in DOM: Scrolls to it with yellow ring highlight for 3 seconds
+- If comment NOT in DOM (depth >5): Fetches via API and opens in ThreadViewModal automatically
 - Query parameter auto-removed from URL after scroll (clean URL history)
-- Works with both top-level posts and deeply nested comments
+- Works with both top-level posts and deeply nested comments (any depth)
+- "Parent" link on each comment navigates to parent comment using same deep linking mechanism
+- Parent link only shows if comment has a parent_id
+
+**Files Created:**
+- `backend/pkg/db/queries/messages.sql` - Added `GetMessage` SQL query
+- Generated Go code via `just sqlgen` for GetMessage query
 
 **Files Modified:**
-- `frontend/src/components/ThreadedComment.tsx` (lines 46, 74-86, 198-218)
+- `frontend/src/components/ThreadedComment.tsx` (lines 46, 74-86, 198-231)
   - Added `linkCopied` state
   - Added `handleCopyLink()` function
   - Added "Copy link" button with icon and success state
-- `frontend/src/components/CommonRoom.tsx` (lines 2, 24-25, 38-62)
-  - Added `useSearchParams` hook
-  - Added URL parameter parsing
-  - Added auto-scroll effect with highlight
+  - Added "Parent" link with navigation to parent comment (lines 220-231)
+- `frontend/src/components/CommonRoom.tsx` (lines 2, 24-26, 34, 38-92, 233-244)
+  - Added `useSearchParams` and `useNavigate` hooks
+  - Added `threadModalComment` state for modal management
+  - Added URL parameter parsing with two-path logic:
+    1. Element in DOM: Auto-scroll with highlight
+    2. Element not in DOM: Fetch via API and open ThreadViewModal
   - Auto-clears query param after navigation
+  - Added ThreadViewModal at bottom of component
+- `frontend/src/lib/api/messages.ts` (lines 44-46)
+  - Added `getMessage(gameId, messageId)` method to MessagesApi class
+- `backend/pkg/db/services/messages/comments.go` (full GetMessage implementation)
+  - Added `GetMessage()` service method
+  - Returns `*core.MessageWithDetails` for any message by ID
+- `backend/pkg/messages/api.go` (new GetMessage handler)
+  - Added `GetMessage()` HTTP handler
+  - Validates gameId and messageId from URL params
+  - Returns 500 for errors (using ErrInternalError)
+- `backend/pkg/http/root.go` (route registration)
+  - Added `r.Get("/{gameId}/messages/{messageId}", messageHandler.GetMessage)`
 
 **Key Design Decisions:**
 - Used query parameter `?comment=123` instead of hash `#comment-123` for better analytics
@@ -1483,6 +1509,10 @@ And I can see parent comments for context
 - Link button always visible (not hidden in overflow menu) for discoverability
 - Green checkmark + text change provides immediate visual feedback
 - 500ms delay before scroll allows DOM to fully render comments
+- Two-path navigation: In-DOM scroll vs. API fetch + modal (seamless UX for any depth)
+- Modal-first approach for deep comments (avoids navigating away from Common Room)
+- Parent link uses same deep linking mechanism for consistency
+- Fallback navigation to ThreadViewPage if API fetch fails
 
 ### 4.5 Phase 5: Visual Enhancements - ✅ COMPLETED (2025-10-20)
 
@@ -1492,35 +1522,52 @@ And I can see parent comments for context
 **Completion**: 100%
 
 **Tasks Completed:**
-- ✅ Updated `PostCard` styling (shadow-lg, rounded corners, spacing)
+- ✅ Implemented unified card design containing both post and comments
 - ✅ Added "NEW" badges to new comments (yellow background)
 - ✅ Enhanced GM post styling (gradient background, megaphone icon)
 - ✅ Improved comment visual hierarchy (colored left borders)
+- ✅ Added proper whitespace between posts (32px with mb-8)
+- ✅ Comments section visually integrated within post card
 - ✅ Added hover states and transitions
 - ✅ Tested responsive design (mobile, tablet, desktop)
 - ✅ Cross-browser testing completed
 
 **What Actually Works:**
-- GM posts have distinct elevated card design with `shadow-lg` and `rounded-lg`
-- Gradient background: `bg-gradient-to-r from-blue-50 to-indigo-50`
-- Megaphone icon clearly identifies GM announcements
-- Post spacing: `mb-6 pb-6 border-b-4` for clear separation
-- Comments have colored left borders that change with depth (blue→green→yellow→purple→pink→indigo)
-- NEW badges: Yellow background (`bg-yellow-100 text-yellow-800`) with bold font
-- Hover transitions: `transition-colors` on interactive elements
-- Fully responsive from 375px mobile to desktop
-- Works consistently across Chrome, Firefox, Safari
+- **Unified Card Design**: Each post is wrapped in a single elevated card (`bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden`)
+- **Comments Inside Card**: Comments section has gray background (`bg-gray-50`) and is contained within the post card, not separate
+- **Post Separation**: 32px spacing between posts (`mb-8`) provides clear visual boundaries
+- **GM Post Header**: Gradient background (`bg-gradient-to-r from-blue-50 to-indigo-50`) with megaphone icon
+- **Comment Actions Bar**: Gray background with border (`p-4 border-b border-gray-200`) separating actions from comments
+- **Alternating Comment Backgrounds**: Depth-based alternating backgrounds (white/gray-50) for maximum readability
+  - Depth 0: No background (inherits parent gray-50)
+  - Depth 1: White background
+  - Depth 2: Gray background (bg-gray-50)
+  - Depth 3+: Pattern continues alternating
+  - Each nested comment has `py-3 my-2 rounded-r-lg` for spacing and visual separation
+- **Colored Left Borders**: Color-coded by depth (blue→green→yellow→purple→pink→indigo) for thread tracking
+- **NEW badges**: Yellow background (`bg-yellow-100 text-yellow-800`) with bold font
+- **Hover transitions**: `transition-colors` on interactive elements
+- **Mobile Responsive**: Fully responsive from 375px mobile to desktop, no horizontal scroll
+- **Cross-browser**: Works consistently across Chrome, Firefox, Safari
 
 **Files Modified:**
-- `frontend/src/components/PostCard.tsx` (lines 199-272, full card redesign)
-- `frontend/src/components/ThreadedComment.tsx` (lines 113-122, colored borders; 130, unread highlighting; 146-148, NEW badge)
+- `frontend/src/components/PostCard.tsx` (lines 199-393, complete card structure redesign)
+  - Moved from `border-b-4 border-gray-200` separator to unified card design
+  - Changed spacing from `mb-6` to `mb-8` (24px → 32px)
+  - Wrapped entire component in `bg-white rounded-xl shadow-lg` card
+  - Comments section now has `bg-gray-50 border-t border-gray-200` background
+  - Action buttons in separate section with `p-4 border-b border-gray-200`
+  - Comments area has `p-4` padding with `space-y-3` between threads
+- `frontend/src/components/ThreadedComment.tsx` (lines 128-136, colored borders; 145, unread highlighting; 161-163, NEW badge)
 
 **Key Design Decisions:**
-- GM posts use gradient + icon to stand out as announcements
-- Color-coded nesting helps users track conversation depth
-- Yellow theme for "NEW" (caution/attention color) vs blue theme for GM posts
-- Sufficient whitespace between posts prevents overwhelming users
-- Shadows and rounded corners give modern card-based feel
+- **Card-Based Design**: Post + comments are one cohesive visual unit, meeting spec requirement "Comment threads visually nested within post card"
+- **Visual Hierarchy**: Gray background for comments distinguishes them from white post content
+- **Proper Spacing**: 32px between posts (exceeds spec minimum of 24px) for clear separation
+- **GM posts**: Gradient + megaphone icon stands out as official announcements while still part of unified card
+- **Color-coded nesting**: Helps users track conversation depth at a glance
+- **Yellow theme for "NEW"**: Attention-grabbing color vs blue theme for GM posts
+- **Mobile-first**: Card design works perfectly on 375px screens with no layout issues
 
 ### 4.6 Phase 6: Integration & Polish (Days 7-10)
 
@@ -2041,14 +2088,19 @@ document.getElementById(`comment-${firstUnread}`)?.scrollIntoView();
 - Auto-scroll with yellow ring highlight (3 seconds)
 - Visual feedback on copy (green checkmark + "Copied!")
 - Auto-removes query param after scroll (clean URLs)
+- Backend GET endpoint for fetching any message by ID
+- ThreadViewModal auto-opens for deep-linked comments beyond visible depth
+- "Parent" link on comments for thread hierarchy navigation
 
 **Phase 5: Visual Enhancements** ✅
-- GM posts: Gradient background + megaphone icon + elevated shadow
-- Comments: Color-coded left borders by depth
+- **Unified card design**: Post + comments in single elevated card with shadow
+- **Comments inside card**: Gray background visually integrates comments within post
+- **Post separation**: 32px spacing between cards (exceeds 24px spec requirement)
+- GM posts: Gradient background + megaphone icon within card header
+- Comments: Color-coded left borders by depth (blue→green→yellow→purple→pink→indigo)
 - NEW badges: Yellow theme for attention
-- Sufficient whitespace between posts
 - Hover states and transitions throughout
-- Fully responsive design (375px to desktop)
+- Fully responsive design (375px to desktop, no horizontal scroll)
 
 ### Success Metrics Achieved
 

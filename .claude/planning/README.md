@@ -4,8 +4,8 @@ This directory contains persistent planning documents that survive across AI ses
 
 ## Current Planning Documents
 
-- **[MVP_STATUS.md](MVP_STATUS.md)** - Current MVP implementation status, completed features, recent work, and post-MVP roadmap (living document)
-- **[MVP_DEVELOPMENT_PLAN.md](MVP_DEVELOPMENT_PLAN.md)** - Original phase-by-phase development roadmap (historical reference)
+- **[MVP_STATUS.md](completed/MVP_STATUS.md)** - Current MVP implementation status, completed features, recent work, and post-MVP roadmap (living document)
+- **[MVP_DEVELOPMENT_PLAN.md](completed/MVP_DEVELOPMENT_PLAN.md)** - Original phase-by-phase development roadmap (historical reference)
 - **[FEATURE_PLAN_TEMPLATE.md](FEATURE_PLAN_TEMPLATE.md)** - Comprehensive template for planning new features (use as base for new plans)
 - **[USING_FEATURE_TEMPLATE.md](USING_FEATURE_TEMPLATE.md)** - Detailed guide on how to effectively use the feature planning template
 

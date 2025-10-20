@@ -196,9 +196,11 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   const isLongContent = post.content.length > 500;
 
   return (
-    <div ref={postRef} data-testid="post-card" className="mb-6 pb-6 border-b-4 border-gray-200">
-      {/* Collapsible GM Post Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-lg border-2 border-blue-200">
+    <div ref={postRef} data-testid="post-card" className="mb-8">
+      {/* Post Card - Contains both post and comments */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      {/* GM Post Header Section */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-200">
         {/* Post Header - Always visible */}
         <div className="p-4 bg-white bg-opacity-90 border-b border-blue-200">
           <div className="flex items-start justify-between mb-2">
@@ -271,9 +273,9 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
         )}
       </div>
 
-      {/* Comments Section */}
-      <div className="mt-4">
-        <div className="flex items-center gap-4 text-sm text-gray-600 mb-3 flex-wrap">
+      {/* Comments Section - Inside the card */}
+      <div className="bg-gray-50 border-t border-gray-200">
+        <div className="p-4 flex items-center gap-4 text-sm text-gray-600 flex-wrap border-b border-gray-200">
           <button
             onClick={handleShowComments}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
@@ -301,8 +303,8 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
 
         {/* Inline Reply Form (at top level) */}
         {isCommenting && (
-          <div className="mt-4">
-            <form onSubmit={handleSubmitComment} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div className="px-4 pb-4">
+            <form onSubmit={handleSubmitComment} className="bg-white rounded-lg p-4 border border-gray-300 shadow-sm">
             {controllableCharacters.length > 0 ? (
               <>
                 {controllableCharacters.length > 1 && (
@@ -360,13 +362,13 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
 
         {/* Threaded Comments */}
         {showComments && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="p-4">
           {loadingComments ? (
-            <div className="text-sm text-gray-500">Loading comments...</div>
+            <div className="text-sm text-gray-500 text-center py-4">Loading comments...</div>
           ) : topLevelComments.length === 0 ? (
-            <p className="text-sm text-gray-500 italic">No comments yet. Be the first to reply!</p>
+            <p className="text-sm text-gray-500 italic text-center py-4">No comments yet. Be the first to reply!</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {topLevelComments.map((comment) => (
                 <ThreadedComment
                   key={comment.id}
@@ -387,6 +389,8 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
           </div>
         )}
       </div>
+      </div>
+      {/* End of Post Card */}
 
       {/* Thread View Modal */}
       {threadModalComment !== null && (
