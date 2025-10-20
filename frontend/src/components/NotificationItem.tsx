@@ -66,9 +66,9 @@ export default function NotificationItem({ notification, onNavigate }: Notificat
       onClick={handleClick}
       className={`
         notification-item
-        flex items-start gap-3 p-4 border-b border-gray-700
-        ${notification.is_read ? 'bg-gray-800' : 'bg-gray-750'}
-        ${notification.link_url ? 'cursor-pointer hover:bg-gray-700' : ''}
+        flex items-start gap-3 p-4 border-b border-gray-200
+        ${notification.is_read ? 'bg-white' : 'bg-blue-50'}
+        ${notification.link_url ? 'cursor-pointer hover:bg-gray-50' : ''}
         transition-colors
       `}
     >
@@ -81,17 +81,17 @@ export default function NotificationItem({ notification, onNavigate }: Notificat
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <h4 className={`text-sm ${!notification.is_read ? 'font-semibold' : 'font-normal'}`}>
+            <h4 className={`text-sm text-gray-900 ${!notification.is_read ? 'font-semibold' : 'font-normal'}`}>
               {notification.title}
             </h4>
             {notification.content && (
-              <p className="text-sm text-gray-400 mt-1">{notification.content}</p>
+              <p className="text-sm text-gray-600 mt-1">{notification.content}</p>
             )}
           </div>
 
           {/* Unread indicator */}
           {!notification.is_read && (
-            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+            <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1"></div>
           )}
         </div>
 
@@ -104,7 +104,7 @@ export default function NotificationItem({ notification, onNavigate }: Notificat
       {/* Delete button */}
       <button
         onClick={handleDelete}
-        className="text-gray-500 hover:text-red-400 transition-colors flex-shrink-0"
+        className="text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
         title="Delete notification"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
