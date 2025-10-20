@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { GamesPage } from './pages/GamesPage';
 import { GameDetailsPage } from './pages/GameDetailsPage';
+import { ThreadViewPage } from './pages/ThreadViewPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { GameProvider } from './contexts/GameContext';
@@ -52,6 +53,14 @@ function AppRoutes() {
           <Route
             path="/games/recruiting"
             element={<Navigate to="/games?states=recruitment" replace />}
+          />
+          <Route
+            path="/games/:gameId/common-room/thread/:commentId"
+            element={
+              <ProtectedRoute>
+                <ThreadViewPage />
+              </ProtectedRoute>
+            }
           />
           <Route
             path="/games/:gameId"
