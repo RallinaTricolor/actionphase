@@ -3,20 +3,35 @@ import { useNavigate } from 'react-router-dom';
 import { GamesList } from '../components/GamesList';
 import { CreateGameForm } from '../components/CreateGameForm';
 import { Modal } from '../components/Modal';
+import { FilterBar } from '../components/FilterBar';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
-import type { GameListItem } from '../types/games';
-
-type ViewMode = 'all' | 'recruiting';
+import { useGameListing } from '../hooks/useGameListing';
+import type { EnrichedGameListItem } from '../types/games';
 
 export const GamesPage = () => {
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<ViewMode>('recruiting');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const { isAuthenticated } = useAuth();
 
-  const handleGameClick = (game: GameListItem) => {
+  // Use the new game listing hook with URL-synced filters
+  const {
+    games,
+    metadata,
+    filters,
+    setStates,
+    setGenres,
+    setParticipation,
+    setHasOpenSpots,
+    setSortBy,
+    clearFilters,
+    isLoading,
+    isError,
+    error,
+  } = useGameListing();
+
+  const handleGameClick = (game: EnrichedGameListItem) => {
     navigate(`/games/${game.id}`);
   };
 
@@ -89,61 +104,51 @@ export const GamesPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Games</h1>
-        <p className="text-gray-600 mt-2 text-sm">
-          Discover and join role-playing games in the ActionPhase community
-        </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Browse Games</h1>
+            <p className="text-gray-600 mt-2 text-sm">
+              Discover and join role-playing games in the ActionPhase community
+            </p>
+          </div>
+          <button
+            onClick={handleCreateGame}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+          >
+            Create Game
+          </button>
+        </div>
       </div>
 
-      {/* Content Card */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-100">
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-200">
-          <div className="px-6">
+      {/* Filter Bar */}
+      <FilterBar
+        selectedStates={filters.states || []}
+        participation={filters.participation}
+        hasOpenSpots={filters.has_open_spots}
+        sortBy={filters.sort_by || 'recent_activity'}
+        availableStates={metadata.available_states}
+        onStatesChange={setStates}
+        onParticipationChange={setParticipation}
+        onHasOpenSpotsChange={setHasOpenSpots}
+        onSortByChange={setSortBy}
+        onClearFilters={clearFilters}
+        filteredCount={metadata.filtered_count}
+        totalCount={metadata.total_count}
+      />
 
-          <nav className="flex space-x-8">
-            <button
-              onClick={() => setViewMode('recruiting')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                viewMode === 'recruiting'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Recruiting
-              <span className="ml-2 bg-green-100 text-green-800 py-1 px-2 rounded-full text-xs font-semibold">
-                Open
-              </span>
-            </button>
-            <button
-              onClick={() => setViewMode('all')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                viewMode === 'all'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              All Games
-            </button>
-          </nav>
-          </div>
-        </div>
-
-        {/* Game Lists */}
-        <div>
-          <GamesList
-            showRecruitingOnly={viewMode === 'recruiting'}
-            onGameClick={handleGameClick}
-            showCreateButton={true}
-            onCreateClick={handleCreateGame}
-            onApplyToGame={handleApplyToGame}
-            isJoining={isJoining}
-          />
-        </div>
-
+      {/* Games List */}
+      <div className="mt-6">
+        <GamesList
+          games={games}
+          loading={isLoading}
+          error={isError ? error?.message : null}
+          onGameClick={handleGameClick}
+          onApplyToGame={handleApplyToGame}
+          isJoining={isJoining}
+        />
       </div>
 
       {/* Create Game Modal */}

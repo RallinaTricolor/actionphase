@@ -566,3 +566,140 @@ func (h *Handler) GetRecruitingGames(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
+
+// GetFilteredGames retrieves games with advanced filtering, sorting, and user enrichment
+func (h *Handler) GetFilteredGames(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse query parameters
+	queryParams := r.URL.Query()
+
+	// Build filters from query parameters
+	filters := core.GameListingFilters{
+		SortBy: queryParams.Get("sort_by"),
+	}
+
+	// Parse states array (comma-separated)
+	if statesParam := queryParams.Get("states"); statesParam != "" {
+		filters.States = splitCommaSeparated(statesParam)
+	}
+
+	// Parse participation filter
+	if participationParam := queryParams.Get("participation"); participationParam != "" {
+		filters.ParticipationFilter = &participationParam
+	}
+
+	// Parse has_open_spots boolean
+	if openSpotsParam := queryParams.Get("has_open_spots"); openSpotsParam != "" {
+		if openSpotsParam == "true" {
+			hasOpenSpots := true
+			filters.HasOpenSpots = &hasOpenSpots
+		} else if openSpotsParam == "false" {
+			hasOpenSpots := false
+			filters.HasOpenSpots = &hasOpenSpots
+		}
+	}
+
+	// Try to get user ID from JWT (optional - unauthenticated users can browse)
+	userService := &db.UserService{DB: h.App.Pool}
+	userID, _ := core.GetUserIDFromJWT(ctx, userService)
+	if userID != 0 {
+		filters.UserID = &userID
+	}
+
+	// Call service
+	gameService := &db.GameService{DB: h.App.Pool}
+	result, err := gameService.GetFilteredGames(ctx, filters)
+	if err != nil {
+		h.App.Logger.Error("Failed to get filtered games", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to API response format
+	response := &GameListingResponse{
+		Games: make([]*EnrichedGameListItemResponse, len(result.Games)),
+		Metadata: GameListingMetadataResponse{
+			TotalCount:      result.Metadata.TotalCount,
+			FilteredCount:   result.Metadata.FilteredCount,
+			AvailableStates: result.Metadata.AvailableStates,
+		},
+	}
+
+	for i, game := range result.Games {
+		response.Games[i] = &EnrichedGameListItemResponse{
+			ID:                   game.ID,
+			Title:                game.Title,
+			Description:          game.Description,
+			GMUserID:             game.GMUserID,
+			GMUsername:           game.GMUsername,
+			State:                game.State,
+			Genre:                game.Genre,
+			StartDate:            game.StartDate,
+			EndDate:              game.EndDate,
+			RecruitmentDeadline:  game.RecruitmentDeadline,
+			MaxPlayers:           game.MaxPlayers,
+			IsPublic:             game.IsPublic,
+			IsAnonymous:          game.IsAnonymous,
+			CreatedAt:            game.CreatedAt,
+			UpdatedAt:            game.UpdatedAt,
+			CurrentPlayers:       game.CurrentPlayers,
+			UserRelationship:     game.UserRelationship,
+			CurrentPhaseType:     game.CurrentPhaseType,
+			CurrentPhaseDeadline: game.CurrentPhaseDeadline,
+			DeadlineUrgency:      game.DeadlineUrgency,
+			HasRecentActivity:    game.HasRecentActivity,
+		}
+	}
+
+	render.Render(w, r, response)
+}
+
+// splitCommaSeparated splits a comma-separated string into a slice
+func splitCommaSeparated(s string) []string {
+	var result []string
+	for _, item := range splitString(s, ",") {
+		trimmed := trimString(item)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}
+
+// splitString splits a string by delimiter
+func splitString(s, delim string) []string {
+	// Simple split implementation
+	var result []string
+	current := ""
+	for _, ch := range s {
+		if string(ch) == delim {
+			result = append(result, current)
+			current = ""
+		} else {
+			current += string(ch)
+		}
+	}
+	if current != "" {
+		result = append(result, current)
+	}
+	return result
+}
+
+// trimString removes leading and trailing whitespace
+func trimString(s string) string {
+	start := 0
+	end := len(s)
+
+	// Trim leading whitespace
+	for start < end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n' || s[start] == '\r') {
+		start++
+	}
+
+	// Trim trailing whitespace
+	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n' || s[end-1] == '\r') {
+		end--
+	}
+
+	return s[start:end]
+}

@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -295,4 +296,186 @@ func (gs *GameService) RemoveGameParticipant(ctx context.Context, gameID, userID
 func (gs *GameService) GetGameParticipants(ctx context.Context, gameID int32) ([]models.GetGameParticipantsRow, error) {
 	queries := models.New(gs.DB)
 	return queries.GetGameParticipants(ctx, gameID)
+}
+
+// GetFilteredGames retrieves games with filters, sorting, and user enrichment
+func (gs *GameService) GetFilteredGames(ctx context.Context, filters core.GameListingFilters) (*core.GameListingResponse, error) {
+	queries := models.New(gs.DB)
+
+	// Convert filters to sqlc parameters
+	// Note: sqlc generated Column1-6 parameter names, mapping:
+	// Column1 = user_id, Column2 = states, Column3 = genres
+	// Column4 = participation_filter, Column5 = has_open_spots, Column6 = sort_by
+	var userID int32
+	if filters.UserID != nil {
+		userID = *filters.UserID
+	}
+
+	var participationFilter string
+	if filters.ParticipationFilter != nil {
+		participationFilter = *filters.ParticipationFilter
+	}
+
+	var hasOpenSpots bool
+	if filters.HasOpenSpots != nil {
+		hasOpenSpots = *filters.HasOpenSpots
+	}
+
+	// Default sort to recent_activity
+	sortBy := filters.SortBy
+	if sortBy == "" {
+		sortBy = "recent_activity"
+	}
+
+	// Execute query
+	rows, err := queries.GetFilteredGames(ctx, models.GetFilteredGamesParams{
+		Column1: userID,
+		Column2: filters.States,
+		Column3: participationFilter,
+		Column4: hasOpenSpots,
+		Column5: sortBy,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch games: %w", err)
+	}
+
+	// Convert to domain models
+	games := make([]*core.EnrichedGameListItem, len(rows))
+	for i, row := range rows {
+		games[i] = enrichedGameFromRow(row)
+	}
+
+	// Fetch metadata (available filters)
+	metadata, err := gs.getListingMetadata(ctx, queries)
+	if err != nil {
+		// Don't fail the entire request, just use empty metadata
+		metadata = core.GameListingMetadata{
+			TotalCount:      len(games),
+			FilteredCount:   len(games),
+			AvailableStates: []string{},
+		}
+	} else {
+		metadata.FilteredCount = len(games)
+	}
+
+	return &core.GameListingResponse{
+		Games:    games,
+		Metadata: metadata,
+	}, nil
+}
+
+// getListingMetadata fetches available states for filter dropdowns
+func (gs *GameService) getListingMetadata(ctx context.Context, queries *models.Queries) (core.GameListingMetadata, error) {
+	// Get total count of public games
+	totalCount, err := queries.CountPublicGames(ctx)
+	if err != nil {
+		return core.GameListingMetadata{}, err
+	}
+
+	// Get states that have at least one game
+	statesDB, err := queries.GetAvailableStates(ctx)
+	if err != nil {
+		return core.GameListingMetadata{}, err
+	}
+
+	// Convert pgtype.Text to []string
+	states := make([]string, 0, len(statesDB))
+	for _, s := range statesDB {
+		if s.Valid {
+			states = append(states, s.String)
+		}
+	}
+
+	return core.GameListingMetadata{
+		TotalCount:      int(totalCount),
+		AvailableStates: states,
+	}, nil
+}
+
+// enrichedGameFromRow converts DB row to EnrichedGameListItem
+func enrichedGameFromRow(row models.GetFilteredGamesRow) *core.EnrichedGameListItem {
+	return &core.EnrichedGameListItem{
+		ID:                   row.ID,
+		Title:                row.Title,
+		Description:          textToString(row.Description),
+		GMUserID:             row.GmUserID,
+		GMUsername:           row.GmUsername,
+		State:                textToString(row.State),
+		Genre:                nullTextToStringPtr(row.Genre),
+		StartDate:            timestamptzToTimePtr(row.StartDate),
+		EndDate:              timestamptzToTimePtr(row.EndDate),
+		RecruitmentDeadline:  timestamptzToTimePtr(row.RecruitmentDeadline),
+		MaxPlayers:           nullInt4ToInt32Ptr(row.MaxPlayers),
+		IsPublic:             boolToBool(row.IsPublic),
+		IsAnonymous:          row.IsAnonymous,
+		CreatedAt:            timestamptzToTime(row.CreatedAt),
+		UpdatedAt:            timestamptzToTime(row.UpdatedAt),
+		CurrentPlayers:       int32(row.CurrentPlayers),
+		UserRelationship:     interfaceToStringPtr(row.UserRelationship),
+		CurrentPhaseType:     interfaceToStringPtr(row.CurrentPhaseType),
+		CurrentPhaseDeadline: timestamptzToTimePtr(row.CurrentPhaseDeadline),
+		DeadlineUrgency:      row.DeadlineUrgency,
+		HasRecentActivity:    row.HasRecentActivity,
+	}
+}
+
+// Helper conversion functions for pgtype to Go types
+func textToString(t pgtype.Text) string {
+	if t.Valid {
+		return t.String
+	}
+	return ""
+}
+
+func nullTextToStringPtr(t pgtype.Text) *string {
+	if t.Valid && t.String != "" {
+		return &t.String
+	}
+	return nil
+}
+
+func timestamptzToTime(t pgtype.Timestamptz) time.Time {
+	if t.Valid {
+		return t.Time
+	}
+	return time.Time{}
+}
+
+func timestamptzToTimePtr(t pgtype.Timestamptz) *time.Time {
+	if t.Valid {
+		return &t.Time
+	}
+	return nil
+}
+
+func nullInt4ToInt32Ptr(i pgtype.Int4) *int32 {
+	if i.Valid {
+		return &i.Int32
+	}
+	return nil
+}
+
+func boolToBool(b pgtype.Bool) bool {
+	if b.Valid {
+		return b.Bool
+	}
+	return false
+}
+
+func stringToStringPtr(s string) *string {
+	if s != "" && s != "none" {
+		return &s
+	}
+	return nil
+}
+
+func interfaceToStringPtr(i interface{}) *string {
+	if i == nil {
+		return nil
+	}
+	s, ok := i.(string)
+	if !ok || s == "" || s == "none" {
+		return nil
+	}
+	return &s
 }

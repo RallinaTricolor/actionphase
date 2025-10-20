@@ -164,6 +164,9 @@ type GameServiceInterface interface {
 
 	// GetGameParticipants retrieves all participants for a game
 	GetGameParticipants(ctx context.Context, gameID int32) ([]models.GetGameParticipantsRow, error)
+
+	// GetFilteredGames retrieves games with filters, sorting, and user enrichment
+	GetFilteredGames(ctx context.Context, filters GameListingFilters) (*GameListingResponse, error)
 }
 
 // GameApplicationServiceInterface defines the contract for game application operations.

@@ -91,9 +91,16 @@ func (h *Handler) Start() {
 	gamesRouter.Route("/", func(r chi.Router) {
 		gameHandler := games.Handler{App: h.App}
 
-		// All routes require authentication
+		// Public routes (authentication optional - will enrich if present)
+		tokenAuth := h.getTokenAuth()
 		r.Group(func(r chi.Router) {
-			tokenAuth := h.getTokenAuth()
+			// Use verifier to extract token if present, but don't require authentication
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Get("/", gameHandler.GetFilteredGames) // Main game listing endpoint with filters
+		})
+
+		// All routes below require authentication
+		r.Group(func(r chi.Router) {
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 
