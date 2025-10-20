@@ -6,6 +6,7 @@ import (
 	"actionphase/pkg/characters"
 	"actionphase/pkg/conversations"
 	"actionphase/pkg/core"
+	"actionphase/pkg/dashboard"
 	"actionphase/pkg/docs"
 	"actionphase/pkg/games"
 	"actionphase/pkg/messages"
@@ -222,6 +223,23 @@ func (h *Handler) Start() {
 		})
 	})
 	apiV1Router.Mount("/notifications", notificationsRouter)
+
+	// Dashboard API
+	dashboardRouter := chi.NewRouter()
+	dashboardRouter.Route("/", func(r chi.Router) {
+		dashboardHandler := dashboard.Handler{App: h.App}
+
+		// Dashboard route requires authentication
+		r.Group(func(r chi.Router) {
+			tokenAuth := h.getTokenAuth()
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+
+			// Get user's dashboard
+			r.Get("/", dashboardHandler.GetUserDashboard)
+		})
+	})
+	apiV1Router.Mount("/dashboard", dashboardRouter)
 
 	// API Documentation routes (public)
 	docsHandler := &docs.Handler{}

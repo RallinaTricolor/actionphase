@@ -1,124 +1,130 @@
-import { usePing } from '../hooks/useAuth';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GamesList } from '../components/GamesList';
-import type { GameListItem } from '../types/games';
+import { useDashboard } from '../hooks/useDashboard';
+import { DashboardGameCard } from '../components/DashboardGameCard';
+import { UrgentActionsCard } from '../components/UrgentActionsCard';
+import { RecentActivityCard } from '../components/RecentActivityCard';
+import { UpcomingDeadlinesCard } from '../components/UpcomingDeadlinesCard';
 
-export const DashboardPage = () => {
+/**
+ * DashboardPage - Main user dashboard showing games, actions, and activity
+ */
+export function DashboardPage() {
   const navigate = useNavigate();
-  const { data: pingData, isLoading: isPingLoading, error: pingError } = usePing();
+  const { data: dashboard, isLoading, error } = useDashboard();
 
-  const handleGameClick = (game: GameListItem) => {
-    navigate(`/games/${game.id}`);
-  };
+  // Redirect to recruiting games if user has no games
+  useEffect(() => {
+    if (dashboard && !dashboard.has_games) {
+      navigate('/games/recruiting');
+    }
+  }, [dashboard, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600 text-lg">Failed to load dashboard</p>
+          <p className="text-gray-600 mt-2">Please try refreshing the page</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dashboard) {
+    return null;
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Welcome to ActionPhase - your collaborative role-playing platform
-        </p>
-      </div>
-
-      {/* Main Content */}
-      <div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* API Health Check Card */}
-          <div className="bg-white overflow-hidden shadow-md rounded-xl border border-gray-100">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className={`h-3 w-3 rounded-full ${
-                      isPingLoading ? 'bg-yellow-500' :
-                      pingError ? 'bg-red-500' : 'bg-green-500'
-                    }`}></div>
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        API Status
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {isPingLoading ? 'Checking...' :
-                         pingError ? 'Offline' : 'Online'}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-5 py-3">
-                <div className="text-sm">
-                  <span className="font-medium text-gray-500">Response:</span>
-                  <span className="ml-2 text-gray-900">
-                    {isPingLoading ? 'Loading...' :
-                     pingError ? 'Error connecting' :
-                     pingData?.data || 'Success'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-          {/* Authentication Status Card */}
-          <div className="bg-white overflow-hidden shadow-md rounded-xl border border-gray-100">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="h-3 w-3 bg-green-500 rounded-full"></div>
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Authentication
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        Authenticated
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-5 py-3">
-                <div className="text-sm">
-                  <span className="font-medium text-gray-500">Token:</span>
-                  <span className="ml-2 text-gray-900">
-                    {localStorage.getItem('auth_token') ? 'Present' : 'None'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-          {/* Quick Stats Card */}
-          <div className="bg-white overflow-hidden shadow-md rounded-xl border border-gray-100">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        System Status
-                      </dt>
-                      <dd className="mt-2 text-lg font-semibold text-gray-900">
-                        All Systems Operational
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">My Dashboard</h1>
+          <p className="mt-2 text-gray-600">
+            Welcome back! Here's what's happening in your games.
+          </p>
         </div>
 
-        {/* Games Section */}
-        <div className="mt-8">
-          <div className="mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">My Games</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Browse and manage your active role-playing games
-            </p>
+        {/* Urgent Actions Section */}
+        {dashboard.player_games.some((game) => game.is_urgent) && (
+          <div className="mb-8">
+            <UrgentActionsCard games={dashboard.player_games} />
           </div>
-          <GamesList onGameClick={handleGameClick} />
+        )}
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Games */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Player Games */}
+            {dashboard.player_games.length > 0 && (
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  My Games as Player
+                </h2>
+                <div className="space-y-4">
+                  {dashboard.player_games.map((game) => (
+                    <DashboardGameCard key={game.game_id} game={game} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* GM Games */}
+            {dashboard.gm_games.length > 0 && (
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Games I'm Running
+                </h2>
+                <div className="space-y-4">
+                  {dashboard.gm_games.map((game) => (
+                    <DashboardGameCard key={game.game_id} game={game} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Mixed Role Games */}
+            {dashboard.mixed_role_games.length > 0 && (
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Other Games
+                </h2>
+                <div className="space-y-4">
+                  {dashboard.mixed_role_games.map((game) => (
+                    <DashboardGameCard key={game.game_id} game={game} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+
+          {/* Right Column - Activity & Deadlines */}
+          <div className="space-y-8">
+            {/* Upcoming Deadlines */}
+            {dashboard.upcoming_deadlines.length > 0 && (
+              <UpcomingDeadlinesCard deadlines={dashboard.upcoming_deadlines} />
+            )}
+
+            {/* Recent Activity */}
+            {dashboard.recent_messages.length > 0 && (
+              <RecentActivityCard messages={dashboard.recent_messages} />
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
-};
+}

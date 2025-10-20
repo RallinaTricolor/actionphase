@@ -751,3 +751,29 @@ type AvatarServiceInterface interface {
 	// Returns nil if character has no avatar
 	GetCharacterAvatarURL(ctx context.Context, characterID int32) (*string, error)
 }
+
+// DashboardServiceInterface defines the contract for dashboard data operations.
+// Provides aggregated view of user's games, deadlines, and activity for the dashboard page.
+//
+// Usage Example:
+//
+//	dashboardService := &services.DashboardService{DB: pool}
+//
+//	// Get user's complete dashboard data
+//	dashboard, err := dashboardService.GetUserDashboard(ctx, userID)
+//	if !dashboard.HasGames {
+//	    // Redirect user to games listing page
+//	}
+//
+//	// Access urgent games requiring action
+//	for _, game := range dashboard.PlayerGames {
+//	    if game.IsUrgent {
+//	        // Display with urgent styling
+//	    }
+//	}
+type DashboardServiceInterface interface {
+	// GetUserDashboard retrieves complete dashboard data for a user
+	// Returns aggregated game information, recent activity, and upcoming deadlines
+	// If user has no games, returns DashboardData with HasGames = false
+	GetUserDashboard(ctx context.Context, userID int32) (*DashboardData, error)
+}
