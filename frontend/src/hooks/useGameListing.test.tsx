@@ -52,7 +52,6 @@ describe('useGameListing', () => {
     metadata: {
       total_count: 10,
       filtered_count: 1,
-      available_genres: ['Fantasy', 'Sci-Fi'],
       available_states: ['recruitment', 'in_progress'],
     },
   };
@@ -118,7 +117,6 @@ describe('useGameListing', () => {
           metadata: {
             total_count: 0,
             filtered_count: 0,
-            available_genres: [],
             available_states: [],
           },
         },
@@ -155,27 +153,6 @@ describe('useGameListing', () => {
       expect(apiClient.games.getFilteredGames).toHaveBeenCalledWith(
         expect.objectContaining({
           states: ['recruitment', 'in_progress'],
-        })
-      );
-    });
-
-    it('parses genres from URL', async () => {
-      vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
-        data: mockResponse,
-      } as any);
-
-      const { result } = renderHook(() => useGameListing(), {
-        wrapper: createWrapper('/games?genres=Fantasy,Sci-Fi'),
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      expect(result.current.filters.genres).toEqual(['Fantasy', 'Sci-Fi']);
-      expect(apiClient.games.getFilteredGames).toHaveBeenCalledWith(
-        expect.objectContaining({
-          genres: ['Fantasy', 'Sci-Fi'],
         })
       );
     });
@@ -248,7 +225,7 @@ describe('useGameListing', () => {
         data: mockResponse,
       } as any);
 
-      const url = '/games?states=recruitment&genres=Fantasy&participation=my_games&has_open_spots=true&sort_by=created';
+      const url = '/games?states=recruitment&participation=my_games&has_open_spots=true&sort_by=created';
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(url),
       });
@@ -259,7 +236,6 @@ describe('useGameListing', () => {
 
       expect(result.current.filters).toEqual({
         states: ['recruitment'],
-        genres: ['Fantasy'],
         participation: 'my_games',
         has_open_spots: true,
         sort_by: 'created',
@@ -294,36 +270,6 @@ describe('useGameListing', () => {
       expect(apiClient.games.getFilteredGames).toHaveBeenLastCalledWith(
         expect.objectContaining({
           states: ['recruitment', 'in_progress'],
-        })
-      );
-    });
-
-    it('updates genres and triggers refetch', async () => {
-      vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
-        data: mockResponse,
-      } as any);
-
-      const { result } = renderHook(() => useGameListing(), {
-        wrapper: createWrapper(),
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      const initialCallCount = vi.mocked(apiClient.games.getFilteredGames).mock.calls.length;
-
-      act(() => {
-        result.current.setGenres(['Fantasy', 'Horror']);
-      });
-
-      await waitFor(() => {
-        expect(apiClient.games.getFilteredGames).toHaveBeenCalledTimes(initialCallCount + 1);
-      });
-
-      expect(apiClient.games.getFilteredGames).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          genres: ['Fantasy', 'Horror'],
         })
       );
     });
@@ -423,7 +369,7 @@ describe('useGameListing', () => {
         data: mockResponse,
       } as any);
 
-      const url = '/games?states=recruitment&genres=Fantasy&participation=my_games';
+      const url = '/games?states=recruitment&participation=my_games';
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(url),
       });
@@ -450,7 +396,6 @@ describe('useGameListing', () => {
       );
 
       expect(result.current.filters.states).toBeUndefined();
-      expect(result.current.filters.genres).toBeUndefined();
       // participation becomes null (from URL params), not undefined
       expect(result.current.filters.participation).toBeNull();
     });
@@ -588,7 +533,7 @@ describe('useGameListing', () => {
 
       // URL with empty values
       const { result } = renderHook(() => useGameListing(), {
-        wrapper: createWrapper('/games?states=&genres='),
+        wrapper: createWrapper('/games?states='),
       });
 
       await waitFor(() => {

@@ -25,31 +25,33 @@ vi.mock('../../lib/api', () => ({
 }))
 
 // Mock the auth hook
-vi.mock('../../hooks/useAuth', () => ({
-  useAuth: vi.fn(),
-}))
+vi.mock('../../contexts/AuthContext', async () => {
+  const actual = await vi.importActual('../../contexts/AuthContext')
+  return {
+    ...actual,
+    useAuth: vi.fn(),
+  }
+})
 
 // Mock components
 vi.mock('../../components/GamesList', () => ({
   GamesList: ({
-    showRecruitingOnly,
+    games,
+    loading,
+    error,
     onGameClick,
-    showCreateButton,
-    onCreateClick,
     onApplyToGame,
     isJoining
   }: any) => (
     <div data-testid="games-list">
-      <div>Recruiting Only: {String(showRecruitingOnly)}</div>
-      <div>Show Create Button: {String(showCreateButton)}</div>
+      <div>Games Count: {games?.length || 0}</div>
+      <div>Loading: {String(loading)}</div>
+      <div>Error: {error || 'none'}</div>
       <div>Is Joining: {String(isJoining)}</div>
       {onGameClick && (
         <button onClick={() => onGameClick({ id: 123, title: 'Test Game' })}>
           Test Game Click
         </button>
-      )}
-      {onCreateClick && (
-        <button onClick={onCreateClick}>Create Game</button>
       )}
       {onApplyToGame && (
         <button onClick={() => onApplyToGame(456)}>Apply to Game</button>
@@ -80,7 +82,7 @@ vi.mock('../../components/Modal', () => ({
 }))
 
 import { apiClient } from '../../lib/api'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 
 describe('GamesPage', () => {
   beforeEach(() => {
@@ -107,49 +109,13 @@ describe('GamesPage', () => {
     global.alert = vi.fn()
   })
 
-  it('renders games page with header and navigation', () => {
+  it('renders games page with header and create button', () => {
     renderWithProviders(<GamesPage />)
 
-    expect(screen.getByRole('heading', { name: 'Games' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Browse Games' })).toBeInTheDocument()
     expect(screen.getByText('Discover and join role-playing games in the ActionPhase community')).toBeInTheDocument()
 
-    expect(screen.getByRole('button', { name: /Recruiting/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /All Games/ })).toBeInTheDocument()
-  })
-
-  it('defaults to recruiting view mode', () => {
-    renderWithProviders(<GamesPage />)
-
-    const recruitingButton = screen.getByRole('button', { name: /Recruiting/ })
-    const allGamesButton = screen.getByRole('button', { name: /All Games/ })
-
-    expect(recruitingButton).toHaveClass('border-indigo-500', 'text-indigo-600')
-    expect(allGamesButton).toHaveClass('border-transparent', 'text-gray-500')
-
-    // Check GamesList receives correct prop
-    expect(screen.getByText('Recruiting Only: true')).toBeInTheDocument()
-  })
-
-  it('switches to all games view mode', () => {
-    renderWithProviders(<GamesPage />)
-
-    const allGamesButton = screen.getByRole('button', { name: /All Games/ })
-    fireEvent.click(allGamesButton)
-
-    expect(allGamesButton).toHaveClass('border-indigo-500', 'text-indigo-600')
-    expect(screen.getByText('Recruiting Only: false')).toBeInTheDocument()
-  })
-
-  it('switches back to recruiting view mode', () => {
-    renderWithProviders(<GamesPage />)
-
-    // Switch to all games first
-    fireEvent.click(screen.getByRole('button', { name: /All Games/ }))
-    expect(screen.getByText('Recruiting Only: false')).toBeInTheDocument()
-
-    // Switch back to recruiting
-    fireEvent.click(screen.getByRole('button', { name: /Recruiting/ }))
-    expect(screen.getByText('Recruiting Only: true')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create Game' })).toBeInTheDocument()
   })
 
   it('navigates to game details when game is clicked', () => {
@@ -370,16 +336,6 @@ describe('GamesPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Is Joining: false')).toBeInTheDocument()
     })
-  })
-
-  it('passes correct props to GamesList', () => {
-    renderWithProviders(<GamesPage />)
-
-    const gamesList = screen.getByTestId('games-list')
-
-    expect(screen.getByText('Show Create Button: true')).toBeInTheDocument()
-    expect(screen.getByText('Is Joining: false')).toBeInTheDocument()
-    expect(screen.getByText('Recruiting Only: true')).toBeInTheDocument()
   })
 
   it('handles user declining login redirect', () => {
