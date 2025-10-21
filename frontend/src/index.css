@@ -162,6 +162,17 @@
     --color-info-light: 238 242 255; /* indigo-50 */
     --color-info-text: 67 56 202; /* indigo-700 */
 
+    /* ===== AVATAR COLORS ===== */
+    /* Distinct colors for character avatars (deterministic assignment) */
+    --color-avatar-1: 59 130 246; /* blue-500 */
+    --color-avatar-2: 34 197 94; /* green-500 */
+    --color-avatar-3: 234 179 8; /* yellow-500 */
+    --color-avatar-4: 239 68 68; /* red-500 */
+    --color-avatar-5: 168 85 247; /* purple-500 */
+    --color-avatar-6: 236 72 153; /* pink-500 */
+    --color-avatar-7: 99 102 241; /* indigo-500 */
+    --color-avatar-8: 20 184 166; /* teal-500 */
+
     /* ===== SPECIAL COLORS ===== */
     --color-placeholder: 107 114 128; /* gray-500 */
     --color-focus-ring: 59 130 246; /* blue-500 */
@@ -252,6 +263,17 @@
     --color-info-light: 49 46 129; /* indigo-900 (will use with opacity) */
     --color-info-text: 165 180 252; /* indigo-300 */
 
+    /* ===== AVATAR COLORS ===== */
+    /* Distinct colors for character avatars (slightly brighter in dark mode) */
+    --color-avatar-1: 96 165 250; /* blue-400 */
+    --color-avatar-2: 74 222 128; /* green-400 */
+    --color-avatar-3: 250 204 21; /* yellow-400 */
+    --color-avatar-4: 248 113 113; /* red-400 */
+    --color-avatar-5: 192 132 252; /* purple-400 */
+    --color-avatar-6: 244 114 182; /* pink-400 */
+    --color-avatar-7: 129 140 248; /* indigo-400 */
+    --color-avatar-8: 45 212 191; /* teal-400 */
+
     /* ===== SPECIAL COLORS ===== */
     --color-placeholder: 156 163 175; /* gray-400 */
     --color-focus-ring: 59 130 246; /* blue-500 */
@@ -341,6 +363,11 @@
     border-color: rgb(var(--color-interactive-primary));
   }
 
+  /* Interactive ring colors (for focus states) */
+  .focus\:ring-interactive-primary:focus {
+    --tw-ring-color: rgb(var(--color-interactive-primary));
+  }
+
   /* Interactive subtle backgrounds (for badges, pills, etc.) */
   .bg-interactive-primary-subtle {
     background-color: rgb(var(--color-primary-light));
@@ -407,6 +434,10 @@
     border-color: rgb(var(--color-success));
   }
 
+  .focus\:ring-semantic-success:focus {
+    --tw-ring-color: rgb(var(--color-success));
+  }
+
   .bg-semantic-info {
     background-color: rgb(var(--color-info));
   }
@@ -435,15 +466,48 @@
   .border-theme-strong {
     border-color: rgb(var(--color-border-strong));
   }
+
+  /* Avatar colors - for character avatar fallbacks */
+  .bg-avatar-1 {
+    background-color: rgb(var(--color-avatar-1));
+  }
+
+  .bg-avatar-2 {
+    background-color: rgb(var(--color-avatar-2));
+  }
+
+  .bg-avatar-3 {
+    background-color: rgb(var(--color-avatar-3));
+  }
+
+  .bg-avatar-4 {
+    background-color: rgb(var(--color-avatar-4));
+  }
+
+  .bg-avatar-5 {
+    background-color: rgb(var(--color-avatar-5));
+  }
+
+  .bg-avatar-6 {
+    background-color: rgb(var(--color-avatar-6));
+  }
+
+  .bg-avatar-7 {
+    background-color: rgb(var(--color-avatar-7));
+  }
+
+  .bg-avatar-8 {
+    background-color: rgb(var(--color-avatar-8));
+  }
 }
 
 /* ===================================================================
    MARKDOWN PROSE STYLES
    =================================================================== */
 
-/* Markdown prose styles */
+/* Markdown prose styles - using semantic tokens for theme compatibility */
 .prose {
-  color: #374151;
+  color: rgb(var(--color-content-primary));
   max-width: 65ch;
 }
 
@@ -453,7 +517,7 @@
 }
 
 .prose :where([class~="lead"]):not(:where([class~="not-prose"] *)) {
-  color: #4b5563;
+  color: rgb(var(--color-content-secondary));
   font-size: 1.25em;
   line-height: 1.6;
   margin-top: 1.2em;
@@ -461,17 +525,17 @@
 }
 
 .prose :where(a):not(:where([class~="not-prose"] *)) {
-  color: #2563eb;
+  color: rgb(var(--color-interactive-primary));
   text-decoration: underline;
   font-weight: 500;
 }
 
 .prose :where(a):hover:not(:where([class~="not-prose"] *)) {
-  color: #1d4ed8;
+  color: rgb(var(--color-interactive-primary-hover));
 }
 
 .prose :where(strong):not(:where([class~="not-prose"] *)) {
-  color: #111827;
+  color: rgb(var(--color-content-primary));
   font-weight: 600;
 }
 
@@ -512,15 +576,15 @@
 
 .prose :where(ol > li):not(:where([class~="not-prose"] *))::marker {
   font-weight: 400;
-  color: #6b7280;
+  color: rgb(var(--color-content-tertiary));
 }
 
 .prose :where(ul > li):not(:where([class~="not-prose"] *))::marker {
-  color: #9ca3af;
+  color: rgb(var(--color-content-tertiary));
 }
 
 .prose :where(hr):not(:where([class~="not-prose"] *)) {
-  border-color: #e5e7eb;
+  border-color: rgb(var(--color-border-default));
   border-top-width: 1px;
   margin-top: 3em;
   margin-bottom: 3em;
@@ -529,9 +593,9 @@
 .prose :where(blockquote):not(:where([class~="not-prose"] *)) {
   font-weight: 500;
   font-style: italic;
-  color: #111827;
+  color: rgb(var(--color-content-primary));
   border-left-width: 0.25rem;
-  border-left-color: #e5e7eb;
+  border-left-color: rgb(var(--color-border-default));
   quotes: "\201C""\201D""\2018""\2019";
   margin-top: 1.6em;
   margin-bottom: 1.6em;
@@ -539,7 +603,7 @@
 }
 
 .prose :where(h1):not(:where([class~="not-prose"] *)) {
-  color: #111827;
+  color: rgb(var(--color-content-primary));
   font-weight: 800;
   font-size: 2.25em;
   margin-top: 0;
@@ -548,7 +612,7 @@
 }
 
 .prose :where(h2):not(:where([class~="not-prose"] *)) {
-  color: #111827;
+  color: rgb(var(--color-content-primary));
   font-weight: 700;
   font-size: 1.5em;
   margin-top: 2em;
@@ -557,7 +621,7 @@
 }
 
 .prose :where(h3):not(:where([class~="not-prose"] *)) {
-  color: #111827;
+  color: rgb(var(--color-content-primary));
   font-weight: 600;
   font-size: 1.25em;
   margin-top: 1.6em;
@@ -566,7 +630,7 @@
 }
 
 .prose :where(h4):not(:where([class~="not-prose"] *)) {
-  color: #111827;
+  color: rgb(var(--color-content-primary));
   font-weight: 600;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
@@ -574,17 +638,17 @@
 }
 
 .prose :where(code):not(:where([class~="not-prose"] *)) {
-  color: #111827;
+  color: rgb(var(--color-content-primary));
   font-weight: 600;
   font-size: 0.875em;
-  background-color: #f3f4f6;
+  background-color: rgb(var(--color-surface-raised));
   padding: 0.2em 0.4em;
   border-radius: 0.25rem;
 }
 
 .prose :where(pre):not(:where([class~="not-prose"] *)) {
-  color: #e5e7eb;
-  background-color: #1f2937;
+  color: rgb(var(--color-content-primary));
+  background-color: rgb(var(--color-surface-raised));
   overflow-x: auto;
   font-size: 0.875em;
   line-height: 1.7142857;
@@ -618,11 +682,11 @@
 
 .prose :where(thead):not(:where([class~="not-prose"] *)) {
   border-bottom-width: 1px;
-  border-bottom-color: #d1d5db;
+  border-bottom-color: rgb(var(--color-border-default));
 }
 
 .prose :where(thead th):not(:where([class~="not-prose"] *)) {
-  color: #111827;
+  color: rgb(var(--color-content-primary));
   font-weight: 600;
   vertical-align: bottom;
   padding-right: 0.5714286em;
@@ -632,7 +696,7 @@
 
 .prose :where(tbody tr):not(:where([class~="not-prose"] *)) {
   border-bottom-width: 1px;
-  border-bottom-color: #e5e7eb;
+  border-bottom-color: rgb(var(--color-border-default));
 }
 
 .prose :where(tbody tr:last-child):not(:where([class~="not-prose"] *)) {
@@ -671,55 +735,55 @@
    =================================================================== */
 
 .dark .prose {
-  color: rgb(229 231 235); /* gray-200 */
+  color: rgb(var(--color-content-primary));
 }
 
 .dark .prose :where(p):not(:where([class~="not-prose"] *)) {
-  color: rgb(229 231 235); /* gray-200 */
+  color: rgb(var(--color-content-primary));
 }
 
 .dark .prose :where(strong):not(:where([class~="not-prose"] *)) {
-  color: rgb(255 255 255); /* white */
+  color: rgb(var(--color-content-primary));
 }
 
 .dark .prose :where(em):not(:where([class~="not-prose"] *)) {
-  color: rgb(229 231 235); /* gray-200 */
+  color: rgb(var(--color-content-secondary));
 }
 
 .dark .prose :where(h1):not(:where([class~="not-prose"] *)) {
-  color: rgb(255 255 255); /* white */
+  color: rgb(var(--color-content-primary));
 }
 
 .dark .prose :where(h2):not(:where([class~="not-prose"] *)) {
-  color: rgb(255 255 255); /* white */
+  color: rgb(var(--color-content-primary));
 }
 
 .dark .prose :where(h3):not(:where([class~="not-prose"] *)) {
-  color: rgb(255 255 255); /* white */
+  color: rgb(var(--color-content-primary));
 }
 
 .dark .prose :where(h4):not(:where([class~="not-prose"] *)) {
-  color: rgb(255 255 255); /* white */
+  color: rgb(var(--color-content-primary));
 }
 
 .dark .prose :where(li):not(:where([class~="not-prose"] *)) {
-  color: rgb(229 231 235); /* gray-200 */
+  color: rgb(var(--color-content-primary));
 }
 
 .dark .prose :where(ol > li):not(:where([class~="not-prose"] *))::marker {
-  color: rgb(156 163 175); /* gray-400 */
+  color: rgb(var(--color-content-tertiary));
 }
 
 .dark .prose :where(ul > li):not(:where([class~="not-prose"] *))::marker {
-  color: rgb(156 163 175); /* gray-400 */
+  color: rgb(var(--color-content-tertiary));
 }
 
 .dark .prose :where(blockquote):not(:where([class~="not-prose"] *)) {
-  color: rgb(229 231 235); /* gray-200 */
-  border-left-color: rgb(75 85 99); /* gray-600 */
+  color: rgb(var(--color-content-secondary));
+  border-left-color: rgb(var(--color-border-default));
 }
 
 .dark .prose :where(code):not(:where([class~="not-prose"] *)) {
-  color: rgb(229 231 235); /* gray-200 */
-  background-color: rgb(55 65 81); /* gray-700 */
+  color: rgb(var(--color-content-primary));
+  background-color: rgb(var(--color-surface-raised));
 }

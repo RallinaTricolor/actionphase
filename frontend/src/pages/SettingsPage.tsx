@@ -60,6 +60,63 @@ export function SettingsPage() {
                 <input
                   type="radio"
                   name="theme"
+                  value="highContrast"
+                  checked={theme === 'highContrast'}
+                  onChange={(e) => setTheme(e.target.value as 'highContrast')}
+                  className="h-4 w-4 text-interactive-primary focus:ring-2 focus:ring-interactive-primary"
+                />
+                <div className="ml-3">
+                  <div className="text-sm font-medium text-content-primary">
+                    High Contrast
+                  </div>
+                  <div className="text-sm text-content-tertiary">
+                    Maximum contrast light theme for accessibility
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex items-center p-3 border border-theme-default rounded-lg cursor-pointer hover:bg-surface-raised">
+                <input
+                  type="radio"
+                  name="theme"
+                  value="highContrastDark"
+                  checked={theme === 'highContrastDark'}
+                  onChange={(e) => setTheme(e.target.value as 'highContrastDark')}
+                  className="h-4 w-4 text-interactive-primary focus:ring-2 focus:ring-interactive-primary"
+                />
+                <div className="ml-3">
+                  <div className="text-sm font-medium text-content-primary">
+                    High Contrast Dark
+                  </div>
+                  <div className="text-sm text-content-tertiary">
+                    Maximum contrast dark theme for accessibility
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex items-center p-3 border border-theme-default rounded-lg cursor-pointer hover:bg-surface-raised">
+                <input
+                  type="radio"
+                  name="theme"
+                  value="colorblind"
+                  checked={theme === 'colorblind'}
+                  onChange={(e) => setTheme(e.target.value as 'colorblind')}
+                  className="h-4 w-4 text-interactive-primary focus:ring-2 focus:ring-interactive-primary"
+                />
+                <div className="ml-3">
+                  <div className="text-sm font-medium text-content-primary">
+                    Colorblind-Friendly
+                  </div>
+                  <div className="text-sm text-content-tertiary">
+                    Optimized for color vision deficiency
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex items-center p-3 border border-theme-default rounded-lg cursor-pointer hover:bg-surface-raised">
+                <input
+                  type="radio"
+                  name="theme"
                   value="system"
                   checked={theme === 'system'}
                   onChange={(e) => setTheme(e.target.value as 'system')}

@@ -1,6 +1,6 @@
 import { useTheme } from '../contexts/ThemeContext';
 import { tv, cn } from '../lib/theme/utils';
-import { Sun, Moon, Monitor } from 'lucide-react';
+import { Sun, Moon, Monitor, Contrast, Eye } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -47,6 +47,9 @@ export default function ThemeTestPage() {
   const themeOptions = [
     { value: 'light' as const, icon: Sun, label: 'Light' },
     { value: 'dark' as const, icon: Moon, label: 'Dark' },
+    { value: 'highContrast' as const, icon: Contrast, label: 'High Contrast' },
+    { value: 'highContrastDark' as const, icon: Contrast, label: 'High Contrast Dark' },
+    { value: 'colorblind' as const, icon: Eye, label: 'Colorblind' },
     { value: 'system' as const, icon: Monitor, label: 'System' },
   ];
 
@@ -74,7 +77,7 @@ export default function ThemeTestPage() {
           <h2 className="text-xl font-bold text-content-primary mb-4">
             Theme Switcher
           </h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {themeOptions.map(({ value, icon: Icon, label }) => (
               <button
                 key={value}
@@ -87,7 +90,7 @@ export default function ThemeTestPage() {
                 )}
               >
                 <Icon className="w-4 h-4" />
-                <span>{label}</span>
+                <span className="whitespace-nowrap">{label}</span>
               </button>
             ))}
           </div>

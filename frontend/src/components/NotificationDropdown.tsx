@@ -84,7 +84,7 @@ export default function NotificationDropdown({ isOpen, onClose, bellButtonRef }:
             <p className="mt-2">Loading notifications...</p>
           </div>
         ) : error ? (
-          <div className="p-8 text-center text-red-500">
+          <div className="p-8 text-center text-semantic-danger">
             <p className="font-medium">Failed to load notifications</p>
             <p className="text-sm text-content-secondary mt-1">Please try again later</p>
           </div>
