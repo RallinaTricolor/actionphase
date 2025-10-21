@@ -55,14 +55,14 @@ const CharacterAvatar: React.FC<CharacterAvatarProps> = ({
   // Generate consistent color based on character name
   const getColorClass = (name: string): string => {
     const colors = [
-      'bg-blue-500',
-      'bg-green-500',
-      'bg-yellow-500',
-      'bg-red-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-indigo-500',
-      'bg-teal-500',
+      'bg-avatar-1',
+      'bg-avatar-2',
+      'bg-avatar-3',
+      'bg-avatar-4',
+      'bg-avatar-5',
+      'bg-avatar-6',
+      'bg-avatar-7',
+      'bg-avatar-8',
     ];
 
     // Simple hash function for consistent color selection

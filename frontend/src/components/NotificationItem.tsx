@@ -109,7 +109,7 @@ export default function NotificationItem({ notification, onNavigate }: Notificat
         variant="ghost"
         size="sm"
         onClick={handleDelete}
-        className="text-content-secondary hover:text-red-500 flex-shrink-0 p-1 h-auto"
+        className="text-content-secondary hover:text-semantic-danger flex-shrink-0 p-1 h-auto"
         title="Delete notification"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

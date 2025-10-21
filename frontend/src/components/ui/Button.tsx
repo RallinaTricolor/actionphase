@@ -2,7 +2,7 @@ import { ButtonHTMLAttributes, ReactNode } from 'react';
 import { tv } from '../../lib/theme/utils';
 import { Loader2 } from 'lucide-react';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'warning' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'warning' | 'success' | 'ghost';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -33,6 +33,7 @@ const buttonStyles = tv({
       outline: 'bg-transparent hover:surface-raised text-content-primary border-2 border-interactive-primary',
       danger: 'bg-semantic-danger hover:bg-semantic-danger-hover text-content-inverse',
       warning: 'bg-semantic-warning hover:bg-semantic-warning-hover text-content-inverse',
+      success: 'bg-semantic-success hover:bg-semantic-success-hover text-content-inverse',
       ghost: 'bg-transparent hover:surface-raised text-content-primary',
     },
     size: {

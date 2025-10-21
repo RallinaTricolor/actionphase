@@ -25,17 +25,17 @@ export function PhaseActivationDialog({
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+      <div className="surface-base rounded-lg max-w-md w-full p-6">
+        <h3 className="text-lg font-semibold text-content-primary mb-2">
           Activate Phase {phaseNumber}?
         </h3>
 
         {currentPhaseId && unpublishedCount > 0 ? (
           <>
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded">
+            <div className="mb-4 p-3 bg-semantic-warning-subtle border border-semantic-warning rounded">
               <div className="flex items-start">
                 <svg
-                  className="w-5 h-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0"
+                  className="w-5 h-5 text-semantic-warning mr-2 mt-0.5 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -48,10 +48,10 @@ export function PhaseActivationDialog({
                   />
                 </svg>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-amber-900">
+                  <p className="text-sm font-medium text-content-primary">
                     You have {unpublishedCount} unpublished {unpublishedCount === 1 ? 'result' : 'results'}
                   </p>
-                  <p className="text-sm text-amber-700 mt-1">
+                  <p className="text-sm text-semantic-warning mt-1">
                     Do you want to publish {unpublishedCount === 1 ? 'it' : 'them'} before activating the next phase?
                   </p>
                 </div>
@@ -93,7 +93,7 @@ export function PhaseActivationDialog({
           </>
         ) : (
           <>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-content-secondary mb-6">
               This will deactivate the current phase and make Phase {phaseNumber} active. Continue?
             </p>
             <div className="flex justify-end space-x-3">

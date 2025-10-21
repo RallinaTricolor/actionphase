@@ -22,7 +22,7 @@ export default function NotificationBell() {
         ref={bellButtonRef}
         variant="ghost"
         onClick={toggleDropdown}
-        className="relative p-2 text-indigo-100 hover:text-white h-auto"
+        className="relative p-2 text-white/90 hover:text-white h-auto"
         aria-label="Notifications"
         data-testid="notification-bell"
       >

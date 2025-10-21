@@ -22,7 +22,7 @@ export const HomePage = () => {
                 <>
                   <Link
                     to="/dashboard"
-                    className="bg-interactive-primary text-white px-4 py-2 rounded-md hover:bg-interactive-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className="bg-interactive-primary text-white px-4 py-2 rounded-md hover:bg-interactive-primary focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2"
                   >
                     Dashboard
                   </Link>
@@ -36,7 +36,7 @@ export const HomePage = () => {
               ) : (
                 <Link
                   to="/login"
-                  className="bg-interactive-primary text-white px-4 py-2 rounded-md hover:bg-interactive-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="bg-interactive-primary text-white px-4 py-2 rounded-md hover:bg-interactive-primary focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2"
                 >
                   Login
                 </Link>
@@ -61,7 +61,7 @@ export const HomePage = () => {
               <p className="text-content-secondary mt-1">Join a game or browse ongoing campaigns</p>
             </div>
             {isAuthenticated && (
-              <button className="bg-semantic-success text-white px-4 py-2 rounded-md hover:bg-semantic-success focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+              <button className="bg-semantic-success text-white px-4 py-2 rounded-md hover:bg-semantic-success-hover focus:outline-none focus:ring-2 focus:ring-semantic-success focus:ring-offset-2">
                 Create Game
               </button>
             )}
@@ -108,7 +108,7 @@ export const HomePage = () => {
                   </p>
                   <Link
                     to="/login"
-                    className="inline-block bg-interactive-primary text-white px-6 py-3 rounded-md hover:bg-interactive-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className="inline-block bg-interactive-primary text-white px-6 py-3 rounded-md hover:bg-interactive-primary-hover focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2"
                   >
                     Sign Up or Login
                   </Link>

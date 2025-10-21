@@ -22,15 +22,15 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+      <div className="surface-base rounded-lg shadow-xl max-w-md w-full">
         <form onSubmit={handleSubmit} className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Create New Phase</h3>
+            <h3 className="text-lg font-semibold text-content-primary">Create New Phase</h3>
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 h-auto p-0"
+              className="text-content-tertiary hover:text-content-secondary h-auto p-0"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
