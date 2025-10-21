@@ -32,8 +32,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ onAdd, onCancel }) =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-lg font-medium mb-4">Add New Item</h3>
+      <div className="surface-base rounded-lg p-6 w-full max-w-md">
+        <h3 className="text-lg font-medium text-content-primary mb-4">Add New Item</h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
