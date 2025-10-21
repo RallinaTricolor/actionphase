@@ -50,21 +50,21 @@ export function useGameStateManagement({
 
     switch (currentState) {
       case 'setup':
-        actions.push({ label: 'Start Recruitment', state: 'recruitment', color: 'bg-green-600 hover:bg-green-700' });
+        actions.push({ label: 'Start Recruitment', state: 'recruitment', color: 'bg-semantic-success hover:bg-semantic-success-hover text-white' });
         break;
       case 'recruitment':
-        actions.push({ label: 'Close Recruitment', state: 'character_creation', color: 'bg-blue-600 hover:bg-blue-700' });
-        actions.push({ label: 'Cancel Game', state: 'cancelled', color: 'bg-red-600 hover:bg-red-700' });
+        actions.push({ label: 'Close Recruitment', state: 'character_creation', color: 'bg-interactive-primary hover:bg-interactive-primary-hover text-white' });
+        actions.push({ label: 'Cancel Game', state: 'cancelled', color: 'bg-semantic-danger hover:bg-semantic-danger-hover text-white' });
         break;
       case 'character_creation':
-        actions.push({ label: 'Start Game', state: 'in_progress', color: 'bg-purple-600 hover:bg-purple-700' });
+        actions.push({ label: 'Start Game', state: 'in_progress', color: 'bg-interactive-primary hover:bg-interactive-primary-hover text-white' });
         break;
       case 'in_progress':
-        actions.push({ label: 'Pause Game', state: 'paused', color: 'bg-yellow-600 hover:bg-yellow-700' });
-        actions.push({ label: 'Complete Game', state: 'completed', color: 'bg-green-600 hover:bg-green-700' });
+        actions.push({ label: 'Pause Game', state: 'paused', color: 'bg-semantic-warning hover:bg-semantic-warning-hover text-white' });
+        actions.push({ label: 'Complete Game', state: 'completed', color: 'bg-semantic-success hover:bg-semantic-success-hover text-white' });
         break;
       case 'paused':
-        actions.push({ label: 'Resume Game', state: 'in_progress', color: 'bg-purple-600 hover:bg-purple-700' });
+        actions.push({ label: 'Resume Game', state: 'in_progress', color: 'bg-interactive-primary hover:bg-interactive-primary-hover text-white' });
         break;
     }
 

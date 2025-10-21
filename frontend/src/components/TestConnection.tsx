@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { simpleApi } from '../lib/simple-api';
+import { Button } from './ui';
 
 export const TestConnection = () => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -18,21 +19,21 @@ export const TestConnection = () => {
   };
 
   return (
-    <div className="p-4 border rounded-lg bg-white">
-      <h3 className="text-lg font-semibold mb-4">Test Backend Connection</h3>
-      <button
+    <div className="p-4 border border-theme-default rounded-lg surface-base">
+      <h3 className="text-lg font-semibold text-content-primary mb-4">Test Backend Connection</h3>
+      <Button
+        variant="primary"
         onClick={testPing}
         disabled={status === 'loading'}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
       >
         {status === 'loading' ? 'Testing...' : 'Test Ping'}
-      </button>
+      </Button>
 
       {status !== 'idle' && (
         <div className={`mt-4 p-3 rounded ${
-          status === 'success' ? 'bg-green-50 text-green-800' :
-          status === 'error' ? 'bg-red-50 text-red-800' :
-          'bg-gray-50 text-gray-800'
+          status === 'success' ? 'bg-semantic-success-subtle text-semantic-success' :
+          status === 'error' ? 'bg-semantic-danger-subtle text-semantic-danger' :
+          'surface-sunken text-content-primary'
         }`}>
           <strong>Status:</strong> {status}<br />
           <strong>Response:</strong> {response}

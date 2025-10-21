@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { InventoryItem } from '../types/characters';
+import { Button, Input, Textarea, Badge } from './ui';
 
 interface ItemCardProps {
   item: InventoryItem;
@@ -30,43 +31,43 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
     setIsEditing(false);
   };
 
-  const getCategoryColor = (category?: string) => {
-    if (!category) return 'bg-gray-100 text-gray-800';
+  const getCategoryVariant = (category?: string): 'primary' | 'success' | 'warning' | 'danger' | 'default' => {
+    if (!category) return 'default';
 
     switch (category.toLowerCase()) {
       case 'weapon':
-        return 'bg-red-100 text-red-800';
+        return 'danger';
       case 'armor':
-        return 'bg-blue-100 text-blue-800';
+        return 'primary';
       case 'consumable':
-        return 'bg-green-100 text-green-800';
+        return 'success';
       case 'tool':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'warning';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'default';
     }
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 bg-white">
+    <div className="border border-theme-default rounded-lg p-4 surface-base">
       <div className="flex justify-between items-start mb-2">
         <div className="flex-1">
           {isEditing ? (
             <div className="space-y-2">
-              <input
+              <Input
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="text-lg font-medium border-b border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent"
                 placeholder="Item name..."
+                className="text-lg font-medium"
               />
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Qty:</span>
-                <input
+                <span className="text-sm text-content-secondary">Qty:</span>
+                <Input
                   type="number"
                   value={editQuantity}
                   onChange={(e) => setEditQuantity(parseInt(e.target.value) || 1)}
-                  className="w-20 text-sm border border-gray-300 rounded px-2 py-1 focus:border-blue-500 focus:outline-none"
+                  className="w-20 text-sm"
                   min="1"
                 />
               </div>
@@ -74,16 +75,16 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
           ) : (
             <div>
               <div className="flex items-center space-x-2">
-                <h4 className="text-lg font-medium text-gray-900">{item.name}</h4>
+                <h4 className="text-lg font-medium text-content-primary">{item.name}</h4>
                 {item.quantity > 1 && (
-                  <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                  <Badge variant="default">
                     x{item.quantity}
-                  </span>
+                  </Badge>
                 )}
                 {item.equipped && (
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                  <Badge variant="success">
                     Equipped
-                  </span>
+                  </Badge>
                 )}
               </div>
             </div>
@@ -92,42 +93,50 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
 
         <div className="flex items-center space-x-2 ml-4">
           {item.category && (
-            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(item.category)}`}>
+            <Badge variant={getCategoryVariant(item.category)}>
               {item.category}
-            </span>
+            </Badge>
           )}
 
           {canEdit && (
             <div className="flex space-x-1">
               {isEditing ? (
                 <>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleSave}
-                    className="p-1 text-green-600 hover:text-green-800"
+                    className="p-1 text-semantic-success hover:text-semantic-success"
                   >
                     ✓
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleCancel}
-                    className="p-1 text-gray-600 hover:text-gray-800"
+                    className="p-1 text-content-secondary hover:text-content-primary"
                   >
                     ✕
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setIsEditing(true)}
-                    className="p-1 text-blue-600 hover:text-blue-800"
+                    className="p-1 text-interactive-primary hover:text-interactive-primary-hover"
                   >
                     ✎
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={onRemove}
-                    className="p-1 text-red-600 hover:text-red-800"
+                    className="p-1 text-semantic-danger hover:text-semantic-danger"
                   >
                     🗑
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -138,21 +147,20 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
       {(item.description || isEditing) && (
         <div className="mb-2">
           {isEditing ? (
-            <textarea
+            <Textarea
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
-              className="w-full text-sm text-gray-600 border border-gray-300 rounded p-2 focus:border-blue-500 focus:outline-none"
               placeholder="Describe this item..."
               rows={2}
             />
           ) : (
-            <p className="text-sm text-gray-600">{item.description}</p>
+            <p className="text-sm text-content-secondary">{item.description}</p>
           )}
         </div>
       )}
 
       {/* Item Stats */}
-      <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+      <div className="flex flex-wrap gap-4 text-xs text-content-tertiary">
         {item.weight && (
           <span>Weight: {item.weight * item.quantity}</span>
         )}

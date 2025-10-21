@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import type { ConversationListItem } from '../types/conversations';
+import { Button } from './ui';
 
 interface ConversationListProps {
   gameId: number;
@@ -67,9 +68,9 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
     return (
       <div className="flex items-center justify-center p-8">
         {collapsed ? (
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-interactive-primary"></div>
         ) : (
-          <div className="text-gray-600">Loading conversations...</div>
+          <div className="text-content-secondary">Loading conversations...</div>
         )}
       </div>
     );
@@ -79,9 +80,9 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
     return (
       <div className="p-4">
         {collapsed ? (
-          <div className="text-red-600 text-center">!</div>
+          <div className="text-semantic-danger text-center">!</div>
         ) : (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          <div className="bg-semantic-danger-subtle border border-semantic-danger rounded-lg p-4 text-semantic-danger">
             {error}
           </div>
         )}
@@ -93,16 +94,16 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
     return (
       <div className="flex items-center justify-center p-8">
         {collapsed ? (
-          <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-8 h-8 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
         ) : (
           <div className="text-center">
-            <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-16 h-16 mx-auto text-content-tertiary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <p className="text-gray-600 text-lg mb-2">No conversations yet</p>
-            <p className="text-gray-500 text-sm">Start a conversation with other characters in the game</p>
+            <p className="text-content-secondary text-lg mb-2">No conversations yet</p>
+            <p className="text-content-tertiary text-sm">Start a conversation with other characters in the game</p>
           </div>
         )}
       </div>
@@ -110,27 +111,28 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
   }
 
   return (
-    <div className="divide-y divide-gray-200">
+    <div className="divide-y divide-theme-default">
       {conversations.map((conversation) => (
-        <button
+        <Button
           key={conversation.id}
+          variant="ghost"
           onClick={() => {
             console.log('[ConversationList] Clicked conversation:', conversation);
             onSelectConversation(conversation.id);
           }}
-          className={`w-full text-left hover:bg-gray-50 transition-colors ${
-            selectedConversationId === conversation.id ? 'bg-blue-50 border-l-4 border-blue-600' : ''
+          className={`w-full text-left hover:surface-raised transition-colors ${
+            selectedConversationId === conversation.id ? 'bg-interactive-primary-subtle border-l-4 border-interactive-primary' : ''
           } ${collapsed ? 'p-2' : 'p-4'}`}
           title={collapsed ? conversation.title || 'Untitled Conversation' : undefined}
         >
           {collapsed ? (
             // Collapsed view: show initial or icon with unread badge
             <div className="flex items-center justify-center relative">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-semibold">
+              <div className="w-10 h-10 bg-interactive-primary-subtle rounded-full flex items-center justify-center text-interactive-primary font-semibold">
                 {conversation.title ? conversation.title.charAt(0).toUpperCase() : '?'}
               </div>
               {conversation.unread_count > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-semantic-danger text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                   {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
                 </span>
               )}
@@ -141,34 +143,34 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-900 truncate">
+                    <h3 className="font-semibold text-content-primary truncate">
                       {conversation.title || 'Untitled Conversation'}
                     </h3>
                     {conversation.unread_count > 0 && (
-                      <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0">
+                      <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0">
                         {conversation.unread_count}
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-600 truncate">
+                  <p className="text-sm text-content-secondary truncate">
                     {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
                   </p>
                 </div>
                 {conversation.last_message_at && (
-                  <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                  <span className="text-xs text-content-tertiary ml-2 flex-shrink-0">
                     {formatDate(conversation.last_message_at)}
                   </span>
                 )}
               </div>
 
               {conversation.last_message && (
-                <p className="text-sm text-gray-600 truncate">
+                <p className="text-sm text-content-secondary truncate">
                   {conversation.last_message}
                 </p>
               )}
             </>
           )}
-        </button>
+        </Button>
       ))}
     </div>
   );

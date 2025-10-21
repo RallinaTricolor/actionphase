@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import type { EnrichedGameListItem } from '../types/games';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS, DEADLINE_URGENCY_COLORS, USER_RELATIONSHIP_LABELS } from '../types/games';
+import { Button } from './ui';
 
 interface EnhancedGameCardProps {
   game: EnrichedGameListItem;
@@ -32,21 +33,21 @@ export function EnhancedGameCard({
 
   return (
     <div
-      className={`bg-white rounded-lg shadow-md border-2 transition-all hover:shadow-lg ${
+      className={`surface-base rounded-lg shadow-md border-2 transition-all hover:shadow-lg ${
         onClick ? 'cursor-pointer' : ''
       } ${
         isUserGame
-          ? 'border-blue-400 bg-blue-50/30'
+          ? 'border-interactive-primary bg-interactive-primary-subtle'
           : hasApplied
-          ? 'border-yellow-400 bg-yellow-50/30'
-          : 'border-gray-200 hover:border-gray-300'
+          ? 'border-semantic-warning bg-semantic-warning-subtle'
+          : 'border-theme-default hover:border-theme-strong'
       }`}
       onClick={onClick}
     >
       {/* Card Header */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-theme-default">
         <div className="flex items-start justify-between mb-2">
-          <h3 className="text-lg font-semibold text-gray-900 flex-1 pr-2">
+          <h3 className="text-lg font-semibold text-content-primary flex-1 pr-2">
             {game.title}
           </h3>
 
@@ -55,10 +56,10 @@ export function EnhancedGameCard({
             <span
               className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                 game.user_relationship === 'gm'
-                  ? 'bg-purple-100 text-purple-800'
+                  ? 'bg-semantic-info-subtle text-content-primary'
                   : game.user_relationship === 'participant'
-                  ? 'bg-blue-100 text-blue-800'
-                  : 'bg-yellow-100 text-yellow-800'
+                  ? 'bg-interactive-primary-subtle text-interactive-primary'
+                  : 'bg-semantic-warning-subtle text-semantic-warning'
               }`}
             >
               {USER_RELATIONSHIP_LABELS[game.user_relationship]}
@@ -75,15 +76,15 @@ export function EnhancedGameCard({
 
           {/* Genre Badge */}
           {game.genre && (
-            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
+            <span className="px-2 py-1 rounded-full text-xs font-semibold surface-raised text-content-primary">
               {game.genre}
             </span>
           )}
 
           {/* Recent Activity Indicator */}
           {game.has_recent_activity && (
-            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-semantic-success-subtle text-semantic-success flex items-center gap-1">
+              <span className="w-2 h-2 bg-semantic-success rounded-full animate-pulse"></span>
               New Activity
             </span>
           )}
@@ -93,8 +94,8 @@ export function EnhancedGameCard({
             <span
               className={`px-2 py-1 rounded-full text-xs font-semibold ${
                 game.deadline_urgency === 'critical'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-orange-100 text-orange-800'
+                  ? 'bg-semantic-danger-subtle text-semantic-danger'
+                  : 'bg-semantic-warning-subtle text-semantic-warning'
               }`}
             >
               {game.deadline_urgency === 'critical' ? '⚠️ Urgent' : '⏰ Soon'}
@@ -105,10 +106,10 @@ export function EnhancedGameCard({
 
       {/* Card Body */}
       <div className="p-4">
-        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{game.description}</p>
+        <p className="text-sm text-content-secondary mb-3 line-clamp-2">{game.description}</p>
 
         {/* Game Info Grid */}
-        <div className="grid grid-cols-2 gap-2 text-sm text-gray-700">
+        <div className="grid grid-cols-2 gap-2 text-sm text-content-primary">
           <div>
             <span className="font-medium">GM:</span> {game.gm_username}
           </div>
@@ -117,7 +118,7 @@ export function EnhancedGameCard({
             {game.current_players}
             {game.max_players && ` / ${game.max_players}`}
             {hasOpenSpots && game.state === 'recruitment' && (
-              <span className="text-green-600 ml-1">✓ Open</span>
+              <span className="text-semantic-success ml-1">✓ Open</span>
             )}
           </div>
 
@@ -136,9 +137,9 @@ export function EnhancedGameCard({
               <span
                 className={
                   game.deadline_urgency === 'critical'
-                    ? 'text-red-600 font-semibold'
+                    ? 'text-semantic-danger font-semibold'
                     : game.deadline_urgency === 'warning'
-                    ? 'text-orange-600 font-semibold'
+                    ? 'text-semantic-warning font-semibold'
                     : ''
                 }
               >
@@ -151,17 +152,18 @@ export function EnhancedGameCard({
 
       {/* Card Footer Actions */}
       {showApplyButton && !isUserGame && !hasApplied && game.state === 'recruitment' && hasOpenSpots && onApplyClick && (
-        <div className="p-4 border-t border-gray-200">
-          <button
+        <div className="p-4 border-t border-theme-default">
+          <Button
+            variant="primary"
+            loading={isJoining}
             onClick={(e) => {
               e.stopPropagation();
               onApplyClick();
             }}
-            disabled={isJoining}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors font-medium"
+            className="w-full"
           >
-            {isJoining ? 'Applying...' : 'Apply to Join'}
-          </button>
+            Apply to Join
+          </Button>
         </div>
       )}
     </div>

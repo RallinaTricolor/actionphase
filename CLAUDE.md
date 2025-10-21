@@ -305,12 +305,153 @@ Location: `.claude/reference/`
 - Document all public functions
 
 ### TypeScript Frontend
+
+**Component Structure:**
 - Enable TypeScript strict mode
 - One component per file
 - Co-locate tests: `ComponentName.test.tsx`
 - Test user interactions, not implementation details
 - Use React Testing Library with `screen` queries
 - Type all API client methods
+
+**Styling & Theming (CRITICAL - Dark Mode Support):**
+
+⚠️ **ALWAYS use the UI Component Library** (`@/components/ui`) for consistent dark mode support
+❌ **NEVER use hardcoded Tailwind colors** or native HTML elements for interactive components
+
+**UI Component Library Reference:**
+
+```tsx
+// ❌ WRONG - Native HTML with manual styling
+<div className="bg-white border border-gray-200 rounded-lg p-4">
+  <input className="border border-gray-300 px-3 py-2 rounded" />
+  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+    Submit
+  </button>
+</div>
+
+// ✅ CORRECT - UI Component Library
+import { Card, CardBody, Input, Button } from '@/components/ui';
+
+<Card variant="default" padding="md">
+  <CardBody>
+    <Input label="Email" type="email" placeholder="Enter email" />
+    <Button variant="primary">Submit</Button>
+  </CardBody>
+</Card>
+```
+
+**Available UI Components:**
+
+**Layout Components:**
+- `<Card variant="default|elevated|bordered">` - Container with sections
+- `<CardHeader>`, `<CardBody>`, `<CardFooter>` - Card sections
+
+**Form Components:**
+- `<Input label="..." />` - Text input with label and validation
+- `<Textarea label="..." />` - Multi-line text input
+- `<Select label="...">` - Dropdown select
+- `<Checkbox label="..." />` - Checkbox with label
+- `<Radio label="..." />` - Radio button
+- `<DateTimeInput label="..." />` - Date/time picker
+- `<Label required optional>` - Standalone form label
+
+**Interactive Components:**
+- `<Button variant="primary|secondary|danger|ghost">` - Action buttons
+- `<Badge variant="primary|success|warning|danger">` - Status indicators
+- `<Alert variant="info|success|warning|danger">` - Notification boxes
+- `<Spinner size="sm|md|lg|xl">` - Loading indicator
+
+**Common Patterns:**
+
+```tsx
+import { Card, CardHeader, CardBody, CardFooter, Input, Button, Badge } from '@/components/ui';
+
+// Login Form
+<Card variant="elevated" padding="md">
+  <CardHeader>
+    <h2>Sign In</h2>
+  </CardHeader>
+  <CardBody>
+    <Input
+      label="Email"
+      type="email"
+      placeholder="you@example.com"
+      value={email}
+      onChange={(e) => setEmail(e.target.value)}
+    />
+    <Input
+      label="Password"
+      type="password"
+      error={passwordError}
+    />
+  </CardBody>
+  <CardFooter>
+    <Button variant="primary" loading={isLoading}>
+      Sign In
+    </Button>
+  </CardFooter>
+</Card>
+
+// Status Display
+<div className="flex items-center gap-2">
+  <Badge variant="success">Active</Badge>
+  <Badge variant="warning" dot>Pending Review</Badge>
+</div>
+
+// Action Buttons
+<div className="flex gap-2">
+  <Button variant="primary" onClick={handleSave}>Save</Button>
+  <Button variant="secondary" onClick={handleCancel}>Cancel</Button>
+  <Button variant="danger" onClick={handleDelete}>Delete</Button>
+</div>
+
+// Alert Messages
+<Alert variant="success" title="Success!" dismissible onDismiss={closeAlert}>
+  Your changes have been saved.
+</Alert>
+```
+
+**Markdown/Prose Content:**
+
+For markdown content, use the MarkdownPreview component:
+
+```tsx
+import { MarkdownPreview } from '@/components/MarkdownPreview';
+
+<MarkdownPreview
+  content={markdownText}
+  mentionedCharacters={characters}  // Optional
+/>
+```
+
+**When You Can't Use UI Components:**
+
+For layout-only elements (flexbox containers, grids, etc.), use semantic CSS tokens:
+- `bg-bg-primary`, `bg-bg-secondary` - Backgrounds
+- `text-text-heading`, `text-text-primary` - Text colors
+- `border-border-primary` - Borders
+
+**Pre-Flight Checklist for New Components:**
+
+Before committing any new React component, verify:
+- [ ] Uses `<Button>` instead of `<button>`
+- [ ] Uses `<Input>` instead of `<input>`
+- [ ] Uses `<Card>` instead of manual `<div>` containers
+- [ ] Uses `<Badge>` for status indicators
+- [ ] Uses `<Alert>` for notifications
+- [ ] Layout containers use `bg-bg-*` and `text-text-*` tokens
+- [ ] Component tested in both light AND dark mode
+- [ ] Markdown content uses MarkdownPreview component
+
+**Testing Dark Mode:**
+1. Navigate to `/settings`
+2. Toggle between Light/Dark/System
+3. Verify all text is readable
+4. Verify all backgrounds adapt correctly
+5. Visit `/theme-test` to see all components in action
+
+**Full Documentation:** See `frontend/src/components/ui/README.md` for complete API reference
 
 ### General
 - **Tests are MANDATORY** for all features and bug fixes

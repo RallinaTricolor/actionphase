@@ -103,13 +103,13 @@ export const GAME_STATE_LABELS: Record<GameState, string> = {
 };
 
 export const GAME_STATE_COLORS: Record<GameState, string> = {
-  setup: 'bg-gray-100 text-gray-800',
-  recruitment: 'bg-green-100 text-green-800',
-  character_creation: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-yellow-100 text-yellow-800',
-  paused: 'bg-orange-100 text-orange-800',
-  completed: 'bg-purple-100 text-purple-800',
-  cancelled: 'bg-red-100 text-red-800'
+  setup: 'surface-raised text-content-secondary',
+  recruitment: 'bg-semantic-success-subtle text-semantic-success',
+  character_creation: 'bg-interactive-primary-subtle text-interactive-primary',
+  in_progress: 'bg-semantic-warning-subtle text-semantic-warning',
+  paused: 'bg-semantic-warning-subtle text-semantic-warning',
+  completed: 'bg-semantic-info-subtle text-content-primary',
+  cancelled: 'bg-semantic-danger-subtle text-semantic-danger'
 };
 
 export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
@@ -120,10 +120,10 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
 };
 
 export const APPLICATION_STATUS_COLORS: Record<ApplicationStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
-  withdrawn: 'bg-gray-100 text-gray-800'
+  pending: 'bg-semantic-warning-subtle text-semantic-warning',
+  approved: 'bg-semantic-success-subtle text-semantic-success',
+  rejected: 'bg-semantic-danger-subtle text-semantic-danger',
+  withdrawn: 'surface-raised text-content-secondary'
 };
 
 // Enhanced game listing types
@@ -165,9 +165,9 @@ export interface GameListingFilters {
 }
 
 export const DEADLINE_URGENCY_COLORS: Record<DeadlineUrgency, string> = {
-  critical: 'bg-red-100 text-red-800 border-red-300',
-  warning: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  normal: 'bg-gray-100 text-gray-800 border-gray-300'
+  critical: 'bg-semantic-danger-subtle text-semantic-danger border-semantic-danger',
+  warning: 'bg-semantic-warning-subtle text-semantic-warning border-semantic-warning',
+  normal: 'surface-raised text-content-secondary border-theme-default'
 };
 
 export const USER_RELATIONSHIP_LABELS: Record<UserRelationship, string> = {

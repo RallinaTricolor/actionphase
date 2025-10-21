@@ -1,5 +1,446 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
+/* ===================================================================
+   TAILWIND CUSTOM THEME - Semantic Color Extensions
+   =================================================================== */
+
+@theme {
+  /* Semantic Background Colors
+     Note: Values must NOT use var() references. Tailwind v4 needs static values or direct CSS variable names.
+     These will generate utilities like bg-bg-primary, bg-bg-secondary, etc. */
+  --color-bg-page*: initial;
+  --color-bg-page-secondary*: initial;
+  --color-bg-primary*: initial;
+  --color-bg-secondary*: initial;
+  --color-bg-tertiary*: initial;
+  --color-bg-hover*: initial;
+  --color-bg-active*: initial;
+  --color-bg-input*: initial;
+  --color-bg-input-disabled*: initial;
+
+  /* Semantic Text Colors */
+  --color-text-heading*: initial;
+  --color-text-primary*: initial;
+  --color-text-secondary*: initial;
+  --color-text-muted*: initial;
+  --color-text-disabled*: initial;
+
+  /* Semantic Border Colors */
+  --color-border-primary*: initial;
+  --color-border-secondary*: initial;
+  --color-border-input*: initial;
+  --color-border-focus*: initial;
+
+  /* Interactive Colors - Primary */
+  --color-primary*: initial;
+  --color-primary-hover*: initial;
+  --color-primary-light*: initial;
+  --color-primary-text*: initial;
+
+  /* Interactive Colors - Danger */
+  --color-danger*: initial;
+  --color-danger-hover*: initial;
+  --color-danger-light*: initial;
+  --color-danger-text*: initial;
+
+  /* Interactive Colors - Warning */
+  --color-warning*: initial;
+  --color-warning-hover*: initial;
+  --color-warning-light*: initial;
+  --color-warning-text*: initial;
+
+  /* Interactive Colors - Success */
+  --color-success*: initial;
+  --color-success-hover*: initial;
+  --color-success-light*: initial;
+  --color-success-text*: initial;
+
+  /* Interactive Colors - Info */
+  --color-info*: initial;
+  --color-info-hover*: initial;
+  --color-info-light*: initial;
+  --color-info-text*: initial;
+
+  /* Special Colors */
+  --color-placeholder*: initial;
+  --color-focus-ring*: initial;
+  --color-focus-ring-offset*: initial;
+}
+
+/* ===================================================================
+   THEME VARIABLES - CSS Custom Properties for Dark Mode
+   =================================================================== */
+
+@layer base {
+  :root {
+    /* ===== BACKGROUND COLORS ===== */
+    /* Page-level backgrounds */
+    --color-bg-page: 249 250 251; /* gray-50 */
+    --color-bg-page-secondary: 243 244 246; /* gray-100 */
+
+    /* Component backgrounds */
+    --color-bg-primary: 255 255 255; /* white */
+    --color-bg-secondary: 249 250 251; /* gray-50 */
+    --color-bg-tertiary: 243 244 246; /* gray-100 */
+
+    /* Interactive backgrounds */
+    --color-bg-hover: 249 250 251; /* gray-50 */
+    --color-bg-active: 243 244 246; /* gray-100 */
+
+    /* Input backgrounds */
+    --color-bg-input: 255 255 255; /* white */
+    --color-bg-input-disabled: 243 244 246; /* gray-100 */
+
+    /* ===== SURFACE TOKENS ===== */
+    --color-surface-base: 255 255 255; /* white */
+    --color-surface-raised: 249 250 251; /* gray-50 */
+    --color-surface-overlay: 255 255 255; /* white */
+    --color-surface-sunken: 243 244 246; /* gray-100 */
+    --color-surface-page: 249 250 251; /* gray-50 */
+
+    /* ===== CONTENT (TEXT) TOKENS ===== */
+    --color-content-primary: 17 24 39; /* gray-900 */
+    --color-content-secondary: 75 85 99; /* gray-600 */
+    --color-content-tertiary: 107 114 128; /* gray-500 */
+    --color-content-disabled: 156 163 175; /* gray-400 */
+    --color-content-inverse: 255 255 255; /* white */
+
+    /* ===== TEXT COLORS ===== */
+    --color-text-heading: 17 24 39; /* gray-900 */
+    --color-text-primary: 75 85 99; /* gray-600 */
+    --color-text-secondary: 107 114 128; /* gray-500 */
+    --color-text-muted: 156 163 175; /* gray-400 */
+    --color-text-disabled: 209 213 219; /* gray-300 */
+
+    /* ===== BORDER TOKENS ===== */
+    --color-border-default: 229 231 235; /* gray-200 */
+    --color-border-subtle: 243 244 246; /* gray-100 */
+    --color-border-strong: 209 213 219; /* gray-300 */
+
+    /* ===== BORDER COLORS ===== */
+    --color-border-primary: 229 231 235; /* gray-200 */
+    --color-border-secondary: 209 213 219; /* gray-300 */
+    --color-border-input: 209 213 219; /* gray-300 */
+    --color-border-focus: 59 130 246; /* blue-500 */
+
+    /* ===== INTERACTIVE TOKENS ===== */
+    --color-interactive-primary: 37 99 235; /* blue-600 */
+    --color-interactive-primary-hover: 29 78 216; /* blue-700 */
+    --color-interactive-secondary: 107 114 128; /* gray-500 */
+    --color-interactive-secondary-hover: 75 85 99; /* gray-600 */
+
+    /* ===== INTERACTIVE COLORS ===== */
+    /* Primary (Blue) */
+    --color-primary: 37 99 235; /* blue-600 */
+    --color-primary-hover: 29 78 216; /* blue-700 */
+    --color-primary-light: 239 246 255; /* blue-50 */
+    --color-primary-text: 29 78 216; /* blue-700 */
+
+    /* Danger (Red) */
+    --color-danger: 220 38 38; /* red-600 */
+    --color-danger-hover: 185 28 28; /* red-700 */
+    --color-danger-light: 254 242 242; /* red-50 */
+    --color-danger-text: 185 28 28; /* red-700 */
+
+    /* Warning (Yellow) */
+    --color-warning: 234 179 8; /* yellow-500 */
+    --color-warning-hover: 202 138 4; /* yellow-600 */
+    --color-warning-light: 254 252 232; /* yellow-50 */
+    --color-warning-text: 161 98 7; /* yellow-700 */
+
+    /* Success (Green) */
+    --color-success: 22 163 74; /* green-600 */
+    --color-success-hover: 21 128 61; /* green-700 */
+    --color-success-light: 240 253 244; /* green-50 */
+    --color-success-text: 21 128 61; /* green-700 */
+
+    /* Info (Indigo) */
+    --color-info: 79 70 229; /* indigo-600 */
+    --color-info-hover: 67 56 202; /* indigo-700 */
+    --color-info-light: 238 242 255; /* indigo-50 */
+    --color-info-text: 67 56 202; /* indigo-700 */
+
+    /* ===== SPECIAL COLORS ===== */
+    --color-placeholder: 107 114 128; /* gray-500 */
+    --color-focus-ring: 59 130 246; /* blue-500 */
+    --color-focus-ring-offset: 255 255 255; /* white */
+  }
+
+  .dark {
+    /* ===== BACKGROUND COLORS ===== */
+    --color-bg-page: 17 24 39; /* gray-900 */
+    --color-bg-page-secondary: 31 41 55; /* gray-800 */
+
+    --color-bg-primary: 31 41 55; /* gray-800 */
+    --color-bg-secondary: 17 24 39; /* gray-900 */
+    --color-bg-tertiary: 55 65 81; /* gray-700 */
+
+    --color-bg-hover: 55 65 81; /* gray-700 */
+    --color-bg-active: 75 85 99; /* gray-600 */
+
+    --color-bg-input: 55 65 81; /* gray-700 */
+    --color-bg-input-disabled: 31 41 55; /* gray-800 */
+
+    /* ===== SURFACE TOKENS ===== */
+    --color-surface-base: 31 41 55; /* gray-800 */
+    --color-surface-raised: 55 65 81; /* gray-700 */
+    --color-surface-overlay: 75 85 99; /* gray-600 */
+    --color-surface-sunken: 17 24 39; /* gray-900 */
+    --color-surface-page: 17 24 39; /* gray-900 */
+
+    /* ===== CONTENT (TEXT) TOKENS ===== */
+    --color-content-primary: 255 255 255; /* white */
+    --color-content-secondary: 229 231 235; /* gray-200 */
+    --color-content-tertiary: 156 163 175; /* gray-400 */
+    --color-content-disabled: 75 85 99; /* gray-600 */
+    --color-content-inverse: 17 24 39; /* gray-900 */
+
+    /* ===== TEXT COLORS ===== */
+    --color-text-heading: 255 255 255; /* white */
+    --color-text-primary: 156 163 175; /* gray-400 */
+    --color-text-secondary: 107 114 128; /* gray-500 */
+    --color-text-muted: 75 85 99; /* gray-600 */
+    --color-text-disabled: 55 65 81; /* gray-700 */
+
+    /* ===== BORDER TOKENS ===== */
+    --color-border-default: 75 85 99; /* gray-600 */
+    --color-border-subtle: 55 65 81; /* gray-700 */
+    --color-border-strong: 107 114 128; /* gray-500 */
+
+    /* ===== BORDER COLORS ===== */
+    --color-border-primary: 55 65 81; /* gray-700 */
+    --color-border-secondary: 75 85 99; /* gray-600 */
+    --color-border-input: 75 85 99; /* gray-600 */
+    --color-border-focus: 59 130 246; /* blue-500 */
+
+    /* ===== INTERACTIVE TOKENS ===== */
+    --color-interactive-primary: 59 130 246; /* blue-500 */
+    --color-interactive-primary-hover: 96 165 250; /* blue-400 */
+    --color-interactive-secondary: 156 163 175; /* gray-400 */
+    --color-interactive-secondary-hover: 229 231 235; /* gray-200 */
+
+    /* ===== INTERACTIVE COLORS ===== */
+    /* Primary (Blue) - inverted for dark mode */
+    --color-primary: 29 78 216; /* blue-700 */
+    --color-primary-hover: 37 99 235; /* blue-600 */
+    --color-primary-light: 30 58 138; /* blue-900 (will use with opacity) */
+    --color-primary-text: 147 197 253; /* blue-300 */
+
+    /* Danger (Red) */
+    --color-danger: 185 28 28; /* red-700 */
+    --color-danger-hover: 220 38 38; /* red-600 */
+    --color-danger-light: 127 29 29; /* red-900 (will use with opacity) */
+    --color-danger-text: 252 165 165; /* red-300 */
+
+    /* Warning (Yellow) */
+    --color-warning: 202 138 4; /* yellow-600 */
+    --color-warning-hover: 234 179 8; /* yellow-500 */
+    --color-warning-light: 113 63 18; /* yellow-900 (will use with opacity) */
+    --color-warning-text: 253 224 71; /* yellow-300 */
+
+    /* Success (Green) */
+    --color-success: 21 128 61; /* green-700 */
+    --color-success-hover: 22 163 74; /* green-600 */
+    --color-success-light: 20 83 45; /* green-900 (will use with opacity) */
+    --color-success-text: 134 239 172; /* green-300 */
+
+    /* Info (Indigo) */
+    --color-info: 67 56 202; /* indigo-700 */
+    --color-info-hover: 79 70 229; /* indigo-600 */
+    --color-info-light: 49 46 129; /* indigo-900 (will use with opacity) */
+    --color-info-text: 165 180 252; /* indigo-300 */
+
+    /* ===== SPECIAL COLORS ===== */
+    --color-placeholder: 156 163 175; /* gray-400 */
+    --color-focus-ring: 59 130 246; /* blue-500 */
+    --color-focus-ring-offset: 31 41 55; /* gray-800 */
+  }
+}
+
+/* ===================================================================
+   NEW SEMANTIC THEME SYSTEM - Surface, Content, Interactive Tokens
+   =================================================================== */
+
+@layer utilities {
+  /* Surface tokens - for backgrounds and containers */
+  .surface-base {
+    background-color: rgb(var(--color-surface-base));
+  }
+
+  .surface-raised {
+    background-color: rgb(var(--color-surface-raised));
+  }
+
+  .surface-overlay {
+    background-color: rgb(var(--color-surface-overlay));
+  }
+
+  .surface-sunken {
+    background-color: rgb(var(--color-surface-sunken));
+  }
+
+  .surface-page {
+    background-color: rgb(var(--color-surface-page));
+  }
+
+  /* Content tokens - for text */
+  .text-content-primary {
+    color: rgb(var(--color-content-primary));
+  }
+
+  .text-content-secondary {
+    color: rgb(var(--color-content-secondary));
+  }
+
+  .text-content-tertiary {
+    color: rgb(var(--color-content-tertiary));
+  }
+
+  .text-content-disabled {
+    color: rgb(var(--color-content-disabled));
+  }
+
+  .text-content-inverse {
+    color: rgb(var(--color-content-inverse));
+  }
+
+  /* Interactive tokens - for buttons and interactive elements */
+  .bg-interactive-primary {
+    background-color: rgb(var(--color-interactive-primary));
+  }
+
+  .hover\:bg-interactive-primary-hover:hover {
+    background-color: rgb(var(--color-interactive-primary-hover));
+  }
+
+  .bg-interactive-secondary {
+    background-color: rgb(var(--color-interactive-secondary));
+  }
+
+  .hover\:bg-interactive-secondary-hover:hover {
+    background-color: rgb(var(--color-interactive-secondary-hover));
+  }
+
+  /* Interactive text colors */
+  .text-interactive-primary {
+    color: rgb(var(--color-interactive-primary));
+  }
+
+  .hover\:text-interactive-primary-hover:hover {
+    color: rgb(var(--color-interactive-primary-hover));
+  }
+
+  /* Interactive border colors */
+  .border-interactive-primary {
+    border-color: rgb(var(--color-interactive-primary));
+  }
+
+  .hover\:border-interactive-primary:hover {
+    border-color: rgb(var(--color-interactive-primary));
+  }
+
+  /* Interactive subtle backgrounds (for badges, pills, etc.) */
+  .bg-interactive-primary-subtle {
+    background-color: rgb(var(--color-primary-light));
+  }
+
+  /* Semantic tokens - for status colors */
+  .bg-semantic-danger {
+    background-color: rgb(var(--color-danger));
+  }
+
+  .hover\:bg-semantic-danger-hover:hover {
+    background-color: rgb(var(--color-danger-hover));
+  }
+
+  .bg-semantic-danger-subtle {
+    background-color: rgb(var(--color-danger-light));
+  }
+
+  .text-semantic-danger {
+    color: rgb(var(--color-danger-text));
+  }
+
+  .border-semantic-danger {
+    border-color: rgb(var(--color-danger));
+  }
+
+  .bg-semantic-warning {
+    background-color: rgb(var(--color-warning));
+  }
+
+  .hover\:bg-semantic-warning-hover:hover {
+    background-color: rgb(var(--color-warning-hover));
+  }
+
+  .bg-semantic-warning-subtle {
+    background-color: rgb(var(--color-warning-light));
+  }
+
+  .text-semantic-warning {
+    color: rgb(var(--color-warning-text));
+  }
+
+  .border-semantic-warning {
+    border-color: rgb(var(--color-warning));
+  }
+
+  .bg-semantic-success {
+    background-color: rgb(var(--color-success));
+  }
+
+  .hover\:bg-semantic-success-hover:hover {
+    background-color: rgb(var(--color-success-hover));
+  }
+
+  .bg-semantic-success-subtle {
+    background-color: rgb(var(--color-success-light));
+  }
+
+  .text-semantic-success {
+    color: rgb(var(--color-success-text));
+  }
+
+  .border-semantic-success {
+    border-color: rgb(var(--color-success));
+  }
+
+  .bg-semantic-info {
+    background-color: rgb(var(--color-info));
+  }
+
+  .bg-semantic-info-subtle {
+    background-color: rgb(var(--color-info-light));
+  }
+
+  .text-semantic-info {
+    color: rgb(var(--color-info-text));
+  }
+
+  .border-semantic-info {
+    border-color: rgb(var(--color-info));
+  }
+
+  /* Border tokens */
+  .border-theme-default {
+    border-color: rgb(var(--color-border-default));
+  }
+
+  .border-theme-subtle {
+    border-color: rgb(var(--color-border-subtle));
+  }
+
+  .border-theme-strong {
+    border-color: rgb(var(--color-border-strong));
+  }
+}
+
+/* ===================================================================
+   MARKDOWN PROSE STYLES
+   =================================================================== */
+
 /* Markdown prose styles */
 .prose {
   color: #374151;
@@ -223,4 +664,62 @@
   font-size: 1.1428571em;
   margin-top: 1.5555556em;
   margin-bottom: 0.4444444em;
+}
+
+/* ===================================================================
+   DARK MODE PROSE OVERRIDES
+   =================================================================== */
+
+.dark .prose {
+  color: rgb(229 231 235); /* gray-200 */
+}
+
+.dark .prose :where(p):not(:where([class~="not-prose"] *)) {
+  color: rgb(229 231 235); /* gray-200 */
+}
+
+.dark .prose :where(strong):not(:where([class~="not-prose"] *)) {
+  color: rgb(255 255 255); /* white */
+}
+
+.dark .prose :where(em):not(:where([class~="not-prose"] *)) {
+  color: rgb(229 231 235); /* gray-200 */
+}
+
+.dark .prose :where(h1):not(:where([class~="not-prose"] *)) {
+  color: rgb(255 255 255); /* white */
+}
+
+.dark .prose :where(h2):not(:where([class~="not-prose"] *)) {
+  color: rgb(255 255 255); /* white */
+}
+
+.dark .prose :where(h3):not(:where([class~="not-prose"] *)) {
+  color: rgb(255 255 255); /* white */
+}
+
+.dark .prose :where(h4):not(:where([class~="not-prose"] *)) {
+  color: rgb(255 255 255); /* white */
+}
+
+.dark .prose :where(li):not(:where([class~="not-prose"] *)) {
+  color: rgb(229 231 235); /* gray-200 */
+}
+
+.dark .prose :where(ol > li):not(:where([class~="not-prose"] *))::marker {
+  color: rgb(156 163 175); /* gray-400 */
+}
+
+.dark .prose :where(ul > li):not(:where([class~="not-prose"] *))::marker {
+  color: rgb(156 163 175); /* gray-400 */
+}
+
+.dark .prose :where(blockquote):not(:where([class~="not-prose"] *)) {
+  color: rgb(229 231 235); /* gray-200 */
+  border-left-color: rgb(75 85 99); /* gray-600 */
+}
+
+.dark .prose :where(code):not(:where([class~="not-prose"] *)) {
+  color: rgb(229 231 235); /* gray-200 */
+  background-color: rgb(55 65 81); /* gray-700 */
 }

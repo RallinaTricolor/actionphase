@@ -4,6 +4,7 @@ import { ItemCard } from './ItemCard';
 import { CurrencyCard } from './CurrencyCard';
 import { AddItemModal } from './AddItemModal';
 import { AddCurrencyModal } from './AddCurrencyModal';
+import { Button } from './ui';
 
 interface InventoryManagerProps {
   items: InventoryItem[];
@@ -78,28 +79,30 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
   return (
     <div>
       {/* Tab Navigation - Hide currency tab if user cannot edit */}
-      <div className="flex space-x-1 mb-6 border-b border-gray-200">
-        <button
+      <div className="flex space-x-1 mb-6 border-b border-theme-default">
+        <Button
+          variant="ghost"
           onClick={() => setActiveTab('items')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'items'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-interactive-primary text-interactive-primary'
+              : 'border-transparent text-content-secondary hover:text-content-primary'
           }`}
         >
           Items ({items.length})
-        </button>
+        </Button>
         {canEdit && (
-          <button
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('currency')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'currency'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-interactive-primary text-interactive-primary'
+                : 'border-transparent text-content-secondary hover:text-content-primary'
             }`}
           >
             Currency ({currency.length})
-          </button>
+          </Button>
         )}
       </div>
 
@@ -108,25 +111,26 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
         <div>
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">Items</h3>
+              <h3 className="text-lg font-medium text-content-primary">Items</h3>
               {items.length > 0 && (
-                <div className="text-sm text-gray-500 mt-1">
+                <div className="text-sm text-content-tertiary mt-1">
                   Total Weight: {getTotalWeight().toFixed(1)} • Total Value: {getTotalValue()}
                 </div>
               )}
             </div>
             {canEdit && (
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => setShowAddItem(true)}
-                className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 Add Item
-              </button>
+              </Button>
             )}
           </div>
 
           {items.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-content-secondary">
               <p>No items yet.</p>
               {canEdit && <p className="text-sm mt-1">Click "Add Item" to get started.</p>}
             </div>
@@ -157,17 +161,18 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
       {activeTab === 'currency' && canEdit && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Currency & Resources</h3>
-            <button
+            <h3 className="text-lg font-medium text-content-primary">Currency & Resources</h3>
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => setShowAddCurrency(true)}
-              className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               Add Currency
-            </button>
+            </Button>
           </div>
 
           {currency.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-content-secondary">
               <p>No currency tracked yet.</p>
               {canEdit && <p className="text-sm mt-1">Click "Add Currency" to get started.</p>}
             </div>

@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo } from 'react';
 import type { AppError } from '../types/errors';
 import { ErrorType, ErrorSeverity } from '../types/errors';
 import { createAppError, logError, getErrorMessage, getRecoveryActions } from '../lib/errors';
+import { Button } from './ui';
 
 interface Props {
   children: React.ReactNode;
@@ -113,10 +114,10 @@ const DefaultErrorFallback: React.FC<ErrorBoundaryFallbackProps> = ({
   const recoveryActions = getRecoveryActions(error);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-6 rounded-lg shadow-md">
+    <div className="min-h-screen flex items-center justify-center surface-sunken py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 surface-base p-6 rounded-lg shadow-md">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 text-red-500">
+          <div className="mx-auto h-12 w-12 text-semantic-danger">
             <svg
               fill="none"
               stroke="currentColor"
@@ -132,23 +133,23 @@ const DefaultErrorFallback: React.FC<ErrorBoundaryFallbackProps> = ({
             </svg>
           </div>
 
-          <h2 className="mt-4 text-lg font-medium text-gray-900">
+          <h2 className="mt-4 text-lg font-medium text-content-primary">
             Something went wrong
           </h2>
 
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-content-secondary">
             {message}
           </p>
 
           {recoveryActions.length > 0 && (
             <div className="mt-4 text-left">
-              <p className="text-sm font-medium text-gray-700 mb-2">
+              <p className="text-sm font-medium text-content-primary mb-2">
                 You can try to:
               </p>
-              <ul className="text-sm text-gray-600 space-y-1">
+              <ul className="text-sm text-content-secondary space-y-1">
                 {recoveryActions.map((action, index) => (
                   <li key={index} className="flex items-start">
-                    <span className="text-blue-500 mr-2">•</span>
+                    <span className="text-interactive-primary mr-2">•</span>
                     {action}
                   </li>
                 ))}
@@ -157,25 +158,27 @@ const DefaultErrorFallback: React.FC<ErrorBoundaryFallbackProps> = ({
           )}
 
           <div className="mt-6 flex flex-col space-y-3">
-            <button
+            <Button
+              variant="primary"
               onClick={resetError}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              className="w-full"
             >
               Try Again
-            </button>
+            </Button>
 
-            <button
+            <Button
+              variant="outline"
               onClick={() => window.location.reload()}
-              className="w-full bg-gray-200 text-gray-900 py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+              className="w-full"
             >
               Reload Page
-            </button>
+            </Button>
           </div>
 
           {/* Error ID for support */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <p className="text-xs text-gray-500">
-              Error ID: <code className="bg-gray-100 px-1 py-0.5 rounded">{errorId}</code>
+          <div className="mt-4 pt-4 border-t border-theme-default">
+            <p className="text-xs text-content-tertiary">
+              Error ID: <code className="surface-raised px-1 py-0.5 rounded">{errorId}</code>
             </p>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { DashboardGameCard } from '../types/dashboard';
 import { AlertTriangle, Clock } from 'lucide-react';
+import { Badge } from './ui';
 
 interface UrgentActionsCardProps {
   games: DashboardGameCard[];
@@ -17,14 +18,14 @@ export function UrgentActionsCard({ games }: UrgentActionsCardProps) {
   }
 
   return (
-    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6">
+    <div className="bg-semantic-danger-subtle rounded-lg shadow-lg p-8 border-2 border-semantic-danger">
       <div className="flex items-center mb-4">
-        <AlertTriangle className="w-6 h-6 text-red-600 mr-2" />
-        <h2 className="text-xl font-bold text-red-900">
+        <AlertTriangle className="w-6 h-6 text-semantic-danger mr-2" />
+        <h2 className="text-xl font-bold text-content-primary">
           Urgent Actions Required
         </h2>
       </div>
-      <p className="text-red-700 mb-4">
+      <p className="text-content-secondary mb-4">
         The following games have pending actions with approaching deadlines:
       </p>
       <div className="space-y-3">
@@ -32,19 +33,19 @@ export function UrgentActionsCard({ games }: UrgentActionsCardProps) {
           <Link
             key={game.game_id}
             to={`/games/${game.game_id}`}
-            className="block bg-white rounded-md p-4 border border-red-200 hover:border-red-300 hover:shadow-md transition-all"
+            className="block surface-base rounded-md p-4 border-2 border-semantic-danger hover:border-semantic-danger hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900">{game.title}</h3>
+                <h3 className="font-bold text-content-primary">{game.title}</h3>
                 {game.current_phase_title && (
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-content-secondary mt-1">
                     {game.current_phase_title}
                   </p>
                 )}
               </div>
               {game.current_phase_deadline && (
-                <div className="ml-4 flex items-center text-red-600">
+                <div className="ml-4 flex items-center text-semantic-danger">
                   <Clock className="w-4 h-4 mr-1" />
                   <span className="text-sm font-medium">
                     {formatDeadline(game.current_phase_deadline)}
@@ -53,9 +54,9 @@ export function UrgentActionsCard({ games }: UrgentActionsCardProps) {
               )}
             </div>
             {game.has_pending_action && (
-              <div className="mt-2 text-sm text-yellow-700 bg-yellow-50 px-2 py-1 rounded inline-block">
+              <Badge variant="warning" className="mt-2">
                 Action submission needed
-              </div>
+              </Badge>
             )}
           </Link>
         ))}

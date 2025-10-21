@@ -81,7 +81,9 @@ func (h *Handler) Start() {
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 			r.Get("/refresh", authHandler.V1Refresh)
-			r.Get("/me", authHandler.V1Me) // Get current user info
+			r.Get("/me", authHandler.V1Me)                         // Get current user info
+			r.Get("/preferences", authHandler.V1GetPreferences)    // Get user preferences
+			r.Put("/preferences", authHandler.V1UpdatePreferences) // Update user preferences
 		})
 	})
 	apiV1Router.Mount("/auth", authRouter)

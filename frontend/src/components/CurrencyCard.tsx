@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { CurrencyEntry } from '../types/characters';
+import { Button, Input } from './ui';
 
 interface CurrencyCardProps {
   currency: CurrencyEntry;
@@ -31,29 +32,29 @@ export const CurrencyCard: React.FC<CurrencyCardProps> = ({ currency, canEdit, o
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 bg-white">
+    <div className="border border-theme-default rounded-lg p-4 surface-base">
       <div className="flex justify-between items-center">
         <div className="flex-1">
           {isEditing ? (
             <div className="flex items-center space-x-3">
-              <input
+              <Input
                 type="text"
                 value={editType}
                 onChange={(e) => setEditType(e.target.value)}
-                className="font-medium border-b border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent"
                 placeholder="Currency type..."
+                className="font-medium"
               />
-              <input
+              <Input
                 type="number"
                 value={editAmount}
                 onChange={(e) => setEditAmount(parseInt(e.target.value) || 0)}
-                className="w-24 text-right border border-gray-300 rounded px-2 py-1 focus:border-blue-500 focus:outline-none"
+                className="w-24 text-right"
               />
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <span className="font-medium text-gray-900">{currency.type}</span>
-              <span className="text-lg font-semibold text-green-600">{currency.amount.toLocaleString()}</span>
+              <span className="font-medium text-content-primary">{currency.type}</span>
+              <span className="text-lg font-semibold text-semantic-success">{currency.amount.toLocaleString()}</span>
             </div>
           )}
         </div>
@@ -62,33 +63,41 @@ export const CurrencyCard: React.FC<CurrencyCardProps> = ({ currency, canEdit, o
           <div className="flex space-x-1 ml-4">
             {isEditing ? (
               <>
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={handleSave}
-                  className="p-1 text-green-600 hover:text-green-800"
+                  className="p-1 text-semantic-success hover:text-semantic-success"
                 >
                   ✓
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={handleCancel}
-                  className="p-1 text-gray-600 hover:text-gray-800"
+                  className="p-1 text-content-secondary hover:text-content-primary"
                 >
                   ✕
-                </button>
+                </Button>
               </>
             ) : (
               <>
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setIsEditing(true)}
-                  className="p-1 text-blue-600 hover:text-blue-800"
+                  className="p-1 text-interactive-primary hover:text-interactive-primary-hover"
                 >
                   ✎
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={onRemove}
-                  className="p-1 text-red-600 hover:text-red-800"
+                  className="p-1 text-semantic-danger hover:text-semantic-danger"
                 >
                   🗑
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -98,15 +107,15 @@ export const CurrencyCard: React.FC<CurrencyCardProps> = ({ currency, canEdit, o
       {(currency.description || isEditing) && (
         <div className="mt-2">
           {isEditing ? (
-            <input
+            <Input
               type="text"
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
-              className="w-full text-sm text-gray-600 border border-gray-300 rounded px-2 py-1 focus:border-blue-500 focus:outline-none"
               placeholder="Notes about this currency..."
+              className="text-sm"
             />
           ) : (
-            <p className="text-sm text-gray-600">{currency.description}</p>
+            <p className="text-sm text-content-secondary">{currency.description}</p>
           )}
         </div>
       )}

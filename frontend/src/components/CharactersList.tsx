@@ -5,6 +5,7 @@ import type { Character } from '../types/characters';
 import { CreateCharacterModal } from './CreateCharacterModal';
 import { CharacterSheet } from './CharacterSheet';
 import { Modal } from './Modal';
+import { Card, Button, Badge, Spinner, type BadgeVariant } from './ui';
 
 interface CharactersListProps {
   gameId: number;
@@ -91,64 +92,61 @@ export function CharactersList({
     return false;
   };
 
-  // Get character status badge styles
-  const getStatusBadge = (status: string) => {
-    const baseClasses = "px-2 py-1 text-xs font-medium rounded-full";
+  // Get character status badge variant
+  const getStatusBadgeVariant = (status: string): BadgeVariant => {
     switch (status) {
       case 'approved':
-        return `${baseClasses} bg-green-100 text-green-800`;
+        return 'success';
       case 'pending':
-        return `${baseClasses} bg-yellow-100 text-yellow-800`;
+        return 'warning';
       case 'rejected':
-        return `${baseClasses} bg-red-100 text-red-800`;
+        return 'danger';
       case 'active':
-        return `${baseClasses} bg-blue-100 text-blue-800`;
+        return 'primary';
       case 'dead':
-        return `${baseClasses} bg-gray-100 text-gray-800`;
+        return 'neutral';
       default:
-        return `${baseClasses} bg-gray-100 text-gray-800`;
+        return 'neutral';
     }
   };
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">Characters</h2>
-        <div className="animate-pulse space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-16 bg-gray-200 rounded"></div>
-          ))}
+      <Card variant="elevated" padding="lg">
+        <h2 className="text-lg font-semibold text-content-primary mb-4">Characters</h2>
+        <div className="flex items-center justify-center py-8">
+          <Spinner size="lg" label="Loading characters..." />
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Characters</h2>
+    <Card variant="elevated" padding="lg">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold text-content-primary">Characters</h2>
+        {canCreateCharacter() && (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            Create Character
+          </Button>
+        )}
+      </div>
+
+      {characters.length === 0 ? (
+        <div className="text-center py-8 text-content-secondary">
+          <p>No characters created yet.</p>
           {canCreateCharacter() && (
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Create Character
-            </button>
+            <p className="mt-1 text-sm">Click "Create Character" to get started.</p>
           )}
         </div>
-
-        {characters.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <p>No characters created yet.</p>
-            {canCreateCharacter() && (
-              <p className="mt-1 text-sm">Click "Create Character" to get started.</p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Anonymous mode: Show all characters in one unified list */}
-            {isAnonymous && userRole !== 'gm' ? (
+      ) : (
+        <div className="space-y-6">
+          {/* Anonymous mode: Show all characters in one unified list */}
+          {isAnonymous && userRole !== 'gm' ? (
               <div className="space-y-3">
                 {visibleCharacters.map((character) => (
                   <CharacterCard
@@ -158,7 +156,7 @@ export function CharactersList({
                     userRole={userRole}
                     isAnonymous={isAnonymous}
                     onApprove={handleApproveCharacter}
-                    getStatusBadge={getStatusBadge}
+                    getStatusBadgeVariant={getStatusBadgeVariant}
                     canViewSheet={canViewCharacterSheet(character)}
                     canEditSheet={canEditCharacterSheet(character)}
                     onViewSheet={() => setSelectedCharacterId(character.id)}
@@ -171,7 +169,7 @@ export function CharactersList({
                 {/* Player Characters */}
                 {playerCharacters.length > 0 && (
                   <div>
-                    <h3 className="text-md font-medium text-gray-700 mb-3">Player Characters</h3>
+                    <h3 className="text-md font-medium text-content-primary mb-3">Player Characters</h3>
                     <div className="space-y-3">
                       {playerCharacters.map((character) => (
                         <CharacterCard
@@ -181,7 +179,7 @@ export function CharactersList({
                           userRole={userRole}
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
-                          getStatusBadge={getStatusBadge}
+                          getStatusBadgeVariant={getStatusBadgeVariant}
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
                           onViewSheet={() => setSelectedCharacterId(character.id)}
@@ -194,7 +192,7 @@ export function CharactersList({
                 {/* GM NPCs */}
                 {gmNPCs.length > 0 && (
                   <div>
-                    <h3 className="text-md font-medium text-gray-700 mb-3">GM NPCs</h3>
+                    <h3 className="text-md font-medium text-content-primary mb-3">GM NPCs</h3>
                     <div className="space-y-3">
                       {gmNPCs.map((character) => (
                         <CharacterCard
@@ -204,7 +202,7 @@ export function CharactersList({
                           userRole={userRole}
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
-                          getStatusBadge={getStatusBadge}
+                          getStatusBadgeVariant={getStatusBadgeVariant}
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
                           onViewSheet={() => setSelectedCharacterId(character.id)}
@@ -217,7 +215,7 @@ export function CharactersList({
                 {/* Audience NPCs */}
                 {audienceNPCs.length > 0 && (
                   <div>
-                    <h3 className="text-md font-medium text-gray-700 mb-3">Audience NPCs</h3>
+                    <h3 className="text-md font-medium text-content-primary mb-3">Audience NPCs</h3>
                     <div className="space-y-3">
                       {audienceNPCs.map((character) => (
                         <CharacterCard
@@ -227,7 +225,7 @@ export function CharactersList({
                           userRole={userRole}
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
-                          getStatusBadge={getStatusBadge}
+                          getStatusBadgeVariant={getStatusBadgeVariant}
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
                           onViewSheet={() => setSelectedCharacterId(character.id)}
@@ -236,11 +234,10 @@ export function CharactersList({
                     </div>
                   </div>
                 )}
-              </>
-            )}
-          </div>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      )}
 
       <CreateCharacterModal
         isOpen={isCreateModalOpen}
@@ -269,7 +266,7 @@ export function CharactersList({
           </Modal>
         );
       })()}
-    </div>
+    </Card>
   );
 }
 
@@ -279,7 +276,7 @@ interface CharacterCardProps {
   userRole: string;
   isAnonymous?: boolean;
   onApprove: (characterId: number, status: 'approved' | 'rejected') => void;
-  getStatusBadge: (status: string) => string;
+  getStatusBadgeVariant: (status: string) => BadgeVariant;
   canViewSheet: boolean;
   canEditSheet: boolean;
   onViewSheet: () => void;
@@ -291,29 +288,29 @@ function CharacterCard({
   userRole,
   isAnonymous = false,
   onApprove,
-  getStatusBadge,
+  getStatusBadgeVariant,
   canViewSheet,
   canEditSheet,
   onViewSheet
 }: CharacterCardProps) {
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+    <div className="border border-theme-default rounded-lg p-4 surface-base hover:shadow-sm transition-shadow">
       <div className="flex justify-between items-start">
         <div className="flex-grow">
           <div className="flex items-center space-x-2 mb-1">
-            <h4 className="font-medium text-gray-900">{character.name}</h4>
-            <span className={getStatusBadge(character.status)}>
+            <h4 className="font-medium text-content-primary">{character.name}</h4>
+            <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
               {character.status}
-            </span>
+            </Badge>
             {/* Only show ownership badge if not anonymous or if GM */}
             {isOwner && (!isAnonymous || userRole === 'gm') && (
-              <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+              <Badge variant="secondary" size="sm">
                 Your Character
-              </span>
+              </Badge>
             )}
           </div>
 
-          <div className="text-sm text-gray-600 space-y-1">
+          <div className="text-sm text-content-primary space-y-1">
             {/* Only show character type if not anonymous or if GM */}
             {(!isAnonymous || userRole === 'gm') && (
               <div>
@@ -330,33 +327,33 @@ function CharacterCard({
         <div className="flex flex-col space-y-2 ml-4">
           {/* View Character Sheet Button */}
           {canViewSheet && (
-            <button
+            <Button
+              variant={canEditSheet ? 'primary' : 'secondary'}
+              size="sm"
               onClick={onViewSheet}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                canEditSheet
-                  ? 'text-blue-700 bg-blue-100 hover:bg-blue-200 focus:ring-blue-500'
-                  : 'text-gray-700 bg-gray-100 hover:bg-gray-200 focus:ring-gray-500'
-              } focus:outline-none focus:ring-2`}
             >
               {canEditSheet ? 'Edit Sheet' : 'View Sheet'}
-            </button>
+            </Button>
           )}
 
           {/* GM Actions */}
           {userRole === 'gm' && character.status === 'pending' && (
             <div className="flex space-x-2">
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => onApprove(character.id, 'approved')}
-                className="px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="bg-success hover:bg-success-hover"
               >
                 Approve
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
                 onClick={() => onApprove(character.id, 'rejected')}
-                className="px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500"
               >
                 Reject
-              </button>
+              </Button>
             </div>
           )}
         </div>

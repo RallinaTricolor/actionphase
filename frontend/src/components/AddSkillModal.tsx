@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { CharacterSkill } from '../types/characters';
+import { Button, Input, Textarea } from './ui';
 
 interface AddSkillModalProps {
   onAdd: (skill: Omit<CharacterSkill, 'id'>) => void;
@@ -30,77 +31,57 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ onAdd, onCancel })
         <h3 className="text-lg font-medium mb-4">Add New Skill</h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="skill-name" className="block text-sm font-medium text-gray-700 mb-1">
-              Skill Name *
-            </label>
-            <input
-              id="skill-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., Sword Fighting, Lockpicking"
-              required
-            />
-          </div>
+          <Input
+            id="skill-name"
+            label="Skill Name *"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., Sword Fighting, Lockpicking"
+            required
+          />
 
-          <div>
-            <label htmlFor="skill-level" className="block text-sm font-medium text-gray-700 mb-1">
-              Level
-            </label>
-            <input
-              id="skill-level"
-              type="text"
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., Expert, 5, Advanced"
-            />
-          </div>
+          <Input
+            id="skill-level"
+            label="Level"
+            type="text"
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+            placeholder="e.g., Expert, 5, Advanced"
+          />
 
-          <div>
-            <label htmlFor="skill-category" className="block text-sm font-medium text-gray-700 mb-1">
-              Category
-            </label>
-            <input
-              id="skill-category"
-              type="text"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., Combat, Social, Academic"
-            />
-          </div>
+          <Input
+            id="skill-category"
+            label="Category"
+            type="text"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="e.g., Combat, Social, Academic"
+          />
 
-          <div>
-            <label htmlFor="skill-description" className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              id="skill-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Describe this skill..."
-              rows={2}
-            />
-          </div>
+          <Textarea
+            id="skill-description"
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe this skill..."
+            rows={2}
+          />
 
           <div className="flex justify-end space-x-3 pt-4">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={onCancel}
-              className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              variant="primary"
             >
               Add Skill
-            </button>
+            </Button>
           </div>
         </form>
       </div>

@@ -361,3 +361,11 @@ type UserCommonRoomRead struct {
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
+
+type UserPreference struct {
+	ID          int32              `json:"id"`
+	UserID      int32              `json:"user_id"`
+	Preferences []byte             `json:"preferences"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}

@@ -137,7 +137,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   }, [content, mentionedCharacters]);
 
   return (
-    <div className={`markdown-preview prose prose-slate max-w-none ${className}`}>
+    <div className={`markdown-preview prose dark:prose-invert max-w-none text-content-primary dark:text-white ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw as any, [rehypeSanitize as any, sanitizeSchema]]}
@@ -170,7 +170,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 underline"
+                className="text-interactive-primary hover:text-interactive-primary-hover underline"
                 {...props}
               >
                 {children}
@@ -183,7 +183,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
             const mentionId = (props as any)['data-mention-id'];
             return (
               <mark
-                className="bg-blue-100 text-blue-800 px-1 rounded font-medium cursor-pointer hover:bg-blue-200"
+                className="bg-interactive-primary-subtle text-interactive-primary px-1 rounded font-medium cursor-pointer hover:bg-interactive-primary"
                 data-mention-id={mentionId}
                 {...props}
               >
@@ -194,17 +194,17 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
 
           // Style headers
           h1: ({ node, children, ...props }) => (
-            <h1 className="text-2xl font-bold mt-4 mb-2" {...props}>
+            <h1 className="text-2xl font-bold mt-4 mb-2 !text-content-primary" {...props}>
               {children}
             </h1>
           ),
           h2: ({ node, children, ...props }) => (
-            <h2 className="text-xl font-bold mt-3 mb-2" {...props}>
+            <h2 className="text-xl font-bold mt-3 mb-2 !text-content-primary" {...props}>
               {children}
             </h2>
           ),
           h3: ({ node, children, ...props }) => (
-            <h3 className="text-lg font-bold mt-2 mb-1" {...props}>
+            <h3 className="text-lg font-bold mt-2 mb-1 !text-content-primary" {...props}>
               {children}
             </h3>
           ),
@@ -212,7 +212,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           // Style blockquotes
           blockquote: ({ node, children, ...props }) => (
             <blockquote
-              className="border-l-4 border-gray-300 pl-4 py-2 my-2 italic text-gray-700"
+              className="border-l-4 border-theme-default pl-4 py-2 my-2 italic text-content-secondary"
               {...props}
             >
               {children}
@@ -221,7 +221,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
 
           // Style horizontal rules
           hr: ({ node, ...props }) => (
-            <hr className="my-4 border-t-2 border-gray-300" {...props} />
+            <hr className="my-4 border-t-2 border-theme-default" {...props} />
           ),
 
           // Style lists
@@ -236,16 +236,28 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
             </ol>
           ),
           li: ({ node, children, ...props }) => (
-            <li className="ml-4" {...props}>
+            <li className="ml-4 !text-content-primary" {...props}>
               {children}
             </li>
           ),
 
           // Style paragraphs
           p: ({ node, children, ...props }) => (
-            <p className="my-2" {...props}>
+            <p className="my-2 !text-content-primary" {...props}>
               {children}
             </p>
+          ),
+
+          // Style inline elements
+          strong: ({ node, children, ...props }) => (
+            <strong className="!text-content-primary" {...props}>
+              {children}
+            </strong>
+          ),
+          em: ({ node, children, ...props }) => (
+            <em className="!text-content-primary" {...props}>
+              {children}
+            </em>
           ),
         }}
         // react-markdown automatically sanitizes HTML to prevent XSS

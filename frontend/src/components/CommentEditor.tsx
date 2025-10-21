@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CharacterAutocomplete } from './CharacterAutocomplete';
+import { Button, Textarea } from './ui';
 import type { Character } from '../types/characters';
 
 interface CommentEditorProps {
@@ -202,64 +203,62 @@ export function CommentEditor({
   return (
     <div className="comment-editor">
       {/* Editor Header with Controls */}
-      <div className="flex items-center justify-between mb-2 text-xs text-gray-600">
+      <div className="flex items-center justify-between mb-2 text-xs text-content-secondary">
         <div className="flex items-center gap-3">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setShowPreview(!showPreview)}
-            className={`font-medium transition-colors ${
-              showPreview
-                ? 'text-blue-600 hover:text-blue-700'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
             disabled={disabled}
           >
             {showPreview ? '👁️ Hide Preview' : '👁️ Show Preview'}
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setShowHelp(!showHelp)}
-            className="text-gray-500 hover:text-gray-700 font-medium transition-colors"
             disabled={disabled}
           >
             ❓ Markdown Help
-          </button>
+          </Button>
         </div>
 
-        <span className="text-gray-400">
+        <span className="text-content-tertiary">
           {value.length} characters
         </span>
       </div>
 
       {/* Markdown Help Panel */}
       {showHelp && (
-        <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
-          <div className="font-semibold text-blue-900 mb-2">Markdown Quick Reference</div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-gray-700">
+        <div className="mb-3 p-3 bg-interactive-primary-subtle border border-interactive-primary rounded text-xs">
+          <div className="font-semibold text-interactive-primary mb-2">Markdown Quick Reference</div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-content-primary">
             <div>
-              <code className="bg-white px-1 rounded">**bold**</code> → <strong>bold</strong>
+              <code className="surface-sunken px-1 rounded">**bold**</code> → <strong>bold</strong>
             </div>
             <div>
-              <code className="bg-white px-1 rounded">*italic*</code> → <em>italic</em>
+              <code className="surface-sunken px-1 rounded">*italic*</code> → <em>italic</em>
             </div>
             <div>
-              <code className="bg-white px-1 rounded">[link](url)</code> → link
+              <code className="surface-sunken px-1 rounded">[link](url)</code> → link
             </div>
             <div>
-              <code className="bg-white px-1 rounded">`code`</code> → <code className="bg-white px-1">code</code>
+              <code className="surface-sunken px-1 rounded">`code`</code> → <code className="surface-sunken px-1">code</code>
             </div>
             <div>
-              <code className="bg-white px-1 rounded"># Heading</code> → Heading
+              <code className="surface-sunken px-1 rounded"># Heading</code> → Heading
             </div>
             <div>
-              <code className="bg-white px-1 rounded">- list item</code> → • list item
+              <code className="surface-sunken px-1 rounded">- list item</code> → • list item
             </div>
             <div>
-              <code className="bg-white px-1 rounded">&gt; quote</code> → blockquote
+              <code className="surface-sunken px-1 rounded">&gt; quote</code> → blockquote
             </div>
             <div>
-              <code className="bg-white px-1 rounded">@CharacterName</code> → mention
+              <code className="surface-sunken px-1 rounded">@CharacterName</code> → mention
             </div>
           </div>
         </div>
@@ -269,7 +268,7 @@ export function CommentEditor({
       <div className={`grid ${showPreview ? 'grid-cols-2 gap-3' : 'grid-cols-1'}`}>
         {/* Textarea */}
         <div className="relative">
-          <textarea
+          <Textarea
             id={id}
             ref={textareaRef}
             value={value}
@@ -278,17 +277,18 @@ export function CommentEditor({
             placeholder={placeholder}
             disabled={disabled}
             rows={rows}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y font-mono"
+            textareaSize="sm"
+            className="font-mono resize-y"
           />
         </div>
 
         {/* Live Preview */}
         {showPreview && (
-          <div className="border border-gray-200 rounded-md p-3 bg-gray-50 overflow-auto" style={{ maxHeight: `${rows * 1.5}rem` }}>
+          <div className="border border-theme-default rounded-md p-3 surface-raised overflow-auto" style={{ maxHeight: `${rows * 1.5}rem` }}>
             {value.trim() ? (
               <MarkdownPreview content={value} />
             ) : (
-              <p className="text-xs text-gray-400 italic">Preview will appear here...</p>
+              <p className="text-xs text-content-tertiary italic">Preview will appear here...</p>
             )}
           </div>
         )}

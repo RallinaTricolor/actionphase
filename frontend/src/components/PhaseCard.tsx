@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SimpleCountdown } from './CountdownTimer';
 import { PhaseActivationDialog } from './PhaseActivationDialog';
 import { usePhaseActivation } from '../hooks/usePhaseActivation';
+import { Button, DateTimeInput } from './ui';
 import {
   PHASE_TYPE_DESCRIPTIONS,
   getActionPhaseLabel,
@@ -56,10 +57,10 @@ export function PhaseCard({
   const phaseLabel = getActionPhaseLabel(phase);
 
   const borderClass = isActive
-    ? 'border-blue-500 bg-blue-50'
+    ? 'border-interactive-primary bg-interactive-primary-subtle'
     : isSelected
-    ? 'border-gray-300 bg-gray-50'
-    : 'border-gray-200 hover:border-gray-300';
+    ? 'border-theme-strong surface-raised'
+    : 'border-theme-default hover:border-theme-strong';
 
   const handleDeadlineSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,14 +81,14 @@ export function PhaseCard({
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <h4 className="font-medium text-gray-900">{phase.title || phaseLabel}</h4>
+              <h4 className="font-medium text-content-primary">{phase.title || phaseLabel}</h4>
               {phase.title && (
                 <span className={`px-2 py-0.5 text-xs rounded font-medium ${phaseColorClass}`}>
                   {phaseLabel}
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-content-secondary">
               {phase.description || PHASE_TYPE_DESCRIPTIONS[phase.phase_type]}
             </p>
           </div>
@@ -97,21 +98,22 @@ export function PhaseCard({
           {phase.deadline && !isEditingDeadline && (
             <SimpleCountdown
               deadline={phase.deadline}
-              className="text-gray-600"
+              className="text-content-secondary"
             />
           )}
 
           {!isActive && (
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowActivateConfirm(true);
               }}
               disabled={isActivating}
-              className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50"
             >
               {isActivating ? 'Activating...' : 'Activate'}
-            </button>
+            </Button>
           )}
 
           <button
@@ -119,7 +121,7 @@ export function PhaseCard({
               e.stopPropagation();
               onEdit();
             }}
-            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1 text-content-tertiary hover:text-content-primary transition-colors"
             title="Edit phase details"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,42 +133,41 @@ export function PhaseCard({
 
       {/* Edit Deadline Form */}
       {isEditingDeadline && (
-        <form onSubmit={handleDeadlineSubmit} className="mt-4 pt-4 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
+        <form onSubmit={handleDeadlineSubmit} className="mt-4 pt-4 border-t border-theme-default" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-end space-x-2">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Set Deadline
-              </label>
-              <input
+              <DateTimeInput
+                label="Set Deadline"
                 type="datetime-local"
                 value={deadlineInput}
                 onChange={(e) => setDeadlineInput(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
             </div>
-            <button
+            <Button
               type="submit"
+              variant="primary"
+              size="sm"
               disabled={isUpdatingDeadline}
-              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors disabled:opacity-50"
             >
               {isUpdatingDeadline ? 'Saving...' : 'Save'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={onCancelEditDeadline}
-              className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
       {/* Active Phase Indicator */}
       {isActive && (
-        <div className="mt-3 flex items-center text-sm text-blue-700">
-          <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+        <div className="mt-3 flex items-center text-sm text-interactive-primary">
+          <div className="w-2 h-2 bg-interactive-primary rounded-full mr-2"></div>
           Currently Active
         </div>
       )}

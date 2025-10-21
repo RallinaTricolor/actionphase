@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
+import { Button, Select, Badge } from './ui';
 import type { ActionWithDetails, GamePhase } from '../types/phases';
 import { CreateActionResultForm } from './CreateActionResultForm';
 
@@ -73,12 +74,12 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
 
   if (isLoading) {
     return (
-      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
+      <div className={`surface-base rounded-lg border border-theme-default p-6 ${className}`}>
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded mb-4 w-1/3"></div>
+          <div className="h-6 surface-sunken rounded mb-4 w-1/3"></div>
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+              <div key={i} className="h-24 surface-sunken rounded"></div>
             ))}
           </div>
         </div>
@@ -94,46 +95,47 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
   const unpublishedCount = unpublishedCountData?.count || 0;
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
+    <div className={`surface-base rounded-lg border border-theme-default ${className}`}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Submitted Actions</h2>
-            <p className="text-sm text-gray-600 mt-1">
+            <h2 className="text-xl font-semibold text-content-primary">Submitted Actions</h2>
+            <p className="text-sm text-content-secondary mt-1">
               View and manage player action submissions
             </p>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+            <Badge variant="primary">
               {filteredActions.length} {filteredActions.length === 1 ? 'Action' : 'Actions'}
-            </span>
+            </Badge>
           </div>
         </div>
 
         {/* Publish All Results Button */}
         {displayPhaseId && unpublishedCount > 0 && (
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="mb-6 p-4 bg-semantic-warning-subtle border border-semantic-warning rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <svg className="w-5 h-5 text-amber-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-semantic-warning mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
-                  <p className="font-medium text-amber-900">
+                  <p className="font-medium text-semantic-warning">
                     {unpublishedCount} unpublished {unpublishedCount === 1 ? 'result' : 'results'}
                   </p>
-                  <p className="text-sm text-amber-700 mt-0.5">
+                  <p className="text-sm text-semantic-warning mt-0.5">
                     These results are ready to be sent to players
                   </p>
                 </div>
               </div>
-              <button
+              <Button
+                variant="primary"
                 onClick={() => setShowPublishConfirm(true)}
                 disabled={publishAllMutation.isPending}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-semantic-success hover:bg-semantic-success-hover"
               >
                 {publishAllMutation.isPending ? 'Publishing...' : 'Publish All Results'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -141,26 +143,27 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
         {/* Confirmation Dialog */}
         {showPublishConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Publish All Results?</h3>
-              <p className="text-sm text-gray-600 mb-6">
+            <div className="surface-base rounded-lg max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-content-primary mb-2">Publish All Results?</h3>
+              <p className="text-sm text-content-secondary mb-6">
                 This will publish {unpublishedCount} {unpublishedCount === 1 ? 'result' : 'results'} and make {unpublishedCount === 1 ? 'it' : 'them'} visible to players. This action cannot be undone.
               </p>
               <div className="flex justify-end space-x-3">
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => setShowPublishConfirm(false)}
                   disabled={publishAllMutation.isPending}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
                   onClick={() => publishAllMutation.mutate()}
                   disabled={publishAllMutation.isPending}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-semantic-success hover:bg-semantic-success-hover"
                 >
                   {publishAllMutation.isPending ? 'Publishing...' : 'Confirm & Publish'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -169,13 +172,10 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
         {/* Phase Filter - Only show action phases */}
         {actionPhases.length > 0 && (
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Action Phase
-            </label>
-            <select
-              value={selectedPhase || (currentPhase?.phase_type === 'action' ? currentPhase?.id : '') || ''}
+            <Select
+              label="Filter by Action Phase"
+              value={selectedPhase?.toString() || (currentPhase?.phase_type === 'action' ? currentPhase?.id.toString() : '') || ''}
               onChange={(e) => setSelectedPhase(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Action Phases</option>
               {actionPhases.map((phase) => (
@@ -184,13 +184,13 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
                   {actionsByPhase[phase.id] ? ` (${actionsByPhase[phase.id].length})` : ' (0)'}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
 
         {/* Actions List */}
         {filteredActions.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-content-tertiary">
             <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
@@ -227,36 +227,36 @@ interface ActionCardProps {
 function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardProps) {
   const [showResultForm, setShowResultForm] = useState(false);
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors">
+    <div className="border border-theme-default rounded-lg overflow-hidden hover:border-interactive-primary transition-colors">
       <button
         onClick={onToggleExpand}
-        className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+        className="w-full px-4 py-3 flex items-center justify-between text-left hover:surface-raised transition-colors"
       >
         <div className="flex items-center space-x-3 flex-1">
           <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-10 h-10 bg-interactive-primary-subtle rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-interactive-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2">
-              <h4 className="font-medium text-gray-900">{action.username}</h4>
+              <h4 className="font-medium text-content-primary">{action.username}</h4>
               {action.character_name && (
-                <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full">
+                <Badge variant="secondary">
                   as {action.character_name}
-                </span>
+                </Badge>
               )}
             </div>
             <div className="flex items-center space-x-2 mt-1">
               {action.phase_type && action.phase_number && (
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-content-secondary">
                   Phase {action.phase_number} - {action.phase_type.replace('_', ' ')}
                 </span>
               )}
-              <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-content-tertiary">•</span>
+              <span className="text-xs text-content-secondary">
                 {new Date(action.submitted_at).toLocaleString()}
               </span>
             </div>
@@ -264,7 +264,7 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
         </div>
         <div className="flex items-center space-x-2">
           <svg
-            className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 text-content-tertiary transition-transform ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -275,37 +275,39 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
       </button>
 
       {isExpanded && (
-        <div className="px-4 py-4 bg-gray-50 border-t border-gray-200">
+        <div className="px-4 py-4 surface-raised border-t border-theme-default">
           <div className="prose prose-sm max-w-none">
-            <div className="bg-white p-4 rounded border border-gray-200 whitespace-pre-wrap text-gray-900">
+            <div className="surface-base p-4 rounded border border-theme-default whitespace-pre-wrap text-content-primary">
               {action.content}
             </div>
           </div>
-          <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+          <div className="mt-3 flex items-center justify-between text-xs text-content-tertiary">
             <span>
               Last updated: {new Date(action.updated_at).toLocaleString()}
             </span>
           </div>
 
           {/* GM Action: Send Result */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-theme-default">
             {!showResultForm ? (
-              <button
+              <Button
+                variant="primary"
                 onClick={() => setShowResultForm(true)}
-                className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors"
+                className="w-full bg-semantic-success hover:bg-semantic-success-hover"
               >
                 Send Result to {action.username}
-              </button>
+              </Button>
             ) : (
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h5 className="font-semibold text-gray-900">Send Result</h5>
-                  <button
+                  <h5 className="font-semibold text-content-primary">Send Result</h5>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setShowResultForm(false)}
-                    className="text-sm text-gray-600 hover:text-gray-800"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
                 <CreateActionResultForm
                   gameId={gameId}

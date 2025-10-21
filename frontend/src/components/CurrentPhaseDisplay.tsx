@@ -11,6 +11,7 @@ import {
   getActionPhaseColor
 } from '../types/phases';
 import type { GamePhase } from '../types/phases';
+import { Button } from './ui';
 
 interface CurrentPhaseDisplayProps {
   gameId: number;
@@ -47,22 +48,22 @@ export function CurrentPhaseDisplay({
 
   if (isLoading) {
     return (
-      <div className={`bg-white rounded-lg border border-gray-200 p-4 animate-pulse ${className}`}>
-        <div className="h-6 bg-gray-200 rounded mb-2 w-1/3"></div>
-        <div className="h-4 bg-gray-200 rounded mb-2 w-2/3"></div>
-        <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+      <div className={`surface-base rounded-lg border border-theme-default p-4 animate-pulse ${className}`}>
+        <div className="h-6 surface-sunken rounded mb-2 w-1/3"></div>
+        <div className="h-4 surface-sunken rounded mb-2 w-2/3"></div>
+        <div className="h-8 surface-sunken rounded w-1/4"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}>
+      <div className={`bg-semantic-danger-subtle border border-semantic-danger rounded-lg p-4 ${className}`}>
         <div className="flex items-center">
-          <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-semantic-danger mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span className="text-red-700 text-sm">Failed to load current phase</span>
+          <span className="text-semantic-danger text-sm">Failed to load current phase</span>
         </div>
       </div>
     );
@@ -80,14 +81,14 @@ export function CurrentPhaseDisplay({
 
   if (!currentPhase) {
     return (
-      <div className={`bg-gray-50 border border-gray-200 rounded-lg p-6 text-center ${className}`}>
-        <div className="text-gray-500 mb-2">
+      <div className={`surface-raised border border-theme-default rounded-lg p-6 text-center ${className}`}>
+        <div className="text-content-tertiary mb-2">
           <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-1">No Active Phase</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="text-lg font-medium text-content-primary mb-1">No Active Phase</h3>
+        <p className="text-sm text-content-secondary">
           {isGM
             ? 'Create a new phase to begin the game session.'
             : 'Waiting for the GM to start the next phase.'
@@ -107,31 +108,32 @@ export function CurrentPhaseDisplay({
 
       {/* Previous Phases Section (Non-GM only) */}
       {!isGM && previousPhases.length > 0 && (
-        <div className="mt-4 bg-white rounded-lg border border-gray-200">
-          <button
+        <div className="mt-4 surface-base rounded-lg border border-theme-default">
+          <Button
+            variant="ghost"
             onClick={() => setShowPreviousPhases(!showPreviousPhases)}
-            className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+            className="w-full px-6 py-4 flex items-center justify-between text-left hover:surface-raised transition-colors rounded-none"
           >
             <div className="flex items-center">
-              <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-content-tertiary mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h3 className="text-md font-medium text-gray-900">
+              <h3 className="text-md font-medium text-content-primary">
                 Previous Phases ({previousPhases.length})
               </h3>
             </div>
             <svg
-              className={`w-5 h-5 text-gray-400 transition-transform ${showPreviousPhases ? 'rotate-180' : ''}`}
+              className={`w-5 h-5 text-content-tertiary transition-transform ${showPreviousPhases ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
-          </button>
+          </Button>
 
           {showPreviousPhases && (
-            <div className="border-t border-gray-200 p-4">
+            <div className="border-t border-theme-default p-4">
               <div className="space-y-3">
                 {previousPhases.map((phase) => (
                   <PreviousPhaseCard key={phase.id} phase={phase} />
@@ -165,7 +167,7 @@ function CurrentPhaseCard({
   const phaseIcon = getPhaseIcon(phase);
 
   return (
-    <div className={`bg-white rounded-lg border-2 shadow-sm ${className}`}>
+    <div className={`surface-base rounded-lg border-2 shadow-sm ${className}`}>
       <div className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center">
@@ -174,14 +176,14 @@ function CurrentPhaseCard({
             </div>
             <div>
               <div className="flex items-center space-x-2 mb-1">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-content-primary">
                   {phaseLabel}
                 </h3>
                 <span className={`px-2 py-1 text-xs rounded-full font-medium border ${phaseColorClass}`}>
                   Phase {phase.phase_number}
                 </span>
               </div>
-              <p className="text-sm text-gray-600">{phaseDescription}</p>
+              <p className="text-sm text-content-secondary">{phaseDescription}</p>
             </div>
           </div>
 
@@ -195,18 +197,18 @@ function CurrentPhaseCard({
         </div>
 
         {/* Phase-specific information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-theme-default">
           <div>
-            <span className="text-sm font-medium text-gray-700">Started:</span>
-            <div className="text-sm text-gray-900">
+            <span className="text-sm font-medium text-content-primary">Started:</span>
+            <div className="text-sm text-content-primary">
               {new Date(phase.start_time).toLocaleString()}
             </div>
           </div>
 
           {phase.deadline && (
             <div>
-              <span className="text-sm font-medium text-gray-700">Deadline:</span>
-              <div className="text-sm text-gray-900">
+              <span className="text-sm font-medium text-content-primary">Deadline:</span>
+              <div className="text-sm text-content-primary">
                 {new Date(phase.deadline).toLocaleString()}
               </div>
             </div>
@@ -230,8 +232,8 @@ function PhaseActions({ phase, isGM }: PhaseActionsProps) {
     // Action phase with published results
     if (phase.is_published) {
       return (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="text-sm text-purple-700 font-medium">
+        <div className="mt-4 pt-4 border-t border-theme-default">
+          <p className="text-sm text-interactive-primary font-medium">
             {isGM
               ? 'Results have been published to all players.'
               : 'The GM has published the results of your actions.'
@@ -243,10 +245,10 @@ function PhaseActions({ phase, isGM }: PhaseActionsProps) {
 
     // Action phase still accepting submissions
     return (
-      <div className="mt-4 pt-4 border-t border-gray-100">
+      <div className="mt-4 pt-4 border-t border-theme-default">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div className="mb-2 sm:mb-0">
-            <p className="text-sm text-blue-700 font-medium">
+            <p className="text-sm text-interactive-primary font-medium">
               {isGM
                 ? 'Players are submitting their actions privately.'
                 : 'Submit your action before the deadline.'
@@ -254,9 +256,9 @@ function PhaseActions({ phase, isGM }: PhaseActionsProps) {
             </p>
           </div>
           {!isGM && (
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+            <Button variant="primary" size="sm">
               Submit Action
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -265,8 +267,8 @@ function PhaseActions({ phase, isGM }: PhaseActionsProps) {
 
   if (phase.phase_type === 'common_room') {
     return (
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <p className="text-sm text-green-700 font-medium">
+      <div className="mt-4 pt-4 border-t border-theme-default">
+        <p className="text-sm text-semantic-success font-medium">
           {isGM
             ? 'Players can discuss and roleplay freely.'
             : 'Discuss and interact with other players.'
@@ -285,8 +287,8 @@ function getPhaseIcon(phase: GamePhase) {
   // Check if action phase with published results
   if (phase.phase_type === 'action' && phase.is_published) {
     return (
-      <div className="p-2 bg-purple-100 rounded-lg">
-        <svg className={`${iconClass} text-purple-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="p-2 bg-interactive-primary-subtle rounded-lg">
+        <svg className={`${iconClass} text-interactive-primary`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
@@ -296,8 +298,8 @@ function getPhaseIcon(phase: GamePhase) {
   switch (phase.phase_type) {
     case 'common_room':
       return (
-        <div className="p-2 bg-green-100 rounded-lg">
-          <svg className={`${iconClass} text-green-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="p-2 bg-semantic-success-subtle rounded-lg">
+          <svg className={`${iconClass} text-semantic-success`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
           </svg>
         </div>
@@ -305,8 +307,8 @@ function getPhaseIcon(phase: GamePhase) {
 
     case 'action':
       return (
-        <div className="p-2 bg-blue-100 rounded-lg">
-          <svg className={`${iconClass} text-blue-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="p-2 bg-interactive-primary-subtle rounded-lg">
+          <svg className={`${iconClass} text-interactive-primary`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         </div>
@@ -314,8 +316,8 @@ function getPhaseIcon(phase: GamePhase) {
 
     default:
       return (
-        <div className="p-2 bg-gray-100 rounded-lg">
-          <svg className={`${iconClass} text-gray-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="p-2 surface-raised rounded-lg">
+          <svg className={`${iconClass} text-content-secondary`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
@@ -332,21 +334,21 @@ function PreviousPhaseCard({ phase }: PreviousPhaseCardProps) {
   const phaseLabel = getActionPhaseLabel(phase);
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+    <div className="border border-theme-default rounded-lg p-4 surface-raised">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <span className={`px-2 py-1 text-xs rounded-full font-medium border ${phaseColorClass}`}>
             Phase {phase.phase_number}
           </span>
           <div>
-            <h4 className="font-medium text-gray-900 text-sm">{phaseLabel}</h4>
-            <p className="text-xs text-gray-600">
+            <h4 className="font-medium text-content-primary text-sm">{phaseLabel}</h4>
+            <p className="text-xs text-content-secondary">
               {new Date(phase.start_time).toLocaleDateString()} •
               {phase.end_time ? ` Ended ${new Date(phase.end_time).toLocaleDateString()}` : ' Completed'}
             </p>
           </div>
         </div>
-        <span className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded">
+        <span className="px-2 py-1 text-xs surface-sunken text-content-secondary rounded">
           Completed
         </span>
       </div>

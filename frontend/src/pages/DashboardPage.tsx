@@ -24,8 +24,8 @@ export function DashboardPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-interactive-primary"></div>
+          <p className="mt-4 text-content-secondary">Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -35,8 +35,8 @@ export function DashboardPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <p className="text-red-600 text-lg">Failed to load dashboard</p>
-          <p className="text-gray-600 mt-2">Please try refreshing the page</p>
+          <p className="text-semantic-danger text-lg">Failed to load dashboard</p>
+          <p className="text-content-secondary mt-2">Please try refreshing the page</p>
         </div>
       </div>
     );
@@ -47,12 +47,12 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-surface-sunken py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Dashboard</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-content-primary">My Dashboard</h1>
+          <p className="mt-2 text-content-secondary">
             Welcome back! Here's what's happening in your games.
           </p>
         </div>
@@ -71,7 +71,7 @@ export function DashboardPage() {
             {/* Player Games */}
             {dashboard.player_games.length > 0 && (
               <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                <h2 className="text-2xl font-bold text-content-primary mb-4">
                   My Games as Player
                 </h2>
                 <div className="space-y-4">
@@ -85,7 +85,7 @@ export function DashboardPage() {
             {/* GM Games */}
             {dashboard.gm_games.length > 0 && (
               <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                <h2 className="text-2xl font-bold text-content-primary mb-4">
                   Games I'm Running
                 </h2>
                 <div className="space-y-4">
@@ -99,7 +99,7 @@ export function DashboardPage() {
             {/* Mixed Role Games */}
             {dashboard.mixed_role_games.length > 0 && (
               <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                <h2 className="text-2xl font-bold text-content-primary mb-4">
                   Other Games
                 </h2>
                 <div className="space-y-4">

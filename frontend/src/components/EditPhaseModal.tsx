@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PHASE_TYPE_LABELS, PHASE_TYPE_DESCRIPTIONS } from '../types/phases';
 import type { GamePhase, UpdatePhaseRequest } from '../types/phases';
+import { Button, Input, Textarea, DateTimeInput } from './ui';
 
 interface EditPhaseModalProps {
   phase: GamePhase;
@@ -29,41 +30,40 @@ export function EditPhaseModal({ phase, onClose, onSubmit, isSubmitting }: EditP
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+      <div className="surface-base rounded-lg shadow-xl max-w-md w-full">
         <form onSubmit={handleSubmit} className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Edit Phase</h3>
-            <button
-              type="button"
+            <h3 className="text-lg font-semibold text-content-primary">Edit Phase</h3>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-content-tertiary hover:text-content-secondary h-auto p-0"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </button>
+            </Button>
           </div>
 
           <div className="space-y-4">
             {/* Phase Type (Read-only) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-content-primary mb-2">
                 Phase Type
               </label>
-              <div className="px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700">
+              <div className="px-3 py-2 border border-theme-default rounded-md surface-raised text-content-primary">
                 {phaseLabel} (Phase {phase.phase_number})
               </div>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-content-tertiary mt-1">
                 {PHASE_TYPE_DESCRIPTIONS[phase.phase_type]}
               </p>
             </div>
 
             <div>
-              <label htmlFor="edit-phase-title" className="block text-sm font-medium text-gray-700 mb-2">
-                Title (Optional)
-              </label>
-              <input
+              <Input
                 id="edit-phase-title"
+                label="Title (Optional)"
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({
@@ -71,19 +71,14 @@ export function EditPhaseModal({ phase, onClose, onSubmit, isSubmitting }: EditP
                   title: e.target.value
                 }))}
                 placeholder="e.g., 'The Gathering Storm'"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                helperText="Give this phase a custom name"
               />
-              <p className="text-sm text-gray-500 mt-1">
-                Give this phase a custom name
-              </p>
             </div>
 
             <div>
-              <label htmlFor="edit-phase-description" className="block text-sm font-medium text-gray-700 mb-2">
-                Description (Optional)
-              </label>
-              <textarea
+              <Textarea
                 id="edit-phase-description"
+                label="Description (Optional)"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
@@ -91,45 +86,38 @@ export function EditPhaseModal({ phase, onClose, onSubmit, isSubmitting }: EditP
                 }))}
                 placeholder="Describe what happens in this phase..."
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label htmlFor="edit-phase-deadline" className="block text-sm font-medium text-gray-700 mb-2">
-                Deadline (Optional)
-              </label>
-              <input
+              <DateTimeInput
                 id="edit-phase-deadline"
-                type="datetime-local"
+                label="Deadline (Optional)"
                 value={formData.deadline}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
                   deadline: e.target.value
                 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                helperText="Set or update the deadline for this phase"
               />
-              <p className="text-sm text-gray-500 mt-1">
-                Set or update the deadline for this phase
-              </p>
             </div>
           </div>
 
           <div className="flex justify-end space-x-3 mt-6">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors disabled:opacity-50"
             >
               {isSubmitting ? 'Saving...' : 'Save Changes'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

@@ -86,8 +86,8 @@ export const PHASE_TYPE_DESCRIPTIONS: Record<GamePhase['phase_type'], string> = 
 };
 
 export const PHASE_TYPE_COLORS: Record<GamePhase['phase_type'], string> = {
-  common_room: 'bg-green-100 text-green-800 border-green-200',
-  action: 'bg-blue-100 text-blue-800 border-blue-200'
+  common_room: 'bg-semantic-success-subtle text-semantic-success border-semantic-success',
+  action: 'bg-interactive-primary-subtle text-interactive-primary border-interactive-primary'
 };
 
 // Action phase states
@@ -106,6 +106,6 @@ export const getActionPhaseDescription = (phase: GamePhase): string => {
 export const getActionPhaseColor = (phase: GamePhase): string => {
   if (phase.phase_type !== 'action') return PHASE_TYPE_COLORS[phase.phase_type];
   return phase.is_published
-    ? 'bg-purple-100 text-purple-800 border-purple-200'
-    : 'bg-blue-100 text-blue-800 border-blue-200';
+    ? 'bg-semantic-info-subtle text-content-primary border-semantic-info'
+    : 'bg-interactive-primary-subtle text-interactive-primary border-interactive-primary';
 };

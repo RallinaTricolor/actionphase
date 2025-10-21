@@ -10,6 +10,7 @@ This directory contains all AI-specific context and instructions for working wit
 - **TESTING.md** - Read before writing any tests (backend or frontend)
 - **ARCHITECTURE.md** - Read for architectural context and patterns
 - **STATE_MANAGEMENT.md** - Read before working on frontend state
+- **FRONTEND_STYLING.md** - Read before creating/modifying ANY frontend component (dark mode required!)
 - **TEST_DATA.md** - Read when working with test data and fixtures
 
 ### `/reference/` - Detailed Implementation Guides

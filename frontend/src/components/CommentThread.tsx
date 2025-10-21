@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
+import { Button, Select, Textarea, Alert, Badge } from './ui';
 
 interface CommentThreadProps {
   postId: number;
@@ -89,7 +90,7 @@ export function CommentThread({
   if (loading) {
     return (
       <div className="flex justify-center py-4">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-interactive-primary"></div>
       </div>
     );
   }
@@ -98,20 +99,19 @@ export function CommentThread({
     <div className="space-y-3">
       {/* Comment Form */}
       {isCommenting && (
-        <form onSubmit={handleSubmitComment} className="bg-gray-50 rounded-lg p-4 mb-3">
+        <form onSubmit={handleSubmitComment} className="surface-raised rounded-lg p-4 mb-3">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded p-2 mb-3">
-              <p className="text-red-800 text-sm">{error}</p>
-            </div>
+            <Alert variant="danger" className="mb-3">
+              {error}
+            </Alert>
           )}
 
           {characters.length > 0 ? (
             <>
               <div className="mb-3">
-                <select
+                <Select
                   value={selectedCharacterId || ''}
                   onChange={(e) => setSelectedCharacterId(Number(e.target.value))}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={isSubmitting}
                 >
                   {characters.map((char) => (
@@ -119,68 +119,70 @@ export function CommentThread({
                       Reply as {char.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
-              <textarea
+              <Textarea
                 value={commentContent}
                 onChange={(e) => setCommentContent(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
                 rows={3}
                 placeholder="Write a reply..."
                 disabled={isSubmitting}
+                className="mb-2"
               />
 
               <div className="flex gap-2">
-                <button
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="sm"
                   disabled={isSubmitting || !commentContent.trim()}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
                   {isSubmitting ? 'Posting...' : 'Reply'}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setIsCommenting(false);
                     setCommentContent('');
                     setError(null);
                   }}
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 transition-colors"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </>
           ) : (
-            <p className="text-sm text-gray-600">You need a character to comment.</p>
+            <p className="text-sm text-content-secondary">You need a character to comment.</p>
           )}
         </form>
       )}
 
       {/* Comments List */}
       {comments.length === 0 && !isCommenting ? (
-        <p className="text-sm text-gray-500 italic py-2">No comments yet. Be the first to reply!</p>
+        <p className="text-sm text-content-secondary italic py-2">No comments yet. Be the first to reply!</p>
       ) : (
         <div className="space-y-3">
           {comments.map((comment) => {
             const isAuthor = currentUserId === comment.author_id;
             return (
-              <div key={comment.id} className="bg-gray-50 rounded-lg p-4">
+              <div key={comment.id} className="surface-raised rounded-lg p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <span className="font-semibold text-sm text-gray-900">{comment.character_name}</span>
-                    <span className="text-xs text-gray-500 ml-2">
+                    <span className="font-semibold text-sm text-content-primary">{comment.character_name}</span>
+                    <span className="text-xs text-content-secondary ml-2">
                       @{comment.author_username} · {formatDate(comment.created_at)}
                       {comment.is_edited && <span className="ml-1">(edited)</span>}
                     </span>
                   </div>
                   {isAuthor && (
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">You</span>
+                    <Badge variant="primary">You</Badge>
                   )}
                 </div>
-                <p className="text-sm text-gray-800 whitespace-pre-wrap">{comment.content}</p>
+                <p className="text-sm text-content-primary whitespace-pre-wrap">{comment.content}</p>
               </div>
             );
           })}

@@ -7,6 +7,7 @@ import { AbilitiesManager } from './AbilitiesManager';
 import { InventoryManager } from './InventoryManager';
 import CharacterAvatar from './CharacterAvatar';
 import AvatarUploadModal from './AvatarUploadModal';
+import { Button, Textarea, Badge } from './ui';
 
 interface CharacterSheetProps {
   characterId: number;
@@ -123,12 +124,12 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="surface-base rounded-lg shadow p-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded mb-4"></div>
+          <div className="h-8 surface-sunken rounded mb-4"></div>
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              <div key={i} className="h-16 surface-sunken rounded"></div>
             ))}
           </div>
         </div>
@@ -137,8 +138,8 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
   }
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="border-b border-gray-200">
+    <div className="surface-base rounded-lg shadow">
+      <div className="border-b border-theme-default">
         <div className="flex justify-between items-center p-6">
           <div className="flex items-center gap-4">
             {/* Character Avatar */}
@@ -150,39 +151,43 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
                   size="xl"
                 />
                 {canEdit && (
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={() => setIsAvatarModalOpen(true)}
-                    className="absolute -bottom-1 -right-1 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1.5 shadow-lg transition-colors"
+                    className="absolute -bottom-1 -right-1 rounded-full p-1.5 shadow-lg"
                     title="Upload Avatar"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-content-primary">
                 {character?.name || 'Character Sheet'}
               </h2>
               {character && (
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-content-secondary mt-1">
                   {character.character_type.replace('_', ' ')} • Status: {character.status}
                 </p>
               )}
             </div>
           </div>
           {onClose && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-1"
+              className="text-content-tertiary hover:text-content-secondary h-auto p-1"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </button>
+            </Button>
           )}
         </div>
 
@@ -194,17 +199,18 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
             // Private modules only visible to editors (GM, owner, audience)
             return canEdit;
           }).map((module) => (
-            <button
+            <Button
               key={module.type}
+              variant="ghost"
               onClick={() => setActiveModule(module.type)}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeModule === module.type
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-interactive-primary text-interactive-primary'
+                  : 'border-transparent text-content-secondary hover:text-content-primary hover:border-theme-default'
               }`}
             >
               {module.name}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -217,8 +223,8 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
         }).filter(module => module.type === activeModule).map((module) => (
           <div key={module.type}>
             <div className="mb-4">
-              <h3 className="text-lg font-medium text-gray-900">{module.name}</h3>
-              <p className="text-sm text-gray-600">{module.description}</p>
+              <h3 className="text-lg font-medium text-content-primary">{module.name}</h3>
+              <p className="text-sm text-content-secondary">{module.description}</p>
             </div>
 
             {/* Render specialized components for abilities and inventory modules */}
@@ -255,23 +261,19 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
                   }
 
                   return (
-                    <div key={field.name} className="border border-gray-200 rounded-lg p-4">
+                    <div key={field.name} className="border border-theme-default rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">
+                          <label className="block text-sm font-medium text-content-primary">
                             {field.label}
-                            {field.required && <span className="text-red-500 ml-1">*</span>}
+                            {field.required && <span className="text-semantic-danger ml-1">*</span>}
                           </label>
                           {fieldData && (
                             <div className="flex items-center space-x-2 mt-1">
-                              <span className={`px-2 py-1 text-xs rounded-full ${
-                                isFieldPublic
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}>
+                              <Badge variant={isFieldPublic ? 'success' : 'warning'}>
                                 {isFieldPublic ? 'Public' : 'Private'}
-                              </span>
-                              <span className="text-xs text-gray-500">
+                              </Badge>
+                              <span className="text-xs text-content-tertiary">
                                 Last updated: {new Date(fieldData.updated_at).toLocaleDateString()}
                               </span>
                             </div>
@@ -279,54 +281,58 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
                         </div>
 
                         {canEdit && !isEditing && (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => handleFieldEdit(module.type, field.name)}
-                            className="px-2 py-1 text-xs text-blue-600 hover:text-blue-800 focus:outline-none"
+                            className="px-2 py-1 text-xs text-interactive-primary hover:text-interactive-primary-hover"
                           >
                             Edit
-                          </button>
+                          </Button>
                         )}
                       </div>
 
                       {isEditing ? (
                         <div className="space-y-3">
-                          <textarea
+                          <Textarea
                             value={value}
                             onChange={(e) => handleFieldChange(key, e.target.value)}
                             placeholder={field.placeholder}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
                             rows={field.type === 'text' ? 4 : 1}
+                            className="min-h-[100px]"
                           />
                           <div className="flex justify-end space-x-2">
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => setEditingField(null)}
-                              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
                               disabled={saveCharacterDataMutation.isPending}
                             >
                               Cancel
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="primary"
+                              size="sm"
                               onClick={() => handleFieldSave(
                                 module.type,
                                 field.name,
                                 field.type,
                                 field.isPublic ?? true
                               )}
-                              className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                               disabled={saveCharacterDataMutation.isPending}
                             >
                               {saveCharacterDataMutation.isPending ? 'Saving...' : 'Save'}
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       ) : (
                         <div className="mt-2">
                           {value ? (
-                            <div className="text-sm text-gray-900 whitespace-pre-wrap">
+                            <div className="text-sm text-content-primary whitespace-pre-wrap">
                               {value}
                             </div>
                           ) : (
-                            <div className="text-sm text-gray-500 italic">
+                            <div className="text-sm text-content-tertiary italic">
                               {field.placeholder || 'No content yet...'}
                             </div>
                           )}
@@ -342,8 +348,8 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
 
         {/* Error Display */}
         {saveCharacterDataMutation.error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-700">
+          <div className="mt-4 p-3 bg-semantic-danger-subtle border border-semantic-danger rounded-md">
+            <p className="text-sm text-semantic-danger">
               Failed to save: {
                 saveCharacterDataMutation.error instanceof Error
                   ? saveCharacterDataMutation.error.message

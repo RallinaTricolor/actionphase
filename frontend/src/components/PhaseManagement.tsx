@@ -4,6 +4,7 @@ import { PhaseCard } from './PhaseCard';
 import { CreatePhaseModal } from './CreatePhaseModal';
 import { EditPhaseModal } from './EditPhaseModal';
 import { usePhaseManagement } from '../hooks/usePhaseManagement';
+import { Button } from './ui';
 import { PHASE_TYPE_LABELS } from '../types/phases';
 import type { GamePhase } from '../types/phases';
 
@@ -30,12 +31,12 @@ export function PhaseManagement({ gameId, className = '' }: PhaseManagementProps
 
   if (isLoading) {
     return (
-      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
+      <div className={`surface-base rounded-lg border border-theme-default p-6 ${className}`}>
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded mb-4 w-1/3"></div>
+          <div className="h-6 surface-sunken rounded mb-4 w-1/3"></div>
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              <div key={i} className="h-16 surface-sunken rounded"></div>
             ))}
           </div>
         </div>
@@ -44,30 +45,30 @@ export function PhaseManagement({ gameId, className = '' }: PhaseManagementProps
   }
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
+    <div className={`surface-base rounded-lg border border-theme-default ${className}`}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Phase Management</h2>
-            <p className="text-sm text-gray-600 mt-1">
+            <h2 className="text-xl font-semibold text-content-primary">Phase Management</h2>
+            <p className="text-sm text-content-secondary mt-1">
               Create and control game phases to structure your session
             </p>
           </div>
-          <button
+          <Button
+            variant="primary"
             onClick={() => setIsCreatingPhase(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
           >
             New Phase
-          </button>
+          </Button>
         </div>
 
         {/* Current Phase Summary */}
         {currentPhase && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="mb-6 p-4 bg-interactive-primary-subtle border border-interactive-primary rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-medium text-blue-900">Currently Active</h3>
-                <p className="text-sm text-blue-700">
+                <h3 className="font-medium text-content-primary">Currently Active</h3>
+                <p className="text-sm text-content-primary">
                   {currentPhase.title || PHASE_TYPE_LABELS[currentPhase.phase_type]} (Phase {currentPhase.phase_number})
                 </p>
               </div>
@@ -81,7 +82,7 @@ export function PhaseManagement({ gameId, className = '' }: PhaseManagementProps
         {/* Phase List */}
         <div className="space-y-3">
           {phases.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-content-secondary">
               <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>

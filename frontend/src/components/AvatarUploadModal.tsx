@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useUploadCharacterAvatar, useDeleteCharacterAvatar } from '../hooks/useCharacterAvatar';
 import CharacterAvatar from './CharacterAvatar';
+import { Button, Alert } from './ui';
 
 interface AvatarUploadModalProps {
   isOpen: boolean;
@@ -144,10 +145,10 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+      <div className="surface-base rounded-lg shadow-xl max-w-md w-full mx-4">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">
+        <div className="px-6 py-4 border-b border-theme-default">
+          <h2 className="text-xl font-bold text-content-primary">
             Upload Avatar for {characterName}
           </h2>
         </div>
@@ -157,20 +158,21 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
           {/* Current Avatar (if exists) */}
           {currentAvatarUrl && (
             <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">Current Avatar:</p>
+              <p className="text-sm text-content-secondary mb-2">Current Avatar:</p>
               <div className="flex items-center gap-3">
                 <CharacterAvatar
                   avatarUrl={currentAvatarUrl}
                   characterName={characterName}
                   size="lg"
                 />
-                <button
+                <Button
+                  variant="danger"
+                  size="sm"
                   onClick={handleDelete}
                   disabled={isDeleting || isUploading}
-                  className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isDeleting ? 'Removing...' : 'Remove Avatar'}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -179,7 +181,7 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
           <div className="mb-4">
             <label
               htmlFor="avatar-file-input"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-content-primary mb-2"
             >
               Choose File
             </label>
@@ -190,15 +192,15 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
               accept="image/jpeg,image/png,image/webp"
               onChange={handleFileChange}
               disabled={isUploading || isDeleting}
-              className="block w-full text-sm text-gray-500
+              className="block w-full text-sm text-content-tertiary
                 file:mr-4 file:py-2 file:px-4
                 file:rounded file:border-0
                 file:text-sm file:font-semibold
-                file:bg-blue-50 file:text-blue-700
-                hover:file:bg-blue-100
+                file:bg-interactive-primary-subtle file:text-interactive-primary
+                hover:file:bg-interactive-primary-subtle
                 disabled:opacity-50 disabled:cursor-not-allowed"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-content-tertiary">
               JPG, PNG, or WebP. Max 5MB.
             </p>
           </div>
@@ -206,12 +208,12 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
           {/* Preview */}
           {previewUrl && (
             <div className="mb-4">
-              <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+              <p className="text-sm font-medium text-content-primary mb-2">Preview:</p>
               <div className="flex justify-center">
                 <img
                   src={previewUrl}
                   alt="Avatar preview"
-                  className="w-32 h-32 rounded-full object-cover border-2 border-gray-200"
+                  className="w-32 h-32 rounded-full object-cover border-2 border-theme-default"
                 />
               </div>
             </div>
@@ -219,37 +221,35 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
 
           {/* Validation Error */}
           {validationError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
-              <p className="text-sm text-red-600">{validationError}</p>
-            </div>
+            <Alert variant="danger" className="mb-4">
+              {validationError}
+            </Alert>
           )}
 
           {/* Upload/Delete Error */}
           {hasError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
-              <p className="text-sm text-red-600">
-                {uploadMutation.error?.message || deleteMutation.error?.message || 'An error occurred'}
-              </p>
-            </div>
+            <Alert variant="danger" className="mb-4">
+              {uploadMutation.error?.message || deleteMutation.error?.message || 'An error occurred'}
+            </Alert>
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-          <button
+        <div className="px-6 py-4 border-t border-theme-default flex justify-end gap-3">
+          <Button
+            variant="ghost"
             onClick={handleClose}
             disabled={isUploading || isDeleting}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleUpload}
             disabled={!selectedFile || isUploading || isDeleting || !!validationError}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isUploading ? 'Uploading...' : 'Upload'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

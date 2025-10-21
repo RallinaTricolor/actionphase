@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { GameWithDetails, UpdateGameRequest } from '../types/games';
 import { apiClient } from '../lib/api';
+import { Input, Button, Alert, Textarea, DateTimeInput, Checkbox } from './ui';
 
 interface EditGameModalProps {
   game: GameWithDetails;
@@ -92,140 +93,101 @@ export function EditGameModal({ game, isOpen, onClose, onGameUpdated }: EditGame
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="surface-base rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Game</h2>
+          <h2 className="text-2xl font-bold text-content-primary mb-6">Edit Game</h2>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              {error}
-            </div>
+            <Alert variant="danger" className="mb-4">{error}</Alert>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                Title *
-              </label>
-              <input
-                type="text"
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
+            <Input
+              label="Title"
+              id="title"
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
 
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Description *
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
+            <Textarea
+              label="Description"
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              required
+            />
 
-            <div>
-              <label htmlFor="genre" className="block text-sm font-medium text-gray-700 mb-1">
-                Genre
-              </label>
-              <input
-                type="text"
-                id="genre"
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <Input
+              label="Genre"
+              id="genre"
+              type="text"
+              optional
+              value={genre}
+              onChange={(e) => setGenre(e.target.value)}
+            />
 
-            <div>
-              <label htmlFor="maxPlayers" className="block text-sm font-medium text-gray-700 mb-1">
-                Max Players
-              </label>
-              <input
-                type="number"
-                id="maxPlayers"
-                value={maxPlayers}
-                onChange={(e) => setMaxPlayers(e.target.value === '' ? '' : Number(e.target.value))}
-                min="1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <Input
+              label="Max Players"
+              id="maxPlayers"
+              type="number"
+              optional
+              value={maxPlayers}
+              onChange={(e) => setMaxPlayers(e.target.value === '' ? '' : Number(e.target.value))}
+              min={1}
+            />
 
-            <div>
-              <label htmlFor="recruitmentDeadline" className="block text-sm font-medium text-gray-700 mb-1">
-                Recruitment Deadline
-              </label>
-              <input
-                type="datetime-local"
-                id="recruitmentDeadline"
-                value={recruitmentDeadline}
-                onChange={(e) => setRecruitmentDeadline(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <DateTimeInput
+              label="Recruitment Deadline"
+              id="recruitmentDeadline"
+              optional
+              value={recruitmentDeadline}
+              onChange={(e) => setRecruitmentDeadline(e.target.value)}
+            />
 
-            <div>
-              <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date
-              </label>
-              <input
-                type="datetime-local"
-                id="startDate"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <DateTimeInput
+              label="Start Date"
+              id="startDate"
+              optional
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
 
-            <div>
-              <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
-                End Date
-              </label>
-              <input
-                type="datetime-local"
-                id="endDate"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <DateTimeInput
+              label="End Date"
+              id="endDate"
+              optional
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
 
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="isAnonymous"
-                checked={isAnonymous}
-                onChange={(e) => setIsAnonymous(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <label htmlFor="isAnonymous" className="ml-2 block text-sm text-gray-700">
-                Anonymous Mode (hides character ownership and NPC status from players)
-              </label>
-            </div>
+            <Checkbox
+              id="isAnonymous"
+              label="Anonymous Mode (hides character ownership and NPC status from players)"
+              checked={isAnonymous}
+              onChange={(e) => setIsAnonymous(e.target.checked)}
+            />
 
             <div className="flex gap-3 pt-4">
-              <button
+              <Button
                 type="submit"
-                disabled={loading}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
+                variant="primary"
+                loading={loading}
+                className="flex-1"
               >
-                {loading ? 'Saving...' : 'Save Changes'}
-              </button>
-              <button
+                Save Changes
+              </Button>
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={onClose}
                 disabled={loading}
-                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
+                className="flex-1"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         </div>

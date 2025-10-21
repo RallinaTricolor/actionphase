@@ -21,43 +21,43 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-surface-sunken py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
+            <h1 className="text-3xl font-bold text-content-primary">Notifications</h1>
             {hasUnread && (
               <button
                 onClick={handleMarkAllAsRead}
-                className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-interactive-primary bg-semantic-info-subtle hover:bg-semantic-info-subtle rounded-lg transition-colors"
                 disabled={markAllAsRead.isPending}
               >
                 {markAllAsRead.isPending ? 'Marking...' : 'Mark all as read'}
               </button>
             )}
           </div>
-          <p className="text-gray-600">
+          <p className="text-content-secondary">
             Stay updated with all your game activities and messages
           </p>
         </div>
 
         {/* Notifications List */}
-        <div className="bg-white rounded-lg shadow border border-gray-200">
+        <div className="bg-surface-base rounded-lg shadow border border-theme-default">
           {isLoading ? (
-            <div className="p-12 text-center text-gray-600">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="p-12 text-center text-content-secondary">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-interactive-primary mx-auto mb-4"></div>
               <p>Loading notifications...</p>
             </div>
           ) : error ? (
-            <div className="p-12 text-center text-red-600">
+            <div className="p-12 text-center text-semantic-danger">
               <p className="font-medium mb-2">Failed to load notifications</p>
-              <p className="text-sm text-gray-600">Please try again later</p>
+              <p className="text-sm text-content-secondary">Please try again later</p>
             </div>
           ) : notifications.length === 0 ? (
-            <div className="p-12 text-center text-gray-600">
+            <div className="p-12 text-center text-content-secondary">
               <svg
-                className="w-20 h-20 mx-auto mb-4 text-gray-400"
+                className="w-20 h-20 mx-auto mb-4 text-content-tertiary"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -70,14 +70,14 @@ export default function NotificationsPage() {
                 />
               </svg>
               <p className="text-lg font-medium mb-1">No notifications</p>
-              <p className="text-sm text-gray-500">You're all caught up!</p>
+              <p className="text-sm text-content-tertiary">You're all caught up!</p>
             </div>
           ) : (
             <div>
               {notifications.map((notification, index) => (
                 <div
                   key={notification.id}
-                  className={index === notifications.length - 1 ? '' : 'border-b border-gray-200'}
+                  className={index === notifications.length - 1 ? '' : 'border-b border-theme-default'}
                 >
                   <NotificationItem
                     notification={notification}
@@ -93,7 +93,7 @@ export default function NotificationsPage() {
         <div className="mt-6 text-center">
           <button
             onClick={() => navigate('/dashboard')}
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-content-secondary hover:text-content-primary transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

@@ -6,6 +6,7 @@ import {
   type ParticipationFilter,
   type SortBy,
 } from '../types/games';
+import { Button, Select, Checkbox } from './ui';
 
 interface FilterBarProps {
   // Current filter values
@@ -59,61 +60,49 @@ export function FilterBar({
   };
 
   return (
-    <div className="bg-white border-b border-gray-200">
+    <div className="surface-base border-b border-theme-default">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Top row: Quick filters */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
           {/* Participation quick filters */}
           <div className="flex gap-2">
-            <button
+            <Button
+              variant={!participation || participation === null ? "primary" : "outline"}
               onClick={() => onParticipationChange(undefined)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                !participation || participation === null
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              size="sm"
             >
               All Games
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={participation === 'my_games' ? "primary" : "outline"}
               onClick={() => onParticipationChange('my_games')}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                participation === 'my_games'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              size="sm"
             >
               My Games
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={participation === 'applied' ? "primary" : "outline"}
               onClick={() => onParticipationChange('applied')}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                participation === 'applied'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              size="sm"
             >
               Applied
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={participation === 'not_joined' ? "primary" : "outline"}
               onClick={() => onParticipationChange('not_joined')}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                participation === 'not_joined'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              size="sm"
             >
               Not Joined
-            </button>
+            </Button>
           </div>
 
           {/* Spacer */}
           <div className="flex-1" />
 
           {/* Results count */}
-          <div className="text-sm text-gray-600">
-            Showing <span className="font-medium text-gray-900">{filteredCount}</span> of{' '}
-            <span className="font-medium text-gray-900">{totalCount}</span> games
+          <div className="text-sm text-content-secondary">
+            Showing <span className="font-medium text-content-primary">{filteredCount}</span> of{' '}
+            <span className="font-medium text-content-primary">{totalCount}</span> games
           </div>
         </div>
 
@@ -121,36 +110,37 @@ export function FilterBar({
         <div className="flex flex-wrap items-center gap-3">
           {/* State filter dropdown */}
           <div className="relative">
-            <button
+            <Button
+              variant="outline"
               onClick={() => setShowStateDropdown(!showStateDropdown)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 flex items-center gap-2"
+              size="sm"
+              className="flex items-center gap-2"
             >
               <span>State</span>
               {selectedStates.length > 0 && (
-                <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs">
+                <span className="bg-interactive-primary-subtle text-interactive-primary px-2 py-0.5 rounded-full text-xs">
                   {selectedStates.length}
                 </span>
               )}
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </button>
+            </Button>
             {showStateDropdown && (
-              <div className="absolute z-10 mt-2 w-56 bg-white border border-gray-300 rounded-md shadow-lg">
+              <div className="absolute z-10 mt-2 w-56 surface-base border border-theme-default rounded-md shadow-lg">
                 <div className="py-1 max-h-60 overflow-auto">
                   {availableStates.map((state) => (
-                    <label
+                    <div
                       key={state}
-                      className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                      className="px-4 py-2 hover:surface-raised cursor-pointer"
                     >
-                      <input
-                        type="checkbox"
+                      <Checkbox
+                        id={`state-filter-${state}`}
                         checked={selectedStates.includes(state)}
                         onChange={() => handleStateToggle(state)}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        label={GAME_STATE_LABELS[state]}
                       />
-                      <span className="ml-3 text-sm text-gray-700">{GAME_STATE_LABELS[state]}</span>
-                    </label>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -158,13 +148,10 @@ export function FilterBar({
           </div>
 
           {/* Has open spots toggle */}
-          <button
+          <Button
+            variant={hasOpenSpots ? "primary" : "outline"}
             onClick={() => onHasOpenSpotsChange(hasOpenSpots ? undefined : true)}
-            className={`px-3 py-2 border rounded-md text-sm font-medium transition-colors ${
-              hasOpenSpots
-                ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-                : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
-            }`}
+            size="sm"
           >
             {hasOpenSpots && (
               <svg
@@ -180,29 +167,29 @@ export function FilterBar({
               </svg>
             )}
             Has Open Spots
-          </button>
+          </Button>
 
           {/* Sort dropdown */}
-          <select
+          <Select
             value={sortBy}
             onChange={(e) => onSortByChange(e.target.value as SortBy)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           >
             {(Object.keys(SORT_BY_LABELS) as SortBy[]).map((key) => (
               <option key={key} value={key}>
                 Sort: {SORT_BY_LABELS[key]}
               </option>
             ))}
-          </select>
+          </Select>
 
           {/* Clear filters button */}
           {hasActiveFilters && (
-            <button
+            <Button
+              variant="ghost"
               onClick={onClearFilters}
-              className="px-3 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
+              size="sm"
             >
               Clear Filters
-            </button>
+            </Button>
           )}
         </div>
       </div>

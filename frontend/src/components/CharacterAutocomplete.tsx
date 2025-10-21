@@ -52,7 +52,7 @@ export function CharacterAutocomplete({
   if (filteredCharacters.length === 0) {
     return (
       <div
-        className="z-50 bg-white border border-gray-300 rounded-md shadow-lg py-2 px-3 text-sm text-gray-500"
+        className="z-50 surface-base border border-theme-default rounded-md shadow-lg py-2 px-3 text-sm text-content-tertiary"
         style={{
           position: 'fixed',
           top: `${position.top}px`,
@@ -69,7 +69,7 @@ export function CharacterAutocomplete({
     <ul
       ref={listRef}
       role="listbox"
-      className="z-50 bg-white border border-gray-300 rounded-md shadow-lg py-1 max-h-48 overflow-y-auto"
+      className="z-50 surface-base border border-theme-default rounded-md shadow-lg py-1 max-h-48 overflow-y-auto"
       style={{
         position: 'fixed',
         top: `${position.top}px`,
@@ -85,8 +85,8 @@ export function CharacterAutocomplete({
           onClick={() => onSelect(character)}
           className={`px-3 py-2 cursor-pointer flex items-center gap-2 text-sm transition-colors ${
             index === selectedIndex
-              ? 'bg-blue-100 text-blue-900'
-              : 'hover:bg-gray-100 text-gray-900'
+              ? 'bg-interactive-primary-subtle text-interactive-primary'
+              : 'hover:surface-raised text-content-primary'
           }`}
         >
           {character.avatar_url && (

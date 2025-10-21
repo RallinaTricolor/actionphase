@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCreateActionResult } from '../hooks/useActionResults';
+import { Button, Textarea, Checkbox, Alert } from './ui';
 
 interface CreateActionResultFormProps {
   gameId: number;
@@ -42,55 +43,48 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 bg-white border border-gray-200 rounded shadow-sm">
-      <h4 className="font-semibold mb-2">Send Result to {userName}</h4>
+    <form onSubmit={handleSubmit} className="p-4 surface-base border border-theme-default rounded shadow-sm">
+      <h4 className="font-semibold text-content-primary mb-2">Send Result to {userName}</h4>
 
       <div className="mb-4">
-        <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
-          Result Content
-        </label>
-        <textarea
+        <Textarea
           id="content"
+          label="Result Content"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           rows={4}
           placeholder="Enter the result of the player's action..."
         />
       </div>
 
       <div className="mb-4">
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            checked={isPublished}
-            onChange={(e) => setIsPublished(e.target.checked)}
-            className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-          />
-          <span className="ml-2 text-sm text-gray-700">
-            Publish immediately (visible to player)
-          </span>
-        </label>
+        <Checkbox
+          id="publish-immediately"
+          checked={isPublished}
+          onChange={(e) => setIsPublished(e.target.checked)}
+          label="Publish immediately (visible to player)"
+        />
       </div>
 
-      <button
+      <Button
         type="submit"
+        variant="primary"
         disabled={createResult.isPending}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full"
       >
         {createResult.isPending ? 'Sending...' : 'Send Result'}
-      </button>
+      </Button>
 
       {createResult.isError && (
-        <p className="mt-2 text-sm text-red-600">
+        <Alert variant="danger" className="mt-2">
           Failed to send result. Please try again.
-        </p>
+        </Alert>
       )}
 
       {createResult.isSuccess && (
-        <p className="mt-2 text-sm text-green-600">
+        <Alert variant="success" className="mt-2">
           Result sent successfully!
-        </p>
+        </Alert>
       )}
     </form>
   );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { InventoryItem } from '../types/characters';
+import { Button, Input, Textarea } from './ui';
 
 interface AddItemModalProps {
   onAdd: (item: Omit<InventoryItem, 'id'>) => void;
@@ -35,111 +36,81 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ onAdd, onCancel }) =
         <h3 className="text-lg font-medium mb-4">Add New Item</h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="item-name" className="block text-sm font-medium text-gray-700 mb-1">
-              Item Name *
-            </label>
-            <input
-              id="item-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., Iron Sword, Health Potion"
+          <Input
+            id="item-name"
+            label="Item Name *"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., Iron Sword, Health Potion"
+            required
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              id="item-quantity"
+              label="Quantity"
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+              min={1}
               required
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="item-quantity" className="block text-sm font-medium text-gray-700 mb-1">
-                Quantity
-              </label>
-              <input
-                id="item-quantity"
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                min="1"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="item-category" className="block text-sm font-medium text-gray-700 mb-1">
-                Category
-              </label>
-              <input
-                id="item-category"
-                type="text"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Weapon, Armor, etc."
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="item-value" className="block text-sm font-medium text-gray-700 mb-1">
-                Value
-              </label>
-              <input
-                id="item-value"
-                type="number"
-                value={value}
-                onChange={(e) => setValue(parseInt(e.target.value) || '')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                min="0"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label htmlFor="item-weight" className="block text-sm font-medium text-gray-700 mb-1">
-                Weight
-              </label>
-              <input
-                id="item-weight"
-                type="number"
-                value={weight}
-                onChange={(e) => setWeight(parseFloat(e.target.value) || '')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                min="0"
-                step="0.1"
-                placeholder="0.0"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="item-description" className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              id="item-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Describe this item..."
-              rows={2}
+            <Input
+              id="item-category"
+              label="Category"
+              type="text"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Weapon, Armor, etc."
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              id="item-value"
+              label="Value"
+              type="number"
+              value={value}
+              onChange={(e) => setValue(parseInt(e.target.value) || '')}
+              min={0}
+              placeholder="0"
+            />
+            <Input
+              id="item-weight"
+              label="Weight"
+              type="number"
+              value={weight}
+              onChange={(e) => setWeight(parseFloat(e.target.value) || '')}
+              min={0}
+              step={0.1}
+              placeholder="0.0"
+            />
+          </div>
+
+          <Textarea
+            id="item-description"
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe this item..."
+            rows={2}
+          />
+
           <div className="flex justify-end space-x-3 pt-4">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={onCancel}
-              className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              variant="primary"
             >
               Add Item
-            </button>
+            </Button>
           </div>
         </form>
       </div>

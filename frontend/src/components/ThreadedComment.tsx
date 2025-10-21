@@ -5,6 +5,7 @@ import type { Character } from '../types/characters';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
+import { Button, Select } from './ui';
 
 interface ThreadedCommentProps {
   comment: Message;
@@ -124,25 +125,17 @@ export function ThreadedComment({
     return date.toLocaleDateString();
   };
 
-  // Calculate left border color based on depth
-  const borderColors = [
-    'border-l-blue-400',
-    'border-l-green-400',
-    'border-l-yellow-400',
-    'border-l-purple-400',
-    'border-l-pink-400',
-    'border-l-indigo-400',
-  ];
-  const borderColor = depth > 0 ? borderColors[depth % borderColors.length] : '';
+  // Use consistent semantic color for thread borders (maintains visual hierarchy through indentation)
+  const borderColor = depth > 0 ? 'border-l-interactive-primary' : '';
 
   // Alternating background colors for better visual separation between comment levels
   const backgroundColors = [
-    '', // depth 0 - no background (uses parent's gray-50)
-    'bg-white', // depth 1 - white
-    'bg-gray-50', // depth 2 - light gray
-    'bg-white', // depth 3 - white
-    'bg-gray-50', // depth 4 - light gray
-    'bg-white', // depth 5 - white
+    '', // depth 0 - no background (uses parent's surface-raised)
+    'surface-base', // depth 1 - base surface
+    'surface-raised', // depth 2 - raised surface
+    'surface-base', // depth 3 - base surface
+    'surface-raised', // depth 4 - raised surface
+    'surface-base', // depth 5 - base surface
   ];
   const bgColor = backgroundColors[depth % backgroundColors.length];
 
@@ -153,7 +146,7 @@ export function ThreadedComment({
       className={`${depth > 0 ? 'ml-6 border-l-2 pl-3 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2 rounded-r-lg' : 'py-2'}`}
     >
       {/* Comment Header and Content */}
-      <div className={`${isUnread ? 'border-2 border-yellow-400 bg-yellow-50 rounded-lg p-3 -ml-3' : ''}`}>
+      <div className={`${isUnread ? 'border-2 border-semantic-warning bg-semantic-warning-subtle rounded-lg p-3 -ml-3' : ''}`}>
         <div className="flex items-start gap-2 mb-1">
           <CharacterAvatar
             avatarUrl={comment.character_avatar_url}
@@ -161,21 +154,21 @@ export function ThreadedComment({
             size="sm"
           />
           <div className="flex-1">
-            <span className="font-semibold text-sm text-gray-900">{comment.character_name}</span>
-            <span className="text-xs text-gray-500 ml-2">
+            <span className="font-semibold text-sm text-content-primary">{comment.character_name}</span>
+            <span className="text-xs text-content-secondary ml-2">
               @{comment.author_username} · {formatDate(comment.created_at)}
-              {comment.is_edited && <span className="ml-1">(edited)</span>}
+              {comment.is_edited && <span className="ml-1 text-content-tertiary">(edited)</span>}
             </span>
             {isAuthor && (
-              <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">You</span>
+              <span className="ml-2 text-xs bg-interactive-primary-subtle text-interactive-primary px-1.5 py-0.5 rounded">You</span>
             )}
             {isUnread && (
-              <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-semibold">NEW</span>
+              <span className="ml-2 text-xs bg-semantic-warning-subtle text-semantic-warning px-2 py-0.5 rounded font-semibold">NEW</span>
             )}
           </div>
         </div>
 
-        <div className="text-sm text-gray-800 mb-2">
+        <div className="text-sm text-content-primary mb-2">
           <MarkdownPreview
             content={comment.content}
             mentionedCharacters={comment.mentioned_character_ids?.map(id => {
@@ -186,37 +179,43 @@ export function ThreadedComment({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3 text-xs text-gray-500">
+        <div className="flex items-center gap-3 text-xs text-content-secondary">
           {!isAtMaxDepth && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setIsReplying(!isReplying)}
-              className="hover:text-blue-600 font-medium transition-colors"
+              className="text-xs h-auto p-0 hover:text-interactive-primary-hover font-medium"
             >
               Reply
-            </button>
+            </Button>
           )}
 
           {hasReplies && !isAtMaxDepth && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowReplies(!showReplies)}
-              className="hover:text-blue-600 font-medium transition-colors flex items-center gap-1"
+              className="text-xs h-auto p-0 hover:text-interactive-primary-hover font-medium flex items-center gap-1"
             >
               <span>{showReplies ? '▼' : '▶'}</span>
               <span>{comment.reply_count} {comment.reply_count === 1 ? 'reply' : 'replies'}</span>
-            </button>
+            </Button>
           )}
 
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleCopyLink}
-            className="hover:text-blue-600 font-medium transition-colors flex items-center gap-1"
+            className="text-xs h-auto p-0 hover:text-interactive-primary-hover font-medium flex items-center gap-1"
             title="Copy link to this comment"
           >
             {linkCopied ? (
               <>
-                <svg className="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 text-semantic-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-green-600">Copied!</span>
+                <span className="text-semantic-success">Copied!</span>
               </>
             ) : (
               <>
@@ -226,12 +225,12 @@ export function ThreadedComment({
                 <span>Copy link</span>
               </>
             )}
-          </button>
+          </Button>
 
           {comment.parent_id && (
             <a
               href={`/games/${gameId}?tab=common-room&comment=${comment.parent_id}`}
-              className="hover:text-blue-600 font-medium transition-colors flex items-center gap-1"
+              className="hover:text-interactive-primary-hover font-medium transition-colors flex items-center gap-1"
               title="Go to parent comment"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,15 +244,15 @@ export function ThreadedComment({
 
       {/* Reply Form */}
       {isReplying && (
-        <div className="mb-3 bg-gray-50 rounded p-3 border border-gray-200">
+        <div className="mb-3 surface-raised rounded p-3 border border-theme-default">
           <form onSubmit={handleSubmitReply}>
             {controllableCharacters.length > 0 ? (
               <>
                 {controllableCharacters.length > 1 && (
-                  <select
+                  <Select
                     value={selectedCharacterId || ''}
                     onChange={(e) => setSelectedCharacterId(Number(e.target.value))}
-                    className="w-full mb-2 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="mb-2"
                     disabled={isSubmitting}
                   >
                     {controllableCharacters.map((char) => (
@@ -261,7 +260,7 @@ export function ThreadedComment({
                         Reply as {char.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 )}
 
                 <div className="mb-2">
@@ -275,28 +274,30 @@ export function ThreadedComment({
                 </div>
 
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     type="submit"
+                    variant="primary"
+                    size="sm"
                     disabled={isSubmitting || !replyContent.trim()}
-                    className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
                   >
                     {isSubmitting ? 'Posting...' : 'Reply'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setIsReplying(false);
                       setReplyContent('');
                     }}
                     disabled={isSubmitting}
-                    className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors font-medium"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : (
-              <p className="text-xs text-gray-600">You need a character to reply.</p>
+              <p className="text-xs text-content-secondary">You need a character to reply.</p>
             )}
           </form>
         </div>
@@ -305,16 +306,18 @@ export function ThreadedComment({
       {/* Continue Thread Button (if at max depth with replies) */}
       {isAtMaxDepth && hasReplies && (
         <div className="mt-2 ml-6">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onOpenThread?.(comment)}
-            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+            className="inline-flex items-center gap-1 text-sm font-medium text-interactive-primary hover:text-interactive-primary-hover h-auto p-0"
           >
             <span>Continue this thread</span>
-            <span className="text-gray-500">({comment.reply_count} {comment.reply_count === 1 ? 'reply' : 'replies'})</span>
+            <span className="text-content-secondary">({comment.reply_count} {comment.reply_count === 1 ? 'reply' : 'replies'})</span>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </button>
+          </Button>
         </div>
       )}
 
@@ -322,7 +325,7 @@ export function ThreadedComment({
       {!isAtMaxDepth && showReplies && (hasReplies || replies.length > 0) && (
         <div className="space-y-0">
           {loadingReplies ? (
-            <div className="ml-6 py-2 text-xs text-gray-500">Loading replies...</div>
+            <div className="ml-6 py-2 text-xs text-content-secondary">Loading replies...</div>
           ) : (
             replies.map((reply) => (
               <ThreadedComment
