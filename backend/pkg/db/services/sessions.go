@@ -55,3 +55,9 @@ func (s *SessionService) DeleteSessionByToken(token string) error {
 	err := q.DeleteSessionByToken(ctx, token)
 	return err
 }
+
+// InvalidateAllUserSessions deletes all sessions for a user (used when banning)
+func (s *SessionService) InvalidateAllUserSessions(ctx context.Context, userID int32) error {
+	q := db.New(s.DB)
+	return q.DeleteUserSessions(ctx, userID)
+}

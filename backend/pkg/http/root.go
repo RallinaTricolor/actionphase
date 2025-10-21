@@ -1,6 +1,7 @@
 package http
 
 import (
+	"actionphase/pkg/admin"
 	"actionphase/pkg/auth"
 	"actionphase/pkg/avatars"
 	"actionphase/pkg/characters"
@@ -9,6 +10,7 @@ import (
 	"actionphase/pkg/dashboard"
 	"actionphase/pkg/docs"
 	"actionphase/pkg/games"
+	httpmiddleware "actionphase/pkg/http/middleware"
 	"actionphase/pkg/messages"
 	"actionphase/pkg/notifications"
 	"actionphase/pkg/phases"
@@ -256,6 +258,33 @@ func (h *Handler) Start() {
 		})
 	})
 	apiV1Router.Mount("/dashboard", dashboardRouter)
+
+	// Admin API - All routes require authentication AND admin privileges
+	adminRouter := chi.NewRouter()
+	adminRouter.Route("/", func(r chi.Router) {
+		adminHandler := admin.Handler{App: h.App}
+
+		// All admin routes require authentication and admin privileges
+		r.Group(func(r chi.Router) {
+			tokenAuth := h.getTokenAuth()
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(httpmiddleware.RequireAdmin(h.App))
+
+			// Admin management
+			r.Get("/admins", adminHandler.ListAdmins)
+
+			// User admin status management
+			r.Put("/users/{id}/admin", adminHandler.GrantAdminStatus)
+			r.Delete("/users/{id}/admin", adminHandler.RevokeAdminStatus)
+
+			// User banning
+			r.Post("/users/{id}/ban", adminHandler.BanUser)
+			r.Delete("/users/{id}/ban", adminHandler.UnbanUser)
+			r.Get("/users/banned", adminHandler.ListBannedUsers)
+		})
+	})
+	apiV1Router.Mount("/admin", adminRouter)
 
 	// API Documentation routes (public)
 	docsHandler := &docs.Handler{}

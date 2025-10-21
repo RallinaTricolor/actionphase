@@ -20,6 +20,17 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, core.ErrUnauthorized("Invalid username or password"))
 		return
 	}
+
+	// Check if user is banned
+	if user.IsBanned {
+		h.App.Logger.Warn("Login attempt by banned user",
+			"username", user.Username,
+			"user_id", user.ID,
+			"banned_at", user.BannedAt)
+		render.Render(w, r, core.ErrForbidden("Your account has been banned. Please contact support."))
+		return
+	}
+
 	if !user.CheckPasswordHash(data.User.Password) {
 		h.App.Logger.Error("Invalid password", "username", user.Username)
 		render.Render(w, r, core.ErrInvalidRequest(LoginError{"invalid username or password"}))

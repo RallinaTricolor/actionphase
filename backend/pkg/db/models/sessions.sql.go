@@ -58,6 +58,17 @@ func (q *Queries) DeleteSessionByToken(ctx context.Context, data string) error {
 	return err
 }
 
+const deleteUserSessions = `-- name: DeleteUserSessions :exec
+DELETE FROM sessions
+WHERE user_id = $1
+`
+
+// Invalidate all sessions for a user (used when banning)
+func (q *Queries) DeleteUserSessions(ctx context.Context, userID int32) error {
+	_, err := q.db.Exec(ctx, deleteUserSessions, userID)
+	return err
+}
+
 const getSession = `-- name: GetSession :one
 SELECT id, user_id, data, expires FROM sessions
 WHERE id = $1 LIMIT 1

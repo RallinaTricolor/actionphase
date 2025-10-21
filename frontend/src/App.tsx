@@ -10,6 +10,7 @@ import { GameDetailsPage } from './pages/GameDetailsPage';
 import { ThreadViewPage } from './pages/ThreadViewPage';
 import NotificationsPage from './pages/NotificationsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { AdminPage } from './pages/AdminPage';
 import ThemeTestPage from './pages/ThemeTestPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -59,6 +60,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPage />
               </ProtectedRoute>
             }
           />

@@ -2,6 +2,7 @@ package db
 
 import (
 	"actionphase/pkg/core"
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -268,5 +269,354 @@ func TestUserService_IntegrationWorkflow(t *testing.T) {
 		// Verify all passwords are hashed and different
 		assert.NotEqual(t, alice.Password, bob.Password)
 		assert.NotEqual(t, bob.Password, charlie.Password)
+	})
+}
+
+func TestUserService_SetAdminStatus(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &UserService{DB: testDB.Pool}
+
+	t.Run("grants admin status successfully", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		// Create an admin user
+		admin := &core.User{
+			Username: "admin",
+			Password: "adminpass",
+			Email:    "admin@example.com",
+		}
+		createdAdmin, err := service.CreateUser(admin)
+		require.NoError(t, err)
+
+		// Make them admin manually in the database (bootstrap scenario)
+		ctx := context.Background()
+		_, err = testDB.Pool.Exec(ctx, "UPDATE users SET is_admin = TRUE WHERE id = $1", createdAdmin.ID)
+		require.NoError(t, err)
+
+		// Create a regular user
+		user := &core.User{
+			Username: "regular",
+			Password: "password123",
+			Email:    "regular@example.com",
+		}
+		createdUser, err := service.CreateUser(user)
+		require.NoError(t, err)
+
+		// Grant admin status
+		err = service.SetAdminStatus(ctx, int32(createdUser.ID), true, int32(createdAdmin.ID))
+		require.NoError(t, err)
+
+		// Verify user is now admin
+		admins, err := service.ListAdmins(ctx)
+		require.NoError(t, err)
+		assert.Len(t, admins, 2)
+	})
+
+	t.Run("revokes admin status successfully", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		// Create an admin user
+		admin := &core.User{
+			Username: "admin",
+			Password: "adminpass",
+			Email:    "admin@example.com",
+		}
+		createdAdmin, err := service.CreateUser(admin)
+		require.NoError(t, err)
+
+		// Make them admin manually in the database (bootstrap scenario)
+		ctx := context.Background()
+		_, err = testDB.Pool.Exec(ctx, "UPDATE users SET is_admin = TRUE WHERE id = $1", createdAdmin.ID)
+		require.NoError(t, err)
+
+		// Verify admin status was granted
+		admins, err := service.ListAdmins(ctx)
+		require.NoError(t, err)
+		assert.Len(t, admins, 1)
+
+		// Revoke admin status
+		err = service.SetAdminStatus(ctx, int32(createdAdmin.ID), false, int32(createdAdmin.ID))
+		require.NoError(t, err)
+
+		// Verify admin status was revoked
+		admins, err = service.ListAdmins(ctx)
+		require.NoError(t, err)
+		assert.Len(t, admins, 0)
+	})
+
+	t.Run("rejects non-admin attempting to grant admin status", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		// Create two regular users
+		user1 := &core.User{
+			Username: "user1",
+			Password: "password123",
+			Email:    "user1@example.com",
+		}
+		createdUser1, err := service.CreateUser(user1)
+		require.NoError(t, err)
+
+		user2 := &core.User{
+			Username: "user2",
+			Password: "password456",
+			Email:    "user2@example.com",
+		}
+		createdUser2, err := service.CreateUser(user2)
+		require.NoError(t, err)
+
+		// Try to grant admin status without being admin
+		ctx := context.Background()
+		err = service.SetAdminStatus(ctx, int32(createdUser2.ID), true, int32(createdUser1.ID))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "Unauthorized")
+	})
+}
+
+func TestUserService_ListAdmins(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &UserService{DB: testDB.Pool}
+
+	t.Run("lists all admin users", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		ctx := context.Background()
+
+		// Create multiple users
+		admin1 := &core.User{
+			Username: "admin1",
+			Password: "password123",
+			Email:    "admin1@example.com",
+		}
+		createdAdmin1, err := service.CreateUser(admin1)
+		require.NoError(t, err)
+
+		admin2 := &core.User{
+			Username: "admin2",
+			Password: "password123",
+			Email:    "admin2@example.com",
+		}
+		createdAdmin2, err := service.CreateUser(admin2)
+		require.NoError(t, err)
+
+		regularUser := &core.User{
+			Username: "regular",
+			Password: "password123",
+			Email:    "regular@example.com",
+		}
+		_, err = service.CreateUser(regularUser)
+		require.NoError(t, err)
+
+		// Make first user admin manually in the database (bootstrap scenario)
+		_, err = testDB.Pool.Exec(ctx, "UPDATE users SET is_admin = TRUE WHERE id = $1", createdAdmin1.ID)
+		require.NoError(t, err)
+
+		// Grant admin status to second user using the service
+		err = service.SetAdminStatus(ctx, int32(createdAdmin2.ID), true, int32(createdAdmin1.ID))
+		require.NoError(t, err)
+
+		// List admins
+		admins, err := service.ListAdmins(ctx)
+		require.NoError(t, err)
+		assert.Len(t, admins, 2)
+
+		// Verify correct users are in the list
+		usernames := []string{admins[0].Username, admins[1].Username}
+		assert.Contains(t, usernames, "admin1")
+		assert.Contains(t, usernames, "admin2")
+	})
+
+	t.Run("returns empty list when no admins exist", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		// Create a regular user
+		user := &core.User{
+			Username: "regular",
+			Password: "password123",
+			Email:    "regular@example.com",
+		}
+		_, err := service.CreateUser(user)
+		require.NoError(t, err)
+
+		ctx := context.Background()
+		admins, err := service.ListAdmins(ctx)
+		require.NoError(t, err)
+		assert.Len(t, admins, 0)
+	})
+}
+
+func TestUserService_BanUser(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &UserService{DB: testDB.Pool}
+
+	t.Run("bans user successfully", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		ctx := context.Background()
+
+		// Create admin user
+		admin := &core.User{
+			Username: "admin",
+			Password: "adminpass",
+			Email:    "admin@example.com",
+		}
+		createdAdmin, err := service.CreateUser(admin)
+		require.NoError(t, err)
+
+		// Create regular user
+		user := &core.User{
+			Username: "regular",
+			Password: "password123",
+			Email:    "regular@example.com",
+		}
+		createdUser, err := service.CreateUser(user)
+		require.NoError(t, err)
+
+		// Ban the user
+		err = service.BanUser(ctx, int32(createdUser.ID), int32(createdAdmin.ID))
+		require.NoError(t, err)
+
+		// Verify user is banned
+		banned, err := service.CheckUserBanned(ctx, int32(createdUser.ID))
+		require.NoError(t, err)
+		assert.True(t, banned)
+
+		// Verify user appears in banned list
+		bannedUsers, err := service.ListBannedUsers(ctx)
+		require.NoError(t, err)
+		assert.Len(t, bannedUsers, 1)
+		assert.Equal(t, "regular", bannedUsers[0].Username)
+		assert.Equal(t, int32(createdAdmin.ID), bannedUsers[0].BannedByUserID)
+	})
+
+	t.Run("rejects admin banning themselves", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		ctx := context.Background()
+
+		// Create admin user
+		admin := &core.User{
+			Username: "admin",
+			Password: "adminpass",
+			Email:    "admin@example.com",
+		}
+		createdAdmin, err := service.CreateUser(admin)
+		require.NoError(t, err)
+
+		// Try to ban themselves
+		err = service.BanUser(ctx, int32(createdAdmin.ID), int32(createdAdmin.ID))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "Cannot ban yourself")
+	})
+}
+
+func TestUserService_UnbanUser(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &UserService{DB: testDB.Pool}
+
+	t.Run("unbans user successfully", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		ctx := context.Background()
+
+		// Create admin and user
+		admin := &core.User{
+			Username: "admin",
+			Password: "adminpass",
+			Email:    "admin@example.com",
+		}
+		createdAdmin, err := service.CreateUser(admin)
+		require.NoError(t, err)
+
+		user := &core.User{
+			Username: "regular",
+			Password: "password123",
+			Email:    "regular@example.com",
+		}
+		createdUser, err := service.CreateUser(user)
+		require.NoError(t, err)
+
+		// Ban the user
+		err = service.BanUser(ctx, int32(createdUser.ID), int32(createdAdmin.ID))
+		require.NoError(t, err)
+
+		// Verify user is banned
+		banned, err := service.CheckUserBanned(ctx, int32(createdUser.ID))
+		require.NoError(t, err)
+		assert.True(t, banned)
+
+		// Unban the user
+		err = service.UnbanUser(ctx, int32(createdUser.ID))
+		require.NoError(t, err)
+
+		// Verify user is no longer banned
+		banned, err = service.CheckUserBanned(ctx, int32(createdUser.ID))
+		require.NoError(t, err)
+		assert.False(t, banned)
+
+		// Verify user no longer in banned list
+		bannedUsers, err := service.ListBannedUsers(ctx)
+		require.NoError(t, err)
+		assert.Len(t, bannedUsers, 0)
+	})
+}
+
+func TestUserService_CheckUserBanned(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &UserService{DB: testDB.Pool}
+
+	t.Run("returns false for non-banned user", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		user := &core.User{
+			Username: "regular",
+			Password: "password123",
+			Email:    "regular@example.com",
+		}
+		createdUser, err := service.CreateUser(user)
+		require.NoError(t, err)
+
+		ctx := context.Background()
+		banned, err := service.CheckUserBanned(ctx, int32(createdUser.ID))
+		require.NoError(t, err)
+		assert.False(t, banned)
+	})
+
+	t.Run("returns true for banned user", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		ctx := context.Background()
+
+		admin := &core.User{
+			Username: "admin",
+			Password: "adminpass",
+			Email:    "admin@example.com",
+		}
+		createdAdmin, err := service.CreateUser(admin)
+		require.NoError(t, err)
+
+		user := &core.User{
+			Username: "regular",
+			Password: "password123",
+			Email:    "regular@example.com",
+		}
+		createdUser, err := service.CreateUser(user)
+		require.NoError(t, err)
+
+		err = service.BanUser(ctx, int32(createdUser.ID), int32(createdAdmin.ID))
+		require.NoError(t, err)
+
+		banned, err := service.CheckUserBanned(ctx, int32(createdUser.ID))
+		require.NoError(t, err)
+		assert.True(t, banned)
 	})
 }

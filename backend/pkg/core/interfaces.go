@@ -41,6 +41,9 @@ type SessionServiceInterface interface {
 
 	// DeleteSessionByToken removes a session by its token
 	DeleteSessionByToken(token string) error
+
+	// InvalidateAllUserSessions deletes all sessions for a user (used when banning)
+	InvalidateAllUserSessions(ctx context.Context, userID int32) error
 }
 
 // UserServiceInterface defines the contract for user management operations.
@@ -82,6 +85,16 @@ type UserServiceInterface interface {
 
 	// DeleteUser removes a user account
 	DeleteUser(id int) error
+
+	// Admin management
+	SetAdminStatus(ctx context.Context, userID int32, isAdmin bool, requesterID int32) error
+	ListAdmins(ctx context.Context) ([]*User, error)
+
+	// User banning
+	BanUser(ctx context.Context, userID int32, adminID int32) error
+	UnbanUser(ctx context.Context, userID int32) error
+	ListBannedUsers(ctx context.Context) ([]*BannedUser, error)
+	CheckUserBanned(ctx context.Context, userID int32) (bool, error)
 }
 
 // GameServiceInterface defines the contract for game management operations.

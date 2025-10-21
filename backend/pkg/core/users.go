@@ -10,11 +10,27 @@ import (
 // It includes authentication credentials, contact information, and metadata.
 // The struct supports JSON serialization and validation tags for API usage.
 type User struct {
-	ID        int        `json:"id"`                                        // Unique user identifier
-	Username  string     `json:"username" validate:"required"`              // Unique username for login
-	Email     string     `json:"email" validate:"required,email"`           // User's email address
-	Password  string     `json:"password" validate:"required,min=8,max=64"` // Hashed password (bcrypt)
-	CreatedAt *time.Time `json:"createdAt"`                                 // Account creation timestamp
+	ID             int        `json:"id"`                                        // Unique user identifier
+	Username       string     `json:"username" validate:"required"`              // Unique username for login
+	Email          string     `json:"email" validate:"required,email"`           // User's email address
+	Password       string     `json:"password" validate:"required,min=8,max=64"` // Hashed password (bcrypt)
+	IsAdmin        bool       `json:"is_admin"`                                  // Whether user has admin privileges
+	IsBanned       bool       `json:"is_banned"`                                 // Whether user is banned from platform
+	BannedAt       *time.Time `json:"banned_at,omitempty"`                       // When user was banned
+	BannedByUserID *int32     `json:"banned_by_user_id,omitempty"`               // ID of admin who banned user
+	CreatedAt      *time.Time `json:"createdAt"`                                 // Account creation timestamp
+}
+
+// BannedUser represents a banned user with additional ban information.
+// Used for admin listing of banned users.
+type BannedUser struct {
+	ID               int       `json:"id"`
+	Username         string    `json:"username"`
+	Email            string    `json:"email"`
+	BannedAt         time.Time `json:"banned_at"`
+	BannedByUserID   int32     `json:"banned_by_user_id"`
+	BannedByUsername string    `json:"banned_by_username"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 // validate is the shared validator instance for user validation
