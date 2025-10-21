@@ -4,3 +4,4 @@
 - Usability / accessibility improvements
   - Lots of reading! Optimize for reading lots of text
 - User journeys
+- User registration security (prevent bots, email verification, captcha)
