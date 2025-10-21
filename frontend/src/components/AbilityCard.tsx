@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { CharacterAbility } from '../types/characters';
+import { Button, Input, Textarea, Badge } from './ui';
 
 interface AbilityCardProps {
   ability: CharacterAbility;
@@ -27,72 +28,80 @@ export const AbilityCard: React.FC<AbilityCardProps> = ({ ability, canEdit, onUp
     setIsEditing(false);
   };
 
-  const getTypeColor = (type: CharacterAbility['type']) => {
+  const getTypeVariant = (type: CharacterAbility['type']): 'primary' | 'success' | 'warning' | 'default' => {
     switch (type) {
       case 'gm_assigned':
-        return 'bg-purple-100 text-purple-800';
+        return 'warning';
       case 'learned':
-        return 'bg-blue-100 text-blue-800';
+        return 'primary';
       case 'innate':
-        return 'bg-green-100 text-green-800';
+        return 'success';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'default';
     }
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 bg-white">
+    <div className="border border-theme-default rounded-lg p-4 surface-base">
       <div className="flex justify-between items-start mb-2">
         <div className="flex-1">
           {isEditing ? (
-            <input
+            <Input
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="text-lg font-medium border-b border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent"
               placeholder="Ability name..."
+              className="text-lg font-medium"
             />
           ) : (
-            <h4 className="text-lg font-medium text-gray-900">{ability.name}</h4>
+            <h4 className="text-lg font-medium text-content-primary">{ability.name}</h4>
           )}
         </div>
 
         <div className="flex items-center space-x-2 ml-4">
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(ability.type)}`}>
+          <Badge variant={getTypeVariant(ability.type)}>
             {ability.type.replace('_', ' ')}
-          </span>
+          </Badge>
 
           {canEdit && ability.type !== 'gm_assigned' && (
             <div className="flex space-x-1">
               {isEditing ? (
                 <>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleSave}
-                    className="p-1 text-green-600 hover:text-green-800"
+                    className="p-1 text-semantic-success hover:text-semantic-success"
                   >
                     ✓
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleCancel}
-                    className="p-1 text-gray-600 hover:text-gray-800"
+                    className="p-1 text-content-secondary hover:text-content-primary"
                   >
                     ✕
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setIsEditing(true)}
-                    className="p-1 text-blue-600 hover:text-blue-800"
+                    className="p-1 text-interactive-primary hover:text-interactive-primary-hover"
                   >
                     ✎
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={onRemove}
-                    className="p-1 text-red-600 hover:text-red-800"
+                    className="p-1 text-semantic-danger hover:text-semantic-danger"
                   >
                     🗑
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -103,28 +112,27 @@ export const AbilityCard: React.FC<AbilityCardProps> = ({ ability, canEdit, onUp
       {(ability.description || isEditing) && (
         <div className="mb-2">
           {isEditing ? (
-            <textarea
+            <Textarea
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
-              className="w-full text-sm text-gray-600 border border-gray-300 rounded p-2 focus:border-blue-500 focus:outline-none"
               placeholder="Describe this ability..."
               rows={2}
             />
           ) : (
-            <p className="text-sm text-gray-600">{ability.description}</p>
+            <p className="text-sm text-content-secondary">{ability.description}</p>
           )}
         </div>
       )}
 
       {ability.source && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-content-tertiary">
           Source: {ability.source}
         </p>
       )}
 
       {!ability.active && (
         <div className="mt-2">
-          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">Inactive</span>
+          <Badge variant="default">Inactive</Badge>
         </div>
       )}
     </div>

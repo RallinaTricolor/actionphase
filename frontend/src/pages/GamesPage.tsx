@@ -109,14 +109,14 @@ export const GamesPage = () => {
       <div className="mb-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Browse Games</h1>
-            <p className="text-gray-600 mt-2 text-sm">
+            <h1 className="text-3xl font-bold text-content-primary">Browse Games</h1>
+            <p className="text-content-secondary mt-2 text-sm">
               Discover and join role-playing games in the ActionPhase community
             </p>
           </div>
           <button
             onClick={handleCreateGame}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+            className="bg-interactive-primary hover:bg-interactive-primary text-white px-4 py-2 rounded-lg transition-colors font-medium"
           >
             Create Game
           </button>

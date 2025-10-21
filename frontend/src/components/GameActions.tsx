@@ -1,4 +1,5 @@
 import type { Game, GameApplication, GameState } from '../types/games';
+import { Button } from './ui';
 
 interface StateAction {
   label: string;
@@ -38,54 +39,55 @@ export function GameActions({
   return (
     <div className="flex gap-4">
       {isGM && (
-        <button
+        <Button
+          variant="outline"
           onClick={onEditGame}
           disabled={actionLoading}
-          className="px-4 py-2 text-indigo-700 bg-indigo-100 hover:bg-indigo-200 rounded-lg font-medium transition-colors disabled:opacity-50"
         >
           Edit Game
-        </button>
+        </Button>
       )}
 
       {isGM && stateActions.map((action) => (
-        <button
+        <Button
           key={action.state}
+          variant="primary"
           onClick={() => onStateChange(action.state)}
           disabled={actionLoading}
-          className={`px-4 py-2 text-white rounded-lg font-medium transition-colors disabled:opacity-50 ${action.color}`}
+          className={action.color}
         >
           {action.label}
-        </button>
+        </Button>
       ))}
 
       {!isGM && !isCheckingAuth && game.state === 'recruitment' && !userApplication && (
-        <button
+        <Button
+          variant="primary"
           onClick={onApplyToGame}
           disabled={actionLoading}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
         >
           Apply to Join
-        </button>
+        </Button>
       )}
 
       {!isGM && userApplication && userApplication.status === 'pending' && game.state === 'recruitment' && (
-        <button
+        <Button
+          variant="warning"
           onClick={onWithdrawApplication}
           disabled={actionLoading}
-          className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
         >
           Withdraw Application
-        </button>
+        </Button>
       )}
 
       {!isGM && isParticipant && game.state !== 'completed' && game.state !== 'cancelled' && (
-        <button
+        <Button
+          variant="danger"
           onClick={onLeaveGame}
           disabled={actionLoading}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
         >
           Leave Game
-        </button>
+        </Button>
       )}
     </div>
   );

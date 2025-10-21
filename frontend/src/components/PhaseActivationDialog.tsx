@@ -1,4 +1,5 @@
 import type { UseMutationResult } from '@tanstack/react-query';
+import { Button } from './ui';
 
 interface PhaseActivationDialogProps {
   phaseNumber: number;
@@ -57,34 +58,37 @@ export function PhaseActivationDialog({
               </div>
             </div>
             <div className="flex flex-col space-y-2">
-              <button
+              <Button
+                variant="success"
                 onClick={async () => {
                   await publishAllMutation.mutateAsync();
                   onActivate();
                   onClose();
                 }}
                 disabled={isActivating || publishAllMutation.isPending}
-                className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full"
               >
                 {publishAllMutation.isPending ? 'Publishing...' : isActivating ? 'Activating...' : 'Publish & Activate Phase'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 onClick={() => {
                   onActivate();
                   onClose();
                 }}
                 disabled={isActivating || publishAllMutation.isPending}
-                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full"
               >
                 {isActivating ? 'Activating...' : 'Activate Without Publishing'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={onClose}
                 disabled={isActivating || publishAllMutation.isPending}
-                className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50 transition-colors"
+                className="w-full"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </>
         ) : (
@@ -93,23 +97,23 @@ export function PhaseActivationDialog({
               This will deactivate the current phase and make Phase {phaseNumber} active. Continue?
             </p>
             <div className="flex justify-end space-x-3">
-              <button
+              <Button
+                variant="ghost"
                 onClick={onClose}
                 disabled={isActivating}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 onClick={() => {
                   onActivate();
                   onClose();
                 }}
                 disabled={isActivating}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isActivating ? 'Activating...' : 'Activate Phase'}
-              </button>
+              </Button>
             </div>
           </>
         )}

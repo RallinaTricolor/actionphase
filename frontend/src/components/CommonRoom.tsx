@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { Button, Alert, Spinner } from './ui';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { CreatePostForm } from './CreatePostForm';
@@ -50,9 +51,9 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
         // Highlight the comment briefly
-        element.classList.add('ring-4', 'ring-yellow-400', 'ring-opacity-75');
+        element.classList.add('ring-4', 'ring-semantic-warning', 'ring-opacity-75');
         setTimeout(() => {
-          element.classList.remove('ring-4', 'ring-yellow-400', 'ring-opacity-75');
+          element.classList.remove('ring-4', 'ring-semantic-warning', 'ring-opacity-75');
         }, 3000);
 
         // Clear the comment parameter from URL after scrolling
@@ -149,22 +150,20 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <Spinner size="lg" label="Loading Common Room..." />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <h3 className="text-red-800 font-semibold mb-2">Error</h3>
-        <p className="text-red-700">{error}</p>
-        <button
-          onClick={loadData}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-        >
+      <div className="space-y-4">
+        <Alert variant="danger" title="Error">
+          {error}
+        </Alert>
+        <Button variant="danger" onClick={loadData}>
           Try Again
-        </button>
+        </Button>
       </div>
     );
   }
@@ -172,10 +171,10 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
   return (
     <div className="max-w-full">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-content-primary mb-2">
           Common Room{phaseTitle && ` - ${phaseTitle}`}
         </h2>
-        <p className="text-gray-600">
+        <p className="text-content-secondary">
           {isCurrentPhase
             ? isGM
               ? 'Create GM posts to share information, updates, and phase details with all players. Players can comment and discuss below your posts.'
@@ -197,9 +196,9 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
 
       {/* Posts Feed */}
       {posts.length === 0 ? (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+        <div className="surface-raised border border-theme-default rounded-lg p-8 text-center">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400 mb-3"
+            className="mx-auto h-12 w-12 text-content-tertiary mb-3"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -211,8 +210,8 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
             />
           </svg>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No posts yet</h3>
-          <p className="text-gray-600">Be the first to start a conversation!</p>
+          <h3 className="text-lg font-medium text-content-primary mb-1">No posts yet</h3>
+          <p className="text-content-secondary">Be the first to start a conversation!</p>
         </div>
       ) : (
         <div className="space-y-4">

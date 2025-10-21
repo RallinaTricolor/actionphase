@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useUnreadCount } from '../hooks/useNotifications';
+import { Badge, Button } from './ui';
 import NotificationDropdown from './NotificationDropdown';
 
 export default function NotificationBell() {
@@ -17,10 +18,11 @@ export default function NotificationBell() {
   return (
     <div className="relative">
       {/* Bell Button */}
-      <button
+      <Button
         ref={bellButtonRef}
+        variant="ghost"
         onClick={toggleDropdown}
-        className="relative p-2 text-gray-300 hover:text-white transition-colors"
+        className="relative p-2 text-indigo-100 hover:text-white h-auto"
         aria-label="Notifications"
         data-testid="notification-bell"
       >
@@ -36,14 +38,16 @@ export default function NotificationBell() {
 
         {/* Unread Badge */}
         {hasUnread && (
-          <span
-            className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1"
+          <Badge
+            variant="danger"
+            size="sm"
+            className="absolute -top-1 -right-1"
             data-testid="notification-badge"
           >
             {displayCount}
-          </span>
+          </Badge>
         )}
-      </button>
+      </Button>
 
       {/* Dropdown - only render when open to ensure fresh data on mount */}
       {isOpen && (

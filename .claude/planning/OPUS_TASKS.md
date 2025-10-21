@@ -1,0 +1,4 @@
+- More code refactoring/reorg
+- Test coverage and useful tests
+- Game integrity and security (assume people could build a 3rd party client)
+- Usability / accessibility improvements

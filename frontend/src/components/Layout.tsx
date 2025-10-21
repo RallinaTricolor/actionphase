@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from './NotificationBell';
+import { Button } from './ui';
 
 interface LayoutProps {
   children: ReactNode;
@@ -24,15 +25,15 @@ export const Layout = ({ children }: LayoutProps) => {
   const navLinkClass = (path: string) => {
     const baseClasses = "px-3 py-2 rounded-md text-sm font-medium transition-colors";
     return isActive(path)
-      ? `${baseClasses} bg-indigo-700 text-white`
-      : `${baseClasses} text-indigo-100 hover:bg-indigo-600 hover:text-white`;
+      ? `${baseClasses} bg-interactive-primary-hover text-white`
+      : `${baseClasses} text-white/90 hover:bg-interactive-primary-hover hover:text-white`;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen surface-sunken">
       {/* Navigation Bar */}
       {isAuthenticated && (
-        <nav className="bg-indigo-600 shadow-lg">
+        <nav className="bg-interactive-primary shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
               <div className="flex items-center">
@@ -57,12 +58,18 @@ export const Layout = ({ children }: LayoutProps) => {
                 {/* Notification Bell */}
                 <NotificationBell />
 
-                <button
+                <Link to="/settings" className={navLinkClass('/settings')}>
+                  Settings
+                </Link>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={handleLogout}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-700 hover:bg-indigo-800 rounded-md"
+                  className="text-white hover:bg-interactive-primary-hover"
                 >
                   Logout
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -75,9 +82,9 @@ export const Layout = ({ children }: LayoutProps) => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-auto">
+      <footer className="surface-base border-t border-theme-default mt-auto">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-content-secondary">
             &copy; 2025 ActionPhase. A collaborative role-playing platform.
           </p>
         </div>

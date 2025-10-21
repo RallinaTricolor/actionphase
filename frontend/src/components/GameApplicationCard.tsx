@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { GameApplication, GameState } from '../types/games';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from '../types/games';
+import { Button } from './ui';
 
 interface GameApplicationCardProps {
   application: GameApplication;
@@ -60,17 +61,17 @@ export const GameApplicationCard = ({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+    <div className="surface-base border border-theme-default rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-content-primary">
             {application.username || `User ${application.user_id}`}
           </h3>
-          <p className="text-sm text-gray-500 capitalize">
+          <p className="text-sm text-content-secondary capitalize">
             Applying as {application.role}
           </p>
           {application.email && (
-            <p className="text-sm text-gray-500">{application.email}</p>
+            <p className="text-sm text-content-secondary">{application.email}</p>
           )}
         </div>
         <span className={`px-3 py-1 rounded-full text-sm font-medium ${APPLICATION_STATUS_COLORS[application.status]}`}>
@@ -80,14 +81,14 @@ export const GameApplicationCard = ({
 
       {application.message && (
         <div className="mb-4">
-          <h4 className="font-medium text-gray-900 mb-2">Application Message:</h4>
-          <p className="text-gray-700 bg-gray-50 p-3 rounded-lg text-sm leading-relaxed">
+          <h4 className="font-medium text-content-primary mb-2">Application Message:</h4>
+          <p className="text-content-primary surface-raised p-3 rounded-lg text-sm leading-relaxed">
             "{application.message}"
           </p>
         </div>
       )}
 
-      <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
+      <div className="flex justify-between items-center text-sm text-content-secondary mb-4">
         <span>Applied: {formatDate(application.applied_at)}</span>
         {application.reviewed_at && (
           <span>Reviewed: {formatDate(application.reviewed_at)}</span>
@@ -95,42 +96,46 @@ export const GameApplicationCard = ({
       </div>
 
       {isGM && gameState === 'recruitment' && onApprove && onReject && (
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+        <div className="flex justify-end gap-3 pt-4 border-t border-theme-default">
           {application.status === 'pending' && (
             <>
-              <button
+              <Button
+                variant="danger"
+                size="sm"
                 onClick={handleReject}
                 disabled={actionLoading}
-                className="bg-red-600 hover:bg-red-700 text-white py-1.5 px-3 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {actionLoading ? 'Processing...' : 'Reject'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="success"
+                size="sm"
                 onClick={handleApprove}
                 disabled={actionLoading}
-                className="bg-green-600 hover:bg-green-700 text-white py-1.5 px-3 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {actionLoading ? 'Processing...' : 'Approve'}
-              </button>
+              </Button>
             </>
           )}
           {application.status === 'approved' && (
-            <button
+            <Button
+              variant="danger"
+              size="sm"
               onClick={handleReject}
               disabled={actionLoading}
-              className="bg-red-600 hover:bg-red-700 text-white py-1.5 px-3 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {actionLoading ? 'Processing...' : 'Reject'}
-            </button>
+            </Button>
           )}
           {application.status === 'rejected' && (
-            <button
+            <Button
+              variant="success"
+              size="sm"
               onClick={handleApprove}
               disabled={actionLoading}
-              className="bg-green-600 hover:bg-green-700 text-white py-1.5 px-3 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {actionLoading ? 'Processing...' : 'Approve'}
-            </button>
+            </Button>
           )}
         </div>
       )}

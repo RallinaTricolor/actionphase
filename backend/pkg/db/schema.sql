@@ -334,3 +334,16 @@ CREATE TABLE user_common_room_reads (
 CREATE INDEX idx_user_common_room_reads_user_game ON user_common_room_reads(user_id, game_id);
 CREATE INDEX idx_user_common_room_reads_post ON user_common_room_reads(post_id);
 CREATE INDEX idx_user_common_room_reads_updated ON user_common_room_reads(updated_at DESC);
+
+-- User Preferences table
+CREATE TABLE user_preferences (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
+CREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);
+CREATE INDEX idx_user_preferences_jsonb ON user_preferences USING GIN (preferences);

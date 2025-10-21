@@ -4,6 +4,7 @@ import { AbilityCard } from './AbilityCard';
 import { SkillCard } from './SkillCard';
 import { AddAbilityModal } from './AddAbilityModal';
 import { AddSkillModal } from './AddSkillModal';
+import { Button } from './ui';
 
 interface AbilitiesManagerProps {
   abilities: CharacterAbility[];
@@ -63,46 +64,49 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
   return (
     <div>
       {/* Tab Navigation */}
-      <div className="flex space-x-1 mb-6 border-b border-gray-200">
-        <button
+      <div className="flex space-x-1 mb-6 border-b border-theme-default">
+        <Button
+          variant="ghost"
           onClick={() => setActiveTab('abilities')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'abilities'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-interactive-primary text-interactive-primary'
+              : 'border-transparent text-content-secondary hover:text-content-primary'
           }`}
         >
           Abilities ({abilities.length})
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           onClick={() => setActiveTab('skills')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'skills'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-interactive-primary text-interactive-primary'
+              : 'border-transparent text-content-secondary hover:text-content-primary'
           }`}
         >
           Skills ({skills.length})
-        </button>
+        </Button>
       </div>
 
       {/* Abilities Tab */}
       {activeTab === 'abilities' && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Abilities</h3>
+            <h3 className="text-lg font-medium text-content-primary">Abilities</h3>
             {canEdit && (
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => setShowAddAbility(true)}
-                className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 Add Ability
-              </button>
+              </Button>
             )}
           </div>
 
           {abilities.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-content-secondary">
               <p>No abilities yet.</p>
               {canEdit && <p className="text-sm mt-1">Click "Add Ability" to get started.</p>}
             </div>
@@ -133,19 +137,20 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
       {activeTab === 'skills' && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Skills</h3>
+            <h3 className="text-lg font-medium text-content-primary">Skills</h3>
             {canEdit && (
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => setShowAddSkill(true)}
-                className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 Add Skill
-              </button>
+              </Button>
             )}
           </div>
 
           {skills.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-content-secondary">
               <p>No skills yet.</p>
               {canEdit && <p className="text-sm mt-1">Click "Add Skill" to get started.</p>}
             </div>

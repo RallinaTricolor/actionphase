@@ -17,9 +17,9 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen surface-sunken flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h1 className="text-center text-3xl font-extrabold text-gray-900 mb-8">
+        <h1 className="text-center text-3xl font-extrabold text-content-primary mb-8">
           ActionPhase
         </h1>
 
@@ -37,7 +37,7 @@ export const LoginPage = () => {
         <div className="mt-6 text-center">
           <button
             onClick={() => setShowRegister(!showRegister)}
-            className="text-blue-600 hover:text-blue-500 font-medium"
+            className="text-interactive-primary hover:opacity-80 font-medium transition-opacity"
           >
             {showRegister
               ? "Already have an account? Sign in"

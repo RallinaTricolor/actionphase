@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { apiClient } from '../lib/api';
+import { Button, Input, Alert, Textarea, DateTimeInput } from './ui';
 import type { CreateGameRequest } from '../types/games';
 
 interface CreateGameFormProps {
@@ -65,156 +66,120 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div>
+      {error && (
+        <Alert variant="danger" className="mb-6" dismissible onDismiss={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600">{error}</p>
-          </div>
-        )}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Title */}
+        <Input
+          label="Game Title"
+          id="title"
+          type="text"
+          required
+          value={formData.title}
+          onChange={(e) => handleChange('title', e.target.value)}
+          placeholder="Enter a compelling game title"
+          maxLength={255}
+        />
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Title */}
-          <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-              Game Title *
-            </label>
-            <input
-              type="text"
-              id="title"
-              value={formData.title}
-              onChange={(e) => handleChange('title', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter a compelling game title"
-              maxLength={255}
-              required
-            />
-          </div>
+        {/* Description */}
+        <Textarea
+          label="Description"
+          id="description"
+          value={formData.description}
+          onChange={(e) => handleChange('description', e.target.value)}
+          rows={4}
+          required
+          placeholder="Describe your game world, setting, and what players can expect..."
+        />
 
-          {/* Description */}
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-              Description *
-            </label>
-            <textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleChange('description', e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Describe your game world, setting, and what players can expect..."
-              required
-            />
-          </div>
+        {/* Genre */}
+        <Input
+          label="Genre"
+          id="genre"
+          type="text"
+          optional
+          value={formData.genre}
+          onChange={(e) => handleChange('genre', e.target.value)}
+          placeholder="e.g., Fantasy, Sci-Fi, Horror, Modern"
+          maxLength={100}
+        />
 
-          {/* Genre */}
-          <div>
-            <label htmlFor="genre" className="block text-sm font-medium text-gray-700 mb-2">
-              Genre
-            </label>
-            <input
-              type="text"
-              id="genre"
-              value={formData.genre}
-              onChange={(e) => handleChange('genre', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g., Fantasy, Sci-Fi, Horror, Modern"
-              maxLength={100}
-            />
-          </div>
+        {/* Max Players */}
+        <Input
+          label="Maximum Players"
+          id="max_players"
+          type="number"
+          value={formData.max_players || ''}
+          onChange={(e) => handleChange('max_players', parseInt(e.target.value) || 0)}
+          helperText="Leave empty for default (6 players)"
+          min={1}
+          max={20}
+          placeholder="6"
+        />
 
-          {/* Max Players */}
-          <div>
-            <label htmlFor="max_players" className="block text-sm font-medium text-gray-700 mb-2">
-              Maximum Players
-            </label>
-            <input
-              type="number"
-              id="max_players"
-              value={formData.max_players || ''}
-              onChange={(e) => handleChange('max_players', parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              min="1"
-              max="20"
-              placeholder="6"
-            />
-            <p className="text-sm text-gray-500 mt-1">Leave empty for default (6 players)</p>
-          </div>
+        {/* Dates */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <DateTimeInput
+            label="Recruitment Deadline"
+            id="recruitment_deadline"
+            optional
+            value={formData.recruitment_deadline}
+            onChange={(e) => handleChange('recruitment_deadline', e.target.value)}
+          />
 
-          {/* Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="recruitment_deadline" className="block text-sm font-medium text-gray-700 mb-2">
-                Recruitment Deadline
-              </label>
-              <input
-                type="datetime-local"
-                id="recruitment_deadline"
-                value={formData.recruitment_deadline}
-                onChange={(e) => handleChange('recruitment_deadline', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+          <DateTimeInput
+            label="Start Date"
+            id="start_date"
+            optional
+            value={formData.start_date}
+            onChange={(e) => handleChange('start_date', e.target.value)}
+          />
 
-            <div>
-              <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-2">
-                Start Date
-              </label>
-              <input
-                type="datetime-local"
-                id="start_date"
-                value={formData.start_date}
-                onChange={(e) => handleChange('start_date', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+          <DateTimeInput
+            label="End Date"
+            id="end_date"
+            optional
+            value={formData.end_date}
+            onChange={(e) => handleChange('end_date', e.target.value)}
+          />
+        </div>
 
-            <div>
-              <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-2">
-                End Date
-              </label>
-              <input
-                type="datetime-local"
-                id="end_date"
-                value={formData.end_date}
-                onChange={(e) => handleChange('end_date', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
+        {/* Info Box */}
+        <Alert variant="info" title="Game Creation Process">
+          <ul className="text-sm space-y-1 list-disc list-inside">
+            <li>Your game will start in "Setup" mode after creation</li>
+            <li>Switch to "Recruitment" when ready to accept players</li>
+            <li>Players can join until the recruitment deadline</li>
+            <li>Move to "Character Creation" once recruitment is complete</li>
+          </ul>
+        </Alert>
 
-          {/* Info Box */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-blue-800 mb-2">Game Creation Process</h4>
-            <ul className="text-sm text-blue-700 space-y-1">
-              <li>• Your game will start in "Setup" mode after creation</li>
-              <li>• Switch to "Recruitment" when ready to accept players</li>
-              <li>• Players can join until the recruitment deadline</li>
-              <li>• Move to "Character Creation" once recruitment is complete</li>
-            </ul>
-          </div>
-
-          {/* Buttons */}
-          <div className="flex gap-4 pt-4">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+        {/* Buttons */}
+        <div className="flex gap-4 pt-4">
+          <Button
+            type="submit"
+            variant="primary"
+            loading={isSubmitting}
+            className="flex-1"
+          >
+            {isSubmitting ? 'Creating Game...' : 'Create Game'}
+          </Button>
+          {onCancel && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCancel}
+              className="px-6"
             >
-              {isSubmitting ? 'Creating Game...' : 'Create Game'}
-            </button>
-            {onCancel && (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
+              Cancel
+            </Button>
+          )}
+        </div>
+      </form>
     </div>
   );
 };

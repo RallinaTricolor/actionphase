@@ -14,3 +14,6 @@ export {
   useOptionalGameContext,
   type UserGameRole as GameUserRole,
 } from './GameContext';
+
+// Theme Context
+export { ThemeProvider, useTheme } from './ThemeContext';

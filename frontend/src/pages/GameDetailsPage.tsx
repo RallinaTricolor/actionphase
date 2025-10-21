@@ -86,21 +86,21 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen surface-page flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-interactive-primary"></div>
       </div>
     );
   }
 
   if (!game) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Error</h2>
-          <p className="text-gray-600 mb-4">Game not found</p>
+      <div className="min-h-screen surface-page flex items-center justify-center">
+        <div className="surface-base p-8 rounded-lg shadow-md max-w-md w-full">
+          <h2 className="text-xl font-semibold text-content-primary mb-4">Error</h2>
+          <p className="text-content-secondary mb-4">Game not found</p>
           <button
             onClick={() => window.history.back()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
+            className="w-full bg-interactive-primary hover:bg-interactive-primary-hover text-white py-2 px-4 rounded-lg transition-colors"
           >
             Go Back
           </button>
@@ -112,15 +112,15 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   const stateActions = isGM ? getStateActions(game.state) : [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen surface-page">
       <div className="max-w-6xl mx-auto py-8 px-4">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+        <div className="surface-base rounded-lg shadow-md p-8 mb-6">
           <div className="flex justify-between items-start mb-4">
             <GameHeader game={game} />
           </div>
 
-          <p className="text-gray-700 mb-6 leading-relaxed">{game.description}</p>
+          <p className="text-content-secondary mb-6 leading-relaxed">{game.description}</p>
 
           {/* Current Phase Summary - Only show when game is in progress */}
           {game.state === 'in_progress' && currentPhaseData?.phase && (
@@ -162,7 +162,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
             />
 
             {/* Tab Content */}
-            <div className={`bg-white rounded-b-lg shadow-md ${activeTab === 'common-room' ? 'p-4' : 'p-6'}`}>
+            <div className={`surface-base rounded-b-lg shadow-md ${activeTab === 'common-room' ? 'p-4' : 'p-6'}`}>
               <GameTabContent
                 activeTab={activeTab}
                 gameId={gameId}

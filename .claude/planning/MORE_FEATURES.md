@@ -10,6 +10,7 @@ Ask me questions about the following feature requests to clarify requirements:
   - Audience members should receive notifications for private messages and common room activity
   - Audience members should appear in the game roster with a special "Audience" label
   - Audience members should have the same read comment tracking as regular players
+  - GM should be able to set an option for the game to auto-accept all Audience applications
 - Players need a way to see all the new comments outside threading order
   - Should likely be a separate tab in the common room tab
   - Should show all new comments since the player's last visit, regardless of which post they belong to
@@ -17,4 +18,14 @@ Ask me questions about the following feature requests to clarify requirements:
   - Each comment should render the parent comment as well for context
   - There should be a "Mark all as read" button to clear the new comments list
 - Admin view
+  - Admin users need to be able to toggle admin mode which will allow them full access
+  - Can control games as though they were a GM, delete (but NOT edit) comments/posts
+  - View games as a GM/Audience member
 - GM Handouts / Informational Documents
+  - GM needs to be able to create informational documents (with markdown support) to publicly show players
+  - These documents are purely for reference and not part of the game
+  - Only the GM should be able to create or reply to these documents, but they can otherwise act like common room posts
+  - These documents need a draft/published state but exist in all game states, as the GM might have them available while recruiting
+  - These documents need a title and have content
+  - They should likely be in a separate tab in the Game Details view
+- Comment editing and deletion

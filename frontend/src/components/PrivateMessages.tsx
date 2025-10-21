@@ -6,6 +6,7 @@ import { usePrivateMessagesLayout } from '../hooks/usePrivateMessagesLayout';
 import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 import type { ConversationListItem } from '../types/conversations';
+import { Button } from './ui';
 
 interface PrivateMessagesProps {
   gameId: number;
@@ -86,16 +87,17 @@ export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMess
       <div className="h-full">
         {!selectedConversationId ? (
           /* Conversation List (full screen on mobile) */
-          <div className="h-full flex flex-col bg-white">
-            <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <div className="h-full flex flex-col surface-base">
+            <div className="p-4 border-b border-theme-default surface-raised">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-bold text-gray-900">Private Messages</h2>
-                <button
+                <h2 className="text-lg font-bold text-content-primary">Private Messages</h2>
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={() => setShowNewConversationModal(true)}
-                  className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                 >
                   + New
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -110,18 +112,20 @@ export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMess
           </div>
         ) : (
           /* Message Thread (full screen on mobile) */
-          <div className="h-full flex flex-col bg-white">
+          <div className="h-full flex flex-col surface-base">
             {/* Back button */}
-            <div className="p-3 border-b border-gray-200 bg-white sticky top-0 z-10">
-              <button
+            <div className="p-3 border-b border-theme-default surface-base sticky top-0 z-10">
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleBackToList}
-                className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
+                className="flex items-center text-interactive-primary hover:text-interactive-primary-hover font-medium h-auto p-0"
               >
                 <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Back to conversations
-              </button>
+              </Button>
             </div>
 
             <div className="flex-1 overflow-hidden">
@@ -155,37 +159,40 @@ export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMess
       {/* Conversation List Sidebar */}
       <div
         className={`
-          border-r border-gray-200 bg-white flex flex-col transition-all duration-300
+          border-r border-theme-default surface-base flex flex-col transition-all duration-300
           ${sidebarCollapsed ? 'w-16' : ''}
         `}
         style={!sidebarCollapsed ? { width: `${sidebarWidth}px` } : undefined}
       >
-        <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+        <div className="p-4 border-b border-theme-default surface-raised flex items-center justify-between">
           {!sidebarCollapsed && (
             <>
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Messages</h2>
-                <p className="text-xs text-gray-600">Private conversations</p>
+                <h2 className="text-lg font-bold text-content-primary">Messages</h2>
+                <p className="text-xs text-content-secondary">Private conversations</p>
               </div>
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => setShowNewConversationModal(true)}
-                className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                 title="New Conversation"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-              </button>
+              </Button>
             </>
           )}
 
           {/* Toggle Button */}
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={toggleSidebar}
-            className="p-2 hover:bg-gray-200 rounded-md transition-colors"
+            className="p-2 hover:surface-raised rounded-md"
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-content-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -193,7 +200,7 @@ export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMess
                 d={sidebarCollapsed ? "M13 5l7 7-7 7M5 5l7 7-7 7" : "M11 19l-7-7 7-7m8 14l-7-7 7-7"}
               />
             </svg>
-          </button>
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -208,7 +215,7 @@ export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMess
       </div>
 
       {/* Message Thread */}
-      <div className="flex-1 bg-white">
+      <div className="flex-1 surface-base">
         {selectedConversationId ? (
           <MessageThread
             gameId={gameId}
@@ -219,8 +226,8 @@ export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMess
           />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center text-gray-500">
-              <svg className="w-20 h-20 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center text-content-secondary">
+              <svg className="w-20 h-20 mx-auto mb-4 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
               <p className="text-lg mb-2">No conversation selected</p>

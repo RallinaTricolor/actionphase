@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useErrorHandler } from '../hooks/useErrorHandler';
 import { ErrorDisplay } from './ErrorDisplay';
+import { Input, Button } from './ui';
 import type { LoginRequest } from '../types/auth';
 
 interface LoginFormProps {
@@ -37,41 +38,31 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Login</h2>
+    <div className="max-w-md mx-auto surface-base rounded-lg shadow-md border border-theme-default p-6">
+      <h2 className="text-2xl font-bold text-content-primary mb-6">Login</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-            Username
-          </label>
-          <input
-            id="username"
-            name="username"
-            type="text"
-            required
-            value={formData.username}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your username"
-          />
-        </div>
+        <Input
+          label="Username"
+          id="username"
+          name="username"
+          type="text"
+          required
+          value={formData.username}
+          onChange={handleChange}
+          placeholder="Enter your username"
+        />
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your password"
-          />
-        </div>
+        <Input
+          label="Password"
+          id="password"
+          name="password"
+          type="password"
+          required
+          value={formData.password}
+          onChange={handleChange}
+          placeholder="Enter your password"
+        />
 
         <ErrorDisplay
           error={error}
@@ -80,13 +71,14 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           compact
         />
 
-        <button
+        <Button
           type="submit"
-          disabled={isLoading}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="primary"
+          loading={isLoading}
+          className="w-full"
         >
-          {isLoading ? 'Logging in...' : 'Login'}
-        </button>
+          Login
+        </Button>
       </form>
     </div>
   );

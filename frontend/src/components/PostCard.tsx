@@ -10,6 +10,7 @@ import { apiClient } from '../lib/api';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
 import { useMarkPostAsRead, usePostUnreadCommentIDs } from '../hooks/useReadTracking';
+import { Button, Select } from './ui';
 
 interface PostCardProps {
   post: Message;
@@ -198,11 +199,11 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   return (
     <div ref={postRef} data-testid="post-card" className="mb-8">
       {/* Post Card - Contains both post and comments */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <div className="surface-base rounded-xl shadow-lg border border-theme-default overflow-hidden">
       {/* GM Post Header Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-200">
+      <div className="bg-interactive-primary-subtle border-b-2 border-interactive-primary">
         {/* Post Header - Always visible */}
-        <div className="p-4 bg-white bg-opacity-90 border-b border-blue-200">
+        <div className="p-4 surface-base bg-opacity-90 border-b border-interactive-primary">
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1">
               <div className="flex items-center gap-3">
@@ -212,22 +213,22 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                   size="md"
                 />
                 <div className="flex items-center gap-2 flex-1">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-interactive-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                   </svg>
-                  <h3 className="font-bold text-xl text-gray-900">GM Post: {post.character_name}</h3>
+                  <h3 className="font-bold text-xl text-content-primary">GM Post: {post.character_name}</h3>
                   {unreadCommentIDs.length > 0 && (
-                    <span className="ml-2 px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded">
+                    <span className="ml-2 px-2 py-1 text-xs font-semibold bg-interactive-primary-subtle text-interactive-primary rounded">
                       {unreadCommentIDs.length} new {unreadCommentIDs.length === 1 ? 'comment' : 'comments'}
                     </span>
                   )}
                 </div>
               </div>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-content-secondary mt-1">
                 Posted by @{post.author_username} · {formatDate(post.created_at)}
-                {post.is_edited && <span className="ml-1 text-gray-400">(edited)</span>}
+                {post.is_edited && <span className="ml-1 text-content-tertiary">(edited)</span>}
                 {isAuthor && (
-                  <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">You</span>
+                  <span className="ml-2 text-xs bg-interactive-primary-subtle text-interactive-primary px-2 py-0.5 rounded">You</span>
                 )}
               </p>
             </div>
@@ -235,9 +236,11 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
 
           {/* Toggle Button for Long Content */}
           {isLongContent && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setIsPostCollapsed(!isPostCollapsed)}
-              className="mt-2 flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-800 transition-colors"
+              className="mt-2 text-interactive-primary hover:text-interactive-primary-hover"
             >
               {isPostCollapsed ? (
                 <>
@@ -254,14 +257,14 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                   Collapse Post
                 </>
               )}
-            </button>
+            </Button>
           )}
         </div>
 
         {/* Post Content - Collapsible for long content */}
         {(!isLongContent || !isPostCollapsed) && (
-          <div className="p-6 bg-white">
-            <div className="prose prose-sm max-w-none">
+          <div className="p-6 surface-base">
+            <div className="prose dark:prose-invert prose-sm max-w-none">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeSanitize]}
@@ -274,11 +277,12 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       </div>
 
       {/* Comments Section - Inside the card */}
-      <div className="bg-gray-50 border-t border-gray-200">
-        <div className="p-4 flex items-center gap-4 text-sm text-gray-600 flex-wrap border-b border-gray-200">
-          <button
+      <div className="surface-raised border-t border-theme-default">
+        <div className="p-4 flex items-center gap-4 text-sm text-content-secondary flex-wrap border-b border-theme-default">
+          <Button
+            variant="ghost"
             onClick={handleShowComments}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+            className="flex items-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -286,32 +290,33 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
             <span>
               {showComments ? 'Hide' : 'Show'} Comments ({post.comment_count || 0})
             </span>
-          </button>
+          </Button>
 
           {!isCommenting && (
-            <button
+            <Button
+              variant="primary"
               onClick={() => setIsCommenting(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              className="flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
               <span>Add Comment</span>
-            </button>
+            </Button>
           )}
         </div>
 
         {/* Inline Reply Form (at top level) */}
         {isCommenting && (
           <div className="px-4 pb-4">
-            <form onSubmit={handleSubmitComment} className="bg-white rounded-lg p-4 border border-gray-300 shadow-sm">
+            <form onSubmit={handleSubmitComment} className="surface-base rounded-lg p-4 border border-theme-default shadow-sm">
             {controllableCharacters.length > 0 ? (
               <>
                 {controllableCharacters.length > 1 && (
-                  <select
+                  <Select
                     value={selectedCharacterId || ''}
                     onChange={(e) => setSelectedCharacterId(Number(e.target.value))}
-                    className="w-full mb-3 px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="mb-3"
                     disabled={isSubmitting}
                   >
                     {controllableCharacters.map((char) => (
@@ -319,7 +324,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                         Reply as {char.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 )}
 
                 <div className="mb-3">
@@ -333,28 +338,28 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                 </div>
 
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     type="submit"
+                    variant="primary"
                     disabled={isSubmitting || !replyContent.trim()}
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
                   >
                     {isSubmitting ? 'Posting...' : 'Comment'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="ghost"
                     onClick={() => {
                       setIsCommenting(false);
                       setReplyContent('');
                     }}
                     disabled={isSubmitting}
-                    className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : (
-              <p className="text-sm text-gray-600">You need a character to comment.</p>
+              <p className="text-sm text-content-secondary">You need a character to comment.</p>
             )}
           </form>
           </div>
@@ -364,9 +369,9 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
         {showComments && (
           <div className="p-4">
           {loadingComments ? (
-            <div className="text-sm text-gray-500 text-center py-4">Loading comments...</div>
+            <div className="text-sm text-content-secondary text-center py-4">Loading comments...</div>
           ) : topLevelComments.length === 0 ? (
-            <p className="text-sm text-gray-500 italic text-center py-4">No comments yet. Be the first to reply!</p>
+            <p className="text-sm text-content-secondary italic text-center py-4">No comments yet. Be the first to reply!</p>
           ) : (
             <div className="space-y-3">
               {topLevelComments.map((comment) => (

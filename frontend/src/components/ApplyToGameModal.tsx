@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { apiClient } from '../lib/api';
 import type { ApplyToGameRequest } from '../types/games';
 import { Modal } from './Modal';
+import { Button, Alert, Select, Textarea } from './ui';
 
 interface ApplyToGameModalProps {
   gameId: number;
@@ -64,67 +65,55 @@ export const ApplyToGameModal = ({
     <Modal isOpen={isOpen} onClose={handleClose} title={`Apply to ${gameTitle}`}>
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600 text-sm">{error}</p>
-          </div>
+          <Alert variant="danger">{error}</Alert>
         )}
 
-        <div>
-          <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
-            Role
-          </label>
-          <select
-            id="role"
-            value={formData.role}
-            onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'player' | 'audience' }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            disabled={submitting}
-          >
-            <option value="player">Player</option>
-            <option value="audience">Audience</option>
-          </select>
-          <p className="text-xs text-gray-500 mt-1">
-            {formData.role === 'player'
+        <Select
+          label="Role"
+          id="role"
+          value={formData.role}
+          onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'player' | 'audience' }))}
+          disabled={submitting}
+          helperText={
+            formData.role === 'player'
               ? 'Actively participate in the game'
-              : 'Watch and follow the game story'}
-          </p>
-        </div>
+              : 'Watch and follow the game story'
+          }
+        >
+          <option value="player">Player</option>
+          <option value="audience">Audience</option>
+        </Select>
 
-        <div>
-          <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-            Application Message
-            <span className="text-gray-400 font-normal"> (Optional)</span>
-          </label>
-          <textarea
-            id="message"
-            value={formData.message}
-            onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-            placeholder="Tell the GM why you'd like to join this game..."
-            rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-            disabled={submitting}
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Share your interest in the game, character ideas, or experience with the genre.
-          </p>
-        </div>
+        <Textarea
+          label="Application Message"
+          id="message"
+          optional
+          value={formData.message}
+          onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+          placeholder="Tell the GM why you'd like to join this game..."
+          rows={4}
+          disabled={submitting}
+          helperText="Share your interest in the game, character ideas, or experience with the genre."
+        />
 
         <div className="flex gap-3 pt-4">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={handleClose}
             disabled={submitting}
-            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={submitting}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="primary"
+            loading={submitting}
+            className="flex-1"
           >
-            {submitting ? 'Submitting...' : 'Submit Application'}
-          </button>
+            Submit Application
+          </Button>
         </div>
       </form>
     </Modal>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Character } from '../types/characters';
 import { CommentEditor } from './CommentEditor';
+import { Button, Select, Alert } from './ui';
 
 interface CreatePostFormProps {
   gameId: number;
@@ -50,46 +51,39 @@ export function CreatePostForm({ gameId, characters, allCharacters, onSubmit, is
 
   if (characters.length === 0) {
     return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <p className="text-yellow-800">
-          You need a character to post in the Common Room. Please create a character first.
-        </p>
-      </div>
+      <Alert variant="warning">
+        You need a character to post in the Common Room. Please create a character first.
+      </Alert>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-lg rounded-lg p-6 mb-6">
+    <form onSubmit={handleSubmit} className="bg-interactive-primary-subtle border-2 border-interactive-primary shadow-lg rounded-lg p-6 mb-6">
       <div className="flex items-center gap-2 mb-4">
-        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 text-interactive-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
         </svg>
-        <h3 className="text-lg font-bold text-gray-900">Create New GM Post</h3>
+        <h3 className="text-lg font-bold text-content-primary">Create New GM Post</h3>
       </div>
 
-      <div className="bg-blue-100 border border-blue-300 rounded-lg p-3 mb-4">
-        <p className="text-sm text-blue-800">
-          <strong>💡 Tip:</strong> You can use Markdown formatting for rich text. Type <code className="bg-blue-200 px-1 rounded">@</code> to mention characters and trigger autocomplete.
-        </p>
-      </div>
+      <Alert variant="info" className="mb-4">
+        <strong>💡 Tip:</strong> You can use Markdown formatting for rich text. Type <code className="surface-sunken px-1 rounded">@</code> to mention characters and trigger autocomplete.
+      </Alert>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded p-3 mb-4">
-          <p className="text-red-800 text-sm">{error}</p>
-        </div>
+        <Alert variant="danger" className="mb-4">
+          {error}
+        </Alert>
       )}
 
       {/* Only show character selector if user has multiple characters */}
       {characters.length > 1 && (
         <div className="mb-4">
-          <label htmlFor="character" className="block text-sm font-medium text-gray-700 mb-2">
-            Post as:
-          </label>
-          <select
+          <Select
             id="character"
+            label="Post as:"
             value={selectedCharacterId || ''}
             onChange={(e) => setSelectedCharacterId(Number(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={isSubmitting}
           >
             {characters.map((char) => (
@@ -97,12 +91,12 @@ export function CreatePostForm({ gameId, characters, allCharacters, onSubmit, is
                 {char.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
       <div className="mb-4">
-        <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="content" className="block text-sm font-medium text-content-primary mb-2">
           Post Content (Markdown supported):
         </label>
         <CommentEditor
@@ -115,18 +109,19 @@ export function CreatePostForm({ gameId, characters, allCharacters, onSubmit, is
           characters={allCharacters || characters}
           showPreviewByDefault={false}
         />
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-content-secondary mt-1">
           {content.length} characters (longer posts will be collapsible for players)
         </p>
       </div>
 
-      <button
+      <Button
         type="submit"
+        variant="primary"
         disabled={isSubmitting || !content.trim()}
-        className="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold text-lg"
+        className="w-full text-lg py-3"
       >
         {isSubmitting ? 'Creating GM Post...' : 'Create GM Post'}
-      </button>
+      </Button>
     </form>
   );
 }

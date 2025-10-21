@@ -1,6 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
 import type { EnrichedGameListItem } from '../types/games';
 import { EnhancedGameCard } from './EnhancedGameCard';
+import { Card, Spinner, Alert } from './ui';
 
 interface GamesListProps {
   games: EnrichedGameListItem[];
@@ -23,38 +24,31 @@ export const GamesList = ({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="animate-pulse">
-          <div className="space-y-4">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <Card variant="elevated" padding="lg" className="flex items-center justify-center min-h-[300px]">
+        <Spinner size="lg" label="Loading games..." />
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Games</h3>
-          <p className="text-red-600">{error}</p>
-        </div>
-      </div>
+      <Card variant="elevated" padding="lg">
+        <Alert variant="danger" title="Error Loading Games">
+          {error}
+        </Alert>
+      </Card>
     );
   }
 
-  if (games.length === 0) {
+  if (!games || games.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12">
+      <Card variant="elevated" padding="xl">
         <div className="text-center">
-          <div className="text-gray-400 text-4xl mb-4">🎲</div>
-          <p className="text-gray-600 text-lg">No games match your current filters.</p>
-          <p className="text-gray-500 text-sm mt-2">Try adjusting your filter criteria.</p>
+          <div className="text-content-tertiary text-4xl mb-4">🎲</div>
+          <p className="text-content-primary text-lg">No games match your current filters.</p>
+          <p className="text-content-tertiary text-sm mt-2">Try adjusting your filter criteria.</p>
         </div>
-      </div>
+      </Card>
     );
   }
 
@@ -67,7 +61,7 @@ export const GamesList = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <Card variant="elevated" padding="lg">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {games.map((game) => (
           <EnhancedGameCard
@@ -80,6 +74,6 @@ export const GamesList = ({
           />
         ))}
       </div>
-    </div>
+    </Card>
   );
 };

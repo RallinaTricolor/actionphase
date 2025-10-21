@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { apiClient } from '../lib/api';
+import { Button, Select, Textarea, Alert } from './ui';
 import type { PrivateMessage, ConversationWithDetails, ConversationListItem } from '../types/conversations';
 import type { Character } from '../types/characters';
 
@@ -214,7 +215,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-gray-600">Loading messages...</div>
+        <div className="text-content-secondary">Loading messages...</div>
       </div>
     );
   }
@@ -222,9 +223,9 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
   if (error) {
     return (
       <div className="p-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+        <Alert variant="danger">
           {error}
-        </div>
+        </Alert>
       </div>
     );
   }
@@ -233,11 +234,11 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
     <div className="flex flex-col h-full">
       {/* Conversation Header */}
       {conversation && conversation.conversation && (
-        <div className="bg-white border-b border-gray-200 p-4">
-          <h2 className="text-xl font-bold text-gray-900">
+        <div className="surface-base border-b border-theme-default p-4">
+          <h2 className="text-xl font-bold text-content-primary">
             {conversation.conversation.title || 'Untitled Conversation'}
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-content-secondary mt-1">
             Participants: {conversation.participants?.map(p => p.character_name || p.username).join(', ') || 'None'}
           </p>
         </div>
@@ -247,7 +248,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center text-gray-500">
+            <div className="text-center text-content-secondary">
               <p className="mb-2">No messages yet</p>
               <p className="text-sm">Start the conversation!</p>
             </div>
@@ -261,24 +262,24 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                 {/* "New messages" divider */}
                 {isFirstUnread && (
                   <div ref={firstUnreadRef} className="flex items-center gap-3 my-6">
-                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-300 to-blue-300"></div>
-                    <span className="text-sm font-semibold text-blue-600 px-3 py-1 bg-blue-50 rounded-full border border-blue-200">
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-interactive-primary to-interactive-primary"></div>
+                    <span className="text-sm font-semibold text-interactive-primary px-3 py-1 bg-interactive-primary-subtle rounded-full border border-interactive-primary">
                       New messages
                     </span>
-                    <div className="flex-1 h-px bg-gradient-to-l from-transparent via-blue-300 to-blue-300"></div>
+                    <div className="flex-1 h-px bg-gradient-to-l from-transparent via-interactive-primary to-interactive-primary"></div>
                   </div>
                 )}
 
                 <div className="flex flex-col">
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-content-primary">
                       {message.sender_character_name || message.sender_username}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-content-tertiary">
                       {formatTimestamp(message.created_at)}
                     </span>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3 prose prose-sm max-w-none">
+                  <div className="surface-raised rounded-lg p-3 prose dark:prose-invert prose-sm max-w-none">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       rehypePlugins={[rehypeSanitize]}
@@ -295,53 +296,55 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       </div>
 
       {/* Message Input */}
-      <div className="bg-white border-t border-gray-200 p-4">
+      <div className="surface-base border-t border-theme-default p-4">
         <form onSubmit={handleSendMessage}>
           {participantCharacters.length > 0 ? (
             <>
               {participantCharacters.length > 1 && (
-                <select
-                  value={selectedCharacterId || ''}
-                  onChange={(e) => setSelectedCharacterId(Number(e.target.value))}
-                  className="w-full mb-3 px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={sending}
-                >
-                  {participantCharacters.map((char) => (
-                    <option key={char.id} value={char.id}>
-                      Send as {char.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="mb-3">
+                  <Select
+                    value={selectedCharacterId?.toString() || ''}
+                    onChange={(e) => setSelectedCharacterId(Number(e.target.value))}
+                    disabled={sending}
+                  >
+                    {participantCharacters.map((char) => (
+                      <option key={char.id} value={char.id}>
+                        Send as {char.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
               )}
 
-              <div className="flex gap-2">
-                <textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  placeholder="Type your message... (Markdown supported)"
-                  disabled={sending}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                      handleSendMessage(e);
-                    }
-                  }}
-                />
-                <button
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <Textarea
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    rows={3}
+                    placeholder="Type your message... (Markdown supported)"
+                    disabled={sending}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                        handleSendMessage(e);
+                      }
+                    }}
+                  />
+                </div>
+                <Button
                   type="submit"
+                  variant="primary"
                   disabled={sending || !newMessage.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium self-end"
                 >
                   {sending ? 'Sending...' : 'Send'}
-                </button>
+                </Button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-content-tertiary mt-1">
                 Press Ctrl/Cmd + Enter to send
               </p>
             </>
           ) : (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-content-secondary">
               {characters.length === 0
                 ? "You need a character to send messages."
                 : "You don't have any characters participating in this conversation."}

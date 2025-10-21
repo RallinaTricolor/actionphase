@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
+import { Badge, Button } from './ui';
 import type { Notification } from '../types/notifications';
 import { useMarkNotificationAsRead, useDeleteNotification } from '../hooks/useNotifications';
 
@@ -66,9 +67,9 @@ export default function NotificationItem({ notification, onNavigate }: Notificat
       onClick={handleClick}
       className={`
         notification-item
-        flex items-start gap-3 p-4 border-b border-gray-200
-        ${notification.is_read ? 'bg-white' : 'bg-blue-50'}
-        ${notification.link_url ? 'cursor-pointer hover:bg-gray-50' : ''}
+        flex items-start gap-3 p-4 border-b border-theme-default
+        ${notification.is_read ? 'surface-base' : 'surface-raised'}
+        ${notification.link_url ? 'cursor-pointer hover:surface-sunken' : ''}
         transition-colors
       `}
     >
@@ -81,36 +82,40 @@ export default function NotificationItem({ notification, onNavigate }: Notificat
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <h4 className={`text-sm text-gray-900 ${!notification.is_read ? 'font-semibold' : 'font-normal'}`}>
+            <h4 className={`text-sm text-content-primary ${!notification.is_read ? 'font-semibold' : 'font-normal'}`}>
               {notification.title}
             </h4>
             {notification.content && (
-              <p className="text-sm text-gray-600 mt-1">{notification.content}</p>
+              <p className="text-sm text-content-primary mt-1">{notification.content}</p>
             )}
           </div>
 
           {/* Unread indicator */}
           {!notification.is_read && (
-            <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1"></div>
+            <Badge variant="primary" size="sm" dot className="flex-shrink-0">
+              New
+            </Badge>
           )}
         </div>
 
         {/* Timestamp */}
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-content-secondary mt-2">
           {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
         </p>
       </div>
 
       {/* Delete button */}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={handleDelete}
-        className="text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
+        className="text-content-secondary hover:text-red-500 flex-shrink-0 p-1 h-auto"
         title="Delete notification"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
-      </button>
+      </Button>
     </div>
   );
 }

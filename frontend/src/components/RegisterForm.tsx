@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Button, Input, Card, Alert } from './ui';
 import type { RegisterRequest } from '../types/auth';
 
 interface RegisterFormProps {
@@ -32,73 +33,61 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     }));
   };
 
+  const errorMessage = (error as any)?.response?.data?.message || 'Registration failed. Please try again.';
+
   return (
-    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Register</h2>
+    <Card variant="elevated" padding="md" className="max-w-md mx-auto">
+      <h2 className="text-2xl font-bold text-content-primary mb-6">Register</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-            Username
-          </label>
-          <input
-            id="username"
-            name="username"
-            type="text"
-            required
-            value={formData.username}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Choose a username"
-          />
-        </div>
+        <Input
+          label="Username"
+          id="username"
+          name="username"
+          type="text"
+          required
+          value={formData.username}
+          onChange={handleChange}
+          placeholder="Choose a username"
+        />
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            value={formData.email}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your email"
-          />
-        </div>
+        <Input
+          label="Email"
+          id="email"
+          name="email"
+          type="email"
+          required
+          value={formData.email}
+          onChange={handleChange}
+          placeholder="Enter your email"
+        />
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Choose a password"
-          />
-        </div>
+        <Input
+          label="Password"
+          id="password"
+          name="password"
+          type="password"
+          required
+          value={formData.password}
+          onChange={handleChange}
+          placeholder="Choose a password"
+        />
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-            {(error as any)?.response?.data?.message || 'Registration failed. Please try again.'}
-          </div>
+          <Alert variant="danger">
+            {errorMessage}
+          </Alert>
         )}
 
-        <button
+        <Button
           type="submit"
-          disabled={isLoading}
-          className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="primary"
+          loading={isLoading}
+          className="w-full"
         >
           {isLoading ? 'Creating account...' : 'Register'}
-        </button>
+        </Button>
       </form>
-    </div>
+    </Card>
   );
 };

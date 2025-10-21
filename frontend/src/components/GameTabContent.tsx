@@ -52,9 +52,9 @@ export function GameTabContent({
   if (activeTab === 'participants') {
     return (
       <>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Participants</h2>
+        <h2 className="text-2xl font-bold text-content-primary mb-6">Participants</h2>
         {participants.length === 0 ? (
-          <p className="text-gray-500">No participants yet.</p>
+          <p className="text-content-tertiary">No participants yet.</p>
         ) : (
           <div className="space-y-4">
             {['player', 'co_gm', 'audience'].map((role) => {
@@ -62,14 +62,14 @@ export function GameTabContent({
               if (roleParticipants.length === 0) return null;
               return (
                 <div key={role}>
-                  <h3 className="font-semibold text-gray-900 mb-2 capitalize">
+                  <h3 className="font-semibold text-content-primary mb-2 capitalize">
                     {role.replace('_', ' ')}s ({roleParticipants.length})
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {roleParticipants.map((participant) => (
-                      <div key={participant.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="font-medium text-gray-900">{participant.username}</div>
-                        <div className="text-sm text-gray-500">
+                      <div key={participant.id} className="border border-theme-default rounded-lg p-4 surface-raised">
+                        <div className="font-medium text-content-primary">{participant.username}</div>
+                        <div className="text-sm text-content-tertiary">
                           Joined {new Date(participant.joined_at).toLocaleDateString()}
                         </div>
                       </div>
@@ -88,29 +88,29 @@ export function GameTabContent({
   if (activeTab === 'info') {
     return (
       <>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Game Information</h2>
+        <h2 className="text-2xl font-bold text-content-primary mb-6">Game Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Genre</h3>
-            <p className="text-gray-600">{game.genre || 'Not specified'}</p>
+            <h3 className="font-semibold text-content-primary mb-2">Genre</h3>
+            <p className="text-content-secondary">{game.genre || 'Not specified'}</p>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Players</h3>
-            <p className="text-gray-600">
+            <h3 className="font-semibold text-content-primary mb-2">Players</h3>
+            <p className="text-content-secondary">
               {game.current_players} / {game.max_players || 'Unlimited'}
             </p>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Recruitment Deadline</h3>
-            <p className="text-gray-600">{formatDate(game.recruitment_deadline)}</p>
+            <h3 className="font-semibold text-content-primary mb-2">Recruitment Deadline</h3>
+            <p className="text-content-secondary">{formatDate(game.recruitment_deadline)}</p>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Start Date</h3>
-            <p className="text-gray-600">{formatDate(game.start_date)}</p>
+            <h3 className="font-semibold text-content-primary mb-2">Start Date</h3>
+            <p className="text-content-secondary">{formatDate(game.start_date)}</p>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">End Date</h3>
-            <p className="text-gray-600">{formatDate(game.end_date)}</p>
+            <h3 className="font-semibold text-content-primary mb-2">End Date</h3>
+            <p className="text-content-secondary">{formatDate(game.end_date)}</p>
           </div>
         </div>
       </>

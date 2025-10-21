@@ -13,9 +13,14 @@ interface TabNavigationProps {
   onTabChange: (tabId: string) => void;
 }
 
+/**
+ * TabNavigation - Tab component with semantic theme tokens
+ *
+ * Now uses semantic tokens instead of hard-coded colors for automatic theme adaptation.
+ */
 export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationProps) {
   return (
-    <div className="border-b border-gray-200 bg-white rounded-t-lg">
+    <div className="border-b border-theme-default surface-base rounded-t-lg">
       <nav className="flex -mb-px overflow-x-auto" role="tablist" aria-label="Tabs">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -28,8 +33,8 @@ export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationPro
                 whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm flex items-center gap-2
                 transition-colors duration-200
                 ${isActive
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-interactive-primary text-interactive-primary'
+                  : 'border-transparent text-content-secondary hover:text-content-primary hover:border-theme-default'
                 }
               `}
               aria-selected={isActive}
@@ -42,8 +47,8 @@ export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationPro
                   className={`
                     ml-2 py-0.5 px-2 rounded-full text-xs font-medium
                     ${isActive
-                      ? 'bg-blue-100 text-blue-600'
-                      : 'bg-gray-100 text-gray-600'
+                      ? 'bg-semantic-info-subtle text-content-primary'
+                      : 'surface-raised text-content-secondary'
                     }
                   `}
                 >
