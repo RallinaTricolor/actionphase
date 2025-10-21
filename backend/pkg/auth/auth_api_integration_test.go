@@ -4,6 +4,7 @@ import (
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/services"
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
@@ -460,6 +461,58 @@ func setupAuthAPITestRouter(app *core.App) *chi.Mux {
 	})
 
 	return r
+}
+
+// TestAuthAPI_BannedUserLogin tests that banned users cannot log in
+func TestAuthAPI_BannedUserLogin(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthAPITestRouter(app)
+
+	// Create a user
+	userService := &db.UserService{DB: testDB.Pool}
+	user := &core.User{
+		Username: "testuser",
+		Password: "testpassword123",
+		Email:    "testuser@example.com",
+	}
+	createdUser, err := userService.CreateUser(user)
+	core.AssertNoError(t, err, "Should create user successfully")
+
+	// Verify user can log in before being banned
+	loginPayload := map[string]interface{}{
+		"username": "testuser",
+		"password": "testpassword123",
+	}
+	payload, _ := json.Marshal(loginPayload)
+	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	core.AssertEqual(t, 200, w.Code, "User should be able to log in before ban")
+
+	// Ban the user via direct SQL update (simulating admin action)
+	ctx := context.Background()
+	_, err = testDB.Pool.Exec(ctx, "UPDATE users SET is_banned = TRUE WHERE id = $1", createdUser.ID)
+	core.AssertNoError(t, err, "Should ban user successfully")
+
+	// Attempt to log in again
+	req = httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Should be forbidden
+	core.AssertEqual(t, 403, w.Code, "Banned user should not be able to log in")
+
+	// Verify error message
+	var response map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	core.AssertNoError(t, err, "Response should be valid JSON")
+	core.AssertNotEqual(t, "", response["error"], "Response should contain error message")
 }
 
 // createTestAuthToken creates a JWT token for testing purposes

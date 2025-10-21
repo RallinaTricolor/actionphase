@@ -25,3 +25,8 @@ WHERE id = $1;
 -- name: DeleteSessionByToken :exec
 DELETE FROM sessions
 WHERE data = $1;
+
+-- name: DeleteUserSessions :exec
+-- Invalidate all sessions for a user (used when banning)
+DELETE FROM sessions
+WHERE user_id = $1;

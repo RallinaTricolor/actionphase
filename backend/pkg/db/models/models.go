@@ -349,6 +349,9 @@ type User struct {
 	Timezone           pgtype.Text      `json:"timezone"`
 	EmailNotifications pgtype.Bool      `json:"email_notifications"`
 	HighContrast       pgtype.Bool      `json:"high_contrast"`
+	IsBanned           bool             `json:"is_banned"`
+	BannedAt           pgtype.Timestamp `json:"banned_at"`
+	BannedByUserID     pgtype.Int4      `json:"banned_by_user_id"`
 }
 
 type UserCommonRoomRead struct {

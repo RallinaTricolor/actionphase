@@ -7,7 +7,29 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const banUser = `-- name: BanUser :exec
+
+UPDATE users
+SET is_banned = TRUE,
+    banned_at = NOW(),
+    banned_by_user_id = $2
+WHERE id = $1
+`
+
+type BanUserParams struct {
+	ID             int32       `json:"id"`
+	BannedByUserID pgtype.Int4 `json:"banned_by_user_id"`
+}
+
+// User banning queries
+func (q *Queries) BanUser(ctx context.Context, arg BanUserParams) error {
+	_, err := q.db.Exec(ctx, banUser, arg.ID, arg.BannedByUserID)
+	return err
+}
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
@@ -15,7 +37,7 @@ INSERT INTO users (
 ) VALUES (
              $1, $2, $3
          )
-RETURNING id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast
+RETURNING id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id
 `
 
 type CreateUserParams struct {
@@ -39,6 +61,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
+		&i.IsBanned,
+		&i.BannedAt,
+		&i.BannedByUserID,
 	)
 	return i, err
 }
@@ -54,7 +79,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast FROM users
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -73,12 +98,15 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
+		&i.IsBanned,
+		&i.BannedAt,
+		&i.BannedByUserID,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast FROM users
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id FROM users
 WHERE username = $1 LIMIT 1
 `
 
@@ -97,12 +125,101 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
+		&i.IsBanned,
+		&i.BannedAt,
+		&i.BannedByUserID,
 	)
 	return i, err
 }
 
+const listAdmins = `-- name: ListAdmins :many
+SELECT id, username, email, created_at
+FROM users
+WHERE is_admin = TRUE
+ORDER BY created_at ASC
+`
+
+type ListAdminsRow struct {
+	ID        int32            `json:"id"`
+	Username  string           `json:"username"`
+	Email     string           `json:"email"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
+	rows, err := q.db.Query(ctx, listAdmins)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAdminsRow
+	for rows.Next() {
+		var i ListAdminsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBannedUsers = `-- name: ListBannedUsers :many
+SELECT u.id, u.username, u.email, u.banned_at, u.banned_by_user_id, u.created_at,
+       admin.username as banned_by_username
+FROM users u
+LEFT JOIN users admin ON u.banned_by_user_id = admin.id
+WHERE u.is_banned = TRUE
+ORDER BY u.banned_at DESC
+`
+
+type ListBannedUsersRow struct {
+	ID               int32            `json:"id"`
+	Username         string           `json:"username"`
+	Email            string           `json:"email"`
+	BannedAt         pgtype.Timestamp `json:"banned_at"`
+	BannedByUserID   pgtype.Int4      `json:"banned_by_user_id"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	BannedByUsername pgtype.Text      `json:"banned_by_username"`
+}
+
+func (q *Queries) ListBannedUsers(ctx context.Context) ([]ListBannedUsersRow, error) {
+	rows, err := q.db.Query(ctx, listBannedUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBannedUsersRow
+	for rows.Next() {
+		var i ListBannedUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.BannedAt,
+			&i.BannedByUserID,
+			&i.CreatedAt,
+			&i.BannedByUsername,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast FROM users
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id FROM users
 ORDER BY username
 `
 
@@ -127,6 +244,9 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Timezone,
 			&i.EmailNotifications,
 			&i.HighContrast,
+			&i.IsBanned,
+			&i.BannedAt,
+			&i.BannedByUserID,
 		); err != nil {
 			return nil, err
 		}
@@ -136,6 +256,19 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const unbanUser = `-- name: UnbanUser :exec
+UPDATE users
+SET is_banned = FALSE,
+    banned_at = NULL,
+    banned_by_user_id = NULL
+WHERE id = $1
+`
+
+func (q *Queries) UnbanUser(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, unbanUser, id)
+	return err
 }
 
 const updateUser = `-- name: UpdateUser :exec
@@ -160,5 +293,23 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 		arg.Password,
 		arg.Email,
 	)
+	return err
+}
+
+const updateUserAdminStatus = `-- name: UpdateUserAdminStatus :exec
+
+UPDATE users
+SET is_admin = $2
+WHERE id = $1
+`
+
+type UpdateUserAdminStatusParams struct {
+	ID      int32       `json:"id"`
+	IsAdmin pgtype.Bool `json:"is_admin"`
+}
+
+// Admin management queries
+func (q *Queries) UpdateUserAdminStatus(ctx context.Context, arg UpdateUserAdminStatusParams) error {
+	_, err := q.db.Exec(ctx, updateUserAdminStatus, arg.ID, arg.IsAdmin)
 	return err
 }

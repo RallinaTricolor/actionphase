@@ -28,3 +28,40 @@ WHERE id = $1;
 -- name: DeleteUser :exec
 DELETE FROM users
 WHERE id = $1;
+
+-- Admin management queries
+
+-- name: UpdateUserAdminStatus :exec
+UPDATE users
+SET is_admin = $2
+WHERE id = $1;
+
+-- name: ListAdmins :many
+SELECT id, username, email, created_at
+FROM users
+WHERE is_admin = TRUE
+ORDER BY created_at ASC;
+
+-- User banning queries
+
+-- name: BanUser :exec
+UPDATE users
+SET is_banned = TRUE,
+    banned_at = NOW(),
+    banned_by_user_id = $2
+WHERE id = $1;
+
+-- name: UnbanUser :exec
+UPDATE users
+SET is_banned = FALSE,
+    banned_at = NULL,
+    banned_by_user_id = NULL
+WHERE id = $1;
+
+-- name: ListBannedUsers :many
+SELECT u.id, u.username, u.email, u.banned_at, u.banned_by_user_id, u.created_at,
+       admin.username as banned_by_username
+FROM users u
+LEFT JOIN users admin ON u.banned_by_user_id = admin.id
+WHERE u.is_banned = TRUE
+ORDER BY u.banned_at DESC;

@@ -13,7 +13,10 @@ CREATE TABLE users (
     bio TEXT,
     timezone VARCHAR(50) DEFAULT 'UTC',
     email_notifications BOOLEAN DEFAULT TRUE,
-    high_contrast BOOLEAN DEFAULT FALSE
+    high_contrast BOOLEAN DEFAULT FALSE,
+    is_banned BOOLEAN DEFAULT FALSE NOT NULL,
+    banned_at TIMESTAMP WITHOUT TIME ZONE,
+    banned_by_user_id INTEGER REFERENCES users(id)
 );
 
 -- Sessions table
