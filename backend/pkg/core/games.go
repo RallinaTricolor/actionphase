@@ -10,6 +10,8 @@ type GameListingFilters struct {
 	ParticipationFilter *string  // 'my_games', 'applied', 'not_joined'
 	HasOpenSpots        *bool    // Only games with available player spots
 	SortBy              string   // 'recent_activity', 'created', 'start_date', 'alphabetical'
+	AdminMode           bool     // Admin mode: bypasses is_public filter when user is admin
+	AdminUserID         *int32   // User ID requesting admin mode (for validation)
 }
 
 // EnrichedGameListItem extends GameListItem with user context and urgency

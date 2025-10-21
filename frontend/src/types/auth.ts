@@ -3,6 +3,8 @@ export interface User {
   username: string;
   email: string;
   password?: string;
+  is_admin?: boolean;
+  is_banned?: boolean;
   createdAt?: string;
 }
 

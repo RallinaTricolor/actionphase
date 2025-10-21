@@ -721,6 +721,17 @@ func (q *Queries) SendPrivateMessage(ctx context.Context, arg SendPrivateMessage
 	return i, err
 }
 
+const softDeleteMessage = `-- name: SoftDeleteMessage :exec
+UPDATE messages
+SET deleted_at = NOW(), is_deleted = true
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteMessage(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, softDeleteMessage, id)
+	return err
+}
+
 const toggleThreadPin = `-- name: ToggleThreadPin :one
 UPDATE threads
 SET is_pinned = $2, updated_at = NOW()

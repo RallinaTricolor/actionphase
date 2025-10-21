@@ -2,6 +2,7 @@ package admin
 
 import (
 	"actionphase/pkg/core"
+	models "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
 	"context"
 	"errors"
@@ -233,4 +234,65 @@ func (h *Handler) ListBannedUsers(w http.ResponseWriter, r *http.Request) {
 
 	h.App.Logger.Info("Listed banned users", "count", len(bannedUsers))
 	render.JSON(w, r, bannedUsers)
+}
+
+// GetUserByUsername returns a user by username
+// GET /admin/users/lookup/{username}
+func (h *Handler) GetUserByUsername(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	if username == "" {
+		render.Render(w, r, core.ErrInvalidRequest(errors.New("username is required")))
+		return
+	}
+
+	userService := &db.UserService{DB: h.App.Pool}
+
+	user, err := userService.UserByUsername(username)
+	if err != nil {
+		h.App.Logger.Error("Failed to lookup user", "error", err, "username", username)
+		render.Render(w, r, core.ErrNotFound("user not found"))
+		return
+	}
+
+	h.App.Logger.Info("User lookup successful", "username", username)
+	render.JSON(w, r, user)
+}
+
+// DeleteMessage soft-deletes a message (post or comment) (admin only)
+// DELETE /admin/messages/{messageId}
+func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+	messageIDStr := chi.URLParam(r, "messageId")
+	messageID, err := strconv.ParseInt(messageIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	// Get admin ID from token for logging
+	adminID, err := h.getUserIDFromToken(r)
+	if err != nil {
+		h.App.Logger.Error("Failed to get admin from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized("invalid token"))
+		return
+	}
+
+	ctx := context.Background()
+	queries := models.New(h.App.Pool)
+
+	// Soft delete the message
+	err = queries.SoftDeleteMessage(ctx, int32(messageID))
+	if err != nil {
+		h.App.Logger.Error("Failed to delete message",
+			"error", err,
+			"message_id", messageID,
+			"admin_id", adminID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	h.App.Logger.Info("Deleted message",
+		"message_id", messageID,
+		"deleted_by", adminID)
+
+	w.WriteHeader(http.StatusNoContent)
 }

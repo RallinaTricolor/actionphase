@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from './NotificationBell';
 import { Button } from './ui';
+import { AdminModeToggle } from './AdminModeToggle';
+import { AdminBanner } from './AdminBanner';
 
 interface LayoutProps {
   children: ReactNode;
@@ -58,6 +60,9 @@ export const Layout = ({ children }: LayoutProps) => {
                 {/* Notification Bell */}
                 <NotificationBell />
 
+                {/* Admin Mode Toggle (only visible to admins) */}
+                <AdminModeToggle />
+
                 <Link to="/settings" className={navLinkClass('/settings')}>
                   Settings
                 </Link>
@@ -75,6 +80,9 @@ export const Layout = ({ children }: LayoutProps) => {
           </div>
         </nav>
       )}
+
+      {/* Admin Mode Banner */}
+      <AdminBanner />
 
       {/* Main Content */}
       <main className="py-6">

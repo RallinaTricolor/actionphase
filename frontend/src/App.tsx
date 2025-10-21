@@ -14,6 +14,7 @@ import { AdminPage } from './pages/AdminPage';
 import ThemeTestPage from './pages/ThemeTestPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AdminModeProvider } from './contexts/AdminModeContext';
 import { GameProvider } from './contexts/GameContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 
@@ -141,9 +142,11 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <ThemeProvider>
-            <AppRoutes />
-          </ThemeProvider>
+          <AdminModeProvider>
+            <ThemeProvider>
+              <AppRoutes />
+            </ThemeProvider>
+          </AdminModeProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
