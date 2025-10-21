@@ -6,6 +6,7 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
 import { Button, Select } from './ui';
+import { useAdminMode } from '../hooks/useAdminMode';
 
 interface ThreadedCommentProps {
   comment: Message;
@@ -39,7 +40,9 @@ export function ThreadedComment({
   const [replyContent, setReplyContent] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  const { adminModeEnabled } = useAdminMode();
   const isAuthor = currentUserId === comment.author_id;
   const hasReplies = (comment.reply_count || 0) > 0;
   const isUnread = unreadCommentIDs.includes(comment.id);
@@ -83,6 +86,24 @@ export function ThreadedComment({
       console.error('Failed to copy link:', err);
       // Fallback: show alert if clipboard API fails
       alert(`Link: ${url}`);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await apiClient.admin.deleteMessage(comment.id);
+      // Refresh to show the updated state
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to delete comment:', err);
+      alert('Failed to delete comment. Please try again.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -226,6 +247,22 @@ export function ThreadedComment({
               </>
             )}
           </Button>
+
+          {adminModeEnabled && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="text-xs h-auto p-0 hover:text-semantic-danger font-medium text-semantic-danger flex items-center gap-1"
+              title="Delete this post (admin only)"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
+            </Button>
+          )}
 
           {comment.parent_id && (
             <a

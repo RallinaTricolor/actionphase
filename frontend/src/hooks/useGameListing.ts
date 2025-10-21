@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useCallback, useMemo } from 'react';
 import { apiClient } from '../lib/api';
+import { useAdminMode } from './useAdminMode';
 import type {
   GameListingFilters,
   GameState,
@@ -25,6 +26,7 @@ import type {
  */
 export function useGameListing() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { adminModeEnabled } = useAdminMode();
 
   // Parse filters from URL
   const filters = useMemo<GameListingFilters>(() => {
@@ -38,8 +40,9 @@ export function useGameListing() {
       participation: participationParam as ParticipationFilter | undefined,
       has_open_spots: openSpotsParam === 'true' ? true : openSpotsParam === 'false' ? false : undefined,
       sort_by: (sortByParam as SortBy) || 'recent_activity',
+      admin_mode: adminModeEnabled, // Add admin mode from context
     };
-  }, [searchParams]);
+  }, [searchParams, adminModeEnabled]);
 
   // Fetch games with current filters
   const query = useQuery({

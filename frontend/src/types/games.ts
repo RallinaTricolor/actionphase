@@ -162,6 +162,7 @@ export interface GameListingFilters {
   participation?: ParticipationFilter;
   has_open_spots?: boolean;
   sort_by?: SortBy;
+  admin_mode?: boolean;
 }
 
 export const DEADLINE_URGENCY_COLORS: Record<DeadlineUrgency, string> = {

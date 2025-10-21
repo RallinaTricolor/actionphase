@@ -22,6 +22,8 @@ SELECT COUNT(*) FROM games WHERE is_public = true
 // $3: participation_filter (text, nullable) - 'my_games', 'applied', 'not_joined'
 // $4: has_open_spots (boolean, nullable) - only games with available spots
 // $5: sort_by (text) - 'recent_activity', 'created', 'start_date', 'alphabetical'
+// $6: admin_mode (boolean) - bypass is_public filter if user is admin
+// $7: admin_user_id (int, nullable) - user ID to validate admin status
 func (q *Queries) CountPublicGames(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countPublicGames)
 	var count int64
@@ -116,7 +118,10 @@ SELECT
 FROM games g
 INNER JOIN users u ON g.gm_user_id = u.id
 WHERE
-  g.is_public = true
+  -- Show public games, OR games user is in, OR all games if admin mode enabled and user is admin
+  (g.is_public = true OR
+   ($6::boolean IS TRUE AND $7::int IS NOT NULL AND EXISTS(SELECT 1 FROM users WHERE id = $7 AND is_admin = true)) OR
+   ($1::int IS NOT NULL AND (g.gm_user_id = $1 OR EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1 AND status = 'active'))))
 
   -- Filter by states (optional array of states)
   AND ($2::text[] IS NULL OR g.state = ANY($2::text[]))
@@ -160,6 +165,8 @@ type GetFilteredGamesParams struct {
 	Column3 string      `json:"column_3"`
 	Column4 bool        `json:"column_4"`
 	Column5 interface{} `json:"column_5"`
+	Column6 bool        `json:"column_6"`
+	Column7 int32       `json:"column_7"`
 }
 
 type GetFilteredGamesRow struct {
@@ -194,6 +201,8 @@ func (q *Queries) GetFilteredGames(ctx context.Context, arg GetFilteredGamesPara
 		arg.Column3,
 		arg.Column4,
 		arg.Column5,
+		arg.Column6,
+		arg.Column7,
 	)
 	if err != nil {
 		return nil, err

@@ -607,6 +607,12 @@ func (h *Handler) GetFilteredGames(w http.ResponseWriter, r *http.Request) {
 		filters.UserID = &userID
 	}
 
+	// Parse admin_mode parameter (requires authentication)
+	if adminModeParam := queryParams.Get("admin_mode"); adminModeParam == "true" && userID != 0 {
+		filters.AdminMode = true
+		filters.AdminUserID = &userID
+	}
+
 	// Call service
 	gameService := &db.GameService{DB: h.App.Pool}
 	result, err := gameService.GetFilteredGames(ctx, filters)

@@ -282,6 +282,12 @@ func (h *Handler) Start() {
 			r.Post("/users/{id}/ban", adminHandler.BanUser)
 			r.Delete("/users/{id}/ban", adminHandler.UnbanUser)
 			r.Get("/users/banned", adminHandler.ListBannedUsers)
+
+			// User lookup
+			r.Get("/users/lookup/{username}", adminHandler.GetUserByUsername)
+
+			// Content moderation
+			r.Delete("/messages/{messageId}", adminHandler.DeleteMessage)
 		})
 	})
 	apiV1Router.Mount("/admin", adminRouter)

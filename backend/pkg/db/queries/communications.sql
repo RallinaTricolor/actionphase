@@ -189,3 +189,8 @@ WHERE pm.conversation_id = $2
 UPDATE conversations
 SET updated_at = NOW()
 WHERE id = $1;
+
+-- name: SoftDeleteMessage :exec
+UPDATE messages
+SET deleted_at = NOW(), is_deleted = true
+WHERE id = $1;
