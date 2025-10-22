@@ -1,0 +1,281 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import { NewCommentsView } from '../NewCommentsView';
+import * as useRecentCommentsModule from '../../hooks/useRecentComments';
+import type { CommentWithParent } from '../../types/messages';
+
+// Mock the useRecentComments hook
+vi.mock('../../hooks/useRecentComments');
+
+// Mock the CommentWithParentCard component
+vi.mock('../CommentWithParentCard', () => ({
+  CommentWithParentCard: ({ comment }: { comment: CommentWithParent }) => (
+    <div data-testid={`comment-${comment.id}`}>
+      {comment.content}
+    </div>
+  ),
+}));
+
+// Mock IntersectionObserver
+const mockIntersectionObserver = vi.fn();
+mockIntersectionObserver.mockReturnValue({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+});
+window.IntersectionObserver = mockIntersectionObserver as any;
+
+describe('NewCommentsView', () => {
+  const mockComment: CommentWithParent = {
+    id: 1,
+    game_id: 1,
+    parent_id: 100,
+    author_id: 10,
+    character_id: 20,
+    content: 'Test comment',
+    created_at: '2025-10-22T10:00:00Z',
+    updated_at: '2025-10-22T10:00:00Z',
+    edited_at: null,
+    edit_count: 0,
+    deleted_at: null,
+    is_deleted: false,
+    author_username: 'testuser',
+    character_name: 'Test Character',
+    parent_content: 'Parent content',
+    parent_created_at: '2025-10-22T09:00:00Z',
+    parent_deleted_at: null,
+    parent_is_deleted: false,
+    parent_message_type: 'post',
+    parent_author_username: 'parentuser',
+    parent_character_name: 'Parent Character',
+  };
+
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <BrowserRouter>{children}</BrowserRouter>
+  );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows loading spinner while loading', () => {
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as any);
+
+    render(<NewCommentsView gameId={1} />, { wrapper });
+
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('shows error message when loading fails', () => {
+    const error = new Error('Failed to load');
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as any);
+
+    render(<NewCommentsView gameId={1} />, { wrapper });
+
+    expect(screen.getByText(/failed to load recent comments/i)).toBeInTheDocument();
+    expect(screen.getByText('Failed to load')).toBeInTheDocument();
+  });
+
+  it('shows empty state when there are no comments', () => {
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      data: { pages: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as any);
+
+    render(<NewCommentsView gameId={1} />, { wrapper });
+
+    expect(screen.getByText(/no comments yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/be the first to start a conversation/i)).toBeInTheDocument();
+  });
+
+  it('renders list of comments', () => {
+    const comments = [
+      { ...mockComment, id: 1, content: 'Comment 1' },
+      { ...mockComment, id: 2, content: 'Comment 2' },
+      { ...mockComment, id: 3, content: 'Comment 3' },
+    ];
+
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      data: {
+        pages: [{ comments, total: 3, limit: 20, offset: 0 }],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as any);
+
+    render(<NewCommentsView gameId={1} />, { wrapper });
+
+    expect(screen.getByTestId('comment-1')).toBeInTheDocument();
+    expect(screen.getByTestId('comment-2')).toBeInTheDocument();
+    expect(screen.getByTestId('comment-3')).toBeInTheDocument();
+  });
+
+  it('flattens multiple pages of comments', () => {
+    const page1Comments = [
+      { ...mockComment, id: 1, content: 'Comment 1' },
+      { ...mockComment, id: 2, content: 'Comment 2' },
+    ];
+
+    const page2Comments = [
+      { ...mockComment, id: 3, content: 'Comment 3' },
+      { ...mockComment, id: 4, content: 'Comment 4' },
+    ];
+
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      data: {
+        pages: [
+          { comments: page1Comments, total: 4, limit: 2, offset: 0 },
+          { comments: page2Comments, total: 4, limit: 2, offset: 2 },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as any);
+
+    render(<NewCommentsView gameId={1} />, { wrapper });
+
+    expect(screen.getByTestId('comment-1')).toBeInTheDocument();
+    expect(screen.getByTestId('comment-2')).toBeInTheDocument();
+    expect(screen.getByTestId('comment-3')).toBeInTheDocument();
+    expect(screen.getByTestId('comment-4')).toBeInTheDocument();
+  });
+
+  it('shows "No more comments" when all pages loaded', () => {
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      data: {
+        pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as any);
+
+    render(<NewCommentsView gameId={1} />, { wrapper });
+
+    expect(screen.getByText(/no more comments to load/i)).toBeInTheDocument();
+  });
+
+  it('shows loading spinner when fetching next page', () => {
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      data: {
+        pages: [{ comments: [mockComment], total: 20, limit: 20, offset: 0 }],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: true,
+      isFetchingNextPage: true,
+    } as any);
+
+    render(<NewCommentsView gameId={1} />, { wrapper });
+
+    // There should be 2 spinners: one for the sentinel and potentially one in the loading state
+    const spinners = screen.getAllByRole('status');
+    expect(spinners.length).toBeGreaterThan(0);
+  });
+
+  it('sets up intersection observer when hasNextPage is true', () => {
+    const mockObserve = vi.fn();
+    mockIntersectionObserver.mockReturnValue({
+      observe: mockObserve,
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
+    });
+
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      data: {
+        pages: [{ comments: [mockComment], total: 20, limit: 20, offset: 0 }],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: true,
+      isFetchingNextPage: false,
+    } as any);
+
+    render(<NewCommentsView gameId={1} />, { wrapper });
+
+    // Wait for useEffect to run
+    waitFor(() => {
+      expect(mockIntersectionObserver).toHaveBeenCalled();
+    });
+  });
+
+  it('does not set up intersection observer when hasNextPage is false', () => {
+    const mockObserve = vi.fn();
+    mockIntersectionObserver.mockReturnValue({
+      observe: mockObserve,
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
+    });
+
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      data: {
+        pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as any);
+
+    render(<NewCommentsView gameId={1} />, { wrapper });
+
+    // Observer should not be set up if there's no next page
+    expect(mockObserve).not.toHaveBeenCalled();
+  });
+
+  it('handles unknown error gracefully', () => {
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: 'String error',
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as any);
+
+    render(<NewCommentsView gameId={1} />, { wrapper });
+
+    expect(screen.getByText(/failed to load recent comments/i)).toBeInTheDocument();
+    expect(screen.getByText('Unknown error')).toBeInTheDocument();
+  });
+});

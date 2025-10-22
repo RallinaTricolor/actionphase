@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/render"
 
 	"actionphase/pkg/core"
+	models "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
 	messagesvc "actionphase/pkg/db/services/messages"
 )
@@ -806,4 +807,178 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 		"message": "Comment deleted successfully",
 		"id":      commentID,
 	})
+}
+
+// ListRecentCommentsWithParents lists recent comments with their parent messages for the "New Comments" view
+// GET /api/v1/games/:gameId/comments/recent
+func (h *Handler) ListRecentCommentsWithParents(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse game ID
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Parse pagination parameters
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+
+	// Default limit is 10, max is 50
+	limit := 10
+	if limitStr != "" {
+		parsedLimit, err := strconv.Atoi(limitStr)
+		if err != nil || parsedLimit < 1 {
+			render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid limit parameter")))
+			return
+		}
+		if parsedLimit > 50 {
+			parsedLimit = 50
+		}
+		limit = parsedLimit
+	}
+
+	// Default offset is 0
+	offset := 0
+	if offsetStr != "" {
+		parsedOffset, err := strconv.Atoi(offsetStr)
+		if err != nil || parsedOffset < 0 {
+			render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid offset parameter")))
+			return
+		}
+		offset = parsedOffset
+	}
+
+	// Get user ID from token for authorization
+	userID, err := getUserIDFromToken(r, h.App)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	// Check if user is participant or GM of the game
+	queries := models.New(h.App.Pool)
+
+	// First check if user is the GM
+	game, err := queries.GetGame(ctx, int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get game", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	isGM := game.GmUserID == userID
+
+	// If not GM, check if they're a participant
+	var hasAccess bool
+	if isGM {
+		hasAccess = true
+	} else {
+		isParticipant, err := queries.CheckParticipantExists(ctx, models.CheckParticipantExistsParams{
+			GameID: int32(gameID),
+			UserID: userID,
+		})
+		if err != nil {
+			h.App.Logger.Error("Failed to check game participation", "error", err, "game_id", gameID, "user_id", userID)
+			render.Render(w, r, core.ErrInternalError(err))
+			return
+		}
+		hasAccess = isParticipant
+	}
+
+	if !hasAccess {
+		h.App.Logger.Warn("User attempted to access game they're not part of",
+			"game_id", gameID,
+			"user_id", userID)
+		render.Render(w, r, core.ErrForbidden("You are not a participant in this game"))
+		return
+	}
+
+	// Get comments with parents from service
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	comments, err := messageService.ListRecentCommentsWithParents(ctx, int32(gameID), int32(limit), int32(offset))
+	if err != nil {
+		h.App.Logger.Error("Failed to list recent comments", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Get total comment count for pagination metadata
+	totalCount, err := messageService.GetTotalCommentCount(ctx, int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get total comment count", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	h.App.Logger.Info("Listed recent comments with parents",
+		"game_id", gameID,
+		"user_id", userID,
+		"limit", limit,
+		"offset", offset,
+		"count", len(comments),
+		"total", totalCount)
+
+	// Convert to response format
+	response := map[string]interface{}{
+		"comments": commentsWithParentsToResponse(comments),
+		"pagination": map[string]interface{}{
+			"limit":  limit,
+			"offset": offset,
+			"total":  totalCount,
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// Helper function to convert CommentWithParent slice to response format
+func commentsWithParentsToResponse(comments []core.CommentWithParent) []map[string]interface{} {
+	result := make([]map[string]interface{}, len(comments))
+	for i, comment := range comments {
+		commentData := map[string]interface{}{
+			"id":              comment.ID,
+			"game_id":         comment.GameID,
+			"parent_id":       comment.ParentID,
+			"author_id":       comment.AuthorID,
+			"character_id":    comment.CharacterID,
+			"content":         comment.Content,
+			"created_at":      comment.CreatedAt.Format(time.RFC3339),
+			"updated_at":      comment.UpdatedAt.Format(time.RFC3339),
+			"edited_at":       formatTimePtr(comment.EditedAt),
+			"edit_count":      comment.EditCount,
+			"deleted_at":      formatTimePtr(comment.DeletedAt),
+			"is_deleted":      comment.IsDeleted,
+			"author_username": comment.AuthorUsername,
+			"character_name":  comment.CharacterName,
+		}
+
+		// Add parent data if exists
+		if comment.ParentContent != nil {
+			commentData["parent"] = map[string]interface{}{
+				"content":         comment.ParentContent,
+				"created_at":      formatTimePtr(comment.ParentCreatedAt),
+				"deleted_at":      formatTimePtr(comment.ParentDeletedAt),
+				"is_deleted":      comment.ParentIsDeleted,
+				"message_type":    comment.ParentMessageType,
+				"author_username": comment.ParentAuthorUsername,
+				"character_name":  comment.ParentCharacterName,
+			}
+		}
+
+		result[i] = commentData
+	}
+	return result
+}
+
+// Helper function to format *time.Time as RFC3339 string or nil
+func formatTimePtr(t *time.Time) interface{} {
+	if t == nil {
+		return nil
+	}
+	return t.Format(time.RFC3339)
 }

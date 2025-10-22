@@ -31,3 +31,6 @@ export { useAdminMode, type UseAdminModeReturn } from './useAdminMode';
 
 // Comment mutation hooks
 export { useUpdateComment, useDeleteComment } from './useCommentMutations';
+
+// Recent comments hooks
+export { useRecentComments, useTotalCommentCount } from './useRecentComments';

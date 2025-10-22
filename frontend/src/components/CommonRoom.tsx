@@ -8,6 +8,7 @@ import type { Character } from '../types/characters';
 import { CreatePostForm } from './CreatePostForm';
 import { PostCard } from './PostCard';
 import { ThreadViewModal } from './ThreadViewModal';
+import { NewCommentsView } from './NewCommentsView';
 
 interface CommonRoomProps {
   gameId: number;
@@ -33,6 +34,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
   const [error, setError] = useState<string | null>(null);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
+  const [activeTab, setActiveTab] = useState<'posts' | 'newComments'>('posts');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -183,50 +185,84 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
         </p>
       </div>
 
-      {/* Create Post Form - only show for current phase and GM */}
-      {isCurrentPhase && isGM && (
-        <CreatePostForm
-          gameId={gameId}
-          characters={controllableCharacters}
-          allCharacters={allCharacters}
-          onSubmit={handleCreatePost}
-          isSubmitting={isCreatingPost}
-        />
-      )}
-
-      {/* Posts Feed */}
-      {posts.length === 0 ? (
-        <div className="surface-raised border border-theme-default rounded-lg p-8 text-center">
-          <svg
-            className="mx-auto h-12 w-12 text-content-tertiary mb-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {/* Tab Navigation */}
+      <div className="border-b border-border-primary mb-6">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveTab('posts')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'posts'
+                ? 'border-accent-primary text-accent-primary'
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-secondary'
+            }`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-          <h3 className="text-lg font-medium text-content-primary mb-1">No posts yet</h3>
-          <p className="text-content-secondary">Be the first to start a conversation!</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
+            Posts
+          </button>
+          <button
+            onClick={() => setActiveTab('newComments')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'newComments'
+                ? 'border-accent-primary text-accent-primary'
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-secondary'
+            }`}
+          >
+            New Comments
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'posts' ? (
+        <>
+          {/* Create Post Form - only show for current phase and GM */}
+          {isCurrentPhase && isGM && (
+            <CreatePostForm
               gameId={gameId}
-              characters={allCharacters}
-              controllableCharacters={controllableCharacters}
-              onCreateComment={handleCreateComment}
-              currentUserId={currentUserId}
+              characters={controllableCharacters}
+              allCharacters={allCharacters}
+              onSubmit={handleCreatePost}
+              isSubmitting={isCreatingPost}
             />
-          ))}
-        </div>
+          )}
+
+          {/* Posts Feed */}
+          {posts.length === 0 ? (
+            <div className="surface-raised border border-theme-default rounded-lg p-8 text-center">
+              <svg
+                className="mx-auto h-12 w-12 text-content-tertiary mb-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                />
+              </svg>
+              <h3 className="text-lg font-medium text-content-primary mb-1">No posts yet</h3>
+              <p className="text-content-secondary">Be the first to start a conversation!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  gameId={gameId}
+                  characters={allCharacters}
+                  controllableCharacters={controllableCharacters}
+                  onCreateComment={handleCreateComment}
+                  currentUserId={currentUserId}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        /* New Comments View */
+        <NewCommentsView gameId={gameId} />
       )}
 
       {/* Thread View Modal for deep-linked comments */}

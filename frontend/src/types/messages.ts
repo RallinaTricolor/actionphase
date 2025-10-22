@@ -77,3 +77,39 @@ export interface PostUnreadComments {
   post_id: number;
   unread_comment_ids: number[];
 }
+
+// Comment with parent context (for "New Comments" view)
+export interface CommentWithParent {
+  // Comment data
+  id: number;
+  game_id: number;
+  parent_id?: number | null;
+  author_id: number;
+  character_id: number;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  edited_at?: string | null;
+  edit_count: number;
+  deleted_at?: string | null;
+  is_deleted: boolean;
+  author_username: string;
+  character_name?: string | null;
+
+  // Parent context
+  parent_content?: string | null;
+  parent_created_at?: string | null;
+  parent_deleted_at?: string | null;
+  parent_is_deleted?: boolean | null;
+  parent_message_type?: string | null;
+  parent_author_username?: string | null;
+  parent_character_name?: string | null;
+}
+
+// Pagination response for recent comments
+export interface RecentCommentsResponse {
+  comments: CommentWithParent[];
+  total: number;
+  limit: number;
+  offset: number;
+}

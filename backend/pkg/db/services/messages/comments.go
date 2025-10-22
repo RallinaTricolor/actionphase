@@ -338,3 +338,70 @@ func (s *MessageService) CanUserDeleteComment(ctx context.Context, commentID int
 
 	return false, nil
 }
+
+// ListRecentCommentsWithParents retrieves recent comments with their parent messages/posts
+// for the "New Comments" view. Supports pagination via limit/offset.
+func (s *MessageService) ListRecentCommentsWithParents(ctx context.Context, gameID int32, limit, offset int32) ([]core.CommentWithParent, error) {
+	queries := models.New(s.DB)
+
+	// Call the generated sqlc method
+	rows, err := queries.ListRecentCommentsWithParents(ctx, models.ListRecentCommentsWithParentsParams{
+		GameID: gameID,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list recent comments with parents: %w", err)
+	}
+
+	// Convert sqlc generated rows to domain models
+	comments := make([]core.CommentWithParent, len(rows))
+	for i, row := range rows {
+		comments[i] = core.CommentWithParent{
+			// Comment data
+			ID:             row.ID,
+			GameID:         row.GameID,
+			ParentID:       pgInt4ToInt32Ptr(row.ParentID),
+			AuthorID:       row.AuthorID,
+			CharacterID:    row.CharacterID,
+			Content:        row.Content,
+			CreatedAt:      pgTimestampToTime(row.CreatedAt),
+			UpdatedAt:      pgTimestampToTime(row.UpdatedAt),
+			EditedAt:       pgTimestamptzToTimePtr(row.EditedAt),
+			EditCount:      row.EditCount,
+			DeletedAt:      pgTimestampToTimePtr(row.DeletedAt),
+			IsDeleted:      row.IsDeleted,
+			AuthorUsername: row.AuthorUsername,
+			CharacterName:  pgTextToStringPtr(row.CharacterName),
+
+			// Parent data
+			ParentContent:        pgTextToStringPtr(row.ParentContent),
+			ParentCreatedAt:      pgTimestampToTimePtr(row.ParentCreatedAt),
+			ParentDeletedAt:      pgTimestampToTimePtr(row.ParentDeletedAt),
+			ParentIsDeleted:      pgBoolToBoolPtr(row.ParentIsDeleted),
+			ParentMessageType:    nullMessageTypeToStringPtr(row.ParentMessageType),
+			ParentAuthorUsername: pgTextToStringPtr(row.ParentAuthorUsername),
+			ParentCharacterName:  pgTextToStringPtr(row.ParentCharacterName),
+		}
+	}
+
+	slog.InfoContext(ctx, "Listed recent comments with parents",
+		"game_id", gameID,
+		"limit", limit,
+		"offset", offset,
+		"count", len(comments))
+
+	return comments, nil
+}
+
+// GetTotalCommentCount returns the total count of non-deleted comments in a game
+func (s *MessageService) GetTotalCommentCount(ctx context.Context, gameID int32) (int64, error) {
+	queries := models.New(s.DB)
+
+	count, err := queries.GetTotalCommentCount(ctx, gameID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get total comment count: %w", err)
+	}
+
+	return count, nil
+}

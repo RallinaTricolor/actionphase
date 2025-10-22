@@ -554,6 +554,13 @@ type MessageServiceInterface interface {
 
 	// GetAudienceConversationMessages retrieves all messages in a conversation (for audience/GM)
 	GetAudienceConversationMessages(ctx context.Context, conversationID int32) ([]models.GetAudienceConversationMessagesRow, error)
+
+	// ListRecentCommentsWithParents retrieves recent comments with their parent messages/posts
+	// for the "New Comments" view. Supports pagination via limit/offset.
+	ListRecentCommentsWithParents(ctx context.Context, gameID int32, limit, offset int32) ([]CommentWithParent, error)
+
+	// GetTotalCommentCount returns the total count of non-deleted comments in a game
+	GetTotalCommentCount(ctx context.Context, gameID int32) (int64, error)
 }
 
 // CreatePhaseRequest represents the parameters needed to create a new game phase
@@ -674,6 +681,35 @@ type MessageWithDetails struct {
 	CharacterAvatarUrl *string // Optional - character's avatar URL
 	CommentCount       int64   // For posts
 	ReplyCount         int64   // For comments
+}
+
+// CommentWithParent represents a comment along with its parent message/post
+// Used for the "New Comments" view to show recent activity with context
+type CommentWithParent struct {
+	// Comment data
+	ID             int32
+	GameID         int32
+	ParentID       *int32
+	AuthorID       int32
+	CharacterID    int32
+	Content        string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	EditedAt       *time.Time
+	EditCount      int32
+	DeletedAt      *time.Time
+	IsDeleted      bool
+	AuthorUsername string
+	CharacterName  *string
+
+	// Parent data (the post or comment this comment is replying to)
+	ParentContent        *string
+	ParentCreatedAt      *time.Time
+	ParentDeletedAt      *time.Time
+	ParentIsDeleted      *bool
+	ParentMessageType    *string // "post" or "comment"
+	ParentAuthorUsername *string
+	ParentCharacterName  *string
 }
 
 // ReadMarker tracks which comments a user has read in a common room post
