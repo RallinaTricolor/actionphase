@@ -54,8 +54,7 @@ export function CreateCharacterModal({
     if (userRole === 'gm') {
       return [
         { value: 'player_character', label: 'Player Character' },
-        { value: 'npc_gm', label: 'GM-Controlled NPC' },
-        { value: 'npc_audience', label: 'Audience NPC' }
+        { value: 'npc', label: 'NPC' }
       ];
     } else {
       return [
@@ -90,9 +89,7 @@ export function CreateCharacterModal({
           helperText={
             formData.character_type === 'player_character'
               ? "A character you'll control during the game"
-              : formData.character_type === 'npc_gm'
-              ? "An NPC controlled by the GM"
-              : "An NPC that can be assigned to audience members"
+              : "A non-player character (can be assigned to audience members)"
           }
         >
           {getAvailableCharacterTypes().map((type) => (

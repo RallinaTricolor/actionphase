@@ -34,7 +34,7 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate character type
-	validTypes := []string{"player_character", "npc_gm", "npc_audience"}
+	validTypes := []string{"player_character", "npc"}
 	isValid := false
 	for _, validType := range validTypes {
 		if data.CharacterType == validType {

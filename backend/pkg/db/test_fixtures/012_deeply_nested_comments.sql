@@ -23,7 +23,7 @@ BEGIN
   SELECT id INTO target_phase_id FROM game_phases WHERE game_id = target_game_id AND is_active = true LIMIT 1;
 
   -- Get character IDs
-  SELECT id INTO gm_char_id FROM characters WHERE game_id = target_game_id AND user_id = gm_id AND character_type = 'npc_gm' LIMIT 1;
+  SELECT id INTO gm_char_id FROM characters WHERE game_id = target_game_id AND user_id = gm_id AND character_type = 'npc' LIMIT 1;
   SELECT id INTO p1_char_id FROM characters WHERE game_id = target_game_id AND user_id = p1_id LIMIT 1;
   SELECT id INTO p2_char_id FROM characters WHERE game_id = target_game_id AND user_id = p2_id LIMIT 1;
 

@@ -527,16 +527,20 @@ func (b *CharacterBuilder) PlayerCharacter() *CharacterBuilder {
 	return b
 }
 
-func (b *CharacterBuilder) NPCGMControlled() *CharacterBuilder {
-	b.characterType = "npc_gm"
+func (b *CharacterBuilder) NPC() *CharacterBuilder {
+	b.characterType = "npc"
 	b.userID = nil
 	return b
 }
 
+// Deprecated: Use NPC() instead. NPC type consolidation removed distinction between GM and audience NPCs.
+func (b *CharacterBuilder) NPCGMControlled() *CharacterBuilder {
+	return b.NPC()
+}
+
+// Deprecated: Use NPC() instead. NPC type consolidation removed distinction between GM and audience NPCs.
 func (b *CharacterBuilder) NPCAudience() *CharacterBuilder {
-	b.characterType = "npc_audience"
-	b.userID = nil
-	return b
+	return b.NPC()
 }
 
 func (b *CharacterBuilder) WithStatus(status string) *CharacterBuilder {

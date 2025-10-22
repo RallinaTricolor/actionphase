@@ -570,7 +570,7 @@ func TestConversationService_AddParticipant(t *testing.T) {
 			GameID:        game.ID,
 			UserID:        nil, // NPC has no user
 			Name:          "NPC Character",
-			CharacterType: "npc_gm",
+			CharacterType: "npc",
 		})
 		require.NoError(t, err)
 
@@ -708,7 +708,7 @@ func TestConversationService_CreateConversationWithNPC(t *testing.T) {
 		GameID:        game.ID,
 		UserID:        nil, // NPC has no user
 		Name:          "NPC Character",
-		CharacterType: "npc_gm",
+		CharacterType: "npc",
 	})
 	require.NoError(t, err)
 

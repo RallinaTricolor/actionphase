@@ -231,7 +231,7 @@ func TestExtractCharacterMentions_MultiWordNames(t *testing.T) {
 	_, err = characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
 		Name:          "Bob Smith",
-		CharacterType: "npc_gm",
+		CharacterType: "npc",
 	})
 	require.NoError(t, err)
 

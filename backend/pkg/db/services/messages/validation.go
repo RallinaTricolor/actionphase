@@ -31,8 +31,8 @@ func (s *MessageService) ValidateCharacterOwnership(ctx context.Context, charact
 		return nil
 	}
 
-	// Check if this is an NPC (GM or audience controlled)
-	if character.CharacterType == "npc_gm" || character.CharacterType == "npc_audience" {
+	// Check if this is an NPC
+	if character.CharacterType == "npc" {
 		// Check if user is assigned to this NPC
 		assignment, err := queries.GetNPCAssignment(ctx, characterID)
 		if err == nil && assignment.AssignedUserID == authorID {

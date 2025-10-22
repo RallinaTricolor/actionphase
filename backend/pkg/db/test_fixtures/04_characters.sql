@@ -49,8 +49,8 @@ BEGIN
   -- GM NPCs
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (game1_id, gm_id, 'Captain Obed Marsh', 'npc_gm', 'approved', NOW() - INTERVAL '5 days', NOW()),
-    (game1_id, gm_id, 'The Fishmonger', 'npc_gm', 'approved', NOW() - INTERVAL '5 days', NOW());
+    (game1_id, gm_id, 'Captain Obed Marsh', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW()),
+    (game1_id, gm_id, 'The Fishmonger', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW());
 
   -- ============================================
   -- GAME #2: The Heist
@@ -73,9 +73,9 @@ BEGIN
   -- GM NPCs only
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (game2_id, gm_id, 'Inspector Dalton', 'npc_gm', 'approved', NOW() - INTERVAL '8 days', NOW()),
-    (game2_id, gm_id, 'Bones (Contact)', 'npc_gm', 'approved', NOW() - INTERVAL '7 days', NOW()),
-    (game2_id, gm_id, 'Whistle (Lookout)', 'npc_gm', 'approved', NOW() - INTERVAL '7 days', NOW());
+    (game2_id, gm_id, 'Inspector Dalton', 'npc', 'approved', NOW() - INTERVAL '8 days', NOW()),
+    (game2_id, gm_id, 'Bones (Contact)', 'npc', 'approved', NOW() - INTERVAL '7 days', NOW()),
+    (game2_id, gm_id, 'Whistle (Lookout)', 'npc', 'approved', NOW() - INTERVAL '7 days', NOW());
 
   -- Character data examples
   INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, is_public, created_at, updated_at)
@@ -95,7 +95,7 @@ BEGIN
     (game3_id, p1_id, 'Commander Vasquez', 'player_character', 'approved', NOW() - INTERVAL '13 days', NOW()),
     (game3_id, p2_id, 'Engineer Patel', 'player_character', 'approved', NOW() - INTERVAL '13 days', NOW()),
     (game3_id, p3_id, 'Dr. Kim', 'player_character', 'approved', NOW() - INTERVAL '13 days', NOW()),
-    (game3_id, gm_id, 'The Alien Entity', 'npc_gm', 'approved', NOW() - INTERVAL '12 days', NOW());
+    (game3_id, gm_id, 'The Alien Entity', 'npc', 'approved', NOW() - INTERVAL '12 days', NOW());
 
   -- ============================================
   -- GAME #4: Court of Shadows
@@ -107,8 +107,8 @@ BEGIN
     (game4_id, p2_id, 'Countess Nyx', 'player_character', 'approved', NOW() - INTERVAL '19 days', NOW()),
     (game4_id, p3_id, 'Baron Ash', 'player_character', 'approved', NOW() - INTERVAL '19 days', NOW()),
     (game4_id, p4_id, 'Lady Morgana', 'player_character', 'approved', NOW() - INTERVAL '18 days', NOW()),
-    (game4_id, gm_id, 'Prince Valdric', 'npc_gm', 'approved', NOW() - INTERVAL '18 days', NOW()),
-    (game4_id, gm_id, 'The Archbishop', 'npc_gm', 'approved', NOW() - INTERVAL '18 days', NOW());
+    (game4_id, gm_id, 'Prince Valdric', 'npc', 'approved', NOW() - INTERVAL '18 days', NOW()),
+    (game4_id, gm_id, 'The Archbishop', 'npc', 'approved', NOW() - INTERVAL '18 days', NOW());
 
   -- ============================================
   -- GAME #5: Dragon of Mount Krag
@@ -119,7 +119,7 @@ BEGIN
     (game5_id, p1_id, 'Thorin Ironforge', 'player_character', 'approved', NOW() - INTERVAL '44 days', NOW()),
     (game5_id, p2_id, 'Elara Moonshadow', 'player_character', 'approved', NOW() - INTERVAL '44 days', NOW()),
     (game5_id, p3_id, 'Grimm the Bold', 'player_character', 'approved', NOW() - INTERVAL '44 days', NOW()),
-    (game5_id, gm_id, 'Vorathax the Ancient', 'npc_gm', 'approved', NOW() - INTERVAL '40 days', NOW());
+    (game5_id, gm_id, 'Vorathax the Ancient', 'npc', 'approved', NOW() - INTERVAL '40 days', NOW());
 
   -- ============================================
   -- GAME #6: Chronicles of Westmarch
@@ -131,8 +131,8 @@ BEGIN
     (game6_id, p2_id, 'Zara the Mystic', 'player_character', 'approved', NOW() - INTERVAL '59 days', NOW()),
     (game6_id, p3_id, 'Finn Quickfingers', 'player_character', 'approved', NOW() - INTERVAL '58 days', NOW()),
     (game6_id, p4_id, 'Bronwyn Stormcaller', 'player_character', 'approved', NOW() - INTERVAL '55 days', NOW()),
-    (game6_id, gm_id, 'The Dark Lord', 'npc_gm', 'approved', NOW() - INTERVAL '50 days', NOW()),
-    (game6_id, gm_id, 'Merchant Guild Master', 'npc_gm', 'approved', NOW() - INTERVAL '50 days', NOW());
+    (game6_id, gm_id, 'The Dark Lord', 'npc', 'approved', NOW() - INTERVAL '50 days', NOW()),
+    (game6_id, gm_id, 'Merchant Guild Master', 'npc', 'approved', NOW() - INTERVAL '50 days', NOW());
 
 END $$;
 

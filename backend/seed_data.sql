@@ -20,18 +20,18 @@ INSERT INTO characters (game_id, user_id, name, character_type, status) VALUES
 -- Player characters for game 1
 (1, 1, 'Elara Moonwhisper', 'player_character', 'approved'),
 -- NPCs for game 1
-(1, NULL, 'The Forest Guardian', 'npc_gm', 'active'),
-(1, NULL, 'Whiskers the Talking Fox', 'npc_gm', 'active'),
+(1, NULL, 'The Forest Guardian', 'npc', 'active'),
+(1, NULL, 'Whiskers the Talking Fox', 'npc', 'active'),
 
 -- Player characters for game 2
 (2, 1, 'Jack "NetRunner" Chen', 'player_character', 'pending'),
 -- NPCs for game 2
-(2, NULL, 'Corporate Security Chief', 'npc_gm', 'active'),
+(2, NULL, 'Corporate Security Chief', 'npc', 'active'),
 
 -- Player characters for game 3
 (3, 1, 'Dr. Sarah Mitchell', 'player_character', 'approved'),
 -- NPCs for game 3
-(3, NULL, 'The Guide', 'npc_gm', 'active');
+(3, NULL, 'The Guide', 'npc', 'active');
 
 -- Add some character data (bio information)
 INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, is_public) VALUES
