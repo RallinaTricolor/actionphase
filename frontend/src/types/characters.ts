@@ -13,6 +13,9 @@ export interface Character {
   original_owner_user_id?: number;
   original_owner_username?: string;
   current_owner_username?: string;
+  // NPC assignment fields (only present for NPCs)
+  assigned_user_id?: number;
+  assigned_username?: string;
   created_at: string;
   updated_at: string;
 }
@@ -122,8 +125,8 @@ export const CHARACTER_MODULES: CharacterModule[] = [
       {
         name: 'background',
         type: 'text',
-        label: 'Background Story',
-        placeholder: 'Tell your character\'s story...',
+        label: 'Public Profile',
+        placeholder: 'What\'s visible at a glance...',
         isPublic: true
       },
       {

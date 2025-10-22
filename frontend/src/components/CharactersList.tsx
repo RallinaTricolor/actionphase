@@ -4,6 +4,7 @@ import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 import { CreateCharacterModal } from './CreateCharacterModal';
 import { CharacterSheet } from './CharacterSheet';
+import { AssignNPCModal } from './AssignNPCModal';
 import { Modal } from './Modal';
 import { Card, Button, Badge, Spinner, type BadgeVariant } from './ui';
 
@@ -24,6 +25,7 @@ export function CharactersList({
 }: CharactersListProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
+  const [npcToAssign, setNpcToAssign] = useState<Character | null>(null);
   const queryClient = useQueryClient();
 
   const { data: charactersData, isLoading } = useQuery({
@@ -56,8 +58,7 @@ export function CharactersList({
 
   // Group characters by type
   const playerCharacters = visibleCharacters.filter(char => char.character_type === 'player_character');
-  const gmNPCs = visibleCharacters.filter(char => char.character_type === 'npc_gm');
-  const audienceNPCs = visibleCharacters.filter(char => char.character_type === 'npc_audience');
+  const npcs = visibleCharacters.filter(char => char.character_type === 'npc');
 
   // Check if user can create characters
   const canCreateCharacter = () => {
@@ -69,7 +70,19 @@ export function CharactersList({
 
   // Check if character belongs to current user
   const isUserCharacter = (character: Character) => {
-    return character.user_id === currentUserId;
+    if (character.character_type === 'player_character') {
+      return character.user_id === currentUserId;
+    }
+    // For NPCs: GM owns all unassigned NPCs, or users own NPCs assigned to them
+    if (character.character_type === 'npc') {
+      // If NPC is assigned to someone, check if it's assigned to current user
+      if (character.assigned_user_id) {
+        return character.assigned_user_id === currentUserId;
+      }
+      // If NPC is unassigned, GM owns it
+      return userRole === 'gm';
+    }
+    return false;
   };
 
   // Check if user can view character sheet
@@ -156,6 +169,7 @@ export function CharactersList({
                     userRole={userRole}
                     isAnonymous={isAnonymous}
                     onApprove={handleApproveCharacter}
+                    onAssignNPC={setNpcToAssign}
                     getStatusBadgeVariant={getStatusBadgeVariant}
                     canViewSheet={canViewCharacterSheet(character)}
                     canEditSheet={canEditCharacterSheet(character)}
@@ -179,6 +193,7 @@ export function CharactersList({
                           userRole={userRole}
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
+                          onAssignNPC={setNpcToAssign}
                           getStatusBadgeVariant={getStatusBadgeVariant}
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
@@ -189,12 +204,12 @@ export function CharactersList({
                   </div>
                 )}
 
-                {/* GM NPCs */}
-                {gmNPCs.length > 0 && (
+                {/* NPCs */}
+                {npcs.length > 0 && (
                   <div>
-                    <h3 className="text-md font-medium text-content-primary mb-3">GM NPCs</h3>
+                    <h3 className="text-md font-medium text-content-primary mb-3">NPCs</h3>
                     <div className="space-y-3">
-                      {gmNPCs.map((character) => (
+                      {npcs.map((character) => (
                         <CharacterCard
                           key={character.id}
                           character={character}
@@ -202,29 +217,7 @@ export function CharactersList({
                           userRole={userRole}
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
-                          getStatusBadgeVariant={getStatusBadgeVariant}
-                          canViewSheet={canViewCharacterSheet(character)}
-                          canEditSheet={canEditCharacterSheet(character)}
-                          onViewSheet={() => setSelectedCharacterId(character.id)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Audience NPCs */}
-                {audienceNPCs.length > 0 && (
-                  <div>
-                    <h3 className="text-md font-medium text-content-primary mb-3">Audience NPCs</h3>
-                    <div className="space-y-3">
-                      {audienceNPCs.map((character) => (
-                        <CharacterCard
-                          key={character.id}
-                          character={character}
-                          isOwner={isUserCharacter(character)}
-                          userRole={userRole}
-                          isAnonymous={isAnonymous}
-                          onApprove={handleApproveCharacter}
+                          onAssignNPC={setNpcToAssign}
                           getStatusBadgeVariant={getStatusBadgeVariant}
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
@@ -266,6 +259,20 @@ export function CharactersList({
           </Modal>
         );
       })()}
+
+      {/* Assign NPC Modal */}
+      {npcToAssign && (
+        <AssignNPCModal
+          character={npcToAssign}
+          gameId={gameId}
+          isOpen={true}
+          onClose={() => setNpcToAssign(null)}
+          onSuccess={() => {
+            setNpcToAssign(null);
+            queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
+          }}
+        />
+      )}
     </Card>
   );
 }
@@ -276,6 +283,7 @@ interface CharacterCardProps {
   userRole: string;
   isAnonymous?: boolean;
   onApprove: (characterId: number, status: 'approved' | 'rejected') => void;
+  onAssignNPC?: (character: Character) => void;
   getStatusBadgeVariant: (status: string) => BadgeVariant;
   canViewSheet: boolean;
   canEditSheet: boolean;
@@ -288,6 +296,7 @@ function CharacterCard({
   userRole,
   isAnonymous = false,
   onApprove,
+  onAssignNPC,
   getStatusBadgeVariant,
   canViewSheet,
   canEditSheet,
@@ -317,8 +326,12 @@ function CharacterCard({
                 Type: <span className="capitalize">{character.character_type.replace('_', ' ')}</span>
               </div>
             )}
-            {/* Only show player name if not anonymous or if GM */}
-            {character.username && (!isAnonymous || userRole === 'gm') && (
+            {/* For NPCs, show assignment info */}
+            {character.character_type === 'npc' && character.assigned_username && (!isAnonymous || userRole === 'gm') && (
+              <div>Assigned to: {character.assigned_username}</div>
+            )}
+            {/* For player characters, show player name if not anonymous or if GM */}
+            {character.character_type === 'player_character' && character.username && (!isAnonymous || userRole === 'gm') && (
               <div>Player: {character.username}</div>
             )}
           </div>
@@ -333,6 +346,17 @@ function CharacterCard({
               onClick={onViewSheet}
             >
               {canEditSheet ? 'Edit Sheet' : 'View Sheet'}
+            </Button>
+          )}
+
+          {/* Assign NPC Button (GM only, for NPCs) */}
+          {userRole === 'gm' && character.character_type === 'npc' && onAssignNPC && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onAssignNPC(character)}
+            >
+              Assign NPC
             </Button>
           )}
 

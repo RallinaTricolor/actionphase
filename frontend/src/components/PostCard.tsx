@@ -212,25 +212,22 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                   characterName={post.character_name}
                   size="md"
                 />
-                <div className="flex items-center gap-2 flex-1">
-                  <svg className="w-5 h-5 text-interactive-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                  </svg>
-                  <h3 className="font-bold text-xl text-content-primary">GM Post: {post.character_name}</h3>
-                  {unreadCommentIDs.length > 0 && (
-                    <span className="ml-2 px-2 py-1 text-xs font-semibold bg-interactive-primary-subtle text-interactive-primary rounded">
-                      {unreadCommentIDs.length} new {unreadCommentIDs.length === 1 ? 'comment' : 'comments'}
-                    </span>
-                  )}
+                <div className="flex-1">
+                  <h3 className="font-bold text-xl text-content-primary">{post.character_name}</h3>
+                  <p className="text-sm text-content-secondary">
+                    Posted by @{post.author_username} · {formatDate(post.created_at)}
+                    {post.is_edited && <span className="ml-1 text-content-tertiary">(edited)</span>}
+                    {isAuthor && (
+                      <span className="ml-2 text-xs bg-interactive-primary-subtle text-interactive-primary px-2 py-0.5 rounded">You</span>
+                    )}
+                  </p>
                 </div>
-              </div>
-              <p className="text-sm text-content-secondary mt-1">
-                Posted by @{post.author_username} · {formatDate(post.created_at)}
-                {post.is_edited && <span className="ml-1 text-content-tertiary">(edited)</span>}
-                {isAuthor && (
-                  <span className="ml-2 text-xs bg-interactive-primary-subtle text-interactive-primary px-2 py-0.5 rounded">You</span>
+                {unreadCommentIDs.length > 0 && (
+                  <span className="px-2 py-1 text-xs font-semibold bg-interactive-primary-subtle text-interactive-primary rounded">
+                    {unreadCommentIDs.length} new {unreadCommentIDs.length === 1 ? 'comment' : 'comments'}
+                  </span>
                 )}
-              </p>
+              </div>
             </div>
           </div>
 

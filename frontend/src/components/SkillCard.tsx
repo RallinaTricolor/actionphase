@@ -32,8 +32,8 @@ export const SkillCard: React.FC<SkillCardProps> = ({ skill, canEdit, onUpdate, 
   };
 
   return (
-    <div className="border border-theme-default rounded-lg p-4 surface-base">
-      <div className="flex justify-between items-start mb-2">
+    <div className="border border-theme-default rounded-lg p-5 surface-base hover:shadow-md transition-shadow">
+      <div className="flex justify-between items-start mb-3">
         <div className="flex-1">
           {isEditing ? (
             <div className="space-y-2">
@@ -42,7 +42,7 @@ export const SkillCard: React.FC<SkillCardProps> = ({ skill, canEdit, onUpdate, 
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="Skill name..."
-                className="text-lg font-medium"
+                className="text-base font-medium"
               />
               <Input
                 type="text"
@@ -54,7 +54,7 @@ export const SkillCard: React.FC<SkillCardProps> = ({ skill, canEdit, onUpdate, 
             </div>
           ) : (
             <div>
-              <h4 className="text-lg font-medium text-content-primary">{skill.name}</h4>
+              <h4 className="text-base font-semibold text-content-primary mb-1">{skill.name}</h4>
               {skill.level && (
                 <span className="text-sm text-interactive-primary font-medium">Level: {skill.level}</span>
               )}
@@ -108,22 +108,22 @@ export const SkillCard: React.FC<SkillCardProps> = ({ skill, canEdit, onUpdate, 
       </div>
 
       {(skill.description || isEditing) && (
-        <div className="mb-2">
+        <div className="mb-3">
           {isEditing ? (
             <Textarea
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
               placeholder="Describe this skill..."
-              rows={2}
+              rows={3}
             />
           ) : (
-            <p className="text-sm text-content-secondary">{skill.description}</p>
+            <p className="text-sm text-content-primary leading-relaxed">{skill.description}</p>
           )}
         </div>
       )}
 
       {skill.category && (
-        <Badge variant="default">
+        <Badge variant="primary" size="sm">
           {skill.category}
         </Badge>
       )}

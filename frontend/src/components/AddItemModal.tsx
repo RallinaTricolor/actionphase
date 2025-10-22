@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { InventoryItem } from '../types/characters';
 import { Button, Input, Textarea } from './ui';
+import { Modal } from './Modal';
 
 interface AddItemModalProps {
   onAdd: (item: Omit<InventoryItem, 'id'>) => void;
@@ -31,11 +32,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ onAdd, onCancel }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="surface-base rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-lg font-medium text-content-primary mb-4">Add New Item</h3>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal isOpen={true} onClose={onCancel} title="Add New Item">
+      <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             id="item-name"
             label="Item Name *"
@@ -97,23 +95,22 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ onAdd, onCancel }) =
             rows={2}
           />
 
-          <div className="flex justify-end space-x-3 pt-4">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-            >
-              Add Item
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end space-x-3 pt-4">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+          >
+            Add Item
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };

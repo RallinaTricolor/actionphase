@@ -50,7 +50,7 @@ export function useGameTabs({
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<string>(tabParam || 'default');
-  const [userSelectedTab, setUserSelectedTab] = useState(false); // Track if user manually selected a tab
+  const [userSelectedTab, setUserSelectedTab] = useState(!!tabParam); // True if URL param exists on initial load
   const hasProcessedUrlParam = useRef(false); // Track if we've already processed the initial URL param
 
   // Phase-aware tab configuration
@@ -119,7 +119,7 @@ export function useGameTabs({
 
   // Smart default tab selection logic based on game context
   const defaultTab = useMemo(() => {
-    if (tabs.length === 0) return 'info';
+    if (tabs.length === 0) return 'default';
 
     // Priority 1: In-progress game - phase-aware defaults
     if (gameState === 'in_progress' && currentPhaseType) {
@@ -159,48 +159,79 @@ export function useGameTabs({
     return tabs[0].id;
   }, [tabs, gameState, currentPhaseType, isGM]);
 
-  // Process URL parameter changes (including from notifications)
+  // Handle URL parameters and apply smart defaults
   useEffect(() => {
-    const paramTab = searchParams.get('tab');
-
-    // If there's a tab parameter in the URL and it's a valid tab
-    if (paramTab && tabs.some(t => t.id === paramTab)) {
-      // Only switch if it's different from current tab
-      if (activeTab !== paramTab) {
-        setActiveTab(paramTab);
-        setUserSelectedTab(true); // URL param counts as user selection
-      }
-      hasProcessedUrlParam.current = true;
-    }
-  }, [searchParams, tabs, activeTab]);
-
-  // Apply smart default when phase data loads (if user hasn't selected a tab)
-  useEffect(() => {
-    // Don't override if we've already processed a URL param
-    if (hasProcessedUrlParam.current) {
+    // Don't run if tabs haven't loaded yet (avoid false positives on invalid tabs)
+    if (tabs.length === 0) {
       return;
     }
 
-    if (!userSelectedTab && (activeTab === 'default' || activeTab !== defaultTab)) {
+    // Don't run if game data hasn't loaded yet - wait for actual game state
+    // This prevents redirecting URL params before we know what tabs should exist
+    if (!gameState) {
+      return;
+    }
+
+    // Check if there's a URL param
+    const urlTab = searchParams.get('tab');
+
+    if (urlTab) {
+      // If URL tab is valid, use it
+      if (tabs.some(t => t.id === urlTab)) {
+        hasProcessedUrlParam.current = true;
+        // Always mark as user-selected when URL param is present
+        if (!userSelectedTab) {
+          setUserSelectedTab(true);
+        }
+        // Only update activeTab if it's different
+        if (activeTab !== urlTab) {
+          setActiveTab(urlTab);
+        }
+        return; // Valid URL param - we're done
+      } else {
+        // Invalid URL param - but only redirect if we've seen it as valid before
+        // This prevents redirecting during initial load when tabs haven't loaded yet
+        if (hasProcessedUrlParam.current) {
+          setActiveTab(defaultTab);
+          const newParams = new URLSearchParams(searchParams);
+          newParams.set('tab', defaultTab);
+          setSearchParams(newParams, { replace: true });
+        }
+        return; // Handled invalid URL param - we're done
+      }
+    }
+
+    if (!userSelectedTab && activeTab === 'default') {
       // User hasn't manually selected a tab - apply smart default
       // This allows the default to update when phase data loads
       setActiveTab(defaultTab);
+
+      // Set the URL parameter on initial load (replace so no new history entry)
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('tab', defaultTab);
+      setSearchParams(newParams, { replace: true });
     } else if (!tabs.some(t => t.id === activeTab)) {
       // Current tab is no longer valid (e.g., action phase ended) - reset to default
+      // This only runs when there's NO URL param (checked above)
       setActiveTab(defaultTab);
       setUserSelectedTab(false);
+
+      // Update URL to reflect the reset
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('tab', defaultTab);
+      setSearchParams(newParams, { replace: true });
     }
-  }, [tabs, defaultTab, activeTab, userSelectedTab]);
+  }, [tabs, defaultTab, activeTab, userSelectedTab, searchParams, setSearchParams]);
 
   // Wrapper for setActiveTab that tracks user selection and updates URL
   const handleSetActiveTab = (tabId: string) => {
     setActiveTab(tabId);
     setUserSelectedTab(true);
 
-    // Update URL with new tab parameter
+    // Update URL with new tab parameter (push new history entry for back button support)
     const newParams = new URLSearchParams(searchParams);
     newParams.set('tab', tabId);
-    setSearchParams(newParams, { replace: true });
+    setSearchParams(newParams, { replace: false });
   };
 
   return {

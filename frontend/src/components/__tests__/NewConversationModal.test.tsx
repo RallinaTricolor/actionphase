@@ -58,7 +58,7 @@ describe('NewConversationModal', () => {
       user_id: undefined,
       username: undefined,
       name: 'The Mysterious NPC',
-      character_type: 'npc_gm',
+      character_type: 'npc',
       status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -1038,7 +1038,7 @@ describe('NewConversationModal', () => {
       // Check that character types are displayed (with underscore replaced)
       const participantsList = screen.getAllByRole('checkbox')[0].closest('div[class*="space-y-2"]')
       expect(participantsList).toHaveTextContent('player character')
-      expect(participantsList).toHaveTextContent('npc gm')
+      expect(participantsList).toHaveTextContent('npc')
     })
   })
 })

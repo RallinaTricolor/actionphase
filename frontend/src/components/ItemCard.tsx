@@ -49,8 +49,8 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
   };
 
   return (
-    <div className="border border-theme-default rounded-lg p-4 surface-base">
-      <div className="flex justify-between items-start mb-2">
+    <div className="border border-theme-default rounded-lg p-5 surface-base hover:shadow-md transition-shadow">
+      <div className="flex justify-between items-start mb-3">
         <div className="flex-1">
           {isEditing ? (
             <div className="space-y-2">
@@ -59,7 +59,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="Item name..."
-                className="text-lg font-medium"
+                className="text-base font-medium"
               />
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-content-secondary">Qty:</span>
@@ -74,15 +74,15 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
             </div>
           ) : (
             <div>
-              <div className="flex items-center space-x-2">
-                <h4 className="text-lg font-medium text-content-primary">{item.name}</h4>
+              <div className="flex items-center space-x-2 flex-wrap gap-1">
+                <h4 className="text-base font-semibold text-content-primary">{item.name}</h4>
                 {item.quantity > 1 && (
-                  <Badge variant="default">
+                  <Badge variant="default" size="sm">
                     x{item.quantity}
                   </Badge>
                 )}
                 {item.equipped && (
-                  <Badge variant="success">
+                  <Badge variant="success" size="sm">
                     Equipped
                   </Badge>
                 )}
@@ -93,7 +93,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
 
         <div className="flex items-center space-x-2 ml-4">
           {item.category && (
-            <Badge variant={getCategoryVariant(item.category)}>
+            <Badge variant={getCategoryVariant(item.category)} size="md">
               {item.category}
             </Badge>
           )}
@@ -145,32 +145,49 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
       </div>
 
       {(item.description || isEditing) && (
-        <div className="mb-2">
+        <div className="mb-3">
           {isEditing ? (
             <Textarea
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
               placeholder="Describe this item..."
-              rows={2}
+              rows={3}
             />
           ) : (
-            <p className="text-sm text-content-secondary">{item.description}</p>
+            <p className="text-sm text-content-primary leading-relaxed">{item.description}</p>
           )}
         </div>
       )}
 
       {/* Item Stats */}
-      <div className="flex flex-wrap gap-4 text-xs text-content-tertiary">
-        {item.weight && (
-          <span>Weight: {item.weight * item.quantity}</span>
-        )}
-        {item.value && (
-          <span>Value: {item.value * item.quantity}</span>
-        )}
-        {item.condition && (
-          <span>Condition: {item.condition}</span>
-        )}
-      </div>
+      {(item.weight || item.value || item.condition) && (
+        <div className="flex flex-wrap gap-3 text-xs text-content-secondary border-t border-theme-default pt-3">
+          {item.weight !== undefined && (
+            <span className="flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+              </svg>
+              Weight: {(item.weight * item.quantity).toFixed(1)}
+            </span>
+          )}
+          {item.value !== undefined && (
+            <span className="flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Value: {item.value * item.quantity}
+            </span>
+          )}
+          {item.condition && (
+            <span className="flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {item.condition}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 };

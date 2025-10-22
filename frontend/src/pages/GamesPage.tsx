@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GamesList } from '../components/GamesList';
 import { CreateGameForm } from '../components/CreateGameForm';
 import { Modal } from '../components/Modal';
 import { FilterBar } from '../components/FilterBar';
+import { Input } from '../components/ui';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useGameListing } from '../hooks/useGameListing';
@@ -13,6 +14,7 @@ export const GamesPage = () => {
   const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const { isAuthenticated } = useAuth();
 
   // Use the new game listing hook with URL-synced filters
@@ -20,8 +22,8 @@ export const GamesPage = () => {
     games,
     metadata,
     filters,
+    setSearch,
     setStates,
-    setGenres,
     setParticipation,
     setHasOpenSpots,
     setSortBy,
@@ -30,6 +32,15 @@ export const GamesPage = () => {
     isError,
     error,
   } = useGameListing();
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearch(searchInput);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput, setSearch]);
 
   const handleGameClick = (game: EnrichedGameListItem) => {
     navigate(`/games/${game.id}`);
@@ -121,6 +132,18 @@ export const GamesPage = () => {
             Create Game
           </button>
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-4">
+        <Input
+          id="game-search"
+          type="text"
+          placeholder="Search games by title or description..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="max-w-2xl"
+        />
       </div>
 
       {/* Filter Bar */}

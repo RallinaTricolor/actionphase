@@ -42,8 +42,8 @@ export const AbilityCard: React.FC<AbilityCardProps> = ({ ability, canEdit, onUp
   };
 
   return (
-    <div className="border border-theme-default rounded-lg p-4 surface-base">
-      <div className="flex justify-between items-start mb-2">
+    <div className="border border-theme-default rounded-lg p-5 surface-base hover:shadow-md transition-shadow">
+      <div className="flex justify-between items-start mb-3">
         <div className="flex-1">
           {isEditing ? (
             <Input
@@ -51,15 +51,15 @@ export const AbilityCard: React.FC<AbilityCardProps> = ({ ability, canEdit, onUp
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               placeholder="Ability name..."
-              className="text-lg font-medium"
+              className="text-base font-medium"
             />
           ) : (
-            <h4 className="text-lg font-medium text-content-primary">{ability.name}</h4>
+            <h4 className="text-base font-semibold text-content-primary mb-1">{ability.name}</h4>
           )}
         </div>
 
         <div className="flex items-center space-x-2 ml-4">
-          <Badge variant={getTypeVariant(ability.type)}>
+          <Badge variant={getTypeVariant(ability.type)} size="md">
             {ability.type.replace('_', ' ')}
           </Badge>
 
@@ -110,31 +110,33 @@ export const AbilityCard: React.FC<AbilityCardProps> = ({ ability, canEdit, onUp
       </div>
 
       {(ability.description || isEditing) && (
-        <div className="mb-2">
+        <div className="mb-3">
           {isEditing ? (
             <Textarea
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
               placeholder="Describe this ability..."
-              rows={2}
+              rows={3}
             />
           ) : (
-            <p className="text-sm text-content-secondary">{ability.description}</p>
+            <p className="text-sm text-content-primary leading-relaxed">{ability.description}</p>
           )}
         </div>
       )}
 
-      {ability.source && (
-        <p className="text-xs text-content-tertiary">
-          Source: {ability.source}
-        </p>
-      )}
-
-      {!ability.active && (
-        <div className="mt-2">
-          <Badge variant="default">Inactive</Badge>
-        </div>
-      )}
+      <div className="flex items-center gap-3 text-xs text-content-tertiary">
+        {ability.source && (
+          <span className="flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Source: {ability.source}
+          </span>
+        )}
+        {!ability.active && (
+          <Badge variant="default" size="sm">Inactive</Badge>
+        )}
+      </div>
     </div>
   );
 };
