@@ -150,3 +150,44 @@ gm_participant AS (
     RETURNING *
 )
 SELECT gu.* FROM game_update gu;
+
+-- Player Management Queries
+
+-- name: RemoveParticipant :exec
+UPDATE game_participants
+SET removed_at = NOW(),
+    removed_by_user_id = $3,
+    status = 'removed'
+WHERE game_id = $1 AND user_id = $2 AND removed_at IS NULL;
+
+-- name: AddParticipantDirectly :one
+INSERT INTO game_participants (game_id, user_id, role, status)
+VALUES ($1, $2, 'player', 'active')
+ON CONFLICT (game_id, user_id) DO UPDATE
+SET removed_at = NULL,
+    removed_by_user_id = NULL,
+    status = 'active',
+    joined_at = NOW()
+WHERE game_participants.removed_at IS NOT NULL
+RETURNING *;
+
+-- name: GetActiveParticipants :many
+SELECT gp.*, u.username, u.email
+FROM game_participants gp
+JOIN users u ON gp.user_id = u.id
+WHERE gp.game_id = $1 AND gp.removed_at IS NULL AND gp.status = 'active'
+ORDER BY gp.joined_at;
+
+-- name: CheckParticipantExists :one
+SELECT EXISTS(
+    SELECT 1 FROM game_participants
+    WHERE game_id = $1 AND user_id = $2 AND removed_at IS NULL AND status = 'active'
+);
+
+-- name: RestoreParticipant :one
+UPDATE game_participants
+SET removed_at = NULL,
+    removed_by_user_id = NULL,
+    status = 'active'
+WHERE game_id = $1 AND user_id = $2 AND removed_at IS NOT NULL
+RETURNING *;

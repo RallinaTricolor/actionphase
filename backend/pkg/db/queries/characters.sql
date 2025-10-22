@@ -145,3 +145,27 @@ WHERE id = $1;
 -- For cleanup/maintenance: find all characters with avatars
 SELECT id, avatar_url FROM characters
 WHERE avatar_url IS NOT NULL;
+
+-- Player Management Queries
+
+-- name: DeactivatePlayerCharacters :exec
+UPDATE characters
+SET is_active = false,
+    updated_at = NOW()
+WHERE game_id = $1 AND user_id = $2 AND character_type = 'player_character';
+
+-- name: ReassignCharacter :one
+UPDATE characters
+SET user_id = $2,
+    original_owner_user_id = COALESCE(original_owner_user_id, user_id),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: ListInactiveCharacters :many
+SELECT c.*, u.username as current_owner_username, ou.username as original_owner_username
+FROM characters c
+LEFT JOIN users u ON c.user_id = u.id
+LEFT JOIN users ou ON c.original_owner_user_id = ou.id
+WHERE c.game_id = $1 AND c.is_active = false
+ORDER BY c.updated_at DESC;

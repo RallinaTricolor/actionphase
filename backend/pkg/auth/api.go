@@ -185,3 +185,57 @@ func (h *Handler) V1UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 
 	render.Render(w, r, response)
 }
+
+// UserSearchResult represents a single user in search results
+type UserSearchResult struct {
+	ID        int32  `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	CreatedAt string `json:"created_at"`
+}
+
+// SearchUsersResponse represents the search results
+type SearchUsersResponse struct {
+	Users []UserSearchResult `json:"users"`
+}
+
+func (rd *SearchUsersResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+// V1SearchUsers searches for users by username
+// Query parameter: q (search query)
+func (h *Handler) V1SearchUsers(w http.ResponseWriter, r *http.Request) {
+	// Get search query from URL parameters
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("search query parameter 'q' is required")))
+		return
+	}
+
+	// Search users
+	userService := &db.UserService{DB: h.App.Pool}
+	users, err := userService.SearchUsers(r.Context(), query)
+	if err != nil {
+		h.App.Logger.Error("Failed to search users", "error", err, "query", query)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	results := make([]UserSearchResult, 0, len(users))
+	for _, user := range users {
+		results = append(results, UserSearchResult{
+			ID:        user.ID,
+			Username:  user.Username,
+			Email:     user.Email,
+			CreatedAt: user.CreatedAt.Time.Format("2006-01-02T15:04:05Z07:00"),
+		})
+	}
+
+	response := &SearchUsersResponse{
+		Users: results,
+	}
+
+	render.Render(w, r, response)
+}

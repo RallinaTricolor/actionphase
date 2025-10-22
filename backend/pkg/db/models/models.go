@@ -120,15 +120,17 @@ type ActionSubmission struct {
 }
 
 type Character struct {
-	ID            int32              `json:"id"`
-	GameID        int32              `json:"game_id"`
-	UserID        pgtype.Int4        `json:"user_id"`
-	Name          string             `json:"name"`
-	CharacterType string             `json:"character_type"`
-	Status        pgtype.Text        `json:"status"`
-	AvatarUrl     pgtype.Text        `json:"avatar_url"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	ID                  int32              `json:"id"`
+	GameID              int32              `json:"game_id"`
+	UserID              pgtype.Int4        `json:"user_id"`
+	Name                string             `json:"name"`
+	CharacterType       string             `json:"character_type"`
+	Status              pgtype.Text        `json:"status"`
+	AvatarUrl           pgtype.Text        `json:"avatar_url"`
+	IsActive            bool               `json:"is_active"`
+	OriginalOwnerUserID pgtype.Int4        `json:"original_owner_user_id"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
 type CharacterDatum struct {
@@ -205,12 +207,14 @@ type GameApplication struct {
 }
 
 type GameParticipant struct {
-	ID       int32              `json:"id"`
-	GameID   int32              `json:"game_id"`
-	UserID   int32              `json:"user_id"`
-	Role     string             `json:"role"`
-	Status   pgtype.Text        `json:"status"`
-	JoinedAt pgtype.Timestamptz `json:"joined_at"`
+	ID              int32              `json:"id"`
+	GameID          int32              `json:"game_id"`
+	UserID          int32              `json:"user_id"`
+	Role            string             `json:"role"`
+	Status          pgtype.Text        `json:"status"`
+	JoinedAt        pgtype.Timestamptz `json:"joined_at"`
+	RemovedAt       pgtype.Timestamptz `json:"removed_at"`
+	RemovedByUserID pgtype.Int4        `json:"removed_by_user_id"`
 }
 
 type GamePhase struct {

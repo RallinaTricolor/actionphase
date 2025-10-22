@@ -487,3 +487,67 @@ func interfaceToStringPtr(i interface{}) *string {
 	}
 	return &s
 }
+
+// Player Management Methods
+
+// RemovePlayer removes a player from the game and deactivates their characters
+func (gs *GameService) RemovePlayer(ctx context.Context, gameID, userID, gmUserID int32) error {
+	queries := models.New(gs.DB)
+
+	// Start a transaction
+	tx, err := gs.DB.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	txQueries := queries.WithTx(tx)
+
+	// Remove the participant (soft delete)
+	err = txQueries.RemoveParticipant(ctx, models.RemoveParticipantParams{
+		GameID:          gameID,
+		UserID:          userID,
+		RemovedByUserID: pgtype.Int4{Int32: gmUserID, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to remove participant: %w", err)
+	}
+
+	// Deactivate the player's characters
+	err = txQueries.DeactivatePlayerCharacters(ctx, models.DeactivatePlayerCharactersParams{
+		GameID: gameID,
+		UserID: pgtype.Int4{Int32: userID, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to deactivate characters: %w", err)
+	}
+
+	// Commit the transaction
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// AddPlayerDirectly adds a player directly to the game without application process
+func (gs *GameService) AddPlayerDirectly(ctx context.Context, gameID, userID int32) (*models.GameParticipant, error) {
+	queries := models.New(gs.DB)
+
+	participant, err := queries.AddParticipantDirectly(ctx, models.AddParticipantDirectlyParams{
+		GameID: gameID,
+		UserID: userID,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to add participant: %w", err)
+	}
+
+	return &participant, nil
+}
+
+// GetActiveParticipants retrieves all active (non-removed) participants for a game
+func (gs *GameService) GetActiveParticipants(ctx context.Context, gameID int32) ([]models.GetActiveParticipantsRow, error) {
+	queries := models.New(gs.DB)
+	return queries.GetActiveParticipants(ctx, gameID)
+}

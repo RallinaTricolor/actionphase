@@ -188,3 +188,10 @@ func (s *UserService) CheckUserBanned(ctx context.Context, userID int32) (bool, 
 
 	return user.IsBanned, nil
 }
+
+// SearchUsers searches for users by username (case-insensitive partial match)
+// Returns only non-banned users, limited to 20 results
+func (s *UserService) SearchUsers(ctx context.Context, query string) ([]db.SearchUsersRow, error) {
+	q := db.New(s.DB)
+	return q.SearchUsers(ctx, pgtype.Text{String: query, Valid: true})
+}

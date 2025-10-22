@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { GameApplicationsList } from './GameApplicationsList';
 import { CharactersList } from './CharactersList';
 import { PhaseManagement } from './PhaseManagement';
@@ -7,6 +8,10 @@ import { ActionResultsList } from './ActionResultsList';
 import { CommonRoom } from './CommonRoom';
 import { PrivateMessages } from './PrivateMessages';
 import { PhaseHistoryView } from './PhaseHistoryView';
+import { RemovePlayerButton } from './RemovePlayerButton';
+import { AddPlayerModal } from './AddPlayerModal';
+import { InactiveCharactersList } from './InactiveCharactersList';
+import { Button } from './ui';
 import type { Game, Participant, Character } from '../types/games';
 import type { GamePhase } from '../types/phases';
 
@@ -38,6 +43,8 @@ export function GameTabContent({
   currentUserId,
   userCharacters,
 }: GameTabContentProps) {
+  const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
+
   // Applications Tab (Recruitment - GM only)
   if (activeTab === 'applications' && game.state === 'recruitment' && isGM) {
     return <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} />;
@@ -52,7 +59,18 @@ export function GameTabContent({
   if (activeTab === 'participants') {
     return (
       <>
-        <h2 className="text-2xl font-bold text-content-primary mb-6">Participants</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-content-primary">Participants</h2>
+          {isGM && (
+            <Button
+              variant="primary"
+              onClick={() => setShowAddPlayerModal(true)}
+            >
+              Add Player
+            </Button>
+          )}
+        </div>
+
         {participants.length === 0 ? (
           <p className="text-content-tertiary">No participants yet.</p>
         ) : (
@@ -68,9 +86,19 @@ export function GameTabContent({
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {roleParticipants.map((participant) => (
                       <div key={participant.id} className="border border-theme-default rounded-lg p-4 surface-raised">
-                        <div className="font-medium text-content-primary">{participant.username}</div>
-                        <div className="text-sm text-content-tertiary">
-                          Joined {new Date(participant.joined_at).toLocaleDateString()}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="font-medium text-content-primary">{participant.username}</div>
+                            <div className="text-sm text-content-tertiary">
+                              Joined {new Date(participant.joined_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                          {isGM && participant.user_id !== currentUserId && (
+                            <RemovePlayerButton
+                              gameId={gameId}
+                              participant={participant}
+                            />
+                          )}
                         </div>
                       </div>
                     ))}
@@ -80,6 +108,18 @@ export function GameTabContent({
             })}
           </div>
         )}
+
+        {isGM && (
+          <div className="mt-8">
+            <InactiveCharactersList gameId={gameId} />
+          </div>
+        )}
+
+        <AddPlayerModal
+          gameId={gameId}
+          isOpen={showAddPlayerModal}
+          onClose={() => setShowAddPlayerModal(false)}
+        />
       </>
     );
   }

@@ -65,3 +65,13 @@ FROM users u
 LEFT JOIN users admin ON u.banned_by_user_id = admin.id
 WHERE u.is_banned = TRUE
 ORDER BY u.banned_at DESC;
+
+-- User search queries
+
+-- name: SearchUsers :many
+SELECT id, username, email, created_at
+FROM users
+WHERE username ILIKE '%' || $1 || '%'
+  AND is_banned = FALSE
+ORDER BY username
+LIMIT 20;
