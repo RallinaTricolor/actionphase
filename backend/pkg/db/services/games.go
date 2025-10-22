@@ -551,3 +551,81 @@ func (gs *GameService) GetActiveParticipants(ctx context.Context, gameID int32) 
 	queries := models.New(gs.DB)
 	return queries.GetActiveParticipants(ctx, gameID)
 }
+
+// ============================================================================
+// Audience Participation Methods
+// ============================================================================
+
+// GetGameAutoAcceptAudience retrieves the auto-accept audience setting for a game
+func (gs *GameService) GetGameAutoAcceptAudience(ctx context.Context, gameID int32) (bool, error) {
+	queries := models.New(gs.DB)
+	return queries.GetGameAutoAcceptAudience(ctx, gameID)
+}
+
+// UpdateGameAutoAcceptAudience updates the auto-accept audience setting for a game
+func (gs *GameService) UpdateGameAutoAcceptAudience(ctx context.Context, gameID int32, autoAccept bool) error {
+	queries := models.New(gs.DB)
+	return queries.UpdateGameAutoAcceptAudience(ctx, models.UpdateGameAutoAcceptAudienceParams{
+		ID:                 gameID,
+		AutoAcceptAudience: autoAccept,
+	})
+}
+
+// CreateAudienceApplication allows a user to apply/join as an audience member
+// If auto_accept_audience is enabled, user is immediately added as active audience.
+// Otherwise, they are added with 'pending' status and require GM approval.
+func (gs *GameService) CreateAudienceApplication(ctx context.Context, gameID, userID int32) (*models.GameParticipant, error) {
+	queries := models.New(gs.DB)
+
+	// Check if auto-accept is enabled for this game
+	autoAccept, err := queries.GetGameAutoAcceptAudience(ctx, gameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get auto-accept setting: %w", err)
+	}
+
+	// Determine status based on auto-accept setting
+	// Use 'inactive' for manual approval, 'active' for auto-accept
+	status := "active"
+	if !autoAccept {
+		status = "inactive"
+	}
+
+	// Create the audience application/participant
+	participant, err := queries.CreateAudienceApplication(ctx, models.CreateAudienceApplicationParams{
+		GameID: gameID,
+		UserID: userID,
+		Status: pgtype.Text{String: status, Valid: true},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create audience application: %w", err)
+	}
+
+	return &participant, nil
+}
+
+// ListAudienceMembers retrieves all audience members for a game
+func (gs *GameService) ListAudienceMembers(ctx context.Context, gameID int32) ([]models.ListAudienceMembersRow, error) {
+	queries := models.New(gs.DB)
+	return queries.ListAudienceMembers(ctx, gameID)
+}
+
+// CheckAudienceAccess verifies if a user has audience or GM access to a game
+// Returns true if the user is:
+// - The GM of the game
+// - A co-GM participant
+// - An active audience member
+func (gs *GameService) CheckAudienceAccess(ctx context.Context, gameID, userID int32) (bool, error) {
+	queries := models.New(gs.DB)
+
+	result, err := queries.CheckAudienceAccess(ctx, models.CheckAudienceAccessParams{
+		GameID: gameID,
+		UserID: userID,
+	})
+
+	if err != nil {
+		return false, fmt.Errorf("failed to check audience access: %w", err)
+	}
+
+	return result.Bool, nil
+}

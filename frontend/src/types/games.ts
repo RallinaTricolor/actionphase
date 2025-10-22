@@ -10,6 +10,7 @@ export interface Game {
   recruitment_deadline?: string;
   max_players?: number;
   is_anonymous?: boolean;
+  auto_accept_audience?: boolean;
   created_at: string;
   updated_at: string;
 }

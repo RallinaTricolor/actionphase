@@ -228,3 +228,25 @@ JOIN game_phases to_phase ON pt.to_phase_id = to_phase.id
 JOIN users u ON pt.initiated_by = u.id
 WHERE pt.game_id = $1
 ORDER BY pt.created_at;
+
+-- Audience Participation Queries (Action Viewing)
+
+-- name: ListAllActionSubmissions :many
+-- List all action submissions for a game (for audience/GM)
+-- Includes character name and submission status
+SELECT acts.*, u.username, c.name as character_name, gp.phase_type, gp.phase_number, gp.title as phase_title
+FROM action_submissions acts
+JOIN users u ON acts.user_id = u.id
+JOIN game_phases gp ON acts.phase_id = gp.id
+LEFT JOIN characters c ON acts.character_id = c.id
+WHERE acts.game_id = sqlc.arg(game_id)
+  AND (CASE WHEN sqlc.arg(phase_id) = 0 THEN TRUE ELSE acts.phase_id = sqlc.arg(phase_id) END)
+ORDER BY gp.phase_number DESC, acts.submitted_at DESC
+LIMIT sqlc.arg(result_limit) OFFSET sqlc.arg(result_offset);
+
+-- name: CountAllActionSubmissions :one
+-- Count total action submissions for a game/phase (for pagination)
+SELECT COUNT(*)
+FROM action_submissions acts
+WHERE acts.game_id = sqlc.arg(game_id)
+  AND (CASE WHEN sqlc.arg(phase_id) = 0 THEN TRUE ELSE acts.phase_id = sqlc.arg(phase_id) END);

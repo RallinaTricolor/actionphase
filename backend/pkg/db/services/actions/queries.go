@@ -52,3 +52,44 @@ func (as *ActionSubmissionService) GetGameResults(ctx context.Context, gameID in
 	}
 	return results, nil
 }
+
+// ============================================================================
+// Audience Participation Methods
+// ============================================================================
+
+// ListAllActionSubmissions retrieves all action submissions for a game (for audience/GM)
+// Supports pagination and optional filtering by phase.
+// phaseID of 0 means "all phases"
+func (as *ActionSubmissionService) ListAllActionSubmissions(ctx context.Context, gameID, phaseID int32, limit, offset int32) ([]models.ListAllActionSubmissionsRow, error) {
+	queries := models.New(as.DB)
+
+	submissions, err := queries.ListAllActionSubmissions(ctx, models.ListAllActionSubmissionsParams{
+		GameID:       gameID,
+		PhaseID:      phaseID,
+		ResultLimit:  limit,
+		ResultOffset: offset,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list all action submissions: %w", err)
+	}
+
+	return submissions, nil
+}
+
+// CountAllActionSubmissions counts total action submissions for pagination
+// phaseID of 0 means "all phases"
+func (as *ActionSubmissionService) CountAllActionSubmissions(ctx context.Context, gameID, phaseID int32) (int64, error) {
+	queries := models.New(as.DB)
+
+	count, err := queries.CountAllActionSubmissions(ctx, models.CountAllActionSubmissionsParams{
+		GameID:  gameID,
+		PhaseID: phaseID,
+	})
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to count action submissions: %w", err)
+	}
+
+	return count, nil
+}

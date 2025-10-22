@@ -872,3 +872,109 @@ func TestGameService_GetFilteredGames(t *testing.T) {
 		// Default sort is applied internally, just verify it doesn't error
 	})
 }
+
+// ============================================================================
+// Audience Participation Tests
+// ============================================================================
+
+func TestGameService_AudienceParticipation(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games", "game_participants", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool}
+	ctx := context.Background()
+
+	// Create a test game
+	game, err := gameService.CreateGame(ctx, core.CreateGameRequest{
+		Title:       "Audience Test Game",
+		Description: "Testing audience participation",
+		GMUserID:    int32(fixtures.TestUser.ID),
+		IsPublic:    true,
+	})
+	core.AssertNoError(t, err, "Failed to create test game")
+
+	t.Run("GetGameAutoAcceptAudience returns default false", func(t *testing.T) {
+		autoAccept, err := gameService.GetGameAutoAcceptAudience(ctx, game.ID)
+		core.AssertNoError(t, err, "Failed to get auto-accept setting")
+		core.AssertEqual(t, false, autoAccept, "Default auto-accept should be false")
+	})
+
+	t.Run("UpdateGameAutoAcceptAudience updates setting", func(t *testing.T) {
+		err := gameService.UpdateGameAutoAcceptAudience(ctx, game.ID, true)
+		core.AssertNoError(t, err, "Failed to update auto-accept setting")
+
+		autoAccept, err := gameService.GetGameAutoAcceptAudience(ctx, game.ID)
+		core.AssertNoError(t, err, "Failed to get auto-accept setting")
+		core.AssertEqual(t, true, autoAccept, "Auto-accept should be true after update")
+	})
+
+	// Create test users for audience tests
+	audienceUser1 := testDB.CreateTestUser(t, "audience1@example.com", "Audience User 1")
+	audienceUser2 := testDB.CreateTestUser(t, "audience2@example.com", "Audience User 2")
+
+	t.Run("CreateAudienceApplication with auto-accept creates active participant", func(t *testing.T) {
+		// Ensure auto-accept is enabled
+		err := gameService.UpdateGameAutoAcceptAudience(ctx, game.ID, true)
+		core.AssertNoError(t, err, "Failed to enable auto-accept")
+
+		participant, err := gameService.CreateAudienceApplication(ctx, game.ID, int32(audienceUser1.ID))
+		core.AssertNoError(t, err, "Failed to create audience application")
+		if participant == nil {
+			t.Fatal("Participant should not be nil")
+		}
+		core.AssertEqual(t, "active", participant.Status.String, "Status should be active with auto-accept")
+		core.AssertEqual(t, "audience", participant.Role, "Role should be audience")
+	})
+
+	t.Run("CreateAudienceApplication without auto-accept creates inactive participant", func(t *testing.T) {
+		// Disable auto-accept
+		err := gameService.UpdateGameAutoAcceptAudience(ctx, game.ID, false)
+		core.AssertNoError(t, err, "Failed to disable auto-accept")
+
+		participant, err := gameService.CreateAudienceApplication(ctx, game.ID, int32(audienceUser2.ID))
+		core.AssertNoError(t, err, "Failed to create audience application")
+		if participant == nil {
+			t.Fatal("Participant should not be nil")
+		}
+		core.AssertEqual(t, "inactive", participant.Status.String, "Status should be inactive without auto-accept")
+		core.AssertEqual(t, "audience", participant.Role, "Role should be audience")
+	})
+
+	t.Run("ListAudienceMembers returns active audience members", func(t *testing.T) {
+		// audienceUser1 was added as active audience earlier
+		members, err := gameService.ListAudienceMembers(ctx, game.ID)
+		core.AssertNoError(t, err, "Failed to list audience members")
+		core.AssertTrue(t, len(members) >= 1, "Should have at least one audience member")
+
+		// Verify the active member
+		found := false
+		for _, member := range members {
+			if member.UserID == int32(audienceUser1.ID) && member.Status.Valid && member.Status.String == "active" {
+				found = true
+				core.AssertEqual(t, "audience", member.Role, "Role should be audience")
+			}
+		}
+		core.AssertTrue(t, found, "Should find the active audience member")
+	})
+
+	t.Run("CheckAudienceAccess returns true for GM", func(t *testing.T) {
+		hasAccess, err := gameService.CheckAudienceAccess(ctx, game.ID, int32(fixtures.TestUser.ID))
+		core.AssertNoError(t, err, "Failed to check audience access")
+		core.AssertTrue(t, hasAccess, "GM should have audience access")
+	})
+
+	t.Run("CheckAudienceAccess returns true for active audience member", func(t *testing.T) {
+		hasAccess, err := gameService.CheckAudienceAccess(ctx, game.ID, int32(audienceUser1.ID))
+		core.AssertNoError(t, err, "Failed to check audience access")
+		core.AssertTrue(t, hasAccess, "Active audience member should have access")
+	})
+
+	t.Run("CheckAudienceAccess returns false for non-participant", func(t *testing.T) {
+		testUser3 := testDB.CreateTestUser(t, "random_user@example.com", "Random User")
+		hasAccess, err := gameService.CheckAudienceAccess(ctx, game.ID, int32(testUser3.ID))
+		core.AssertNoError(t, err, "Failed to check audience access")
+		core.AssertEqual(t, false, hasAccess, "Random user should not have audience access")
+	})
+}

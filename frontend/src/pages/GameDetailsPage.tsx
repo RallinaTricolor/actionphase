@@ -31,6 +31,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     isLoadingParticipants,
     isGM,
     isParticipant,
+    userRole,
     userCharacters,
     refetchGameData,
   } = useGameContext();
@@ -79,6 +80,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     isGM,
     participantCount: participants.length,
     currentPhaseType: currentPhaseData?.phase?.phase_type,
+    isAudience: userRole === 'audience',
   });
 
   const actionLoading = appActionLoading || stateActionLoading;

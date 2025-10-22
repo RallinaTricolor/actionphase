@@ -191,3 +191,41 @@ SET removed_at = NULL,
     status = 'active'
 WHERE game_id = $1 AND user_id = $2 AND removed_at IS NOT NULL
 RETURNING *;
+
+-- Audience Participation Queries
+
+-- name: GetGameAutoAcceptAudience :one
+SELECT auto_accept_audience FROM games WHERE id = $1;
+
+-- name: UpdateGameAutoAcceptAudience :exec
+UPDATE games
+SET auto_accept_audience = $2, updated_at = NOW()
+WHERE id = $1;
+
+-- name: CreateAudienceApplication :one
+INSERT INTO game_participants (game_id, user_id, role, status)
+VALUES ($1, $2, 'audience', $3)
+ON CONFLICT (game_id, user_id) DO UPDATE
+SET removed_at = NULL,
+    removed_by_user_id = NULL,
+    status = EXCLUDED.status,
+    role = 'audience',
+    joined_at = NOW()
+WHERE game_participants.removed_at IS NOT NULL OR game_participants.status = 'removed'
+RETURNING *;
+
+-- name: ListAudienceMembers :many
+SELECT gp.*, u.username, u.email
+FROM game_participants gp
+JOIN users u ON gp.user_id = u.id
+WHERE gp.game_id = $1 AND gp.role = 'audience' AND gp.status = 'active'
+ORDER BY gp.joined_at;
+
+-- name: CheckAudienceAccess :one
+SELECT EXISTS(
+    SELECT 1 FROM game_participants
+    WHERE game_id = $1 AND user_id = $2 AND role IN ('audience', 'co_gm') AND status = 'active'
+) OR EXISTS(
+    SELECT 1 FROM games
+    WHERE id = $1 AND gm_user_id = $2
+);

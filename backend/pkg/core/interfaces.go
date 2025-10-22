@@ -191,6 +191,23 @@ type GameServiceInterface interface {
 
 	// GetActiveParticipants retrieves all active (non-removed) participants for a game
 	GetActiveParticipants(ctx context.Context, gameID int32) ([]models.GetActiveParticipantsRow, error)
+
+	// Audience Participation methods
+
+	// GetGameAutoAcceptAudience retrieves the auto-accept audience setting for a game
+	GetGameAutoAcceptAudience(ctx context.Context, gameID int32) (bool, error)
+
+	// UpdateGameAutoAcceptAudience updates the auto-accept audience setting for a game
+	UpdateGameAutoAcceptAudience(ctx context.Context, gameID int32, autoAccept bool) error
+
+	// CreateAudienceApplication allows a user to apply/join as an audience member
+	CreateAudienceApplication(ctx context.Context, gameID, userID int32) (*models.GameParticipant, error)
+
+	// ListAudienceMembers retrieves all audience members for a game
+	ListAudienceMembers(ctx context.Context, gameID int32) ([]models.ListAudienceMembersRow, error)
+
+	// CheckAudienceAccess verifies if a user has audience or GM access to a game
+	CheckAudienceAccess(ctx context.Context, gameID, userID int32) (bool, error)
 }
 
 // GameApplicationServiceInterface defines the contract for game application operations.
@@ -416,6 +433,14 @@ type ActionSubmissionServiceInterface interface {
 
 	// CanUserSubmitAction checks if user can submit/edit actions for a phase
 	CanUserSubmitAction(ctx context.Context, phaseID, userID int32) (bool, error)
+
+	// Audience Participation methods
+
+	// ListAllActionSubmissions retrieves all action submissions for a game (for audience/GM)
+	ListAllActionSubmissions(ctx context.Context, gameID, phaseID int32, limit, offset int32) ([]models.ListAllActionSubmissionsRow, error)
+
+	// CountAllActionSubmissions counts total action submissions for pagination
+	CountAllActionSubmissions(ctx context.Context, gameID, phaseID int32) (int64, error)
 }
 
 // MessageServiceInterface defines the contract for message and comment operations.
@@ -521,6 +546,14 @@ type MessageServiceInterface interface {
 
 	// ValidateCharacterOwnership verifies character belongs to author and game
 	ValidateCharacterOwnership(ctx context.Context, characterID, authorID, gameID int32) error
+
+	// Audience Participation methods (Private Conversation Viewing)
+
+	// ListAllPrivateConversations lists all private conversations in a game (for audience/GM)
+	ListAllPrivateConversations(ctx context.Context, gameID int32) ([]models.ListAllPrivateConversationsRow, error)
+
+	// GetAudienceConversationMessages retrieves all messages in a conversation (for audience/GM)
+	GetAudienceConversationMessages(ctx context.Context, conversationID int32) ([]models.GetAudienceConversationMessagesRow, error)
 }
 
 // CreatePhaseRequest represents the parameters needed to create a new game phase

@@ -6,3 +6,4 @@
 - User journeys
 - User registration security (prevent bots, email verification, captcha)
 - Antipatterns
+- Demo/staging + more thorough test data

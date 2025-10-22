@@ -137,6 +137,15 @@ func (h *Handler) Start() {
 			r.Put("/{id}/applications/{applicationId}/review", gameHandler.ReviewGameApplication)
 			r.Delete("/{id}/application", gameHandler.WithdrawGameApplication)
 
+			// Audience participation
+			r.Post("/{id}/apply/audience", gameHandler.ApplyAsAudience)
+			r.Get("/{id}/audience", gameHandler.ListAudienceMembers)
+			r.Get("/{id}/characters/audience-npcs", gameHandler.ListAudienceNPCs)
+			r.Put("/{id}/settings/auto-accept-audience", gameHandler.UpdateAutoAcceptAudience)
+			r.Get("/{id}/private-messages/all", gameHandler.ListAllPrivateConversations)
+			r.Get("/{id}/private-messages/conversations/{conversationId}", gameHandler.GetAudienceConversationMessages)
+			r.Get("/{id}/action-submissions/all", gameHandler.ListAllActionSubmissions)
+
 			// Character management within games
 			characterHandler := characters.Handler{App: h.App}
 			r.Post("/{gameId}/characters", characterHandler.CreateCharacter)

@@ -41,6 +41,7 @@ CREATE TABLE games (
     max_players INTEGER DEFAULT 6,
     is_public BOOLEAN DEFAULT TRUE,
     is_anonymous BOOLEAN NOT NULL DEFAULT FALSE,
+    auto_accept_audience BOOLEAN DEFAULT FALSE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -261,8 +262,10 @@ CREATE INDEX idx_phase_transitions_game_id ON phase_transitions(game_id);
 CREATE INDEX idx_game_participants_game_id ON game_participants(game_id);
 CREATE INDEX idx_game_participants_user_id ON game_participants(user_id);
 CREATE INDEX idx_game_participants_removed_at ON game_participants(game_id, removed_at) WHERE removed_at IS NULL;
+CREATE INDEX idx_game_participants_role ON game_participants(game_id, role);
 CREATE INDEX idx_characters_game_id ON characters(game_id);
 CREATE INDEX idx_characters_active ON characters(game_id, is_active);
+CREATE INDEX idx_characters_audience ON characters(game_id, character_type) WHERE character_type = 'npc_audience';
 CREATE INDEX idx_character_data_character_id ON character_data(character_id);
 CREATE INDEX idx_conversations_game_id ON conversations(game_id);
 CREATE INDEX idx_conversation_participants_conversation_id ON conversation_participants(conversation_id);

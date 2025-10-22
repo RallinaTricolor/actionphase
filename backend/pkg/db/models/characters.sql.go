@@ -11,6 +11,33 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const assignNPCToAudience = `-- name: AssignNPCToAudience :one
+INSERT INTO npc_assignments (character_id, assigned_user_id, assigned_by_user_id)
+VALUES ($1, $2, $3)
+ON CONFLICT (character_id)
+DO UPDATE SET assigned_user_id = $2, assigned_by_user_id = $3, assigned_at = NOW()
+RETURNING id, character_id, assigned_user_id, assigned_by_user_id, assigned_at
+`
+
+type AssignNPCToAudienceParams struct {
+	CharacterID      int32 `json:"character_id"`
+	AssignedUserID   int32 `json:"assigned_user_id"`
+	AssignedByUserID int32 `json:"assigned_by_user_id"`
+}
+
+func (q *Queries) AssignNPCToAudience(ctx context.Context, arg AssignNPCToAudienceParams) (NpcAssignment, error) {
+	row := q.db.QueryRow(ctx, assignNPCToAudience, arg.CharacterID, arg.AssignedUserID, arg.AssignedByUserID)
+	var i NpcAssignment
+	err := row.Scan(
+		&i.ID,
+		&i.CharacterID,
+		&i.AssignedUserID,
+		&i.AssignedByUserID,
+		&i.AssignedAt,
+	)
+	return i, err
+}
+
 const assignNPCToUser = `-- name: AssignNPCToUser :one
 INSERT INTO npc_assignments (character_id, assigned_user_id, assigned_by_user_id)
 VALUES ($1, $2, $3)
@@ -749,6 +776,70 @@ func (q *Queries) GetUserNPCs(ctx context.Context, assignedUserID int32) ([]GetU
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.GameTitle,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAudienceNPCs = `-- name: ListAudienceNPCs :many
+
+SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.avatar_url, c.is_active, c.original_owner_user_id, c.created_at, c.updated_at, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
+FROM characters c
+LEFT JOIN users u ON c.user_id = u.id
+LEFT JOIN npc_assignments na ON c.id = na.character_id
+LEFT JOIN users au ON na.assigned_user_id = au.id
+WHERE c.game_id = $1 AND c.character_type = 'npc_audience'
+ORDER BY c.name
+`
+
+type ListAudienceNPCsRow struct {
+	ID                  int32              `json:"id"`
+	GameID              int32              `json:"game_id"`
+	UserID              pgtype.Int4        `json:"user_id"`
+	Name                string             `json:"name"`
+	CharacterType       string             `json:"character_type"`
+	Status              pgtype.Text        `json:"status"`
+	AvatarUrl           pgtype.Text        `json:"avatar_url"`
+	IsActive            bool               `json:"is_active"`
+	OriginalOwnerUserID pgtype.Int4        `json:"original_owner_user_id"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	OwnerUsername       pgtype.Text        `json:"owner_username"`
+	AssignedUserID      pgtype.Int4        `json:"assigned_user_id"`
+	AssignedUsername    pgtype.Text        `json:"assigned_username"`
+}
+
+// Audience Participation Queries
+func (q *Queries) ListAudienceNPCs(ctx context.Context, gameID int32) ([]ListAudienceNPCsRow, error) {
+	rows, err := q.db.Query(ctx, listAudienceNPCs, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAudienceNPCsRow
+	for rows.Next() {
+		var i ListAudienceNPCsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.UserID,
+			&i.Name,
+			&i.CharacterType,
+			&i.Status,
+			&i.AvatarUrl,
+			&i.IsActive,
+			&i.OriginalOwnerUserID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OwnerUsername,
+			&i.AssignedUserID,
+			&i.AssignedUsername,
 		); err != nil {
 			return nil, err
 		}

@@ -250,3 +250,49 @@ func (cs *CharacterService) DeactivatePlayerCharacters(ctx context.Context, game
 		UserID: pgtype.Int4{Int32: userID, Valid: true},
 	})
 }
+
+// ============================================================================
+// Audience Participation Methods (NPC Assignment)
+// ============================================================================
+
+// ListAudienceNPCs retrieves all audience NPCs for a game with assignment information
+// Returns NPCs with owner information and current assignment status
+func (cs *CharacterService) ListAudienceNPCs(ctx context.Context, gameID int32) ([]models.ListAudienceNPCsRow, error) {
+	queries := models.New(cs.DB)
+
+	npcs, err := queries.ListAudienceNPCs(ctx, gameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list audience NPCs: %w", err)
+	}
+
+	return npcs, nil
+}
+
+// AssignNPCToAudience assigns an NPC character to an audience member
+// Creates or updates the NPC assignment record
+func (cs *CharacterService) AssignNPCToAudience(ctx context.Context, characterID, assignedUserID, assignedByUserID int32) (*models.NpcAssignment, error) {
+	queries := models.New(cs.DB)
+
+	// Verify this is an audience NPC
+	character, err := queries.GetCharacter(ctx, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get character: %w", err)
+	}
+
+	if character.CharacterType != "npc_audience" {
+		return nil, fmt.Errorf("character is not an audience NPC (type: %s)", character.CharacterType)
+	}
+
+	// Create or update the assignment
+	assignment, err := queries.AssignNPCToAudience(ctx, models.AssignNPCToAudienceParams{
+		CharacterID:      characterID,
+		AssignedUserID:   assignedUserID,
+		AssignedByUserID: assignedByUserID,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to assign NPC to audience: %w", err)
+	}
+
+	return &assignment, nil
+}

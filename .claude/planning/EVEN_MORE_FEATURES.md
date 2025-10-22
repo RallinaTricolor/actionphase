@@ -1,3 +1,4 @@
 - Archive mode
   - After game is complete, all users should have audience level access
   - Game is in read only mode for all functionality
+- Modals need a better UI (black background is not doing it)

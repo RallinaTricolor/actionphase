@@ -65,6 +65,26 @@ func (q *Queries) CanUserSubmitToPhase(ctx context.Context, arg CanUserSubmitToP
 	return can_submit, err
 }
 
+const countAllActionSubmissions = `-- name: CountAllActionSubmissions :one
+SELECT COUNT(*)
+FROM action_submissions acts
+WHERE acts.game_id = $1
+  AND (CASE WHEN $2 = 0 THEN TRUE ELSE acts.phase_id = $2 END)
+`
+
+type CountAllActionSubmissionsParams struct {
+	GameID  int32       `json:"game_id"`
+	PhaseID interface{} `json:"phase_id"`
+}
+
+// Count total action submissions for a game/phase (for pagination)
+func (q *Queries) CountAllActionSubmissions(ctx context.Context, arg CountAllActionSubmissionsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAllActionSubmissions, arg.GameID, arg.PhaseID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createActionResult = `-- name: CreateActionResult :one
 INSERT INTO action_results (game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at)
 VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6 THEN NOW() ELSE NULL END)
@@ -1024,6 +1044,86 @@ func (q *Queries) GetUserResults(ctx context.Context, arg GetUserResultsParams) 
 			&i.PhaseType,
 			&i.PhaseNumber,
 			&i.GmUsername,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllActionSubmissions = `-- name: ListAllActionSubmissions :many
+
+SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.is_draft, acts.submitted_at, acts.updated_at, u.username, c.name as character_name, gp.phase_type, gp.phase_number, gp.title as phase_title
+FROM action_submissions acts
+JOIN users u ON acts.user_id = u.id
+JOIN game_phases gp ON acts.phase_id = gp.id
+LEFT JOIN characters c ON acts.character_id = c.id
+WHERE acts.game_id = $1
+  AND (CASE WHEN $2 = 0 THEN TRUE ELSE acts.phase_id = $2 END)
+ORDER BY gp.phase_number DESC, acts.submitted_at DESC
+LIMIT $4 OFFSET $3
+`
+
+type ListAllActionSubmissionsParams struct {
+	GameID       int32       `json:"game_id"`
+	PhaseID      interface{} `json:"phase_id"`
+	ResultOffset int32       `json:"result_offset"`
+	ResultLimit  int32       `json:"result_limit"`
+}
+
+type ListAllActionSubmissionsRow struct {
+	ID            int32              `json:"id"`
+	GameID        int32              `json:"game_id"`
+	UserID        int32              `json:"user_id"`
+	PhaseID       int32              `json:"phase_id"`
+	CharacterID   pgtype.Int4        `json:"character_id"`
+	Content       string             `json:"content"`
+	IsDraft       pgtype.Bool        `json:"is_draft"`
+	SubmittedAt   pgtype.Timestamptz `json:"submitted_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	Username      string             `json:"username"`
+	CharacterName pgtype.Text        `json:"character_name"`
+	PhaseType     string             `json:"phase_type"`
+	PhaseNumber   int32              `json:"phase_number"`
+	PhaseTitle    string             `json:"phase_title"`
+}
+
+// Audience Participation Queries (Action Viewing)
+// List all action submissions for a game (for audience/GM)
+// Includes character name and submission status
+func (q *Queries) ListAllActionSubmissions(ctx context.Context, arg ListAllActionSubmissionsParams) ([]ListAllActionSubmissionsRow, error) {
+	rows, err := q.db.Query(ctx, listAllActionSubmissions,
+		arg.GameID,
+		arg.PhaseID,
+		arg.ResultOffset,
+		arg.ResultLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAllActionSubmissionsRow
+	for rows.Next() {
+		var i ListAllActionSubmissionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.UserID,
+			&i.PhaseID,
+			&i.CharacterID,
+			&i.Content,
+			&i.IsDraft,
+			&i.SubmittedAt,
+			&i.UpdatedAt,
+			&i.Username,
+			&i.CharacterName,
+			&i.PhaseType,
+			&i.PhaseNumber,
+			&i.PhaseTitle,
 		); err != nil {
 			return nil, err
 		}
