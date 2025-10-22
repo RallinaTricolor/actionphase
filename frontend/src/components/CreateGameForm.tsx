@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { apiClient } from '../lib/api';
-import { Button, Input, Alert, Textarea, DateTimeInput } from './ui';
+import { Button, Alert } from './ui';
+import { GameFormFields, type GameFormData } from './GameFormFields';
 import type { CreateGameRequest } from '../types/games';
 
 interface CreateGameFormProps {
@@ -9,7 +10,7 @@ interface CreateGameFormProps {
 }
 
 export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => {
-  const [formData, setFormData] = useState<CreateGameRequest>({
+  const [formData, setFormData] = useState<GameFormData>({
     title: '',
     description: '',
     genre: '',
@@ -17,6 +18,7 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
     end_date: '',
     recruitment_deadline: '',
     max_players: 6,
+    is_anonymous: false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,14 +40,14 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
 
       // Prepare data for API (convert empty strings to undefined for optional dates)
       const gameData: CreateGameRequest = {
-        ...formData,
         title: formData.title.trim(),
         description: formData.description.trim(),
         genre: formData.genre?.trim() || undefined,
         start_date: formData.start_date || undefined,
         end_date: formData.end_date || undefined,
         recruitment_deadline: formData.recruitment_deadline || undefined,
-        max_players: formData.max_players || undefined,
+        max_players: formData.max_players === '' ? undefined : Number(formData.max_players),
+        is_anonymous: formData.is_anonymous,
       };
 
       const response = await apiClient.games.createGame(gameData);
@@ -60,7 +62,7 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
     }
   };
 
-  const handleChange = (field: keyof CreateGameRequest, value: string | number) => {
+  const handleChange = (field: keyof GameFormData, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -73,80 +75,10 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Title */}
-        <Input
-          label="Game Title"
-          id="title"
-          type="text"
-          required
-          value={formData.title}
-          onChange={(e) => handleChange('title', e.target.value)}
-          placeholder="Enter a compelling game title"
-          maxLength={255}
+        <GameFormFields
+          formData={formData}
+          onChange={handleChange}
         />
-
-        {/* Description */}
-        <Textarea
-          label="Description"
-          id="description"
-          value={formData.description}
-          onChange={(e) => handleChange('description', e.target.value)}
-          rows={4}
-          required
-          placeholder="Describe your game world, setting, and what players can expect..."
-        />
-
-        {/* Genre */}
-        <Input
-          label="Genre"
-          id="genre"
-          type="text"
-          optional
-          value={formData.genre}
-          onChange={(e) => handleChange('genre', e.target.value)}
-          placeholder="e.g., Fantasy, Sci-Fi, Horror, Modern"
-          maxLength={100}
-        />
-
-        {/* Max Players */}
-        <Input
-          label="Maximum Players"
-          id="max_players"
-          type="number"
-          value={formData.max_players || ''}
-          onChange={(e) => handleChange('max_players', parseInt(e.target.value) || 0)}
-          helperText="Leave empty for default (6 players)"
-          min={1}
-          max={20}
-          placeholder="6"
-        />
-
-        {/* Dates */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <DateTimeInput
-            label="Recruitment Deadline"
-            id="recruitment_deadline"
-            optional
-            value={formData.recruitment_deadline}
-            onChange={(e) => handleChange('recruitment_deadline', e.target.value)}
-          />
-
-          <DateTimeInput
-            label="Start Date"
-            id="start_date"
-            optional
-            value={formData.start_date}
-            onChange={(e) => handleChange('start_date', e.target.value)}
-          />
-
-          <DateTimeInput
-            label="End Date"
-            id="end_date"
-            optional
-            value={formData.end_date}
-            onChange={(e) => handleChange('end_date', e.target.value)}
-          />
-        </div>
 
         {/* Info Box */}
         <Alert variant="info" title="Game Creation Process">

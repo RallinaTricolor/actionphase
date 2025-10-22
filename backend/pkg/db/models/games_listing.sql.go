@@ -24,6 +24,7 @@ SELECT COUNT(*) FROM games WHERE is_public = true
 // $5: sort_by (text) - 'recent_activity', 'created', 'start_date', 'alphabetical'
 // $6: admin_mode (boolean) - bypass is_public filter if user is admin
 // $7: admin_user_id (int, nullable) - user ID to validate admin status
+// $8: search (text, nullable) - case-insensitive search in title and description
 func (q *Queries) CountPublicGames(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countPublicGames)
 	var count int64
@@ -140,6 +141,13 @@ WHERE
     (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') < g.max_players)
   )
 
+  -- Filter by search text (case-insensitive search in title and description)
+  AND (
+    $8::text IS NULL OR $8 = '' OR
+    g.title ILIKE '%' || $8 || '%' OR
+    g.description::text ILIKE '%' || $8 || '%'
+  )
+
 ORDER BY
   -- Dynamic sorting based on $5 parameter
   CASE
@@ -167,6 +175,7 @@ type GetFilteredGamesParams struct {
 	Column5 interface{} `json:"column_5"`
 	Column6 bool        `json:"column_6"`
 	Column7 int32       `json:"column_7"`
+	Column8 string      `json:"column_8"`
 }
 
 type GetFilteredGamesRow struct {
@@ -203,6 +212,7 @@ func (q *Queries) GetFilteredGames(ctx context.Context, arg GetFilteredGamesPara
 		arg.Column5,
 		arg.Column6,
 		arg.Column7,
+		arg.Column8,
 	)
 	if err != nil {
 		return nil, err

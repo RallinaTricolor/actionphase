@@ -143,6 +143,31 @@ func (h *Handler) AssignNPC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify the assigned user is an audience member or the GM (for taking back control)
+	// GM can assign to themselves without being in the audience
+	if data.AssignedUserID != authUser.ID {
+		participants, err := gameService.GetGameParticipants(r.Context(), character.GameID)
+		if err != nil {
+			h.App.Logger.Error("Failed to get game participants", "error", err)
+			render.Render(w, r, core.ErrInternalError(err))
+			return
+		}
+
+		// Check if assigned user is an audience member
+		isAudience := false
+		for _, participant := range participants {
+			if participant.UserID == data.AssignedUserID && participant.Role == "audience" {
+				isAudience = true
+				break
+			}
+		}
+
+		if !isAudience {
+			render.Render(w, r, core.ErrBadRequest("NPCs can only be assigned to audience members"))
+			return
+		}
+	}
+
 	// Assign NPC
 	err = characterService.AssignNPCToUser(r.Context(), int32(characterID), data.AssignedUserID, authUser.ID)
 	if err != nil {

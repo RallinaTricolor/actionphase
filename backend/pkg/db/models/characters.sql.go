@@ -347,9 +347,11 @@ func (q *Queries) GetCharacterDataByModule(ctx context.Context, arg GetCharacter
 }
 
 const getCharactersByGame = `-- name: GetCharactersByGame :many
-SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.avatar_url, c.is_active, c.original_owner_user_id, c.created_at, c.updated_at, u.username as owner_username
+SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.avatar_url, c.is_active, c.original_owner_user_id, c.created_at, c.updated_at, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
 FROM characters c
 LEFT JOIN users u ON c.user_id = u.id
+LEFT JOIN npc_assignments na ON c.id = na.character_id
+LEFT JOIN users au ON na.assigned_user_id = au.id
 WHERE c.game_id = $1
 ORDER BY c.character_type, c.name
 `
@@ -367,6 +369,8 @@ type GetCharactersByGameRow struct {
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	OwnerUsername       pgtype.Text        `json:"owner_username"`
+	AssignedUserID      pgtype.Int4        `json:"assigned_user_id"`
+	AssignedUsername    pgtype.Text        `json:"assigned_username"`
 }
 
 func (q *Queries) GetCharactersByGame(ctx context.Context, gameID int32) ([]GetCharactersByGameRow, error) {
@@ -391,6 +395,8 @@ func (q *Queries) GetCharactersByGame(ctx context.Context, gameID int32) ([]GetC
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.OwnerUsername,
+			&i.AssignedUserID,
+			&i.AssignedUsername,
 		); err != nil {
 			return nil, err
 		}
@@ -512,8 +518,8 @@ FROM characters c
 LEFT JOIN users u ON c.user_id = u.id
 LEFT JOIN npc_assignments na ON c.id = na.character_id
 LEFT JOIN users au ON na.assigned_user_id = au.id
-WHERE c.game_id = $1 AND c.character_type IN ('npc_gm', 'npc_audience')
-ORDER BY c.character_type, c.name
+WHERE c.game_id = $1 AND c.character_type = 'npc'
+ORDER BY c.name
 `
 
 type GetNPCsByGameRow struct {
@@ -674,7 +680,7 @@ WHERE c.game_id = $1
     (na.assigned_user_id = $2)
     OR
     -- If user is GM, all NPCs (GMs can control any NPC in their game)
-    (g.gm_user_id = $2 AND c.character_type IN ('npc_gm', 'npc_audience'))
+    (g.gm_user_id = $2 AND c.character_type = 'npc')
   )
 ORDER BY c.character_type, c.name
 `
@@ -794,7 +800,7 @@ FROM characters c
 LEFT JOIN users u ON c.user_id = u.id
 LEFT JOIN npc_assignments na ON c.id = na.character_id
 LEFT JOIN users au ON na.assigned_user_id = au.id
-WHERE c.game_id = $1 AND c.character_type = 'npc_audience'
+WHERE c.game_id = $1 AND c.character_type = 'npc'
 ORDER BY c.name
 `
 

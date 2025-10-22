@@ -138,10 +138,10 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
   }
 
   return (
-    <div className="surface-base rounded-lg shadow">
+    <div className="surface-base rounded-lg shadow-lg min-h-[600px] flex flex-col">
       <div className="border-b border-theme-default">
-        <div className="flex justify-between items-center p-6">
-          <div className="flex items-center gap-4">
+        <div className="flex justify-between items-center p-8">
+          <div className="flex items-center gap-6">
             {/* Character Avatar */}
             {character && (
               <div className="relative">
@@ -167,13 +167,18 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
               </div>
             )}
             <div>
-              <h2 className="text-xl font-semibold text-content-primary">
+              <h2 className="text-2xl font-bold text-content-primary mb-1">
                 {character?.name || 'Character Sheet'}
               </h2>
               {character && (
-                <p className="text-sm text-content-secondary mt-1">
-                  {character.character_type.replace('_', ' ')} • Status: {character.status}
-                </p>
+                <div className="flex items-center gap-3">
+                  <Badge variant="primary" size="md">
+                    {character.character_type.replace('_', ' ')}
+                  </Badge>
+                  <Badge variant={character.status === 'approved' ? 'success' : 'warning'} size="md">
+                    {character.status}
+                  </Badge>
+                </div>
               )}
             </div>
           </div>
@@ -182,7 +187,7 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-content-tertiary hover:text-content-secondary h-auto p-1"
+              className="text-content-tertiary hover:text-content-secondary h-auto p-2"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -192,7 +197,7 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
         </div>
 
         {/* Module Tabs - Filter out modules user cannot view */}
-        <div className="flex space-x-8 px-6">
+        <div className="flex space-x-1 px-8">
           {CHARACTER_MODULES.filter((module) => {
             // Bio is always visible (public information)
             if (module.type === 'bio') return true;
@@ -203,10 +208,10 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
               key={module.type}
               variant="ghost"
               onClick={() => setActiveModule(module.type)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 px-6 border-b-2 font-medium transition-colors rounded-none ${
                 activeModule === module.type
                   ? 'border-interactive-primary text-interactive-primary'
-                  : 'border-transparent text-content-secondary hover:text-content-primary hover:border-theme-default'
+                  : 'border-transparent text-content-secondary hover:text-content-primary hover:border-border-primary'
               }`}
             >
               {module.name}
@@ -215,16 +220,16 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="flex-1 overflow-y-auto p-8">
         {CHARACTER_MODULES.filter(module => {
           // Only render modules the user has permission to view
           if (module.type === 'bio') return true;
           return canEdit;
         }).filter(module => module.type === activeModule).map((module) => (
-          <div key={module.type}>
-            <div className="mb-4">
-              <h3 className="text-lg font-medium text-content-primary">{module.name}</h3>
-              <p className="text-sm text-content-secondary">{module.description}</p>
+          <div key={module.type} className="max-w-4xl mx-auto">
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-content-primary mb-2">{module.name}</h3>
+              <p className="text-content-secondary">{module.description}</p>
             </div>
 
             {/* Render specialized components for abilities and inventory modules */}
@@ -261,20 +266,20 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
                   }
 
                   return (
-                    <div key={field.name} className="border border-theme-default rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <label className="block text-sm font-medium text-content-primary">
+                    <div key={field.name} className="border border-theme-default rounded-lg p-6 bg-surface-raised shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <label className="block text-base font-semibold text-content-primary mb-1">
                             {field.label}
                             {field.required && <span className="text-semantic-danger ml-1">*</span>}
                           </label>
                           {fieldData && (
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Badge variant={isFieldPublic ? 'success' : 'warning'}>
+                            <div className="flex items-center space-x-3 mt-2">
+                              <Badge variant={isFieldPublic ? 'success' : 'warning'} size="sm">
                                 {isFieldPublic ? 'Public' : 'Private'}
                               </Badge>
                               <span className="text-xs text-content-tertiary">
-                                Last updated: {new Date(fieldData.updated_at).toLocaleDateString()}
+                                Updated {new Date(fieldData.updated_at).toLocaleDateString()}
                               </span>
                             </div>
                           )}
@@ -282,29 +287,32 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
 
                         {canEdit && !isEditing && (
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="sm"
                             onClick={() => handleFieldEdit(module.type, field.name)}
-                            className="px-2 py-1 text-xs text-interactive-primary hover:text-interactive-primary-hover"
+                            className="flex-shrink-0"
                           >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
                             Edit
                           </Button>
                         )}
                       </div>
 
                       {isEditing ? (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           <Textarea
                             value={value}
                             onChange={(e) => handleFieldChange(key, e.target.value)}
                             placeholder={field.placeholder}
-                            rows={field.type === 'text' ? 4 : 1}
-                            className="min-h-[100px]"
+                            rows={8}
+                            className="min-h-[200px] text-base"
                           />
-                          <div className="flex justify-end space-x-2">
+                          <div className="flex justify-end space-x-3">
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="md"
                               onClick={() => setEditingField(null)}
                               disabled={saveCharacterDataMutation.isPending}
                             >
@@ -312,7 +320,7 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
                             </Button>
                             <Button
                               variant="primary"
-                              size="sm"
+                              size="md"
                               onClick={() => handleFieldSave(
                                 module.type,
                                 field.name,
@@ -320,20 +328,21 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
                                 field.isPublic ?? true
                               )}
                               disabled={saveCharacterDataMutation.isPending}
+                              loading={saveCharacterDataMutation.isPending}
                             >
-                              {saveCharacterDataMutation.isPending ? 'Saving...' : 'Save'}
+                              {saveCharacterDataMutation.isPending ? 'Saving...' : 'Save Changes'}
                             </Button>
                           </div>
                         </div>
                       ) : (
-                        <div className="mt-2">
+                        <div className="mt-3">
                           {value ? (
-                            <div className="text-sm text-content-primary whitespace-pre-wrap">
+                            <div className="text-base text-content-primary whitespace-pre-wrap leading-relaxed">
                               {value}
                             </div>
                           ) : (
-                            <div className="text-sm text-content-tertiary italic">
-                              {field.placeholder || 'No content yet...'}
+                            <div className="text-base text-content-tertiary italic py-8 text-center">
+                              {canEdit ? field.placeholder || 'Click "Edit" to add content...' : 'No content yet...'}
                             </div>
                           )}
                         </div>

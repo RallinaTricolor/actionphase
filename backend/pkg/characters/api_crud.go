@@ -214,6 +214,12 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 		if char.AvatarUrl.Valid {
 			charData["avatar_url"] = char.AvatarUrl.String
 		}
+		if char.AssignedUserID.Valid {
+			charData["assigned_user_id"] = char.AssignedUserID.Int32
+		}
+		if char.AssignedUsername.Valid {
+			charData["assigned_username"] = char.AssignedUsername.String
+		}
 
 		response = append(response, charData)
 	}

@@ -6,6 +6,7 @@ import "time"
 // GameListingFilters represents filter criteria for game listing
 type GameListingFilters struct {
 	UserID              *int32   // For participation enrichment (nullable)
+	Search              string   // Search text for title/description (case-insensitive)
 	States              []string // Filter by game states
 	ParticipationFilter *string  // 'my_games', 'applied', 'not_joined'
 	HasOpenSpots        *bool    // Only games with available player spots

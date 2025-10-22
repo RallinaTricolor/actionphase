@@ -7,9 +7,11 @@ RETURNING *;
 SELECT * FROM characters WHERE id = $1;
 
 -- name: GetCharactersByGame :many
-SELECT c.*, u.username as owner_username
+SELECT c.*, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
 FROM characters c
 LEFT JOIN users u ON c.user_id = u.id
+LEFT JOIN npc_assignments na ON c.id = na.character_id
+LEFT JOIN users au ON na.assigned_user_id = au.id
 WHERE c.game_id = $1
 ORDER BY c.character_type, c.name;
 
@@ -33,8 +35,8 @@ FROM characters c
 LEFT JOIN users u ON c.user_id = u.id
 LEFT JOIN npc_assignments na ON c.id = na.character_id
 LEFT JOIN users au ON na.assigned_user_id = au.id
-WHERE c.game_id = $1 AND c.character_type IN ('npc_gm', 'npc_audience')
-ORDER BY c.character_type, c.name;
+WHERE c.game_id = $1 AND c.character_type = 'npc'
+ORDER BY c.name;
 
 -- name: UpdateCharacter :one
 UPDATE characters
@@ -120,7 +122,7 @@ WHERE c.game_id = $1
     (na.assigned_user_id = $2)
     OR
     -- If user is GM, all NPCs (GMs can control any NPC in their game)
-    (g.gm_user_id = $2 AND c.character_type IN ('npc_gm', 'npc_audience'))
+    (g.gm_user_id = $2 AND c.character_type = 'npc')
   )
 ORDER BY c.character_type, c.name;
 
@@ -178,7 +180,7 @@ FROM characters c
 LEFT JOIN users u ON c.user_id = u.id
 LEFT JOIN npc_assignments na ON c.id = na.character_id
 LEFT JOIN users au ON na.assigned_user_id = au.id
-WHERE c.game_id = $1 AND c.character_type = 'npc_audience'
+WHERE c.game_id = $1 AND c.character_type = 'npc'
 ORDER BY c.name;
 
 -- name: AssignNPCToAudience :one

@@ -30,12 +30,14 @@ export function useGameListing() {
 
   // Parse filters from URL
   const filters = useMemo<GameListingFilters>(() => {
+    const searchParam = searchParams.get('search');
     const statesParam = searchParams.get('states');
     const participationParam = searchParams.get('participation');
     const openSpotsParam = searchParams.get('has_open_spots');
     const sortByParam = searchParams.get('sort_by');
 
     return {
+      search: searchParam || undefined,
       states: statesParam ? (statesParam.split(',') as GameState[]) : undefined,
       participation: participationParam as ParticipationFilter | undefined,
       has_open_spots: openSpotsParam === 'true' ? true : openSpotsParam === 'false' ? false : undefined,
@@ -61,6 +63,15 @@ export function useGameListing() {
   const updateFilters = useCallback(
     (updates: Partial<GameListingFilters>) => {
       const newParams = new URLSearchParams(searchParams);
+
+      // Update or remove search
+      if ('search' in updates) {
+        if (updates.search && updates.search.trim()) {
+          newParams.set('search', updates.search.trim());
+        } else {
+          newParams.delete('search');
+        }
+      }
 
       // Update or remove states
       if ('states' in updates) {
@@ -104,6 +115,13 @@ export function useGameListing() {
   );
 
   // Convenience methods for updating individual filters
+  const setSearch = useCallback(
+    (search: string) => {
+      updateFilters({ search });
+    },
+    [updateFilters]
+  );
+
   const setStates = useCallback(
     (states: GameState[]) => {
       updateFilters({ states });
@@ -150,6 +168,7 @@ export function useGameListing() {
     filters,
 
     // Filter setters
+    setSearch,
     setStates,
     setParticipation,
     setHasOpenSpots,

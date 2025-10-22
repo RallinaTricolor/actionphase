@@ -42,7 +42,7 @@ describe('CharactersList', () => {
       game_id: 123,
       user_id: 1,
       username: 'gm',
-      character_type: 'npc_gm',
+      character_type: 'npc',
       status: 'approved',
       attributes: {},
       inventory: [],
@@ -115,7 +115,7 @@ describe('CharactersList', () => {
       expect(screen.getByText('Villain NPC')).toBeInTheDocument()
     })
 
-    it('should group characters by type (Player Characters, GM NPCs)', async () => {
+    it('should group characters by type (Player Characters, NPCs)', async () => {
       renderWithProviders(
         <CharactersList gameId={123} userRole="gm" currentUserId={1} />
       )
@@ -124,7 +124,7 @@ describe('CharactersList', () => {
         expect(screen.getByText('Player Characters')).toBeInTheDocument()
       })
 
-      expect(screen.getByText('GM NPCs')).toBeInTheDocument()
+      expect(screen.getByText('NPCs')).toBeInTheDocument()
     })
 
     it('should display character status badges', async () => {
@@ -355,7 +355,7 @@ describe('CharactersList', () => {
       })
 
       expect(screen.queryByText('Player Characters')).not.toBeInTheDocument()
-      expect(screen.queryByText('GM NPCs')).not.toBeInTheDocument()
+      expect(screen.queryByText('NPCs')).not.toBeInTheDocument()
     })
 
     it('GM should still see character details in anonymous mode', async () => {

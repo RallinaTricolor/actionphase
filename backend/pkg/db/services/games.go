@@ -303,10 +303,10 @@ func (gs *GameService) GetFilteredGames(ctx context.Context, filters core.GameLi
 	queries := models.New(gs.DB)
 
 	// Convert filters to sqlc parameters
-	// Note: sqlc generated Column1-7 parameter names, mapping:
+	// Note: sqlc generated Column1-8 parameter names, mapping:
 	// Column1 = user_id, Column2 = states, Column3 = participation_filter
 	// Column4 = has_open_spots, Column5 = sort_by
-	// Column6 = admin_mode, Column7 = admin_user_id
+	// Column6 = admin_mode, Column7 = admin_user_id, Column8 = search
 	var userID int32
 	if filters.UserID != nil {
 		userID = *filters.UserID
@@ -342,6 +342,7 @@ func (gs *GameService) GetFilteredGames(ctx context.Context, filters core.GameLi
 		Column5: sortBy,
 		Column6: filters.AdminMode,
 		Column7: adminUserID,
+		Column8: filters.Search,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch games: %w", err)

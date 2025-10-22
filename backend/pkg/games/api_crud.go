@@ -576,6 +576,7 @@ func (h *Handler) GetFilteredGames(w http.ResponseWriter, r *http.Request) {
 
 	// Build filters from query parameters
 	filters := core.GameListingFilters{
+		Search: queryParams.Get("search"),
 		SortBy: queryParams.Get("sort_by"),
 	}
 

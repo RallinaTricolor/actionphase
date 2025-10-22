@@ -159,6 +159,7 @@ export type ParticipationFilter = 'my_games' | 'applied' | 'not_joined';
 export type SortBy = 'recent_activity' | 'created' | 'start_date' | 'alphabetical';
 
 export interface GameListingFilters {
+  search?: string;
   states?: GameState[];
   participation?: ParticipationFilter;
   has_open_spots?: boolean;
