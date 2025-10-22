@@ -144,18 +144,30 @@ ORDER BY m.created_at DESC;
 -- name: UpdateComment :one
 UPDATE messages
 SET content = $2,
-    is_edited = true
+    mentioned_character_ids = $3,
+    is_edited = true,
+    edited_at = NOW(),
+    edit_count = edit_count + 1,
+    updated_at = NOW()
 WHERE id = $1
-  AND is_deleted = false
+  AND deleted_at IS NULL
   AND message_type = 'comment'
 RETURNING *;
 
--- name: DeleteComment :one
+-- name: DeleteComment :exec
 UPDATE messages
-SET is_deleted = true
+SET deleted_at = NOW(),
+    deleted_by_user_id = $2,
+    is_deleted = true,
+    updated_at = NOW()
 WHERE id = $1
-  AND message_type = 'comment'
-RETURNING *;
+  AND deleted_at IS NULL
+  AND message_type = 'comment';
+
+-- name: CheckCommentOwnership :one
+SELECT author_id, deleted_at
+FROM messages
+WHERE id = $1 AND message_type = 'comment';
 
 -- ============================================================================
 -- STATISTICS & COUNTS

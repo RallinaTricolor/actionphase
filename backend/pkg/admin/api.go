@@ -2,8 +2,8 @@ package admin
 
 import (
 	"actionphase/pkg/core"
-	models "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
+	messagesvc "actionphase/pkg/db/services/messages"
 	"context"
 	"errors"
 	"net/http"
@@ -277,10 +277,29 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.Background()
-	queries := models.New(h.App.Pool)
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 
-	// Soft delete the message
-	err = queries.SoftDeleteMessage(ctx, int32(messageID))
+	// Check if user can delete this message (admins always can via admin mode)
+	canDelete, err := messageService.CanUserDeleteComment(ctx, int32(messageID), adminID, true)
+	if err != nil {
+		h.App.Logger.Error("Failed to check delete permission",
+			"error", err,
+			"message_id", messageID,
+			"admin_id", adminID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canDelete {
+		h.App.Logger.Warn("Admin attempted to delete already-deleted message",
+			"message_id", messageID,
+			"admin_id", adminID)
+		render.Render(w, r, core.ErrForbidden("Message is already deleted"))
+		return
+	}
+
+	// Delete the message using the shared service method
+	err = messageService.DeleteComment(ctx, int32(messageID), adminID)
 	if err != nil {
 		h.App.Logger.Error("Failed to delete message",
 			"error", err,

@@ -41,26 +41,38 @@ func (r *CreateCommentRequest) Bind(req *http.Request) error {
 	return nil
 }
 
+type UpdateCommentRequest struct {
+	Content string `json:"content" validate:"required,min=1"`
+}
+
+func (r *UpdateCommentRequest) Bind(req *http.Request) error {
+	return nil
+}
+
 // Response Types
 type MessageResponse struct {
-	ID                    int32     `json:"id"`
-	GameID                int32     `json:"game_id"`
-	PhaseID               *int32    `json:"phase_id,omitempty"`
-	AuthorID              int32     `json:"author_id"`
-	CharacterID           int32     `json:"character_id"`
-	Content               string    `json:"content"`
-	MessageType           string    `json:"message_type"`
-	ParentID              *int32    `json:"parent_id,omitempty"`
-	ThreadDepth           int32     `json:"thread_depth"`
-	AuthorUsername        string    `json:"author_username"`
-	CharacterName         string    `json:"character_name"`
-	CommentCount          int64     `json:"comment_count,omitempty"`
-	ReplyCount            int64     `json:"reply_count,omitempty"`
-	IsEdited              bool      `json:"is_edited"`
-	IsDeleted             bool      `json:"is_deleted"`
-	MentionedCharacterIds []int32   `json:"mentioned_character_ids,omitempty"`
-	CreatedAt             time.Time `json:"created_at"`
-	UpdatedAt             time.Time `json:"updated_at"`
+	ID                    int32      `json:"id"`
+	GameID                int32      `json:"game_id"`
+	PhaseID               *int32     `json:"phase_id,omitempty"`
+	AuthorID              int32      `json:"author_id"`
+	CharacterID           int32      `json:"character_id"`
+	Content               string     `json:"content"`
+	MessageType           string     `json:"message_type"`
+	ParentID              *int32     `json:"parent_id,omitempty"`
+	ThreadDepth           int32      `json:"thread_depth"`
+	AuthorUsername        string     `json:"author_username"`
+	CharacterName         string     `json:"character_name"`
+	CommentCount          int64      `json:"comment_count,omitempty"`
+	ReplyCount            int64      `json:"reply_count,omitempty"`
+	IsEdited              bool       `json:"is_edited"`
+	IsDeleted             bool       `json:"is_deleted"`
+	MentionedCharacterIds []int32    `json:"mentioned_character_ids,omitempty"`
+	CreatedAt             time.Time  `json:"created_at"`
+	UpdatedAt             time.Time  `json:"updated_at"`
+	DeletedAt             *time.Time `json:"deleted_at,omitempty"`
+	DeletedByUserID       *int32     `json:"deleted_by_user_id,omitempty"`
+	EditedAt              *time.Time `json:"edited_at,omitempty"`
+	EditCount             int32      `json:"edit_count"`
 }
 
 func (rd *MessageResponse) Render(w http.ResponseWriter, r *http.Request) error {
@@ -95,6 +107,7 @@ func messageWithDetailsToResponse(msg *core.MessageWithDetails) *MessageResponse
 		MentionedCharacterIds: msg.MentionedCharacterIds,
 		CreatedAt:             msg.CreatedAt.Time,
 		UpdatedAt:             msg.UpdatedAt.Time,
+		EditCount:             msg.EditCount,
 	}
 	fmt.Printf("API messageWithDetailsToResponse: response.ID=%d, response.MentionedCharacterIds=%v\n", response.ID, response.MentionedCharacterIds)
 
@@ -106,6 +119,21 @@ func messageWithDetailsToResponse(msg *core.MessageWithDetails) *MessageResponse
 	if msg.ParentID.Valid {
 		parentID := msg.ParentID.Int32
 		response.ParentID = &parentID
+	}
+
+	if msg.DeletedAt.Valid {
+		deletedAt := msg.DeletedAt.Time
+		response.DeletedAt = &deletedAt
+	}
+
+	if msg.DeletedByUserID.Valid {
+		deletedByUserID := msg.DeletedByUserID.Int32
+		response.DeletedByUserID = &deletedByUserID
+	}
+
+	if msg.EditedAt.Valid {
+		editedAt := msg.EditedAt.Time
+		response.EditedAt = &editedAt
 	}
 
 	// Set either CommentCount or ReplyCount depending on message type
@@ -620,4 +648,162 @@ func (h *Handler) GetUnreadCommentIDs(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// UpdateComment updates the content of an existing comment
+// PATCH /api/v1/games/:gameId/posts/:postId/comments/:commentId
+func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse IDs
+	gameIDStr := chi.URLParam(r, "gameId")
+	_, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	commentIDStr := chi.URLParam(r, "commentId")
+	commentID, err := strconv.ParseInt(commentIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid comment ID")))
+		return
+	}
+
+	// Parse request body
+	data := &UpdateCommentRequest{}
+	if err := render.Bind(r, data); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	// Get user ID from token
+	userID, err := getUserIDFromToken(r, h.App)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+
+	// Check if user can edit this comment (must be author)
+	canEdit, err := messageService.CanUserEditComment(ctx, int32(commentID), userID)
+	if err != nil {
+		h.App.Logger.Error("Failed to check edit permission", "error", err, "comment_id", commentID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canEdit {
+		h.App.Logger.Warn("User attempted to edit comment without permission", "comment_id", commentID, "user_id", userID)
+		render.Render(w, r, core.ErrForbidden("You can only edit your own comments"))
+		return
+	}
+
+	// Update the comment
+	updatedComment, err := messageService.UpdateComment(ctx, int32(commentID), data.Content)
+	if err != nil {
+		h.App.Logger.Error("Failed to update comment", "error", err, "comment_id", commentID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	h.App.Logger.Info("Comment updated successfully", "comment_id", commentID, "user_id", userID, "edit_count", updatedComment.EditCount)
+
+	// Fetch full comment details to return
+	commentDetails, err := messageService.GetComment(ctx, updatedComment.ID)
+	if err != nil {
+		h.App.Logger.Error("Failed to fetch updated comment details", "error", err, "comment_id", updatedComment.ID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	response := messageWithDetailsToResponse(commentDetails)
+	render.Render(w, r, response)
+}
+
+// DeleteComment soft-deletes a comment
+// DELETE /api/v1/games/:gameId/posts/:postId/comments/:commentId
+func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse IDs
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	commentIDStr := chi.URLParam(r, "commentId")
+	commentID, err := strconv.ParseInt(commentIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid comment ID")))
+		return
+	}
+
+	// Get user ID from token
+	userID, err := getUserIDFromToken(r, h.App)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	// Get admin mode header
+	adminModeHeader := r.Header.Get("X-Admin-Mode")
+	isAdminMode := adminModeHeader == "true"
+
+	// Get user service to check if user is admin
+	userService := &db.UserService{DB: h.App.Pool}
+	user, err := userService.User(int(userID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get user", "error", err, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Admin mode only works for actual admins
+	isAdmin := isAdminMode && user.IsAdmin
+
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+
+	// Check if user can delete this comment
+	canDelete, err := messageService.CanUserDeleteComment(ctx, int32(commentID), userID, isAdmin)
+	if err != nil {
+		h.App.Logger.Error("Failed to check delete permission", "error", err, "comment_id", commentID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canDelete {
+		h.App.Logger.Warn("User attempted to delete comment without permission",
+			"comment_id", commentID,
+			"user_id", userID,
+			"is_admin", isAdmin)
+		render.Render(w, r, core.ErrForbidden("You don't have permission to delete this comment"))
+		return
+	}
+
+	// Delete the comment
+	err = messageService.DeleteComment(ctx, int32(commentID), userID)
+	if err != nil {
+		h.App.Logger.Error("Failed to delete comment", "error", err, "comment_id", commentID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	h.App.Logger.Info("Comment deleted successfully",
+		"comment_id", commentID,
+		"game_id", gameID,
+		"deleted_by_user_id", userID,
+		"is_admin", isAdmin)
+
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Comment deleted successfully",
+		"id":      commentID,
+	})
 }

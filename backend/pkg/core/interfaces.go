@@ -478,7 +478,14 @@ type MessageServiceInterface interface {
 	UpdateComment(ctx context.Context, commentID int32, content string) (*models.Message, error)
 
 	// DeleteComment soft-deletes a comment (preserves thread structure)
-	DeleteComment(ctx context.Context, commentID int32) error
+	// deleterID: the user performing the deletion (could be author, GM, or admin)
+	DeleteComment(ctx context.Context, commentID int32, deleterID int32) error
+
+	// CanUserEditComment checks if a user can edit a comment (must be author)
+	CanUserEditComment(ctx context.Context, commentID int32, userID int32) (bool, error)
+
+	// CanUserDeleteComment checks if a user can delete a comment (author, GM, or admin in admin mode)
+	CanUserDeleteComment(ctx context.Context, commentID int32, userID int32, isAdmin bool) (bool, error)
 
 	// GetGamePostCount returns total post count for a game
 	GetGamePostCount(ctx context.Context, gameID int32, phaseID *int32) (int64, error)

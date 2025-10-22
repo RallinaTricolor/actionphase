@@ -81,21 +81,25 @@ func (s *MessageService) GetComment(ctx context.Context, commentID int32) (*core
 
 	return &core.MessageWithDetails{
 		Message: models.Message{
-			ID:          comment.ID,
-			GameID:      comment.GameID,
-			PhaseID:     comment.PhaseID,
-			AuthorID:    comment.AuthorID,
-			CharacterID: comment.CharacterID,
-			Content:     comment.Content,
-			MessageType: comment.MessageType,
-			ParentID:    comment.ParentID,
-			ThreadDepth: comment.ThreadDepth,
-			Visibility:  comment.Visibility,
-			IsEdited:    comment.IsEdited,
-			IsDeleted:   comment.IsDeleted,
-			CreatedAt:   comment.CreatedAt,
-			UpdatedAt:   comment.UpdatedAt,
-			DeletedAt:   comment.DeletedAt,
+			ID:                    comment.ID,
+			GameID:                comment.GameID,
+			PhaseID:               comment.PhaseID,
+			AuthorID:              comment.AuthorID,
+			CharacterID:           comment.CharacterID,
+			Content:               comment.Content,
+			MessageType:           comment.MessageType,
+			ParentID:              comment.ParentID,
+			ThreadDepth:           comment.ThreadDepth,
+			Visibility:            comment.Visibility,
+			MentionedCharacterIds: comment.MentionedCharacterIds,
+			IsEdited:              comment.IsEdited,
+			IsDeleted:             comment.IsDeleted,
+			CreatedAt:             comment.CreatedAt,
+			UpdatedAt:             comment.UpdatedAt,
+			DeletedAt:             comment.DeletedAt,
+			DeletedByUserID:       comment.DeletedByUserID,
+			EditedAt:              comment.EditedAt,
+			EditCount:             comment.EditCount,
 		},
 		AuthorUsername:     comment.AuthorUsername,
 		CharacterName:      comment.CharacterName.String,
@@ -196,22 +200,64 @@ func (s *MessageService) GetPostComments(ctx context.Context, parentID int32) ([
 func (s *MessageService) UpdateComment(ctx context.Context, commentID int32, content string) (*models.Message, error) {
 	queries := models.New(s.DB)
 
+	// Get the existing comment to compare mentions
+	existingComment, err := queries.GetComment(ctx, commentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get existing comment: %w", err)
+	}
+
+	// Extract character mentions from new content
+	mentionedIDs, err := s.extractCharacterMentions(ctx, content, existingComment.GameID)
+	if err != nil {
+		// Log error but don't fail the update
+		// Mention extraction is a non-critical feature
+		slog.Error("Failed to extract mentions during comment update", "error", err, "comment_id", commentID)
+		mentionedIDs = []int32{}
+	}
+
+	// Update the comment with new content and mentions
 	message, err := queries.UpdateComment(ctx, models.UpdateCommentParams{
-		ID:      commentID,
-		Content: content,
+		ID:                    commentID,
+		Content:               content,
+		MentionedCharacterIds: mentionedIDs,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update comment: %w", err)
+	}
+
+	// Compare old mentions vs new mentions to find newly added ones
+	oldMentions := make(map[int32]bool)
+	for _, id := range existingComment.MentionedCharacterIds {
+		oldMentions[id] = true
+	}
+
+	newMentions := make([]int32, 0)
+	for _, id := range mentionedIDs {
+		if !oldMentions[id] {
+			newMentions = append(newMentions, id)
+		}
+	}
+
+	// Trigger notifications for NEW mentions only (fire-and-forget)
+	if len(newMentions) > 0 {
+		slog.Info("Comment updated successfully", "comment_id", commentID, "user_id", existingComment.AuthorID, "edit_count", message.EditCount, "new_mentions", len(newMentions))
+		go s.notifyCharacterMentions(context.Background(), newMentions, existingComment.CharacterID, existingComment.AuthorID, existingComment.GameID, message.ID)
+	} else {
+		slog.Info("Comment updated successfully", "comment_id", commentID, "user_id", existingComment.AuthorID, "edit_count", message.EditCount)
 	}
 
 	return &message, nil
 }
 
 // DeleteComment soft-deletes a comment (preserves thread structure)
-func (s *MessageService) DeleteComment(ctx context.Context, commentID int32) error {
+// deleterID: the user performing the deletion (could be author, GM, or admin)
+func (s *MessageService) DeleteComment(ctx context.Context, commentID int32, deleterID int32) error {
 	queries := models.New(s.DB)
 
-	_, err := queries.DeleteComment(ctx, commentID)
+	err := queries.DeleteComment(ctx, models.DeleteCommentParams{
+		ID:              commentID,
+		DeletedByUserID: int32ValueToPgInt4(deleterID),
+	})
 	if err != nil {
 		return fmt.Errorf("failed to delete comment: %w", err)
 	}
@@ -229,4 +275,66 @@ func (s *MessageService) GetPostCommentCount(ctx context.Context, postID int32) 
 	}
 
 	return count, nil
+}
+
+// CanUserEditComment checks if a user can edit a comment (must be author)
+func (s *MessageService) CanUserEditComment(ctx context.Context, commentID int32, userID int32) (bool, error) {
+	queries := models.New(s.DB)
+
+	comment, err := queries.CheckCommentOwnership(ctx, commentID)
+	if err != nil {
+		return false, fmt.Errorf("failed to check comment ownership: %w", err)
+	}
+
+	// Cannot edit deleted comments
+	if comment.DeletedAt.Valid {
+		return false, nil
+	}
+
+	// Only the author can edit
+	return comment.AuthorID == userID, nil
+}
+
+// CanUserDeleteComment checks if a user can delete a comment
+// Users who can delete: author, GM of the game, or admin (when in admin mode)
+func (s *MessageService) CanUserDeleteComment(ctx context.Context, commentID int32, userID int32, isAdmin bool) (bool, error) {
+	queries := models.New(s.DB)
+
+	comment, err := queries.CheckCommentOwnership(ctx, commentID)
+	if err != nil {
+		return false, fmt.Errorf("failed to check comment ownership: %w", err)
+	}
+
+	// Cannot delete already deleted comments
+	if comment.DeletedAt.Valid {
+		return false, nil
+	}
+
+	// Author can always delete
+	if comment.AuthorID == userID {
+		return true, nil
+	}
+
+	// Get the full comment to access game_id
+	fullComment, err := queries.GetComment(ctx, commentID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get comment details: %w", err)
+	}
+
+	// Check if user is the GM of the game
+	game, err := queries.GetGame(ctx, fullComment.GameID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get game: %w", err)
+	}
+
+	if game.GmUserID == userID {
+		return true, nil
+	}
+
+	// Admin with admin mode enabled can delete
+	if isAdmin {
+		return true, nil
+	}
+
+	return false, nil
 }

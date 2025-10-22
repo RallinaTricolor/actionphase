@@ -534,7 +534,7 @@ func TestMessageService_CommentCRUD(t *testing.T) {
 		require.NoError(t, err)
 
 		// Delete comment
-		err = service.DeleteComment(context.Background(), comment.ID)
+		err = service.DeleteComment(context.Background(), comment.ID, int32(player.ID))
 		require.NoError(t, err)
 
 		// Verify comment is marked as deleted
@@ -1143,4 +1143,376 @@ func TestMessageService_CommentWithMentions(t *testing.T) {
 // Helper function
 func int32Ptr(v int32) *int32 {
 	return &v
+}
+
+// TestMessageService_CommentEditDeleteTracking tests the new edit and delete tracking functionality
+func TestMessageService_CommentEditDeleteTracking(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &MessageService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
+
+	// Setup
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	admin := testDB.CreateTestUser(t, "admin", "admin@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Test Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Create parent post
+	post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID:      game.ID,
+		AuthorID:    int32(player.ID),
+		CharacterID: char.ID,
+		Content:     "Parent post",
+		Visibility:  string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	t.Run("tracks edit history correctly", func(t *testing.T) {
+		// Create comment
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    post.ID,
+			Content:     "Original comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Verify initial state
+		assert.Equal(t, int32(0), comment.EditCount)
+		assert.False(t, comment.EditedAt.Valid)
+
+		// Update comment once
+		updated1, err := service.UpdateComment(context.Background(), comment.ID, "First edit")
+		require.NoError(t, err)
+		assert.Equal(t, "First edit", updated1.Content)
+		assert.Equal(t, int32(1), updated1.EditCount)
+		assert.True(t, updated1.EditedAt.Valid)
+		firstEditTime := updated1.EditedAt
+
+		// Update comment again
+		updated2, err := service.UpdateComment(context.Background(), comment.ID, "Second edit")
+		require.NoError(t, err)
+		assert.Equal(t, "Second edit", updated2.Content)
+		assert.Equal(t, int32(2), updated2.EditCount)
+		assert.True(t, updated2.EditedAt.Valid)
+		// EditedAt should be more recent
+		assert.True(t, updated2.EditedAt.Time.After(firstEditTime.Time) || updated2.EditedAt.Time.Equal(firstEditTime.Time))
+	})
+
+	t.Run("tracks who deleted the comment", func(t *testing.T) {
+		// Create comment
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    post.ID,
+			Content:     "Comment to delete",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Delete comment as GM
+		err = service.DeleteComment(context.Background(), comment.ID, int32(gm.ID))
+		require.NoError(t, err)
+
+		// Verify deletion tracking
+		deleted, err := service.GetComment(context.Background(), comment.ID)
+		require.NoError(t, err)
+		assert.True(t, deleted.DeletedAt.Valid)
+		assert.True(t, deleted.DeletedByUserID.Valid)
+		assert.Equal(t, int32(gm.ID), deleted.DeletedByUserID.Int32)
+	})
+
+	t.Run("CanUserEditComment - only author can edit", func(t *testing.T) {
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    post.ID,
+			Content:     "Test comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Author can edit
+		canEdit, err := service.CanUserEditComment(context.Background(), comment.ID, int32(player.ID))
+		require.NoError(t, err)
+		assert.True(t, canEdit)
+
+		// GM cannot edit
+		canEdit, err = service.CanUserEditComment(context.Background(), comment.ID, int32(gm.ID))
+		require.NoError(t, err)
+		assert.False(t, canEdit)
+
+		// Admin cannot edit (unless they're the author)
+		canEdit, err = service.CanUserEditComment(context.Background(), comment.ID, int32(admin.ID))
+		require.NoError(t, err)
+		assert.False(t, canEdit)
+	})
+
+	t.Run("CanUserDeleteComment - author, GM, or admin can delete", func(t *testing.T) {
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    post.ID,
+			Content:     "Test comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Author can delete
+		canDelete, err := service.CanUserDeleteComment(context.Background(), comment.ID, int32(player.ID), false)
+		require.NoError(t, err)
+		assert.True(t, canDelete)
+
+		// GM can delete
+		canDelete, err = service.CanUserDeleteComment(context.Background(), comment.ID, int32(gm.ID), false)
+		require.NoError(t, err)
+		assert.True(t, canDelete)
+
+		// Admin with admin mode can delete
+		canDelete, err = service.CanUserDeleteComment(context.Background(), comment.ID, int32(admin.ID), true)
+		require.NoError(t, err)
+		assert.True(t, canDelete)
+
+		// Admin without admin mode cannot delete (unless they're author or GM)
+		canDelete, err = service.CanUserDeleteComment(context.Background(), comment.ID, int32(admin.ID), false)
+		require.NoError(t, err)
+		assert.False(t, canDelete)
+	})
+
+	t.Run("cannot edit or delete already deleted comment", func(t *testing.T) {
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    post.ID,
+			Content:     "Comment to delete",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Delete comment
+		err = service.DeleteComment(context.Background(), comment.ID, int32(player.ID))
+		require.NoError(t, err)
+
+		// Try to edit deleted comment - should fail
+		_, err = service.UpdateComment(context.Background(), comment.ID, "Trying to edit deleted")
+		assert.Error(t, err)
+
+		// Try to delete again - should fail
+		err = service.DeleteComment(context.Background(), comment.ID, int32(player.ID))
+		assert.Error(t, err)
+	})
+}
+
+// TestMessageService_UpdateCommentWithMentions tests the mention detection and notification behavior in UpdateComment
+func TestMessageService_UpdateCommentWithMentions(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &MessageService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
+
+	// Setup
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	game := testDB.CreateTestGame(t, int32(player.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	authorChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Author Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	aragorn, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Aragorn",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	gandalf, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Gandalf",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Create parent post
+	post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID:      game.ID,
+		AuthorID:    int32(player.ID),
+		CharacterID: authorChar.ID,
+		Content:     "Parent post",
+		Visibility:  string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	t.Run("adding new mention updates mentioned_character_ids", func(t *testing.T) {
+		// Create comment without mentions
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: authorChar.ID,
+			ParentID:    post.ID,
+			Content:     "Original comment without mentions",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+		assert.Empty(t, comment.MentionedCharacterIds)
+
+		// Update comment to add a mention
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated comment with @Aragorn mention")
+		require.NoError(t, err)
+		assert.Len(t, updated.MentionedCharacterIds, 1)
+		assert.Contains(t, updated.MentionedCharacterIds, aragorn.ID)
+		assert.True(t, updated.IsEdited)
+	})
+
+	t.Run("adding multiple new mentions updates mentioned_character_ids", func(t *testing.T) {
+		// Create comment without mentions
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: authorChar.ID,
+			ParentID:    post.ID,
+			Content:     "Original comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Update comment to add multiple mentions
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated with @Aragorn and @Gandalf")
+		require.NoError(t, err)
+		assert.Len(t, updated.MentionedCharacterIds, 2)
+		assert.Contains(t, updated.MentionedCharacterIds, aragorn.ID)
+		assert.Contains(t, updated.MentionedCharacterIds, gandalf.ID)
+	})
+
+	t.Run("removing mentions clears mentioned_character_ids", func(t *testing.T) {
+		// Create comment with mention
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: authorChar.ID,
+			ParentID:    post.ID,
+			Content:     "Comment with @Aragorn",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+		assert.Len(t, comment.MentionedCharacterIds, 1)
+
+		// Update comment to remove mention
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated without mentions")
+		require.NoError(t, err)
+		assert.Empty(t, updated.MentionedCharacterIds)
+	})
+
+	t.Run("keeping existing mention preserves mentioned_character_ids", func(t *testing.T) {
+		// Create comment with mention
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: authorChar.ID,
+			ParentID:    post.ID,
+			Content:     "Comment with @Aragorn",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+		assert.Len(t, comment.MentionedCharacterIds, 1)
+
+		// Update comment but keep same mention
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated comment still mentions @Aragorn")
+		require.NoError(t, err)
+		assert.Len(t, updated.MentionedCharacterIds, 1)
+		assert.Contains(t, updated.MentionedCharacterIds, aragorn.ID)
+	})
+
+	t.Run("replacing one mention with another updates mentioned_character_ids", func(t *testing.T) {
+		// Create comment with Aragorn mention
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: authorChar.ID,
+			ParentID:    post.ID,
+			Content:     "Comment with @Aragorn",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+		assert.Len(t, comment.MentionedCharacterIds, 1)
+		assert.Contains(t, comment.MentionedCharacterIds, aragorn.ID)
+
+		// Update comment to replace Aragorn with Gandalf
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated to mention @Gandalf instead")
+		require.NoError(t, err)
+		assert.Len(t, updated.MentionedCharacterIds, 1)
+		assert.Contains(t, updated.MentionedCharacterIds, gandalf.ID)
+		assert.NotContains(t, updated.MentionedCharacterIds, aragorn.ID)
+	})
+
+	t.Run("adding new mention to existing mentions", func(t *testing.T) {
+		// Create comment with Aragorn mention
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: authorChar.ID,
+			ParentID:    post.ID,
+			Content:     "Comment with @Aragorn",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+		assert.Len(t, comment.MentionedCharacterIds, 1)
+
+		// Update comment to add Gandalf mention while keeping Aragorn
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated with @Aragorn and @Gandalf")
+		require.NoError(t, err)
+		assert.Len(t, updated.MentionedCharacterIds, 2)
+		assert.Contains(t, updated.MentionedCharacterIds, aragorn.ID)
+		assert.Contains(t, updated.MentionedCharacterIds, gandalf.ID)
+	})
+
+	t.Run("handles mention extraction errors gracefully", func(t *testing.T) {
+		// Create comment
+		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: authorChar.ID,
+			ParentID:    post.ID,
+			Content:     "Original comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Update with non-existent character mention (should not fail, just not add mention)
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Mentioning @NonExistentCharacter")
+		require.NoError(t, err)
+		assert.NotNil(t, updated)
+		assert.Empty(t, updated.MentionedCharacterIds)
+		assert.True(t, updated.IsEdited)
+	})
 }

@@ -285,7 +285,10 @@ CREATE TABLE messages (
     is_deleted BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    deleted_at TIMESTAMP,
+    deleted_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    edited_at TIMESTAMPTZ,
+    edit_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE message_recipients (

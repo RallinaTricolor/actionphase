@@ -436,7 +436,7 @@ func TestMessageService_GetPostsWithUnreadInfo(t *testing.T) {
 		require.NoError(t, err)
 
 		// Delete comment
-		err = service.DeleteComment(context.Background(), comment.ID)
+		err = service.DeleteComment(context.Background(), comment.ID, int32(player.ID))
 		require.NoError(t, err)
 
 		infos, err := service.GetPostsWithUnreadInfo(context.Background(), game.ID)
