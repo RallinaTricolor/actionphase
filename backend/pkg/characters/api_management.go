@@ -153,3 +153,155 @@ func (h *Handler) AssignNPC(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// ReassignCharacter reassigns an inactive character to a new owner (GM only)
+func (h *Handler) ReassignCharacter(w http.ResponseWriter, r *http.Request) {
+	characterIDStr := chi.URLParam(r, "id")
+	characterID, err := strconv.ParseInt(characterIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid character ID")))
+		return
+	}
+
+	data := &ReassignCharacterRequest{}
+	if err := render.Bind(r, data); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
+		return
+	}
+
+	// Get character and verify it exists
+	characterService := &services.CharacterService{DB: h.App.Pool}
+	character, err := characterService.GetCharacter(r.Context(), int32(characterID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get character", "error", err)
+		render.Render(w, r, core.ErrNotFound("character not found"))
+		return
+	}
+
+	// Verify user is GM of this game
+	gameService := &services.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), character.GameID)
+	if err != nil {
+		h.App.Logger.Error("Failed to get game", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Check GM permissions (considers admin mode)
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+		render.Render(w, r, core.ErrForbidden("only the GM can reassign characters"))
+		return
+	}
+
+	// Verify character is inactive
+	if character.IsActive {
+		render.Render(w, r, core.ErrConflict("can only reassign inactive characters"))
+		return
+	}
+
+	// Reassign character
+	updatedCharacter, err := characterService.ReassignCharacter(r.Context(), int32(characterID), data.NewOwnerUserID)
+	if err != nil {
+		h.App.Logger.Error("Failed to reassign character", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	h.App.Logger.Info("Character reassigned", "character_id", characterID, "new_owner", data.NewOwnerUserID, "reassigned_by", authUser.ID)
+
+	// Convert to response format
+	response := &CharacterResponse{
+		ID:            updatedCharacter.ID,
+		GameID:        updatedCharacter.GameID,
+		Name:          updatedCharacter.Name,
+		CharacterType: updatedCharacter.CharacterType,
+		Status:        updatedCharacter.Status.String,
+		CreatedAt:     updatedCharacter.CreatedAt.Time,
+		UpdatedAt:     updatedCharacter.UpdatedAt.Time,
+	}
+
+	if updatedCharacter.UserID.Valid {
+		response.UserID = &updatedCharacter.UserID.Int32
+	}
+
+	render.Render(w, r, response)
+}
+
+// ListInactiveCharacters lists all inactive characters for a game (GM only)
+func (h *Handler) ListInactiveCharacters(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
+		return
+	}
+
+	// Verify user is GM of this game
+	gameService := &services.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get game", "error", err)
+		render.Render(w, r, core.ErrNotFound("game not found"))
+		return
+	}
+
+	// Check GM permissions (considers admin mode)
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+		render.Render(w, r, core.ErrForbidden("only the GM can view inactive characters"))
+		return
+	}
+
+	// Get inactive characters
+	characterService := &services.CharacterService{DB: h.App.Pool}
+	characters, err := characterService.ListInactiveCharacters(r.Context(), int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to list inactive characters", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	response := make([]map[string]interface{}, 0)
+	for _, char := range characters {
+		charData := map[string]interface{}{
+			"id":                      char.ID,
+			"game_id":                 char.GameID,
+			"name":                    char.Name,
+			"character_type":          char.CharacterType,
+			"status":                  char.Status.String,
+			"is_active":               char.IsActive,
+			"created_at":              char.CreatedAt.Time,
+			"updated_at":              char.UpdatedAt.Time,
+			"current_owner_username":  char.CurrentOwnerUsername,
+			"original_owner_username": char.OriginalOwnerUsername,
+		}
+
+		if char.UserID.Valid {
+			charData["user_id"] = char.UserID.Int32
+		}
+		if char.OriginalOwnerUserID.Valid {
+			charData["original_owner_user_id"] = char.OriginalOwnerUserID.Int32
+		}
+
+		response = append(response, charData)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	render.JSON(w, r, response)
+}

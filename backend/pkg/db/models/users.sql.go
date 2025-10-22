@@ -258,6 +258,49 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
+const searchUsers = `-- name: SearchUsers :many
+
+SELECT id, username, email, created_at
+FROM users
+WHERE username ILIKE '%' || $1 || '%'
+  AND is_banned = FALSE
+ORDER BY username
+LIMIT 20
+`
+
+type SearchUsersRow struct {
+	ID        int32            `json:"id"`
+	Username  string           `json:"username"`
+	Email     string           `json:"email"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+// User search queries
+func (q *Queries) SearchUsers(ctx context.Context, dollar_1 pgtype.Text) ([]SearchUsersRow, error) {
+	rows, err := q.db.Query(ctx, searchUsers, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchUsersRow
+	for rows.Next() {
+		var i SearchUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const unbanUser = `-- name: UnbanUser :exec
 UPDATE users
 SET is_banned = FALSE,

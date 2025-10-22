@@ -87,6 +87,7 @@ func (h *Handler) Start() {
 			r.Get("/me", authHandler.V1Me)                         // Get current user info
 			r.Get("/preferences", authHandler.V1GetPreferences)    // Get user preferences
 			r.Put("/preferences", authHandler.V1UpdatePreferences) // Update user preferences
+			r.Get("/users/search", authHandler.V1SearchUsers)      // Search for users
 		})
 	})
 	apiV1Router.Mount("/auth", authRouter)
@@ -126,6 +127,8 @@ func (h *Handler) Start() {
 
 			// Participant management
 			r.Delete("/{id}/leave", gameHandler.LeaveGame)
+			r.Delete("/{id}/participants/{userId}", gameHandler.RemovePlayer)      // GM removes player
+			r.Post("/{id}/participants/direct-add", gameHandler.AddPlayerDirectly) // GM adds player directly
 
 			// Game application management
 			r.Post("/{id}/apply", gameHandler.ApplyToGame)
@@ -139,6 +142,7 @@ func (h *Handler) Start() {
 			r.Post("/{gameId}/characters", characterHandler.CreateCharacter)
 			r.Get("/{gameId}/characters", characterHandler.GetGameCharacters)
 			r.Get("/{gameId}/characters/controllable", characterHandler.GetUserControllableCharacters)
+			r.Get("/{gameId}/characters/inactive", characterHandler.ListInactiveCharacters) // GM views inactive characters
 
 			// Phase management within games
 			phaseHandler := phases.Handler{App: h.App}
@@ -185,17 +189,20 @@ func (h *Handler) Start() {
 	charactersRouter.Route("/", func(r chi.Router) {
 		characterHandler := characters.Handler{App: h.App}
 		avatarHandler := avatars.Handler{App: h.App}
+		userService := &db.UserService{DB: h.App.Pool}
 
 		// All character routes require authentication
 		r.Group(func(r chi.Router) {
 			tokenAuth := h.getTokenAuth()
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
 
 			// Character management
 			r.Get("/{id}", characterHandler.GetCharacter)
 			r.Post("/{id}/approve", characterHandler.ApproveCharacter)
 			r.Post("/{id}/assign", characterHandler.AssignNPC)
+			r.Put("/{id}/reassign", characterHandler.ReassignCharacter) // GM reassigns inactive character
 			r.Post("/{id}/data", characterHandler.SetCharacterData)
 			r.Get("/{id}/data", characterHandler.GetCharacterData)
 

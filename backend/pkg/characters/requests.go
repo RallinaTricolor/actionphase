@@ -42,3 +42,12 @@ type AssignNPCRequest struct {
 func (r *AssignNPCRequest) Bind(req *http.Request) error {
 	return nil
 }
+
+// ReassignCharacterRequest represents a request to reassign an inactive character
+type ReassignCharacterRequest struct {
+	NewOwnerUserID int32 `json:"new_owner_user_id" validate:"required"`
+}
+
+func (r *ReassignCharacterRequest) Bind(req *http.Request) error {
+	return nil
+}

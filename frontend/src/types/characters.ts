@@ -9,6 +9,10 @@ export interface Character {
   character_type: 'player_character' | 'npc_gm' | 'npc_audience';
   status: 'pending' | 'approved' | 'rejected' | 'active' | 'dead';
   avatar_url?: string | null;
+  is_active: boolean;
+  original_owner_user_id?: number;
+  original_owner_username?: string;
+  current_owner_username?: string;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +48,10 @@ export interface ApproveCharacterRequest {
 
 export interface AssignNPCRequest {
   assigned_user_id: number;
+}
+
+export interface ReassignCharacterRequest {
+  new_owner_user_id: number;
 }
 
 // Individual ability/skill item structures for JSON fields

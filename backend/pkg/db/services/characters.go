@@ -80,7 +80,7 @@ func (cs *CharacterService) GetNPCs(ctx context.Context, gameID int32) ([]models
 	return queries.GetNPCsByGame(ctx, gameID)
 }
 
-func (cs *CharacterService) GetUserControllableCharacters(ctx context.Context, gameID, userID int32) ([]models.Character, error) {
+func (cs *CharacterService) GetUserControllableCharacters(ctx context.Context, gameID, userID int32) ([]models.GetUserControllableCharactersRow, error) {
 	queries := models.New(cs.DB)
 	return queries.GetUserControllableCharacters(ctx, models.GetUserControllableCharactersParams{
 		GameID: gameID,
@@ -220,4 +220,33 @@ func isValidCharacterType(characterType string) bool {
 		}
 	}
 	return false
+}
+
+// Player Management Methods
+
+// ReassignCharacter reassigns a character to a new owner (used when removing players)
+func (cs *CharacterService) ReassignCharacter(ctx context.Context, characterID, newOwnerUserID int32) (*models.Character, error) {
+	queries := models.New(cs.DB)
+
+	character, err := queries.ReassignCharacter(ctx, models.ReassignCharacterParams{
+		ID:     characterID,
+		UserID: pgtype.Int4{Int32: newOwnerUserID, Valid: true},
+	})
+
+	return &character, err
+}
+
+// ListInactiveCharacters returns all inactive characters for a game
+func (cs *CharacterService) ListInactiveCharacters(ctx context.Context, gameID int32) ([]models.ListInactiveCharactersRow, error) {
+	queries := models.New(cs.DB)
+	return queries.ListInactiveCharacters(ctx, gameID)
+}
+
+// DeactivatePlayerCharacters marks all player characters for a user as inactive
+func (cs *CharacterService) DeactivatePlayerCharacters(ctx context.Context, gameID, userID int32) error {
+	queries := models.New(cs.DB)
+	return queries.DeactivatePlayerCharacters(ctx, models.DeactivatePlayerCharactersParams{
+		GameID: gameID,
+		UserID: pgtype.Int4{Int32: userID, Valid: true},
+	})
 }

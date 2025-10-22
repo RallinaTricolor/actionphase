@@ -180,6 +180,17 @@ type GameServiceInterface interface {
 
 	// GetFilteredGames retrieves games with filters, sorting, and user enrichment
 	GetFilteredGames(ctx context.Context, filters GameListingFilters) (*GameListingResponse, error)
+
+	// Player Management methods
+
+	// RemovePlayer removes a player from the game and deactivates their characters
+	RemovePlayer(ctx context.Context, gameID, userID, gmUserID int32) error
+
+	// AddPlayerDirectly adds a player directly to the game without application
+	AddPlayerDirectly(ctx context.Context, gameID, userID int32) (*models.GameParticipant, error)
+
+	// GetActiveParticipants retrieves all active (non-removed) participants for a game
+	GetActiveParticipants(ctx context.Context, gameID int32) ([]models.GetActiveParticipantsRow, error)
 }
 
 // GameApplicationServiceInterface defines the contract for game application operations.

@@ -53,6 +53,8 @@ CREATE TABLE game_participants (
     role VARCHAR(50) NOT NULL,
     status VARCHAR(50) DEFAULT 'active',
     joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    removed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    removed_by_user_id INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
     UNIQUE(game_id, user_id)
 );
 
@@ -82,6 +84,8 @@ CREATE TABLE characters (
     character_type VARCHAR(50) NOT NULL,
     status VARCHAR(50) DEFAULT 'pending',
     avatar_url TEXT NULL,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    original_owner_user_id INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -256,7 +260,9 @@ CREATE INDEX idx_action_results_user_id ON action_results(user_id);
 CREATE INDEX idx_phase_transitions_game_id ON phase_transitions(game_id);
 CREATE INDEX idx_game_participants_game_id ON game_participants(game_id);
 CREATE INDEX idx_game_participants_user_id ON game_participants(user_id);
+CREATE INDEX idx_game_participants_removed_at ON game_participants(game_id, removed_at) WHERE removed_at IS NULL;
 CREATE INDEX idx_characters_game_id ON characters(game_id);
+CREATE INDEX idx_characters_active ON characters(game_id, is_active);
 CREATE INDEX idx_character_data_character_id ON character_data(character_id);
 CREATE INDEX idx_conversations_game_id ON conversations(game_id);
 CREATE INDEX idx_conversation_participants_conversation_id ON conversation_participants(conversation_id);

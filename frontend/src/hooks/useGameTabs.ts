@@ -86,6 +86,11 @@ export function useGameTabs({
       // Messages
       tabList.push({ id: 'messages', label: 'Messages', icon: icons.messages });
 
+      // Participants tab (GM only - for player management)
+      if (isGM) {
+        tabList.push({ id: 'participants', label: 'Participants', badge: participantCount, icon: icons.participants });
+      }
+
       // Phase History - context-aware label
       // During action phases, label as "Previous Common Rooms" to set expectations
       const phaseHistoryLabel = currentPhaseType === 'action' ? 'Previous Common Rooms' : 'Phase History';
