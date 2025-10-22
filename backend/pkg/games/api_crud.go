@@ -256,12 +256,11 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
-	userID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
-	if errResp != nil {
-		h.App.Logger.Error("Failed to authenticate user from JWT")
-		render.Render(w, r, errResp)
+	// Get authenticated user
+	user := core.GetAuthenticatedUser(r.Context())
+	if user == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
@@ -275,7 +274,8 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
+	// Check GM permissions (considers admin mode)
+	if !core.IsUserGameMaster(r, user.ID, user.IsAdmin, *game) {
 		render.Render(w, r, core.ErrForbidden("only the GM can update this game state"))
 		return
 	}
@@ -294,7 +294,7 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 		applicationService := &db.GameApplicationService{DB: h.App.Pool}
 
 		// Auto-reject all pending applications (those not explicitly approved)
-		err = applicationService.BulkRejectApplications(r.Context(), int32(gameID), userID)
+		err = applicationService.BulkRejectApplications(r.Context(), int32(gameID), user.ID)
 		if err != nil {
 			h.App.Logger.Error("Failed to bulk reject pending applications", "error", err, "game_id", gameID)
 			// Don't fail the state transition, but log the error
@@ -348,12 +348,11 @@ func (h *Handler) UpdateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
-	userID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
-	if errResp != nil {
-		h.App.Logger.Error("Failed to authenticate user from JWT")
-		render.Render(w, r, errResp)
+	// Get authenticated user
+	user := core.GetAuthenticatedUser(r.Context())
+	if user == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
@@ -367,7 +366,8 @@ func (h *Handler) UpdateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
+	// Check GM permissions (considers admin mode)
+	if !core.IsUserGameMaster(r, user.ID, user.IsAdmin, *game) {
 		render.Render(w, r, core.ErrForbidden("only the GM can update this game"))
 		return
 	}
@@ -432,12 +432,11 @@ func (h *Handler) DeleteGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
-	userID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
-	if errResp != nil {
-		h.App.Logger.Error("Failed to authenticate user from JWT")
-		render.Render(w, r, errResp)
+	// Get authenticated user
+	user := core.GetAuthenticatedUser(r.Context())
+	if user == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
@@ -451,7 +450,8 @@ func (h *Handler) DeleteGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
+	// Check GM permissions (considers admin mode)
+	if !core.IsUserGameMaster(r, user.ID, user.IsAdmin, *game) {
 		render.Render(w, r, core.ErrForbidden("only the GM can delete this game"))
 		return
 	}

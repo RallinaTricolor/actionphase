@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { AdminModeToggle } from '../components/AdminModeToggle';
 import type { AdminUser, BannedUser, User } from '../lib/api/admin';
 
 export function AdminPage() {
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
   const currentUserId = currentUser?.id;
-  const [activeTab, setActiveTab] = useState<'admins' | 'banned' | 'lookup'>('banned');
+  const [activeTab, setActiveTab] = useState<'mode' | 'admins' | 'banned' | 'lookup'>('mode');
   const [lookupUsername, setLookupUsername] = useState('');
   const [lookupResult, setLookupResult] = useState<User | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
@@ -141,6 +142,16 @@ export function AdminPage() {
       <div className="border-b border-theme-default mb-6">
         <nav className="flex space-x-8">
           <button
+            onClick={() => setActiveTab('mode')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'mode'
+                ? 'border-interactive-primary text-interactive-primary'
+                : 'border-transparent text-content-tertiary hover:text-content-secondary hover:border-content-tertiary'
+            }`}
+          >
+            Admin Mode
+          </button>
+          <button
             onClick={() => setActiveTab('banned')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'banned'
@@ -172,6 +183,38 @@ export function AdminPage() {
           </button>
         </nav>
       </div>
+
+      {/* Admin Mode Tab */}
+      {activeTab === 'mode' && (
+        <div className="bg-surface-base rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-theme-default">
+            <h2 className="text-xl font-semibold text-content-primary">Admin Mode</h2>
+            <p className="text-sm text-content-tertiary mt-1">
+              Control your administrator privileges and visibility
+            </p>
+          </div>
+
+          <div className="px-6 py-6">
+            <div className="max-w-2xl">
+              <div className="mb-4">
+                <h3 className="text-lg font-medium text-content-primary mb-2">What is Admin Mode?</h3>
+                <p className="text-sm text-content-secondary mb-4">
+                  When Admin Mode is enabled, you'll see additional moderation controls throughout the site,
+                  such as delete buttons on posts and comments. This allows you to quickly moderate content
+                  without switching to the admin panel.
+                </p>
+                <p className="text-sm text-content-secondary mb-4">
+                  When disabled, the site appears as it does to regular users, hiding all administrative controls.
+                </p>
+              </div>
+
+              <div className="border-t border-theme-default pt-4">
+                <AdminModeToggle />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Banned Users Tab */}
       {activeTab === 'banned' && (

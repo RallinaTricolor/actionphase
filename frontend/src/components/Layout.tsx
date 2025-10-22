@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from './NotificationBell';
 import { Button } from './ui';
-import { AdminModeToggle } from './AdminModeToggle';
 import { AdminBanner } from './AdminBanner';
 
 interface LayoutProps {
@@ -13,7 +12,7 @@ interface LayoutProps {
 export const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, currentUser } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -60,8 +59,12 @@ export const Layout = ({ children }: LayoutProps) => {
                 {/* Notification Bell */}
                 <NotificationBell />
 
-                {/* Admin Mode Toggle (only visible to admins) */}
-                <AdminModeToggle />
+                {/* Admin Link (only visible to admins) */}
+                {currentUser?.is_admin && (
+                  <Link to="/admin" className={navLinkClass('/admin')}>
+                    Admin
+                  </Link>
+                )}
 
                 <Link to="/settings" className={navLinkClass('/settings')}>
                   Settings

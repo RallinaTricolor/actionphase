@@ -47,11 +47,11 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user ID from token
-	userID, err := h.getUserIDFromToken(r)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
@@ -76,7 +76,7 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 
 		isParticipant := false
 		for _, participant := range participants {
-			if participant.UserID == userID && participant.Role == "player" {
+			if participant.UserID == authUser.ID && participant.Role == "player" {
 				isParticipant = true
 				break
 			}
@@ -87,8 +87,8 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// For NPCs, only GM can create them
-		if game.GmUserID != userID {
+		// For NPCs, only GM can create them (considers admin mode)
+		if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
 			render.Render(w, r, core.ErrForbidden("only the GM can create NPCs"))
 			return
 		}
@@ -99,7 +99,7 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 
 	var reqUserID *int32
 	if data.CharacterType == "player_character" {
-		reqUserID = &userID
+		reqUserID = &authUser.ID
 	}
 	// For NPCs, UserID can be nil (GM-controlled) or assigned later
 

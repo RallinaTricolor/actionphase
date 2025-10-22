@@ -36,6 +36,7 @@ type AuthenticatedUser struct {
 	ID       int32
 	Username string
 	Email    string
+	IsAdmin  bool
 }
 
 // RequireAuthenticationMiddleware creates middleware that extracts user information from JWT tokens.
@@ -94,6 +95,7 @@ func RequireAuthenticationMiddleware(userService MiddlewareUserService) func(htt
 				ID:       int32(user.ID),
 				Username: user.Username,
 				Email:    user.Email,
+				IsAdmin:  user.IsAdmin,
 			}
 
 			// Add user information to request context

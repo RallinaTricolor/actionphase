@@ -33,11 +33,11 @@ func (h *Handler) ApproveCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user ID from token
-	userID, err := h.getUserIDFromToken(r)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
@@ -58,7 +58,8 @@ func (h *Handler) ApproveCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
+	// Check GM permissions (considers admin mode)
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
 		render.Render(w, r, core.ErrForbidden("only the GM can approve characters"))
 		return
 	}
@@ -111,10 +112,11 @@ func (h *Handler) AssignNPC(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from token
-	userID, err := h.getUserIDFromToken(r)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
@@ -135,13 +137,14 @@ func (h *Handler) AssignNPC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
+	// Check GM permissions (considers admin mode)
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
 		render.Render(w, r, core.ErrForbidden("only the GM can assign NPCs"))
 		return
 	}
 
 	// Assign NPC
-	err = characterService.AssignNPCToUser(r.Context(), int32(characterID), data.AssignedUserID, userID)
+	err = characterService.AssignNPCToUser(r.Context(), int32(characterID), data.AssignedUserID, authUser.ID)
 	if err != nil {
 		h.App.Logger.Error("Failed to assign NPC", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
