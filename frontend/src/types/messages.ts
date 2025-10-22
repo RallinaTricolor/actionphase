@@ -20,6 +20,11 @@ export interface Message {
   created_at: string;
   updated_at: string;
   mentioned_character_ids?: number[];
+  // Edit/Delete tracking fields
+  deleted_at?: string | null;
+  deleted_by_user_id?: number | null;
+  edited_at?: string | null;
+  edit_count?: number;
 }
 
 export interface CreatePostRequest {
@@ -31,6 +36,10 @@ export interface CreatePostRequest {
 export interface CreateCommentRequest {
   phase_id?: number;
   character_id: number;
+  content: string;
+}
+
+export interface UpdateCommentRequest {
   content: string;
 }
 

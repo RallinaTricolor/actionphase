@@ -7,6 +7,8 @@ import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
 import { Button, Select } from './ui';
 import { useAdminMode } from '../hooks/useAdminMode';
+import { useUpdateComment, useDeleteComment } from '../hooks/useCommentMutations';
+import { useGamePermissions } from '../hooks/useGamePermissions';
 
 interface ThreadedCommentProps {
   comment: Message;
@@ -41,8 +43,13 @@ export function ThreadedComment({
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(comment.content);
 
   const { adminModeEnabled } = useAdminMode();
+  const { isGM } = useGamePermissions(gameId);
+  const updateCommentMutation = useUpdateComment();
+  const deleteCommentMutation = useDeleteComment();
   const isAuthor = currentUserId === comment.author_id;
   const hasReplies = (comment.reply_count || 0) > 0;
   const isUnread = unreadCommentIDs.includes(comment.id);
@@ -89,6 +96,36 @@ export function ThreadedComment({
     }
   };
 
+  const handleEdit = () => {
+    setEditContent(comment.content);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditContent(comment.content);
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editContent.trim() || editContent === comment.content) {
+      setIsEditing(false);
+      return;
+    }
+
+    try {
+      await updateCommentMutation.mutateAsync({
+        gameId,
+        postId: comment.parent_id || comment.id,
+        commentId: comment.id,
+        data: { content: editContent.trim() }
+      });
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Failed to update comment:', err);
+      alert('Failed to update comment. Please try again.');
+    }
+  };
+
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
       return;
@@ -96,9 +133,11 @@ export function ThreadedComment({
 
     try {
       setIsDeleting(true);
-      await apiClient.admin.deleteMessage(comment.id);
-      // Refresh to show the updated state
-      window.location.reload();
+      await deleteCommentMutation.mutateAsync({
+        gameId,
+        postId: comment.parent_id || comment.id,
+        commentId: comment.id
+      });
     } catch (err) {
       console.error('Failed to delete comment:', err);
       alert('Failed to delete comment. Please try again.');
@@ -178,7 +217,11 @@ export function ThreadedComment({
             <span className="font-semibold text-sm text-content-primary">{comment.character_name}</span>
             <span className="text-xs text-content-secondary ml-2">
               @{comment.author_username} · {formatDate(comment.created_at)}
-              {comment.is_edited && <span className="ml-1 text-content-tertiary">(edited)</span>}
+              {comment.is_edited && (
+                <span className="ml-1 text-content-tertiary" title={comment.edited_at ? `Last edited ${formatDate(comment.edited_at)}` : undefined}>
+                  (edited{comment.edit_count && comment.edit_count > 1 ? ` ${comment.edit_count}x` : ''})
+                </span>
+              )}
             </span>
             {isAuthor && (
               <span className="ml-2 text-xs bg-interactive-primary-subtle text-interactive-primary px-1.5 py-0.5 rounded">You</span>
@@ -189,19 +232,50 @@ export function ThreadedComment({
           </div>
         </div>
 
-        <div className="text-sm text-content-primary mb-2">
-          <MarkdownPreview
-            content={comment.content}
-            mentionedCharacters={comment.mentioned_character_ids?.map(id => {
-              const char = characters.find(c => c.id === id);
-              return char ? { id: char.id, name: char.name } : null;
-            }).filter((c): c is { id: number; name: string } => c !== null) || []}
-          />
-        </div>
+        {/* Comment Content - Edit Mode or Display Mode */}
+        {isEditing ? (
+          <div className="mb-3">
+            <CommentEditor
+              value={editContent}
+              onChange={setEditContent}
+              placeholder="Edit comment..."
+              disabled={updateCommentMutation.isPending}
+              characters={characters}
+            />
+            <div className="flex gap-2 mt-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSaveEdit}
+                disabled={updateCommentMutation.isPending || !editContent.trim()}
+              >
+                {updateCommentMutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCancelEdit}
+                disabled={updateCommentMutation.isPending}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-content-primary mb-2">
+            <MarkdownPreview
+              content={comment.content}
+              mentionedCharacters={comment.mentioned_character_ids?.map(id => {
+                const char = characters.find(c => c.id === id);
+                return char ? { id: char.id, name: char.name } : null;
+              }).filter((c): c is { id: number; name: string } => c !== null) || []}
+            />
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 text-xs text-content-secondary">
-          {!isAtMaxDepth && (
+          {!isAtMaxDepth && !isEditing && (
             <Button
               variant="ghost"
               size="sm"
@@ -248,14 +322,29 @@ export function ThreadedComment({
             )}
           </Button>
 
-          {adminModeEnabled && (
+          {isAuthor && !isEditing && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleEdit}
+              className="text-xs h-auto p-0 hover:text-interactive-primary-hover font-medium flex items-center gap-1"
+              title="Edit this comment"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span>Edit</span>
+            </Button>
+          )}
+
+          {(isAuthor || isGM || adminModeEnabled) && !isEditing && (
             <Button
               variant="ghost"
               size="sm"
               onClick={handleDelete}
               disabled={isDeleting}
               className="text-xs h-auto p-0 hover:text-semantic-danger font-medium text-semantic-danger flex items-center gap-1"
-              title="Delete this post (admin only)"
+              title={isAuthor ? "Delete this comment" : (isGM ? "Delete this comment (GM)" : "Delete this comment (admin)")}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

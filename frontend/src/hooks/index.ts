@@ -28,3 +28,6 @@ export { useAuth as useAuthLegacy, usePing } from './useAuth';
 
 // Admin-related hooks
 export { useAdminMode, type UseAdminModeReturn } from './useAdminMode';
+
+// Comment mutation hooks
+export { useUpdateComment, useDeleteComment } from './useCommentMutations';
