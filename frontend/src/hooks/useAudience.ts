@@ -1,0 +1,143 @@
+import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '../lib/api';
+import type { GameParticipant, Character } from '../types/games';
+
+/**
+ * Hook to apply as an audience member
+ */
+export function useApplyAsAudience(gameId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (applicationText: string) =>
+      apiClient.games.applyAsAudience(gameId, applicationText),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['game-participants', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['audience-members', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['game-details', gameId] });
+    },
+  });
+}
+
+/**
+ * Hook to fetch all audience members for a game
+ */
+export function useAudienceMembers(gameId: number) {
+  return useQuery({
+    queryKey: ['audience-members', gameId],
+    queryFn: async () => {
+      const response = await apiClient.games.listAudienceMembers(gameId);
+      return response.data.audience_members;
+    },
+    enabled: !!gameId,
+  });
+}
+
+/**
+ * Hook to update auto-accept audience setting (GM only)
+ */
+export function useSetAutoAcceptAudience(gameId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (autoAccept: boolean) =>
+      apiClient.games.setAutoAcceptAudience(gameId, autoAccept),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['game', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['game-details', gameId] });
+    },
+  });
+}
+
+/**
+ * Hook to fetch audience-controlled NPCs
+ */
+export function useAudienceNPCs(gameId: number) {
+  return useQuery({
+    queryKey: ['audience-npcs', gameId],
+    queryFn: async () => {
+      const response = await apiClient.characters.listAudienceNPCs(gameId);
+      return response.data.npcs;
+    },
+    enabled: !!gameId,
+  });
+}
+
+/**
+ * Hook to fetch all private conversations (infinite scroll for GM/audience)
+ */
+export function useAllPrivateConversations(
+  gameId: number,
+  options?: { characterId?: number }
+) {
+  return useInfiniteQuery({
+    queryKey: ['all-private-conversations', gameId, options],
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await apiClient.games.listAllPrivateConversations(gameId, {
+        ...options,
+        offset: pageParam as number,
+        limit: 20,
+      });
+      return response.data;
+    },
+    getNextPageParam: (lastPage, pages) => {
+      const loadedCount = pages.reduce(
+        (sum, page) => sum + (page.conversations?.length || 0),
+        0
+      );
+      return loadedCount < lastPage.total ? loadedCount : undefined;
+    },
+    initialPageParam: 0,
+    enabled: !!gameId,
+    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
+  });
+}
+
+/**
+ * Hook to fetch all action submissions (infinite scroll for GM/audience)
+ */
+export function useAllActionSubmissions(
+  gameId: number,
+  options?: { phaseId?: number }
+) {
+  return useInfiniteQuery({
+    queryKey: ['all-action-submissions', gameId, options],
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await apiClient.games.listAllActionSubmissions(gameId, {
+        ...options,
+        offset: pageParam as number,
+        limit: 10,
+      });
+      return response.data;
+    },
+    getNextPageParam: (lastPage, pages) => {
+      const loadedCount = pages.reduce(
+        (sum, page) => sum + (page.action_submissions?.length || 0),
+        0
+      );
+      return loadedCount < lastPage.total ? loadedCount : undefined;
+    },
+    initialPageParam: 0,
+    enabled: !!gameId,
+    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
+  });
+}
+
+/**
+ * Hook to fetch messages for a specific conversation (GM/audience only)
+ */
+export function useAudienceConversationMessages(
+  gameId: number,
+  conversationId: string | null
+) {
+  return useQuery({
+    queryKey: ['audience-conversation-messages', gameId, conversationId],
+    queryFn: async () => {
+      const response = await apiClient.games.getAudienceConversationMessages(gameId, conversationId!);
+      return response.data.messages;
+    },
+    enabled: !!conversationId && !!gameId,
+  });
+}

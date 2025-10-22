@@ -169,3 +169,21 @@ LEFT JOIN users u ON c.user_id = u.id
 LEFT JOIN users ou ON c.original_owner_user_id = ou.id
 WHERE c.game_id = $1 AND c.is_active = false
 ORDER BY c.updated_at DESC;
+
+-- Audience Participation Queries
+
+-- name: ListAudienceNPCs :many
+SELECT c.*, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
+FROM characters c
+LEFT JOIN users u ON c.user_id = u.id
+LEFT JOIN npc_assignments na ON c.id = na.character_id
+LEFT JOIN users au ON na.assigned_user_id = au.id
+WHERE c.game_id = $1 AND c.character_type = 'npc_audience'
+ORDER BY c.name;
+
+-- name: AssignNPCToAudience :one
+INSERT INTO npc_assignments (character_id, assigned_user_id, assigned_by_user_id)
+VALUES ($1, $2, $3)
+ON CONFLICT (character_id)
+DO UPDATE SET assigned_user_id = $2, assigned_by_user_id = $3, assigned_at = NOW()
+RETURNING *;

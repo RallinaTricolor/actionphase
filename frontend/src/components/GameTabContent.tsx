@@ -11,6 +11,9 @@ import { PhaseHistoryView } from './PhaseHistoryView';
 import { RemovePlayerButton } from './RemovePlayerButton';
 import { AddPlayerModal } from './AddPlayerModal';
 import { InactiveCharactersList } from './InactiveCharactersList';
+import { AudienceView } from './AudienceView';
+import { AudienceMemberBadge } from './AudienceMemberBadge';
+import { PeopleView } from './PeopleView';
 import { Button } from './ui';
 import type { Game, Participant, Character } from '../types/games';
 import type { GamePhase } from '../types/phases';
@@ -55,7 +58,21 @@ export function GameTabContent({
     return <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} />;
   }
 
-  // Participants Tab
+  // People Tab (combines Characters and Participants)
+  if (activeTab === 'people') {
+    return (
+      <PeopleView
+        gameId={gameId}
+        participants={participants}
+        isGM={isGM}
+        currentUserId={currentUserId}
+        gameState={game.state}
+        isAnonymous={game.is_anonymous || false}
+      />
+    );
+  }
+
+  // Participants Tab (for other game states)
   if (activeTab === 'participants') {
     return (
       <>
@@ -88,7 +105,10 @@ export function GameTabContent({
                       <div key={participant.id} className="border border-theme-default rounded-lg p-4 surface-raised">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
-                            <div className="font-medium text-content-primary">{participant.username}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium text-content-primary">{participant.username}</div>
+                              {participant.role === 'audience' && <AudienceMemberBadge />}
+                            </div>
                             <div className="text-sm text-content-tertiary">
                               Joined {new Date(participant.joined_at).toLocaleDateString()}
                             </div>
@@ -230,6 +250,11 @@ export function GameTabContent({
         />
       </div>
     );
+  }
+
+  // Audience Tab (In Progress - GM and audience members only)
+  if (activeTab === 'audience' && game.state === 'in_progress') {
+    return <AudienceView gameId={gameId} />;
   }
 
   // Default fallback

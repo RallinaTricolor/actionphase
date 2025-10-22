@@ -332,3 +332,58 @@ WHERE m.game_id = $2
   AND m.is_deleted = false
 GROUP BY m.id, ucr.last_read_at
 ORDER BY m.created_at DESC;
+
+-- ============================================================================
+-- AUDIENCE PARTICIPATION (Private Message Access)
+-- ============================================================================
+
+-- name: ListAllPrivateConversations :many
+-- List all private message conversations in a game (for audience/GM)
+-- Returns all conversations with metadata and participant information
+WITH conversation_messages AS (
+  SELECT
+    c.id as conversation_id,
+    c.title,
+    c.conversation_type,
+    c.created_at,
+    COUNT(pm.id) as message_count,
+    MAX(pm.created_at) as latest_message_at
+  FROM conversations c
+  LEFT JOIN private_messages pm ON c.id = pm.conversation_id
+  WHERE c.game_id = $1
+  GROUP BY c.id, c.title, c.conversation_type, c.created_at
+),
+participants_agg AS (
+  SELECT
+    cp.conversation_id,
+    array_agg(COALESCE(ch.name, u.username) ORDER BY cp.id) as participant_names,
+    array_agg(u.username ORDER BY cp.id) as participant_usernames
+  FROM conversation_participants cp
+  JOIN users u ON cp.user_id = u.id
+  LEFT JOIN characters ch ON cp.character_id = ch.id
+  GROUP BY cp.conversation_id
+)
+SELECT
+  cm.conversation_id,
+  cm.title as subject,
+  cm.conversation_type,
+  cm.created_at,
+  cm.message_count,
+  cm.latest_message_at as last_message_at,
+  pa.participant_names,
+  pa.participant_usernames
+FROM conversation_messages cm
+LEFT JOIN participants_agg pa ON cm.conversation_id = pa.conversation_id
+ORDER BY cm.latest_message_at DESC NULLS LAST;
+
+-- name: GetAudienceConversationMessages :many
+-- Get all messages in a specific conversation (for audience/GM)
+SELECT pm.*,
+       u.username as sender_username,
+       c.name as sender_character_name,
+       c.avatar_url as sender_avatar_url
+FROM private_messages pm
+JOIN users u ON pm.sender_user_id = u.id
+LEFT JOIN characters c ON pm.sender_character_id = c.id
+WHERE pm.conversation_id = $1
+ORDER BY pm.created_at ASC;

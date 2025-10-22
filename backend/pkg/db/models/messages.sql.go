@@ -320,6 +320,63 @@ func (q *Queries) GetAllDescendantComments(ctx context.Context, parentID pgtype.
 	return items, nil
 }
 
+const getAudienceConversationMessages = `-- name: GetAudienceConversationMessages :many
+SELECT pm.id, pm.conversation_id, pm.sender_user_id, pm.sender_character_id, pm.content, pm.created_at, pm.updated_at,
+       u.username as sender_username,
+       c.name as sender_character_name,
+       c.avatar_url as sender_avatar_url
+FROM private_messages pm
+JOIN users u ON pm.sender_user_id = u.id
+LEFT JOIN characters c ON pm.sender_character_id = c.id
+WHERE pm.conversation_id = $1
+ORDER BY pm.created_at ASC
+`
+
+type GetAudienceConversationMessagesRow struct {
+	ID                  int32              `json:"id"`
+	ConversationID      int32              `json:"conversation_id"`
+	SenderUserID        int32              `json:"sender_user_id"`
+	SenderCharacterID   pgtype.Int4        `json:"sender_character_id"`
+	Content             string             `json:"content"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	SenderUsername      string             `json:"sender_username"`
+	SenderCharacterName pgtype.Text        `json:"sender_character_name"`
+	SenderAvatarUrl     pgtype.Text        `json:"sender_avatar_url"`
+}
+
+// Get all messages in a specific conversation (for audience/GM)
+func (q *Queries) GetAudienceConversationMessages(ctx context.Context, conversationID int32) ([]GetAudienceConversationMessagesRow, error) {
+	rows, err := q.db.Query(ctx, getAudienceConversationMessages, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAudienceConversationMessagesRow
+	for rows.Next() {
+		var i GetAudienceConversationMessagesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConversationID,
+			&i.SenderUserID,
+			&i.SenderCharacterID,
+			&i.Content,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SenderUsername,
+			&i.SenderCharacterName,
+			&i.SenderAvatarUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getComment = `-- name: GetComment :one
 SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
        u.username as author_username,
@@ -1166,6 +1223,90 @@ func (q *Queries) GetUserReadMarkersForGame(ctx context.Context, arg GetUserRead
 			&i.LastReadAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllPrivateConversations = `-- name: ListAllPrivateConversations :many
+
+WITH conversation_messages AS (
+  SELECT
+    c.id as conversation_id,
+    c.title,
+    c.conversation_type,
+    c.created_at,
+    COUNT(pm.id) as message_count,
+    MAX(pm.created_at) as latest_message_at
+  FROM conversations c
+  LEFT JOIN private_messages pm ON c.id = pm.conversation_id
+  WHERE c.game_id = $1
+  GROUP BY c.id, c.title, c.conversation_type, c.created_at
+),
+participants_agg AS (
+  SELECT
+    cp.conversation_id,
+    array_agg(COALESCE(ch.name, u.username) ORDER BY cp.id) as participant_names,
+    array_agg(u.username ORDER BY cp.id) as participant_usernames
+  FROM conversation_participants cp
+  JOIN users u ON cp.user_id = u.id
+  LEFT JOIN characters ch ON cp.character_id = ch.id
+  GROUP BY cp.conversation_id
+)
+SELECT
+  cm.conversation_id,
+  cm.title as subject,
+  cm.conversation_type,
+  cm.created_at,
+  cm.message_count,
+  cm.latest_message_at as last_message_at,
+  pa.participant_names,
+  pa.participant_usernames
+FROM conversation_messages cm
+LEFT JOIN participants_agg pa ON cm.conversation_id = pa.conversation_id
+ORDER BY cm.latest_message_at DESC NULLS LAST
+`
+
+type ListAllPrivateConversationsRow struct {
+	ConversationID       int32              `json:"conversation_id"`
+	Subject              pgtype.Text        `json:"subject"`
+	ConversationType     string             `json:"conversation_type"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	MessageCount         int64              `json:"message_count"`
+	LastMessageAt        interface{}        `json:"last_message_at"`
+	ParticipantNames     interface{}        `json:"participant_names"`
+	ParticipantUsernames interface{}        `json:"participant_usernames"`
+}
+
+// ============================================================================
+// AUDIENCE PARTICIPATION (Private Message Access)
+// ============================================================================
+// List all private message conversations in a game (for audience/GM)
+// Returns all conversations with metadata and participant information
+func (q *Queries) ListAllPrivateConversations(ctx context.Context, gameID int32) ([]ListAllPrivateConversationsRow, error) {
+	rows, err := q.db.Query(ctx, listAllPrivateConversations, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAllPrivateConversationsRow
+	for rows.Next() {
+		var i ListAllPrivateConversationsRow
+		if err := rows.Scan(
+			&i.ConversationID,
+			&i.Subject,
+			&i.ConversationType,
+			&i.CreatedAt,
+			&i.MessageCount,
+			&i.LastMessageAt,
+			&i.ParticipantNames,
+			&i.ParticipantUsernames,
 		); err != nil {
 			return nil, err
 		}

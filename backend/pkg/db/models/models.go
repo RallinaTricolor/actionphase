@@ -187,6 +187,7 @@ type Game struct {
 	MaxPlayers          pgtype.Int4        `json:"max_players"`
 	IsPublic            pgtype.Bool        `json:"is_public"`
 	IsAnonymous         bool               `json:"is_anonymous"`
+	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }

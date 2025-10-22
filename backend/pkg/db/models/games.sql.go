@@ -103,6 +103,28 @@ func (q *Queries) CanUserJoinGame(ctx context.Context, arg CanUserJoinGameParams
 	return join_status, err
 }
 
+const checkAudienceAccess = `-- name: CheckAudienceAccess :one
+SELECT EXISTS(
+    SELECT 1 FROM game_participants
+    WHERE game_id = $1 AND user_id = $2 AND role IN ('audience', 'co_gm') AND status = 'active'
+) OR EXISTS(
+    SELECT 1 FROM games
+    WHERE id = $1 AND gm_user_id = $2
+)
+`
+
+type CheckAudienceAccessParams struct {
+	GameID int32 `json:"game_id"`
+	UserID int32 `json:"user_id"`
+}
+
+func (q *Queries) CheckAudienceAccess(ctx context.Context, arg CheckAudienceAccessParams) (pgtype.Bool, error) {
+	row := q.db.QueryRow(ctx, checkAudienceAccess, arg.GameID, arg.UserID)
+	var column_1 pgtype.Bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const checkParticipantExists = `-- name: CheckParticipantExists :one
 SELECT EXISTS(
     SELECT 1 FROM game_participants
@@ -122,13 +144,48 @@ func (q *Queries) CheckParticipantExists(ctx context.Context, arg CheckParticipa
 	return exists, err
 }
 
+const createAudienceApplication = `-- name: CreateAudienceApplication :one
+INSERT INTO game_participants (game_id, user_id, role, status)
+VALUES ($1, $2, 'audience', $3)
+ON CONFLICT (game_id, user_id) DO UPDATE
+SET removed_at = NULL,
+    removed_by_user_id = NULL,
+    status = EXCLUDED.status,
+    role = 'audience',
+    joined_at = NOW()
+WHERE game_participants.removed_at IS NOT NULL OR game_participants.status = 'removed'
+RETURNING id, game_id, user_id, role, status, joined_at, removed_at, removed_by_user_id
+`
+
+type CreateAudienceApplicationParams struct {
+	GameID int32       `json:"game_id"`
+	UserID int32       `json:"user_id"`
+	Status pgtype.Text `json:"status"`
+}
+
+func (q *Queries) CreateAudienceApplication(ctx context.Context, arg CreateAudienceApplicationParams) (GameParticipant, error) {
+	row := q.db.QueryRow(ctx, createAudienceApplication, arg.GameID, arg.UserID, arg.Status)
+	var i GameParticipant
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.UserID,
+		&i.Role,
+		&i.Status,
+		&i.JoinedAt,
+		&i.RemovedAt,
+		&i.RemovedByUserID,
+	)
+	return i, err
+}
+
 const createGame = `-- name: CreateGame :one
 INSERT INTO games (
     title, description, gm_user_id, genre, start_date, end_date,
     recruitment_deadline, max_players, is_public, is_anonymous
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at
+) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at
 `
 
 type CreateGameParams struct {
@@ -171,6 +228,7 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		&i.MaxPlayers,
 		&i.IsPublic,
 		&i.IsAnonymous,
+		&i.AutoAcceptAudience,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -239,7 +297,7 @@ func (q *Queries) GetActiveParticipants(ctx context.Context, gameID int32) ([]Ge
 }
 
 const getAllGames = `-- name: GetAllGames :many
-SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.is_anonymous, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username
+SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.is_anonymous, games.auto_accept_audience, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username
 FROM games
 LEFT JOIN users ON games.gm_user_id = users.id
 WHERE games.is_public = true
@@ -259,6 +317,7 @@ type GetAllGamesRow struct {
 	MaxPlayers          pgtype.Int4        `json:"max_players"`
 	IsPublic            pgtype.Bool        `json:"is_public"`
 	IsAnonymous         bool               `json:"is_anonymous"`
+	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	GmUsername          string             `json:"gm_username"`
@@ -286,6 +345,7 @@ func (q *Queries) GetAllGames(ctx context.Context) ([]GetAllGamesRow, error) {
 			&i.MaxPlayers,
 			&i.IsPublic,
 			&i.IsAnonymous,
+			&i.AutoAcceptAudience,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.GmUsername,
@@ -301,7 +361,7 @@ func (q *Queries) GetAllGames(ctx context.Context) ([]GetAllGamesRow, error) {
 }
 
 const getGame = `-- name: GetGame :one
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at FROM games WHERE id = $1
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at FROM games WHERE id = $1
 `
 
 func (q *Queries) GetGame(ctx context.Context, id int32) (Game, error) {
@@ -320,10 +380,24 @@ func (q *Queries) GetGame(ctx context.Context, id int32) (Game, error) {
 		&i.MaxPlayers,
 		&i.IsPublic,
 		&i.IsAnonymous,
+		&i.AutoAcceptAudience,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getGameAutoAcceptAudience = `-- name: GetGameAutoAcceptAudience :one
+
+SELECT auto_accept_audience FROM games WHERE id = $1
+`
+
+// Audience Participation Queries
+func (q *Queries) GetGameAutoAcceptAudience(ctx context.Context, id int32) (bool, error) {
+	row := q.db.QueryRow(ctx, getGameAutoAcceptAudience, id)
+	var auto_accept_audience bool
+	err := row.Scan(&auto_accept_audience)
+	return auto_accept_audience, err
 }
 
 const getGameParticipantCount = `-- name: GetGameParticipantCount :one
@@ -392,7 +466,7 @@ func (q *Queries) GetGameParticipants(ctx context.Context, gameID int32) ([]GetG
 
 const getGameWithDetails = `-- name: GetGameWithDetails :one
 SELECT
-    g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.is_anonymous, g.created_at, g.updated_at,
+    g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.is_anonymous, g.auto_accept_audience, g.created_at, g.updated_at,
     u.username as gm_username,
     COALESCE(pc.player_count, 0) as current_players
 FROM games g
@@ -419,6 +493,7 @@ type GetGameWithDetailsRow struct {
 	MaxPlayers          pgtype.Int4        `json:"max_players"`
 	IsPublic            pgtype.Bool        `json:"is_public"`
 	IsAnonymous         bool               `json:"is_anonymous"`
+	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	GmUsername          pgtype.Text        `json:"gm_username"`
@@ -441,6 +516,7 @@ func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWith
 		&i.MaxPlayers,
 		&i.IsPublic,
 		&i.IsAnonymous,
+		&i.AutoAcceptAudience,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.GmUsername,
@@ -450,7 +526,7 @@ func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWith
 }
 
 const getGamesByGM = `-- name: GetGamesByGM :many
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at FROM games WHERE gm_user_id = $1 ORDER BY created_at DESC
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at FROM games WHERE gm_user_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, error) {
@@ -475,6 +551,7 @@ func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, err
 			&i.MaxPlayers,
 			&i.IsPublic,
 			&i.IsAnonymous,
+			&i.AutoAcceptAudience,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -489,7 +566,7 @@ func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, err
 }
 
 const getGamesByUser = `-- name: GetGamesByUser :many
-SELECT g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.is_anonymous, g.created_at, g.updated_at, gp.role as user_role, u.username as gm_username
+SELECT g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.is_anonymous, g.auto_accept_audience, g.created_at, g.updated_at, gp.role as user_role, u.username as gm_username
 FROM games g
 JOIN game_participants gp ON g.id = gp.game_id
 JOIN users u ON g.gm_user_id = u.id
@@ -510,6 +587,7 @@ type GetGamesByUserRow struct {
 	MaxPlayers          pgtype.Int4        `json:"max_players"`
 	IsPublic            pgtype.Bool        `json:"is_public"`
 	IsAnonymous         bool               `json:"is_anonymous"`
+	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	UserRole            string             `json:"user_role"`
@@ -538,6 +616,7 @@ func (q *Queries) GetGamesByUser(ctx context.Context, userID int32) ([]GetGamesB
 			&i.MaxPlayers,
 			&i.IsPublic,
 			&i.IsAnonymous,
+			&i.AutoAcceptAudience,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.UserRole,
@@ -554,7 +633,7 @@ func (q *Queries) GetGamesByUser(ctx context.Context, userID int32) ([]GetGamesB
 }
 
 const getGamesNeedingStateUpdate = `-- name: GetGamesNeedingStateUpdate :many
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at FROM games
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at FROM games
 WHERE (state = 'recruitment' AND recruitment_deadline IS NOT NULL AND recruitment_deadline < NOW())
    OR (state = 'in_progress' AND end_date IS NOT NULL AND end_date < NOW())
 `
@@ -581,6 +660,7 @@ func (q *Queries) GetGamesNeedingStateUpdate(ctx context.Context) ([]Game, error
 			&i.MaxPlayers,
 			&i.IsPublic,
 			&i.IsAnonymous,
+			&i.AutoAcceptAudience,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -612,7 +692,7 @@ func (q *Queries) GetParticipantRole(ctx context.Context, arg GetParticipantRole
 }
 
 const getRecruitingGames = `-- name: GetRecruitingGames :many
-SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.is_anonymous, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username,
+SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.is_anonymous, games.auto_accept_audience, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username,
        COALESCE(participant_count.count, 0) as current_players
 FROM games
 LEFT JOIN users ON games.gm_user_id = users.id
@@ -641,6 +721,7 @@ type GetRecruitingGamesRow struct {
 	MaxPlayers          pgtype.Int4        `json:"max_players"`
 	IsPublic            pgtype.Bool        `json:"is_public"`
 	IsAnonymous         bool               `json:"is_anonymous"`
+	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	GmUsername          string             `json:"gm_username"`
@@ -669,6 +750,7 @@ func (q *Queries) GetRecruitingGames(ctx context.Context) ([]GetRecruitingGamesR
 			&i.MaxPlayers,
 			&i.IsPublic,
 			&i.IsAnonymous,
+			&i.AutoAcceptAudience,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.GmUsername,
@@ -701,6 +783,58 @@ func (q *Queries) IsUserInGame(ctx context.Context, arg IsUserInGameParams) (boo
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const listAudienceMembers = `-- name: ListAudienceMembers :many
+SELECT gp.id, gp.game_id, gp.user_id, gp.role, gp.status, gp.joined_at, gp.removed_at, gp.removed_by_user_id, u.username, u.email
+FROM game_participants gp
+JOIN users u ON gp.user_id = u.id
+WHERE gp.game_id = $1 AND gp.role = 'audience' AND gp.status = 'active'
+ORDER BY gp.joined_at
+`
+
+type ListAudienceMembersRow struct {
+	ID              int32              `json:"id"`
+	GameID          int32              `json:"game_id"`
+	UserID          int32              `json:"user_id"`
+	Role            string             `json:"role"`
+	Status          pgtype.Text        `json:"status"`
+	JoinedAt        pgtype.Timestamptz `json:"joined_at"`
+	RemovedAt       pgtype.Timestamptz `json:"removed_at"`
+	RemovedByUserID pgtype.Int4        `json:"removed_by_user_id"`
+	Username        string             `json:"username"`
+	Email           string             `json:"email"`
+}
+
+func (q *Queries) ListAudienceMembers(ctx context.Context, gameID int32) ([]ListAudienceMembersRow, error) {
+	rows, err := q.db.Query(ctx, listAudienceMembers, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAudienceMembersRow
+	for rows.Next() {
+		var i ListAudienceMembersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.UserID,
+			&i.Role,
+			&i.Status,
+			&i.JoinedAt,
+			&i.RemovedAt,
+			&i.RemovedByUserID,
+			&i.Username,
+			&i.Email,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const removeGameParticipant = `-- name: RemoveGameParticipant :exec
@@ -775,7 +909,7 @@ SET title = $2, description = $3, genre = $4, start_date = $5,
     end_date = $6, recruitment_deadline = $7, max_players = $8,
     is_public = $9, is_anonymous = $10, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at
 `
 
 type UpdateGameParams struct {
@@ -818,6 +952,7 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		&i.MaxPlayers,
 		&i.IsPublic,
 		&i.IsAnonymous,
+		&i.AutoAcceptAudience,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -831,7 +966,7 @@ WITH game_update AS (
         end_date = $6, recruitment_deadline = $7, max_players = $8,
         is_public = $9, is_anonymous = $10, updated_at = NOW()
     WHERE games.id = $1
-    RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at
+    RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at
 ),
 gm_participant AS (
     INSERT INTO game_participants (game_id, user_id, role)
@@ -839,7 +974,7 @@ gm_participant AS (
     ON CONFLICT (game_id, user_id) DO NOTHING
     RETURNING id, game_id, user_id, role, status, joined_at, removed_at, removed_by_user_id
 )
-SELECT gu.id, gu.title, gu.description, gu.gm_user_id, gu.state, gu.genre, gu.start_date, gu.end_date, gu.recruitment_deadline, gu.max_players, gu.is_public, gu.is_anonymous, gu.created_at, gu.updated_at FROM game_update gu
+SELECT gu.id, gu.title, gu.description, gu.gm_user_id, gu.state, gu.genre, gu.start_date, gu.end_date, gu.recruitment_deadline, gu.max_players, gu.is_public, gu.is_anonymous, gu.auto_accept_audience, gu.created_at, gu.updated_at FROM game_update gu
 `
 
 type UpdateGameAndAddGMParams struct {
@@ -868,6 +1003,7 @@ type UpdateGameAndAddGMRow struct {
 	MaxPlayers          pgtype.Int4        `json:"max_players"`
 	IsPublic            pgtype.Bool        `json:"is_public"`
 	IsAnonymous         bool               `json:"is_anonymous"`
+	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
@@ -899,17 +1035,34 @@ func (q *Queries) UpdateGameAndAddGM(ctx context.Context, arg UpdateGameAndAddGM
 		&i.MaxPlayers,
 		&i.IsPublic,
 		&i.IsAnonymous,
+		&i.AutoAcceptAudience,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
+const updateGameAutoAcceptAudience = `-- name: UpdateGameAutoAcceptAudience :exec
+UPDATE games
+SET auto_accept_audience = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateGameAutoAcceptAudienceParams struct {
+	ID                 int32 `json:"id"`
+	AutoAcceptAudience bool  `json:"auto_accept_audience"`
+}
+
+func (q *Queries) UpdateGameAutoAcceptAudience(ctx context.Context, arg UpdateGameAutoAcceptAudienceParams) error {
+	_, err := q.db.Exec(ctx, updateGameAutoAcceptAudience, arg.ID, arg.AutoAcceptAudience)
+	return err
+}
+
 const updateGameState = `-- name: UpdateGameState :one
 UPDATE games
 SET state = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, created_at, updated_at
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at
 `
 
 type UpdateGameStateParams struct {
@@ -933,6 +1086,7 @@ func (q *Queries) UpdateGameState(ctx context.Context, arg UpdateGameStateParams
 		&i.MaxPlayers,
 		&i.IsPublic,
 		&i.IsAnonymous,
+		&i.AutoAcceptAudience,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
