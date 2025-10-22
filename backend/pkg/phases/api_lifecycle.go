@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"actionphase/pkg/core"
+	db "actionphase/pkg/db/services"
 	actionsvc "actionphase/pkg/db/services/actions"
 	phasesvc "actionphase/pkg/db/services/phases"
 
@@ -23,11 +24,11 @@ func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token
-	user, err := h.getUserFromToken(r)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
@@ -41,21 +42,22 @@ func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check permissions
-	canManage, err := phaseService.CanUserManagePhases(r.Context(), phase.GameID, int32(user.ID))
+	// Get game and check GM permissions (considers admin mode)
+	gameService := &db.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), phase.GameID)
 	if err != nil {
-		h.App.Logger.Error("Failed to check phase management permission", "error", err)
+		h.App.Logger.Error("Failed to get game", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	if !canManage {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
 		render.Render(w, r, core.ErrForbidden("only the GM can activate phases"))
 		return
 	}
 
 	// Activate phase
-	err = phaseService.ActivatePhase(r.Context(), int32(phaseID), int32(user.ID))
+	err = phaseService.ActivatePhase(r.Context(), int32(phaseID), authUser.ID)
 	if err != nil {
 		h.App.Logger.Error("Failed to activate phase", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
@@ -104,24 +106,24 @@ func (h *Handler) PublishAllPhaseResults(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Get user from token
-	user, err := h.getUserFromToken(r)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
-	// Check permissions - must be GM
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
-	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
+	// Get game and check GM permissions (considers admin mode)
+	gameService := &db.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check phase management permission", "error", err)
+		h.App.Logger.Error("Failed to get game", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	if !canManage {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
 		render.Render(w, r, core.ErrForbidden("only the GM can publish action results"))
 		return
 	}
@@ -157,24 +159,24 @@ func (h *Handler) GetUnpublishedResultsCount(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Get user from token
-	user, err := h.getUserFromToken(r)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
-	// Check permissions - must be GM
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
-	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
+	// Get game and check GM permissions (considers admin mode)
+	gameService := &db.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check phase management permission", "error", err)
+		h.App.Logger.Error("Failed to get game", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	if !canManage {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
 		render.Render(w, r, core.ErrForbidden("only the GM can view result counts"))
 		return
 	}

@@ -4,6 +4,7 @@ import { apiClient } from '../lib/api';
 import type { GameWithDetails, GameParticipant } from '../types/games';
 import type { Character } from '../types/characters';
 import { useAuth } from './AuthContext';
+import { useAdminMode } from './AdminModeContext';
 
 export type UserGameRole = 'gm' | 'player' | 'co_gm' | 'audience' | 'none';
 
@@ -43,6 +44,7 @@ interface GameProviderProps {
 
 export function GameProvider({ gameId, children }: GameProviderProps) {
   const { currentUser } = useAuth();
+  const { adminModeEnabled } = useAdminMode();
   const currentUserId = currentUser?.id;
 
   // Fetch game details
@@ -118,7 +120,12 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
   }, [currentUserId, game, participants]);
 
   // Compute permission flags
-  const isGM = useMemo(() => userRole === 'gm', [userRole]);
+  const isGM = useMemo(() => {
+    // User is GM if they own the game OR if admin mode is enabled
+    const isActualGM = userRole === 'gm';
+    const isAdminAsGM = adminModeEnabled && currentUser?.is_admin;
+    return isActualGM || isAdminAsGM;
+  }, [userRole, adminModeEnabled, currentUser?.is_admin]);
 
   const isParticipant = useMemo(() => {
     return userRole !== 'none' && userRole !== 'audience';

@@ -123,29 +123,13 @@ func (h *Handler) GetGameApplications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := int32(user.ID)
 
 	// Verify user is GM of this game
 	gameService := &db.GameService{DB: h.App.Pool}
@@ -156,7 +140,8 @@ func (h *Handler) GetGameApplications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
+	// Check GM permissions (considers admin mode)
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
 		render.Render(w, r, core.ErrForbidden("only the GM can view game applications"))
 		return
 	}
@@ -230,29 +215,13 @@ func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := int32(user.ID)
 
 	// Verify user is GM of this game
 	gameService := &db.GameService{DB: h.App.Pool}
@@ -263,7 +232,8 @@ func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if game.GmUserID != userID {
+	// Check GM permissions (considers admin mode)
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
 		render.Render(w, r, core.ErrForbidden("only the GM can review game applications"))
 		return
 	}
@@ -284,9 +254,9 @@ func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) 
 
 	// Perform the action
 	if data.Action == "approve" {
-		err = applicationService.ApproveGameApplication(r.Context(), int32(applicationID), userID)
+		err = applicationService.ApproveGameApplication(r.Context(), int32(applicationID), authUser.ID)
 	} else {
-		err = applicationService.RejectGameApplication(r.Context(), int32(applicationID), userID)
+		err = applicationService.RejectGameApplication(r.Context(), int32(applicationID), authUser.ID)
 	}
 
 	if err != nil {

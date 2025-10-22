@@ -8,6 +8,7 @@ import (
 	"actionphase/pkg/conversations"
 	"actionphase/pkg/core"
 	"actionphase/pkg/dashboard"
+	db "actionphase/pkg/db/services"
 	"actionphase/pkg/docs"
 	"actionphase/pkg/games"
 	httpmiddleware "actionphase/pkg/http/middleware"
@@ -94,6 +95,7 @@ func (h *Handler) Start() {
 	gamesRouter := chi.NewRouter()
 	gamesRouter.Route("/", func(r chi.Router) {
 		gameHandler := games.Handler{App: h.App}
+		userService := &db.UserService{DB: h.App.Pool}
 
 		// Public routes (authentication optional - will enrich if present)
 		tokenAuth := h.getTokenAuth()
@@ -107,6 +109,7 @@ func (h *Handler) Start() {
 		r.Group(func(r chi.Router) {
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
 
 			// Game listing and viewing
 			r.Get("/public", gameHandler.GetAllGames)
