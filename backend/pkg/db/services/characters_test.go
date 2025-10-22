@@ -39,7 +39,7 @@ func TestCharacterService_CreateCharacter(t *testing.T) {
 				GameID:        fixtures.TestGame.ID,
 				UserID:        nil, // GM-controlled NPC
 				Name:          "Gandalf",
-				CharacterType: "npc_gm",
+				CharacterType: "npc",
 			},
 			expectError: false,
 		},
@@ -49,7 +49,7 @@ func TestCharacterService_CreateCharacter(t *testing.T) {
 				GameID:        fixtures.TestGame.ID,
 				UserID:        nil,
 				Name:          "Boromir",
-				CharacterType: "npc_audience",
+				CharacterType: "npc",
 			},
 			expectError: false,
 		},
@@ -185,7 +185,7 @@ func TestCharacterService_GetCharactersByGame(t *testing.T) {
 		GameID:        fixtures.TestGame.ID,
 		UserID:        nil,
 		Name:          "GM NPC 1",
-		CharacterType: "npc_gm",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create GM NPC")
 
@@ -268,7 +268,7 @@ func TestCharacterService_AssignNPCToUser(t *testing.T) {
 		GameID:        fixtures.TestGame.ID,
 		UserID:        nil,
 		Name:          "Test NPC",
-		CharacterType: "npc_gm",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create NPC character")
 
@@ -456,7 +456,7 @@ func TestCharacterService_CanUserEditCharacter(t *testing.T) {
 		GameID:        fixtures.TestGame.ID,
 		UserID:        nil,
 		Name:          "Assigned NPC",
-		CharacterType: "npc_audience",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create NPC character")
 
@@ -557,7 +557,7 @@ func TestCharacterService_GetPlayerCharacters(t *testing.T) {
 		GameID:        fixtures.TestGame.ID,
 		UserID:        nil,
 		Name:          "GM NPC",
-		CharacterType: "npc_gm",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create GM NPC")
 
@@ -565,7 +565,7 @@ func TestCharacterService_GetPlayerCharacters(t *testing.T) {
 		GameID:        fixtures.TestGame.ID,
 		UserID:        nil,
 		Name:          "Audience NPC",
-		CharacterType: "npc_audience",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create audience NPC")
 
@@ -612,7 +612,7 @@ func TestCharacterService_GetNPCs(t *testing.T) {
 		GameID:        fixtures.TestGame.ID,
 		UserID:        nil,
 		Name:          "GM NPC 1",
-		CharacterType: "npc_gm",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create GM NPC 1")
 
@@ -620,7 +620,7 @@ func TestCharacterService_GetNPCs(t *testing.T) {
 		GameID:        fixtures.TestGame.ID,
 		UserID:        nil,
 		Name:          "GM NPC 2",
-		CharacterType: "npc_gm",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create GM NPC 2")
 
@@ -628,7 +628,7 @@ func TestCharacterService_GetNPCs(t *testing.T) {
 		GameID:        fixtures.TestGame.ID,
 		UserID:        nil,
 		Name:          "Audience NPC 1",
-		CharacterType: "npc_audience",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create audience NPC 1")
 
@@ -639,8 +639,7 @@ func TestCharacterService_GetNPCs(t *testing.T) {
 
 		// Verify all are NPC types
 		for _, npc := range npcs {
-			isNPC := npc.CharacterType == "npc_gm" || npc.CharacterType == "npc_audience"
-			core.AssertEqual(t, true, isNPC, "All characters should be NPC types")
+			core.AssertEqual(t, "npc", npc.CharacterType, "All characters should be NPC type")
 		}
 	})
 
@@ -688,7 +687,7 @@ func TestCharacterService_GetUserControllableCharacters(t *testing.T) {
 		GameID:        fixtures.TestGame.ID,
 		UserID:        nil,
 		Name:          "Assigned NPC",
-		CharacterType: "npc_audience",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create assigned NPC")
 
@@ -700,7 +699,7 @@ func TestCharacterService_GetUserControllableCharacters(t *testing.T) {
 		GameID:        fixtures.TestGame.ID,
 		UserID:        nil,
 		Name:          "Unassigned NPC",
-		CharacterType: "npc_gm",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create unassigned NPC")
 
@@ -757,7 +756,7 @@ func TestCharacterService_AssignNPCToUser_AudienceNPC(t *testing.T) {
 			GameID:        fixtures.TestGame.ID,
 			UserID:        nil,
 			Name:          "Audience NPC",
-			CharacterType: "npc_audience",
+			CharacterType: "npc",
 		})
 		core.AssertNoError(t, err, "Failed to create audience NPC")
 

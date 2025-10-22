@@ -251,7 +251,7 @@ func TestCharacterAPI_NPCManagement(t *testing.T) {
 	t.Run("create NPC as GM", func(t *testing.T) {
 		requestBody := CreateCharacterRequest{
 			Name:          "Gandalf",
-			CharacterType: "npc_audience",
+			CharacterType: "npc",
 		}
 
 		body, _ := json.Marshal(requestBody)
@@ -269,7 +269,7 @@ func TestCharacterAPI_NPCManagement(t *testing.T) {
 		core.AssertNoError(t, err, "Failed to unmarshal response")
 
 		core.AssertEqual(t, "Gandalf", response.Name, "NPC name mismatch")
-		core.AssertEqual(t, "npc_audience", response.CharacterType, "NPC type mismatch")
+		core.AssertEqual(t, "npc", response.CharacterType, "NPC type mismatch")
 
 		npcCharacterID = response.ID
 	})

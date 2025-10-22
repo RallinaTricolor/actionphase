@@ -373,7 +373,7 @@ func TestMessageService_ValidateCharacterOwnership(t *testing.T) {
 	gmNPC, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
 		Name:          "GM NPC",
-		CharacterType: "npc_gm",
+		CharacterType: "npc",
 	})
 	require.NoError(t, err)
 

@@ -143,7 +143,7 @@ func TestCharacterWorkflow_NPCAssignmentFlow(t *testing.T) {
 			GameID:        game.ID,
 			UserID:        nil, // No user assigned initially
 			Name:          "Tavern Keeper",
-			CharacterType: "npc_audience",
+			CharacterType: "npc",
 		})
 		core.AssertNoError(t, err, "Failed to create NPC")
 		core.AssertEqual(t, false, npc.UserID.Valid, "NPC should not have user assigned initially")
@@ -233,7 +233,7 @@ func TestCharacterWorkflow_PermissionMatrix(t *testing.T) {
 		GameID:        game.ID,
 		UserID:        nil,
 		Name:          "GM NPC",
-		CharacterType: "npc_gm",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create GM NPC")
 
@@ -241,7 +241,7 @@ func TestCharacterWorkflow_PermissionMatrix(t *testing.T) {
 		GameID:        game.ID,
 		UserID:        nil,
 		Name:          "Audience NPC",
-		CharacterType: "npc_audience",
+		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create audience NPC")
 

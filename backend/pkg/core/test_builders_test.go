@@ -38,7 +38,7 @@ func TestCharacterBuilder(t *testing.T) {
 
 		AssertEqual(t, game.ID, npc.GameID, "Game ID should match")
 		AssertEqual(t, false, npc.UserID.Valid, "NPC should not have user ID")
-		AssertEqual(t, "npc_gm", npc.CharacterType, "Should be GM NPC")
+		AssertEqual(t, "npc", npc.CharacterType, "Should be GM NPC")
 		AssertEqual(t, "Important NPC", npc.Name, "Name should match")
 	})
 
@@ -61,7 +61,7 @@ func TestCharacterBuilder(t *testing.T) {
 			WithName("Crowd Member").
 			Create()
 
-		AssertEqual(t, "npc_audience", npc.CharacterType, "Should be audience NPC")
+		AssertEqual(t, "npc", npc.CharacterType, "Should be audience NPC")
 		AssertEqual(t, "Crowd Member", npc.Name, "Name should match")
 	})
 }
@@ -215,8 +215,8 @@ func TestCharacterBuilderIntegration(t *testing.T) {
 
 		AssertEqual(t, "player_character", char1.CharacterType, "Char1 should be player character")
 		AssertEqual(t, "player_character", char2.CharacterType, "Char2 should be player character")
-		AssertEqual(t, "npc_gm", villain.CharacterType, "Villain should be GM NPC")
-		AssertEqual(t, "npc_audience", guide.CharacterType, "Guide should be audience NPC")
+		AssertEqual(t, "npc", villain.CharacterType, "Villain should be GM NPC")
+		AssertEqual(t, "npc", guide.CharacterType, "Guide should be audience NPC")
 	})
 }
 

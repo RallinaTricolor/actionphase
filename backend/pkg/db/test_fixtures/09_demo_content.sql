@@ -54,13 +54,13 @@ BEGIN
   SELECT id INTO game1_p1_char_id FROM characters WHERE game_id = game1_id AND user_id = p1_id LIMIT 1;
   SELECT id INTO game1_p2_char_id FROM characters WHERE game_id = game1_id AND user_id = p2_id LIMIT 1;
   SELECT id INTO game1_p3_char_id FROM characters WHERE game_id = game1_id AND user_id = p3_id LIMIT 1;
-  SELECT id INTO game1_gm_char_id FROM characters WHERE game_id = game1_id AND character_type = 'npc_gm' LIMIT 1;
+  SELECT id INTO game1_gm_char_id FROM characters WHERE game_id = game1_id AND character_type = 'npc' LIMIT 1;
 
   -- Get character IDs for Game 5
   SELECT id INTO game5_p1_char_id FROM characters WHERE game_id = game5_id AND user_id = p1_id LIMIT 1;
   SELECT id INTO game5_p2_char_id FROM characters WHERE game_id = game5_id AND user_id = p2_id LIMIT 1;
   SELECT id INTO game5_p3_char_id FROM characters WHERE game_id = game5_id AND user_id = p3_id LIMIT 1;
-  SELECT id INTO game5_gm_char_id FROM characters WHERE game_id = game5_id AND character_type = 'npc_gm' LIMIT 1;
+  SELECT id INTO game5_gm_char_id FROM characters WHERE game_id = game5_id AND character_type = 'npc' LIMIT 1;
 
   -- ============================================
   -- GAME #1: Shadows Over Innsmouth

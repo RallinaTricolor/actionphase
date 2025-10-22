@@ -66,7 +66,7 @@ BEGIN
 
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (164, gm_id, 'GM Test Character', 'npc_gm', 'approved', NOW() - INTERVAL '4 days', NOW()),
+    (164, gm_id, 'GM Test Character', 'npc', 'approved', NOW() - INTERVAL '4 days', NOW()),
     (164, p1_id, 'Test Player 1 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
     (164, p2_id, 'Test Player 2 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
 
@@ -110,7 +110,7 @@ BEGIN
 
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (165, gm_id, 'GM Test Character', 'npc_gm', 'approved', NOW() - INTERVAL '4 days', NOW()),
+    (165, gm_id, 'GM Test Character', 'npc', 'approved', NOW() - INTERVAL '4 days', NOW()),
     (165, p1_id, 'Test Player 1 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
     (165, p2_id, 'Test Player 2 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
 
@@ -156,7 +156,7 @@ BEGIN
 
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (166, gm_id, 'GM Test Character', 'npc_gm', 'approved', NOW() - INTERVAL '4 days', NOW()),
+    (166, gm_id, 'GM Test Character', 'npc', 'approved', NOW() - INTERVAL '4 days', NOW()),
     (166, p1_id, 'Test Player 1 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
     (166, p2_id, 'Test Player 2 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
     (166, p3_id, 'Test Player 3 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
@@ -201,7 +201,7 @@ BEGIN
 
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (167, gm_id, 'GM Test Character', 'npc_gm', 'approved', NOW() - INTERVAL '4 days', NOW()),
+    (167, gm_id, 'GM Test Character', 'npc', 'approved', NOW() - INTERVAL '4 days', NOW()),
     (167, p5_id, 'Test Player 5 Character', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
 
   RAISE NOTICE 'Created Game #167: E2E Common Room - Misc';

@@ -6,7 +6,7 @@ export interface Character {
   user_id?: number;
   username?: string;
   name: string;
-  character_type: 'player_character' | 'npc_gm' | 'npc_audience';
+  character_type: 'player_character' | 'npc';
   status: 'pending' | 'approved' | 'rejected' | 'active' | 'dead';
   avatar_url?: string | null;
   is_active: boolean;
@@ -31,7 +31,7 @@ export interface CharacterData {
 
 export interface CreateCharacterRequest {
   name: string;
-  character_type: 'player_character' | 'npc_gm' | 'npc_audience';
+  character_type: 'player_character' | 'npc';
 }
 
 export interface CharacterDataRequest {

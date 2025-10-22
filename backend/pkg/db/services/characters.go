@@ -18,7 +18,7 @@ type CreateCharacterRequest struct {
 	GameID        int32
 	UserID        *int32 // nil for GM-controlled NPCs
 	Name          string
-	CharacterType string // "player_character", "npc_gm", "npc_audience"
+	CharacterType string // "player_character", "npc"
 }
 
 type CharacterDataRequest struct {
@@ -115,20 +115,8 @@ func (cs *CharacterService) AssignNPCToUser(ctx context.Context, characterID, as
 		return err
 	}
 
-	if character.CharacterType != "npc_audience" && character.CharacterType != "npc_gm" {
+	if character.CharacterType != "npc" {
 		return fmt.Errorf("character is not an NPC")
-	}
-
-	// Update character type to audience NPC if assigning to non-GM
-	if character.CharacterType == "npc_gm" {
-		_, err = queries.UpdateCharacter(ctx, models.UpdateCharacterParams{
-			ID:     characterID,
-			Name:   character.Name,
-			Status: character.Status,
-		})
-		if err != nil {
-			return err
-		}
 	}
 
 	_, err = queries.AssignNPCToUser(ctx, models.AssignNPCToUserParams{
@@ -202,7 +190,7 @@ func (cs *CharacterService) CanUserEditCharacter(ctx context.Context, characterI
 	}
 
 	// Check if user is assigned to this NPC
-	if character.CharacterType == "npc_audience" {
+	if character.CharacterType == "npc" {
 		assignment, err := queries.GetNPCAssignment(ctx, characterID)
 		if err == nil && assignment.AssignedUserID == userID {
 			return true, nil
@@ -213,7 +201,7 @@ func (cs *CharacterService) CanUserEditCharacter(ctx context.Context, characterI
 }
 
 func isValidCharacterType(characterType string) bool {
-	validTypes := []string{"player_character", "npc_gm", "npc_audience"}
+	validTypes := []string{"player_character", "npc"}
 	for _, validType := range validTypes {
 		if characterType == validType {
 			return true
@@ -273,14 +261,14 @@ func (cs *CharacterService) ListAudienceNPCs(ctx context.Context, gameID int32) 
 func (cs *CharacterService) AssignNPCToAudience(ctx context.Context, characterID, assignedUserID, assignedByUserID int32) (*models.NpcAssignment, error) {
 	queries := models.New(cs.DB)
 
-	// Verify this is an audience NPC
+	// Verify this is an NPC
 	character, err := queries.GetCharacter(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get character: %w", err)
 	}
 
-	if character.CharacterType != "npc_audience" {
-		return nil, fmt.Errorf("character is not an audience NPC (type: %s)", character.CharacterType)
+	if character.CharacterType != "npc" {
+		return nil, fmt.Errorf("character is not an NPC (type: %s)", character.CharacterType)
 	}
 
 	// Create or update the assignment
