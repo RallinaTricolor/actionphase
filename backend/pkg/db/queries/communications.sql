@@ -194,3 +194,84 @@ WHERE id = $1;
 UPDATE messages
 SET deleted_at = NOW(), is_deleted = true
 WHERE id = $1;
+
+-- name: ListRecentCommentsWithParents :many
+-- Get recent comments with their parent comments/posts for New Comments view
+WITH recent_comments AS (
+    SELECT
+        m.id,
+        m.game_id,
+        m.parent_id,
+        m.author_id,
+        m.character_id,
+        m.content,
+        m.created_at,
+        m.updated_at,
+        m.edited_at,
+        m.edit_count,
+        m.deleted_at,
+        m.is_deleted,
+        u.username as author_username,
+        c.name as character_name
+    FROM messages m
+    JOIN users u ON m.author_id = u.id
+    LEFT JOIN characters c ON m.character_id = c.id
+    WHERE m.game_id = $1
+      AND m.message_type = 'comment'
+      AND m.is_deleted = false
+      AND m.deleted_at IS NULL
+    ORDER BY m.created_at DESC
+    LIMIT $2 OFFSET $3
+),
+parent_messages AS (
+    SELECT
+        m.id,
+        m.content,
+        m.created_at,
+        m.deleted_at,
+        m.is_deleted,
+        m.message_type,
+        u.username as author_username,
+        c.name as character_name
+    FROM messages m
+    JOIN users u ON m.author_id = u.id
+    LEFT JOIN characters c ON m.character_id = c.id
+    WHERE m.id IN (
+        SELECT parent_id FROM recent_comments
+        WHERE parent_id IS NOT NULL
+    )
+)
+SELECT
+    rc.id,
+    rc.game_id,
+    rc.parent_id,
+    rc.author_id,
+    rc.character_id,
+    rc.content,
+    rc.created_at,
+    rc.updated_at,
+    rc.edited_at,
+    rc.edit_count,
+    rc.deleted_at,
+    rc.is_deleted,
+    rc.author_username,
+    rc.character_name,
+    pm.content as parent_content,
+    pm.created_at as parent_created_at,
+    pm.deleted_at as parent_deleted_at,
+    pm.is_deleted as parent_is_deleted,
+    pm.message_type as parent_message_type,
+    pm.author_username as parent_author_username,
+    pm.character_name as parent_character_name
+FROM recent_comments rc
+LEFT JOIN parent_messages pm ON rc.parent_id = pm.id
+ORDER BY rc.created_at DESC;
+
+-- name: GetTotalCommentCount :one
+-- Get total count of comments in a game
+SELECT COUNT(*) as total
+FROM messages
+WHERE game_id = $1
+  AND message_type = 'comment'
+  AND is_deleted = false
+  AND deleted_at IS NULL;

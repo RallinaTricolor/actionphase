@@ -521,6 +521,23 @@ func (q *Queries) GetThreadPosts(ctx context.Context, threadID int32) ([]GetThre
 	return items, nil
 }
 
+const getTotalCommentCount = `-- name: GetTotalCommentCount :one
+SELECT COUNT(*) as total
+FROM messages
+WHERE game_id = $1
+  AND message_type = 'comment'
+  AND is_deleted = false
+  AND deleted_at IS NULL
+`
+
+// Get total count of comments in a game
+func (q *Queries) GetTotalCommentCount(ctx context.Context, gameID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalCommentCount, gameID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const getUnreadMessageCount = `-- name: GetUnreadMessageCount :one
 SELECT COUNT(*)
 FROM private_messages pm
@@ -669,6 +686,151 @@ func (q *Queries) IsUserInConversation(ctx context.Context, arg IsUserInConversa
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const listRecentCommentsWithParents = `-- name: ListRecentCommentsWithParents :many
+WITH recent_comments AS (
+    SELECT
+        m.id,
+        m.game_id,
+        m.parent_id,
+        m.author_id,
+        m.character_id,
+        m.content,
+        m.created_at,
+        m.updated_at,
+        m.edited_at,
+        m.edit_count,
+        m.deleted_at,
+        m.is_deleted,
+        u.username as author_username,
+        c.name as character_name
+    FROM messages m
+    JOIN users u ON m.author_id = u.id
+    LEFT JOIN characters c ON m.character_id = c.id
+    WHERE m.game_id = $1
+      AND m.message_type = 'comment'
+      AND m.is_deleted = false
+      AND m.deleted_at IS NULL
+    ORDER BY m.created_at DESC
+    LIMIT $2 OFFSET $3
+),
+parent_messages AS (
+    SELECT
+        m.id,
+        m.content,
+        m.created_at,
+        m.deleted_at,
+        m.is_deleted,
+        m.message_type,
+        u.username as author_username,
+        c.name as character_name
+    FROM messages m
+    JOIN users u ON m.author_id = u.id
+    LEFT JOIN characters c ON m.character_id = c.id
+    WHERE m.id IN (
+        SELECT parent_id FROM recent_comments
+        WHERE parent_id IS NOT NULL
+    )
+)
+SELECT
+    rc.id,
+    rc.game_id,
+    rc.parent_id,
+    rc.author_id,
+    rc.character_id,
+    rc.content,
+    rc.created_at,
+    rc.updated_at,
+    rc.edited_at,
+    rc.edit_count,
+    rc.deleted_at,
+    rc.is_deleted,
+    rc.author_username,
+    rc.character_name,
+    pm.content as parent_content,
+    pm.created_at as parent_created_at,
+    pm.deleted_at as parent_deleted_at,
+    pm.is_deleted as parent_is_deleted,
+    pm.message_type as parent_message_type,
+    pm.author_username as parent_author_username,
+    pm.character_name as parent_character_name
+FROM recent_comments rc
+LEFT JOIN parent_messages pm ON rc.parent_id = pm.id
+ORDER BY rc.created_at DESC
+`
+
+type ListRecentCommentsWithParentsParams struct {
+	GameID int32 `json:"game_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListRecentCommentsWithParentsRow struct {
+	ID                   int32              `json:"id"`
+	GameID               int32              `json:"game_id"`
+	ParentID             pgtype.Int4        `json:"parent_id"`
+	AuthorID             int32              `json:"author_id"`
+	CharacterID          int32              `json:"character_id"`
+	Content              string             `json:"content"`
+	CreatedAt            pgtype.Timestamp   `json:"created_at"`
+	UpdatedAt            pgtype.Timestamp   `json:"updated_at"`
+	EditedAt             pgtype.Timestamptz `json:"edited_at"`
+	EditCount            int32              `json:"edit_count"`
+	DeletedAt            pgtype.Timestamp   `json:"deleted_at"`
+	IsDeleted            bool               `json:"is_deleted"`
+	AuthorUsername       string             `json:"author_username"`
+	CharacterName        pgtype.Text        `json:"character_name"`
+	ParentContent        pgtype.Text        `json:"parent_content"`
+	ParentCreatedAt      pgtype.Timestamp   `json:"parent_created_at"`
+	ParentDeletedAt      pgtype.Timestamp   `json:"parent_deleted_at"`
+	ParentIsDeleted      pgtype.Bool        `json:"parent_is_deleted"`
+	ParentMessageType    NullMessageType    `json:"parent_message_type"`
+	ParentAuthorUsername pgtype.Text        `json:"parent_author_username"`
+	ParentCharacterName  pgtype.Text        `json:"parent_character_name"`
+}
+
+// Get recent comments with their parent comments/posts for New Comments view
+func (q *Queries) ListRecentCommentsWithParents(ctx context.Context, arg ListRecentCommentsWithParentsParams) ([]ListRecentCommentsWithParentsRow, error) {
+	rows, err := q.db.Query(ctx, listRecentCommentsWithParents, arg.GameID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRecentCommentsWithParentsRow
+	for rows.Next() {
+		var i ListRecentCommentsWithParentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.ParentID,
+			&i.AuthorID,
+			&i.CharacterID,
+			&i.Content,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.EditedAt,
+			&i.EditCount,
+			&i.DeletedAt,
+			&i.IsDeleted,
+			&i.AuthorUsername,
+			&i.CharacterName,
+			&i.ParentContent,
+			&i.ParentCreatedAt,
+			&i.ParentDeletedAt,
+			&i.ParentIsDeleted,
+			&i.ParentMessageType,
+			&i.ParentAuthorUsername,
+			&i.ParentCharacterName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const removeConversationParticipant = `-- name: RemoveConversationParticipant :exec
