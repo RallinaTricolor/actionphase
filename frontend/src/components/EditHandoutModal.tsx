@@ -1,0 +1,112 @@
+import { useState, useEffect } from 'react';
+import { Button, Input, Textarea, Select } from './ui';
+import type { Handout, UpdateHandoutRequest } from '../types/handouts';
+
+interface EditHandoutModalProps {
+  handout: Handout;
+  onClose: () => void;
+  onSubmit: (data: UpdateHandoutRequest) => void;
+  isSubmitting: boolean;
+}
+
+export function EditHandoutModal({ handout, onClose, onSubmit, isSubmitting }: EditHandoutModalProps) {
+  const [formData, setFormData] = useState<UpdateHandoutRequest>({
+    title: handout.title,
+    content: handout.content,
+    status: handout.status
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="surface-base rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-content-primary">Edit Handout</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="text-content-tertiary hover:text-content-secondary h-auto p-0"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <Input
+                id="handout-title"
+                label="Title"
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  title: e.target.value
+                }))}
+                placeholder="e.g., 'Combat Rules' or 'World Lore'"
+                required
+              />
+            </div>
+
+            <div>
+              <Textarea
+                id="handout-content"
+                label="Content"
+                value={formData.content}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  content: e.target.value
+                }))}
+                placeholder="Write your handout content here... (Markdown supported)"
+                rows={10}
+                required
+                helperText="Supports Markdown formatting"
+              />
+            </div>
+
+            <div>
+              <Select
+                id="handout-status"
+                label="Status"
+                value={formData.status}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  status: e.target.value as 'draft' | 'published'
+                }))}
+                required
+                helperText="Draft handouts are only visible to you. Published handouts are visible to all players."
+              >
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 mt-6">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -233,6 +233,30 @@ type GamePhase struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+type Handout struct {
+	ID        int32              `json:"id"`
+	GameID    int32              `json:"game_id"`
+	Title     string             `json:"title"`
+	Content   string             `json:"content"`
+	Status    string             `json:"status"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type HandoutComment struct {
+	ID              int32              `json:"id"`
+	HandoutID       int32              `json:"handout_id"`
+	UserID          int32              `json:"user_id"`
+	ParentCommentID pgtype.Int4        `json:"parent_comment_id"`
+	Content         string             `json:"content"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	EditedAt        pgtype.Timestamptz `json:"edited_at"`
+	EditCount       int32              `json:"edit_count"`
+	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+	DeletedByUserID pgtype.Int4        `json:"deleted_by_user_id"`
+}
+
 type Message struct {
 	ID                    int32              `json:"id"`
 	GameID                int32              `json:"game_id"`

@@ -11,6 +11,7 @@ import (
 	db "actionphase/pkg/db/services"
 	"actionphase/pkg/docs"
 	"actionphase/pkg/games"
+	"actionphase/pkg/handouts"
 	httpmiddleware "actionphase/pkg/http/middleware"
 	"actionphase/pkg/messages"
 	"actionphase/pkg/notifications"
@@ -190,6 +191,22 @@ func (h *Handler) Start() {
 			// Private messages (conversations)
 			conversationHandler := &conversations.Handler{App: h.App}
 			conversationHandler.RegisterRoutes(r)
+
+			// Handouts
+			handoutHandler := &handouts.Handler{App: h.App}
+			r.Post("/{gameId}/handouts", handoutHandler.CreateHandout)
+			r.Get("/{gameId}/handouts", handoutHandler.ListHandouts)
+			r.Get("/{gameId}/handouts/{handoutId}", handoutHandler.GetHandout)
+			r.Put("/{gameId}/handouts/{handoutId}", handoutHandler.UpdateHandout)
+			r.Delete("/{gameId}/handouts/{handoutId}", handoutHandler.DeleteHandout)
+			r.Post("/{gameId}/handouts/{handoutId}/publish", handoutHandler.PublishHandout)
+			r.Post("/{gameId}/handouts/{handoutId}/unpublish", handoutHandler.UnpublishHandout)
+
+			// Handout comments
+			r.Post("/{gameId}/handouts/{handoutId}/comments", handoutHandler.CreateHandoutComment)
+			r.Get("/{gameId}/handouts/{handoutId}/comments", handoutHandler.ListHandoutComments)
+			r.Patch("/{gameId}/handouts/{handoutId}/comments/{commentId}", handoutHandler.UpdateHandoutComment)
+			r.Delete("/{gameId}/handouts/{handoutId}/comments/{commentId}", handoutHandler.DeleteHandoutComment)
 		})
 	})
 	apiV1Router.Mount("/games", gamesRouter)

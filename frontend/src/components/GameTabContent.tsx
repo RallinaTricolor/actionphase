@@ -14,6 +14,7 @@ import { InactiveCharactersList } from './InactiveCharactersList';
 import { AudienceView } from './AudienceView';
 import { AudienceMemberBadge } from './AudienceMemberBadge';
 import { PeopleView } from './PeopleView';
+import { HandoutsList } from './HandoutsList';
 import { Button } from './ui';
 import type { Game, Participant, Character } from '../types/games';
 import type { GamePhase } from '../types/phases';
@@ -250,6 +251,11 @@ export function GameTabContent({
         />
       </div>
     );
+  }
+
+  // Handouts Tab (In Progress)
+  if (activeTab === 'handouts' && game.state === 'in_progress') {
+    return <HandoutsList gameId={gameId} isGM={isGM} />;
   }
 
   // Audience Tab (In Progress - GM and audience members only)

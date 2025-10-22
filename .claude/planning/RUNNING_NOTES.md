@@ -1,0 +1,16 @@
+- Archive mode
+  - After game is complete, all users should have audience level access
+  - Game is in read only mode for all functionality
+- Modals need a better UI (black background is not doing it)
+- Character avatars need to be displayed:
+  - In private messages (both in the normal view and audience mode)
+  - On the new comments page (smaller for the parent comment)
+  - On the people page next to the character name
+  - They should generally be more prominent
+- We should add the user's username in the top left, have "Settings" and "Admin" as hover dropdown navigation
+- We need to support the back button working more reliably, right now it's hard to go "back" when you're in a sub tab / tab of a game
+- Creating a game needs to support the new fields that Editing does (anonymous and auto-accept audience applications)
+- Add a search bar for games in addition to the filters
+- For common room posts, we can remove the "GM Post: " prefix and display the character name under the post title
+- The GM is not having any characters detected
+- Character sheet needs some love (very basic and small right now)

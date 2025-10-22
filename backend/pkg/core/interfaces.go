@@ -907,3 +907,75 @@ type DashboardServiceInterface interface {
 	// If user has no games, returns DashboardData with HasGames = false
 	GetUserDashboard(ctx context.Context, userID int32) (*DashboardData, error)
 }
+
+// HandoutServiceInterface defines the contract for handout management operations.
+// Handouts are GM-created informational documents (rules, world info) that persist across all game phases.
+// Only GMs can create/update/delete handouts and comments. Players can view published handouts.
+//
+// Usage Example:
+//
+//	handoutService := &services.HandoutService{DB: pool, NotificationService: notifService}
+//
+//	// GM creates a draft handout
+//	handout, err := handoutService.CreateHandout(ctx, gameID, "Character Rules", content, "draft")
+//
+//	// GM publishes handout (triggers player notifications)
+//	handout, err := handoutService.PublishHandout(ctx, handoutID, gmUserID)
+//
+//	// Player views published handouts
+//	handouts, err := handoutService.ListHandouts(ctx, gameID, playerUserID, false)
+type HandoutServiceInterface interface {
+	// CreateHandout creates a new handout
+	// Only GMs can create handouts
+	// Status must be "draft" or "published"
+	CreateHandout(ctx context.Context, gameID int32, title string, content string, status string, userID int32) (*Handout, error)
+
+	// GetHandout retrieves a handout by ID
+	// Returns error if handout is draft and user is not GM
+	GetHandout(ctx context.Context, handoutID int32, userID int32) (*Handout, error)
+
+	// ListHandouts retrieves all handouts for a game
+	// If isGM is true, returns all handouts (including drafts)
+	// If isGM is false, returns only published handouts
+	ListHandouts(ctx context.Context, gameID int32, userID int32, isGM bool) ([]*Handout, error)
+
+	// UpdateHandout updates a handout's title, content, and status
+	// Only GMs can update handouts
+	// Changing status to "published" triggers notifications
+	UpdateHandout(ctx context.Context, handoutID int32, title string, content string, status string, userID int32) (*Handout, error)
+
+	// DeleteHandout removes a handout
+	// Only GMs can delete handouts
+	// Cascade deletes all comments on the handout
+	DeleteHandout(ctx context.Context, handoutID int32, userID int32) error
+
+	// PublishHandout changes a draft handout to published
+	// Only GMs can publish handouts
+	// Triggers notifications to all game participants
+	PublishHandout(ctx context.Context, handoutID int32, userID int32) (*Handout, error)
+
+	// UnpublishHandout changes a published handout to draft
+	// Only GMs can unpublish handouts
+	// Hides handout from players
+	UnpublishHandout(ctx context.Context, handoutID int32, userID int32) (*Handout, error)
+
+	// CreateHandoutComment adds a comment to a handout
+	// Only GMs can comment on handouts
+	// Supports threaded replies via parentCommentID
+	CreateHandoutComment(ctx context.Context, handoutID int32, userID int32, parentCommentID *int32, content string) (*HandoutComment, error)
+
+	// ListHandoutComments retrieves all comments for a handout
+	// Returns comments in chronological order
+	// Excludes deleted comments
+	ListHandoutComments(ctx context.Context, handoutID int32) ([]*HandoutComment, error)
+
+	// UpdateHandoutComment updates a comment's content
+	// Only the comment author (GM) can update
+	// Increments edit count and sets edited_at timestamp
+	UpdateHandoutComment(ctx context.Context, commentID int32, userID int32, content string) (*HandoutComment, error)
+
+	// DeleteHandoutComment soft-deletes a comment
+	// Only GMs can delete comments
+	// Sets deleted_at timestamp and deleted_by_user_id
+	DeleteHandoutComment(ctx context.Context, commentID int32, userID int32, isGM bool) error
+}
