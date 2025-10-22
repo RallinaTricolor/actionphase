@@ -37,6 +37,7 @@ const icons = {
   messages: createIcon('M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'),
   phaseHistory: createIcon('M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'),
   audience: createIcon('M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'),
+  handouts: createIcon('M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'),
 };
 
 export function useGameTabs({
@@ -89,6 +90,9 @@ export function useGameTabs({
 
       // Messages
       tabList.push({ id: 'messages', label: 'Messages', icon: icons.messages });
+
+      // Handouts - available to all participants
+      tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });
 
       // Audience tab (GM and audience members only)
       if (isGM || isAudience) {

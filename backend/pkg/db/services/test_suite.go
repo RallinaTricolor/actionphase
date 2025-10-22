@@ -130,6 +130,10 @@ func (ts *TestSuite) CharacterService() *CharacterService {
 	return ts.serviceFactory.CharacterService()
 }
 
+func (ts *TestSuite) HandoutService() *HandoutService {
+	return ts.serviceFactory.HandoutService()
+}
+
 // TransitionGameTo is a convenience helper for transitioning game states
 func (ts *TestSuite) TransitionGameTo(game models.Game, newState string) *models.Game {
 	gameService := ts.GameService()
@@ -187,4 +191,9 @@ func (sf *ServiceFactory) GameApplicationService() *GameApplicationService {
 // CharacterService creates a new CharacterService
 func (sf *ServiceFactory) CharacterService() *CharacterService {
 	return &CharacterService{DB: sf.pool}
+}
+
+// HandoutService creates a new HandoutService
+func (sf *ServiceFactory) HandoutService() *HandoutService {
+	return &HandoutService{DB: sf.pool}
 }

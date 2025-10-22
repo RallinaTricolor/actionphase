@@ -259,6 +259,9 @@ const (
 
 	// NotificationTypeGameStateChanged - Game state changed (paused, resumed, etc.)
 	NotificationTypeGameStateChanged = "game_state_changed"
+
+	// NotificationTypeHandoutPublished - GM published a new handout
+	NotificationTypeHandoutPublished = "handout_published"
 )
 
 // ValidNotificationTypes contains all valid notification types for validation.
@@ -275,6 +278,7 @@ var ValidNotificationTypes = []string{
 	NotificationTypeCharacterApproved,
 	NotificationTypeCharacterRejected,
 	NotificationTypeGameStateChanged,
+	NotificationTypeHandoutPublished,
 }
 
 // IsValidNotificationType checks if the given type is a valid notification type.
