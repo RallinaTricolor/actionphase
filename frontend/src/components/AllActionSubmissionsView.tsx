@@ -29,13 +29,16 @@ export function AllActionSubmissionsView({ gameId }: AllActionSubmissionsViewPro
 
   const phases = phasesData || [];
 
-  // Set initial phase to the most recent phase (highest phase number)
+  // Set initial phase to the most recent action phase (highest phase number)
   useEffect(() => {
     if (phases.length > 0 && selectedPhaseId === undefined) {
-      const mostRecentPhase = phases.reduce((prev, current) =>
-        (current.phase_number > prev.phase_number) ? current : prev
-      );
-      setSelectedPhaseId(mostRecentPhase.id);
+      const actionPhases = phases.filter(p => p.phase_type === 'action');
+      if (actionPhases.length > 0) {
+        const mostRecentPhase = actionPhases.reduce((prev, current) =>
+          (current.phase_number > prev.phase_number) ? current : prev
+        );
+        setSelectedPhaseId(mostRecentPhase.id);
+      }
     }
   }, [phases, selectedPhaseId]);
 
@@ -106,12 +109,13 @@ export function AllActionSubmissionsView({ gameId }: AllActionSubmissionsViewPro
         As an audience member, you can view all action submissions and results to follow the story as it unfolds.
       </Alert>
 
-      {/* Phase Switcher */}
-      {phases.length > 0 && (
+      {/* Phase Switcher - Only show action phases */}
+      {phases.filter(p => p.phase_type === 'action').length > 0 && (
         <div className="border border-border-primary rounded-lg p-4 bg-bg-secondary">
-          <h3 className="text-sm font-semibold text-content-primary mb-3">Select Phase</h3>
+          <h3 className="text-sm font-semibold text-content-primary mb-3">Select Action Phase</h3>
           <div className="flex flex-wrap gap-2">
             {phases
+              .filter(p => p.phase_type === 'action') // Only show action phases
               .sort((a, b) => b.phase_number - a.phase_number) // Most recent first
               .map((phase) => {
                 const isSelected = phase.id === selectedPhaseId;
