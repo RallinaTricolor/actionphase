@@ -9,3 +9,4 @@
 - User registration security (prevent bots, email verification, captcha)
 - Antipatterns in the code?
 - Demo/staging + more thorough test data
+- Logging, monitoring, application traces

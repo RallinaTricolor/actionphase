@@ -16,6 +16,7 @@ export interface ConversationParticipant {
   joined_at: string;
   username: string;
   character_name?: string;
+  character_avatar_url?: string | null;
 }
 
 export interface PrivateMessage {
@@ -28,6 +29,7 @@ export interface PrivateMessage {
   created_at: string;
   sender_username: string;
   sender_character_name?: string;
+  sender_avatar_url?: string | null;
 }
 
 export interface ConversationListItem {

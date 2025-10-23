@@ -95,6 +95,7 @@ export interface CommentWithParent {
   is_deleted: boolean;
   author_username: string;
   character_name?: string | null;
+  character_avatar_url?: string | null;
 
   // Parent context
   parent_content?: string | null;
@@ -104,6 +105,7 @@ export interface CommentWithParent {
   parent_message_type?: string | null;
   parent_author_username?: string | null;
   parent_character_name?: string | null;
+  parent_character_avatar_url?: string | null;
 }
 
 // Pagination response for recent comments

@@ -155,3 +155,7 @@ backend/test-results
 
 backend/actionphase
 backend/uploads/
+
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl

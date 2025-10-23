@@ -7,6 +7,7 @@ import { CharacterSheet } from './CharacterSheet';
 import { AssignNPCModal } from './AssignNPCModal';
 import { Modal } from './Modal';
 import { Card, Button, Badge, Spinner, type BadgeVariant } from './ui';
+import CharacterAvatar from './CharacterAvatar';
 
 interface CharactersListProps {
   gameId: number;
@@ -305,35 +306,42 @@ function CharacterCard({
   return (
     <div className="border border-theme-default rounded-lg p-4 surface-base hover:shadow-sm transition-shadow">
       <div className="flex justify-between items-start">
-        <div className="flex-grow">
-          <div className="flex items-center space-x-2 mb-1">
-            <h4 className="font-medium text-content-primary">{character.name}</h4>
-            <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
-              {character.status}
-            </Badge>
-            {/* Only show ownership badge if not anonymous or if GM */}
-            {isOwner && (!isAnonymous || userRole === 'gm') && (
-              <Badge variant="secondary" size="sm">
-                Your Character
+        <div className="flex gap-3 flex-grow">
+          <CharacterAvatar
+            avatarUrl={character.avatar_url}
+            characterName={character.name}
+            size="md"
+          />
+          <div className="flex-grow">
+            <div className="flex items-center space-x-2 mb-1">
+              <h4 className="font-medium text-content-primary">{character.name}</h4>
+              <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
+                {character.status}
               </Badge>
-            )}
-          </div>
+              {/* Only show ownership badge if not anonymous or if GM */}
+              {isOwner && (!isAnonymous || userRole === 'gm') && (
+                <Badge variant="secondary" size="sm">
+                  Your Character
+                </Badge>
+              )}
+            </div>
 
-          <div className="text-sm text-content-primary space-y-1">
-            {/* Only show character type if not anonymous or if GM */}
-            {(!isAnonymous || userRole === 'gm') && (
-              <div>
-                Type: <span className="capitalize">{character.character_type.replace('_', ' ')}</span>
-              </div>
-            )}
-            {/* For NPCs, show assignment info */}
-            {character.character_type === 'npc' && character.assigned_username && (!isAnonymous || userRole === 'gm') && (
-              <div>Assigned to: {character.assigned_username}</div>
-            )}
-            {/* For player characters, show player name if not anonymous or if GM */}
-            {character.character_type === 'player_character' && character.username && (!isAnonymous || userRole === 'gm') && (
-              <div>Player: {character.username}</div>
-            )}
+            <div className="text-sm text-content-primary space-y-1">
+              {/* Only show character type if not anonymous or if GM */}
+              {(!isAnonymous || userRole === 'gm') && (
+                <div>
+                  Type: <span className="capitalize">{character.character_type.replace('_', ' ')}</span>
+                </div>
+              )}
+              {/* For NPCs, show assignment info */}
+              {character.character_type === 'npc' && character.assigned_username && (!isAnonymous || userRole === 'gm') && (
+                <div>Assigned to: {character.assigned_username}</div>
+              )}
+              {/* For player characters, show player name if not anonymous or if GM */}
+              {character.character_type === 'player_character' && character.username && (!isAnonymous || userRole === 'gm') && (
+                <div>Player: {character.username}</div>
+              )}
+            </div>
           </div>
         </div>
 

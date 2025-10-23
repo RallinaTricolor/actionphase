@@ -3,6 +3,7 @@ import type { CommentWithParent } from '../types/messages';
 import { ParentCommentPreview } from './ParentCommentPreview';
 import { MarkdownPreview } from './MarkdownPreview';
 import { Card, CardBody, Badge } from './ui';
+import CharacterAvatar from './CharacterAvatar';
 
 interface CommentWithParentCardProps {
   comment: CommentWithParent;
@@ -40,20 +41,27 @@ export function CommentWithParentCard({
         />
 
         {/* Comment header */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-text-heading">
-              {comment.character_name || 'Unknown'}
-            </span>
-            <span className="text-sm text-text-muted">
-              @{comment.author_username}
-            </span>
-            <span className="text-sm text-text-muted">{timeAgo}</span>
-            {isEdited && (
-              <Badge variant="secondary" size="sm">
-                Edited
-              </Badge>
-            )}
+        <div className="flex items-start gap-3 mb-2">
+          <CharacterAvatar
+            avatarUrl={comment.character_avatar_url}
+            characterName={comment.character_name || comment.author_username}
+            size="sm"
+          />
+          <div className="flex flex-col flex-1">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-text-heading">
+                {comment.character_name || 'Unknown'}
+              </span>
+              <span className="text-sm text-text-muted">
+                @{comment.author_username}
+              </span>
+              <span className="text-sm text-text-muted">{timeAgo}</span>
+              {isEdited && (
+                <Badge variant="secondary" size="sm">
+                  Edited
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
 

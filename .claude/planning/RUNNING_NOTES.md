@@ -1,9 +1,5 @@
 - ✅ Modals need a better UI (black background is not doing it) - COMPLETED: Added backdrop blur, upgraded to surface-raised, enhanced shadows and borders
-- ⏸️ Character avatars need to be displayed - NEEDS BACKEND WORK: Requires API changes to include avatar URLs in conversation lists, message responses, etc.
-  - In private messages (both in the normal view and audience mode)
-  - On the new comments page (smaller for the parent comment)
-  - On the people page next to the character name
-  - They should generally be more prominent
+- ✅ Character avatars need to be displayed - COMPLETED: Added CharacterAvatar component to private messages (MessageThread), comments page (CommentWithParentCard), and people page (CharactersList). Updated TypeScript types to include avatar_url fields for PrivateMessage, ConversationParticipant, and CommentWithParent. Backend SQL queries already return avatar URLs from messages.sql.
 - ✅ We should add the user's username in the top left, have "Settings" and "Admin" as hover dropdown navigation - COMPLETED: Added user dropdown menu with username display, Settings and Admin links in hover dropdown
 - ✅ We need to support the back button working more reliably, right now it's hard to go "back" when you're in a sub tab / tab of a game - COMPLETED: Changed useGameTabs hook to use `replace: false` instead of `replace: true` when updating URL parameters, so each tab change creates a new browser history entry enabling back button navigation between tabs
 - ✅ Creating a game needs to support the new fields that Editing does (anonymous and auto-accept audience applications) - COMPLETED: Extracted shared GameFormFields component, added is_anonymous field to CreateGameForm, refactored EditGameModal to use Modal component

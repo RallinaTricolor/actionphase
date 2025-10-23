@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { apiClient } from '../lib/api';
 import { Button, Select, Textarea, Alert } from './ui';
+import CharacterAvatar from './CharacterAvatar';
 import type { PrivateMessage, ConversationWithDetails, ConversationListItem } from '../types/conversations';
 import type { Character } from '../types/characters';
 
@@ -270,22 +271,29 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                   </div>
                 )}
 
-                <div className="flex flex-col">
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="font-semibold text-content-primary">
-                      {message.sender_character_name || message.sender_username}
-                    </span>
-                    <span className="text-xs text-content-tertiary">
-                      {formatTimestamp(message.created_at)}
-                    </span>
-                  </div>
-                  <div className="surface-raised rounded-lg p-3 prose dark:prose-invert prose-sm max-w-none">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      rehypePlugins={[rehypeSanitize]}
-                    >
-                      {message.content}
-                    </ReactMarkdown>
+                <div className="flex gap-3">
+                  <CharacterAvatar
+                    avatarUrl={message.sender_avatar_url}
+                    characterName={message.sender_character_name || message.sender_username}
+                    size="sm"
+                  />
+                  <div className="flex flex-col flex-1">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="font-semibold text-content-primary">
+                        {message.sender_character_name || message.sender_username}
+                      </span>
+                      <span className="text-xs text-content-tertiary">
+                        {formatTimestamp(message.created_at)}
+                      </span>
+                    </div>
+                    <div className="surface-raised rounded-lg p-3 prose dark:prose-invert prose-sm max-w-none">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeSanitize]}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </div>
               </div>
