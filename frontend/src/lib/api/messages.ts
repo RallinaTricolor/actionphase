@@ -1,0 +1,107 @@
+import { BaseApiClient } from './client';
+import type {
+  Message,
+  CreatePostRequest,
+  CreateCommentRequest,
+  UpdateCommentRequest,
+  GetPostsParams,
+  ReadMarker,
+  PostUnreadInfo,
+  MarkPostReadRequest,
+  PostUnreadComments,
+  CommentWithParent,
+  RecentCommentsResponse
+} from '../../types/messages';
+
+/**
+ * Messages API client
+ * Handles posts and comments in the common room
+ */
+export class MessagesApi extends BaseApiClient {
+  // Post endpoints
+  async createPost(gameId: number, data: CreatePostRequest) {
+    return this.client.post<Message>(`/api/v1/games/${gameId}/posts`, data);
+  }
+
+  async getGamePosts(gameId: number, params?: GetPostsParams) {
+    const queryParams = new URLSearchParams();
+    if (params?.phase_id) queryParams.append('phase_id', params.phase_id.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+
+    const queryString = queryParams.toString();
+    const url = `/api/v1/games/${gameId}/posts${queryString ? `?${queryString}` : ''}`;
+    return this.client.get<Message[]>(url);
+  }
+
+  // Comment endpoints
+  async createComment(gameId: number, postId: number, data: CreateCommentRequest) {
+    return this.client.post<Message>(`/api/v1/games/${gameId}/posts/${postId}/comments`, data);
+  }
+
+  async getPostComments(gameId: number, postId: number) {
+    return this.client.get<Message[]>(`/api/v1/games/${gameId}/posts/${postId}/comments`);
+  }
+
+  async updateComment(gameId: number, postId: number, commentId: number, data: UpdateCommentRequest) {
+    return this.client.patch<Message>(`/api/v1/games/${gameId}/posts/${postId}/comments/${commentId}`, data);
+  }
+
+  async deleteComment(gameId: number, postId: number, commentId: number) {
+    return this.client.delete<{ message: string; id: number }>(`/api/v1/games/${gameId}/posts/${postId}/comments/${commentId}`);
+  }
+
+  // Get a single message by ID (for deep linking to nested comments)
+  async getMessage(gameId: number, messageId: number) {
+    return this.client.get<Message>(`/api/v1/games/${gameId}/messages/${messageId}`);
+  }
+
+  // Read tracking endpoints
+  async markPostAsRead(gameId: number, postId: number, data: MarkPostReadRequest = {}) {
+    return this.client.post<ReadMarker>(`/api/v1/games/${gameId}/posts/${postId}/mark-read`, data);
+  }
+
+  async getReadMarkers(gameId: number) {
+    return this.client.get<ReadMarker[]>(`/api/v1/games/${gameId}/read-markers`);
+  }
+
+  async getPostsUnreadInfo(gameId: number) {
+    return this.client.get<PostUnreadInfo[]>(`/api/v1/games/${gameId}/posts-unread-info`);
+  }
+
+  async getUnreadCommentIDs(gameId: number) {
+    return this.client.get<PostUnreadComments[]>(`/api/v1/games/${gameId}/unread-comment-ids`);
+  }
+
+  // Recent comments (New Comments view)
+  async getRecentComments(gameId: number, limit: number = 20, offset: number = 0) {
+    const queryParams = new URLSearchParams();
+    queryParams.append('limit', limit.toString());
+    queryParams.append('offset', offset.toString());
+
+    const url = `/api/v1/games/${gameId}/comments/recent?${queryParams.toString()}`;
+    const response = await this.client.get<any>(url);
+
+    // Transform the response to flatten the parent object
+    return {
+      data: {
+        ...response.data,
+        comments: response.data.comments.map((comment: any) => ({
+          ...comment,
+          parent_content: comment.parent?.content,
+          parent_created_at: comment.parent?.created_at,
+          parent_deleted_at: comment.parent?.deleted_at,
+          parent_is_deleted: comment.parent?.is_deleted,
+          parent_message_type: comment.parent?.message_type,
+          parent_author_username: comment.parent?.author_username,
+          parent_character_name: comment.parent?.character_name,
+        })),
+      },
+    };
+  }
+
+  async getTotalCommentCount(gameId: number) {
+    const response = await this.client.get<{ total: number }>(`/api/v1/games/${gameId}/comments/count`);
+    return response.total;
+  }
+}
