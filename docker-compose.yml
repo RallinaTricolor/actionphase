@@ -1,13 +1,93 @@
 services:
+  # PostgreSQL Database
   db:
-    image: postgres
-    restart: always
+    image: postgres:16-alpine
+    container_name: actionphase-db
+    restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: example
+      POSTGRES_DB: actionphase
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./backend/pkg/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d actionphase"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - actionphase-network
+
+  # Go Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: actionphase-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Database connection
+      DATABASE_URL: "postgres://postgres:example@db:5432/actionphase?sslmode=disable"
+
+      # JWT configuration
+      JWT_SECRET: "${JWT_SECRET:-your-super-secret-jwt-signing-key-change-this-in-production}"
+      JWT_ACCESS_TOKEN_EXPIRY: "15m"
+      JWT_REFRESH_TOKEN_EXPIRY: "168h"
+
+      # Server configuration
+      PORT: 3000
+      HOST: 0.0.0.0
+      ENVIRONMENT: "${ENVIRONMENT:-production}"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+
+      # Run migrations on startup
+      RUN_MIGRATIONS: "true"
+
+      # CORS configuration - allow frontend
+      CORS_ENABLED: "true"
+      CORS_ORIGINS: "http://localhost,http://localhost:80,http://${HOST_IP:-localhost}"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - actionphase-network
+
+  # React Frontend (nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: actionphase-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - actionphase-network
+
+networks:
+  actionphase-network:
+    driver: bridge
 
 volumes:
   pgdata:
+    driver: local

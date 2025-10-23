@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Development files
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+README.md
+docs/
+
+# Test files
+*_test.go
+testdata/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build artifacts
+/tmp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# CI/CD
+.github/
