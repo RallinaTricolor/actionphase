@@ -163,7 +163,7 @@ func (h *Handler) AssignNPC(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if !isAudience {
-			render.Render(w, r, core.ErrBadRequest("NPCs can only be assigned to audience members"))
+			render.Render(w, r, core.ErrBadRequest(fmt.Errorf("NPCs can only be assigned to audience members")))
 			return
 		}
 	}
