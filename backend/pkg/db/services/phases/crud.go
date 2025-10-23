@@ -17,6 +17,16 @@ import (
 func (ps *PhaseService) CreatePhase(ctx context.Context, req core.CreatePhaseRequest) (*models.GamePhase, error) {
 	queries := models.New(ps.DB)
 
+	// Validate game is not completed/cancelled (archived games are read-only)
+	game, err := queries.GetGame(ctx, req.GameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get game: %w", err)
+	}
+
+	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
+		return nil, err
+	}
+
 	// Validate phase type
 	validPhaseTypes := []string{"common_room", "action"}
 	isValid := false

@@ -216,6 +216,16 @@ func isValidGameState(state string) bool {
 func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameRequest) (*models.Game, error) {
 	queries := models.New(gs.DB)
 
+	// Validate game is not completed/cancelled (archived games are read-only)
+	game, err := queries.GetGame(ctx, req.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get game: %w", err)
+	}
+
+	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
+		return nil, err
+	}
+
 	var startDate, endDate, recruitmentDeadline pgtype.Timestamptz
 
 	if req.StartDate != nil {
@@ -228,7 +238,7 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 		recruitmentDeadline = pgtype.Timestamptz{Time: *req.RecruitmentDeadline, Valid: true}
 	}
 
-	game, err := queries.UpdateGame(ctx, models.UpdateGameParams{
+	updatedGame, err := queries.UpdateGame(ctx, models.UpdateGameParams{
 		ID:                  req.ID,
 		Title:               req.Title,
 		Description:         pgtype.Text{String: req.Description, Valid: req.Description != ""},
@@ -241,7 +251,7 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 		IsAnonymous:         req.IsAnonymous,
 	})
 
-	return &game, err
+	return &updatedGame, err
 }
 
 // DeleteGame - Delete a game
@@ -275,6 +285,17 @@ func (gs *GameService) CanUserJoinGame(ctx context.Context, gameID, userID int32
 // AddGameParticipant - Add a user as a participant to a game
 func (gs *GameService) AddGameParticipant(ctx context.Context, gameID, userID int32, role string) (*models.GameParticipant, error) {
 	queries := models.New(gs.DB)
+
+	// Validate game is not completed/cancelled (archived games are read-only)
+	game, err := queries.GetGame(ctx, gameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get game: %w", err)
+	}
+
+	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
+		return nil, err
+	}
+
 	participant, err := queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
 		GameID: gameID,
 		UserID: userID,
@@ -629,4 +650,32 @@ func (gs *GameService) CheckAudienceAccess(ctx context.Context, gameID, userID i
 	}
 
 	return result.Bool, nil
+}
+
+// CanUserViewGame checks if a user can view a game's content (read-only access).
+// Public Archive Mode: Completed games are viewable by ANY user (not just participants).
+// Active Games: Follows normal permission rules (GM, participants, audience).
+// Cancelled Games: Follow normal permission rules (NOT public).
+func (gs *GameService) CanUserViewGame(ctx context.Context, gameID, userID int32) (bool, error) {
+	queries := models.New(gs.DB)
+
+	// Get the game to check its state
+	game, err := queries.GetGame(ctx, gameID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get game: %w", err)
+	}
+
+	// Public Archive Mode: Completed games are viewable by anyone
+	if game.State.Valid && game.State.String == core.GameStateCompleted {
+		return true, nil
+	}
+
+	// For non-completed games (including cancelled), use normal permission checks
+	// Check if user is GM or any type of participant (player, audience, co_gm)
+	isParticipant, err := gs.IsUserInGame(ctx, gameID, userID)
+	if err != nil {
+		return false, fmt.Errorf("failed to check participation: %w", err)
+	}
+
+	return isParticipant, nil
 }

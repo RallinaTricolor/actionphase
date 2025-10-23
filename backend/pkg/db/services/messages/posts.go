@@ -12,6 +12,16 @@ import (
 func (s *MessageService) CreatePost(ctx context.Context, req core.CreatePostRequest) (*models.Message, error) {
 	queries := models.New(s.DB)
 
+	// Validate game is not completed/cancelled (archived games are read-only)
+	game, err := queries.GetGame(ctx, req.GameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get game: %w", err)
+	}
+
+	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
+		return nil, err
+	}
+
 	// Validate character ownership before creating post
 	if err := s.ValidateCharacterOwnership(ctx, req.CharacterID, req.AuthorID, req.GameID); err != nil {
 		return nil, fmt.Errorf("character validation failed: %w", err)

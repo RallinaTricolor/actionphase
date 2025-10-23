@@ -1,8 +1,10 @@
 package core
 
 import (
-	"github.com/go-chi/render"
 	"net/http"
+	"strings"
+
+	"github.com/go-chi/render"
 )
 
 // ErrResponse represents a structured API error response that follows ActionPhase error handling conventions.
@@ -243,4 +245,33 @@ func ErrAlreadyParticipant() render.Renderer {
 func ErrNotGameMaster() render.Renderer {
 	return ErrWithCode(403, ErrCodeNotGameMaster,
 		"Only the game master can perform this action")
+}
+
+// ErrGameArchived creates a specific error for write operations on completed/cancelled games.
+// Completed games are read-only archives and no new content can be created.
+func ErrGameArchived() render.Renderer {
+	return ErrWithCode(403, ErrCodeGameArchived,
+		"This game is archived and read-only. No new content can be created.")
+}
+
+// IsArchivedGameError checks if an error is from an archived game validation failure.
+// Returns true if the error message contains "archived", indicating a write operation
+// was attempted on a completed or cancelled game.
+//
+// Example Usage:
+//
+//	phase, err := phaseService.CreatePhase(ctx, req)
+//	if err != nil {
+//	    if core.IsArchivedGameError(err) {
+//	        render.Render(w, r, core.ErrGameArchived())
+//	        return
+//	    }
+//	    render.Render(w, r, core.ErrInternalError(err))
+//	    return
+//	}
+func IsArchivedGameError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "archived")
 }

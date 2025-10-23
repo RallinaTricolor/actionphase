@@ -226,6 +226,97 @@ func (td *TestDatabase) CreateTestGame(t TestingInterface, gmUserID int32, title
 	return &game
 }
 
+// CreateTestGameWithState creates a test game with a specific state
+func (td *TestDatabase) CreateTestGameWithState(t TestingInterface, gmUserID int32, title string, state string) *models.Game {
+	ctx := context.Background()
+	queries := models.New(td.Pool)
+
+	// First create the game (state defaults to 'setup')
+	game, err := queries.CreateGame(ctx, models.CreateGameParams{
+		Title:       title,
+		Description: pgtype.Text{String: "Test game created for testing purposes", Valid: true},
+		GmUserID:    gmUserID,
+		Genre:       pgtype.Text{String: "Test", Valid: true},
+		MaxPlayers:  pgtype.Int4{Int32: 6, Valid: true},
+		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create test game: %v", err)
+	}
+
+	// Then update the state if different from default
+	if state != "setup" {
+		updatedGame, err := queries.UpdateGameState(ctx, models.UpdateGameStateParams{
+			ID:    game.ID,
+			State: pgtype.Text{String: state, Valid: true},
+		})
+		if err != nil {
+			t.Fatalf("Failed to update game state to %s: %v", state, err)
+		}
+		return &updatedGame
+	}
+
+	return &game
+}
+
+// CreateTestPhase creates a test phase for a game
+func (td *TestDatabase) CreateTestPhase(t TestingInterface, gameID int32, phaseType string, title string) *models.GamePhase {
+	ctx := context.Background()
+	queries := models.New(td.Pool)
+
+	phase, err := queries.CreateGamePhase(ctx, models.CreateGamePhaseParams{
+		GameID:      gameID,
+		PhaseType:   phaseType,
+		PhaseNumber: 1,
+		Title:       title,
+		Description: pgtype.Text{String: "Test phase", Valid: true},
+		StartTime:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create test phase: %v", err)
+	}
+
+	return &phase
+}
+
+// CreateTestPost creates a test post for a game
+func (td *TestDatabase) CreateTestPost(t TestingInterface, gameID int32, authorID int32, characterID int32, content string) *models.Message {
+	ctx := context.Background()
+	queries := models.New(td.Pool)
+
+	post, err := queries.CreatePost(ctx, models.CreatePostParams{
+		GameID:                gameID,
+		AuthorID:              authorID,
+		CharacterID:           characterID,
+		Content:               content,
+		Visibility:            models.MessageVisibilityGame,
+		MentionedCharacterIds: []int32{}, // Empty array for mentioned characters
+	})
+	if err != nil {
+		t.Fatalf("Failed to create test post: %v", err)
+	}
+
+	return &post
+}
+
+// AddTestGameParticipant directly inserts a game participant without validation
+// Use this for test setup when you need to add participants to archived games
+func (td *TestDatabase) AddTestGameParticipant(t TestingInterface, gameID int32, userID int32, role string) *models.GameParticipant {
+	ctx := context.Background()
+	queries := models.New(td.Pool)
+
+	participant, err := queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
+		GameID: gameID,
+		UserID: userID,
+		Role:   role,
+	})
+	if err != nil {
+		t.Fatalf("Failed to add test game participant: %v", err)
+	}
+
+	return &participant
+}
+
 // TestFixtures provides common test data
 type TestFixtures struct {
 	TestUser *User

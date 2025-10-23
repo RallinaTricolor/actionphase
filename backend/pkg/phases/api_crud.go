@@ -80,6 +80,11 @@ func (h *Handler) CreatePhase(w http.ResponseWriter, r *http.Request) {
 	phase, err := phaseService.CreatePhase(r.Context(), req)
 	if err != nil {
 		h.App.Logger.Error("Failed to create phase", "error", err)
+		// Check if error is due to archived game
+		if core.IsArchivedGameError(err) {
+			render.Render(w, r, core.ErrGameArchived())
+			return
+		}
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}

@@ -100,14 +100,23 @@ export function useGameTabs({
       }
 
       // Phase History - context-aware label
-      // During action phases, label as "History" for brevity
-      const phaseHistoryLabel = currentPhaseType === 'action' ? 'History' : 'Phase History';
-      tabList.push({ id: 'phase-history', label: phaseHistoryLabel, icon: icons.phaseHistory });
+      tabList.push({ id: 'phase-history', label: 'History', icon: icons.phaseHistory });
     } else if (gameState === 'completed' || gameState === 'cancelled') {
-      // Post-game tabs
-      tabList.push({ id: 'phase-history', label: 'Phase History', icon: icons.phaseHistory });
+      // Post-game tabs - read-only archive view
+      tabList.push({ id: 'phase-history', label: 'History', icon: icons.phaseHistory });
       tabList.push({ id: 'characters', label: 'Characters', icon: icons.characters });
       tabList.push({ id: 'participants', label: 'Participants', badge: participantCount, icon: icons.participants });
+
+      // Handouts - available to view historical handouts
+      tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });
+
+      // Audience tab
+      // - Completed games: Always visible (public archive, anyone can view audience posts)
+      // - Cancelled games: Only visible to GM/audience (game remains private)
+      if (gameState === 'completed' || isGM || isAudience) {
+        tabList.push({ id: 'audience', label: 'Audience', icon: icons.audience });
+      }
+
       tabList.push({ id: 'info', label: 'Game Info', icon: icons.info });
     } else {
       // Setup state - minimal tabs

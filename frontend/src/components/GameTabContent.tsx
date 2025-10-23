@@ -79,7 +79,7 @@ export function GameTabContent({
       <>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-content-primary">Participants</h2>
-          {isGM && (
+          {isGM && game.state !== 'completed' && game.state !== 'cancelled' && (
             <Button
               variant="primary"
               onClick={() => setShowAddPlayerModal(true)}

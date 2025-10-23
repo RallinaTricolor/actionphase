@@ -79,6 +79,11 @@ func (h *Handler) SubmitAction(w http.ResponseWriter, r *http.Request) {
 	action, err := actionService.SubmitAction(r.Context(), req)
 	if err != nil {
 		h.App.Logger.Error("Failed to submit action", "error", err)
+		// Check if error is due to archived game
+		if core.IsArchivedGameError(err) {
+			render.Render(w, r, core.ErrGameArchived())
+			return
+		}
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}

@@ -74,6 +74,13 @@ export function EnhancedGameCard({
             {GAME_STATE_LABELS[game.state]}
           </span>
 
+          {/* Archive Badge for completed games */}
+          {game.state === 'completed' && (
+            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-interactive-primary-subtle text-interactive-primary">
+              📚 Public Archive
+            </span>
+          )}
+
           {/* Genre Badge */}
           {game.genre && (
             <span className="px-2 py-1 rounded-full text-xs font-semibold surface-raised text-content-primary">

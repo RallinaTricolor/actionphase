@@ -208,6 +208,13 @@ type GameServiceInterface interface {
 
 	// CheckAudienceAccess verifies if a user has audience or GM access to a game
 	CheckAudienceAccess(ctx context.Context, gameID, userID int32) (bool, error)
+
+	// CanUserViewGame checks if a user can view a game's content (read-only access)
+	// Returns true if:
+	// - Game is completed (public archive mode - ANY user can view)
+	// - User is GM, participant, or audience member (for active games)
+	// Note: Cancelled games are NOT public and follow normal permission rules
+	CanUserViewGame(ctx context.Context, gameID, userID int32) (bool, error)
 }
 
 // GameApplicationServiceInterface defines the contract for game application operations.

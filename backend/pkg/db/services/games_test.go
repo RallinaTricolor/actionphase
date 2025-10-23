@@ -978,3 +978,94 @@ func TestGameService_AudienceParticipation(t *testing.T) {
 		core.AssertEqual(t, false, hasAccess, "Random user should not have audience access")
 	})
 }
+
+// TestGameService_CanUserViewGame tests the public archive access for completed games
+func TestGameService_CanUserViewGame(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	gameService := &GameService{DB: testDB.Pool}
+	ctx := context.Background()
+
+	// Create test users
+	gmUser := testDB.CreateTestUser(t, "gm@example.com", "GM User")
+	playerUser := testDB.CreateTestUser(t, "player@example.com", "Player User")
+	audienceUser := testDB.CreateTestUser(t, "audience@example.com", "Audience User")
+	randomUser := testDB.CreateTestUser(t, "random@example.com", "Random User")
+
+	t.Run("completed game allows ANY user to view (public archive)", func(t *testing.T) {
+		// Create a completed game
+		completedGame := testDB.CreateTestGameWithState(t, int32(gmUser.ID), "Completed Game", core.GameStateCompleted)
+
+		// Random user (not a participant) should be able to view
+		canView, err := gameService.CanUserViewGame(ctx, completedGame.ID, int32(randomUser.ID))
+		core.AssertNoError(t, err, "Failed to check view access")
+		core.AssertTrue(t, canView, "Random user should be able to view completed game (public archive)")
+
+		// GM should also be able to view (obviously)
+		canView, err = gameService.CanUserViewGame(ctx, completedGame.ID, int32(gmUser.ID))
+		core.AssertNoError(t, err, "Failed to check GM view access")
+		core.AssertTrue(t, canView, "GM should be able to view completed game")
+	})
+
+	t.Run("cancelled game does NOT allow non-participants to view (private)", func(t *testing.T) {
+		// Create a cancelled game
+		cancelledGame := testDB.CreateTestGameWithState(t, int32(gmUser.ID), "Cancelled Game", core.GameStateCancelled)
+
+		// Random user should NOT be able to view cancelled game
+		canView, err := gameService.CanUserViewGame(ctx, cancelledGame.ID, int32(randomUser.ID))
+		core.AssertNoError(t, err, "Failed to check view access")
+		core.AssertEqual(t, false, canView, "Random user should NOT be able to view cancelled game")
+
+		// GM should still be able to view their own cancelled game
+		canView, err = gameService.CanUserViewGame(ctx, cancelledGame.ID, int32(gmUser.ID))
+		core.AssertNoError(t, err, "Failed to check GM view access")
+		core.AssertTrue(t, canView, "GM should be able to view their cancelled game")
+	})
+
+	t.Run("active game follows normal permissions (participants only)", func(t *testing.T) {
+		// Create an active game
+		activeGame := testDB.CreateTestGameWithState(t, int32(gmUser.ID), "Active Game", core.GameStateInProgress)
+
+		// Add player as participant
+		testDB.AddTestGameParticipant(t, activeGame.ID, int32(playerUser.ID), "player")
+
+		// Add audience member
+		testDB.AddTestGameParticipant(t, activeGame.ID, int32(audienceUser.ID), "audience")
+
+		// GM should be able to view
+		canView, err := gameService.CanUserViewGame(ctx, activeGame.ID, int32(gmUser.ID))
+		core.AssertNoError(t, err, "Failed to check GM view access")
+		core.AssertTrue(t, canView, "GM should be able to view active game")
+
+		// Player participant should be able to view
+		canView, err = gameService.CanUserViewGame(ctx, activeGame.ID, int32(playerUser.ID))
+		core.AssertNoError(t, err, "Failed to check player view access")
+		core.AssertTrue(t, canView, "Player should be able to view active game")
+
+		// Audience member should be able to view
+		canView, err = gameService.CanUserViewGame(ctx, activeGame.ID, int32(audienceUser.ID))
+		core.AssertNoError(t, err, "Failed to check audience view access")
+		core.AssertTrue(t, canView, "Audience member should be able to view active game")
+
+		// Random user should NOT be able to view
+		canView, err = gameService.CanUserViewGame(ctx, activeGame.ID, int32(randomUser.ID))
+		core.AssertNoError(t, err, "Failed to check random user view access")
+		core.AssertEqual(t, false, canView, "Random user should NOT be able to view active game")
+	})
+
+	t.Run("recruitment game follows normal permissions", func(t *testing.T) {
+		// Create a recruiting game
+		recruitingGame := testDB.CreateTestGameWithState(t, int32(gmUser.ID), "Recruiting Game", core.GameStateRecruitment)
+
+		// GM should be able to view
+		canView, err := gameService.CanUserViewGame(ctx, recruitingGame.ID, int32(gmUser.ID))
+		core.AssertNoError(t, err, "Failed to check GM view access")
+		core.AssertTrue(t, canView, "GM should be able to view recruiting game")
+
+		// Random user should NOT be able to view (not public archive yet)
+		canView, err = gameService.CanUserViewGame(ctx, recruitingGame.ID, int32(randomUser.ID))
+		core.AssertNoError(t, err, "Failed to check random user view access")
+		core.AssertEqual(t, false, canView, "Random user should NOT be able to view recruiting game")
+	})
+}

@@ -15,6 +15,7 @@ import { TabNavigation } from '../components/TabNavigation';
 import { GameTabContent } from '../components/GameTabContent';
 import { ApplyToGameModal } from '../components/ApplyToGameModal';
 import { EditGameModal } from '../components/EditGameModal';
+import { CompleteGameConfirmationDialog } from '../components/CompleteGameConfirmationDialog';
 
 interface GameDetailsPageProps {
   gameId: number;
@@ -69,6 +70,9 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     handleStateChange,
     handleLeaveGame,
     getStateActions,
+    showCompleteDialog,
+    setShowCompleteDialog,
+    handleConfirmComplete,
   } = useGameStateManagement({
     gameId,
     refetchGameData,
@@ -113,9 +117,30 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
 
   const stateActions = isGM ? getStateActions(game.state) : [];
 
+  // Check if user is viewing as public (completed game, not a participant)
+  const isPublicViewer = game?.state === 'completed' && userRole === 'none';
+
   return (
     <div className="min-h-screen surface-page">
       <div className="max-w-6xl mx-auto py-8 px-4">
+        {/* Public Archive Notice */}
+        {isPublicViewer && (
+          <div className="bg-interactive-primary/10 border border-interactive-primary rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-interactive-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <div>
+                <p className="font-semibold text-content-primary">Public Archive</p>
+                <p className="text-sm text-content-secondary">
+                  This completed game is publicly viewable as a read-only archive. You can browse the game's history, but cannot create new content.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="surface-base rounded-lg shadow-md p-8 mb-6">
           <div className="flex justify-between items-start mb-4">
@@ -199,6 +224,16 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           isOpen={showEditModal}
           onClose={() => setShowEditModal(false)}
           onGameUpdated={refetchGameData}
+        />
+      )}
+
+      {/* Complete Game Confirmation Dialog */}
+      {game && (
+        <CompleteGameConfirmationDialog
+          isOpen={showCompleteDialog}
+          onClose={() => setShowCompleteDialog(false)}
+          onConfirm={handleConfirmComplete}
+          gameTitle={game.title}
         />
       )}
     </div>
