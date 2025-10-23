@@ -1,4 +1,5 @@
 import type { Game, GameApplication, GameState } from '../types/games';
+import type { UserGameRole } from '../contexts/GameContext';
 import { Button } from './ui';
 
 interface StateAction {
@@ -12,6 +13,7 @@ interface GameActionsProps {
   isGM: boolean;
   isCheckingAuth: boolean;
   isParticipant: boolean;
+  userRole: UserGameRole;
   userApplication: GameApplication | null;
   actionLoading: boolean;
   stateActions: StateAction[];
@@ -20,6 +22,7 @@ interface GameActionsProps {
   onApplyToGame: () => void;
   onWithdrawApplication: () => void;
   onLeaveGame: () => void;
+  onJoinAsAudience: () => void;
 }
 
 export function GameActions({
@@ -27,6 +30,7 @@ export function GameActions({
   isGM,
   isCheckingAuth,
   isParticipant,
+  userRole,
   userApplication,
   actionLoading,
   stateActions,
@@ -35,6 +39,7 @@ export function GameActions({
   onApplyToGame,
   onWithdrawApplication,
   onLeaveGame,
+  onJoinAsAudience,
 }: GameActionsProps) {
   return (
     <div className="flex gap-4">
@@ -77,6 +82,18 @@ export function GameActions({
           disabled={actionLoading}
         >
           Withdraw Application
+        </Button>
+      )}
+
+      {/* Join as Audience - Available during recruitment and in_progress for non-participants */}
+      {!isGM && !isCheckingAuth && userRole === 'none' && !userApplication &&
+       (game.state === 'recruitment' || game.state === 'in_progress') && (
+        <Button
+          variant="secondary"
+          onClick={onJoinAsAudience}
+          disabled={actionLoading}
+        >
+          Join as Audience
         </Button>
       )}
 
