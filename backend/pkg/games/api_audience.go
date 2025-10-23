@@ -293,17 +293,17 @@ func (h *Handler) ListAllPrivateConversations(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Check if user has GM or audience access
+	// Check if user can view game (includes public archive access for completed games)
 	gameService := &db.GameService{DB: h.App.Pool}
-	hasAccess, err := gameService.CheckAudienceAccess(r.Context(), int32(gameID), int32(user.ID))
+	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check audience access", "error", err, "game_id", gameID, "user_id", user.ID)
+		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", user.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	if !hasAccess {
-		render.Render(w, r, core.ErrForbidden("only GM and audience members can view all private messages"))
+	if !canView {
+		render.Render(w, r, core.ErrForbidden("you do not have permission to view this game's content"))
 		return
 	}
 
@@ -361,17 +361,17 @@ func (h *Handler) GetAudienceConversationMessages(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Check if user has GM or audience access
+	// Check if user can view game (includes public archive access for completed games)
 	gameService := &db.GameService{DB: h.App.Pool}
-	hasAccess, err := gameService.CheckAudienceAccess(r.Context(), int32(gameID), int32(user.ID))
+	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check audience access", "error", err, "game_id", gameID, "user_id", user.ID)
+		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", user.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	if !hasAccess {
-		render.Render(w, r, core.ErrForbidden("only GM and audience members can view all private messages"))
+	if !canView {
+		render.Render(w, r, core.ErrForbidden("you do not have permission to view this game's content"))
 		return
 	}
 
@@ -421,17 +421,17 @@ func (h *Handler) ListAllActionSubmissions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Check if user has GM or audience access
+	// Check if user can view game (includes public archive access for completed games)
 	gameService := &db.GameService{DB: h.App.Pool}
-	hasAccess, err := gameService.CheckAudienceAccess(r.Context(), int32(gameID), int32(user.ID))
+	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check audience access", "error", err, "game_id", gameID, "user_id", user.ID)
+		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", user.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	if !hasAccess {
-		render.Render(w, r, core.ErrForbidden("only GM and audience members can view all action submissions"))
+	if !canView {
+		render.Render(w, r, core.ErrForbidden("you do not have permission to view this game's content"))
 		return
 	}
 

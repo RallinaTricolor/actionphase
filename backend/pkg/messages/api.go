@@ -198,6 +198,11 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		h.App.Logger.Error("Failed to create post", "error", err, "game_id", gameID, "user_id", userID)
+		// Check if error is due to archived game
+		if core.IsArchivedGameError(err) {
+			render.Render(w, r, core.ErrGameArchived())
+			return
+		}
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -343,6 +348,11 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		h.App.Logger.Error("Failed to create comment", "error", err, "game_id", gameID, "post_id", postID, "user_id", userID)
+		// Check if error is due to archived game
+		if core.IsArchivedGameError(err) {
+			render.Render(w, r, core.ErrGameArchived())
+			return
+		}
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}

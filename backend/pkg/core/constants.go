@@ -152,6 +152,7 @@ const (
 	ErrCodeApplicationNotFound      = 1310
 	ErrCodeApplicationExists        = 1311
 	ErrCodeInvalidApplicationStatus = 1312
+	ErrCodeGameArchived             = 1313
 
 	// System/Infrastructure errors (1400-1499)
 	ErrCodeDatabaseError   = 1401

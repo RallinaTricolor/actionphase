@@ -93,6 +93,53 @@ func TestActionSubmissionService_SubmitAction(t *testing.T) {
 		_, err := actionService.SubmitAction(context.Background(), req)
 		require.Error(t, err) // Verify error occurs (permission denied)
 	})
+
+	t.Run("blocks action submission in completed game", func(t *testing.T) {
+		// Create a completed game with a phase
+		completedGame := testDB.CreateTestGameWithState(t, int32(user.ID), "Completed Game", core.GameStateCompleted)
+
+		// Create participant (using test helper to bypass validation)
+		testDB.AddTestGameParticipant(t, completedGame.ID, int32(user.ID), "player")
+
+		// Create a phase (this would have been created before completion)
+		// Need to manually create phase bypassing validation for test setup
+		testPhase := testDB.CreateTestPhase(t, completedGame.ID, "action", "Old Phase")
+
+		req := core.SubmitActionRequest{
+			GameID:  completedGame.ID,
+			PhaseID: testPhase.ID,
+			UserID:  int32(user.ID),
+			Content: "Should fail",
+			IsDraft: false,
+		}
+
+		_, err = actionService.SubmitAction(context.Background(), req)
+		require.Error(t, err, "Expected error when submitting action to completed game")
+		assert.Contains(t, err.Error(), "archived", "Error should mention game is archived")
+	})
+
+	t.Run("blocks action submission in cancelled game", func(t *testing.T) {
+		// Create a cancelled game with a phase
+		cancelledGame := testDB.CreateTestGameWithState(t, int32(user.ID), "Cancelled Game", core.GameStateCancelled)
+
+		// Create participant (using test helper to bypass validation)
+		testDB.AddTestGameParticipant(t, cancelledGame.ID, int32(user.ID), "player")
+
+		// Create a phase
+		testPhase := testDB.CreateTestPhase(t, cancelledGame.ID, "action", "Old Phase")
+
+		req := core.SubmitActionRequest{
+			GameID:  cancelledGame.ID,
+			PhaseID: testPhase.ID,
+			UserID:  int32(user.ID),
+			Content: "Should fail",
+			IsDraft: false,
+		}
+
+		_, err = actionService.SubmitAction(context.Background(), req)
+		require.Error(t, err, "Expected error when submitting action to cancelled game")
+		assert.Contains(t, err.Error(), "archived", "Error should mention game is archived")
+	})
 }
 
 func TestActionSubmissionService_GetActionSubmission(t *testing.T) {

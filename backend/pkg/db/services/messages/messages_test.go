@@ -81,6 +81,64 @@ func TestMessageService_CreatePost(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "character")
 	})
+
+	t.Run("blocks post creation in completed game", func(t *testing.T) {
+		completedGame := testDB.CreateTestGameWithState(t, int32(gm.ID), "Completed Game", core.GameStateCompleted)
+
+		// Add participant (using test helper to bypass validation)
+		testDB.AddTestGameParticipant(t, completedGame.ID, int32(player.ID), "player")
+
+		// Create character
+		completedChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        completedGame.ID,
+			UserID:        int32Ptr(int32(player.ID)),
+			Name:          "Character in Completed Game",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		req := core.CreatePostRequest{
+			GameID:      completedGame.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: completedChar.ID,
+			Content:     "Should fail",
+			Visibility:  string(models.MessageVisibilityGame),
+		}
+
+		_, err = service.CreatePost(context.Background(), req)
+
+		require.Error(t, err, "Expected error when creating post in completed game")
+		assert.Contains(t, err.Error(), "archived", "Error should mention game is archived")
+	})
+
+	t.Run("blocks post creation in cancelled game", func(t *testing.T) {
+		cancelledGame := testDB.CreateTestGameWithState(t, int32(gm.ID), "Cancelled Game", core.GameStateCancelled)
+
+		// Add participant (using test helper to bypass validation)
+		testDB.AddTestGameParticipant(t, cancelledGame.ID, int32(player.ID), "player")
+
+		// Create character
+		cancelledChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        cancelledGame.ID,
+			UserID:        int32Ptr(int32(player.ID)),
+			Name:          "Character in Cancelled Game",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		req := core.CreatePostRequest{
+			GameID:      cancelledGame.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: cancelledChar.ID,
+			Content:     "Should fail",
+			Visibility:  string(models.MessageVisibilityGame),
+		}
+
+		_, err = service.CreatePost(context.Background(), req)
+
+		require.Error(t, err, "Expected error when creating post in cancelled game")
+		assert.Contains(t, err.Error(), "archived", "Error should mention game is archived")
+	})
 }
 
 func TestMessageService_CreateComment(t *testing.T) {
@@ -164,6 +222,72 @@ func TestMessageService_CreateComment(t *testing.T) {
 
 		// Verify thread depth increased
 		assert.Greater(t, comment2.ThreadDepth, comment1.ThreadDepth)
+	})
+
+	t.Run("blocks comment creation in completed game", func(t *testing.T) {
+		completedGame := testDB.CreateTestGameWithState(t, int32(player.ID), "Completed Game", core.GameStateCompleted)
+
+		// Add participant (using test helper to bypass validation)
+		testDB.AddTestGameParticipant(t, completedGame.ID, int32(player.ID), "player")
+
+		// Create character
+		completedChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        completedGame.ID,
+			UserID:        int32Ptr(int32(player.ID)),
+			Name:          "Completed Character",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		// Create a parent post (bypass validation for test setup)
+		testPost := testDB.CreateTestPost(t, completedGame.ID, int32(player.ID), completedChar.ID, "Parent Post")
+
+		req := core.CreateCommentRequest{
+			GameID:      completedGame.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: completedChar.ID,
+			ParentID:    testPost.ID,
+			Content:     "Should fail",
+			Visibility:  string(models.MessageVisibilityGame),
+		}
+
+		_, err = service.CreateComment(context.Background(), req)
+
+		require.Error(t, err, "Expected error when creating comment in completed game")
+		assert.Contains(t, err.Error(), "archived", "Error should mention game is archived")
+	})
+
+	t.Run("blocks comment creation in cancelled game", func(t *testing.T) {
+		cancelledGame := testDB.CreateTestGameWithState(t, int32(player.ID), "Cancelled Game", core.GameStateCancelled)
+
+		// Add participant (using test helper to bypass validation)
+		testDB.AddTestGameParticipant(t, cancelledGame.ID, int32(player.ID), "player")
+
+		// Create character
+		cancelledChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        cancelledGame.ID,
+			UserID:        int32Ptr(int32(player.ID)),
+			Name:          "Cancelled Character",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		// Create a parent post (bypass validation for test setup)
+		testPost := testDB.CreateTestPost(t, cancelledGame.ID, int32(player.ID), cancelledChar.ID, "Parent Post")
+
+		req := core.CreateCommentRequest{
+			GameID:      cancelledGame.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: cancelledChar.ID,
+			ParentID:    testPost.ID,
+			Content:     "Should fail",
+			Visibility:  string(models.MessageVisibilityGame),
+		}
+
+		_, err = service.CreateComment(context.Background(), req)
+
+		require.Error(t, err, "Expected error when creating comment in cancelled game")
+		assert.Contains(t, err.Error(), "archived", "Error should mention game is archived")
 	})
 }
 

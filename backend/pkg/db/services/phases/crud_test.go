@@ -76,6 +76,34 @@ func TestPhaseService_CreatePhase(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid phase type")
 	})
+
+	t.Run("blocks phase creation in completed game", func(t *testing.T) {
+		game := factory.NewGame().WithGM(user.ID).WithState(core.GameStateCompleted).Create()
+
+		req := core.CreatePhaseRequest{
+			GameID:    game.ID,
+			PhaseType: "action",
+			Title:     "Should Fail",
+		}
+
+		_, err := phaseService.CreatePhase(context.Background(), req)
+		require.Error(t, err, "Expected error when creating phase in completed game")
+		assert.Contains(t, err.Error(), "archived", "Error should mention game is archived")
+	})
+
+	t.Run("blocks phase creation in cancelled game", func(t *testing.T) {
+		game := factory.NewGame().WithGM(user.ID).WithState(core.GameStateCancelled).Create()
+
+		req := core.CreatePhaseRequest{
+			GameID:    game.ID,
+			PhaseType: "action",
+			Title:     "Should Fail",
+		}
+
+		_, err := phaseService.CreatePhase(context.Background(), req)
+		require.Error(t, err, "Expected error when creating phase in cancelled game")
+		assert.Contains(t, err.Error(), "archived", "Error should mention game is archived")
+	})
 }
 
 func TestPhaseService_GetActivePhase(t *testing.T) {

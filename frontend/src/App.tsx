@@ -13,6 +13,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { AdminPage } from './pages/AdminPage';
 import ThemeTestPage from './pages/ThemeTestPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { PublicArchiveRoute } from './components/PublicArchiveRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AdminModeProvider } from './contexts/AdminModeContext';
 import { GameProvider } from './contexts/GameContext';
@@ -95,17 +96,17 @@ function AppRoutes() {
           <Route
             path="/games/:gameId/common-room/thread/:commentId"
             element={
-              <ProtectedRoute>
+              <PublicArchiveRoute>
                 <ThreadViewPage />
-              </ProtectedRoute>
+              </PublicArchiveRoute>
             }
           />
           <Route
             path="/games/:gameId"
             element={
-              <ProtectedRoute>
+              <PublicArchiveRoute>
                 <GameDetailsPageWrapper />
-              </ProtectedRoute>
+              </PublicArchiveRoute>
             }
           />
           <Route path="/" element={<HomePage />} />

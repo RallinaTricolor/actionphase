@@ -38,7 +38,7 @@ export function GameActions({
 }: GameActionsProps) {
   return (
     <div className="flex gap-4">
-      {isGM && (
+      {isGM && game.state !== 'completed' && game.state !== 'cancelled' && (
         <Button
           variant="outline"
           onClick={onEditGame}

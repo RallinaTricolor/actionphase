@@ -18,14 +18,34 @@ export function useGameStateManagement({
   refetchGameData,
 }: UseGameStateManagementOptions) {
   const [actionLoading, setActionLoading] = useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
 
   const handleStateChange = async (newState: GameState) => {
+    // Show confirmation dialog for completing game
+    if (newState === 'completed') {
+      setShowCompleteDialog(true);
+      return;
+    }
+
     try {
       setActionLoading(true);
       await apiClient.games.updateGameState(gameId, { state: newState });
       await refetchGameData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update game state');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmComplete = async () => {
+    try {
+      setActionLoading(true);
+      await apiClient.games.updateGameState(gameId, { state: 'completed' });
+      await refetchGameData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to complete game');
+      throw err; // Re-throw so dialog can handle it
     } finally {
       setActionLoading(false);
     }
@@ -76,5 +96,8 @@ export function useGameStateManagement({
     handleStateChange,
     handleLeaveGame,
     getStateActions,
+    showCompleteDialog,
+    setShowCompleteDialog,
+    handleConfirmComplete,
   };
 }

@@ -34,14 +34,19 @@ export function DashboardGameCard({ game }: DashboardGameCardProps) {
               <p className="text-sm text-content-secondary mt-1 line-clamp-2">{game.description}</p>
             )}
           </div>
-          {game.is_urgent && (
-            <div className="ml-4 flex-shrink-0">
+          <div className="ml-4 flex-shrink-0 flex gap-2">
+            {game.state === 'completed' && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-interactive-primary-subtle text-interactive-primary">
+                Archive
+              </span>
+            )}
+            {game.is_urgent && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-semantic-danger-subtle text-semantic-danger">
                 <AlertCircle className="w-3 h-3 mr-1" />
                 Urgent
               </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Metadata Row */}
