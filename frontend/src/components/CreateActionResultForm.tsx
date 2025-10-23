@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCreateActionResult } from '../hooks/useActionResults';
+import { useToast } from '../contexts/ToastContext';
 import { Button, Textarea, Checkbox, Alert } from './ui';
 
 interface CreateActionResultFormProps {
@@ -15,6 +16,7 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
   userName,
   onSuccess,
 }) => {
+  const { showWarning } = useToast();
   const [content, setContent] = useState('');
   const [isPublished, setIsPublished] = useState(false);
   const createResult = useCreateActionResult(gameId);
@@ -23,7 +25,7 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
     e.preventDefault();
 
     if (!content.trim()) {
-      alert('Please enter result content');
+      showWarning('Please enter result content');
       return;
     }
 

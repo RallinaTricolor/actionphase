@@ -1069,3 +1069,74 @@ func TestGameService_CanUserViewGame(t *testing.T) {
 		core.AssertEqual(t, false, canView, "Random user should NOT be able to view recruiting game")
 	})
 }
+
+// TestGameService_CancelledGameRejectsPendingApplications tests Bug #8:
+// When a game is cancelled, all pending applications should be automatically rejected
+func TestGameService_CancelledGameRejectsPendingApplications(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool}
+	appService := &GameApplicationService{DB: testDB.Pool}
+
+	// Create test users who will apply to the game
+	applicant1 := testDB.CreateTestUser(t, "applicant1", "applicant1@example.com")
+	applicant2 := testDB.CreateTestUser(t, "applicant2", "applicant2@example.com")
+
+	// Create a game and set it to recruitment
+	req := core.CreateGameRequest{
+		Title:       "Bug #8 Test Game",
+		Description: "Testing cancelled game application handling",
+		GMUserID:    int32(fixtures.TestUser.ID),
+		IsPublic:    true,
+	}
+
+	game, err := gameService.CreateGame(context.Background(), req)
+	core.AssertNoError(t, err, "Failed to create game")
+
+	_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateRecruitment)
+	core.AssertNoError(t, err, "Failed to set game to recruitment")
+
+	// Submit applications from both users
+	_, err = appService.CreateGameApplication(context.Background(), core.CreateGameApplicationRequest{
+		GameID:  game.ID,
+		UserID:  int32(applicant1.ID),
+		Role:    "player",
+		Message: "I want to join!",
+	})
+	core.AssertNoError(t, err, "Failed to submit application 1")
+
+	_, err = appService.CreateGameApplication(context.Background(), core.CreateGameApplicationRequest{
+		GameID:  game.ID,
+		UserID:  int32(applicant2.ID),
+		Role:    "audience",
+		Message: "I'll watch",
+	})
+	core.AssertNoError(t, err, "Failed to submit application 2")
+
+	// Verify both applications are pending
+	app1, err := appService.GetGameApplicationByUserAndGame(context.Background(), game.ID, int32(applicant1.ID))
+	core.AssertNoError(t, err, "Failed to get application 1")
+	core.AssertEqual(t, "pending", app1.Status.String, "Application 1 should be pending")
+
+	app2, err := appService.GetGameApplicationByUserAndGame(context.Background(), game.ID, int32(applicant2.ID))
+	core.AssertNoError(t, err, "Failed to get application 2")
+	core.AssertEqual(t, "pending", app2.Status.String, "Application 2 should be pending")
+
+	// Cancel the game
+	_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateCancelled)
+	core.AssertNoError(t, err, "Failed to cancel game")
+
+	// Verify both applications are now rejected
+	app1After, err := appService.GetGameApplicationByUserAndGame(context.Background(), game.ID, int32(applicant1.ID))
+	core.AssertNoError(t, err, "Failed to get application 1 after cancellation")
+	core.AssertEqual(t, "rejected", app1After.Status.String, "Application 1 should be rejected after game cancellation")
+
+	app2After, err := appService.GetGameApplicationByUserAndGame(context.Background(), game.ID, int32(applicant2.ID))
+	core.AssertNoError(t, err, "Failed to get application 2 after cancellation")
+	core.AssertEqual(t, "rejected", app2After.Status.String, "Application 2 should be rejected after game cancellation")
+
+	t.Log("Successfully verified that cancelled game automatically rejects all pending applications")
+}

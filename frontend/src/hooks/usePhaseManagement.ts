@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
+import { useToast } from '../contexts/ToastContext';
 import type { CreatePhaseRequest, UpdatePhaseRequest, UpdateDeadlineRequest } from '../types/phases';
 
 /**
@@ -7,6 +8,7 @@ import type { CreatePhaseRequest, UpdatePhaseRequest, UpdateDeadlineRequest } fr
  * Provides queries and mutations for phase CRUD operations
  */
 export function usePhaseManagement(gameId: number) {
+  const { showError } = useToast();
   const queryClient = useQueryClient();
 
   // Query for all game phases
@@ -51,7 +53,7 @@ export function usePhaseManagement(gameId: number) {
     },
     onError: (error) => {
       console.error('Failed to activate phase:', error);
-      alert(error instanceof Error ? error.message : 'Failed to activate phase');
+      showError(error instanceof Error ? error.message : 'Failed to activate phase');
     }
   });
 

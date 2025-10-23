@@ -3,6 +3,7 @@ import { render, RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, MemoryRouterProps } from 'react-router-dom'
 import { AuthProvider } from '../contexts/AuthContext'
+import { AdminModeProvider } from '../contexts/AdminModeContext'
 
 interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
   /**
@@ -78,7 +79,11 @@ export function renderWithProviders(
     return (
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={initialEntries}>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <AdminModeProvider>
+              {children}
+            </AdminModeProvider>
+          </AuthProvider>
         </MemoryRouter>
       </QueryClientProvider>
     )

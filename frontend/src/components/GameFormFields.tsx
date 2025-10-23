@@ -9,6 +9,7 @@ export interface GameFormData {
   start_date: string;
   end_date: string;
   is_anonymous?: boolean;
+  auto_accept_audience?: boolean;
 }
 
 interface GameFormFieldsProps {
@@ -101,6 +102,14 @@ export const GameFormFields = ({ formData, onChange }: GameFormFieldsProps) => {
         label="Anonymous Mode (hides character ownership and NPC status from players)"
         checked={formData.is_anonymous || false}
         onChange={(e) => onChange('is_anonymous', e.target.checked)}
+      />
+
+      {/* Auto-Accept Audience */}
+      <Checkbox
+        id="auto_accept_audience"
+        label="Auto-Accept Audience Members (audience applications are automatically approved)"
+        checked={formData.auto_accept_audience || false}
+        onChange={(e) => onChange('auto_accept_audience', e.target.checked)}
       />
     </>
   );

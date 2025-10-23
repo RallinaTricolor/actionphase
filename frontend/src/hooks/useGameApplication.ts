@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import type { GameApplication } from '../types/games';
+import { useToast } from '../contexts/ToastContext';
 
 interface UseGameApplicationOptions {
   gameId: number;
@@ -17,6 +18,7 @@ export function useGameApplication({
   currentUserId,
   refetchGameData,
 }: UseGameApplicationOptions) {
+  const { showError } = useToast();
   const [userApplication, setUserApplication] = useState<GameApplication | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -52,7 +54,7 @@ export function useGameApplication({
       await apiClient.games.withdrawGameApplication(gameId);
       await refetchGameData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to withdraw application');
+      showError(err instanceof Error ? err.message : 'Failed to withdraw application');
     } finally {
       setActionLoading(false);
     }

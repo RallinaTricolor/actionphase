@@ -101,6 +101,44 @@ export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: Phase
             const phaseLabel = getActionPhaseLabel(phase);
             const phaseColorClass = getActionPhaseColor(phase);
             const isActive = phase.id === currentPhaseId;
+            const isCommonRoom = phase.phase_type === 'common_room';
+
+            // Action phases have no content to display, so they should not be clickable
+            if (!isCommonRoom) {
+              return (
+                <div
+                  key={phase.id}
+                  className={`w-full border rounded-lg p-4 opacity-60 cursor-not-allowed ${
+                    isActive ? 'border-interactive-primary bg-interactive-primary-subtle' : 'border-theme-subtle'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <span className={`px-2 py-1 text-xs rounded-full font-medium border ${phaseColorClass}`}>
+                        Phase {phase.phase_number}
+                      </span>
+                      <div>
+                        <h4 className="font-medium text-content-primary">{phase.title || phaseLabel}</h4>
+                        {phase.description && (
+                          <p className="text-sm text-content-secondary mt-1">{phase.description}</p>
+                        )}
+                        <p className="text-xs text-content-tertiary mt-1 italic">
+                          (No viewable content for action phases)
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      {isActive && (
+                        <span className="px-2 py-1 text-xs bg-interactive-primary-subtle text-interactive-primary rounded-full font-medium">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
 
             return (
               <Button

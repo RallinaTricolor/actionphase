@@ -113,6 +113,7 @@ describe('EditGameModal', () => {
       expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/end date/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/anonymous mode/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/auto.*accept.*audience/i)).toBeInTheDocument();
     });
 
     it('marks required fields with asterisks', () => {
@@ -207,6 +208,44 @@ describe('EditGameModal', () => {
 
       const anonymousCheckbox = screen.getByLabelText(/anonymous mode/i);
       expect(anonymousCheckbox).not.toBeChecked();
+    });
+
+    it('sets auto-accept audience checkbox correctly', () => {
+      const gameWithAutoAccept: GameWithDetails = {
+        ...mockGame,
+        auto_accept_audience: true,
+      };
+
+      renderWithProviders(
+        <EditGameModal
+          game={gameWithAutoAccept}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const autoAcceptCheckbox = screen.getByLabelText(/auto.*accept.*audience/i);
+      expect(autoAcceptCheckbox).toBeChecked();
+    });
+
+    it('unchecks auto-accept audience when game has it disabled', () => {
+      const gameWithoutAutoAccept: GameWithDetails = {
+        ...mockGame,
+        auto_accept_audience: false,
+      };
+
+      renderWithProviders(
+        <EditGameModal
+          game={gameWithoutAutoAccept}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const autoAcceptCheckbox = screen.getByLabelText(/auto.*accept.*audience/i);
+      expect(autoAcceptCheckbox).not.toBeChecked();
     });
 
     it('resets form when modal is reopened', () => {
@@ -345,6 +384,27 @@ describe('EditGameModal', () => {
       expect(anonymousCheckbox).not.toBeChecked();
     });
 
+    it('allows user to toggle auto-accept audience checkbox', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <EditGameModal
+          game={mockGame}
+          isOpen={true}
+          onClose={mockOnClose}
+          onGameUpdated={mockOnGameUpdated}
+        />
+      );
+
+      const autoAcceptCheckbox = screen.getByLabelText(/auto.*accept.*audience/i);
+      expect(autoAcceptCheckbox).not.toBeChecked();
+
+      await user.click(autoAcceptCheckbox);
+      expect(autoAcceptCheckbox).toBeChecked();
+
+      await user.click(autoAcceptCheckbox);
+      expect(autoAcceptCheckbox).not.toBeChecked();
+    });
+
     it('allows clearing max players field', async () => {
       const user = userEvent.setup();
       renderWithProviders(
@@ -471,6 +531,9 @@ describe('EditGameModal', () => {
       const anonymousCheckbox = screen.getByLabelText(/anonymous mode/i);
       await user.click(anonymousCheckbox);
 
+      const autoAcceptCheckbox = screen.getByLabelText(/auto.*accept.*audience/i);
+      await user.click(autoAcceptCheckbox);
+
       const saveButton = screen.getByRole('button', { name: /save changes/i });
       await user.click(saveButton);
 
@@ -485,6 +548,7 @@ describe('EditGameModal', () => {
           end_date: expect.any(String),
           is_public: true,
           is_anonymous: true,
+          auto_accept_audience: true,
         });
       });
     });

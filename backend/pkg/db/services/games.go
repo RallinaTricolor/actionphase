@@ -110,8 +110,22 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 		ID:    gameID,
 		State: pgtype.Text{String: newState, Valid: true},
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	return &game, err
+	// When a game is cancelled, automatically reject all pending applications
+	if newState == core.GameStateCancelled {
+		appService := &GameApplicationService{DB: gs.DB}
+		// Use the GM's ID as the reviewer (since they're cancelling the game)
+		if err := appService.BulkRejectApplications(ctx, gameID, game.GmUserID); err != nil {
+			// Log the error but don't fail the state change
+			// The game is already cancelled at this point
+			fmt.Printf("Warning: failed to reject pending applications for cancelled game %d: %v\n", gameID, err)
+		}
+	}
+
+	return &game, nil
 }
 
 func (gs *GameService) LeaveGame(ctx context.Context, gameID, userID int32) error {

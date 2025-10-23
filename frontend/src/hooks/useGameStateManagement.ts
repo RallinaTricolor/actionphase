@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { apiClient } from '../lib/api';
 import type { GameState } from '../types/games';
+import { useToast } from '../contexts/ToastContext';
 
 interface UseGameStateManagementOptions {
   gameId: number;
@@ -17,8 +18,10 @@ export function useGameStateManagement({
   gameId,
   refetchGameData,
 }: UseGameStateManagementOptions) {
+  const { showError } = useToast();
   const [actionLoading, setActionLoading] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [showPauseDialog, setShowPauseDialog] = useState(false);
 
   const handleStateChange = async (newState: GameState) => {
     // Show confirmation dialog for completing game
@@ -27,12 +30,18 @@ export function useGameStateManagement({
       return;
     }
 
+    // Show confirmation dialog for pausing game
+    if (newState === 'paused') {
+      setShowPauseDialog(true);
+      return;
+    }
+
     try {
       setActionLoading(true);
       await apiClient.games.updateGameState(gameId, { state: newState });
       await refetchGameData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update game state');
+      showError(err instanceof Error ? err.message : 'Failed to update game state');
     } finally {
       setActionLoading(false);
     }
@@ -44,7 +53,20 @@ export function useGameStateManagement({
       await apiClient.games.updateGameState(gameId, { state: 'completed' });
       await refetchGameData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to complete game');
+      showError(err instanceof Error ? err.message : 'Failed to complete game');
+      throw err; // Re-throw so dialog can handle it
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmPause = async () => {
+    try {
+      setActionLoading(true);
+      await apiClient.games.updateGameState(gameId, { state: 'paused' });
+      await refetchGameData();
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to pause game');
       throw err; // Re-throw so dialog can handle it
     } finally {
       setActionLoading(false);
@@ -59,7 +81,7 @@ export function useGameStateManagement({
       await apiClient.games.leaveGame(gameId);
       await refetchGameData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to leave game');
+      showError(err instanceof Error ? err.message : 'Failed to leave game');
     } finally {
       setActionLoading(false);
     }
@@ -99,5 +121,8 @@ export function useGameStateManagement({
     showCompleteDialog,
     setShowCompleteDialog,
     handleConfirmComplete,
+    showPauseDialog,
+    setShowPauseDialog,
+    handleConfirmPause,
   };
 }

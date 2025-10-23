@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
+import { useToast } from '../contexts/ToastContext';
 import type { GameApplication, GameState } from '../types/games';
 import { GameApplicationCard } from './GameApplicationCard';
 import { Card, Spinner, Alert, Button, Badge } from './ui';
@@ -11,6 +12,7 @@ interface GameApplicationsListProps {
 }
 
 export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameApplicationsListProps) => {
+  const { showError } = useToast();
   const [applications, setApplications] = useState<GameApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameAp
       await apiClient.games.reviewGameApplication(gameId, applicationId, { action: 'approve' });
       await fetchApplications(); // Refresh the list
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to approve application');
+      showError(error instanceof Error ? error.message : 'Failed to approve application');
     }
   };
 
@@ -48,7 +50,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameAp
       await apiClient.games.reviewGameApplication(gameId, applicationId, { action: 'reject' });
       await fetchApplications(); // Refresh the list
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to reject application');
+      showError(error instanceof Error ? error.message : 'Failed to reject application');
     }
   };
 

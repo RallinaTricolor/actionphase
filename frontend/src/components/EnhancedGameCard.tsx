@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
+import { Link } from 'react-router-dom';
 import type { EnrichedGameListItem } from '../types/games';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS, DEADLINE_URGENCY_COLORS, USER_RELATIONSHIP_LABELS } from '../types/games';
 import { Button } from './ui';
@@ -32,10 +33,9 @@ export function EnhancedGameCard({
   };
 
   return (
-    <div
-      className={`surface-base rounded-lg shadow-md border-2 transition-all hover:shadow-lg ${
-        onClick ? 'cursor-pointer' : ''
-      } ${
+    <Link
+      to={`/games/${game.id}`}
+      className={`surface-base rounded-lg shadow-md border-2 transition-all hover:shadow-lg block ${
         isUserGame
           ? 'border-interactive-primary bg-interactive-primary-subtle'
           : hasApplied
@@ -173,6 +173,6 @@ export function EnhancedGameCard({
           </Button>
         </div>
       )}
-    </div>
+    </Link>
   );
 }

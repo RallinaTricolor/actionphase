@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
+import { useToast } from '../contexts/ToastContext';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { MarkdownPreview } from './MarkdownPreview';
@@ -35,6 +36,7 @@ export function ThreadedComment({
   unreadCommentIDs = [],
   onOpenThread
 }: ThreadedCommentProps) {
+  const { showSuccess, showError } = useToast();
   const [replies, setReplies] = useState<Message[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [showReplies, setShowReplies] = useState(true); // Start expanded
@@ -91,8 +93,8 @@ export function ThreadedComment({
       setTimeout(() => setLinkCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy link:', err);
-      // Fallback: show alert if clipboard API fails
-      alert(`Link: ${url}`);
+      // Fallback: show toast with link if clipboard API fails
+      showError(`Failed to copy. Link: ${url}`);
     }
   };
 
@@ -122,7 +124,7 @@ export function ThreadedComment({
       setIsEditing(false);
     } catch (err) {
       console.error('Failed to update comment:', err);
-      alert('Failed to update comment. Please try again.');
+      showError('Failed to update comment. Please try again.');
     }
   };
 
@@ -140,7 +142,7 @@ export function ThreadedComment({
       });
     } catch (err) {
       console.error('Failed to delete comment:', err);
-      alert('Failed to delete comment. Please try again.');
+      showError('Failed to delete comment. Please try again.');
     } finally {
       setIsDeleting(false);
     }
@@ -355,9 +357,13 @@ export function ThreadedComment({
 
           {comment.parent_id && (
             <a
-              href={`/games/${gameId}?tab=common-room&comment=${comment.parent_id}`}
+              href={
+                comment.thread_depth === 1
+                  ? `/games/${gameId}?tab=common-room&postId=${comment.parent_id}`
+                  : `/games/${gameId}?tab=common-room&comment=${comment.parent_id}`
+              }
               className="hover:text-interactive-primary-hover font-medium transition-colors flex items-center gap-1"
-              title="Go to parent comment"
+              title={comment.thread_depth === 1 ? "Go to parent post" : "Go to parent comment"}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

@@ -1,7 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import { EnhancedGameCard } from './EnhancedGameCard';
 import type { EnrichedGameListItem } from '../types/games';
+
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <BrowserRouter>{children}</BrowserRouter>
+);
 
 describe('EnhancedGameCard', () => {
   const mockGame: EnrichedGameListItem = {
@@ -25,39 +30,39 @@ describe('EnhancedGameCard', () => {
 
   describe('Basic Rendering', () => {
     it('should render game title and description', () => {
-      render(<EnhancedGameCard game={mockGame} />);
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       expect(screen.getByText('Test Game')).toBeInTheDocument();
       expect(screen.getByText('A test game description')).toBeInTheDocument();
     });
 
     it('should render GM username', () => {
-      render(<EnhancedGameCard game={mockGame} />);
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       expect(screen.getByText(/test_gm/)).toBeInTheDocument();
     });
 
     it('should render player count', () => {
-      render(<EnhancedGameCard game={mockGame} />);
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       expect(screen.getByText(/3 \/ 6/)).toBeInTheDocument();
     });
 
     it('should render state badge', () => {
-      render(<EnhancedGameCard game={mockGame} />);
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       expect(screen.getByText('Recruiting Players')).toBeInTheDocument();
     });
 
     it('should render genre badge when genre exists', () => {
-      render(<EnhancedGameCard game={mockGame} />);
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       expect(screen.getByText('Fantasy')).toBeInTheDocument();
     });
 
     it('should not render genre badge when genre is null', () => {
       const gameWithoutGenre = { ...mockGame, genre: null };
-      render(<EnhancedGameCard game={gameWithoutGenre} />);
+      render(<EnhancedGameCard game={gameWithoutGenre} />, { wrapper });
 
       // Should still render title but no genre badge
       expect(screen.getByText('Test Game')).toBeInTheDocument();
@@ -68,27 +73,27 @@ describe('EnhancedGameCard', () => {
   describe('User Relationship Badges', () => {
     it('should show "You are GM" badge for GM', () => {
       const gmGame = { ...mockGame, user_relationship: 'gm' as const };
-      render(<EnhancedGameCard game={gmGame} />);
+      render(<EnhancedGameCard game={gmGame} />, { wrapper });
 
       expect(screen.getByText('You are GM')).toBeInTheDocument();
     });
 
     it('should show "You are playing" badge for participant', () => {
       const participantGame = { ...mockGame, user_relationship: 'participant' as const };
-      render(<EnhancedGameCard game={participantGame} />);
+      render(<EnhancedGameCard game={participantGame} />, { wrapper });
 
       expect(screen.getByText('You are playing')).toBeInTheDocument();
     });
 
     it('should show "Application pending" badge for applied', () => {
       const appliedGame = { ...mockGame, user_relationship: 'applied' as const };
-      render(<EnhancedGameCard game={appliedGame} />);
+      render(<EnhancedGameCard game={appliedGame} />, { wrapper });
 
       expect(screen.getByText('Application pending')).toBeInTheDocument();
     });
 
     it('should not show badge for none relationship', () => {
-      render(<EnhancedGameCard game={mockGame} />);
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       expect(screen.queryByText('You are GM')).not.toBeInTheDocument();
       expect(screen.queryByText('You are playing')).not.toBeInTheDocument();
@@ -103,7 +108,7 @@ describe('EnhancedGameCard', () => {
         deadline_urgency: 'critical' as const,
         recruitment_deadline: '2025-10-20T23:59:59Z',
       };
-      render(<EnhancedGameCard game={urgentGame} />);
+      render(<EnhancedGameCard game={urgentGame} />, { wrapper });
 
       expect(screen.getByText(/⚠️ Urgent/)).toBeInTheDocument();
     });
@@ -114,7 +119,7 @@ describe('EnhancedGameCard', () => {
         deadline_urgency: 'warning' as const,
         recruitment_deadline: '2025-10-22T23:59:59Z',
       };
-      render(<EnhancedGameCard game={warningGame} />);
+      render(<EnhancedGameCard game={warningGame} />, { wrapper });
 
       expect(screen.getByText(/⏰ Soon/)).toBeInTheDocument();
     });
@@ -125,14 +130,14 @@ describe('EnhancedGameCard', () => {
         deadline_urgency: 'normal' as const,
         recruitment_deadline: '2025-11-01T23:59:59Z',
       };
-      render(<EnhancedGameCard game={normalGame} />);
+      render(<EnhancedGameCard game={normalGame} />, { wrapper });
 
       expect(screen.queryByText(/⚠️ Urgent/)).not.toBeInTheDocument();
       expect(screen.queryByText(/⏰ Soon/)).not.toBeInTheDocument();
     });
 
     it('should not show urgency badge when no deadline', () => {
-      render(<EnhancedGameCard game={mockGame} />);
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       expect(screen.queryByText(/⚠️ Urgent/)).not.toBeInTheDocument();
       expect(screen.queryByText(/⏰ Soon/)).not.toBeInTheDocument();
@@ -142,13 +147,13 @@ describe('EnhancedGameCard', () => {
   describe('Recent Activity Indicator', () => {
     it('should show recent activity badge when has_recent_activity is true', () => {
       const activeGame = { ...mockGame, has_recent_activity: true };
-      render(<EnhancedGameCard game={activeGame} />);
+      render(<EnhancedGameCard game={activeGame} />, { wrapper });
 
       expect(screen.getByText('New Activity')).toBeInTheDocument();
     });
 
     it('should not show recent activity badge when has_recent_activity is false', () => {
-      render(<EnhancedGameCard game={mockGame} />);
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       expect(screen.queryByText('New Activity')).not.toBeInTheDocument();
     });
@@ -157,54 +162,55 @@ describe('EnhancedGameCard', () => {
   describe('Visual Styling', () => {
     it('should have blue border for participant games', () => {
       const participantGame = { ...mockGame, user_relationship: 'participant' as const };
-      const { container } = render(<EnhancedGameCard game={participantGame} />);
+      const { container } = render(<EnhancedGameCard game={participantGame} />, { wrapper });
 
       const card = container.firstChild as HTMLElement;
-      expect(card.className).toContain('border-blue-400');
-      expect(card.className).toContain('bg-blue-50/30');
+      expect(card.className).toContain('border-interactive-primary');
+      expect(card.className).toContain('bg-interactive-primary-subtle');
     });
 
     it('should have yellow border for applied games', () => {
       const appliedGame = { ...mockGame, user_relationship: 'applied' as const };
-      const { container } = render(<EnhancedGameCard game={appliedGame} />);
+      const { container } = render(<EnhancedGameCard game={appliedGame} />, { wrapper });
 
       const card = container.firstChild as HTMLElement;
-      expect(card.className).toContain('border-yellow-400');
-      expect(card.className).toContain('bg-yellow-50/30');
+      expect(card.className).toContain('border-semantic-warning');
+      expect(card.className).toContain('bg-semantic-warning-subtle');
     });
 
     it('should have gray border for non-user games', () => {
-      const { container } = render(<EnhancedGameCard game={mockGame} />);
+      const { container } = render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       const card = container.firstChild as HTMLElement;
-      expect(card.className).toContain('border-gray-200');
+      expect(card.className).toContain('border-theme-default');
     });
 
     it('should be clickable when onClick is provided', () => {
-      const { container } = render(<EnhancedGameCard game={mockGame} onClick={vi.fn()} />);
+      const { container } = render(<EnhancedGameCard game={mockGame} onClick={vi.fn()} />, { wrapper });
 
       const card = container.firstChild as HTMLElement;
-      expect(card.className).toContain('cursor-pointer');
+      // Link elements are always clickable, no need for cursor-pointer class
+      expect(card.tagName).toBe('A');
     });
   });
 
   describe('Open Spots Indicator', () => {
     it('should show "✓ Open" for recruiting games with available spots', () => {
-      render(<EnhancedGameCard game={mockGame} />);
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       expect(screen.getByText('✓ Open')).toBeInTheDocument();
     });
 
     it('should not show "✓ Open" for full games', () => {
       const fullGame = { ...mockGame, current_players: 6, max_players: 6 };
-      render(<EnhancedGameCard game={fullGame} />);
+      render(<EnhancedGameCard game={fullGame} />, { wrapper });
 
       expect(screen.queryByText('✓ Open')).not.toBeInTheDocument();
     });
 
     it('should not show "✓ Open" for non-recruiting games', () => {
       const inProgressGame = { ...mockGame, state: 'in_progress' as const };
-      render(<EnhancedGameCard game={inProgressGame} />);
+      render(<EnhancedGameCard game={inProgressGame} />, { wrapper });
 
       expect(screen.queryByText('✓ Open')).not.toBeInTheDocument();
     });
@@ -216,7 +222,7 @@ describe('EnhancedGameCard', () => {
         ...mockGame,
         recruitment_deadline: '2025-10-25T23:59:59Z',
       };
-      render(<EnhancedGameCard game={gameWithDeadline} />);
+      render(<EnhancedGameCard game={gameWithDeadline} />, { wrapper });
 
       expect(screen.getByText('Application Deadline:')).toBeInTheDocument();
     });
@@ -228,13 +234,13 @@ describe('EnhancedGameCard', () => {
         current_phase_type: 'action' as const,
         current_phase_deadline: '2025-10-25T23:59:59Z',
       };
-      render(<EnhancedGameCard game={gameWithPhaseDeadline} />);
+      render(<EnhancedGameCard game={gameWithPhaseDeadline} />, { wrapper });
 
       expect(screen.getByText('Phase Deadline:')).toBeInTheDocument();
     });
 
     it('should not show deadline when none exists', () => {
-      render(<EnhancedGameCard game={mockGame} />);
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       expect(screen.queryByText(/Deadline:/)).not.toBeInTheDocument();
     });
@@ -247,7 +253,8 @@ describe('EnhancedGameCard', () => {
           game={mockGame}
           onApplyClick={vi.fn()}
           showApplyButton={true}
-        />
+        />,
+        { wrapper }
       );
 
       expect(screen.getByText('Apply to Join')).toBeInTheDocument();
@@ -259,7 +266,8 @@ describe('EnhancedGameCard', () => {
           game={mockGame}
           onApplyClick={vi.fn()}
           showApplyButton={false}
-        />
+        />,
+        { wrapper }
       );
 
       expect(screen.queryByText('Apply to Join')).not.toBeInTheDocument();
@@ -272,7 +280,8 @@ describe('EnhancedGameCard', () => {
           game={userGame}
           onApplyClick={vi.fn()}
           showApplyButton={true}
-        />
+        />,
+        { wrapper }
       );
 
       expect(screen.queryByText('Apply to Join')).not.toBeInTheDocument();
@@ -285,7 +294,8 @@ describe('EnhancedGameCard', () => {
           game={appliedGame}
           onApplyClick={vi.fn()}
           showApplyButton={true}
-        />
+        />,
+        { wrapper }
       );
 
       expect(screen.queryByText('Apply to Join')).not.toBeInTheDocument();
@@ -298,7 +308,8 @@ describe('EnhancedGameCard', () => {
           game={mockGame}
           onApplyClick={handleApply}
           showApplyButton={true}
-        />
+        />,
+        { wrapper }
       );
 
       fireEvent.click(screen.getByText('Apply to Join'));
@@ -306,17 +317,21 @@ describe('EnhancedGameCard', () => {
       expect(handleApply).toHaveBeenCalledTimes(1);
     });
 
-    it('should show "Applying..." when isJoining is true', () => {
+    it('should show loading spinner when isJoining is true', () => {
       render(
         <EnhancedGameCard
           game={mockGame}
           onApplyClick={vi.fn()}
           showApplyButton={true}
           isJoining={true}
-        />
+        />,
+        { wrapper }
       );
 
-      expect(screen.getByText('Applying...')).toBeInTheDocument();
+      // Button component with loading={true} shows spinner but keeps original text
+      expect(screen.getByText('Apply to Join')).toBeInTheDocument();
+      const button = screen.getByRole('button', { name: /apply to join/i });
+      expect(button.querySelector('svg')).toBeInTheDocument(); // Loading spinner
     });
 
     it('should disable Apply button when isJoining is true', () => {
@@ -326,10 +341,11 @@ describe('EnhancedGameCard', () => {
           onApplyClick={vi.fn()}
           showApplyButton={true}
           isJoining={true}
-        />
+        />,
+        { wrapper }
       );
 
-      const button = screen.getByText('Applying...') as HTMLButtonElement;
+      const button = screen.getByRole('button', { name: /apply to join/i }) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
     });
 
@@ -343,7 +359,8 @@ describe('EnhancedGameCard', () => {
           onClick={handleClick}
           onApplyClick={handleApply}
           showApplyButton={true}
-        />
+        />,
+        { wrapper }
       );
 
       fireEvent.click(screen.getByText('Apply to Join'));
@@ -357,7 +374,8 @@ describe('EnhancedGameCard', () => {
     it('should call onClick when card is clicked', () => {
       const handleClick = vi.fn();
       const { container } = render(
-        <EnhancedGameCard game={mockGame} onClick={handleClick} />
+        <EnhancedGameCard game={mockGame} onClick={handleClick} />,
+        { wrapper }
       );
 
       const card = container.firstChild as HTMLElement;
@@ -367,10 +385,11 @@ describe('EnhancedGameCard', () => {
     });
 
     it('should not be clickable when onClick is not provided', () => {
-      const { container } = render(<EnhancedGameCard game={mockGame} />);
+      const { container } = render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       const card = container.firstChild as HTMLElement;
-      expect(card.className).not.toContain('cursor-pointer');
+      // Link elements are always clickable by nature
+      expect(card.tagName).toBe('A');
     });
   });
 
@@ -380,15 +399,76 @@ describe('EnhancedGameCard', () => {
         ...mockGame,
         start_date: '2025-11-01T00:00:00Z',
       };
-      render(<EnhancedGameCard game={gameWithStartDate} />);
+      render(<EnhancedGameCard game={gameWithStartDate} />, { wrapper });
 
       expect(screen.getByText('Starts:')).toBeInTheDocument();
     });
 
     it('should not show start date when not present', () => {
-      render(<EnhancedGameCard game={mockGame} />);
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       expect(screen.queryByText('Starts:')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Bug #1: Game card links cannot be opened in new tabs', () => {
+    it('should render the entire card as a link element', () => {
+      // Arrange
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
+
+      // Assert: Card should be wrapped in a link element
+      const link = screen.getByRole('link');
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveAttribute('href', `/games/${mockGame.id}`);
+    });
+
+    it('should navigate to game page when clicked normally', () => {
+      // Arrange
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
+
+      // Assert: Link should point to correct game details page
+      const link = screen.getByRole('link');
+      expect(link).toHaveAttribute('href', `/games/1`);
+    });
+
+    it('should still allow Apply button to work without triggering navigation', () => {
+      // Arrange
+      const onApplyClick = vi.fn();
+      render(
+        <EnhancedGameCard
+          game={mockGame}
+          onApplyClick={onApplyClick}
+          showApplyButton={true}
+        />,
+        { wrapper }
+      );
+
+      // Act: Click Apply button
+      const applyButton = screen.getByRole('button', { name: /apply to join/i });
+      fireEvent.click(applyButton);
+
+      // Assert: Apply handler called, but link navigation should be prevented
+      expect(onApplyClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('should support CMD+Click to open in new tab (link element)', () => {
+      // Arrange
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
+
+      // Assert: Being a link element allows browser to handle CMD+Click
+      const link = screen.getByRole('link');
+      expect(link.tagName).toBe('A');
+      expect(link).toHaveAttribute('href', `/games/1`);
+    });
+
+    it('should support right-click -> Open in new tab (link element)', () => {
+      // Arrange
+      render(<EnhancedGameCard game={mockGame} />, { wrapper });
+
+      // Assert: Being a link element allows browser's context menu
+      const link = screen.getByRole('link');
+      expect(link.tagName).toBe('A');
+      expect(link).toHaveAttribute('href', `/games/1`);
     });
   });
 });

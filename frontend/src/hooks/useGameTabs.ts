@@ -9,6 +9,8 @@ interface UseGameTabsOptions {
   participantCount: number;
   currentPhaseType?: string;
   isAudience?: boolean;
+  isParticipant?: boolean;
+  hasCharacters?: boolean;
 }
 
 // Icon helper to avoid JSX in .ts file
@@ -46,6 +48,8 @@ export function useGameTabs({
   participantCount,
   currentPhaseType,
   isAudience = false,
+  isParticipant = false,
+  hasCharacters = false,
 }: UseGameTabsOptions) {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
@@ -80,16 +84,25 @@ export function useGameTabs({
         tabList.push({ id: 'phases', label: 'Phases', icon: icons.phases });
       }
 
-      // Actions tab - only during action phases
-      if (currentPhaseType === 'action') {
+      // Actions tab - Only visible during action phases to:
+      // 1. GM (can see all actions)
+      // 2. Regular participants (can submit actions)
+      // NOT visible to audience or non-participants
+      if (currentPhaseType === 'action' && (isGM || isParticipant)) {
         tabList.push({ id: 'actions', label: isGM ? 'Actions' : 'Submit Action', icon: icons.actions });
       }
 
       // People tab (combines Characters and Participants)
       tabList.push({ id: 'people', label: 'People', badge: participantCount, icon: icons.people });
 
-      // Messages
-      tabList.push({ id: 'messages', label: 'Messages', icon: icons.messages });
+      // Messages - Only visible to:
+      // 1. GM (always)
+      // 2. Regular participants (players)
+      // 3. Audience members WITH assigned NPCs
+      const canSeeMessages = isGM || isParticipant || (isAudience && hasCharacters);
+      if (canSeeMessages) {
+        tabList.push({ id: 'messages', label: 'Messages', icon: icons.messages });
+      }
 
       // Handouts - available to all participants
       tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });

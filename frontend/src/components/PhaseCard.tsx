@@ -138,7 +138,6 @@ export function PhaseCard({
             <div className="flex-1">
               <DateTimeInput
                 label="Set Deadline"
-                type="datetime-local"
                 value={deadlineInput}
                 onChange={(e) => setDeadlineInput(e.target.value)}
                 required
