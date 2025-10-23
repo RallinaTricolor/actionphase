@@ -38,7 +38,7 @@ CREATE TABLE messages (
 
     -- Timestamps
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    edited_at TIMESTAMP NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMP,
 
     -- Constraints
