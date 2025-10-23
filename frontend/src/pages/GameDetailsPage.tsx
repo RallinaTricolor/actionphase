@@ -89,6 +89,22 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
 
   const actionLoading = appActionLoading || stateActionLoading;
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isJoiningAudience, setIsJoiningAudience] = useState(false);
+
+  // Handle joining as audience
+  const handleJoinAsAudience = async () => {
+    if (!currentUserId) return;
+
+    try {
+      setIsJoiningAudience(true);
+      await apiClient.games.applyAsAudience(gameId, 'Requesting to join as audience member');
+      await refetchGameData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to join as audience');
+    } finally {
+      setIsJoiningAudience(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -168,14 +184,16 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
             isGM={isGM}
             isCheckingAuth={isCheckingAuth}
             isParticipant={isParticipant}
+            userRole={userRole}
             userApplication={userApplication}
-            actionLoading={actionLoading}
+            actionLoading={actionLoading || isJoiningAudience}
             stateActions={stateActions}
             onEditGame={() => setShowEditModal(true)}
             onStateChange={handleStateChange}
             onApplyToGame={() => setShowApplyModal(true)}
             onWithdrawApplication={handleWithdrawApplication}
             onLeaveGame={handleLeaveGame}
+            onJoinAsAudience={handleJoinAsAudience}
           />
         </div>
 
