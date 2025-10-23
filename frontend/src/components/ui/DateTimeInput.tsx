@@ -1,16 +1,26 @@
-import { InputHTMLAttributes, forwardRef } from 'react';
+import { forwardRef, useState, useEffect } from 'react';
+import ReactDatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { tv } from '../../lib/theme/utils';
 
 export type DateTimeInputSize = 'sm' | 'md' | 'lg';
 export type DateTimeInputVariant = 'default' | 'error';
 
-export interface DateTimeInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
+export interface DateTimeInputProps {
   inputSize?: DateTimeInputSize;
   variant?: DateTimeInputVariant;
   error?: string;
   helperText?: string;
   label?: string;
   optional?: boolean;
+  value?: string;
+  onChange?: (e: { target: { value: string } }) => void;
+  id?: string;
+  name?: string;
+  required?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  className?: string;
 }
 
 /**
@@ -46,12 +56,13 @@ const dateTimeInputStyles = tv({
 });
 
 /**
- * DateTimeInput - Reusable datetime-local input component with semantic theme tokens
+ * DateTimeInput - Enhanced datetime picker with calendar popup and time selection
  *
- * Now uses semantic tokens instead of hard-coded colors:
- * - 70% less code (no more dark: classes)
- * - Automatically adapts to all themes (light, dark, future themes)
- * - Type-safe variants with autocomplete
+ * Uses react-datepicker for better UX:
+ * - Calendar popup for date selection
+ * - Integrated time picker
+ * - Consistent UI across all browsers
+ * - Better accessibility
  *
  * @example
  * ```tsx
@@ -80,12 +91,48 @@ export const DateTimeInput = forwardRef<HTMLInputElement, DateTimeInputProps>(
       optional = false,
       className,
       id,
+      value,
+      onChange,
+      disabled,
+      placeholder,
       ...props
     },
     ref
   ) => {
     const inputId = id || props.name;
     const showError = variant === 'error' || error;
+
+    // Convert string value to Date object for react-datepicker
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+    useEffect(() => {
+      if (value) {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          setSelectedDate(date);
+        }
+      } else {
+        setSelectedDate(null);
+      }
+    }, [value]);
+
+    const handleDateChange = (date: Date | null) => {
+      setSelectedDate(date);
+      if (onChange) {
+        // Convert Date to datetime-local string format (YYYY-MM-DDTHH:mm)
+        // WITHOUT timezone conversion (preserve local time)
+        let dateString = '';
+        if (date) {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          dateString = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        onChange({ target: { value: dateString } });
+      }
+    };
 
     return (
       <div className="w-full">
@@ -102,16 +149,22 @@ export const DateTimeInput = forwardRef<HTMLInputElement, DateTimeInputProps>(
             )}
           </label>
         )}
-        <input
-          ref={ref}
-          type="datetime-local"
-          id={inputId}
+        <ReactDatePicker
+          selected={selectedDate}
+          onChange={handleDateChange}
+          showTimeSelect
+          timeFormat="HH:mm"
+          timeIntervals={15}
+          timeCaption="Time"
+          dateFormat="MMMM d, yyyy h:mm aa"
+          placeholderText={placeholder || "Select date and time"}
+          disabled={disabled}
           className={dateTimeInputStyles({
             variant: showError ? 'error' : 'default',
             inputSize,
             className,
           })}
-          {...props}
+          wrapperClassName="w-full"
         />
         {error && (
           <p className="mt-1 text-sm text-semantic-danger">{error}</p>

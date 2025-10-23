@@ -8,10 +8,12 @@ import { Input } from '../components/ui';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useGameListing } from '../hooks/useGameListing';
+import { useToast } from '../contexts/ToastContext';
 import type { EnrichedGameListItem } from '../types/games';
 
 export const GamesPage = () => {
   const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [searchInput, setSearchInput] = useState('');
@@ -80,7 +82,7 @@ export const GamesPage = () => {
       await apiClient.games.applyToGame(gameId, { role, message });
 
       // Show success message
-      alert(`Successfully applied to game as ${role}!`);
+      showSuccess(`Successfully applied to game as ${role}!`);
 
       // TODO: Refresh the games list or navigate to game details
       window.location.reload(); // Simple refresh for now
@@ -108,7 +110,7 @@ export const GamesPage = () => {
         errorMessage = error.message;
       }
 
-      alert(`Failed to join game: ${errorMessage}`);
+      showError(`Failed to join game: ${errorMessage}`);
     } finally {
       setIsJoining(false);
     }

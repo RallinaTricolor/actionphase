@@ -5,6 +5,7 @@ import { Spinner } from './ui/Spinner';
 import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
 import { MarkdownPreview } from './MarkdownPreview';
+import CharacterAvatar from './CharacterAvatar';
 
 interface AllPrivateMessagesViewProps {
   gameId: number;
@@ -383,13 +384,11 @@ function MessageViewer({
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <div className="flex items-center gap-3">
                       {/* Avatar */}
-                      {message.sender_avatar_url && (
-                        <img
-                          src={message.sender_avatar_url}
-                          alt={message.sender_character_name || message.sender_username}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      )}
+                      <CharacterAvatar
+                        avatarUrl={message.sender_avatar_url}
+                        characterName={message.sender_character_name || message.sender_username}
+                        size="md"
+                      />
                       {/* Sender info */}
                       <div>
                         <div className="font-semibold text-content-primary">

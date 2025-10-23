@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { AdminModeToggle } from '../components/AdminModeToggle';
 import type { AdminUser, BannedUser, User } from '../lib/api/admin';
 
 export function AdminPage() {
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
   const currentUserId = currentUser?.id;
   const [activeTab, setActiveTab] = useState<'mode' | 'admins' | 'banned' | 'lookup'>('mode');
   const [lookupUsername, setLookupUsername] = useState('');
@@ -47,10 +49,10 @@ export function AdminPage() {
       queryClient.invalidateQueries({ queryKey: ['bannedUsers'] });
       queryClient.invalidateQueries({ queryKey: ['admins'] }); // User might lose admin status
       setLookupResult(null); // Clear lookup result after action
-      alert('User banned successfully');
+      showSuccess('User banned successfully');
     },
     onError: (error) => {
-      alert(`Failed to ban user: ${error}`);
+      showError(`Failed to ban user: ${error}`);
     },
   });
 
@@ -59,10 +61,10 @@ export function AdminPage() {
     mutationFn: (userId: number) => apiClient.admin.unbanUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bannedUsers'] });
-      alert('User unbanned successfully');
+      showSuccess('User unbanned successfully');
     },
     onError: (error) => {
-      alert(`Failed to unban user: ${error}`);
+      showError(`Failed to unban user: ${error}`);
     },
   });
 
@@ -72,10 +74,10 @@ export function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admins'] });
       setLookupResult(null); // Clear lookup result after action
-      alert('Admin status revoked successfully');
+      showSuccess('Admin status revoked successfully');
     },
     onError: (error) => {
-      alert(`Failed to revoke admin status: ${error}`);
+      showError(`Failed to revoke admin status: ${error}`);
     },
   });
 
@@ -85,10 +87,10 @@ export function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admins'] });
       setLookupResult(null); // Clear lookup result after action
-      alert('Admin status granted successfully');
+      showSuccess('Admin status granted successfully');
     },
     onError: (error) => {
-      alert(`Failed to grant admin status: ${error}`);
+      showError(`Failed to grant admin status: ${error}`);
     },
   });
 

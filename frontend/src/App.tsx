@@ -18,6 +18,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AdminModeProvider } from './contexts/AdminModeContext';
 import { GameProvider } from './contexts/GameContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './contexts/ToastContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -145,7 +146,9 @@ function App() {
         <AuthProvider>
           <AdminModeProvider>
             <ThemeProvider>
-              <AppRoutes />
+              <ToastProvider>
+                <AppRoutes />
+              </ToastProvider>
             </ThemeProvider>
           </AdminModeProvider>
         </AuthProvider>

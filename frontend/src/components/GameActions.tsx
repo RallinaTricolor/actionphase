@@ -97,7 +97,8 @@ export function GameActions({
         </Button>
       )}
 
-      {!isGM && isParticipant && game.state !== 'completed' && game.state !== 'cancelled' && (
+      {/* Leave Game - Available for participants AND audience members */}
+      {!isGM && (isParticipant || userRole === 'audience') && game.state !== 'completed' && game.state !== 'cancelled' && (
         <Button
           variant="danger"
           onClick={onLeaveGame}

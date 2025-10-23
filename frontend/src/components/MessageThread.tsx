@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { apiClient } from '../lib/api';
+import { useToast } from '../contexts/ToastContext';
 import { Button, Select, Textarea, Alert } from './ui';
 import CharacterAvatar from './CharacterAvatar';
 import type { PrivateMessage, ConversationWithDetails, ConversationListItem } from '../types/conversations';
@@ -17,6 +18,7 @@ interface MessageThreadProps {
 }
 
 export function MessageThread({ gameId, conversationId, characters, onMarkedAsRead, conversationInfo }: MessageThreadProps) {
+  const { showError } = useToast();
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
   const [conversation, setConversation] = useState<ConversationWithDetails | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(true);
@@ -197,7 +199,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       setTimeout(() => scrollToBottom(), 100);
     } catch (err) {
       console.error('Failed to send message:', err);
-      alert('Failed to send message. Please try again.');
+      showError('Failed to send message. Please try again.');
     } finally {
       setSending(false);
     }

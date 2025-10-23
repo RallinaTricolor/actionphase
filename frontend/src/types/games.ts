@@ -62,6 +62,7 @@ export interface CreateGameRequest {
 export interface UpdateGameRequest extends CreateGameRequest {
   is_public: boolean;
   is_anonymous?: boolean;
+  auto_accept_audience?: boolean;
 }
 
 export interface ApplyToGameRequest {

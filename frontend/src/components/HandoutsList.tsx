@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Card, Spinner, Alert, Button } from './ui';
+import { useToast } from '../contexts/ToastContext';
 import { useHandouts } from '../hooks/useHandouts';
 import { HandoutCard } from './HandoutCard';
 import { CreateHandoutModal } from './CreateHandoutModal';
@@ -13,6 +14,7 @@ interface HandoutsListProps {
 }
 
 export function HandoutsList({ gameId, isGM }: HandoutsListProps) {
+  const { showError } = useToast();
   const {
     handouts,
     isLoading,
@@ -32,7 +34,7 @@ export function HandoutsList({ gameId, isGM }: HandoutsListProps) {
       await createHandoutMutation.mutateAsync(data);
       setShowCreateModal(false);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to create handout');
+      showError(error instanceof Error ? error.message : 'Failed to create handout');
     }
   };
 
@@ -46,7 +48,7 @@ export function HandoutsList({ gameId, isGM }: HandoutsListProps) {
       });
       setEditingHandout(null);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to update handout');
+      showError(error instanceof Error ? error.message : 'Failed to update handout');
     }
   };
 
@@ -54,7 +56,7 @@ export function HandoutsList({ gameId, isGM }: HandoutsListProps) {
     try {
       await deleteHandoutMutation.mutateAsync(handout.id);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete handout');
+      showError(error instanceof Error ? error.message : 'Failed to delete handout');
     }
   };
 
@@ -62,7 +64,7 @@ export function HandoutsList({ gameId, isGM }: HandoutsListProps) {
     try {
       await publishHandoutMutation.mutateAsync(handout.id);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to publish handout');
+      showError(error instanceof Error ? error.message : 'Failed to publish handout');
     }
   };
 
@@ -70,7 +72,7 @@ export function HandoutsList({ gameId, isGM }: HandoutsListProps) {
     try {
       await unpublishHandoutMutation.mutateAsync(handout.id);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to unpublish handout');
+      showError(error instanceof Error ? error.message : 'Failed to unpublish handout');
     }
   };
 

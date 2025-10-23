@@ -1356,4 +1356,113 @@ describe('ThreadedComment', () => {
       });
     });
   });
+
+  describe('Bug #2: Parent link navigation', () => {
+    it('should link to post in common room when parent is a post (thread_depth === 1)', () => {
+      // Top-level reply to a post (thread_depth === 1)
+      const topLevelReply: Message = {
+        id: 100,
+        game_id: mockGameId,
+        parent_id: 50, // Parent is a POST with ID 50
+        author_id: mockCurrentUserId,
+        character_id: 1,
+        content: 'Reply to post',
+        message_type: 'comment',
+        thread_depth: 1, // Top-level reply to post
+        author_username: 'testuser',
+        character_name: 'Hero',
+        reply_count: 0,
+        is_edited: false,
+        is_deleted: false,
+        created_at: '2025-01-15T11:00:00Z',
+        updated_at: '2025-01-15T11:00:00Z',
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={topLevelReply}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      // Parent link should navigate to the post in common room view
+      const parentLink = screen.getByRole('link', { name: /parent/i });
+      expect(parentLink).toHaveAttribute('href', `/games/${mockGameId}?tab=common-room&postId=50`);
+    });
+
+    it('should link to parent comment when parent is a comment (thread_depth > 1)', () => {
+      // Nested reply to another comment (thread_depth > 1)
+      const nestedReply: Message = {
+        id: 101,
+        game_id: mockGameId,
+        parent_id: 100, // Parent is a COMMENT with ID 100
+        author_id: mockCurrentUserId,
+        character_id: 1,
+        content: 'Reply to comment',
+        message_type: 'comment',
+        thread_depth: 2, // Nested reply to comment
+        author_username: 'testuser',
+        character_name: 'Hero',
+        reply_count: 0,
+        is_edited: false,
+        is_deleted: false,
+        created_at: '2025-01-15T11:30:00Z',
+        updated_at: '2025-01-15T11:30:00Z',
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={nestedReply}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      // Parent link should navigate to the parent comment
+      const parentLink = screen.getByRole('link', { name: /parent/i });
+      expect(parentLink).toHaveAttribute('href', `/games/${mockGameId}?tab=common-room&comment=100`);
+    });
+
+    it('should not show parent link when parent_id is undefined', () => {
+      // Top-level post (no parent)
+      const topLevelPost: Message = {
+        id: 50,
+        game_id: mockGameId,
+        // No parent_id
+        author_id: mockCurrentUserId,
+        character_id: 1,
+        content: 'This is a post',
+        message_type: 'post',
+        thread_depth: 0,
+        author_username: 'testuser',
+        character_name: 'Hero',
+        comment_count: 5,
+        is_edited: false,
+        is_deleted: false,
+        created_at: '2025-01-15T10:00:00Z',
+        updated_at: '2025-01-15T10:00:00Z',
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={topLevelPost}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      // Parent link should NOT be rendered
+      expect(screen.queryByRole('link', { name: /parent/i })).not.toBeInTheDocument();
+    });
+  });
 });

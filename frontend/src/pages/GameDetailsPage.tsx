@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useGameContext } from '../contexts/GameContext';
+import { useToast } from '../contexts/ToastContext';
 import { useGameApplication } from '../hooks/useGameApplication';
 import { useGameStateManagement } from '../hooks/useGameStateManagement';
 import { useGameTabs } from '../hooks/useGameTabs';
@@ -16,6 +17,7 @@ import { GameTabContent } from '../components/GameTabContent';
 import { ApplyToGameModal } from '../components/ApplyToGameModal';
 import { EditGameModal } from '../components/EditGameModal';
 import { CompleteGameConfirmationDialog } from '../components/CompleteGameConfirmationDialog';
+import { PauseGameConfirmationDialog } from '../components/PauseGameConfirmationDialog';
 
 interface GameDetailsPageProps {
   gameId: number;
@@ -25,6 +27,7 @@ interface GameDetailsPageProps {
 export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   // Get data from contexts
   const { currentUser, isCheckingAuth } = useAuth();
+  const { showError } = useToast();
   const {
     game,
     participants,
@@ -73,6 +76,9 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     showCompleteDialog,
     setShowCompleteDialog,
     handleConfirmComplete,
+    showPauseDialog,
+    setShowPauseDialog,
+    handleConfirmPause,
   } = useGameStateManagement({
     gameId,
     refetchGameData,
@@ -85,6 +91,8 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     participantCount: participants.length,
     currentPhaseType: currentPhaseData?.phase?.phase_type,
     isAudience: userRole === 'audience',
+    isParticipant,
+    hasCharacters: userCharacters.length > 0,
   });
 
   const actionLoading = appActionLoading || stateActionLoading;
@@ -100,7 +108,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
       await apiClient.games.applyAsAudience(gameId, 'Requesting to join as audience member');
       await refetchGameData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to join as audience');
+      showError(err instanceof Error ? err.message : 'Failed to join as audience');
     } finally {
       setIsJoiningAudience(false);
     }
@@ -251,6 +259,16 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           isOpen={showCompleteDialog}
           onClose={() => setShowCompleteDialog(false)}
           onConfirm={handleConfirmComplete}
+          gameTitle={game.title}
+        />
+      )}
+
+      {/* Pause Game Confirmation Dialog */}
+      {game && (
+        <PauseGameConfirmationDialog
+          isOpen={showPauseDialog}
+          onClose={() => setShowPauseDialog(false)}
+          onConfirm={handleConfirmPause}
           gameTitle={game.title}
         />
       )}

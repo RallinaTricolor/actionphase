@@ -22,6 +22,7 @@ export function EditGameModal({ game, isOpen, onClose, onGameUpdated }: EditGame
     start_date: '',
     end_date: '',
     is_anonymous: false,
+    auto_accept_audience: false,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +39,7 @@ export function EditGameModal({ game, isOpen, onClose, onGameUpdated }: EditGame
         start_date: game.start_date ? formatDateTimeLocal(game.start_date) : '',
         end_date: game.end_date ? formatDateTimeLocal(game.end_date) : '',
         is_anonymous: game.is_anonymous || false,
+        auto_accept_audience: game.auto_accept_audience || false,
       });
       setError(null);
     }
@@ -85,6 +87,7 @@ export function EditGameModal({ game, isOpen, onClose, onGameUpdated }: EditGame
         end_date: formData.end_date || undefined,
         is_public: true, // Default to true for now
         is_anonymous: formData.is_anonymous,
+        auto_accept_audience: formData.auto_accept_audience,
       };
 
       await apiClient.games.updateGame(game.id, updateData);
