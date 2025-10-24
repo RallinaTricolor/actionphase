@@ -702,7 +702,7 @@ describe('GameResultsManager', () => {
       const { container } = renderWithProviders(<GameResultsManager gameId={mockGameId} />);
 
       await waitFor(() => {
-        const unpublishedCard = container.querySelector('.border-amber-200');
+        const unpublishedCard = container.querySelector('.border-semantic-warning');
         expect(unpublishedCard).toBeInTheDocument();
       });
     });
@@ -713,7 +713,7 @@ describe('GameResultsManager', () => {
       const { container } = renderWithProviders(<GameResultsManager gameId={mockGameId} />);
 
       await waitFor(() => {
-        const publishedCard = container.querySelector('.border-green-200');
+        const publishedCard = container.querySelector('.border-semantic-success');
         expect(publishedCard).toBeInTheDocument();
       });
     });

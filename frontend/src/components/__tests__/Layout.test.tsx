@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, render, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Layout } from '../Layout'
+import { AdminModeProvider } from '../../contexts/AdminModeContext'
+import { ToastProvider } from '../../contexts/ToastContext'
 
 // Mock the useAuth hook
 vi.mock('../../contexts/AuthContext', () => ({
@@ -28,7 +31,11 @@ describe('Layout', () => {
     return render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={[initialRoute]}>
-          <Layout>{children}</Layout>
+          <AdminModeProvider>
+            <ToastProvider>
+              <Layout>{children}</Layout>
+            </ToastProvider>
+          </AdminModeProvider>
         </MemoryRouter>
       </QueryClientProvider>
     )
@@ -62,8 +69,12 @@ describe('Layout', () => {
       expect(screen.getByRole('link', { name: 'Games' })).toBeInTheDocument()
     })
 
-    it('should render logout button', () => {
+    it('should render logout button', async () => {
       renderLayout(<div>Content</div>, '/dashboard')
+
+      // Hover over user menu to open dropdown
+      const userButton = screen.getByRole('button', { name: /testuser/i })
+      await userEvent.hover(userButton)
 
       expect(screen.getByRole('button', { name: 'Logout' })).toBeInTheDocument()
     })
@@ -72,22 +83,22 @@ describe('Layout', () => {
       renderLayout(<div>Content</div>, '/dashboard')
 
       const dashboardLink = screen.getByRole('link', { name: 'Dashboard' })
-      expect(dashboardLink).toHaveClass('bg-indigo-700', 'text-white')
+      expect(dashboardLink).toHaveClass('bg-interactive-primary-hover', 'text-white')
     })
 
     it('should highlight active games link', () => {
       renderLayout(<div>Content</div>, '/games')
 
       const gamesLink = screen.getByRole('link', { name: 'Games' })
-      expect(gamesLink).toHaveClass('bg-indigo-700', 'text-white')
+      expect(gamesLink).toHaveClass('bg-interactive-primary-hover', 'text-white')
     })
 
     it('should not highlight inactive links', () => {
       renderLayout(<div>Content</div>, '/dashboard')
 
       const gamesLink = screen.getByRole('link', { name: 'Games' })
-      expect(gamesLink).not.toHaveClass('bg-indigo-700')
-      expect(gamesLink).toHaveClass('text-indigo-100')
+      expect(gamesLink).not.toHaveClass('bg-interactive-primary-hover')
+      expect(gamesLink).toHaveClass('text-white/90')
     })
 
     it('should render children content', () => {
@@ -119,8 +130,12 @@ describe('Layout', () => {
       expect(screen.getByText(/collaborative role-playing platform/)).toBeInTheDocument()
     })
 
-    it('should call logout when logout button is clicked', () => {
+    it('should call logout when logout button is clicked', async () => {
       renderLayout(<div>Content</div>, '/dashboard')
+
+      // Hover over user menu to open dropdown
+      const userButton = screen.getByRole('button', { name: /testuser/i })
+      await userEvent.hover(userButton)
 
       const logoutButton = screen.getByRole('button', { name: 'Logout' })
       fireEvent.click(logoutButton)
@@ -216,14 +231,14 @@ describe('Layout', () => {
     it('should have proper layout structure', () => {
       const { container } = renderLayout(<div>Content</div>, '/dashboard')
 
-      const layout = container.querySelector('.min-h-screen.bg-gray-50')
+      const layout = container.querySelector('.min-h-screen.surface-sunken')
       expect(layout).toBeInTheDocument()
     })
 
     it('should have navigation with proper styling', () => {
       const { container } = renderLayout(<div>Content</div>, '/dashboard')
 
-      const nav = container.querySelector('.bg-indigo-600.shadow-lg')
+      const nav = container.querySelector('.bg-interactive-primary.shadow-lg')
       expect(nav).toBeInTheDocument()
     })
 
@@ -238,7 +253,7 @@ describe('Layout', () => {
     it('should have footer with border', () => {
       const { container } = renderLayout(<div>Content</div>, '/dashboard')
 
-      const footer = container.querySelector('footer.border-t.border-gray-200')
+      const footer = container.querySelector('footer.border-t.border-theme-default')
       expect(footer).toBeInTheDocument()
     })
   })
@@ -276,10 +291,10 @@ describe('Layout', () => {
       const dashboardLink = screen.getByRole('link', { name: 'Dashboard' })
       const gamesLink = screen.getByRole('link', { name: 'Games' })
 
-      expect(dashboardLink).not.toHaveClass('bg-indigo-700')
-      expect(gamesLink).not.toHaveClass('bg-indigo-700')
-      expect(dashboardLink).toHaveClass('text-indigo-100')
-      expect(gamesLink).toHaveClass('text-indigo-100')
+      expect(dashboardLink).not.toHaveClass('bg-interactive-primary-hover')
+      expect(gamesLink).not.toHaveClass('bg-interactive-primary-hover')
+      expect(dashboardLink).toHaveClass('text-white/90')
+      expect(gamesLink).toHaveClass('text-white/90')
     })
   })
 
@@ -316,8 +331,12 @@ describe('Layout', () => {
       expect(links.length).toBeGreaterThan(0)
     })
 
-    it('should have logout button with proper role', () => {
+    it('should have logout button with proper role', async () => {
       renderLayout(<div>Content</div>, '/dashboard')
+
+      // Hover over user menu to open dropdown
+      const userButton = screen.getByRole('button', { name: /testuser/i })
+      await userEvent.hover(userButton)
 
       const button = screen.getByRole('button', { name: 'Logout' })
       expect(button).toBeInTheDocument()

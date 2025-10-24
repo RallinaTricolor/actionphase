@@ -299,8 +299,9 @@ describe('GamesList', () => {
     it('renders loading state initially', () => {
       renderWithProviders(<GamesList games={[]} loading={true} error={null} />)
 
-      // Should show loading skeleton
-      expect(document.querySelector('.animate-pulse')).toBeInTheDocument()
+      // Should show loading spinner (appears multiple times due to accessibility label)
+      const loadingElements = screen.getAllByText('Loading games...')
+      expect(loadingElements.length).toBeGreaterThan(0)
     })
 
     it('renders games list after loading', () => {

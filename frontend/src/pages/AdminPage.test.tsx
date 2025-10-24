@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AdminPage } from './AdminPage';
 import { apiClient } from '../lib/api';
+import { ToastProvider } from '../contexts/ToastContext';
+import { AdminModeProvider } from '../contexts/AdminModeContext';
 
 // Mock the API client
 vi.mock('../lib/api', () => ({
@@ -60,28 +62,40 @@ describe('AdminPage', () => {
   const renderAdminPage = () => {
     return render(
       <QueryClientProvider client={queryClient}>
-        <AdminPage />
+        <AdminModeProvider>
+          <ToastProvider>
+            <AdminPage />
+          </ToastProvider>
+        </AdminModeProvider>
       </QueryClientProvider>
     );
   };
 
   describe('Banned Users Tab', () => {
-    it('shows loading state initially', () => {
+    it('shows loading state initially', async () => {
+      const user = userEvent.setup();
       vi.mocked(apiClient.admin.listBannedUsers).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
 
       renderAdminPage();
 
+      // Click on Banned Users tab
+      await user.click(screen.getByRole('button', { name: /banned users/i }));
+
       expect(screen.getByText(/loading banned users/i)).toBeInTheDocument();
     });
 
     it('displays empty state when no banned users exist', async () => {
+      const user = userEvent.setup();
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
       } as any);
 
       renderAdminPage();
+
+      // Click on Banned Users tab
+      await user.click(screen.getByRole('button', { name: /banned users/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/no banned users/i)).toBeInTheDocument();
@@ -89,6 +103,7 @@ describe('AdminPage', () => {
     });
 
     it('displays list of banned users', async () => {
+      const user = userEvent.setup();
       const bannedUsers = [
         {
           id: 1,
@@ -116,6 +131,9 @@ describe('AdminPage', () => {
 
       renderAdminPage();
 
+      // Click on Banned Users tab
+      await user.click(screen.getByRole('button', { name: /banned users/i }));
+
       await waitFor(() => {
         expect(screen.getByText('banneduser1')).toBeInTheDocument();
         expect(screen.getByText('banneduser2')).toBeInTheDocument();
@@ -133,11 +151,15 @@ describe('AdminPage', () => {
     });
 
     it('displays error state when API fails', async () => {
+      const user = userEvent.setup();
       vi.mocked(apiClient.admin.listBannedUsers).mockRejectedValue(
         new Error('API Error')
       );
 
       renderAdminPage();
+
+      // Click on Banned Users tab
+      await user.click(screen.getByRole('button', { name: /banned users/i }));
 
       await waitFor(() => {
         expect(
@@ -147,7 +169,8 @@ describe('AdminPage', () => {
     });
 
     it('unbans a user when unban button is clicked and confirmed', async () => {
-      const user = {
+      const userActions = userEvent.setup();
+      const bannedUser = {
         id: 1,
         username: 'banneduser',
         email: 'banned@example.com',
@@ -158,19 +181,22 @@ describe('AdminPage', () => {
       };
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [user],
+        data: [bannedUser],
       } as any);
 
       vi.mocked(apiClient.admin.unbanUser).mockResolvedValue({} as any);
 
       renderAdminPage();
 
+      // Click on Banned Users tab
+      await userActions.click(screen.getByRole('button', { name: /banned users/i }));
+
       await waitFor(() => {
         expect(screen.getByText('banneduser')).toBeInTheDocument();
       });
 
       const unbanButton = screen.getByRole('button', { name: /unban user/i });
-      await userEvent.click(unbanButton);
+      await userActions.click(unbanButton);
 
       // Verify confirmation dialog was shown
       expect(mockConfirm).toHaveBeenCalledWith(
@@ -182,14 +208,17 @@ describe('AdminPage', () => {
         expect(apiClient.admin.unbanUser).toHaveBeenCalledWith(1);
       });
 
-      // Verify success alert
-      expect(mockAlert).toHaveBeenCalledWith('User unbanned successfully');
+      // Success is shown via toast, not alert
+      await waitFor(() => {
+        expect(screen.getByText('User unbanned successfully')).toBeInTheDocument();
+      });
     });
 
     it('does not unban user when confirmation is cancelled', async () => {
+      const userActions = userEvent.setup();
       mockConfirm.mockReturnValue(false);
 
-      const user = {
+      const bannedUser = {
         id: 1,
         username: 'banneduser',
         email: 'banned@example.com',
@@ -200,24 +229,28 @@ describe('AdminPage', () => {
       };
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [user],
+        data: [bannedUser],
       } as any);
 
       renderAdminPage();
+
+      // Click on Banned Users tab
+      await userActions.click(screen.getByRole('button', { name: /banned users/i }));
 
       await waitFor(() => {
         expect(screen.getByText('banneduser')).toBeInTheDocument();
       });
 
       const unbanButton = screen.getByRole('button', { name: /unban user/i });
-      await userEvent.click(unbanButton);
+      await userActions.click(unbanButton);
 
       // Verify API was not called
       expect(apiClient.admin.unbanUser).not.toHaveBeenCalled();
     });
 
     it('shows error alert when unban fails', async () => {
-      const user = {
+      const userActions = userEvent.setup();
+      const bannedUser = {
         id: 1,
         username: 'banneduser',
         email: 'banned@example.com',
@@ -228,7 +261,7 @@ describe('AdminPage', () => {
       };
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [user],
+        data: [bannedUser],
       } as any);
 
       vi.mocked(apiClient.admin.unbanUser).mockRejectedValue(
@@ -237,17 +270,19 @@ describe('AdminPage', () => {
 
       renderAdminPage();
 
+      // Click on Banned Users tab
+      await userActions.click(screen.getByRole('button', { name: /banned users/i }));
+
       await waitFor(() => {
         expect(screen.getByText('banneduser')).toBeInTheDocument();
       });
 
       const unbanButton = screen.getByRole('button', { name: /unban user/i });
-      await userEvent.click(unbanButton);
+      await userActions.click(unbanButton);
 
+      // Error is shown via toast, not alert
       await waitFor(() => {
-        expect(mockAlert).toHaveBeenCalledWith(
-          expect.stringContaining('Failed to unban user')
-        );
+        expect(screen.getByText(/failed to unban user/i)).toBeInTheDocument();
       });
     });
   });
@@ -351,7 +386,7 @@ describe('AdminPage', () => {
   });
 
   describe('Tab Navigation', () => {
-    it('shows Banned Users tab by default', async () => {
+    it('shows Admin Mode tab by default', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
       } as any);
@@ -359,7 +394,7 @@ describe('AdminPage', () => {
       renderAdminPage();
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /banned users/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /^admin mode$/i })).toBeInTheDocument();
       });
     });
 
@@ -373,9 +408,9 @@ describe('AdminPage', () => {
 
       renderAdminPage();
 
-      // Start on Banned Users tab
+      // Start on Admin Mode tab
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /banned users/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /^admin mode$/i })).toBeInTheDocument();
       });
 
       // Switch to Admins tab
@@ -386,7 +421,7 @@ describe('AdminPage', () => {
         expect(screen.getByRole('heading', { name: /administrator users/i })).toBeInTheDocument();
       });
 
-      // Switch back to Banned Users tab
+      // Switch to Banned Users tab
       const bannedUsersTab = screen.getByRole('button', { name: /banned users/i });
       await userEvent.click(bannedUsersTab);
 
@@ -463,8 +498,10 @@ describe('AdminPage', () => {
         expect(apiClient.admin.grantAdminStatus).toHaveBeenCalledWith(2);
       });
 
-      // Verify success alert
-      expect(mockAlert).toHaveBeenCalledWith('Admin status granted successfully');
+      // Verify success via toast
+      await waitFor(() => {
+        expect(screen.getByText('Admin status granted successfully')).toBeInTheDocument();
+      });
     });
 
     it('does not grant admin when confirmation is cancelled', async () => {
@@ -598,8 +635,10 @@ describe('AdminPage', () => {
         expect(apiClient.admin.revokeAdminStatus).toHaveBeenCalledWith(2);
       });
 
-      // Verify success alert
-      expect(mockAlert).toHaveBeenCalledWith('Admin status revoked successfully');
+      // Verify success via toast
+      await waitFor(() => {
+        expect(screen.getByText('Admin status revoked successfully')).toBeInTheDocument();
+      });
     });
   });
 

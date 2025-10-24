@@ -102,13 +102,13 @@ describe('CharacterAutocomplete', () => {
       const { rerender } = render(<CharacterAutocomplete {...defaultProps} selectedIndex={0} />);
 
       const aragornOption = screen.getByRole('option', { name: /Aragorn/i });
-      expect(aragornOption).toHaveClass('bg-blue-100');
+      expect(aragornOption).toHaveClass('bg-interactive-primary-subtle');
       expect(aragornOption).toHaveAttribute('aria-selected', 'true');
 
       rerender(<CharacterAutocomplete {...defaultProps} selectedIndex={1} />);
 
       const gandalfOption = screen.getByRole('option', { name: /Gandalf/i });
-      expect(gandalfOption).toHaveClass('bg-blue-100');
+      expect(gandalfOption).toHaveClass('bg-interactive-primary-subtle');
       expect(gandalfOption).toHaveAttribute('aria-selected', 'true');
     });
 
@@ -214,7 +214,7 @@ describe('CharacterAutocomplete', () => {
 
       // Aragorn (index 0) is selected, so check Gandalf (index 1) for hover styles
       const gandalfOption = screen.getByRole('option', { name: /Gandalf/i });
-      expect(gandalfOption).toHaveClass('hover:bg-gray-100');
+      expect(gandalfOption).toHaveClass('hover:surface-raised');
       expect(gandalfOption).toHaveClass('cursor-pointer');
     });
 
@@ -222,8 +222,8 @@ describe('CharacterAutocomplete', () => {
       render(<CharacterAutocomplete {...defaultProps} selectedIndex={0} />);
 
       const aragornOption = screen.getByRole('option', { name: /Aragorn/i });
-      expect(aragornOption).toHaveClass('bg-blue-100');
-      expect(aragornOption).toHaveClass('text-blue-900');
+      expect(aragornOption).toHaveClass('bg-interactive-primary-subtle');
+      expect(aragornOption).toHaveClass('text-interactive-primary');
     });
 
     it('renders with minimum width', () => {

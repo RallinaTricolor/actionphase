@@ -107,7 +107,7 @@ describe('CurrentPhaseDisplay', () => {
       renderWithProviders(<CurrentPhaseDisplay gameId={1} />);
 
       await waitFor(() => {
-        const errorContainer = document.querySelector('.bg-red-50');
+        const errorContainer = document.querySelector('.bg-semantic-danger-subtle');
         expect(errorContainer).toBeInTheDocument();
       });
     });
@@ -207,7 +207,7 @@ describe('CurrentPhaseDisplay', () => {
       renderWithProviders(<CurrentPhaseDisplay gameId={1} />);
 
       await waitFor(() => {
-        const greenIcon = document.querySelector('.bg-green-100');
+        const greenIcon = document.querySelector('.bg-semantic-success-subtle');
         expect(greenIcon).toBeInTheDocument();
       });
     });
@@ -263,7 +263,7 @@ describe('CurrentPhaseDisplay', () => {
       renderWithProviders(<CurrentPhaseDisplay gameId={1} />);
 
       await waitFor(() => {
-        const blueIcon = document.querySelector('.bg-blue-100');
+        const blueIcon = document.querySelector('.bg-interactive-primary-subtle');
         expect(blueIcon).toBeInTheDocument();
       });
     });
@@ -306,7 +306,7 @@ describe('CurrentPhaseDisplay', () => {
       renderWithProviders(<CurrentPhaseDisplay gameId={1} />);
 
       await waitFor(() => {
-        const purpleIcon = document.querySelector('.bg-purple-100');
+        const purpleIcon = document.querySelector('.bg-interactive-primary-subtle');
         expect(purpleIcon).toBeInTheDocument();
       });
     });

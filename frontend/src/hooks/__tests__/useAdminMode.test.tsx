@@ -3,6 +3,8 @@ import { renderHook, act } from '@testing-library/react';
 import { useAdminMode } from '../useAdminMode';
 import * as AuthContext from '../../contexts/AuthContext';
 import type { User } from '../../types/auth';
+import { AdminModeProvider } from '../../contexts/AdminModeContext';
+import { ReactNode } from 'react';
 
 // Mock the AuthContext
 vi.mock('../../contexts/AuthContext', () => ({
@@ -37,6 +39,10 @@ describe('useAdminMode', () => {
     is_admin: false,
   };
 
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <AdminModeProvider>{children}</AdminModeProvider>
+  );
+
   describe('for non-admin users', () => {
     it('returns isAdmin false and adminModeEnabled false', () => {
       vi.mocked(AuthContext.useAuth).mockReturnValue({
@@ -50,15 +56,13 @@ describe('useAdminMode', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAdminMode());
+      const { result } = renderHook(() => useAdminMode(), { wrapper });
 
       expect(result.current.isAdmin).toBe(false);
       expect(result.current.adminModeEnabled).toBe(false);
     });
 
     it('cannot toggle admin mode', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
       vi.mocked(AuthContext.useAuth).mockReturnValue({
         currentUser: mockRegularUser,
         isAuthenticated: true,
@@ -70,7 +74,7 @@ describe('useAdminMode', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAdminMode());
+      const { result } = renderHook(() => useAdminMode(), { wrapper });
 
       act(() => {
         result.current.toggleAdminMode();
@@ -78,11 +82,7 @@ describe('useAdminMode', () => {
 
       expect(result.current.adminModeEnabled).toBe(false);
       expect(localStorage.getItem(ADMIN_MODE_STORAGE_KEY)).toBeNull();
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        '[useAdminMode] Cannot toggle admin mode: user is not an admin'
-      );
-
-      consoleWarnSpy.mockRestore();
+      // Hook no longer logs to console - functionality is the same
     });
 
     it('ignores localStorage value if user is not admin', () => {
@@ -99,7 +99,7 @@ describe('useAdminMode', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAdminMode());
+      const { result } = renderHook(() => useAdminMode(), { wrapper });
 
       expect(result.current.isAdmin).toBe(false);
       expect(result.current.adminModeEnabled).toBe(false);
@@ -119,15 +119,13 @@ describe('useAdminMode', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAdminMode());
+      const { result } = renderHook(() => useAdminMode(), { wrapper });
 
       expect(result.current.isAdmin).toBe(true);
       expect(result.current.adminModeEnabled).toBe(false);
     });
 
     it('can toggle admin mode on', () => {
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
       vi.mocked(AuthContext.useAuth).mockReturnValue({
         currentUser: mockAdminUser,
         isAuthenticated: true,
@@ -139,7 +137,7 @@ describe('useAdminMode', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAdminMode());
+      const { result } = renderHook(() => useAdminMode(), { wrapper });
 
       expect(result.current.adminModeEnabled).toBe(false);
 
@@ -149,14 +147,10 @@ describe('useAdminMode', () => {
 
       expect(result.current.adminModeEnabled).toBe(true);
       expect(localStorage.getItem(ADMIN_MODE_STORAGE_KEY)).toBe('true');
-      expect(consoleLogSpy).toHaveBeenCalledWith('[useAdminMode] Admin mode toggled:', true);
-
-      consoleLogSpy.mockRestore();
+      // Hook no longer logs to console - functionality is the same
     });
 
     it('can toggle admin mode off', () => {
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
       vi.mocked(AuthContext.useAuth).mockReturnValue({
         currentUser: mockAdminUser,
         isAuthenticated: true,
@@ -168,7 +162,7 @@ describe('useAdminMode', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAdminMode());
+      const { result } = renderHook(() => useAdminMode(), { wrapper });
 
       // Toggle on first
       act(() => {
@@ -185,9 +179,7 @@ describe('useAdminMode', () => {
 
       expect(result.current.adminModeEnabled).toBe(false);
       expect(localStorage.getItem(ADMIN_MODE_STORAGE_KEY)).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith('[useAdminMode] Admin mode toggled:', false);
-
-      consoleLogSpy.mockRestore();
+      // Hook no longer logs to console - functionality is the same
     });
 
     it('loads admin mode state from localStorage on mount', () => {
@@ -204,7 +196,7 @@ describe('useAdminMode', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAdminMode());
+      const { result } = renderHook(() => useAdminMode(), { wrapper });
 
       expect(result.current.isAdmin).toBe(true);
       expect(result.current.adminModeEnabled).toBe(true);
@@ -224,7 +216,7 @@ describe('useAdminMode', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAdminMode());
+      const { result } = renderHook(() => useAdminMode(), { wrapper });
 
       expect(localStorage.getItem(ADMIN_MODE_STORAGE_KEY)).toBeNull();
 
@@ -249,7 +241,7 @@ describe('useAdminMode', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAdminMode());
+      const { result } = renderHook(() => useAdminMode(), { wrapper });
 
       expect(result.current.adminModeEnabled).toBe(true);
 
@@ -264,7 +256,7 @@ describe('useAdminMode', () => {
   describe('logout/admin revoke behavior', () => {
     it('clears admin mode when user is no longer admin', () => {
       const { result, rerender } = renderHook(() => useAdminMode(), {
-        initialProps: {},
+        wrapper,
       });
 
       // Start as admin with admin mode enabled
@@ -308,7 +300,7 @@ describe('useAdminMode', () => {
     });
 
     it('clears admin mode when user logs out (currentUser becomes null)', () => {
-      const { result, rerender } = renderHook(() => useAdminMode());
+      const { result, rerender } = renderHook(() => useAdminMode(), { wrapper });
 
       // Start as admin with admin mode enabled
       vi.mocked(AuthContext.useAuth).mockReturnValue({
@@ -364,7 +356,7 @@ describe('useAdminMode', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAdminMode());
+      const { result } = renderHook(() => useAdminMode(), { wrapper });
 
       expect(result.current.isAdmin).toBe(false);
       expect(result.current.adminModeEnabled).toBe(false);
@@ -389,7 +381,7 @@ describe('useAdminMode', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAdminMode());
+      const { result } = renderHook(() => useAdminMode(), { wrapper });
 
       expect(result.current.isAdmin).toBe(false);
       expect(result.current.adminModeEnabled).toBe(false);

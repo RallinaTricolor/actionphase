@@ -378,7 +378,7 @@ describe('ConversationList', () => {
       })
 
       const conversationButton = screen.getByRole('button')
-      expect(conversationButton).toHaveClass('bg-blue-50', 'border-l-4', 'border-blue-600')
+      expect(conversationButton).toHaveClass('bg-interactive-primary-subtle', 'border-l-4', 'border-interactive-primary')
     })
 
     it('should handle API errors gracefully', async () => {

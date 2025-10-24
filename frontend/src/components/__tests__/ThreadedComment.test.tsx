@@ -611,9 +611,10 @@ describe('ThreadedComment', () => {
       const replyButton = screen.getByRole('button', { name: /^reply$/i });
       await user.click(replyButton);
 
-      // Find the submit button by its blue background styling (not the toggle button)
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'));
+      // Find the submit button by type="submit" within the form
+      const textarea = screen.getByPlaceholderText(/write a reply/i);
+      const form = textarea.closest('form');
+      const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       expect(submitButton).toBeDisabled();
     });
 
@@ -635,8 +636,8 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, 'Test reply');
 
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'));
+      const form = textarea.closest('form');
+      const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       expect(submitButton).not.toBeDisabled();
     });
 
@@ -658,8 +659,8 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, '   ');
 
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'));
+      const form = textarea.closest('form');
+      const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       expect(submitButton).toBeDisabled();
     });
 
@@ -750,8 +751,8 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, 'Test reply');
 
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'))!;
+      const form = textarea.closest('form');
+      const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -779,8 +780,7 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, '  Test reply  ');
 
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'))!;
+      const form = textarea.closest('form'); const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -808,8 +808,7 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, 'Test reply');
 
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'))!;
+      const form = textarea.closest('form'); const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -839,8 +838,7 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, 'Test reply');
 
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'))!;
+      const form = textarea.closest('form'); const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       await user.click(submitButton);
 
       expect(screen.getByText(/posting\.\.\./i)).toBeInTheDocument();
@@ -868,8 +866,7 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, 'Test reply');
 
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'))!;
+      const form = textarea.closest('form'); const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       await user.click(submitButton);
 
       expect(textarea).toBeDisabled();
@@ -897,8 +894,7 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, 'Test reply');
 
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'))!;
+      const form = textarea.closest('form'); const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -1079,8 +1075,7 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, 'New reply');
 
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'))!;
+      const form = textarea.closest('form'); const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       await user.click(submitButton);
 
       // After submission, replies should be loaded and visible
@@ -1247,8 +1242,7 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, 'Test reply');
 
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'))!;
+      const form = textarea.closest('form'); const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -1303,8 +1297,7 @@ describe('ThreadedComment', () => {
       await user.type(textarea, 'My detailed reply');
 
       // Submit
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'))!;
+      const form = textarea.closest('form'); const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       await user.click(submitButton);
 
       // Verify submission
@@ -1347,8 +1340,7 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, 'Nested reply');
 
-      const submitButtons = screen.getAllByRole('button', { name: /^reply$/i });
-      const submitButton = submitButtons.find(btn => btn.className.includes('bg-blue-600'))!;
+      const form = textarea.closest('form'); const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
       await user.click(submitButton);
 
       await waitFor(() => {

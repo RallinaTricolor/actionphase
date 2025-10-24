@@ -125,7 +125,7 @@ describe('NewConversationModal', () => {
       const backdrop = container.querySelector('.bg-black.bg-opacity-50')
       expect(backdrop).toBeInTheDocument()
 
-      const modalContainer = container.querySelector('.bg-white.rounded-lg')
+      const modalContainer = container.querySelector('.surface-base.rounded-lg')
       expect(modalContainer).toBeInTheDocument()
     })
   })
@@ -991,12 +991,19 @@ describe('NewConversationModal', () => {
       // User's characters should appear in "Your Character" section
       expect(screen.getByText('Select your character...')).toBeInTheDocument()
 
-      // But not in participant checkboxes
+      // But not in participant checkboxes section
+      // The checkboxes are rendered with character info in adjacent divs
       const checkboxes = screen.getAllByRole('checkbox')
+
+      // Verify that user's character names (Alice, Bob) don't appear
+      // as checkbox options by checking they're not adjacent to any checkbox
       checkboxes.forEach(checkbox => {
-        const label = checkbox.closest('label')
-        expect(label).not.toHaveTextContent('Alice')
-        expect(label).not.toHaveTextContent('Bob')
+        const container = checkbox.parentElement
+        if (container) {
+          const containerText = container.textContent || ''
+          expect(containerText).not.toContain('Alice')
+          expect(containerText).not.toContain('Bob')
+        }
       })
     })
 

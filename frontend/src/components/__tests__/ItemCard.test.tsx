@@ -142,7 +142,7 @@ describe('ItemCard', () => {
       );
 
       const badge = screen.getByText('Weapon');
-      expect(badge).toHaveClass('bg-red-100', 'text-red-800');
+      expect(badge).toHaveClass('bg-semantic-danger-subtle', 'border-semantic-danger');
     });
 
     it('applies blue color for armor category', () => {
@@ -157,7 +157,7 @@ describe('ItemCard', () => {
       );
 
       const badge = screen.getByText('Armor');
-      expect(badge).toHaveClass('bg-blue-100', 'text-blue-800');
+      expect(badge).toHaveClass('bg-semantic-info-subtle', 'border-semantic-info');
     });
 
     it('applies green color for consumable category', () => {
@@ -172,7 +172,7 @@ describe('ItemCard', () => {
       );
 
       const badge = screen.getByText('Consumable');
-      expect(badge).toHaveClass('bg-green-100', 'text-green-800');
+      expect(badge).toHaveClass('bg-semantic-success-subtle', 'border-semantic-success');
     });
 
     it('applies yellow color for tool category', () => {
@@ -187,7 +187,7 @@ describe('ItemCard', () => {
       );
 
       const badge = screen.getByText('Tool');
-      expect(badge).toHaveClass('bg-yellow-100', 'text-yellow-800');
+      expect(badge).toHaveClass('bg-semantic-warning-subtle', 'border-semantic-warning');
     });
 
     it('applies gray color for unknown category', () => {
@@ -202,7 +202,8 @@ describe('ItemCard', () => {
       );
 
       const badge = screen.getByText('Misc');
-      expect(badge).toHaveClass('bg-gray-100', 'text-gray-800');
+      // Unknown categories get default badge styling without semantic colors
+      expect(badge).toHaveClass('inline-flex', 'items-center');
     });
 
     it('hides category badge when not provided', () => {
@@ -231,7 +232,7 @@ describe('ItemCard', () => {
         />
       );
 
-      expect(screen.getByText('Weight: 5')).toBeInTheDocument();
+      expect(screen.getByText('Weight: 5.0')).toBeInTheDocument();
     });
 
     it('displays value when provided', () => {
@@ -257,7 +258,7 @@ describe('ItemCard', () => {
         />
       );
 
-      expect(screen.getByText('Condition: Good')).toBeInTheDocument();
+      expect(screen.getByText('Good')).toBeInTheDocument();
     });
 
     it('calculates total weight for multiple quantities', () => {
@@ -271,7 +272,7 @@ describe('ItemCard', () => {
         />
       );
 
-      expect(screen.getByText('Weight: 15')).toBeInTheDocument();
+      expect(screen.getByText('Weight: 15.0')).toBeInTheDocument();
     });
 
     it('calculates total value for multiple quantities', () => {

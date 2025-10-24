@@ -80,7 +80,7 @@ describe('AbilityCard', () => {
       );
 
       const badge = screen.getByText('learned');
-      expect(badge).toHaveClass('bg-blue-100', 'text-blue-800');
+      expect(badge).toHaveClass('bg-semantic-info-subtle', 'text-content-primary');
     });
 
     it('applies green color for innate type', () => {
@@ -95,7 +95,7 @@ describe('AbilityCard', () => {
       );
 
       const badge = screen.getByText('innate');
-      expect(badge).toHaveClass('bg-green-100', 'text-green-800');
+      expect(badge).toHaveClass('bg-semantic-success-subtle', 'text-content-primary');
     });
 
     it('applies purple color for gm_assigned type', () => {
@@ -110,7 +110,7 @@ describe('AbilityCard', () => {
       );
 
       const badge = screen.getByText('gm assigned');
-      expect(badge).toHaveClass('bg-purple-100', 'text-purple-800');
+      expect(badge).toHaveClass('bg-semantic-warning-subtle', 'text-content-primary');
     });
 
     it('formats type name with space for gm_assigned', () => {

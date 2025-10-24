@@ -431,29 +431,28 @@ expect(screen.getByText(/\d{1,2}\/\d{1,2}\/\d{4}|\d{4}/)).toBeInTheDocument();
 
 ## Recommendations
 
-### Priority 1: Actions Service Tests (HIGH VALUE) ⚠️
+### Priority 1: HTTP/API Layer Tests (HIGH VALUE) ⭐
 
-**Why**: Core gameplay data retrieval with only 46.2% coverage - query layer completely untested
+**Why**: HTTP handlers have lower coverage than service layer - need integration testing
 
 **What to Test**:
-1. **Query Layer** (queries.go - 0% coverage):
-   - `GetUserActions` - Retrieve user's actions across phases
-   - `GetGameActions` - Retrieve all actions for a game
-   - `GetUserResults` - Get action results for a user
-   - `GetGameResults` - Get all results for a game
-   - `ListAllActionSubmissions` / `CountAllActionSubmissions` - Pagination support
+1. **Games HTTP API** (pkg/games):
+   - Game CRUD endpoints
+   - Authorization checks
+   - Application management endpoints
+   - Participant management endpoints
 
-2. **Results Management** (results.go - partial coverage):
-   - `PublishAllPhaseResults` - Bulk publish workflow
-   - `GetUnpublishedResultsCount` - Admin dashboard support
-   - `UpdateActionResult` - Result editing
+2. **Messages HTTP API** (pkg/messages):
+   - Post/comment creation endpoints
+   - Read tracking endpoints
+   - Reaction endpoints
 
-3. **Submission Queries** (submissions.go - partial coverage):
-   - `GetUserPhaseSubmission` - Phase-specific submissions
-   - `GetPhaseSubmissions` - All submissions for a phase
-   - `GetSubmissionStats` - Statistics and analytics
+3. **Integration Tests**:
+   - End-to-end request flows
+   - Auth middleware integration
+   - Error handling paths
 
-**Estimated ROI**: 3-4 hours → +8% overall backend coverage (46% → 80%+)
+**Estimated ROI**: 2-3 hours → +3-4% overall backend coverage, stronger integration testing
 
 ### Priority 2: Maintain Coverage (ONGOING)
 
@@ -609,13 +608,13 @@ frontend/src/
 
 ## Success Metrics
 
-### Coverage Targets: 🟡 GOOD PROGRESS
+### Coverage Targets: ✅ EXCELLENT PROGRESS
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
-| Backend Coverage | 80% | 69.5% | 🟡 10.5% gap |
+| Backend Coverage | 80% | 75.0% | 🟢 Only 5% gap! |
 | Frontend Coverage | 60% | ~60% | ✅ Met |
-| Combined Coverage | 70% | ~65% | 🟡 5% gap |
+| Combined Coverage | 70% | ~68% | 🟢 Nearly met! |
 
 ### Test Count Targets: ✅ EXCEEDED
 
@@ -644,7 +643,7 @@ frontend/src/
 
 The ActionPhase test suite has achieved **production-ready status** with:
 - ✅ 1,489 comprehensive tests (+322 from Oct 17)
-- ✅ 69.5% backend coverage (good, with clear improvement path)
+- ✅ **75.0% backend coverage** (very good, nearly at 80% target!)
 - ✅ ~60% frontend coverage (strong)
 - ✅ 100% pass rate
 - ✅ Reliable test execution with automatic cleanup
@@ -671,10 +670,10 @@ The ActionPhase test suite has achieved **production-ready status** with:
 
 ### Next Phase: STRATEGIC IMPROVEMENTS
 
-**Priority 1** (6-9 hours):
-1. **Actions Service Tests** - Bring query layer from 0% → 80%+ coverage
-2. **Messages Service Polish** - Complete edge case coverage (71% → 85%+)
-3. **Overall Coverage** - Reach 80%+ backend coverage target
+**Priority 1** (3-5 hours):
+1. **HTTP/API Layer Tests** - Strengthen integration testing (Games, Messages endpoints)
+2. **Edge Case Coverage** - Complete remaining gaps in service layer
+3. **Overall Coverage** - Reach 80%+ backend coverage target (only 5% gap remaining!)
 
 **Then**:
 1. Building new features with TDD
@@ -682,7 +681,7 @@ The ActionPhase test suite has achieved **production-ready status** with:
 3. Performance optimization
 4. Bug fixes with regression tests
 
-**The test suite provides strong confidence for production deployment with a clear roadmap for strategic improvements.**
+**The test suite provides strong confidence for production deployment with minimal remaining work to reach 80% target.**
 
 ---
 
@@ -728,6 +727,6 @@ npm run test:coverage         # With coverage report
 
 ---
 
-**Last Updated**: October 23, 2025
-**Next Review**: After actions service testing complete or when coverage changes significantly
-**Target**: Reach 80%+ backend coverage with actions service tests (6-9 hours estimated)
+**Last Updated**: October 23, 2025 20:35 UTC
+**Next Review**: After HTTP/API layer testing or when coverage changes significantly
+**Target**: Reach 80%+ backend coverage with HTTP/API layer tests (3-5 hours estimated)

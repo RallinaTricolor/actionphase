@@ -88,7 +88,7 @@ describe('MarkdownPreview', () => {
     it('applies link styling', () => {
       render(<MarkdownPreview content="[Link](https://example.com)" />);
       const link = screen.getByRole('link', { name: 'Link' });
-      expect(link).toHaveClass('text-blue-600');
+      expect(link).toHaveClass('text-interactive-primary');
       expect(link).toHaveClass('underline');
     });
   });
@@ -145,8 +145,8 @@ describe('MarkdownPreview', () => {
       );
 
       const mention = screen.getByText('@Alice');
-      expect(mention).toHaveClass('bg-blue-100');
-      expect(mention).toHaveClass('text-blue-800');
+      expect(mention).toHaveClass('bg-interactive-primary-subtle');
+      expect(mention).toHaveClass('text-interactive-primary');
     });
 
     it('handles multiple mentions of the same character', () => {

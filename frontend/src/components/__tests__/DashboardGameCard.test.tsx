@@ -57,9 +57,9 @@ describe('DashboardGameCard', () => {
 
     expect(screen.getByText('Urgent')).toBeInTheDocument();
 
-    // Check for urgent styling (red border)
+    // Check for urgent styling (semantic danger border)
     const link = container.querySelector('a');
-    expect(link?.className).toContain('border-red');
+    expect(link?.className).toContain('border-semantic-danger');
   });
 
   it('displays current phase information when available', () => {
@@ -156,9 +156,9 @@ describe('DashboardGameCard', () => {
 
     const { container } = renderWithProviders(<DashboardGameCard game={warningGame} />);
 
-    // Check for yellow/warning styling in the deadline badge
-    expect(container.innerHTML).toContain('yellow-600');
-    expect(container.innerHTML).toContain('yellow-50');
+    // Check for semantic warning styling in the deadline badge
+    expect(container.innerHTML).toContain('text-semantic-warning');
+    expect(container.innerHTML).toContain('bg-semantic-warning-subtle');
   });
 
   it('applies critical color for critical deadline status', () => {
@@ -172,9 +172,9 @@ describe('DashboardGameCard', () => {
 
     const { container } = renderWithProviders(<DashboardGameCard game={criticalGame} />);
 
-    // Check for red/critical styling in the deadline badge
-    expect(container.innerHTML).toContain('red-600');
-    expect(container.innerHTML).toContain('red-50');
+    // Check for semantic danger/critical styling in the deadline badge
+    expect(container.innerHTML).toContain('text-semantic-danger');
+    expect(container.innerHTML).toContain('bg-semantic-danger-subtle');
   });
 
   it('applies normal color for normal deadline status', () => {
@@ -188,9 +188,9 @@ describe('DashboardGameCard', () => {
 
     const { container } = renderWithProviders(<DashboardGameCard game={normalGame} />);
 
-    // Check for green/normal styling in the deadline badge
-    expect(container.innerHTML).toContain('green-600');
-    expect(container.innerHTML).toContain('green-50');
+    // Check for semantic success/normal styling in the deadline badge
+    expect(container.innerHTML).toContain('text-semantic-success');
+    expect(container.innerHTML).toContain('bg-semantic-success-subtle');
   });
 
   it('links to game detail page', () => {

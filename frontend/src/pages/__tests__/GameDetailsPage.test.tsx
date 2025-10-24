@@ -347,12 +347,19 @@ describe('GameDetailsPage', () => {
 
       renderGameDetailsPage(1)
 
+      // Wait for phase-independent tabs first (these load immediately)
+      await waitFor(() => {
+        expect(screen.getByRole('tab', { name: /people/i })).toBeInTheDocument()
+      })
+
+      // Then wait for phase-dependent tab (requires currentPhase query to complete)
       await waitFor(() => {
         expect(screen.getByRole('tab', { name: /submit action/i })).toBeInTheDocument()
-        expect(screen.getByRole('tab', { name: /characters/i })).toBeInTheDocument()
-        expect(screen.getByRole('tab', { name: /^messages$/i })).toBeInTheDocument()
-        expect(screen.getByRole('tab', { name: /phase history/i })).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
+
+      // Verify all tabs are present
+      expect(screen.getByRole('tab', { name: /^messages$/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /history/i })).toBeInTheDocument()
     })
 
     it('should display current phase information', async () => {
@@ -368,7 +375,7 @@ describe('GameDetailsPage', () => {
       await waitFor(() => {
         expect(screen.getByText(/current phase: phase 1: planning/i)).toBeInTheDocument()
         // Check for phase type badge specifically - it's in a span with specific classes
-        const phaseBadge = document.querySelector('.bg-blue-100.text-blue-800')
+        const phaseBadge = document.querySelector('.bg-semantic-info-subtle.text-content-primary')
         expect(phaseBadge).toHaveTextContent('Action')
       }, { timeout: 3000 })
     })

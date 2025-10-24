@@ -112,7 +112,7 @@ describe('PostCard', () => {
         />
       );
 
-      expect(screen.getByRole('heading', { name: /gm post: gm character/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /gm character/i })).toBeInTheDocument();
     });
 
     it('displays author username', () => {
@@ -1273,7 +1273,7 @@ describe('PostCard', () => {
       });
 
       // Verify post displays correctly
-      expect(screen.getByRole('heading', { name: /gm post: gm character/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /gm character/i })).toBeInTheDocument();
       expect(screen.getByText(/^you$/i)).toBeInTheDocument(); // Author badge
 
       // Open comment form
