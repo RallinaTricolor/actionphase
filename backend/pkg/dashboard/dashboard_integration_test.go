@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"actionphase/pkg/core"
+	services "actionphase/pkg/db/services"
 	"actionphase/pkg/observability"
 	"net/http"
 	"net/http/httptest"
@@ -16,7 +17,10 @@ import (
 func TestDashboardAPI_GetUserDashboard_Integration(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "game_phases", "game_participants", "games", "users", "sessions")
+
+	// Clean up before and after to ensure isolation
+	testDB.CleanupTables(t, "action_submissions", "game_phases", "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "action_submissions", "game_phases", "game_participants", "games", "sessions", "users")
 
 	factory := core.NewTestDataFactory(testDB, t)
 
@@ -34,19 +38,20 @@ func TestDashboardAPI_GetUserDashboard_Integration(t *testing.T) {
 	}
 
 	// Create authenticated user
-	user, session := factory.CreateAuthenticatedUser()
+	user, _ := factory.CreateAuthenticatedUser()
 
-	// Create JWT token
+	// Create JWT token with username (not session_id)
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
 	_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{
-		"session_id": session.Data,
-		"exp":        time.Now().Add(24 * time.Hour).Unix(),
+		"username": user.Username,
+		"exp":      time.Now().Add(24 * time.Hour).Unix(),
 	})
 
-	// Setup router with dashboard handler
+	// Setup router with dashboard handler and authentication middleware
+	userService := &services.UserService{DB: testDB.Pool}
 	r := chi.NewRouter()
 	r.Use(jwtauth.Verifier(tokenAuth))
-	r.Use(jwtauth.Authenticator(tokenAuth))
+	r.Use(core.RequireAuthenticationMiddleware(userService))
 
 	handler := &Handler{App: app}
 	r.Get("/", handler.GetUserDashboard)
@@ -122,7 +127,10 @@ func TestDashboardAPI_GetUserDashboard_Integration(t *testing.T) {
 func TestDashboardAPI_GetUserDashboard_WithUrgentGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "action_submissions", "game_phases", "game_participants", "games", "users", "sessions")
+
+	// Clean up before and after to ensure isolation
+	testDB.CleanupTables(t, "action_submissions", "game_phases", "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "action_submissions", "game_phases", "game_participants", "games", "sessions", "users")
 
 	factory := core.NewTestDataFactory(testDB, t)
 
@@ -140,19 +148,20 @@ func TestDashboardAPI_GetUserDashboard_WithUrgentGame(t *testing.T) {
 	}
 
 	// Create authenticated user
-	user, session := factory.CreateAuthenticatedUser()
+	user, _ := factory.CreateAuthenticatedUser()
 
-	// Create JWT token
+	// Create JWT token with username
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
 	_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{
-		"session_id": session.Data,
-		"exp":        time.Now().Add(24 * time.Hour).Unix(),
+		"username": user.Username,
+		"exp":      time.Now().Add(24 * time.Hour).Unix(),
 	})
 
-	// Setup router
+	// Setup router with authentication middleware
+	userService := &services.UserService{DB: testDB.Pool}
 	r := chi.NewRouter()
 	r.Use(jwtauth.Verifier(tokenAuth))
-	r.Use(jwtauth.Authenticator(tokenAuth))
+	r.Use(core.RequireAuthenticationMiddleware(userService))
 
 	handler := &Handler{App: app}
 	r.Get("/", handler.GetUserDashboard)

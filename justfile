@@ -297,109 +297,64 @@ start service="backend":
 # BACKEND TESTING
 # ═══════════════════════════════════════════════════════════════════════════
 
-# Run backend tests (default: mocks only, no database)
+# Helper function to clean test database
+_clean_test_db:
+  #!/usr/bin/env bash
+  echo "🧹 Cleaning actionphase database for integration tests..."
+  PGPASSWORD=example psql -h localhost -p 5432 -U postgres -d actionphase -q -c "
+  DO \$\$
+  DECLARE
+      r RECORD;
+  BEGIN
+      FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+          EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' RESTART IDENTITY CASCADE';
+      END LOOP;
+  END \$\$;
+  " 2>&1 | grep -v "NOTICE" || true
+  echo "✅ Database cleaned"
+
+# Run all backend tests (default: everything with database)
 test:
+  @echo "🧪 Running all backend tests (integration + mocks)..."
+  @just _clean_test_db
+  cd backend && SKIP_DB_TESTS=false go test -p=1 ./...
+
+# Run fast mock tests only (no database required)
+test-mocks:
+  @echo "⚡ Running mock tests only (fast, parallel)..."
   cd backend && SKIP_DB_TESTS=true go test ./...
 
-# Backend testing with options: --mocks, --integration, --race, --coverage, --bench, --verbose, --all, --clean
-test-backend *flags="":
-  #!/usr/bin/env bash
-  cd backend
+# Run database service integration tests only
+test-integration:
+  @echo "🗄️  Running database integration tests..."
+  @just _clean_test_db
+  cd backend && SKIP_DB_TESTS=false go test -p=1 ./pkg/db/services/...
 
-  # Parse flags
-  MOCKS=false
-  INTEGRATION=false
-  RACE=false
-  COVERAGE=false
-  BENCH=false
-  VERBOSE=false
-  ALL=false
-  CLEAN=false
-  SERVICE=""
+# Run tests with coverage report
+test-coverage:
+  @echo "📊 Running all tests with coverage..."
+  @just _clean_test_db
+  cd backend && SKIP_DB_TESTS=false go test -p=1 -coverprofile=coverage.out ./...
+  @echo ""
+  @echo "Coverage report generated: backend/coverage.out"
+  @cd backend && go tool cover -func=coverage.out | tail -1
 
-  for flag in {{flags}}; do
-    case "$flag" in
-      --mocks) MOCKS=true ;;
-      --integration) INTEGRATION=true ;;
-      --race) RACE=true ;;
-      --coverage) COVERAGE=true ;;
-      --bench) BENCH=true ;;
-      --verbose) VERBOSE=true ;;
-      --all) ALL=true ;;
-      --clean) CLEAN=true ;;
-      --service=*) SERVICE="${flag#*=}" ;;
-      *)
-        echo "Unknown flag: $flag"
-        echo ""
-        echo "Usage: just test-backend [flags]"
-        echo ""
-        echo "Flags:"
-        echo "  --mocks         Fast unit tests using mocks (default if no flags)"
-        echo "  --integration   Integration tests with database"
-        echo "  --race          Run with race detector"
-        echo "  --coverage      Generate coverage report"
-        echo "  --bench         Run benchmarks"
-        echo "  --verbose       Verbose output"
-        echo "  --all           All tests (mocks + integration)"
-        echo "  --clean         Clean test cache"
-        echo "  --service=<name> Test specific service"
-        exit 1
-        ;;
-    esac
-  done
+# Run tests with race detector
+test-race:
+  @echo "🔍 Running tests with race detector..."
+  @just _clean_test_db
+  cd backend && SKIP_DB_TESTS=false go test -p=1 -race ./...
 
-  # Clean cache if requested
-  if [ "$CLEAN" = true ]; then
-    go clean -testcache
-    echo "✅ Test cache cleaned"
-    exit 0
-  fi
+# Clean test cache
+test-clean:
+  cd backend && go clean -testcache
+  @echo "✅ Test cache cleaned"
 
-  # Build command
-  CMD="go test"
-
-  # Add verbose flag
-  if [ "$VERBOSE" = true ]; then
-    CMD="$CMD -v"
-  fi
-
-  # Add race detector
-  if [ "$RACE" = true ]; then
-    CMD="$CMD -race"
-  fi
-
-  # Add coverage
-  if [ "$COVERAGE" = true ]; then
-    CMD="$CMD -coverprofile=coverage.out"
-  fi
-
-  # Add benchmark
-  if [ "$BENCH" = true ]; then
-    CMD="$CMD -bench=."
-  fi
-
-  # Determine what to test
-  if [ "$ALL" = true ]; then
-    SKIP_DB_TESTS=false $CMD ./...
-  elif [ "$INTEGRATION" = true ]; then
-    SKIP_DB_TESTS=false $CMD ./...
-  elif [ -n "$SERVICE" ]; then
-    if [ "$INTEGRATION" = true ]; then
-      SKIP_DB_TESTS=false $CMD "./pkg/db/services/$SERVICE"
-    else
-      SKIP_DB_TESTS=true $CMD "./pkg/db/services/$SERVICE"
-    fi
-  else
-    # Default: mocks only
-    SKIP_DB_TESTS=true $CMD ./...
-  fi
-
-  # Show coverage if generated
-  if [ "$COVERAGE" = true ]; then
-    echo ""
-    echo "Coverage report generated: backend/coverage.out"
-    go tool cover -func=coverage.out | tail -1
-  fi
+# Run specific test by name
+test-run pattern:
+  @echo "🎯 Running tests matching: {{pattern}}"
+  @just _clean_test_db
+  cd backend && SKIP_DB_TESTS=false go test -p=1 -v -run {{pattern}} ./...
 
 # ═══════════════════════════════════════════════════════════════════════════
 # FRONTEND TESTING

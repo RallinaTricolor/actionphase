@@ -22,7 +22,7 @@ func TestAuthAPI_RegistrationEndpoint(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	router := setupAuthAPITestRouter(app)
+	router := setupAuthAPITestRouter(app, testDB)
 
 	testCases := []struct {
 		name           string
@@ -142,7 +142,7 @@ func TestAuthAPI_LoginEndpoint(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	router := setupAuthAPITestRouter(app)
+	router := setupAuthAPITestRouter(app, testDB)
 	fixtures := testDB.SetupFixtures(t)
 
 	// Use the test fixture user (password is "test_password")
@@ -255,7 +255,7 @@ func TestAuthAPI_RefreshEndpoint(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	router := setupAuthAPITestRouter(app)
+	router := setupAuthAPITestRouter(app, testDB)
 	fixtures := testDB.SetupFixtures(t)
 
 	// Create a valid JWT token for the test user
@@ -340,7 +340,7 @@ func TestAuthAPI_ContentTypeHandling(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	router := setupAuthAPITestRouter(app)
+	router := setupAuthAPITestRouter(app, testDB)
 
 	testCases := []struct {
 		name           string
@@ -412,7 +412,7 @@ func TestAuthAPI_RateLimiting(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	router := setupAuthAPITestRouter(app)
+	router := setupAuthAPITestRouter(app, testDB)
 
 	// Test rapid successive login attempts
 	t.Run("rapid_login_attempts", func(t *testing.T) {
@@ -439,9 +439,10 @@ func TestAuthAPI_RateLimiting(t *testing.T) {
 }
 
 // setupAuthAPITestRouter creates a test router with auth routes configured for API testing
-func setupAuthAPITestRouter(app *core.App) *chi.Mux {
+func setupAuthAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	// Use the same secret from app config for consistency
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &db.UserService{DB: testDB.Pool}
 
 	r := chi.NewRouter()
 
@@ -454,8 +455,12 @@ func setupAuthAPITestRouter(app *core.App) *chi.Mux {
 			r.Post("/login", authHandler.V1Login)
 			r.Group(func(r chi.Router) {
 				r.Use(jwtauth.Verifier(tokenAuth))
-				r.Use(jwtauth.Authenticator(tokenAuth))
+				r.Use(core.RequireAuthenticationMiddleware(userService))
 				r.Get("/refresh", authHandler.V1Refresh)
+				r.Get("/me", authHandler.V1Me)
+				r.Get("/preferences", authHandler.V1GetPreferences)
+				r.Put("/preferences", authHandler.V1UpdatePreferences)
+				r.Get("/users/search", authHandler.V1SearchUsers)
 			})
 		})
 	})
@@ -470,7 +475,7 @@ func TestAuthAPI_BannedUserLogin(t *testing.T) {
 	defer testDB.CleanupTables(t, "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
-	router := setupAuthAPITestRouter(app)
+	router := setupAuthAPITestRouter(app, testDB)
 
 	// Create a user
 	userService := &db.UserService{DB: testDB.Pool}
@@ -515,6 +520,283 @@ func TestAuthAPI_BannedUserLogin(t *testing.T) {
 	core.AssertNotEqual(t, "", response["error"], "Response should contain error message")
 }
 
+// TestAuthAPI_V1Me tests the /me endpoint
+func TestAuthAPI_V1Me(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	testDB.CleanupTables(t, "sessions", "users")
+	defer testDB.CleanupTables(t, "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthAPITestRouter(app, testDB)
+
+	// Create test user
+	userService := &db.UserService{DB: testDB.Pool}
+	user := &core.User{
+		Username: "testuser",
+		Password: "testpassword123",
+		Email:    "testuser@example.com",
+	}
+	createdUser, err := userService.CreateUser(user)
+	core.AssertNoError(t, err, "Should create user successfully")
+
+	// Create valid JWT token
+	token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+	core.AssertNoError(t, err, "Should create token successfully")
+
+	t.Run("get_current_user_info", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/auth/me", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 200, w.Code, "Should return 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		// User fields are at top level
+		core.AssertEqual(t, "testuser", response["username"], "Username should match")
+		core.AssertEqual(t, "testuser@example.com", response["email"], "Email should match")
+		core.AssertNotEqual(t, nil, response["id"], "Should have user ID")
+		core.AssertEqual(t, "", response["Token"], "Token should be empty")
+	})
+
+	t.Run("unauthorized_without_token", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/auth/me", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 401, w.Code, "Should return 401 Unauthorized")
+	})
+
+	t.Run("invalid_token", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/auth/me", nil)
+		req.Header.Set("Authorization", "Bearer invalid.token.here")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 401, w.Code, "Should return 401 Unauthorized for invalid token")
+	})
+}
+
+// TestAuthAPI_Preferences tests the user preferences endpoints
+func TestAuthAPI_Preferences(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	testDB.CleanupTables(t, "sessions", "users")
+	defer testDB.CleanupTables(t, "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthAPITestRouter(app, testDB)
+
+	// Create test user
+	userService := &db.UserService{DB: testDB.Pool}
+	user := &core.User{
+		Username: "prefstest",
+		Password: "testpassword123",
+		Email:    "prefstest@example.com",
+	}
+	createdUser, err := userService.CreateUser(user)
+	core.AssertNoError(t, err, "Should create user successfully")
+
+	token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+	core.AssertNoError(t, err, "Should create token successfully")
+
+	t.Run("get_default_preferences", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/auth/preferences", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 200, w.Code, "Should return 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+		core.AssertNotEqual(t, nil, response["preferences"], "Should have preferences field")
+	})
+
+	t.Run("update_preferences", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"preferences": map[string]interface{}{
+				"theme":                 "dark",
+				"notifications_enabled": true,
+				"email_notifications":   false,
+			},
+		}
+		payloadBytes, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest("PUT", "/api/v1/auth/preferences", bytes.NewBuffer(payloadBytes))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 200, w.Code, "Should return 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		prefs, ok := response["preferences"].(map[string]interface{})
+		core.AssertTrue(t, ok, "Should have preferences object")
+		core.AssertEqual(t, "dark", prefs["theme"], "Theme should be dark")
+	})
+
+	t.Run("update_preferences_verify_persisted", func(t *testing.T) {
+		// Get preferences again to verify they were persisted
+		req := httptest.NewRequest("GET", "/api/v1/auth/preferences", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 200, w.Code, "Should return 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		prefs, ok := response["preferences"].(map[string]interface{})
+		core.AssertTrue(t, ok, "Should have preferences object")
+		core.AssertEqual(t, "dark", prefs["theme"], "Theme should still be dark")
+	})
+
+	t.Run("update_preferences_missing_field", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"notPreferences": map[string]interface{}{
+				"theme": "light",
+			},
+		}
+		payloadBytes, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest("PUT", "/api/v1/auth/preferences", bytes.NewBuffer(payloadBytes))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 400, w.Code, "Should return 400 Bad Request for missing preferences field")
+	})
+
+	t.Run("unauthorized_access", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/auth/preferences", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 401, w.Code, "Should return 401 Unauthorized without token")
+	})
+}
+
+// TestAuthAPI_SearchUsers tests the user search endpoint
+func TestAuthAPI_SearchUsers(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	testDB.CleanupTables(t, "sessions", "users")
+	defer testDB.CleanupTables(t, "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthAPITestRouter(app, testDB)
+
+	// Create test users
+	userService := &db.UserService{DB: testDB.Pool}
+	users := []*core.User{
+		{Username: "alice", Email: "alice@example.com", Password: "password123"},
+		{Username: "bob", Email: "bob@example.com", Password: "password123"},
+		{Username: "charlie", Email: "charlie@example.com", Password: "password123"},
+		{Username: "alicia", Email: "alicia@example.com", Password: "password123"},
+	}
+
+	var testUser *core.User
+	for i, user := range users {
+		createdUser, err := userService.CreateUser(user)
+		core.AssertNoError(t, err, "Should create user successfully")
+		if i == 0 {
+			testUser = createdUser
+		}
+	}
+
+	token, err := core.CreateTestJWTTokenForUser(app, testUser)
+	core.AssertNoError(t, err, "Should create token successfully")
+
+	t.Run("search_by_username", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/auth/users/search?q=ali", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 200, w.Code, "Should return 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		usersArray, ok := response["users"].([]interface{})
+		core.AssertTrue(t, ok, "Should have users array")
+		core.AssertTrue(t, len(usersArray) >= 2, "Should find at least alice and alicia")
+	})
+
+	t.Run("search_missing_query", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/auth/users/search", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 400, w.Code, "Should return 400 Bad Request for missing query")
+	})
+
+	t.Run("search_empty_query", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/auth/users/search?q=", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 400, w.Code, "Should return 400 Bad Request for empty query")
+	})
+
+	t.Run("search_no_results", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/auth/users/search?q=nonexistent", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 200, w.Code, "Should return 200 OK even with no results")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		usersArray, ok := response["users"].([]interface{})
+		core.AssertTrue(t, ok, "Should have users array")
+		core.AssertEqual(t, 0, len(usersArray), "Should find no users")
+	})
+
+	t.Run("unauthorized_search", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/auth/users/search?q=test", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 401, w.Code, "Should return 401 Unauthorized without token")
+	})
+}
+
 // createTestAuthToken creates a JWT token for testing purposes
 func createTestAuthToken(username string) (string, error) {
 	return core.CreateTestJWTToken(username)
@@ -542,7 +824,7 @@ func BenchmarkAuthAPI_Registration(b *testing.B) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	router := setupAuthAPITestRouter(app)
+	router := setupAuthAPITestRouter(app, testDB)
 
 	b.ResetTimer()
 
@@ -567,7 +849,7 @@ func BenchmarkAuthAPI_Login(b *testing.B) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	router := setupAuthAPITestRouter(app)
+	router := setupAuthAPITestRouter(app, testDB)
 
 	// Create a test user for login benchmarks
 	userService := &db.UserService{DB: testDB.Pool}
@@ -604,7 +886,7 @@ func BenchmarkAuthAPI_TokenRefresh(b *testing.B) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	router := setupAuthAPITestRouter(app)
+	router := setupAuthAPITestRouter(app, testDB)
 	fixtures := testDB.SetupFixtures(b)
 
 	// Create a valid token

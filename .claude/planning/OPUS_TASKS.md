@@ -1,5 +1,6 @@
 - More code refactoring/reorg
   - Focus on specific things in individual sessions
+  - Too much code in API functions?
 - Test coverage and useful tests
 - Game integrity and security (assume people could build a 3rd party client)
 - Usability / accessibility improvements
