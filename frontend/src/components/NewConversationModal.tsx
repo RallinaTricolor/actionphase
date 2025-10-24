@@ -129,7 +129,7 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
 
         <div className="mb-4">
           <Input
-            label={<>Conversation Title <span className="text-semantic-danger">*</span></>}
+            label="Conversation Title *"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -188,27 +188,29 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
               </p>
             ) : (
               availableParticipants.map((character) => (
-                <Checkbox
+                <label
                   key={character.id}
-                  id={`participant-${character.id}`}
-                  checked={selectedParticipants.has(character.id)}
-                  onChange={() => handleToggleParticipant(character.id)}
-                  disabled={creating}
-                  label={
-                    <div className="flex-1">
-                      <div className="font-medium text-content-primary">{character.name}</div>
-                      <div className="text-xs text-content-tertiary">{character.character_type.replace('_', ' ')}</div>
-                      {!isAnonymous && character.username && (
-                        <div className="text-xs text-content-tertiary">Played by {character.username}</div>
-                      )}
-                    </div>
-                  }
-                  className={`p-2 rounded transition-colors ${
+                  className={`flex items-start gap-3 p-2 rounded transition-colors cursor-pointer ${
                     selectedParticipants.has(character.id)
                       ? 'bg-interactive-primary-subtle border border-interactive-primary'
                       : 'hover:surface-raised border border-transparent'
                   }`}
-                />
+                >
+                  <Checkbox
+                    id={`participant-${character.id}`}
+                    checked={selectedParticipants.has(character.id)}
+                    onChange={() => handleToggleParticipant(character.id)}
+                    disabled={creating}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium text-content-primary">{character.name}</div>
+                    <div className="text-xs text-content-tertiary">{character.character_type.replace('_', ' ')}</div>
+                    {!isAnonymous && character.username && (
+                      <div className="text-xs text-content-tertiary">Played by {character.username}</div>
+                    )}
+                  </div>
+                </label>
               ))
             )}
           </div>

@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import type { EnrichedGameListItem } from '../types/games';
-import { GAME_STATE_LABELS, GAME_STATE_COLORS, DEADLINE_URGENCY_COLORS, USER_RELATIONSHIP_LABELS } from '../types/games';
+import { GAME_STATE_LABELS, GAME_STATE_COLORS, USER_RELATIONSHIP_LABELS } from '../types/games';
 import { Button } from './ui';
 
 interface EnhancedGameCardProps {

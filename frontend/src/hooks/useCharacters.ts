@@ -8,7 +8,7 @@ export function useAssignNPC() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ characterId, assignedUserId, gameId }: { characterId: number; assignedUserId: number; gameId: number }) =>
+    mutationFn: ({ characterId, assignedUserId, gameId: _gameId }: { characterId: number; assignedUserId: number; gameId: number }) =>
       apiClient.characters.assignNPC(characterId, { assigned_user_id: assignedUserId }),
     onSuccess: (_, variables) => {
       // Invalidate character queries to refresh the list with the correct query key

@@ -5,11 +5,11 @@ import { AddPlayerModal } from './AddPlayerModal';
 import { InactiveCharactersList } from './InactiveCharactersList';
 import { AudienceMemberBadge } from './AudienceMemberBadge';
 import { Button } from './ui';
-import type { Participant } from '../types/games';
+import type { GameParticipant } from '../types/games';
 
 interface PeopleViewProps {
   gameId: number;
-  participants: Participant[];
+  participants: GameParticipant[];
   isGM: boolean;
   currentUserId: number | null;
   gameState?: string;
@@ -19,7 +19,7 @@ interface PeopleViewProps {
 type SubTab = 'characters' | 'participants';
 
 /**
- * Combined view for Characters and Participants
+ * Combined view for Characters and GameParticipants
  * Reduces tab clutter by grouping related people management features
  */
 export function PeopleView({
@@ -60,7 +60,7 @@ export function PeopleView({
               }
             `}
           >
-            Participants ({participants.length})
+            GameParticipants ({participants.length})
           </button>
         </nav>
       </div>
@@ -76,11 +76,11 @@ export function PeopleView({
         />
       )}
 
-      {/* Participants sub-tab */}
+      {/* GameParticipants sub-tab */}
       {activeSubTab === 'participants' && (
         <>
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-content-primary">Participants</h2>
+            <h2 className="text-2xl font-bold text-content-primary">GameParticipants</h2>
             {isGM && (
               <Button
                 variant="primary"
@@ -96,15 +96,15 @@ export function PeopleView({
           ) : (
             <div className="space-y-4">
               {['player', 'co_gm', 'audience'].map((role) => {
-                const roleParticipants = participants.filter(p => p.role === role);
-                if (roleParticipants.length === 0) return null;
+                const roleGameParticipants = participants.filter(p => p.role === role);
+                if (roleGameParticipants.length === 0) return null;
                 return (
                   <div key={role}>
                     <h3 className="font-semibold text-content-primary mb-2 capitalize">
-                      {role.replace('_', ' ')}s ({roleParticipants.length})
+                      {role.replace('_', ' ')}s ({roleGameParticipants.length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {roleParticipants.map((participant) => (
+                      {roleGameParticipants.map((participant) => (
                         <div key={participant.id} className="border border-theme-default rounded-lg p-4 surface-raised">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">

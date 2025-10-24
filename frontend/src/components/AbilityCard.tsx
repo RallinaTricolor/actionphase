@@ -28,7 +28,7 @@ export const AbilityCard: React.FC<AbilityCardProps> = ({ ability, canEdit, onUp
     setIsEditing(false);
   };
 
-  const getTypeVariant = (type: CharacterAbility['type']): 'primary' | 'success' | 'warning' | 'default' => {
+  const getTypeVariant = (type: CharacterAbility['type']): 'primary' | 'success' | 'warning' | 'neutral' => {
     switch (type) {
       case 'gm_assigned':
         return 'warning';
@@ -37,7 +37,7 @@ export const AbilityCard: React.FC<AbilityCardProps> = ({ ability, canEdit, onUp
       case 'innate':
         return 'success';
       default:
-        return 'default';
+        return 'neutral';
     }
   };
 
@@ -134,7 +134,7 @@ export const AbilityCard: React.FC<AbilityCardProps> = ({ ability, canEdit, onUp
           </span>
         )}
         {!ability.active && (
-          <Badge variant="default" size="sm">Inactive</Badge>
+          <Badge variant="neutral" size="sm">Inactive</Badge>
         )}
       </div>
     </div>

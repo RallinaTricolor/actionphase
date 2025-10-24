@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAllActionSubmissions } from '../hooks/useAudience';
 import { Card, CardHeader, CardBody } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { Spinner } from './ui/Spinner';
 import { Alert } from './ui/Alert';
-import { Button } from './ui/Button';
 import { MarkdownPreview } from './MarkdownPreview';
 import { apiClient } from '../lib/api';
 
@@ -189,12 +188,12 @@ function ActionSubmissionCard({ gameId, submission }: { gameId: number; submissi
   useEffect(() => {
     if (isExpanded && submission.status === 'result_posted' && submission.action_result_id && !actionResult && !loadingResult) {
       setLoadingResult(true);
-      apiClient.phases.getGameActionResults(gameId)
-        .then(res => {
+      apiClient.phases.getGameResults(gameId)
+        .then((res: { data: any[] }) => {
           const result = res.data.find((r: any) => r.action_id === submission.id);
           setActionResult(result);
         })
-        .catch(err => {
+        .catch((err: Error) => {
           console.error('Failed to load action result:', err);
         })
         .finally(() => {

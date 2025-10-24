@@ -1,4 +1,4 @@
-import { HTMLAttributes, ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { tv, cn } from '../../lib/theme/utils';
 
 export type CardVariant = 'default' | 'elevated' | 'bordered' | 'danger' | 'warning' | 'success';

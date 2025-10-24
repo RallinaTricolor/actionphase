@@ -169,7 +169,7 @@ export const GamesPage = () => {
         <GamesList
           games={games}
           loading={isLoading}
-          error={isError ? error?.message : null}
+          error={isError ? (error?.message ?? null) : null}
           onGameClick={handleGameClick}
           onApplyToGame={handleApplyToGame}
           isJoining={isJoining}

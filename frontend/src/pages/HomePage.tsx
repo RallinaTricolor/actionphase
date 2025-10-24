@@ -67,7 +67,7 @@ export const HomePage = () => {
             )}
           </div>
 
-          <GamesList />
+          <GamesList games={[]} loading={false} error={null} />
         </div>
 
         {/* Info Section */}

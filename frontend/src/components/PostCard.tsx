@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
@@ -52,7 +52,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   }, [controllableCharacters, selectedCharacterId]);
 
   // Ref to store the mark-as-read callback to avoid re-creating the observer
-  const markAsReadRef = useRef<() => void>();
+  const markAsReadRef = useRef<(() => void) | undefined>(undefined);
 
   // Update the callback ref whenever dependencies change
   useEffect(() => {

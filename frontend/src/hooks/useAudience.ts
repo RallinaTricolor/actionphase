@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import type { GameParticipant, Character } from '../types/games';
 
 /**
  * Hook to apply as an audience member

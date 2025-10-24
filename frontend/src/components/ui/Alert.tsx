@@ -1,4 +1,4 @@
-import { HTMLAttributes, ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { tv } from '../../lib/theme/utils';
 import { AlertCircle, CheckCircle, Info, AlertTriangle, X } from 'lucide-react';
 

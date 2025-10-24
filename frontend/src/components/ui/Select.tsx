@@ -1,4 +1,5 @@
-import { SelectHTMLAttributes, forwardRef } from 'react';
+import type { SelectHTMLAttributes } from 'react';
+import { forwardRef } from 'react';
 import { tv } from '../../lib/theme/utils';
 
 export type SelectSize = 'sm' | 'md' | 'lg';

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Character } from '../types/characters';
 import { GameApplicationsList } from './GameApplicationsList';
 import { CharactersList } from './CharactersList';
 import { PhaseManagement } from './PhaseManagement';
@@ -16,15 +17,15 @@ import { AudienceMemberBadge } from './AudienceMemberBadge';
 import { PeopleView } from './PeopleView';
 import { HandoutsList } from './HandoutsList';
 import { Button } from './ui';
-import type { Game, Participant, Character } from '../types/games';
+import type { GameWithDetails, GameParticipant } from '../types/games';
 import type { GamePhase } from '../types/phases';
 
 interface GameTabContentProps {
   activeTab: string;
   gameId: number;
-  game: Game;
-  participants: Participant[];
-  currentPhaseData?: { phase: GamePhase };
+  game: GameWithDetails;
+  participants: GameParticipant[];
+  currentPhaseData?: { phase: GamePhase | null };
   isGM: boolean;
   isParticipant: boolean;
   currentUserId: number | null;
@@ -59,7 +60,7 @@ export function GameTabContent({
     return <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} />;
   }
 
-  // People Tab (combines Characters and Participants)
+  // People Tab (combines Characters and GameParticipants)
   if (activeTab === 'people') {
     return (
       <PeopleView
@@ -73,12 +74,12 @@ export function GameTabContent({
     );
   }
 
-  // Participants Tab (for other game states)
+  // GameParticipants Tab (for other game states)
   if (activeTab === 'participants') {
     return (
       <>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-content-primary">Participants</h2>
+          <h2 className="text-2xl font-bold text-content-primary">GameParticipants</h2>
           {isGM && game.state !== 'completed' && game.state !== 'cancelled' && (
             <Button
               variant="primary"
@@ -94,15 +95,15 @@ export function GameTabContent({
         ) : (
           <div className="space-y-4">
             {['player', 'co_gm', 'audience'].map((role) => {
-              const roleParticipants = participants.filter(p => p.role === role);
-              if (roleParticipants.length === 0) return null;
+              const roleGameParticipants = participants.filter(p => p.role === role);
+              if (roleGameParticipants.length === 0) return null;
               return (
                 <div key={role}>
                   <h3 className="font-semibold text-content-primary mb-2 capitalize">
-                    {role.replace('_', ' ')}s ({roleParticipants.length})
+                    {role.replace('_', ' ')}s ({roleGameParticipants.length})
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {roleParticipants.map((participant) => (
+                    {roleGameParticipants.map((participant) => (
                       <div key={participant.id} className="border border-theme-default rounded-lg p-4 surface-raised">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">

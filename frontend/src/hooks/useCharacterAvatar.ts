@@ -34,7 +34,7 @@ export function useUploadCharacterAvatar() {
   return useMutation({
     mutationFn: ({ characterId, file }: { characterId: number; file: File }) =>
       apiClient.characters.uploadCharacterAvatar(characterId, file),
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate character queries to refetch with new avatar
       queryClient.invalidateQueries({ queryKey: ['character', variables.characterId] });
       queryClient.invalidateQueries({ queryKey: ['characters'] });

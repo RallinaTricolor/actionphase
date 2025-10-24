@@ -1,4 +1,5 @@
-import { ButtonHTMLAttributes, ReactNode } from 'react';
+import { forwardRef } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { tv } from '../../lib/theme/utils';
 import { Loader2 } from 'lucide-react';
 
@@ -71,25 +72,33 @@ const buttonStyles = tv({
  * </Button>
  * ```
  */
-export function Button({
-  variant = 'primary',
-  size = 'md',
-  loading = false,
-  icon,
-  className,
-  disabled,
-  children,
-  ...props
-}: ButtonProps) {
-  return (
-    <button
-      className={buttonStyles({ variant, size, className })}
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-      {!loading && icon && icon}
-      {children}
-    </button>
-  );
-}
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  (
+    {
+      variant = 'primary',
+      size = 'md',
+      loading = false,
+      icon,
+      className,
+      disabled,
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    return (
+      <button
+        ref={ref}
+        className={buttonStyles({ variant, size, className })}
+        disabled={disabled || loading}
+        {...props}
+      >
+        {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+        {!loading && icon && icon}
+        {children}
+      </button>
+    );
+  }
+);
+
+Button.displayName = 'Button';

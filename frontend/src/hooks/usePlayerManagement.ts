@@ -73,13 +73,16 @@ export function useReassignCharacter() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       characterId,
       newOwnerUserId,
     }: {
       characterId: number;
       newOwnerUserId: number;
-    }) => apiClient.characters.reassignCharacter(characterId, { new_owner_user_id: newOwnerUserId }),
+    }) => {
+      const response = await apiClient.characters.reassignCharacter(characterId, { new_owner_user_id: newOwnerUserId });
+      return response.data;
+    },
     onSuccess: (data: Character) => {
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['characters'] });

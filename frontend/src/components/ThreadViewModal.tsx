@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ThreadedComment } from './ThreadedComment';
-import type { Message, Character } from '../types/messages';
+import type { Message } from '../types/messages';
+import type { Character } from '../types/characters';
 import { Button } from './ui';
 
 interface ThreadViewModalProps {
@@ -9,7 +10,7 @@ interface ThreadViewModalProps {
   characters: Character[];
   controllableCharacters: Character[];
   onClose: () => void;
-  onCreateReply: (parentId: number, content: string, characterId: number) => Promise<void>;
+  onCreateReply: (parentId: number, characterId: number, content: string) => Promise<void>;
   currentUserId?: number;
   unreadCommentIDs?: number[];
 }

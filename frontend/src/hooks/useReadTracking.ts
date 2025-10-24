@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import type { MarkPostReadRequest, ReadMarker, PostUnreadInfo, PostUnreadComments } from '../types/messages';
+import type { MarkPostReadRequest, ReadMarker } from '../types/messages';
 import { useMemo } from 'react';
 
 /**

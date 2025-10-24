@@ -7,7 +7,7 @@ import { Button } from './ui';
 interface NotificationDropdownProps {
   isOpen: boolean;
   onClose: () => void;
-  bellButtonRef?: React.RefObject<HTMLButtonElement>;
+  bellButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 export default function NotificationDropdown({ isOpen, onClose, bellButtonRef }: NotificationDropdownProps) {

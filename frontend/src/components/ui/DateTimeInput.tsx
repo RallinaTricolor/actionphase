@@ -97,7 +97,7 @@ export const DateTimeInput = forwardRef<HTMLInputElement, DateTimeInputProps>(
       placeholder,
       ...props
     },
-    ref
+    _ref
   ) => {
     const inputId = id || props.name;
     const showError = variant === 'error' || error;

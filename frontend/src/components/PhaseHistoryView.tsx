@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import type { GamePhase } from '../types/phases';
-import { getActionPhaseLabel, getActionPhaseColor, PHASE_TYPE_LABELS } from '../types/phases';
+import { getActionPhaseLabel, getActionPhaseColor } from '../types/phases';
 import { CommonRoom } from './CommonRoom';
 import { Button } from './ui';
 

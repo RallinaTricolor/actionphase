@@ -138,7 +138,7 @@ export function useGameListing() {
 
   const setHasOpenSpots = useCallback(
     (hasOpenSpots?: boolean | null) => {
-      updateFilters({ has_open_spots: hasOpenSpots });
+      updateFilters({ has_open_spots: hasOpenSpots === null ? undefined : hasOpenSpots });
     },
     [updateFilters]
   );

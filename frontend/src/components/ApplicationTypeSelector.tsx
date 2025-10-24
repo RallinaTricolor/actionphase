@@ -31,7 +31,7 @@ export function ApplicationTypeSelector({
             checked={selectedType === 'player'}
             onChange={() => onTypeChange('player')}
             label="Player"
-            description="Join as an active player with your own character"
+            helperText="Join as an active player with your own character"
           />
         )}
 
@@ -41,7 +41,7 @@ export function ApplicationTypeSelector({
           checked={selectedType === 'audience'}
           onChange={() => onTypeChange('audience')}
           label="Audience"
-          description="Follow the game and view all private messages and action submissions"
+          helperText="Follow the game and view all private messages and action submissions"
         />
       </div>
 

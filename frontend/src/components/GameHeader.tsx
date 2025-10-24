@@ -1,9 +1,9 @@
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
-import type { Game } from '../types/games';
+import type { GameListItem, GameWithDetails } from '../types/games';
 import { Badge } from './ui';
 
 interface GameHeaderProps {
-  game: Game;
+  game: GameListItem | GameWithDetails;
 }
 
 export function GameHeader({ game }: GameHeaderProps) {

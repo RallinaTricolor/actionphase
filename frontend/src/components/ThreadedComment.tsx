@@ -36,7 +36,7 @@ export function ThreadedComment({
   unreadCommentIDs = [],
   onOpenThread
 }: ThreadedCommentProps) {
-  const { showSuccess, showError } = useToast();
+  const { showSuccess: _showSuccess, showError } = useToast();
   const [replies, setReplies] = useState<Message[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [showReplies, setShowReplies] = useState(true); // Start expanded

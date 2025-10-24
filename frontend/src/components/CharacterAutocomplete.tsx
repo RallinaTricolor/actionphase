@@ -28,7 +28,7 @@ export function CharacterAutocomplete({
   position,
   onSelect,
   selectedIndex,
-  onClose,
+  onClose: _onClose,
 }: CharacterAutocompleteProps) {
   const listRef = useRef<HTMLUListElement>(null);
 
