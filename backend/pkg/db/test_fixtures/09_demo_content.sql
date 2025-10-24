@@ -68,7 +68,7 @@ BEGIN
   -- ============================================
 
   -- GM Welcome Post
-  INSERT INTO messages (game_id, phase_id, author_id, character_id, content, message_type, created_at, updated_at)
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, content, message_type, created_at, edited_at)
   VALUES (
     game1_id,
     game1_phase_id,
@@ -81,7 +81,7 @@ BEGIN
   ) RETURNING id INTO post1_id;
 
   -- Player 1 Response (Detective Marcus Kane) with character mentions
-  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, mentioned_character_ids, created_at, updated_at)
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, mentioned_character_ids, created_at, edited_at)
   VALUES (
     game1_id,
     game1_phase_id,
@@ -96,7 +96,7 @@ BEGIN
   );
 
   -- Player 2 Response (Dr. Sarah Chen) with character mention
-  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, mentioned_character_ids, created_at, updated_at)
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, mentioned_character_ids, created_at, edited_at)
   VALUES (
     game1_id,
     game1_phase_id,
@@ -111,7 +111,7 @@ BEGIN
   );
 
   -- Player 3 Response (Father O'Brien) - no mentions
-  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, updated_at)
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, edited_at)
   VALUES (
     game1_id,
     game1_phase_id,
@@ -125,7 +125,7 @@ BEGIN
   );
 
   -- GM Follow-up Post (Building Tension)
-  INSERT INTO messages (game_id, phase_id, author_id, character_id, content, message_type, created_at, updated_at)
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, content, message_type, created_at, edited_at)
   VALUES (
     game1_id,
     game1_phase_id,
@@ -138,7 +138,7 @@ BEGIN
   ) RETURNING id INTO post2_id;
 
   -- Conversation continues on post2_id with character mention
-  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, mentioned_character_ids, created_at, updated_at)
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, mentioned_character_ids, created_at, edited_at)
   VALUES (
     game1_id,
     game1_phase_id,
@@ -158,7 +158,7 @@ BEGIN
   -- ============================================
 
   -- GM Scene Setting Post
-  INSERT INTO messages (game_id, phase_id, author_id, character_id, content, message_type, created_at, updated_at)
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, content, message_type, created_at, edited_at)
   VALUES (
     game5_id,
     game5_phase_id,
@@ -171,7 +171,7 @@ BEGIN
   ) RETURNING id INTO post3_id;
 
   -- Player 1 discussion
-  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, updated_at)
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, edited_at)
   VALUES (
     game5_id,
     game5_phase_id,
@@ -185,7 +185,7 @@ BEGIN
   );
 
   -- Player 2 counterpoint
-  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, updated_at)
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, edited_at)
   VALUES (
     game5_id,
     game5_phase_id,
@@ -199,7 +199,7 @@ BEGIN
   );
 
   -- Player 3 moral perspective
-  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, updated_at)
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, edited_at)
   VALUES (
     game5_id,
     game5_phase_id,
