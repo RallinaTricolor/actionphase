@@ -28,7 +28,7 @@ BEGIN
   SELECT id INTO p2_char_id FROM characters WHERE game_id = target_game_id AND user_id = p2_id LIMIT 1;
 
 -- Post: "Deep Discussion Thread" by GM
-INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, updated_at)
+INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, edited_at)
 VALUES (
     9000,
     target_game_id,
@@ -48,7 +48,7 @@ This is a test post designed to demonstrate deeply nested comment threading. The
 );
 
 -- Level 1: First comment by Player1
-INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, updated_at)
+INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, edited_at)
 VALUES (
     9001,
     target_game_id,
@@ -64,7 +64,7 @@ VALUES (
 );
 
 -- Level 2: Reply to Level 1
-INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, updated_at)
+INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, edited_at)
 VALUES (
     9002,
     target_game_id,
@@ -80,7 +80,7 @@ VALUES (
 );
 
 -- Level 3: Reply to Level 2
-INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, updated_at)
+INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, edited_at)
 VALUES (
     9003,
     target_game_id,
@@ -96,7 +96,7 @@ VALUES (
 );
 
 -- Level 4: Reply to Level 3
-INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, updated_at)
+INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, edited_at)
 VALUES (
     9004,
     target_game_id,
@@ -114,7 +114,7 @@ What makes you think they might be protecting something?',
 );
 
 -- Level 5: Reply to Level 4 (Max depth reached - Continue button should appear here)
-INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, updated_at)
+INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, edited_at)
 VALUES (
     9005,
     target_game_id,
@@ -132,7 +132,7 @@ VALUES (
 );
 
 -- Level 6: Reply to Level 5 (Should only appear in thread view)
-INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, updated_at)
+INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, edited_at)
 VALUES (
     9006,
     target_game_id,
@@ -150,7 +150,7 @@ Perhaps we should investigate what they consider truly valuable?',
 );
 
 -- Level 7: Reply to Level 6
-INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, updated_at)
+INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, edited_at)
 VALUES (
     9007,
     target_game_id,
@@ -168,7 +168,7 @@ VALUES (
 );
 
 -- Level 8: Reply to Level 7 (Deepest level)
-INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, updated_at)
+INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, edited_at)
 VALUES (
     9008,
     target_game_id,
@@ -189,7 +189,7 @@ I roll for perception to examine the harbor for any hidden passages or clues. ðŸ
 -- The database will calculate these automatically when querying
 
 -- Add a parallel branch at level 5 to test multiple threads at max depth
-INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, updated_at)
+INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, edited_at)
 VALUES (
     9010,
     target_game_id,
@@ -207,7 +207,7 @@ VALUES (
 );
 
 -- Add reply to the parallel branch (depth 6)
-INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, updated_at)
+INSERT INTO messages (id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, visibility, created_at, edited_at)
 VALUES (
     9011,
     target_game_id,
