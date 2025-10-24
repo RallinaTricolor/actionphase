@@ -4,6 +4,80 @@
 
 This guide provides concrete steps to implement the E2E testing strategy. Follow these tasks sequentially for best results.
 
+**Current Status** (Oct 24, 2025):
+- ✅ Test data separation complete (`common/`, `demo/`, `e2e/`)
+- ✅ 3 Page Objects implemented
+- ✅ 25 E2E test files exist (needs reorganization into journeys)
+- ✅ Fixture loading scripts working correctly
+- 🚧 Need more `data-testid` attributes
+- 🚧 Need journey-based organization
+
+---
+
+## Task 0: Understanding Test Data Separation (READ FIRST)
+
+**Important:** ActionPhase uses a three-tier test data system. Understanding this prevents fixture conflicts and ensures tests run correctly.
+
+### The Three Data Tiers
+
+#### 1. Common Data (Always Loaded)
+**Location:** `backend/pkg/db/test_fixtures/common/`
+**Purpose:** Shared users and base configuration
+**Contents:**
+- `00_reset.sql` - Cleans database
+- `01_users.sql` - Test users (TestGM, TestPlayer1-5, TestAudience)
+
+**Never modify these files** - they're shared by both demo and E2E.
+
+#### 2. Demo Data (Staging/Showcase)
+**Location:** `backend/pkg/db/test_fixtures/demo/`
+**Purpose:** Rich, human-readable content for demos and manual testing
+**Load command:** `just load-demo`
+
+**When to use:**
+- Manual testing in the UI
+- Staging environment
+- Screenshots and demonstrations
+- Exploring features interactively
+
+**Characteristics:**
+- Games like "Shadows Over Innsmouth", "Curse of Strahd"
+- Rich narratives and detailed character backstories
+- Natural-sounding conversations
+- Uses database sequences (IDs not hardcoded)
+
+#### 3. E2E Data (Automated Testing)
+**Location:** `backend/pkg/db/test_fixtures/e2e/`
+**Purpose:** Isolated, predictable fixtures for automated tests
+**Load command:** `just load-e2e`
+
+**When to use:**
+- Running E2E tests locally
+- CI/CD pipelines
+- Automated test verification
+
+**Characteristics:**
+- Hardcoded IDs for reliability (e.g., Game 164, 165, 166, 167)
+- Minimal narrative content
+- Isolated games that don't conflict
+- Fast to load
+
+### Quick Reference
+
+| Task | Command | What You Get |
+|------|---------|--------------|
+| Manual testing | `just load-demo` | Rich demo games + users |
+| Running E2E tests | `just load-e2e` | Test games 164-167 + users |
+| Development (both) | `just load-all` | Everything (slower) |
+| Fresh start | `just db-reset && just load-demo` | Clean slate |
+
+### Critical Rules
+
+1. **E2E tests MUST use E2E fixtures** - Don't reference demo game IDs
+2. **Demo fixtures should NOT hardcode IDs** - Use `RETURNING id INTO variable`
+3. **Always run the right load command** before testing
+4. **Check fixture ordering** when creating new files (see Troubleshooting section)
+
 ---
 
 ## Task 1: Add Data-TestId Attributes (Priority: CRITICAL)
@@ -318,6 +392,74 @@ const gameId = 164; // Don't hardcode!
 2. **View trace:** `npx playwright show-trace trace.zip`
 3. **Check selectors:** `npx playwright codegen localhost:3000`
 4. **Parallel issues:** Add `test.describe.serial()` temporarily
+
+---
+
+## Troubleshooting: Common Issues
+
+### Issue: Fixture Fails with "null value in column violates not-null constraint"
+
+**Symptom:** Running `just load-demo` fails when applying fixtures, showing errors like:
+```
+ERROR: null value in column "game_id" of relation "messages" violates not-null constraint
+```
+
+**Cause:** Fixture files are loaded in **alphabetical order**. A fixture file is trying to reference data that hasn't been created yet.
+
+**Solution:** Rename the fixture file to ensure correct load order:
+
+```bash
+# Bad: This file runs before games are created
+012_deeply_nested_comments.sql  # ← Runs early (alphabetically)
+
+# Good: This file runs after games exist
+10_deeply_nested_comments.sql   # ← Runs after 02, 03, 04, etc.
+```
+
+**Load Order Pattern:**
+```
+demo/
+├── 02_games_recruiting.sql     # Create games first
+├── 03_games_running.sql        # More games
+├── 04_characters.sql           # Characters (need games)
+├── 05_actions.sql              # Actions (need characters)
+├── 06_results.sql              # Results (need actions)
+├── 09_demo_content.sql         # Rich content (needs everything)
+└── 10_deeply_nested_comments.sql  # Deep threads (needs game from 03)
+```
+
+**Key Rules:**
+1. Files load in **numerical then alphabetical order**
+2. Number files by dependency: `01` → `02` → `03` → ... → `10` → `11`
+3. Leave gaps (02, 03, 05, 09) for future insertions
+4. Always test with `just load-demo` after renaming
+
+---
+
+### Issue: "Game ID not found" in E2E tests
+
+**Cause:** Test expects specific game ID but fixture hasn't created it
+
+**Solution:** Use fixture helper to get game IDs dynamically:
+```typescript
+// Bad - hardcoded
+const gameId = 164;
+
+// Good - query from database
+const gameId = await getFixtureGameId(page, 'E2E_COMMON_ROOM');
+```
+
+---
+
+## Fixture Development Checklist
+
+When creating new fixture files:
+- [ ] Named with correct numerical prefix (check load order)
+- [ ] Uses variables for IDs (not hardcoded unless E2E-specific)
+- [ ] Wraps inserts in `DO $$ BEGIN ... END $$;` for error handling
+- [ ] Queries for dependent IDs before inserting
+- [ ] Tested with both `just load-demo` and `just load-e2e`
+- [ ] Documented purpose at top of file
 
 ---
 

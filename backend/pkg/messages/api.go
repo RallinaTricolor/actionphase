@@ -107,7 +107,6 @@ func messageWithDetailsToResponse(msg *core.MessageWithDetails) *MessageResponse
 		IsDeleted:             msg.IsDeleted,
 		MentionedCharacterIds: msg.MentionedCharacterIds,
 		CreatedAt:             msg.CreatedAt.Time,
-		UpdatedAt:             msg.UpdatedAt.Time,
 		EditCount:             msg.EditCount,
 	}
 	fmt.Printf("API messageWithDetailsToResponse: response.ID=%d, response.MentionedCharacterIds=%v\n", response.ID, response.MentionedCharacterIds)
@@ -287,7 +286,6 @@ func (h *Handler) GetGamePosts(w http.ResponseWriter, r *http.Request) {
 			"is_edited":            post.IsEdited,
 			"is_deleted":           post.IsDeleted,
 			"created_at":           post.CreatedAt,
-			"updated_at":           post.UpdatedAt,
 		}
 
 		if post.PhaseID.Valid {
@@ -445,7 +443,6 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 			"is_deleted":              comment.IsDeleted,
 			"mentioned_character_ids": comment.MentionedCharacterIds,
 			"created_at":              comment.CreatedAt,
-			"updated_at":              comment.UpdatedAt,
 		}
 
 		if comment.PhaseID.Valid {
@@ -958,7 +955,6 @@ func commentsWithParentsToResponse(comments []core.CommentWithParent) []map[stri
 			"character_id":    comment.CharacterID,
 			"content":         comment.Content,
 			"created_at":      comment.CreatedAt.Format(time.RFC3339),
-			"updated_at":      comment.UpdatedAt.Format(time.RFC3339),
 			"edited_at":       formatTimePtr(comment.EditedAt),
 			"edit_count":      comment.EditCount,
 			"deleted_at":      formatTimePtr(comment.DeletedAt),

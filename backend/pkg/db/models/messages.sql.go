@@ -74,7 +74,7 @@ INSERT INTO messages (
 ) VALUES (
     $1, $2, $3, $4, $5, 'comment', $6, $7, $8
 )
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, updated_at, deleted_at, deleted_by_user_id, edited_at, edit_count
+RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, deleted_at, deleted_by_user_id, edited_at, edit_count
 `
 
 type CreateCommentParams struct {
@@ -118,7 +118,6 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (M
 		&i.IsEdited,
 		&i.IsDeleted,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.EditedAt,
@@ -142,7 +141,7 @@ INSERT INTO messages (
 ) VALUES (
     $1, $2, $3, $4, $5, 'post', $6, $7
 )
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, updated_at, deleted_at, deleted_by_user_id, edited_at, edit_count
+RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, deleted_at, deleted_by_user_id, edited_at, edit_count
 `
 
 type CreatePostParams struct {
@@ -185,7 +184,6 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Message
 		&i.IsEdited,
 		&i.IsDeleted,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.EditedAt,
@@ -198,8 +196,7 @@ const deleteComment = `-- name: DeleteComment :exec
 UPDATE messages
 SET deleted_at = NOW(),
     deleted_by_user_id = $2,
-    is_deleted = true,
-    updated_at = NOW()
+    is_deleted = true
 WHERE id = $1
   AND deleted_at IS NULL
   AND message_type = 'comment'
@@ -220,7 +217,7 @@ UPDATE messages
 SET is_deleted = true
 WHERE id = $1
   AND message_type = 'post'
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, updated_at, deleted_at, deleted_by_user_id, edited_at, edit_count
+RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, deleted_at, deleted_by_user_id, edited_at, edit_count
 `
 
 func (q *Queries) DeletePost(ctx context.Context, id int32) (Message, error) {
@@ -241,7 +238,6 @@ func (q *Queries) DeletePost(ctx context.Context, id int32) (Message, error) {
 		&i.IsEdited,
 		&i.IsDeleted,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.EditedAt,
@@ -378,7 +374,7 @@ func (q *Queries) GetAudienceConversationMessages(ctx context.Context, conversat
 }
 
 const getComment = `-- name: GetComment :one
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
@@ -404,7 +400,6 @@ type GetCommentRow struct {
 	IsEdited              bool               `json:"is_edited"`
 	IsDeleted             bool               `json:"is_deleted"`
 	CreatedAt             pgtype.Timestamp   `json:"created_at"`
-	UpdatedAt             pgtype.Timestamp   `json:"updated_at"`
 	DeletedAt             pgtype.Timestamp   `json:"deleted_at"`
 	DeletedByUserID       pgtype.Int4        `json:"deleted_by_user_id"`
 	EditedAt              pgtype.Timestamptz `json:"edited_at"`
@@ -433,7 +428,6 @@ func (q *Queries) GetComment(ctx context.Context, id int32) (GetCommentRow, erro
 		&i.IsEdited,
 		&i.IsDeleted,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.EditedAt,
@@ -472,7 +466,7 @@ func (q *Queries) GetGamePostCount(ctx context.Context, arg GetGamePostCountPara
 }
 
 const getGamePosts = `-- name: GetGamePosts :many
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
@@ -510,7 +504,6 @@ type GetGamePostsRow struct {
 	IsEdited              bool               `json:"is_edited"`
 	IsDeleted             bool               `json:"is_deleted"`
 	CreatedAt             pgtype.Timestamp   `json:"created_at"`
-	UpdatedAt             pgtype.Timestamp   `json:"updated_at"`
 	DeletedAt             pgtype.Timestamp   `json:"deleted_at"`
 	DeletedByUserID       pgtype.Int4        `json:"deleted_by_user_id"`
 	EditedAt              pgtype.Timestamptz `json:"edited_at"`
@@ -550,7 +543,6 @@ func (q *Queries) GetGamePosts(ctx context.Context, arg GetGamePostsParams) ([]G
 			&i.IsEdited,
 			&i.IsDeleted,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.DeletedByUserID,
 			&i.EditedAt,
@@ -571,7 +563,7 @@ func (q *Queries) GetGamePosts(ctx context.Context, arg GetGamePostsParams) ([]G
 }
 
 const getMessage = `-- name: GetMessage :one
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
@@ -598,7 +590,6 @@ type GetMessageRow struct {
 	IsEdited              bool               `json:"is_edited"`
 	IsDeleted             bool               `json:"is_deleted"`
 	CreatedAt             pgtype.Timestamp   `json:"created_at"`
-	UpdatedAt             pgtype.Timestamp   `json:"updated_at"`
 	DeletedAt             pgtype.Timestamp   `json:"deleted_at"`
 	DeletedByUserID       pgtype.Int4        `json:"deleted_by_user_id"`
 	EditedAt              pgtype.Timestamptz `json:"edited_at"`
@@ -628,7 +619,6 @@ func (q *Queries) GetMessage(ctx context.Context, id int32) (GetMessageRow, erro
 		&i.IsEdited,
 		&i.IsDeleted,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.EditedAt,
@@ -686,7 +676,7 @@ func (q *Queries) GetMessageReactions(ctx context.Context, messageID int32) ([]G
 }
 
 const getPhasePosts = `-- name: GetPhasePosts :many
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
@@ -715,7 +705,6 @@ type GetPhasePostsRow struct {
 	IsEdited              bool               `json:"is_edited"`
 	IsDeleted             bool               `json:"is_deleted"`
 	CreatedAt             pgtype.Timestamp   `json:"created_at"`
-	UpdatedAt             pgtype.Timestamp   `json:"updated_at"`
 	DeletedAt             pgtype.Timestamp   `json:"deleted_at"`
 	DeletedByUserID       pgtype.Int4        `json:"deleted_by_user_id"`
 	EditedAt              pgtype.Timestamptz `json:"edited_at"`
@@ -750,7 +739,6 @@ func (q *Queries) GetPhasePosts(ctx context.Context, phaseID pgtype.Int4) ([]Get
 			&i.IsEdited,
 			&i.IsDeleted,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.DeletedByUserID,
 			&i.EditedAt,
@@ -771,7 +759,7 @@ func (q *Queries) GetPhasePosts(ctx context.Context, phaseID pgtype.Int4) ([]Get
 }
 
 const getPost = `-- name: GetPost :one
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
@@ -797,7 +785,6 @@ type GetPostRow struct {
 	IsEdited              bool               `json:"is_edited"`
 	IsDeleted             bool               `json:"is_deleted"`
 	CreatedAt             pgtype.Timestamp   `json:"created_at"`
-	UpdatedAt             pgtype.Timestamp   `json:"updated_at"`
 	DeletedAt             pgtype.Timestamp   `json:"deleted_at"`
 	DeletedByUserID       pgtype.Int4        `json:"deleted_by_user_id"`
 	EditedAt              pgtype.Timestamptz `json:"edited_at"`
@@ -826,7 +813,6 @@ func (q *Queries) GetPost(ctx context.Context, id int32) (GetPostRow, error) {
 		&i.IsEdited,
 		&i.IsDeleted,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.EditedAt,
@@ -854,7 +840,7 @@ func (q *Queries) GetPostCommentCount(ctx context.Context, parentID pgtype.Int4)
 }
 
 const getPostComments = `-- name: GetPostComments :many
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
@@ -883,7 +869,6 @@ type GetPostCommentsRow struct {
 	IsEdited              bool               `json:"is_edited"`
 	IsDeleted             bool               `json:"is_deleted"`
 	CreatedAt             pgtype.Timestamp   `json:"created_at"`
-	UpdatedAt             pgtype.Timestamp   `json:"updated_at"`
 	DeletedAt             pgtype.Timestamp   `json:"deleted_at"`
 	DeletedByUserID       pgtype.Int4        `json:"deleted_by_user_id"`
 	EditedAt              pgtype.Timestamptz `json:"edited_at"`
@@ -921,7 +906,6 @@ func (q *Queries) GetPostComments(ctx context.Context, parentID pgtype.Int4) ([]
 			&i.IsEdited,
 			&i.IsDeleted,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.DeletedByUserID,
 			&i.EditedAt,
@@ -1075,7 +1059,7 @@ func (q *Queries) GetUnreadCommentIDsForPosts(ctx context.Context, arg GetUnread
 }
 
 const getUserPostsInGame = `-- name: GetUserPostsInGame :many
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
@@ -1110,7 +1094,6 @@ type GetUserPostsInGameRow struct {
 	IsEdited              bool               `json:"is_edited"`
 	IsDeleted             bool               `json:"is_deleted"`
 	CreatedAt             pgtype.Timestamp   `json:"created_at"`
-	UpdatedAt             pgtype.Timestamp   `json:"updated_at"`
 	DeletedAt             pgtype.Timestamp   `json:"deleted_at"`
 	DeletedByUserID       pgtype.Int4        `json:"deleted_by_user_id"`
 	EditedAt              pgtype.Timestamptz `json:"edited_at"`
@@ -1145,7 +1128,6 @@ func (q *Queries) GetUserPostsInGame(ctx context.Context, arg GetUserPostsInGame
 			&i.IsEdited,
 			&i.IsDeleted,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.DeletedByUserID,
 			&i.EditedAt,
@@ -1394,12 +1376,11 @@ SET content = $2,
     mentioned_character_ids = $3,
     is_edited = true,
     edited_at = NOW(),
-    edit_count = edit_count + 1,
-    updated_at = NOW()
+    edit_count = edit_count + 1
 WHERE id = $1
   AND deleted_at IS NULL
   AND message_type = 'comment'
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, updated_at, deleted_at, deleted_by_user_id, edited_at, edit_count
+RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, deleted_at, deleted_by_user_id, edited_at, edit_count
 `
 
 type UpdateCommentParams struct {
@@ -1429,7 +1410,6 @@ func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) (M
 		&i.IsEdited,
 		&i.IsDeleted,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.EditedAt,
@@ -1445,7 +1425,7 @@ SET content = $2,
 WHERE id = $1
   AND is_deleted = false
   AND message_type = 'post'
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, updated_at, deleted_at, deleted_by_user_id, edited_at, edit_count
+RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, deleted_at, deleted_by_user_id, edited_at, edit_count
 `
 
 type UpdatePostParams struct {
@@ -1471,7 +1451,6 @@ func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Message
 		&i.IsEdited,
 		&i.IsDeleted,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.EditedAt,

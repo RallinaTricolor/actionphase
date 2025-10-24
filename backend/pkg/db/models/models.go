@@ -272,7 +272,6 @@ type Message struct {
 	IsEdited              bool               `json:"is_edited"`
 	IsDeleted             bool               `json:"is_deleted"`
 	CreatedAt             pgtype.Timestamp   `json:"created_at"`
-	UpdatedAt             pgtype.Timestamp   `json:"updated_at"`
 	DeletedAt             pgtype.Timestamp   `json:"deleted_at"`
 	DeletedByUserID       pgtype.Int4        `json:"deleted_by_user_id"`
 	EditedAt              pgtype.Timestamptz `json:"edited_at"`
