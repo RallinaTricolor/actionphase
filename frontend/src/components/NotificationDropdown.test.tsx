@@ -336,7 +336,7 @@ describe('NotificationDropdown', () => {
     });
   });
 
-  it('does not display footer when no notifications', async () => {
+  it('displays footer even when no notifications', async () => {
     server.use(
       http.get('/api/v1/notifications', () => {
         return HttpResponse.json({
@@ -349,7 +349,8 @@ describe('NotificationDropdown', () => {
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.queryByText('View all notifications')).not.toBeInTheDocument();
+      // Footer is always shown, even with no notifications
+      expect(screen.getByText('View all notifications')).toBeInTheDocument();
     });
   });
 

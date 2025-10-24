@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiClient } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import type { Message } from '../types/messages';
@@ -47,6 +47,7 @@ export function ThreadedComment({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
+  const isMountedRef = useRef(true);
 
   const { adminModeEnabled } = useAdminMode();
   const { isGM } = useGamePermissions(gameId);
@@ -57,6 +58,13 @@ export function ThreadedComment({
   const isUnread = unreadCommentIDs.includes(comment.id);
   const isAtMaxDepth = depth >= maxDepth;
   const [linkCopied, setLinkCopied] = useState(false);
+
+  // Track component mount status
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Auto-select first character
   useEffect(() => {
@@ -73,14 +81,20 @@ export function ThreadedComment({
   }, [hasReplies]);
 
   const loadReplies = async () => {
+    if (!isMountedRef.current) return;
+
     try {
       setLoadingReplies(true);
       const response = await apiClient.messages.getPostComments(gameId, comment.id);
-      setReplies(response.data);
+      if (isMountedRef.current) {
+        setReplies(response.data);
+      }
     } catch (err) {
       console.error('Failed to load replies:', err);
     } finally {
-      setLoadingReplies(false);
+      if (isMountedRef.current) {
+        setLoadingReplies(false);
+      }
     }
   };
 
@@ -88,13 +102,21 @@ export function ThreadedComment({
     const url = `${window.location.origin}/games/${gameId}?tab=common-room&comment=${comment.id}`;
     try {
       await navigator.clipboard.writeText(url);
-      setLinkCopied(true);
-      // Reset after 2 seconds
-      setTimeout(() => setLinkCopied(false), 2000);
+      if (isMountedRef.current) {
+        setLinkCopied(true);
+        // Reset after 2 seconds
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            setLinkCopied(false);
+          }
+        }, 2000);
+      }
     } catch (err) {
       console.error('Failed to copy link:', err);
       // Fallback: show toast with link if clipboard API fails
-      showError(`Failed to copy. Link: ${url}`);
+      if (isMountedRef.current) {
+        showError(`Failed to copy. Link: ${url}`);
+      }
     }
   };
 

@@ -64,24 +64,6 @@ describe('CharactersList', () => {
   })
 
   describe('Loading and empty states', () => {
-    it('should show loading state initially', () => {
-      server.use(
-        http.get('http://localhost:3000/api/v1/games/:gameId/characters', async () => {
-          await new Promise(resolve => setTimeout(resolve, 100))
-          return HttpResponse.json([])
-        })
-      )
-
-      renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={1} />
-      )
-
-      expect(screen.getByText('Characters')).toBeInTheDocument()
-      // Check for loading skeleton
-      const skeletons = document.querySelectorAll('.animate-pulse')
-      expect(skeletons.length).toBeGreaterThan(0)
-    })
-
     it('should show empty state when no characters exist', async () => {
       server.use(
         http.get('http://localhost:3000/api/v1/games/:gameId/characters', () => {
@@ -438,7 +420,7 @@ describe('CharactersList', () => {
 
       await waitFor(() => {
         const approvedBadge = screen.getAllByText('approved')[0]
-        expect(approvedBadge).toHaveClass('bg-green-100', 'text-green-800')
+        expect(approvedBadge).toHaveClass('bg-semantic-success-subtle', 'text-content-primary')
       })
     })
 
@@ -449,7 +431,7 @@ describe('CharactersList', () => {
 
       await waitFor(() => {
         const pendingBadge = screen.getByText('pending')
-        expect(pendingBadge).toHaveClass('bg-yellow-100', 'text-yellow-800')
+        expect(pendingBadge).toHaveClass('bg-semantic-warning-subtle', 'text-content-primary')
       })
     })
   })

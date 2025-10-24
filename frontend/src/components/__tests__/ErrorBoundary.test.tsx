@@ -137,7 +137,7 @@ describe('ErrorBoundary', () => {
 
       const codeElement = screen.getByText(/err_\d+_[a-z0-9]+/);
       expect(codeElement.tagName).toBe('CODE');
-      expect(codeElement).toHaveClass('bg-gray-100');
+      expect(codeElement).toHaveClass('surface-raised');
     });
   });
 

@@ -83,21 +83,19 @@ describe('NotificationItem', () => {
   it('shows unread indicator for unread notifications', () => {
     const notification = createMockNotification({ is_read: false });
 
-    const { container } = renderWithProviders(<NotificationItem notification={notification} />);
+    renderWithProviders(<NotificationItem notification={notification} />);
 
-    // Look for the blue dot indicator
-    const unreadIndicator = container.querySelector('.bg-blue-500');
-    expect(unreadIndicator).toBeInTheDocument();
+    // Look for the "New" badge
+    expect(screen.getByText('New')).toBeInTheDocument();
   });
 
   it('does not show unread indicator for read notifications', () => {
     const notification = createMockNotification({ is_read: true });
 
-    const { container } = renderWithProviders(<NotificationItem notification={notification} />);
+    renderWithProviders(<NotificationItem notification={notification} />);
 
-    // Should not have blue dot
-    const unreadIndicator = container.querySelector('.bg-blue-500');
-    expect(unreadIndicator).not.toBeInTheDocument();
+    // Should not have "New" badge
+    expect(screen.queryByText('New')).not.toBeInTheDocument();
   });
 
   it('displays title with bold text when unread', () => {

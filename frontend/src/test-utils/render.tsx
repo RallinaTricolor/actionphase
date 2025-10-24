@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, MemoryRouterProps } from 'react-router-dom'
 import { AuthProvider } from '../contexts/AuthContext'
 import { AdminModeProvider } from '../contexts/AdminModeContext'
+import { ToastProvider } from '../contexts/ToastContext'
 
 interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
   /**
@@ -54,8 +55,10 @@ export function createTestQueryClient(): QueryClient {
 /**
  * Renders a component with all necessary providers for testing:
  * - QueryClientProvider (React Query)
- * - AuthProvider (Authentication context)
  * - MemoryRouter (React Router)
+ * - AuthProvider (Authentication context)
+ * - AdminModeProvider (Admin mode context)
+ * - ToastProvider (Toast notifications)
  *
  * @example
  * ```tsx
@@ -81,7 +84,9 @@ export function renderWithProviders(
         <MemoryRouter initialEntries={initialEntries}>
           <AuthProvider>
             <AdminModeProvider>
-              {children}
+              <ToastProvider>
+                {children}
+              </ToastProvider>
             </AdminModeProvider>
           </AuthProvider>
         </MemoryRouter>

@@ -1,7 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThreadedComment } from '../ThreadedComment';
 import type { Message } from '../../types/messages';
+import { ToastProvider } from '../../contexts/ToastContext';
+import { AdminModeProvider } from '../../contexts/AdminModeContext';
+import { AuthProvider } from '../../contexts/AuthContext';
+
+// Mock fetch globally
+global.fetch = vi.fn();
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+    mutations: { retry: false },
+  },
+});
 
 const mockComment: Message = {
   id: 1,
@@ -27,15 +41,23 @@ const mockComment: Message = {
 describe('ThreadedComment - Depth Limiting', () => {
   it('should show reply button when under max depth', () => {
     render(
-      <ThreadedComment
-        comment={mockComment}
-        gameId={1}
-        characters={[]}
-        controllableCharacters={[{ id: 10, name: 'Test Character', game_id: 1, owner_id: 100, avatar_url: null, character_sheet: null, is_gm: false, created_at: '', updated_at: '' }]}
-        onCreateReply={vi.fn()}
-        depth={0}
-        maxDepth={5}
-      />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <AdminModeProvider>
+            <ToastProvider>
+              <ThreadedComment
+                comment={mockComment}
+                gameId={1}
+                characters={[]}
+                controllableCharacters={[{ id: 10, name: 'Test Character', game_id: 1, owner_id: 100, avatar_url: null, character_sheet: null, is_gm: false, created_at: '', updated_at: '' }]}
+                onCreateReply={vi.fn()}
+                depth={0}
+                maxDepth={5}
+              />
+            </ToastProvider>
+          </AdminModeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     expect(screen.getByText('Reply')).toBeInTheDocument();
@@ -43,15 +65,23 @@ describe('ThreadedComment - Depth Limiting', () => {
 
   it('should hide reply button at max depth', () => {
     render(
-      <ThreadedComment
-        comment={mockComment}
-        gameId={1}
-        characters={[]}
-        controllableCharacters={[{ id: 10, name: 'Test Character', game_id: 1, owner_id: 100, avatar_url: null, character_sheet: null, is_gm: false, created_at: '', updated_at: '' }]}
-        onCreateReply={vi.fn()}
-        depth={5}
-        maxDepth={5}
-      />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+        <AdminModeProvider>
+          <ToastProvider>
+            <ThreadedComment
+              comment={mockComment}
+              gameId={1}
+              characters={[]}
+              controllableCharacters={[{ id: 10, name: 'Test Character', game_id: 1, owner_id: 100, avatar_url: null, character_sheet: null, is_gm: false, created_at: '', updated_at: '' }]}
+              onCreateReply={vi.fn()}
+              depth={5}
+              maxDepth={5}
+            />
+          </ToastProvider>
+        </AdminModeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     expect(screen.queryByText('Reply')).not.toBeInTheDocument();
@@ -64,15 +94,23 @@ describe('ThreadedComment - Depth Limiting', () => {
     };
 
     render(
-      <ThreadedComment
-        comment={commentWithReplies}
-        gameId={1}
-        characters={[]}
-        controllableCharacters={[]}
-        onCreateReply={vi.fn()}
-        depth={5}
-        maxDepth={5}
-      />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+        <AdminModeProvider>
+          <ToastProvider>
+            <ThreadedComment
+              comment={commentWithReplies}
+              gameId={1}
+              characters={[]}
+              controllableCharacters={[]}
+              onCreateReply={vi.fn()}
+              depth={5}
+              maxDepth={5}
+            />
+          </ToastProvider>
+        </AdminModeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     const continueLink = screen.getByText(/Continue this thread/);
@@ -87,41 +125,62 @@ describe('ThreadedComment - Depth Limiting', () => {
     };
 
     render(
-      <ThreadedComment
-        comment={commentWithoutReplies}
-        gameId={1}
-        characters={[]}
-        controllableCharacters={[]}
-        onCreateReply={vi.fn()}
-        depth={5}
-        maxDepth={5}
-      />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+        <AdminModeProvider>
+          <ToastProvider>
+            <ThreadedComment
+              comment={commentWithoutReplies}
+              gameId={1}
+              characters={[]}
+              controllableCharacters={[]}
+              onCreateReply={vi.fn()}
+              depth={5}
+              maxDepth={5}
+            />
+          </ToastProvider>
+        </AdminModeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     expect(screen.queryByText(/Continue this thread/)).not.toBeInTheDocument();
   });
 
-  it('should link to correct thread view URL', () => {
+  it('should call onOpenThread when continue thread button clicked', () => {
     const commentWithReplies: Message = {
       ...mockComment,
       id: 123,
       reply_count: 2,
     };
 
+    const onOpenThread = vi.fn();
+
     render(
-      <ThreadedComment
-        comment={commentWithReplies}
-        gameId={42}
-        characters={[]}
-        controllableCharacters={[]}
-        onCreateReply={vi.fn()}
-        depth={5}
-        maxDepth={5}
-      />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+        <AdminModeProvider>
+          <ToastProvider>
+            <ThreadedComment
+              comment={commentWithReplies}
+              gameId={42}
+              characters={[]}
+              controllableCharacters={[]}
+              onCreateReply={vi.fn()}
+              onOpenThread={onOpenThread}
+              depth={5}
+              maxDepth={5}
+            />
+          </ToastProvider>
+        </AdminModeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
-    const link = screen.getByText(/Continue this thread/).closest('a');
-    expect(link).toHaveAttribute('href', '/games/42/common-room/thread/123');
+    const button = screen.getByText(/Continue this thread/).closest('button');
+    expect(button).toBeInTheDocument();
+    button?.click();
+    expect(onOpenThread).toHaveBeenCalledWith(commentWithReplies);
   });
 
   it('should hide replies collapse button at max depth', () => {
@@ -131,15 +190,23 @@ describe('ThreadedComment - Depth Limiting', () => {
     };
 
     render(
-      <ThreadedComment
-        comment={commentWithReplies}
-        gameId={1}
-        characters={[]}
-        controllableCharacters={[]}
-        onCreateReply={vi.fn()}
-        depth={5}
-        maxDepth={5}
-      />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+        <AdminModeProvider>
+          <ToastProvider>
+            <ThreadedComment
+              comment={commentWithReplies}
+              gameId={1}
+              characters={[]}
+              controllableCharacters={[]}
+              onCreateReply={vi.fn()}
+              depth={5}
+              maxDepth={5}
+            />
+          </ToastProvider>
+        </AdminModeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     // The collapse/expand button should not be present at max depth
@@ -149,15 +216,23 @@ describe('ThreadedComment - Depth Limiting', () => {
 
   it('should use default maxDepth of 5', () => {
     render(
-      <ThreadedComment
-        comment={mockComment}
-        gameId={1}
-        characters={[]}
-        controllableCharacters={[{ id: 10, name: 'Test Character', game_id: 1, owner_id: 100, avatar_url: null, character_sheet: null, is_gm: false, created_at: '', updated_at: '' }]}
-        onCreateReply={vi.fn()}
-        depth={4}
-        // maxDepth not specified - should default to 5
-      />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+        <AdminModeProvider>
+          <ToastProvider>
+            <ThreadedComment
+              comment={mockComment}
+              gameId={1}
+              characters={[]}
+              controllableCharacters={[{ id: 10, name: 'Test Character', game_id: 1, owner_id: 100, avatar_url: null, character_sheet: null, is_gm: false, created_at: '', updated_at: '' }]}
+              onCreateReply={vi.fn()}
+              depth={4}
+              // maxDepth not specified - should default to 5
+            />
+          </ToastProvider>
+        </AdminModeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     // At depth 4 with default maxDepth 5, reply button should show
@@ -166,15 +241,23 @@ describe('ThreadedComment - Depth Limiting', () => {
 
   it('should respect custom maxDepth prop', () => {
     render(
-      <ThreadedComment
-        comment={mockComment}
-        gameId={1}
-        characters={[]}
-        controllableCharacters={[{ id: 10, name: 'Test Character', game_id: 1, owner_id: 100, avatar_url: null, character_sheet: null, is_gm: false, created_at: '', updated_at: '' }]}
-        onCreateReply={vi.fn()}
-        depth={3}
-        maxDepth={3}
-      />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+        <AdminModeProvider>
+          <ToastProvider>
+            <ThreadedComment
+              comment={mockComment}
+              gameId={1}
+              characters={[]}
+              controllableCharacters={[{ id: 10, name: 'Test Character', game_id: 1, owner_id: 100, avatar_url: null, character_sheet: null, is_gm: false, created_at: '', updated_at: '' }]}
+              onCreateReply={vi.fn()}
+              depth={3}
+              maxDepth={3}
+            />
+          </ToastProvider>
+        </AdminModeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     // At depth 3 with maxDepth 3, reply button should NOT show
@@ -188,15 +271,23 @@ describe('ThreadedComment - Depth Limiting', () => {
     };
 
     render(
-      <ThreadedComment
-        comment={commentWithManyReplies}
-        gameId={1}
-        characters={[]}
-        controllableCharacters={[]}
-        onCreateReply={vi.fn()}
-        depth={5}
-        maxDepth={5}
-      />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+        <AdminModeProvider>
+          <ToastProvider>
+            <ThreadedComment
+              comment={commentWithManyReplies}
+              gameId={1}
+              characters={[]}
+              controllableCharacters={[]}
+              onCreateReply={vi.fn()}
+              depth={5}
+              maxDepth={5}
+            />
+          </ToastProvider>
+        </AdminModeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     expect(screen.getByText(/15 replies/)).toBeInTheDocument();
@@ -209,15 +300,23 @@ describe('ThreadedComment - Depth Limiting', () => {
     };
 
     render(
-      <ThreadedComment
-        comment={commentWithOneReply}
-        gameId={1}
-        characters={[]}
-        controllableCharacters={[]}
-        onCreateReply={vi.fn()}
-        depth={5}
-        maxDepth={5}
-      />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+        <AdminModeProvider>
+          <ToastProvider>
+            <ThreadedComment
+              comment={commentWithOneReply}
+              gameId={1}
+              characters={[]}
+              controllableCharacters={[]}
+              onCreateReply={vi.fn()}
+              depth={5}
+              maxDepth={5}
+            />
+          </ToastProvider>
+        </AdminModeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     expect(screen.getByText(/1 reply/)).toBeInTheDocument();

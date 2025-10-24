@@ -150,6 +150,7 @@ export const DateTimeInput = forwardRef<HTMLInputElement, DateTimeInputProps>(
           </label>
         )}
         <ReactDatePicker
+          id={inputId}
           selected={selectedDate}
           onChange={handleDateChange}
           showTimeSelect

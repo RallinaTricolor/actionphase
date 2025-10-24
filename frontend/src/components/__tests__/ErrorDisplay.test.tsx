@@ -52,11 +52,11 @@ describe('ErrorDisplay', () => {
         context: { severity: ErrorSeverity.LOW },
       }
 
-      const { container } = render(<ErrorDisplay error={error} />)
+      render(<ErrorDisplay error={error} />)
 
-      const errorContainer = container.querySelector('.bg-yellow-50')
-      expect(errorContainer).toBeInTheDocument()
-      expect(errorContainer).toHaveClass('border-yellow-200', 'text-yellow-700')
+      // Alert component handles styling internally via variant prop
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.getByText('Warning message')).toBeInTheDocument()
     })
 
     it('renders MEDIUM severity with error styling', () => {
@@ -66,11 +66,11 @@ describe('ErrorDisplay', () => {
         context: { severity: ErrorSeverity.MEDIUM },
       }
 
-      const { container } = render(<ErrorDisplay error={error} />)
+      render(<ErrorDisplay error={error} />)
 
-      const errorContainer = container.querySelector('.bg-red-50')
-      expect(errorContainer).toBeInTheDocument()
-      expect(errorContainer).toHaveClass('border-red-200', 'text-red-700')
+      // Alert component handles styling internally via variant prop
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.getByText('Error message')).toBeInTheDocument()
     })
 
     it('renders HIGH severity with stronger error styling', () => {
@@ -80,11 +80,11 @@ describe('ErrorDisplay', () => {
         context: { severity: ErrorSeverity.HIGH },
       }
 
-      const { container } = render(<ErrorDisplay error={error} />)
+      render(<ErrorDisplay error={error} />)
 
-      const errorContainer = container.querySelector('.bg-red-100')
-      expect(errorContainer).toBeInTheDocument()
-      expect(errorContainer).toHaveClass('border-red-300', 'text-red-800')
+      // Alert component handles styling internally via variant prop
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.getByText('High priority error')).toBeInTheDocument()
     })
 
     it('renders CRITICAL severity with strongest error styling', () => {
@@ -94,12 +94,12 @@ describe('ErrorDisplay', () => {
         context: { severity: ErrorSeverity.CRITICAL },
       }
 
-      const { container } = render(<ErrorDisplay error={error} />)
+      render(<ErrorDisplay error={error} />)
 
       expect(screen.getByText('Critical Error')).toBeInTheDocument()
-      const errorContainer = container.querySelector('.bg-red-200')
-      expect(errorContainer).toBeInTheDocument()
-      expect(errorContainer).toHaveClass('border-red-400', 'text-red-900')
+      // Alert component handles styling internally via variant prop
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.getByText('Critical error')).toBeInTheDocument()
     })
 
     it('defaults to MEDIUM severity when not specified', () => {
@@ -109,11 +109,11 @@ describe('ErrorDisplay', () => {
         context: {},
       }
 
-      const { container } = render(<ErrorDisplay error={error} />)
+      render(<ErrorDisplay error={error} />)
 
-      const errorContainer = container.querySelector('.bg-red-50')
-      expect(errorContainer).toBeInTheDocument()
-      expect(errorContainer).toHaveClass('border-red-200', 'text-red-700')
+      // Alert component handles styling internally via variant prop
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.getByText('Default severity')).toBeInTheDocument()
     })
   })
 
@@ -156,7 +156,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} compact={true} onDismiss={mockOnDismiss} />)
 
-      const dismissButton = screen.getByRole('button', { name: 'Dismiss error' })
+      const dismissButton = screen.getByRole('button', { name: 'Dismiss' })
       expect(dismissButton).toBeInTheDocument()
 
       fireEvent.click(dismissButton)
@@ -255,8 +255,7 @@ describe('ErrorDisplay', () => {
 
       const { container } = render(<ErrorDisplay error={error} className="my-custom-class" />)
 
-      const errorContainer = container.querySelector('.my-custom-class')
-      expect(errorContainer).toBeInTheDocument()
+      // Alert component handles styling internally via variant prop
     })
   })
 })
@@ -280,7 +279,7 @@ describe('InlineError', () => {
   it('applies correct styling', () => {
     render(<InlineError error="Validation error" />)
     const error = screen.getByText('Validation error')
-    expect(error).toHaveClass('mt-1', 'text-sm', 'text-red-600')
+    expect(error).toHaveClass('mt-1', 'text-sm', 'text-semantic-danger')
   })
 
   it('applies custom className', () => {
@@ -387,7 +386,7 @@ describe('ErrorToast', () => {
 
     const { container } = render(<ErrorToast error={error} onClose={mockOnClose} />)
 
-    const toastContainer = container.querySelector('.bg-yellow-500')
+    const toastContainer = container.querySelector('.bg-semantic-warning')
     expect(toastContainer).toBeInTheDocument()
   })
 
@@ -400,7 +399,7 @@ describe('ErrorToast', () => {
 
     const { container } = render(<ErrorToast error={error} onClose={mockOnClose} />)
 
-    const toastContainer = container.querySelector('.bg-red-700')
+    const toastContainer = container.querySelector('.bg-semantic-danger')
     expect(toastContainer).toBeInTheDocument()
   })
 

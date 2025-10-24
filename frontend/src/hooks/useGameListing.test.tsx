@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { useGameListing } from './useGameListing';
 import { apiClient } from '../lib/api';
 import type { GameListingResponse, EnrichedGameListItem, GameState } from '../types/games';
+import { AdminModeProvider } from '../contexts/AdminModeContext';
 
 // Mock the API client
 vi.mock('../lib/api', () => ({
@@ -13,6 +14,20 @@ vi.mock('../lib/api', () => ({
       getFilteredGames: vi.fn(),
     },
   },
+}));
+
+// Mock the AuthContext
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    currentUser: { id: 1, username: 'testuser', email: 'test@example.com', is_admin: false },
+    isAuthenticated: true,
+    isLoading: false,
+    isCheckingAuth: false,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    error: null,
+  }),
 }));
 
 describe('useGameListing', () => {
@@ -59,11 +74,13 @@ describe('useGameListing', () => {
   const createWrapper = (initialUrl = '/games') => {
     return ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[initialUrl]}>
-          <Routes>
-            <Route path="/games" element={<div>{children}</div>} />
-          </Routes>
-        </MemoryRouter>
+        <AdminModeProvider>
+          <MemoryRouter initialEntries={[initialUrl]}>
+            <Routes>
+              <Route path="/games" element={<div>{children}</div>} />
+            </Routes>
+          </MemoryRouter>
+        </AdminModeProvider>
       </QueryClientProvider>
     );
   };
@@ -239,6 +256,8 @@ describe('useGameListing', () => {
         participation: 'my_games',
         has_open_spots: true,
         sort_by: 'created',
+        admin_mode: false,
+        search: undefined,
       });
     });
   });

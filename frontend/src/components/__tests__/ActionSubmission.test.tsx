@@ -352,8 +352,9 @@ describe('ActionSubmission', () => {
       );
 
       await waitFor(() => {
-        const label = screen.getByText(/your action/i);
-        expect(label.textContent).toContain('*');
+        // Check that the textarea has the required attribute
+        const textarea = screen.getByPlaceholderText(/describe what your character does/i);
+        expect(textarea).toHaveAttribute('required');
       });
     });
 

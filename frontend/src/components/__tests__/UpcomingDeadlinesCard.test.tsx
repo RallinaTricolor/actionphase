@@ -132,7 +132,7 @@ describe('UpcomingDeadlinesCard', () => {
 
     const { container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
 
-    expect(container.innerHTML).toContain('text-red-600');
+    expect(container.innerHTML).toContain('text-semantic-danger');
   });
 
   it('applies yellow color for warning urgency (<24 hours)', () => {
@@ -144,7 +144,7 @@ describe('UpcomingDeadlinesCard', () => {
 
     const { container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
 
-    expect(container.innerHTML).toContain('text-yellow-600');
+    expect(container.innerHTML).toContain('text-semantic-warning');
   });
 
   it('applies green color for normal urgency (>=24 hours)', () => {
@@ -156,7 +156,7 @@ describe('UpcomingDeadlinesCard', () => {
 
     const { container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
 
-    expect(container.innerHTML).toContain('text-green-600');
+    expect(container.innerHTML).toContain('text-semantic-success');
   });
 
   it('shows AlertCircle icon when less than 24 hours remaining', () => {

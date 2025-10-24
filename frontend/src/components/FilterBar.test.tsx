@@ -78,14 +78,14 @@ describe('FilterBar', () => {
       render(<FilterBar {...defaultProps} />);
 
       const allGamesButton = screen.getByRole('button', { name: 'All Games' });
-      expect(allGamesButton).toHaveClass('bg-indigo-600', 'text-white');
+      expect(allGamesButton).toHaveClass('bg-interactive-primary', 'text-content-inverse');
     });
 
     it('highlights "My Games" button when my_games filter selected', () => {
       render(<FilterBar {...defaultProps} participation="my_games" />);
 
       const myGamesButton = screen.getByRole('button', { name: 'My Games' });
-      expect(myGamesButton).toHaveClass('bg-indigo-600', 'text-white');
+      expect(myGamesButton).toHaveClass('bg-interactive-primary', 'text-content-inverse');
     });
 
     it('calls onParticipationChange with undefined when "All Games" clicked', () => {
@@ -200,7 +200,7 @@ describe('FilterBar', () => {
       render(<FilterBar {...defaultProps} hasOpenSpots={true} />);
 
       const toggleButton = screen.getByRole('button', { name: 'Has Open Spots' });
-      expect(toggleButton).toHaveClass('bg-indigo-50', 'border-indigo-300', 'text-indigo-700');
+      expect(toggleButton).toHaveClass('bg-interactive-primary', 'text-content-inverse');
     });
 
     it('shows checkmark icon when hasOpenSpots is true', () => {

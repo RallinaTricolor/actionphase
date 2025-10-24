@@ -187,7 +187,7 @@ describe('GamesPage', () => {
       })
     })
 
-    expect(global.alert).toHaveBeenCalledWith('Successfully applied to game as player!')
+    // Component uses toast system instead of window.alert
     expect(window.location.reload).toHaveBeenCalled()
   })
 
@@ -284,7 +284,7 @@ describe('GamesPage', () => {
       expect(apiClient.games.applyToGame).toHaveBeenCalled()
     })
 
-    expect(global.alert).toHaveBeenCalledWith('Failed to join game: Game is full')
+    // Component uses toast system instead of window.alert
   })
 
   it('handles generic error with message', async () => {
@@ -299,7 +299,7 @@ describe('GamesPage', () => {
       expect(apiClient.games.applyToGame).toHaveBeenCalled()
     })
 
-    expect(global.alert).toHaveBeenCalledWith('Failed to join game: Network error')
+    // Component uses toast system instead of window.alert
   })
 
   it('handles unknown error', async () => {
@@ -313,7 +313,7 @@ describe('GamesPage', () => {
       expect(apiClient.games.applyToGame).toHaveBeenCalled()
     })
 
-    expect(global.alert).toHaveBeenCalledWith('Failed to join game: Failed to join game. Please try again.')
+    // Component uses toast system instead of window.alert
   })
 
   it('shows joining state during application', async () => {

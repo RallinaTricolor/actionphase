@@ -106,7 +106,7 @@ describe('Modal', () => {
       )
 
       // Find backdrop by className
-      const backdrop = document.querySelector('.bg-black.bg-opacity-50') as HTMLElement
+      const backdrop = document.querySelector('.bg-black\\/60') as HTMLElement
       expect(backdrop).toBeInTheDocument()
 
       fireEvent.click(backdrop)
@@ -207,7 +207,7 @@ describe('Modal', () => {
         </Modal>
       )
 
-      const modalContainer = container.querySelector('.bg-white.rounded-lg.shadow-xl')
+      const modalContainer = container.querySelector('.surface-raised.rounded-lg.shadow-2xl')
       expect(modalContainer).toBeInTheDocument()
       expect(modalContainer).toHaveClass('max-w-4xl', 'w-full', 'max-h-[90vh]')
     })
@@ -219,7 +219,7 @@ describe('Modal', () => {
         </Modal>
       )
 
-      const backdrop = container.querySelector('.bg-black.bg-opacity-50')
+      const backdrop = container.querySelector('.bg-black\\/60')
       expect(backdrop).toBeInTheDocument()
     })
 
@@ -230,7 +230,7 @@ describe('Modal', () => {
         </Modal>
       )
 
-      const titleSection = container.querySelector('.border-b.border-gray-200')
+      const titleSection = container.querySelector('.border-b.border-theme-default')
       expect(titleSection).toBeInTheDocument()
     })
 
@@ -286,7 +286,7 @@ describe('Modal', () => {
         </Modal>
       )
 
-      const backdrop = document.querySelector('.bg-black.bg-opacity-50') as HTMLElement
+      const backdrop = document.querySelector('.bg-black\\/60') as HTMLElement
       const closeButton = screen.getByRole('button')
 
       fireEvent.click(backdrop)
@@ -315,7 +315,7 @@ describe('Modal', () => {
         </Modal>
       )
 
-      const backdrop = document.querySelector('.bg-black.bg-opacity-50') as HTMLElement
+      const backdrop = document.querySelector('.bg-black\\/60') as HTMLElement
       expect(backdrop).toBeInTheDocument()
 
       fireEvent.click(backdrop)
