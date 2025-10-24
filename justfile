@@ -151,6 +151,39 @@ test-data action="reload":
       ;;
   esac
 
+# Load only common base data (users and config)
+load-common:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  echo "🧹 Loading common base data..."
+  DB_NAME=actionphase ./backend/pkg/db/test_fixtures/apply_common.sh
+  echo "✅ Common data loaded (users only, no games)"
+
+# Load demo data for staging/showcase
+load-demo:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  echo "🎭 Loading demo showcase data..."
+  DB_NAME=actionphase ./backend/pkg/db/test_fixtures/apply_demo.sh
+  echo "✅ Demo data loaded (rich, human-friendly content)"
+
+# Load E2E test fixtures
+load-e2e:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  echo "🤖 Loading E2E test fixtures..."
+  DB_NAME=actionphase ./backend/pkg/db/test_fixtures/apply_e2e.sh
+  echo "✅ E2E fixtures loaded (isolated test games)"
+
+# Load all data (dev only) - same as test-fixtures but with new structure
+load-all:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  echo "⚠️  Loading ALL data (demo + E2E)..."
+  just load-demo
+  just load-e2e
+  echo "✅ All data loaded (not recommended for staging)"
+
 # ═══════════════════════════════════════════════════════════════════════════
 # CODE GENERATION
 # ═══════════════════════════════════════════════════════════════════════════
