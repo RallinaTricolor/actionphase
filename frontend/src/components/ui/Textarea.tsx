@@ -1,4 +1,5 @@
-import { TextareaHTMLAttributes, forwardRef } from 'react';
+import { forwardRef } from 'react';
+import type { TextareaHTMLAttributes } from 'react';
 import { tv } from '../../lib/theme/utils';
 
 export type TextareaSize = 'sm' | 'md' | 'lg';

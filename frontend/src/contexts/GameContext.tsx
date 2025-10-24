@@ -123,15 +123,15 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
   const isGM = useMemo(() => {
     // User is GM if they own the game OR if admin mode is enabled
     const isActualGM = userRole === 'gm';
-    const isAdminAsGM = adminModeEnabled && currentUser?.is_admin;
+    const isAdminAsGM = adminModeEnabled && !!currentUser?.is_admin;
     return isActualGM || isAdminAsGM;
   }, [userRole, adminModeEnabled, currentUser?.is_admin]);
 
-  const isParticipant = useMemo(() => {
+  const isParticipant = useMemo((): boolean => {
     return userRole !== 'none' && userRole !== 'audience';
   }, [userRole]);
 
-  const canEditGame = useMemo(() => {
+  const canEditGame = useMemo((): boolean => {
     return isGM;
   }, [isGM]);
 

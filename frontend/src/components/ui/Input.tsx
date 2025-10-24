@@ -1,5 +1,6 @@
-import { InputHTMLAttributes, forwardRef } from 'react';
-import { tv, cn } from '../../lib/theme/utils';
+import type { InputHTMLAttributes } from 'react';
+import { forwardRef } from 'react';
+import { tv } from '../../lib/theme/utils';
 
 export type InputSize = 'sm' | 'md' | 'lg';
 export type InputVariant = 'default' | 'error';
@@ -10,6 +11,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   helperText?: string;
   label?: string;
+  optional?: boolean;
 }
 
 /**
@@ -79,6 +81,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       error,
       helperText,
       label,
+      optional = false,
       className,
       id,
       ...props
@@ -96,6 +99,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className="block text-sm font-medium text-content-primary mb-2"
           >
             {label}
+            {optional && (
+              <span className="ml-1 text-sm font-normal text-content-tertiary">
+                (optional)
+              </span>
+            )}
           </label>
         )}
         <input

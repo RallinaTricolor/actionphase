@@ -31,8 +31,8 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
     setIsEditing(false);
   };
 
-  const getCategoryVariant = (category?: string): 'primary' | 'success' | 'warning' | 'danger' | 'default' => {
-    if (!category) return 'default';
+  const getCategoryVariant = (category?: string): 'primary' | 'success' | 'warning' | 'danger' | 'neutral' => {
+    if (!category) return 'neutral';
 
     switch (category.toLowerCase()) {
       case 'weapon':
@@ -44,7 +44,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
       case 'tool':
         return 'warning';
       default:
-        return 'default';
+        return 'neutral';
     }
   };
 
@@ -77,7 +77,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
               <div className="flex items-center space-x-2 flex-wrap gap-1">
                 <h4 className="text-base font-semibold text-content-primary">{item.name}</h4>
                 {item.quantity > 1 && (
-                  <Badge variant="default" size="sm">
+                  <Badge variant="neutral" size="sm">
                     x{item.quantity}
                   </Badge>
                 )}

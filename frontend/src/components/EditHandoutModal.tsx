@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button, Input, Textarea, Select } from './ui';
 import type { Handout, UpdateHandoutRequest } from '../types/handouts';
 

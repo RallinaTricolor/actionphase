@@ -10,7 +10,7 @@ const COMMENTS_PER_PAGE = 20;
 export function useRecentComments(gameId: number | undefined) {
   return useInfiniteQuery({
     queryKey: ['games', gameId, 'recentComments'],
-    queryFn: async ({ pageParam = 0 }) => {
+    queryFn: async ({ pageParam }: { pageParam?: number }) => {
       if (!gameId) {
         throw new Error('Game ID is required');
       }
@@ -18,11 +18,12 @@ export function useRecentComments(gameId: number | undefined) {
       const response = await apiClient.messages.getRecentComments(
         gameId,
         COMMENTS_PER_PAGE,
-        pageParam
+        pageParam ?? 0
       );
       return response.data;
     },
-    getNextPageParam: (lastPage) => {
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: { comments: any[]; offset: number }) => {
       // If the last page had fewer items than the page size, we're at the end
       if (lastPage.comments.length < COMMENTS_PER_PAGE) {
         return undefined;
@@ -33,8 +34,6 @@ export function useRecentComments(gameId: number | undefined) {
     enabled: !!gameId,
     // Refetch when window regains focus to show new comments
     refetchOnWindowFocus: true,
-    // Keep previous data while loading next page
-    keepPreviousData: true,
   });
 }
 

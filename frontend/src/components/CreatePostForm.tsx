@@ -11,7 +11,7 @@ interface CreatePostFormProps {
   isSubmitting: boolean;
 }
 
-export function CreatePostForm({ gameId, characters, allCharacters, onSubmit, isSubmitting }: CreatePostFormProps) {
+export function CreatePostForm({ gameId: _gameId, characters, allCharacters, onSubmit, isSubmitting }: CreatePostFormProps) {
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [content, setContent] = useState('');
   const [error, setError] = useState<string | null>(null);

@@ -316,8 +316,8 @@ function ConversationCard({
  * Message viewer component - displays messages for a selected conversation
  */
 function MessageViewer({
-  gameId,
-  conversationId,
+  gameId: _gameId,
+  conversationId: _conversationId,
   messages,
   isLoading,
   error,

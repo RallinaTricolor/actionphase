@@ -5,40 +5,46 @@ export interface ApiError {
   error?: string;
 }
 
-export enum ErrorType {
+export const ErrorType = {
   // Network/API errors
-  NETWORK_ERROR = 'network_error',
-  API_ERROR = 'api_error',
-  AUTHENTICATION_ERROR = 'authentication_error',
-  AUTHORIZATION_ERROR = 'authorization_error',
+  NETWORK_ERROR: 'network_error',
+  API_ERROR: 'api_error',
+  AUTHENTICATION_ERROR: 'authentication_error',
+  AUTHORIZATION_ERROR: 'authorization_error',
 
   // Client-side errors
-  VALIDATION_ERROR = 'validation_error',
-  COMPONENT_ERROR = 'component_error',
-  NAVIGATION_ERROR = 'navigation_error',
+  VALIDATION_ERROR: 'validation_error',
+  COMPONENT_ERROR: 'component_error',
+  NAVIGATION_ERROR: 'navigation_error',
 
   // Business logic errors
-  GAME_STATE_ERROR = 'game_state_error',
-  CHARACTER_ERROR = 'character_error',
+  GAME_STATE_ERROR: 'game_state_error',
+  CHARACTER_ERROR: 'character_error',
 
   // Unknown errors
-  UNKNOWN_ERROR = 'unknown_error'
-}
+  UNKNOWN_ERROR: 'unknown_error'
+} as const;
+
+export type ErrorType = typeof ErrorType[keyof typeof ErrorType];
 
 // Error categories for different handling strategies
-export enum ErrorCategory {
-  RECOVERABLE = 'recoverable',       // User can retry or take action
-  NON_RECOVERABLE = 'non_recoverable', // Requires page reload or navigation
-  SILENT = 'silent'                   // Log but don't display to user
-}
+export const ErrorCategory = {
+  RECOVERABLE: 'recoverable',       // User can retry or take action
+  NON_RECOVERABLE: 'non_recoverable', // Requires page reload or navigation
+  SILENT: 'silent'                   // Log but don't display to user
+} as const;
+
+export type ErrorCategory = typeof ErrorCategory[keyof typeof ErrorCategory];
 
 // Error severity levels
-export enum ErrorSeverity {
-  LOW = 'low',       // Minor issues, app continues normally
-  MEDIUM = 'medium', // Some functionality affected
-  HIGH = 'high',     // Major functionality broken
-  CRITICAL = 'critical' // App unusable
-}
+export const ErrorSeverity = {
+  LOW: 'low',       // Minor issues, app continues normally
+  MEDIUM: 'medium', // Some functionality affected
+  HIGH: 'high',     // Major functionality broken
+  CRITICAL: 'critical' // App unusable
+} as const;
+
+export type ErrorSeverity = typeof ErrorSeverity[keyof typeof ErrorSeverity];
 
 // Enhanced error context with metadata
 export interface ErrorContext {
@@ -88,7 +94,7 @@ export const ERROR_MESSAGES = {
 } as const;
 
 // HTTP status code to error type mapping
-export const STATUS_CODE_TO_ERROR_TYPE: Record<number, ErrorType> = {
+export const STATUS_CODE_TO_ERROR_TYPE = {
   400: ErrorType.VALIDATION_ERROR,
   401: ErrorType.AUTHENTICATION_ERROR,
   403: ErrorType.AUTHORIZATION_ERROR,
@@ -99,4 +105,4 @@ export const STATUS_CODE_TO_ERROR_TYPE: Record<number, ErrorType> = {
   502: ErrorType.NETWORK_ERROR,
   503: ErrorType.NETWORK_ERROR,
   504: ErrorType.NETWORK_ERROR,
-} as const;
+} as const satisfies Record<number, ErrorType>;

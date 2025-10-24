@@ -7,7 +7,7 @@ const API_BASE_URL = ''; // Use proxy in development
  */
 export class BaseApiClient {
   protected client: ReturnType<typeof axios.create>;
-  private refreshClient: ReturnType<typeof axios.create>;
+  protected refreshClient: ReturnType<typeof axios.create>;
 
   constructor() {
     this.client = axios.create({

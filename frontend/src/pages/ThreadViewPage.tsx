@@ -2,7 +2,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { ThreadedComment } from '../components/ThreadedComment';
-import type { Message } from '../types/messages';
 
 /**
  * Focused view for a specific comment thread
@@ -17,7 +16,7 @@ export function ThreadViewPage() {
   const { data: commentData, isLoading: isLoadingComment, error: commentError } = useQuery({
     queryKey: ['comment', gameId, commentId],
     queryFn: async () => {
-      const response = await apiClient.get<Message>(`/api/v1/games/${gameId}/posts/${commentId}`);
+      const response = await apiClient.messages.getMessage(Number(gameId), Number(commentId));
       return response.data;
     },
     enabled: !!gameId && !!commentId,

@@ -3,9 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { CountdownTimer } from './CountdownTimer';
 import {
-  PHASE_TYPE_LABELS,
-  PHASE_TYPE_DESCRIPTIONS,
-  PHASE_TYPE_COLORS,
   getActionPhaseLabel,
   getActionPhaseDescription,
   getActionPhaseColor

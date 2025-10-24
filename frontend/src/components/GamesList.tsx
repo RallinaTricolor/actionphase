@@ -42,7 +42,7 @@ export const GamesList = ({
 
   if (!games || games.length === 0) {
     return (
-      <Card variant="elevated" padding="xl">
+      <Card variant="elevated" padding="lg">
         <div className="text-center">
           <div className="text-content-tertiary text-4xl mb-4">🎲</div>
           <p className="text-content-primary text-lg">No games match your current filters.</p>

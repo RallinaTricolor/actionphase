@@ -45,7 +45,6 @@ export function RemovePlayerButton({ gameId, participant, onSuccess }: RemovePla
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
         title="Remove Player from Game?"
-        variant="danger"
       >
         <div className="space-y-4">
           <div className="p-4 rounded-lg bg-semantic-danger-subtle border border-semantic-danger">

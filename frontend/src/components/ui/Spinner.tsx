@@ -1,4 +1,4 @@
-import { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from 'react';
 import { tv, cn } from '../../lib/theme/utils';
 import { Loader2 } from 'lucide-react';
 

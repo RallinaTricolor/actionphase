@@ -1,7 +1,7 @@
-import type { Game } from '../types/games';
+import type { GameWithDetails } from '../types/games';
 
 interface GameInfoGridProps {
-  game: Game;
+  game: GameWithDetails;
 }
 
 const formatDate = (dateString?: string) => {

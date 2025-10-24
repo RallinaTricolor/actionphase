@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import type { UpdateCommentRequest, Message } from '../types/messages';
+import type { UpdateCommentRequest } from '../types/messages';
 
 /**
  * Hook to update a comment
@@ -23,7 +23,7 @@ export function useUpdateComment() {
       const response = await apiClient.messages.updateComment(gameId, postId, commentId, data);
       return response.data;
     },
-    onSuccess: async (updatedComment, variables) => {
+    onSuccess: async (_updatedComment, variables) => {
       // Invalidate post comments to reflect the edit
       await queryClient.invalidateQueries({
         queryKey: ['postComments', variables.gameId, variables.postId]

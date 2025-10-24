@@ -37,7 +37,7 @@ export function PhaseCard({
   onSelect,
   onActivate,
   onEdit,
-  onEditDeadline,
+  onEditDeadline: _onEditDeadline,
   onUpdateDeadline,
   onCancelEditDeadline,
   isActivating,

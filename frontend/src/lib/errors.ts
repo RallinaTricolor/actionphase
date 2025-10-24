@@ -50,11 +50,13 @@ function handleAxiosError(error: AxiosError, baseContext: ErrorContext): AppErro
   const statusCode = error.response?.status;
   const apiError = error.response?.data as ApiError;
 
-  const errorType = statusCode ? STATUS_CODE_TO_ERROR_TYPE[statusCode] : ErrorType.NETWORK_ERROR;
+  const errorType = statusCode && statusCode in STATUS_CODE_TO_ERROR_TYPE
+    ? STATUS_CODE_TO_ERROR_TYPE[statusCode as keyof typeof STATUS_CODE_TO_ERROR_TYPE]
+    : ErrorType.NETWORK_ERROR;
 
-  let userMessage = ERROR_MESSAGES.UNKNOWN_ERROR;
-  let category = ErrorCategory.NON_RECOVERABLE;
-  let severity = ErrorSeverity.MEDIUM;
+  let userMessage: string = ERROR_MESSAGES.UNKNOWN_ERROR;
+  let category: ErrorCategory = ErrorCategory.NON_RECOVERABLE;
+  let severity: ErrorSeverity = ErrorSeverity.MEDIUM;
 
   // Extract user-friendly message from API response
   if (apiError?.error) {

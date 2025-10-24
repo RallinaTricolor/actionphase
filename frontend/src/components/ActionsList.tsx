@@ -312,7 +312,7 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
                 <CreateActionResultForm
                   gameId={gameId}
                   userId={action.user_id}
-                  userName={action.username}
+                  userName={action.username || 'Unknown User'}
                   onSuccess={() => {
                     setShowResultForm(false);
                     // Could add a success toast here

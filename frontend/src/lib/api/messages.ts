@@ -8,9 +8,7 @@ import type {
   ReadMarker,
   PostUnreadInfo,
   MarkPostReadRequest,
-  PostUnreadComments,
-  CommentWithParent,
-  RecentCommentsResponse
+  PostUnreadComments
 } from '../../types/messages';
 
 /**
@@ -102,6 +100,6 @@ export class MessagesApi extends BaseApiClient {
 
   async getTotalCommentCount(gameId: number) {
     const response = await this.client.get<{ total: number }>(`/api/v1/games/${gameId}/comments/count`);
-    return response.total;
+    return response.data.total;
   }
 }

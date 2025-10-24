@@ -27,7 +27,7 @@ export function AssignNPCModal({
   onClose,
   onSuccess,
 }: AssignNPCModalProps) {
-  const { user } = useAuth();
+  const { currentUser: user } = useAuth();
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [assignToSelf, setAssignToSelf] = useState(false);
   const assignNPC = useAssignNPC();

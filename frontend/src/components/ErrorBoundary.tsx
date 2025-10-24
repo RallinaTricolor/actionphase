@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo } from 'react';
+import React, { Component } from 'react';
+import type { ErrorInfo } from 'react';
 import type { AppError } from '../types/errors';
 import { ErrorType, ErrorSeverity } from '../types/errors';
 import { createAppError, logError, getErrorMessage, getRecoveryActions } from '../lib/errors';
