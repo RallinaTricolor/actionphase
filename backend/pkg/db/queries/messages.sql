@@ -147,8 +147,7 @@ SET content = $2,
     mentioned_character_ids = $3,
     is_edited = true,
     edited_at = NOW(),
-    edit_count = edit_count + 1,
-    updated_at = NOW()
+    edit_count = edit_count + 1
 WHERE id = $1
   AND deleted_at IS NULL
   AND message_type = 'comment'
@@ -158,8 +157,7 @@ RETURNING *;
 UPDATE messages
 SET deleted_at = NOW(),
     deleted_by_user_id = $2,
-    is_deleted = true,
-    updated_at = NOW()
+    is_deleted = true
 WHERE id = $1
   AND deleted_at IS NULL
   AND message_type = 'comment';

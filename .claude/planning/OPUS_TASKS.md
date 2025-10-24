@@ -5,9 +5,6 @@
 - Game integrity and security (assume people could build a 3rd party client)
 - Usability / accessibility improvements
   - Lots of reading! Optimize for reading lots of text
-- User journeys
-  - E2E test that just clicks and scrolls (slowly) through every page on every theme for manual verification?
 - User registration security (prevent bots, email verification, captcha)
 - Antipatterns in the code?
-- Demo/staging + more thorough test data
 - Logging, monitoring, application traces

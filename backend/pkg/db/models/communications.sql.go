@@ -698,7 +698,6 @@ WITH recent_comments AS (
         m.character_id,
         m.content,
         m.created_at,
-        m.updated_at,
         m.edited_at,
         m.edit_count,
         m.deleted_at,
@@ -741,7 +740,6 @@ SELECT
     rc.character_id,
     rc.content,
     rc.created_at,
-    rc.updated_at,
     rc.edited_at,
     rc.edit_count,
     rc.deleted_at,
@@ -774,7 +772,6 @@ type ListRecentCommentsWithParentsRow struct {
 	CharacterID          int32              `json:"character_id"`
 	Content              string             `json:"content"`
 	CreatedAt            pgtype.Timestamp   `json:"created_at"`
-	UpdatedAt            pgtype.Timestamp   `json:"updated_at"`
 	EditedAt             pgtype.Timestamptz `json:"edited_at"`
 	EditCount            int32              `json:"edit_count"`
 	DeletedAt            pgtype.Timestamp   `json:"deleted_at"`
@@ -808,7 +805,6 @@ func (q *Queries) ListRecentCommentsWithParents(ctx context.Context, arg ListRec
 			&i.CharacterID,
 			&i.Content,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 			&i.EditedAt,
 			&i.EditCount,
 			&i.DeletedAt,

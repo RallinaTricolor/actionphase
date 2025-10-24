@@ -4,7 +4,14 @@
 
 This document defines a comprehensive E2E testing strategy for ActionPhase, focusing on critical user journeys, maintainable test structure, and efficient test data management. The strategy emphasizes testing complete workflows rather than individual features, with multiple assertions per test where logical.
 
-**Status**: Current coverage ~2,700 lines across 15 test files. Tests need modernization and better organization.
+**Status**: Current coverage ~2,700 lines across 25 E2E test files. Test data separation implemented with dedicated demo and E2E fixtures.
+
+**Recent Updates** (Oct 24, 2025):
+- ✅ Test data separated into `common/`, `demo/`, and `e2e/` directories
+- ✅ Fixture load order fixed (demo data now loads correctly)
+- ✅ 3 Page Objects implemented (CommonRoom, GameDetails, PhaseManagement)
+- 🚧 Need more `data-testid` attributes for stable selectors
+- 🚧 Need journey-based test organization
 
 ---
 
@@ -137,19 +144,38 @@ GM manages players → Removes disruptive player → Archives game → Exports d
 
 ## 3. Test Data Strategy
 
-### 3.1 Fixture Organization
+### 3.1 Fixture Organization (Current Implementation)
 
 ```
 backend/pkg/db/test_fixtures/
-├── 00_users.sql           # Test users (GM, Players 1-5, Audience)
-├── 01_games.sql            # Games in different states
-├── 02_characters.sql       # Pre-approved characters
-├── 03_phases.sql           # Various phase types
-├── 04_actions.sql          # Draft and submitted actions
-├── 05_results.sql          # Published results
-├── 07_common_room.sql      # E2E test games 164-167
-├── 08_conversations.sql    # Private message threads
-└── 09_demo_content.sql     # Rich content for manual testing
+├── common/                         # Shared base data
+│   ├── 00_reset.sql                # Database cleanup
+│   └── 01_users.sql                # Test users (GM, Players 1-5, Audience)
+│
+├── demo/                           # Human-friendly showcase data
+│   ├── 02_games_recruiting.sql     # "The Lost Mine of Phandelver" (recruiting)
+│   ├── 03_games_running.sql        # "Shadows Over Innsmouth", "Heist", etc.
+│   ├── 04_characters.sql           # Detailed character sheets
+│   ├── 05_actions.sql              # Sample actions
+│   ├── 06_results.sql              # Published results
+│   ├── 09_demo_content.sql         # Rich posts and conversations
+│   └── 10_deeply_nested_comments.sql  # 8-level deep comment threading
+│
+├── e2e/                            # Automated test fixtures
+│   ├── 07_common_room.sql          # E2E Common Room games (164-167)
+│   └── 08_e2e_dedicated_games.sql  # Additional E2E test games
+│
+├── apply_common.sh                 # Load only users + config
+├── apply_demo.sh                   # Load common + demo data
+├── apply_e2e.sh                    # Load common + E2E fixtures
+└── apply_all.sh                    # Load everything (dev only)
+```
+
+**Load Commands:**
+```bash
+just load-demo    # Staging/showcase → common + demo
+just load-e2e     # CI/CD testing → common + E2E
+just load-all     # Development → everything
 ```
 
 ### 3.2 Dedicated E2E Test Games
