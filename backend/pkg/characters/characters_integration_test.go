@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"actionphase/pkg/core"
 	services "actionphase/pkg/db/services"
@@ -43,25 +42,28 @@ func TestCharacterAPI_CompleteCharacterLifecycle(t *testing.T) {
 	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(playerUser.ID), "player")
 	core.AssertNoError(t, err, "Failed to add player participant")
 
-	// Create tokens for authentication
-	gmToken, err := createTestAuthToken(gmUser.Username)
+	// Create tokens for authentication using app config
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gmUser)
 	core.AssertNoError(t, err, "Failed to create GM token")
-	playerToken, err := createTestAuthToken(playerUser.Username)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, playerUser)
 	core.AssertNoError(t, err, "Failed to create player token")
 
 	// Setup router with character routes and JWT middleware
-	tokenAuth := core.CreateTestTokenAuth()
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &services.UserService{DB: testDB.Pool}
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
 	// Character routes
 	r.Route("/api/v1/games/{gameId}/characters", func(r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth), jwtauth.Authenticator(tokenAuth))
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
 		r.Post("/", handler.CreateCharacter)
 		r.Get("/", handler.GetGameCharacters)
 	})
 	r.Route("/api/v1/characters/{id}", func(r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth), jwtauth.Authenticator(tokenAuth))
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
 		r.Get("/", handler.GetCharacter)
 		r.Post("/approve", handler.ApproveCharacter)
 		r.Post("/assign", handler.AssignNPC)
@@ -227,21 +229,24 @@ func TestCharacterAPI_NPCManagement(t *testing.T) {
 	core.AssertNoError(t, err, "Failed to add audience participant")
 
 	// Create tokens
-	gmToken, err := createTestAuthToken(gmUser.Username)
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gmUser)
 	core.AssertNoError(t, err, "Failed to create GM token")
 
 	// Setup router with JWT middleware
-	tokenAuth := core.CreateTestTokenAuth()
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &services.UserService{DB: testDB.Pool}
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
 	r.Route("/api/v1/games/{gameId}/characters", func(r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth), jwtauth.Authenticator(tokenAuth))
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
 		r.Post("/", handler.CreateCharacter)
 		r.Get("/", handler.GetGameCharacters)
 	})
 	r.Route("/api/v1/characters/{id}", func(r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth), jwtauth.Authenticator(tokenAuth))
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
 		r.Get("/", handler.GetCharacter)
 		r.Post("/assign", handler.AssignNPC)
 	})
@@ -346,24 +351,27 @@ func TestCharacterAPI_Authorization(t *testing.T) {
 	core.AssertNoError(t, err, "Failed to create test character")
 
 	// Create tokens
-	gmToken, err := createTestAuthToken(gmUser.Username)
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gmUser)
 	core.AssertNoError(t, err, "Failed to create GM token")
-	playerToken, err := createTestAuthToken(playerUser.Username)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, playerUser)
 	core.AssertNoError(t, err, "Failed to create player token")
-	otherToken, err := createTestAuthToken(otherUser.Username)
+	otherToken, err := core.CreateTestJWTTokenForUser(app, otherUser)
 	core.AssertNoError(t, err, "Failed to create other token")
 
 	// Setup router with JWT middleware
-	tokenAuth := core.CreateTestTokenAuth()
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &services.UserService{DB: testDB.Pool}
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
 	r.Route("/api/v1/games/{gameId}/characters", func(r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth), jwtauth.Authenticator(tokenAuth))
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
 		r.Post("/", handler.CreateCharacter)
 	})
 	r.Route("/api/v1/characters/{id}", func(r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth), jwtauth.Authenticator(tokenAuth))
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
 		r.Post("/approve", handler.ApproveCharacter)
 		r.Post("/data", handler.SetCharacterData)
 	})
@@ -485,23 +493,26 @@ func TestCharacterAPI_ErrorHandling(t *testing.T) {
 	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(playerUser.ID), "player")
 	core.AssertNoError(t, err, "Failed to add player participant")
 
-	gmToken, err := createTestAuthToken(gmUser.Username)
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gmUser)
 	core.AssertNoError(t, err, "Failed to create GM token")
 
-	playerToken, err := createTestAuthToken(playerUser.Username)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, playerUser)
 	core.AssertNoError(t, err, "Failed to create player token")
 
 	// Setup router with JWT middleware
-	tokenAuth := core.CreateTestTokenAuth()
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &services.UserService{DB: testDB.Pool}
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
 	r.Route("/api/v1/games/{gameId}/characters", func(r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth), jwtauth.Authenticator(tokenAuth))
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
 		r.Post("/", handler.CreateCharacter)
 	})
 	r.Route("/api/v1/characters/{id}", func(r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth), jwtauth.Authenticator(tokenAuth))
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
 		r.Get("/", handler.GetCharacter)
 		r.Post("/approve", handler.ApproveCharacter)
 	})
@@ -608,11 +619,13 @@ func TestCharacterAPI_UnauthenticatedAccess(t *testing.T) {
 
 	// Setup router with JWT middleware
 	r := chi.NewRouter()
-	tokenAuth := core.CreateTestTokenAuth()
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &services.UserService{DB: testDB.Pool}
 
 	handler := Handler{App: app}
 	r.Route("/api/v1/characters/{id}", func(r chi.Router) {
-		r.Use(jwtauth.Verifier(tokenAuth), jwtauth.Authenticator(tokenAuth))
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
 		r.Get("/", handler.GetCharacter)
 		r.Post("/data", handler.SetCharacterData)
 	})
@@ -645,15 +658,293 @@ func TestCharacterAPI_UnauthenticatedAccess(t *testing.T) {
 	}
 }
 
-// createTestAuthToken creates a JWT token for testing purposes
-func createTestAuthToken(username string) (string, error) {
-	tokenAuth := core.CreateTestTokenAuth()
+func TestCharacterAPI_ControllableAndInactive(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "npc_assignments", "character_data", "characters", "game_participants", "games", "sessions", "users")
 
-	claims := map[string]interface{}{
-		"username": username,
-		"exp":      time.Now().Add(time.Hour).Unix(),
-	}
+	// Setup application
+	app := core.NewTestApp(testDB.Pool)
 
-	_, tokenString, err := tokenAuth.Encode(claims)
-	return tokenString, err
+	// Create test users
+	gmUser := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	playerUser := testDB.CreateTestUser(t, "player", "player@example.com")
+	audienceUser := testDB.CreateTestUser(t, "audience", "audience@example.com")
+	inactivePlayerUser := testDB.CreateTestUser(t, "inactive_player", "inactive@example.com")
+
+	// Create test game
+	gameService := &services.GameService{DB: testDB.Pool}
+	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Character Management Test",
+		Description: "Testing controllable and inactive characters",
+		GMUserID:    int32(gmUser.ID),
+		IsPublic:    true,
+	})
+	core.AssertNoError(t, err, "Failed to create test game")
+
+	// Add participants
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(playerUser.ID), "player")
+	core.AssertNoError(t, err, "Failed to add player participant")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(audienceUser.ID), "audience")
+	core.AssertNoError(t, err, "Failed to add audience participant")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(inactivePlayerUser.ID), "player")
+	core.AssertNoError(t, err, "Failed to add inactive player participant")
+
+	// Create tokens
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gmUser)
+	core.AssertNoError(t, err, "Failed to create GM token")
+	playerToken, err := core.CreateTestJWTTokenForUser(app, playerUser)
+	core.AssertNoError(t, err, "Failed to create player token")
+	audienceToken, err := core.CreateTestJWTTokenForUser(app, audienceUser)
+	core.AssertNoError(t, err, "Failed to create audience token")
+
+	// Setup router
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &services.UserService{DB: testDB.Pool}
+	r := chi.NewRouter()
+	handler := Handler{App: app}
+
+	r.Route("/api/v1/games/{gameId}/characters", func(r chi.Router) {
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
+		r.Post("/", handler.CreateCharacter)
+		r.Get("/controllable", handler.GetUserControllableCharacters)
+		r.Get("/inactive", handler.ListInactiveCharacters)
+	})
+	r.Route("/api/v1/characters/{id}", func(r chi.Router) {
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
+		r.Post("/approve", handler.ApproveCharacter)
+		r.Post("/assign", handler.AssignNPC)
+		r.Put("/reassign", handler.ReassignCharacter)
+	})
+
+	// Create characters for testing
+	characterService := &services.CharacterService{DB: testDB.Pool}
+
+	// Player's own character (approved)
+	playerCharID := int32(playerUser.ID)
+	playerChar, err := characterService.CreateCharacter(context.Background(), services.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &playerCharID,
+		Name:          "Player Character",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Failed to create player character")
+	_, err = characterService.ApproveCharacter(context.Background(), playerChar.ID)
+	core.AssertNoError(t, err, "Failed to approve player character")
+
+	// GM's NPC
+	gmCharID := int32(gmUser.ID)
+	gmNPC, err := characterService.CreateCharacter(context.Background(), services.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &gmCharID,
+		Name:          "GM NPC",
+		CharacterType: "npc",
+	})
+	core.AssertNoError(t, err, "Failed to create GM NPC")
+	_, err = characterService.ApproveCharacter(context.Background(), gmNPC.ID)
+	core.AssertNoError(t, err, "Failed to approve GM NPC")
+
+	// Audience NPC (assigned to audience user)
+	audienceNPC, err := characterService.CreateCharacter(context.Background(), services.CreateCharacterRequest{
+		GameID:        game.ID,
+		Name:          "Audience NPC",
+		CharacterType: "npc",
+	})
+	core.AssertNoError(t, err, "Failed to create audience NPC")
+	_, err = characterService.ApproveCharacter(context.Background(), audienceNPC.ID)
+	core.AssertNoError(t, err, "Failed to approve audience NPC")
+	err = characterService.AssignNPCToUser(context.Background(), audienceNPC.ID, int32(audienceUser.ID), int32(gmUser.ID))
+	core.AssertNoError(t, err, "Failed to assign NPC to audience")
+
+	// Inactive character (for reassignment testing) - owned by separate user
+	inactivePlayerCharID := int32(inactivePlayerUser.ID)
+	inactiveChar, err := characterService.CreateCharacter(context.Background(), services.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &inactivePlayerCharID,
+		Name:          "Inactive Character",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Failed to create inactive character")
+	_, err = characterService.ApproveCharacter(context.Background(), inactiveChar.ID)
+	core.AssertNoError(t, err, "Failed to approve inactive character")
+	// Deactivate this user's characters (will only affect the Inactive Character)
+	err = characterService.DeactivatePlayerCharacters(context.Background(), game.ID, int32(inactivePlayerUser.ID))
+	core.AssertNoError(t, err, "Failed to mark character as inactive")
+
+	t.Run("get_controllable_characters_as_player", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/characters/controllable", game.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Should return 200 OK")
+
+		var response []map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		// Player should see their own active character (not the inactive one)
+		core.AssertTrue(t, len(response) >= 1, "Player should have at least 1 controllable character")
+
+		foundActiveChar := false
+		for _, char := range response {
+			if char["name"] == "Player Character" {
+				foundActiveChar = true
+			}
+			// Should not include inactive character
+			core.AssertTrue(t, char["name"] != "Inactive Character", "Should not include inactive characters")
+		}
+		core.AssertTrue(t, foundActiveChar, "Should include player's active character")
+	})
+
+	t.Run("get_controllable_characters_as_audience", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/characters/controllable", game.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+audienceToken)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Should return 200 OK")
+
+		var response []map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		// Audience should see their assigned NPC
+		foundAssignedNPC := false
+		for _, char := range response {
+			if char["name"] == "Audience NPC" {
+				foundAssignedNPC = true
+			}
+		}
+		core.AssertTrue(t, foundAssignedNPC, "Audience should see their assigned NPC")
+	})
+
+	t.Run("get_controllable_characters_unauthorized", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/characters/controllable", game.ID), nil)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusUnauthorized, w.Code, "Should return 401 Unauthorized")
+	})
+
+	t.Run("list_inactive_characters_as_gm", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/characters/inactive", game.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Should return 200 OK")
+
+		var response []map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		// Should include the inactive character
+		foundInactive := false
+		for _, char := range response {
+			if char["name"] == "Inactive Character" {
+				foundInactive = true
+				core.AssertTrue(t, char["is_active"] == false, "Character should be marked as inactive")
+			}
+		}
+		core.AssertTrue(t, foundInactive, "Should include inactive character")
+	})
+
+	t.Run("list_inactive_characters_as_non_gm", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/characters/inactive", game.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusForbidden, w.Code, "Should return 403 Forbidden for non-GM")
+	})
+
+	t.Run("list_inactive_characters_unauthorized", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/characters/inactive", game.ID), nil)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusUnauthorized, w.Code, "Should return 401 Unauthorized")
+	})
+
+	t.Run("reassign_character_as_gm", func(t *testing.T) {
+		requestBody := ReassignCharacterRequest{
+			NewOwnerUserID: int32(audienceUser.ID),
+		}
+
+		body, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/characters/%d/reassign", inactiveChar.ID), bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Should return 200 OK")
+
+		var response CharacterResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		core.AssertEqual(t, inactiveChar.ID, response.ID, "Character ID should match")
+		core.AssertNotEqual(t, nil, response.UserID, "Character should have new owner")
+		if response.UserID != nil {
+			core.AssertEqual(t, int32(audienceUser.ID), *response.UserID, "Character should be reassigned to audience user")
+		}
+	})
+
+	t.Run("reassign_active_character_fails", func(t *testing.T) {
+		requestBody := ReassignCharacterRequest{
+			NewOwnerUserID: int32(audienceUser.ID),
+		}
+
+		body, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/characters/%d/reassign", playerChar.ID), bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusConflict, w.Code, "Should return 409 Conflict for active character")
+	})
+
+	t.Run("reassign_character_as_non_gm", func(t *testing.T) {
+		requestBody := ReassignCharacterRequest{
+			NewOwnerUserID: int32(gmUser.ID),
+		}
+
+		body, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/characters/%d/reassign", inactiveChar.ID), bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusForbidden, w.Code, "Should return 403 Forbidden for non-GM")
+	})
+
+	t.Run("reassign_character_unauthorized", func(t *testing.T) {
+		requestBody := ReassignCharacterRequest{
+			NewOwnerUserID: int32(gmUser.ID),
+		}
+
+		body, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/characters/%d/reassign", inactiveChar.ID), bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusUnauthorized, w.Code, "Should return 401 Unauthorized")
+	})
 }

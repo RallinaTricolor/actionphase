@@ -895,10 +895,10 @@ func TestGameService_AudienceParticipation(t *testing.T) {
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 
-	t.Run("GetGameAutoAcceptAudience returns default false", func(t *testing.T) {
+	t.Run("GetGameAutoAcceptAudience returns default true", func(t *testing.T) {
 		autoAccept, err := gameService.GetGameAutoAcceptAudience(ctx, game.ID)
 		core.AssertNoError(t, err, "Failed to get auto-accept setting")
-		core.AssertEqual(t, false, autoAccept, "Default auto-accept should be false")
+		core.AssertEqual(t, true, autoAccept, "Default auto-accept should be true (database default)")
 	})
 
 	t.Run("UpdateGameAutoAcceptAudience updates setting", func(t *testing.T) {

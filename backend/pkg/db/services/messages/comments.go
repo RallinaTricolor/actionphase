@@ -216,6 +216,11 @@ func (s *MessageService) UpdateComment(ctx context.Context, commentID int32, con
 		return nil, fmt.Errorf("failed to get existing comment: %w", err)
 	}
 
+	// Cannot edit deleted comments
+	if existingComment.IsDeleted {
+		return nil, fmt.Errorf("cannot edit deleted comment")
+	}
+
 	// Extract character mentions from new content
 	mentionedIDs, err := s.extractCharacterMentions(ctx, content, existingComment.GameID)
 	if err != nil {
@@ -264,7 +269,17 @@ func (s *MessageService) UpdateComment(ctx context.Context, commentID int32, con
 func (s *MessageService) DeleteComment(ctx context.Context, commentID int32, deleterID int32) error {
 	queries := models.New(s.DB)
 
-	err := queries.DeleteComment(ctx, models.DeleteCommentParams{
+	// Check if comment is already deleted
+	comment, err := queries.GetComment(ctx, commentID)
+	if err != nil {
+		return fmt.Errorf("failed to get comment: %w", err)
+	}
+
+	if comment.IsDeleted {
+		return fmt.Errorf("cannot delete already deleted comment")
+	}
+
+	err = queries.DeleteComment(ctx, models.DeleteCommentParams{
 		ID:              commentID,
 		DeletedByUserID: int32ValueToPgInt4(deleterID),
 	})

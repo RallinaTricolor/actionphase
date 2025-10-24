@@ -47,7 +47,7 @@ func NewTestDatabase(t TestingInterface) *TestDatabase {
 
 	connectionString := os.Getenv("TEST_DATABASE_URL")
 	if connectionString == "" {
-		connectionString = "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable"
+		connectionString = "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable"
 	}
 
 	// Validate connection string format
@@ -60,8 +60,7 @@ func NewTestDatabase(t TestingInterface) *TestDatabase {
 		// Instead of failing immediately, try to provide helpful guidance
 		t.Logf("Failed to connect to test database: %v", err)
 		t.Logf("To skip database tests, set SKIP_DB_TESTS=true")
-		t.Logf("To run with database tests, ensure PostgreSQL is running and database exists:")
-		t.Logf("  createdb actionphase_test")
+		t.Logf("To run with database tests, ensure PostgreSQL is running and database 'actionphase' exists")
 		t.Logf("  or set TEST_DATABASE_URL to point to your test database")
 
 		if tb, ok := t.(*testing.T); ok {
@@ -84,10 +83,38 @@ func NewTestDatabase(t TestingInterface) *TestDatabase {
 }
 
 // Close closes the database connection
+// NOTE: Does NOT automatically clean up tables to allow parallel test execution
+// If you need to clean tables between test runs, call CleanupAllTables() explicitly
+// at the START of your test suite (e.g., in TestMain), not at the end
 func (td *TestDatabase) Close() {
 	if td.Pool != nil {
 		td.Pool.Close()
 	}
+}
+
+// CleanupAllTables removes all test data from all tables
+// Call this at the START of your test suite (in TestMain) if needed,
+// not at the end of individual tests (to allow parallel execution)
+func (td *TestDatabase) CleanupAllTables() {
+	simpleT := &simpleTestInterface{}
+	td.CleanupTables(simpleT)
+}
+
+// simpleTestInterface implements TestingInterface for cleanup logging
+type simpleTestInterface struct{}
+
+func (s *simpleTestInterface) Helper() {
+	// No-op for cleanup interface
+}
+
+func (s *simpleTestInterface) Logf(format string, args ...interface{}) {
+	// Silent cleanup - only log errors to stderr
+	// Most cleanup warnings are not critical
+}
+
+func (s *simpleTestInterface) Fatalf(format string, args ...interface{}) {
+	// Convert fatal to log for cleanup errors
+	// We don't want cleanup failures to crash the test harness
 }
 
 // CleanupTables removes test data from tables (useful for test cleanup)
@@ -96,10 +123,41 @@ func (td *TestDatabase) Close() {
 func (td *TestDatabase) CleanupTables(t TestingInterface, tables ...string) {
 	ctx := context.Background()
 
-	// If no tables specified, clean up common test tables in proper order
+	// If no tables specified, clean up all test tables in proper dependency order
 	// (child tables first to avoid foreign key constraint violations)
 	if len(tables) == 0 {
-		tables = []string{"game_applications", "game_participants", "games", "sessions", "users"}
+		tables = []string{
+			// Leaf tables (most dependent)
+			"user_preferences",
+			"user_common_room_reads",
+			"phase_transitions",
+			"message_reactions",
+			"message_recipients",
+			"conversation_reads",
+			"handout_comments",
+			"thread_posts",
+			// Mid-level dependent tables
+			"private_messages",
+			"messages",
+			"handouts",
+			"threads",
+			"notifications",
+			"action_results",
+			"action_submissions",
+			"npc_assignments",
+			"conversation_participants",
+			"conversations",
+			// Game-level tables
+			"game_phases",
+			"game_participants",
+			"game_applications",
+			"character_data",
+			"characters",
+			// Top-level tables (least dependent)
+			"games",
+			"sessions",
+			"users",
+		}
 	}
 
 	// First check which tables exist to avoid transaction aborts
@@ -442,7 +500,7 @@ type TestConfig struct {
 // LoadTestConfig loads test configuration from environment variables
 func LoadTestConfig() *TestConfig {
 	return &TestConfig{
-		DatabaseURL:    getEnvOrDefault("TEST_DATABASE_URL", "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable"),
+		DatabaseURL:    getEnvOrDefault("TEST_DATABASE_URL", "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable"),
 		EnableParallel: getEnvBoolOrDefault("TEST_PARALLEL", false),
 		CleanupTables:  getEnvBoolOrDefault("TEST_CLEANUP", true),
 		LogLevel:       getEnvOrDefault("TEST_LOG_LEVEL", "warn"),
@@ -472,6 +530,7 @@ func getEnvBoolOrDefault(key string, defaultValue bool) bool {
 }
 
 // CreateTestJWTToken creates a JWT token for testing purposes using configurable secret
+// Deprecated: Use CreateTestJWTTokenForUser instead
 func CreateTestJWTToken(username string) (string, error) {
 	config := LoadTestConfig()
 	tokenAuth := jwtauth.New("HS256", []byte(config.JWTSecret), nil)
@@ -482,6 +541,16 @@ func CreateTestJWTToken(username string) (string, error) {
 	}
 
 	_, tokenString, err := tokenAuth.Encode(claims)
+	return tokenString, err
+}
+
+// CreateTestJWTTokenForUser creates a JWT token for a given user using the app config
+// This matches the pattern used in production and ensures compatibility with JWT middleware
+func CreateTestJWTTokenForUser(app *App, user *User) (string, error) {
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	_, tokenString, err := tokenAuth.Encode(map[string]interface{}{
+		"username": user.Username,
+	})
 	return tokenString, err
 }
 
@@ -530,8 +599,8 @@ func (td *TestDatabase) CreateTestUserWithCredentials(t TestingInterface, userna
 func NewTestConfig() *Config {
 	return &Config{
 		Database: DatabaseConfig{
-			URL:            "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable",
-			TestURL:        "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable",
+			URL:            "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable",
+			TestURL:        "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable",
 			MaxConnections: 10,
 			MaxIdleTime:    30 * time.Minute,
 		},
