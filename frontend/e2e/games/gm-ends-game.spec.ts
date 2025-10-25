@@ -34,6 +34,13 @@ test.describe('GM Ends Game', () => {
 
     // Click "Complete Game" button
     await page.click('button:has-text("Complete Game")');
+
+    // Handle confirmation modal - type "completed" to confirm
+    await page.waitForSelector('input[type="text"]', { timeout: 5000 });
+    await page.fill('input[type="text"]', 'completed');
+
+    // Click the confirm button in the modal (use .last() to get the modal button)
+    await page.locator('button:has-text("Complete Game")').last().click();
     await page.waitForLoadState('networkidle');
 
     // Verify game state changed to "Completed"
@@ -55,8 +62,13 @@ test.describe('GM Ends Game', () => {
     // Verify game is in "In Progress" state
     await assertTextVisible(page, 'In Progress');
 
-    // Click "Pause Game"
+    // Click "Pause Game" button
     await page.click('button:has-text("Pause Game")');
+
+    // Handle confirmation modal - click confirm button
+    await page.waitForSelector('button:has-text("Pause Game")', { timeout: 5000 });
+    // Click the confirm button in the modal (there will be two "Pause Game" buttons now)
+    await page.locator('button:has-text("Pause Game")').last().click();
     await page.waitForLoadState('networkidle');
 
     // Verify game state changed to "Paused"
@@ -74,10 +86,9 @@ test.describe('GM Ends Game', () => {
   });
 
   test('Completed game shows appropriate UI to players', async ({ page }) => {
-    // Login as GM and complete a different game (not the one we just completed above)
-    // We'll use a shared fixture game for this read-only test
+    // Login as GM and use dedicated E2E game for completion testing
     await loginAs(page, 'GM');
-    const gameId = await getFixtureGameId(page, 'WESTMARCH');
+    const gameId = await getFixtureGameId(page, 'E2E_COMPLETE');
     await navigateToGame(page, gameId);
 
     // Check current state - complete if needed
@@ -86,6 +97,13 @@ test.describe('GM Ends Game', () => {
     if (currentState?.includes('In Progress')) {
       // Complete the game
       await page.click('button:has-text("Complete Game")');
+
+      // Handle confirmation modal - type "completed" to confirm
+      await page.waitForSelector('input[type="text"]', { timeout: 5000 });
+      await page.fill('input[type="text"]', 'completed');
+
+      // Click the confirm button in the modal (use .last() to get the modal button)
+      await page.locator('button:has-text("Complete Game")').last().click();
       await page.waitForLoadState('networkidle');
     }
 

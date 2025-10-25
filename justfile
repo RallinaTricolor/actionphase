@@ -441,11 +441,20 @@ test-fe mode="run" file="":
 
 # Run E2E tests (default: headless)
 e2e:
+  @echo "🔄 Applying E2E test fixtures..."
+  @just load-e2e
+  @echo ""
   cd frontend && npm run test:e2e
 
 # E2E testing with options
 e2e-test mode="headless" file="":
   #!/usr/bin/env bash
+
+  # Apply fixtures first
+  echo "🔄 Applying E2E test fixtures..."
+  just load-e2e
+  echo ""
+
   cd frontend
 
   case "{{mode}}" in

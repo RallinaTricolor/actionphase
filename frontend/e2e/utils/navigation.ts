@@ -38,11 +38,12 @@ export async function navigateToGameTab(page: Page, tabName: string) {
     'Phases': 'h2:has-text("Phase Management")',
     'Applications': 'h2:has-text("Applications"), h3:has-text("Applications")',
     'Participants': 'h2:has-text("Participants"), h3:has-text("Participants")',
+    'People': 'h2:has-text("Characters"), h3:has-text("Characters")',
     'Characters': 'h2:has-text("Characters")',
     'Actions': 'h2:has-text("Actions")',
     // Submit Action tab has variable content, so we just wait for networkidle
     'Messages': 'h2:has-text("Messages")',
-    'Phase History': 'h2:has-text("Phase History")',
+    'History': 'h2:has-text("Phase History")',
   };
 
   const indicator = tabIndicators[tabName];

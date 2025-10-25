@@ -33,7 +33,7 @@ test.describe('Action Submission Flow', () => {
 
     // Player 4 has a draft action - verify it's displayed
     await assertTextVisible(page, 'Your Current Action');
-    await assertTextVisible(page, 'This is a draft action');
+    await assertTextVisible(page, 'This is a draft action that needs to be completed');
 
     // Click "Edit" to modify the draft action
     await page.click('button:has-text("Edit")');
@@ -106,15 +106,15 @@ test.describe('Action Submission Flow', () => {
     // Login as Player 1
     await loginAs(page, 'PLAYER_1');
 
-    // Use "Shadows Over Innsmouth" from fixtures (has common_room phase active, not action)
-    const gameId = await getFixtureGameId(page, 'SHADOWS');
+    // Use Common Room Misc game (has common_room phase active, NOT action phase)
+    const gameId = await getFixtureGameId(page, 'COMMON_ROOM_MISC');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
-    await gamePage.goToSubmitAction();
 
-    // Verify "No Action Phase Active" message is displayed
-    await assertTextVisible(page, 'No Action Phase Active');
-    await assertTextVisible(page, 'Action submissions are only available during Action phases');
+    // Try to navigate to Submit Action tab - it should not be visible
+    // because there's no active action phase
+    const submitActionTab = page.locator('button:has-text("Submit Action")');
+    await expect(submitActionTab).not.toBeVisible();
   });
 });

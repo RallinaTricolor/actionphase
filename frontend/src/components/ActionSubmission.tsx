@@ -116,7 +116,7 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
   }
 
   return (
-    <div className={`surface-base rounded-lg border border-theme-default ${className}`}>
+    <div className={`surface-base rounded-lg border border-theme-default ${className}`} data-testid="action-submission-container">
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -129,6 +129,7 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
             <CountdownTimer
               deadline={currentPhase.deadline}
               className="flex-shrink-0"
+              data-testid="phase-deadline"
             />
           )}
         </div>
@@ -146,11 +147,11 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
 
         {/* Current Action Display */}
         {currentAction && !isExpanded && (
-          <div className="mb-6 p-4 bg-semantic-info-subtle border border-semantic-info rounded-lg">
+          <div className="mb-6 p-4 bg-semantic-info-subtle border border-semantic-info rounded-lg" data-testid="current-action-display">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <h3 className="font-medium text-content-primary mb-2">Your Current Action</h3>
-                <div className="text-sm text-content-primary surface-base p-3 rounded border border-theme-default whitespace-pre-wrap">
+                <div className="text-sm text-content-primary surface-base p-3 rounded border border-theme-default whitespace-pre-wrap" data-testid="action-content">
                   {currentAction.content}
                 </div>
                 {currentAction.character_name && (
@@ -158,7 +159,7 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
                     Acting as: <span className="font-medium">{currentAction.character_name}</span>
                   </p>
                 )}
-                <p className="text-xs text-content-primary mt-1">
+                <p className="text-xs text-content-primary mt-1" data-testid="action-status">
                   Last updated: {new Date(currentAction.updated_at).toLocaleString()}
                 </p>
               </div>
@@ -168,6 +169,7 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
                   size="sm"
                   onClick={() => setIsExpanded(true)}
                   className="ml-4"
+                  data-testid="edit-action-button"
                 >
                   Edit
                 </Button>
@@ -178,13 +180,14 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
 
         {/* Submission Form */}
         {(!currentAction || isExpanded) && canSubmitAction && (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" data-testid="action-submission-form">
             {/* Character Selection - only show dropdown if multiple characters */}
             {availableCharacters.length > 1 && (
               <Select
                 label="Acting as Character (Optional)"
                 value={selectedCharacterId?.toString() || ''}
                 onChange={(e) => setSelectedCharacterId(e.target.value ? parseInt(e.target.value) : null)}
+                data-testid="character-select"
               >
                 <option value="">Select a character (or leave blank)</option>
                 {availableCharacters.map((character) => (
@@ -214,6 +217,7 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
               required
               disabled={submitActionMutation.isPending}
               helperText="This action is private and will only be visible to the GM during the game."
+              data-testid="action-textarea"
             />
 
             {/* Submit Buttons */}
@@ -235,6 +239,7 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
                 type="submit"
                 variant="primary"
                 disabled={!content.trim() || submitActionMutation.isPending}
+                data-testid="submit-action-button"
               >
                 {submitActionMutation.isPending
                   ? 'Submitting...'

@@ -207,9 +207,57 @@ BEGIN
   RAISE NOTICE 'Created Game #167: E2E Common Room - Misc';
 
   -- ============================================
+  -- GAME #168: Character Avatars (character-avatar.spec.ts)
+  -- ============================================
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  VALUES (
+    168,
+    'E2E Character Avatars',
+    'Dedicated game for character-avatar.spec.ts E2E tests (avatar upload, delete, permissions).',
+    'Test Framework',
+    gm_id,
+    5,
+    'in_progress',
+    true,
+    NOW() - INTERVAL '5 days',
+    NOW()
+  );
+
+  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
+  VALUES
+    (168, p1_id, 'player', 'active', NOW() - INTERVAL '4 days'),
+    (168, p2_id, 'player', 'active', NOW() - INTERVAL '4 days'),
+    (168, p3_id, 'player', 'active', NOW() - INTERVAL '4 days'),
+    (168, p4_id, 'player', 'active', NOW() - INTERVAL '4 days');
+
+  INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
+  VALUES (
+    168,
+    'common_room',
+    1,
+    'Discussion and Planning',
+    'Active common room phase for character avatar testing.',
+    NOW() - INTERVAL '1 hour',
+    NOW() + INTERVAL '23 hours',
+    true,
+    true,
+    NOW() - INTERVAL '1 hour'
+  );
+
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES
+    (168, gm_id, 'GM Test Character', 'npc', 'approved', NOW() - INTERVAL '4 days', NOW()),
+    (168, p1_id, 'E2E Test Char 1', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
+    (168, p2_id, 'E2E Test Char 2', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
+    (168, p3_id, 'E2E Test Char 3', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()),
+    (168, p4_id, 'E2E Test Char 4', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
+
+  RAISE NOTICE 'Created Game #168: E2E Character Avatars';
+
+  -- ============================================
   -- Summary
   -- ============================================
-  RAISE NOTICE 'Created 4 isolated Common Room test games (164-167) for parallel E2E testing';
+  RAISE NOTICE 'Created 5 isolated Common Room test games (164-168) for parallel E2E testing';
 
 END $$;
 

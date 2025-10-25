@@ -121,10 +121,26 @@ export class GameDetailsPage {
   }
 
   /**
-   * Navigate to Characters tab
+   * Navigate to Characters section
+   * Handles both game states:
+   * - character_creation: Direct "Characters" tab
+   * - in_progress: "People" tab with "Characters" sub-navigation
    */
   async goToCharacters() {
-    await this.goToTab('Characters');
+    // Check if there's a direct Characters tab
+    const directTab = this.page.locator('button[role="tab"]:has-text("Characters")');
+    const hasDirectTab = await directTab.count() > 0;
+
+    if (hasDirectTab) {
+      // Direct Characters tab exists (character_creation state)
+      await directTab.click();
+      await this.page.waitForLoadState('networkidle');
+    } else {
+      // Navigate via People tab (in_progress state)
+      await this.goToTab('People');
+      await this.page.click('button:has-text("Characters")');
+      await this.page.waitForLoadState('networkidle');
+    }
   }
 
   /**
@@ -159,7 +175,7 @@ export class GameDetailsPage {
    * Navigate to Phase History tab
    */
   async goToPhaseHistory() {
-    await this.goToTab('Phase History');
+    await this.goToTab('History');
   }
 
   /**

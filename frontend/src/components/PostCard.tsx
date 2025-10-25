@@ -19,9 +19,10 @@ interface PostCardProps {
   controllableCharacters: Character[]; // Characters the user can control (for "Reply as" dropdown)
   onCreateComment: (postId: number, characterId: number, content: string) => Promise<void>;
   currentUserId?: number;
+  'data-testid'?: string;
 }
 
-export function PostCard({ post, gameId, characters, controllableCharacters, onCreateComment, currentUserId }: PostCardProps) {
+export function PostCard({ post, gameId, characters, controllableCharacters, onCreateComment, currentUserId, 'data-testid': dataTestId }: PostCardProps) {
   const [showComments, setShowComments] = useState(true);
   const [isCommenting, setIsCommenting] = useState(false);
   const [topLevelComments, setTopLevelComments] = useState<Message[]>([]);
@@ -197,7 +198,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   const isLongContent = post.content.length > 500;
 
   return (
-    <div ref={postRef} data-testid="post-card" className="mb-8">
+    <div ref={postRef} data-testid={dataTestId || "post-card"} className="mb-8">
       {/* Post Card - Contains both post and comments */}
       <div className="surface-base rounded-xl shadow-lg border border-theme-default overflow-hidden">
       {/* GM Post Header Section */}

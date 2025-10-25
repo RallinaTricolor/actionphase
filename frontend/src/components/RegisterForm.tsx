@@ -49,6 +49,7 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           value={formData.username}
           onChange={handleChange}
           placeholder="Choose a username"
+          data-testid="register-username"
         />
 
         <Input
@@ -60,6 +61,7 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           value={formData.email}
           onChange={handleChange}
           placeholder="Enter your email"
+          data-testid="register-email"
         />
 
         <Input
@@ -71,10 +73,11 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           value={formData.password}
           onChange={handleChange}
           placeholder="Choose a password"
+          data-testid="register-password"
         />
 
         {error && (
-          <Alert variant="danger">
+          <Alert variant="danger" data-testid="error-message">
             {errorMessage}
           </Alert>
         )}
@@ -84,6 +87,7 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           variant="primary"
           loading={isLoading}
           className="w-full"
+          data-testid="register-submit"
         >
           {isLoading ? 'Creating account...' : 'Register'}
         </Button>

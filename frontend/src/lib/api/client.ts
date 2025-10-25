@@ -67,9 +67,11 @@ export class BaseApiClient {
               },
             });
 
-            const newToken = response.data.token;
+            const newToken = response.data.Token; // Backend returns capital-T Token
             localStorage.setItem('auth_token', newToken);
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            // Delete the old Authorization header so the request interceptor can set the new one
+            delete originalRequest.headers.Authorization;
+            // The request interceptor will read the updated token from localStorage
             return this.client(originalRequest);
           } catch (refreshError) {
             console.error('Token refresh failed:', refreshError);

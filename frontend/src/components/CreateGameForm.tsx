@@ -69,7 +69,7 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
   return (
     <div className="max-w-2xl mx-auto">
       {error && (
-        <Alert variant="danger" className="mb-6" dismissible onDismiss={() => setError(null)}>
+        <Alert variant="danger" className="mb-6" dismissible onDismiss={() => setError(null)} data-testid="error-message">
           {error}
         </Alert>
       )}
@@ -97,6 +97,7 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
             variant="primary"
             loading={isSubmitting}
             className="flex-1"
+            data-testid="create-game-submit"
           >
             {isSubmitting ? 'Creating Game...' : 'Create Game'}
           </Button>

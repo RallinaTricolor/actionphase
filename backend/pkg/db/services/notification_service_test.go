@@ -275,3 +275,49 @@ func TestNotificationService_DeleteNotification(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, notifications, 1)
 }
+
+func TestNotificationService_NotifyPhaseCreated(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	ctx := context.Background()
+	service := &NotificationService{DB: testDB.Pool}
+
+	// Create test users (GM + 2 players)
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+
+	// Create test game with GM
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	// Add players as participants (with status 'active')
+	testDB.AddTestGameParticipant(t, int32(game.ID), int32(player1.ID), "player")
+	testDB.AddTestGameParticipant(t, int32(game.ID), int32(player2.ID), "player")
+
+	// Create a test phase
+	phase := testDB.CreateTestPhase(t, int32(game.ID), "action", "Test Phase")
+
+	// Notify all participants about the phase (excluding GM who created it)
+	err := service.NotifyPhaseCreated(ctx, int32(game.ID), int32(phase.ID), phase.Title, int32(gm.ID))
+	require.NoError(t, err)
+
+	// Verify player1 received notification
+	player1Notifications, err := service.GetUserNotifications(ctx, int32(player1.ID), 10, 0)
+	require.NoError(t, err)
+	assert.Len(t, player1Notifications, 1)
+	assert.Equal(t, "New phase: Test Phase", player1Notifications[0].Title)
+	assert.Equal(t, core.NotificationTypePhaseCreated, player1Notifications[0].Type)
+	assert.False(t, player1Notifications[0].IsRead)
+
+	// Verify player2 received notification
+	player2Notifications, err := service.GetUserNotifications(ctx, int32(player2.ID), 10, 0)
+	require.NoError(t, err)
+	assert.Len(t, player2Notifications, 1)
+	assert.Equal(t, "New phase: Test Phase", player2Notifications[0].Title)
+
+	// Verify GM did NOT receive notification (excluded)
+	gmNotifications, err := service.GetUserNotifications(ctx, int32(gm.ID), 10, 0)
+	require.NoError(t, err)
+	assert.Len(t, gmNotifications, 0)
+}

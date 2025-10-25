@@ -378,8 +378,8 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
           characterName={character.name}
           currentAvatarUrl={character.avatar_url}
           onUploadSuccess={() => {
-            // Invalidate character queries to refetch with new avatar
-            queryClient.invalidateQueries({ queryKey: ['character', characterId] });
+            // Refetch character data to immediately show new avatar
+            queryClient.refetchQueries({ queryKey: ['character', characterId] });
           }}
         />
       )}

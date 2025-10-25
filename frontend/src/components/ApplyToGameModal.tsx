@@ -94,6 +94,7 @@ export const ApplyToGameModal = ({
           rows={4}
           disabled={submitting}
           helperText="Share your interest in the game, character ideas, or experience with the genre."
+          data-testid="application-message"
         />
 
         <div className="flex gap-3 pt-4">
@@ -111,6 +112,7 @@ export const ApplyToGameModal = ({
             variant="primary"
             loading={submitting}
             className="flex-1"
+            data-testid="submit-application"
           >
             Submit Application
           </Button>

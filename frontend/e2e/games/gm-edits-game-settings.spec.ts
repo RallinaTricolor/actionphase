@@ -71,7 +71,7 @@ test.describe.serial('GM Edits Game Settings', () => {
     // Update genre and max players
     const newGenre = `Fantasy ${Date.now()}`;
     await page.fill('#genre', newGenre);
-    await page.fill('#maxPlayers', '6');
+    await page.fill('#max_players', '6');
 
     // Click "Save Changes" button
     await page.click('button:has-text("Save Changes")');
@@ -83,7 +83,7 @@ test.describe.serial('GM Edits Game Settings', () => {
 
     // Verify genre and max players were saved
     await expect(page.locator('#genre')).toHaveValue(newGenre);
-    await expect(page.locator('#maxPlayers')).toHaveValue('6');
+    await expect(page.locator('#max_players')).toHaveValue('6');
 
     // Close modal
     await page.click('button:has-text("Cancel")');
@@ -102,7 +102,7 @@ test.describe.serial('GM Edits Game Settings', () => {
     await waitForModal(page, 'Edit Game');
 
     // Get current state of anonymous checkbox
-    const anonymousCheckbox = page.locator('#isAnonymous');
+    const anonymousCheckbox = page.locator('#is_anonymous');
     const wasChecked = await anonymousCheckbox.isChecked();
 
     // Toggle anonymous mode
@@ -117,7 +117,7 @@ test.describe.serial('GM Edits Game Settings', () => {
     await waitForModal(page, 'Edit Game');
 
     // Verify checkbox state changed
-    const isNowChecked = await page.locator('#isAnonymous').isChecked();
+    const isNowChecked = await page.locator('#is_anonymous').isChecked();
     expect(isNowChecked).toBe(!wasChecked);
 
     // Close modal

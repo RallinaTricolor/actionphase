@@ -243,6 +243,108 @@ Use **Game #7** (Blackwood Manor):
 - No phases yet
 - Public visibility
 
+## E2E Test Fixtures - Test Isolation Strategy
+
+**CRITICAL**: E2E fixtures are designed for **test isolation and parallel execution**.
+
+### E2E Fixture Organization
+
+E2E fixtures in `/backend/pkg/db/test_fixtures/e2e/` follow a **one fixture per test file** pattern:
+
+```
+e2e/
+├── 07_common_room.sql       # 5 isolated Common Room games (Game #164-168)
+├── 08_e2e_dedicated_games.sql # Dedicated games for state changes
+```
+
+**Each E2E fixture game has a specific purpose**:
+- **Game #164**: `E2E Common Room - Posts` → for `common-room.spec.ts`
+- **Game #165**: `E2E Common Room - Mentions` → for `character-mentions.spec.ts`
+- **Game #166**: `E2E Common Room - Notifications` → for `notification-flow.spec.ts`
+- **Game #167**: `E2E Common Room - Misc` → for miscellaneous tests
+- **Game #168**: `E2E Character Avatars` → for `character-avatar.spec.ts`
+
+### When to Create a New Fixture vs Reuse
+
+**✅ CREATE a new dedicated fixture when:**
+- Writing a new E2E test file that will run in parallel
+- Test requires specific participant/character setup
+- Test will modify game state (upload avatars, post comments, etc.)
+- Reusing would break another test's assumptions
+
+**❌ DO NOT reuse a fixture if:**
+- The fixture was designed for a specific test file
+- Your test's participant needs differ from the fixture's setup
+- The fixture has a documented purpose that doesn't match your test
+- You're not sure if it will cause conflicts
+
+**Example of WRONG approach:**
+```typescript
+// ❌ WRONG: character-avatar.spec.ts using COMMON_ROOM_MISC
+// COMMON_ROOM_MISC only has Player 5, but tests use Players 1-4
+const gameId = await getFixtureGameId(page, 'COMMON_ROOM_MISC');
+```
+
+**Example of CORRECT approach:**
+```typescript
+// ✅ CORRECT: Created dedicated CHARACTER_AVATARS fixture
+// Game #168 has Players 1-4 with characters specifically for avatar tests
+const gameId = await getFixtureGameId(page, 'CHARACTER_AVATARS');
+```
+
+### Creating a New E2E Fixture
+
+**Step 1**: Add fixture to SQL file (`07_common_room.sql` or create new file):
+```sql
+-- Game #169: My New Feature Test
+INSERT INTO games (id, title, description, ...) VALUES (
+  169,
+  'E2E My Feature',
+  'Dedicated game for my-feature.spec.ts E2E tests.',
+  ...
+);
+
+-- Add participants needed for YOUR test
+INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
+VALUES
+  (169, p1_id, 'player', 'active', NOW() - INTERVAL '4 days'),
+  (169, p2_id, 'player', 'active', NOW() - INTERVAL '4 days');
+
+-- Add characters needed for YOUR test
+INSERT INTO characters (game_id, user_id, name, ...) VALUES
+  (169, p1_id, 'Test Character 1', ...),
+  (169, p2_id, 'Test Character 2', ...);
+```
+
+**Step 2**: Add to `game-helpers.ts` mapping:
+```typescript
+export const FIXTURE_GAMES = {
+  // ... existing fixtures ...
+  MY_FEATURE: 'E2E My Feature',  // Game #169 - for my-feature.spec.ts
+} as const;
+```
+
+**Step 3**: Use in your test:
+```typescript
+const gameId = await getFixtureGameId(page, 'MY_FEATURE');
+```
+
+**Step 4**: Document the fixture's purpose in SQL comments and this file.
+
+### Test Isolation Principles
+
+1. **One Purpose Per Fixture**: Each fixture game serves ONE test file
+2. **Independent State**: Tests should not depend on other tests' state changes
+3. **Parallel Safe**: Fixtures must support parallel test execution
+4. **Documented Purpose**: Always comment WHY a fixture exists and WHAT test uses it
+5. **Minimal Overlap**: Avoid "generic" fixtures that many tests share
+
+**Why This Matters:**
+- Tests run in parallel for speed
+- Shared fixtures cause race conditions and flaky tests
+- Clear fixture ownership makes debugging easier
+- Test isolation prevents cascading failures
+
 ## Fixture Maintenance
 
 ### Updating Fixtures
@@ -254,10 +356,10 @@ Use **Game #7** (Blackwood Manor):
 
 ### Adding New Scenarios
 
-1. Identify fixture file to modify
-2. Add SQL following existing patterns
-3. Update test data summary
-4. Test the new scenario
+1. **Think First**: Does an existing fixture serve this purpose?
+2. **Check Purpose**: Read fixture comments and game-helpers.ts
+3. **Create if Needed**: Make a dedicated fixture for test isolation
+4. **Document**: Update SQL comments and this file
 
 ## Troubleshooting
 

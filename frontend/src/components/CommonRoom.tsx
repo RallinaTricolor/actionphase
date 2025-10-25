@@ -171,7 +171,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
   }
 
   return (
-    <div className="max-w-full">
+    <div className="max-w-full" data-testid="common-room-container">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-content-primary mb-2">
           Common Room{phaseTitle && ` - ${phaseTitle}`}
@@ -255,6 +255,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
                   controllableCharacters={controllableCharacters}
                   onCreateComment={handleCreateComment}
                   currentUserId={currentUserId}
+                  data-testid={`post-${post.id}`}
                 />
               ))}
             </div>

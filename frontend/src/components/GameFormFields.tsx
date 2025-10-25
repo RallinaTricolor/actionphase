@@ -30,6 +30,7 @@ export const GameFormFields = ({ formData, onChange }: GameFormFieldsProps) => {
         onChange={(e) => onChange('title', e.target.value)}
         placeholder="Enter a compelling game title"
         maxLength={255}
+        data-testid="game-title"
       />
 
       {/* Description */}
@@ -41,6 +42,7 @@ export const GameFormFields = ({ formData, onChange }: GameFormFieldsProps) => {
         rows={4}
         required
         placeholder="Describe your game world, setting, and what players can expect..."
+        data-testid="game-description"
       />
 
       {/* Genre */}
@@ -67,6 +69,7 @@ export const GameFormFields = ({ formData, onChange }: GameFormFieldsProps) => {
         min={1}
         max={20}
         placeholder="6"
+        data-testid="max-players"
       />
 
       {/* Dates */}

@@ -117,7 +117,7 @@ test.describe('Character Creation Flow', () => {
 
     // Use "The Heist at Goldstone Bank" from fixtures (already in in_progress state)
     // This saves ~3-4 seconds by avoiding game creation
-    const gameId = await getFixtureGameId(page, 'HEIST');
+    const gameId = await getFixtureGameId(page, 'COMMON_ROOM_MISC');
 
     // Use GameDetailsPage for navigation
     const gamePage = new GameDetailsPage(page);
@@ -139,8 +139,8 @@ test.describe('Character Creation Flow', () => {
     const npcName = `Test NPC ${Date.now()}`;
     await page.fill('#name', npcName);
 
-    // Select "GM-Controlled NPC" from character type dropdown
-    await page.selectOption('#character_type', 'npc_gm');
+    // Select "NPC" from character type dropdown
+    await page.selectOption('#character_type', 'npc');
 
     // Submit the form
     await page.click('form button[type="submit"]:has-text("Create Character")');
@@ -149,7 +149,7 @@ test.describe('Character Creation Flow', () => {
     // Verify NPC appears in character list
     await expect(page.locator(`h4:has-text("${npcName}")`)).toBeVisible({ timeout: 10000 });
 
-    // Verify it's in the GM NPCs section
-    await assertTextVisible(page, 'GM NPCs');
+    // Verify it's in the NPCs section
+    await assertTextVisible(page, 'NPCs');
   });
 });

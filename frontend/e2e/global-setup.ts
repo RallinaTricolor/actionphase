@@ -16,16 +16,16 @@ async function globalSetup() {
   console.log('\n🧹 Resetting E2E test fixtures...');
 
   try {
-    // Apply all test fixtures (this resets existing data first)
+    // Apply E2E test fixtures (includes common data + E2E-specific games)
     const projectRoot = path.resolve(__dirname, '../..');
-    execSync('./backend/pkg/db/test_fixtures/apply_all.sh', {
+    execSync('env DB_NAME=actionphase ./backend/pkg/db/test_fixtures/apply_e2e.sh', {
       stdio: 'inherit',
       cwd: projectRoot,
     });
 
-    console.log('✅ Test fixtures applied successfully!\n');
+    console.log('✅ E2E test fixtures applied successfully!\n');
   } catch (error) {
-    console.error('❌ Failed to apply test fixtures:', error);
+    console.error('❌ Failed to apply E2E test fixtures:', error);
     throw error;
   }
 }

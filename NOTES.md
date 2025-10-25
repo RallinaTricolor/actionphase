@@ -1,7 +1,5 @@
 - Maps/locations
 - Chatroom style games
-- CI/CD
-- Hidden player/character list
-- What tools would make GMing easier?
-- Site administration tools
+- Talent trees
+- Multiple GMs per game
 - OpenAPI docs in CI

@@ -8,7 +8,7 @@ import { waitForModal } from '../utils/waits';
  * Journey 4: GM Manages Phases
  *
  * Tests phase creation, activation, and history viewing.
- * Uses test fixtures ("The Heist at Goldstone Bank" - already in in_progress state).
+ * Uses E2E fixture game "E2E Test: Action Submission" (already in in_progress state with phases).
  * This speeds up tests by ~5-8 seconds per test by avoiding game creation and state transitions.
  *
  * REFACTORED: Using Page Object Model and shared utilities
@@ -21,8 +21,8 @@ test.describe('Phase Management Flow', () => {
     // Login as GM
     await loginAs(page, 'GM');
 
-    // Use "The Heist at Goldstone Bank" from fixtures (already in in_progress state)
-    const gameId = await getFixtureGameId(page, 'HEIST');
+    // Use E2E Action Submission game (already in in_progress state with phases)
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
     const phasePage = new PhaseManagementPage(page);
     await phasePage.goto(gameId);
@@ -51,7 +51,7 @@ test.describe('Phase Management Flow', () => {
     await loginAs(page, 'GM');
 
     // Use "The Heist at Goldstone Bank" from fixtures
-    const gameId = await getFixtureGameId(page, 'HEIST');
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
     const phasePage = new PhaseManagementPage(page);
     await phasePage.goto(gameId);
@@ -71,8 +71,10 @@ test.describe('Phase Management Flow', () => {
     // Activate the phase
     await phasePage.activatePhase(phaseName);
 
-    // Verify phase shows as "Currently Active"
-    await expect(page.locator('div:has-text("Currently Active")').last()).toBeVisible({ timeout: 10000 });
+    // Verify the SPECIFIC phase we activated shows as "Currently Active"
+    // Check the phase card itself shows "Currently Active" indicator
+    const activatedPhaseCard = phasePage.getPhaseCard(phaseName);
+    await expect(activatedPhaseCard.locator('div:has-text("Currently Active")').last()).toBeVisible({ timeout: 10000 });
   });
 
   test('GM can view phase history', async ({ page }) => {
@@ -81,7 +83,7 @@ test.describe('Phase Management Flow', () => {
 
     // Use "The Heist at Goldstone Bank" from fixtures
     // This game already has Phase 2 active, so we can see Phase 1 and Phase 2
-    const gameId = await getFixtureGameId(page, 'HEIST');
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
     const phasePage = new PhaseManagementPage(page);
     await phasePage.goto(gameId);
@@ -92,7 +94,7 @@ test.describe('Phase Management Flow', () => {
     await expect(page.locator('span:has-text("Phase 2")').first()).toBeVisible();
 
     // Verify phase titles from fixtures
-    await expect(page.locator('h4:has-text("Casing the Bank")')).toBeVisible(); // Phase 1
-    await expect(page.locator('h4:has-text("Execute the Plan")')).toBeVisible(); // Phase 2 (active)
+    await expect(page.locator('h4:has-text("Discussion Phase")')).toBeVisible(); // Phase 1
+    await expect(page.locator('h4:has-text("Action Phase")')).toBeVisible(); // Phase 2 (active)
   });
 });
