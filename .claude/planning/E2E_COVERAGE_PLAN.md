@@ -2,7 +2,7 @@
 
 **Status**: In Progress
 **Last Updated**: 2025-01-25
-**Current Coverage**: 89 passing tests across 8 feature areas
+**Current Coverage**: 101 passing tests across 9 feature areas (includes 12 security tests)
 
 ## Coverage Overview
 
@@ -21,7 +21,8 @@
 | Game Lifecycle | 6 | ✅ Complete |
 | Phase History | 3 | ✅ Complete |
 | Smoke Tests | 4 | ✅ Complete |
-| **Total** | **89** | **89 passing** |
+| **Permissions & Security** | **12** | ✅ **Complete** |
+| **Total** | **101** | **101 passing** |
 
 ### 🚧 Planned E2E Test Journeys
 
@@ -101,39 +102,50 @@
 ---
 
 ### 3. Permissions & Access Control ⭐⭐⭐ CRITICAL
-**Status**: 🔴 Not Started
-**Estimated Effort**: 4-5 hours
+**Status**: ✅ Complete (2025-01-25)
+**Actual Effort**: 4 hours
 **Priority**: P0 - Security critical
 
 **Journey Steps**:
 ```
-1. Test player cannot access GM features
-2. Test player cannot edit other players' content
-3. Test audience has read-only access
-4. Test players cannot see unpublished content
-5. Test private message privacy
-6. Test character ownership enforcement
+1. Test player cannot access GM features ✅
+2. Test player cannot edit other players' content ✅
+3. Test audience permissions (NPCs vs no characters) ✅
+4. Test players cannot see unpublished content ✅
+5. Test private message privacy ✅
+6. Test character ownership enforcement ✅
+7. Test API direct access prevention ✅
 ```
 
-**Test Scenarios**:
-- [ ] Player cannot create/activate phases
-- [ ] Player cannot edit other players' characters
-- [ ] Player cannot see draft action results
-- [ ] Player cannot see private messages they're not in
-- [ ] Audience cannot submit actions
-- [ ] Audience cannot send messages
-- [ ] Player cannot approve their own character
-- [ ] Direct URL access is blocked for unauthorized resources
+**Test Scenarios** (12 total):
+- [x] Player cannot access phase management tab
+- [x] Player cannot edit game settings
+- [x] Player cannot edit other players' characters
+- [x] Player can only upload avatar for own character
+- [x] Player cannot see draft action results
+- [x] Player cannot see private messages they're not in
+- [x] Audience cannot submit actions (NPCs or no characters)
+- [x] Audience without characters cannot post in common room
+- [x] Player cannot approve their own character
+- [x] Only GM can approve characters
+- [x] Player cannot modify game via direct API call
+- [x] Player cannot create phase via direct API call
 
 **Fixture Requirements**:
-- Game with mixed content (published/unpublished)
-- Multiple players with characters
-- Audience member account
-- Private conversations
+- E2E_ACTION game (with multiple player characters)
+- CHARACTER_AVATARS game (for avatar upload permissions)
+- E2E_MESSAGES game (for private conversation testing)
+- Audience user account
 
-**Files to Create**:
-- `e2e/security/permissions-enforcement.spec.ts`
-- Use existing fixtures with added unpublished content
+**Files Created**:
+- ✅ `e2e/security/permissions-enforcement.spec.ts` (12 tests, all passing)
+
+**Key Learnings**:
+- Players don't see Phases tab at all (not just read-only view)
+- NPCs can participate in RP (common room/messages) but CANNOT submit actions
+- Audience members WITH NPCs have limited permissions vs those WITHOUT characters
+- Character ownership enforced at UI level (Edit Sheet button visibility)
+- API endpoints return 403 for unauthorized access attempts
 
 ---
 
@@ -379,9 +391,9 @@ From `.claude/context/TESTING.md`:
 ### Sprint 1 Status
 - [ ] Action Results Flow (0/6 scenarios)
 - [ ] Complete Phase Lifecycle (0/6 scenarios)
-- [ ] Permissions & Access Control (0/8 scenarios)
+- [x] Permissions & Access Control (12/12 scenarios) ✅ **COMPLETE**
 
-**Sprint 1 Total**: 0/20 scenarios complete
+**Sprint 1 Total**: 12/26 scenarios complete (46%)
 
 ### Sprint 2 Status
 - [ ] Character Sheet Management (0/7 scenarios)
@@ -404,9 +416,9 @@ From `.claude/context/TESTING.md`:
 
 | Metric | Current | Sprint 1 Goal | Sprint 2 Goal | Sprint 3 Goal |
 |--------|---------|---------------|---------------|---------------|
-| Passing Tests | 89 | 109 | 130 | 153 |
-| Coverage Areas | 10 | 13 | 16 | 20 |
-| Critical Journeys | 0 | 3 | 3 | 3 |
+| Passing Tests | 101 | 109 | 130 | 153 |
+| Coverage Areas | 9 | 13 | 16 | 20 |
+| Critical Journeys | 1/3 ✅ | 3 | 3 | 3 |
 
 ---
 
