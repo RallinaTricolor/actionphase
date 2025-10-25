@@ -71,8 +71,17 @@ export async function login(
  * @param page - Playwright page object
  */
 export async function logout(page: Page) {
-  // Click logout button (directly visible in nav bar)
-  await page.click('button:has-text("Logout")');
+  // Find the user dropdown container (has a button with an SVG user icon and username)
+  const userDropdown = page.locator('nav .relative').last();
+
+  // Hover over the dropdown to open it
+  await userDropdown.hover();
+
+  // Wait a moment for the dropdown animation
+  await page.waitForTimeout(200);
+
+  // Click the logout button (now visible in the dropdown)
+  await page.locator('button:has-text("Logout")').click();
 
   // Wait for redirect to login page
   await page.waitForURL('/login', { timeout: 5000 });
@@ -84,8 +93,8 @@ export async function logout(page: Page) {
  */
 export async function isAuthenticated(page: Page): Promise<boolean> {
   try {
-    // Check for logout button presence (visible when authenticated)
-    await page.waitForSelector('button:has-text("Logout")', { timeout: 2000 });
+    // Check for authenticated navbar (Dashboard or Games link)
+    await page.waitForSelector('nav a[href="/dashboard"]', { timeout: 2000, state: 'attached' });
     return true;
   } catch {
     return false;

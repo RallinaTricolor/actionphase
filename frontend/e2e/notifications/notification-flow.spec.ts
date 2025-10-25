@@ -256,11 +256,15 @@ test.describe('Notification System', () => {
         // Activate the phase
         await phaseManagement.activatePhase(phaseTitle);
 
-        // 4. Wait for player notification
-        const notificationBadge = playerPage.locator('[data-testid="notification-badge"]');
-        await expect(notificationBadge).toBeVisible({ timeout: 25000 });
+        // 4. Reload player page to fetch notifications (instead of waiting for polling)
+        await playerPage.reload();
+        await playerPage.waitForLoadState('networkidle');
 
-        // Verify notification content
+        // Wait for notification badge to appear (transition from 0 to 1)
+        const notificationBadge = playerPage.locator('[data-testid="notification-badge"]');
+        await expect(notificationBadge).toBeVisible({ timeout: 5000 });
+
+        // Open notifications dropdown
         await playerPage.click('[data-testid="notification-bell"]');
 
         const dropdown = playerPage.locator('[data-testid="notification-dropdown"]');
@@ -369,7 +373,7 @@ test.describe('Notification System', () => {
         await loginAs(senderPage, 'PLAYER_1');
         await loginAs(recipientPage, 'PLAYER_2');
 
-        const gameId = await getFixtureGameId(senderPage, 'HEIST'); // Use HEIST game which has Private Messages support
+        const gameId = await getFixtureGameId(senderPage, 'COMMON_ROOM_NOTIFICATIONS'); // Use dedicated notification test game
 
         // 2. Recipient is on a different page (not the game page)
         await recipientPage.goto('/dashboard');
@@ -398,10 +402,10 @@ test.describe('Notification System', () => {
 
         // Fill in conversation title
         const conversationTitle = `Polling test - ${Date.now()}`;
-        await senderPage.fill('input[placeholder*="Planning the heist"]', conversationTitle);
+        await senderPage.fill('input[placeholder*="Planning the heist"], input[placeholder*="title"]', conversationTitle);
 
-        // Select Rook (Player 2's character) as participant
-        await senderPage.click('label:has-text("Rook (Hound)")');
+        // Select Player 2's character as participant
+        await senderPage.click('label:has-text("E2E Test Char 2"), label:has-text("TestPlayer2")');
 
         // Click "Create Conversation" button
         await senderPage.click('button:has-text("Create Conversation")');

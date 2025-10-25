@@ -96,6 +96,19 @@ func TestServiceWithDB(t *testing.T) {
 #### 3. E2E Tests (Playwright)
 **⚠️ CRITICAL: READ BEFORE WRITING E2E TESTS**
 
+**E2E Test Isolation - One Fixture Per Test File**
+
+E2E fixtures support parallel execution - each test file has a dedicated game fixture.
+
+**Before reusing a fixture, ask:**
+1. Was this fixture created for a specific test file?
+2. Do the participants/characters match my test's needs?
+3. Will my test modify state that could break other tests?
+
+**✅ When in doubt, CREATE a new dedicated fixture** (see `.claude/context/TEST_DATA.md` for step-by-step guide)
+
+**Example**: `character-avatar.spec.ts` initially used `COMMON_ROOM_MISC` (wrong - only has Player 5). Created dedicated `CHARACTER_AVATARS` fixture (Game #168) with Players 1-4 instead.
+
 **THE GOLDEN RULE: E2E tests are the LAST step, not the first.**
 
 E2E tests have long feedback loops (~20-30 seconds) and limited debugging visibility. They are expensive to run and debug. **NEVER write E2E tests until lower-level tests pass.**

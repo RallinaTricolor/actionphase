@@ -145,8 +145,8 @@ describe('NewConversationModal', () => {
       const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
       expect(titleInput).toBeInTheDocument()
       expect(titleInput).toHaveAttribute('type', 'text')
+      expect(titleInput).toHaveAttribute('required') // Verify required field
       expect(screen.getByText(/Conversation Title/i)).toBeInTheDocument()
-      expect(screen.getByText('*')).toBeInTheDocument() // Required indicator
     })
 
     it('renders your character section with select dropdown when multiple characters', () => {

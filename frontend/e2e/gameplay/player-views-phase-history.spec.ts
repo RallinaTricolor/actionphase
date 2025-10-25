@@ -8,7 +8,7 @@ import { assertTextVisible } from '../utils/assertions';
  * Journey 7: Player Views Phase History
  *
  * Tests that players can view phase history and navigate through past phases.
- * Uses test fixtures (Game #242: "The Heist at Goldstone Bank") with Phase 1 (common_room) and Phase 2 (action).
+ * Uses E2E fixture game "E2E Test: Action Submission" with Phase 1 (common_room) and Phase 2 (action).
  *
  * REFACTORED: Using Page Object Model and shared utilities
  * - Eliminated all waitForTimeout calls (was 5)
@@ -19,8 +19,8 @@ test.describe('Player Views Phase History', () => {
     // Login as Player 1
     await loginAs(page, 'PLAYER_1');
 
-    // Use "The Heist at Goldstone Bank" from fixtures
-    const gameId = await getFixtureGameId(page, 'HEIST');
+    // Use E2E Action Submission game which has phase history
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
@@ -35,9 +35,9 @@ test.describe('Player Views Phase History', () => {
     await expect(page.locator('span:has-text("Phase 1")').first()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('span:has-text("Phase 2")').first()).toBeVisible();
 
-    // Verify phase titles from fixtures are displayed
-    await expect(page.locator('h4:has-text("Casing the Bank")')).toBeVisible(); // Phase 1
-    await expect(page.locator('h4:has-text("Execute the Plan")')).toBeVisible(); // Phase 2 (active)
+    // Verify phase titles from E2E fixtures are displayed
+    await expect(page.locator('h4:has-text("Discussion Phase")')).toBeVisible(); // Phase 1 (common_room)
+    await expect(page.locator('h4:has-text("Action Phase")')).toBeVisible(); // Phase 2 (active action)
 
     // Verify active phase is marked as "Active"
     await expect(page.locator('span:has-text("Active")')).toBeVisible();
@@ -47,8 +47,8 @@ test.describe('Player Views Phase History', () => {
     // Login as Player 1
     await loginAs(page, 'PLAYER_1');
 
-    // Use "The Heist at Goldstone Bank" from fixtures
-    const gameId = await getFixtureGameId(page, 'HEIST');
+    // Use E2E Action Submission game
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
@@ -57,7 +57,7 @@ test.describe('Player Views Phase History', () => {
     await gamePage.goToPhaseHistory();
 
     // Click on Phase 1 (common_room phase)
-    await page.locator('button:has-text("Casing the Bank")').click();
+    await page.locator('button:has-text("Discussion Phase")').click();
     await page.waitForLoadState('networkidle');
 
     // Verify we're now viewing the phase details
@@ -65,7 +65,7 @@ test.describe('Player Views Phase History', () => {
 
     // Verify Common Room content is visible
     await assertTextVisible(page, 'Common Room');
-    await assertTextVisible(page, 'Casing the Bank');
+    await assertTextVisible(page, 'Discussion Phase');
   });
 
   test('Player can navigate back from phase details', async ({ page }) => {
@@ -73,7 +73,7 @@ test.describe('Player Views Phase History', () => {
     await loginAs(page, 'PLAYER_1');
 
     // Use "The Heist at Goldstone Bank" from fixtures
-    const gameId = await getFixtureGameId(page, 'HEIST');
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
@@ -82,7 +82,7 @@ test.describe('Player Views Phase History', () => {
     await gamePage.goToPhaseHistory();
 
     // Click on Phase 1 (common_room phase)
-    await page.locator('button:has-text("Casing the Bank")').click();
+    await page.locator('button:has-text("Discussion Phase")').click();
     await page.waitForLoadState('networkidle');
 
     // Verify we're viewing phase details

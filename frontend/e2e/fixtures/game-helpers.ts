@@ -21,14 +21,15 @@ export const FIXTURE_GAMES = {
   E2E_CANCEL: 'E2E Test: Game to Cancel',         // For testing game cancellation
   E2E_PAUSE: 'E2E Test: Game to Pause',           // For testing pause/resume
   E2E_ACTION: 'E2E Test: Action Submission',      // For testing action submissions
-  E2E_PM: 'E2E Test: Action Submission',          // For testing private messages (alias)
-  E2E_MESSAGES: 'E2E Test: Action Submission',    // For testing messaging (alias)
+  E2E_MESSAGES: 'E2E Test: Private Messages',     // For testing private messages (dedicated game)
+  E2E_PM: 'E2E Test: Private Messages',           // Alias for E2E_MESSAGES
 
   // Isolated Common Room games for parallel E2E testing (one per test file)
   COMMON_ROOM_POSTS: 'E2E Common Room - Posts',           // Game #164 - for common-room.spec.ts
   COMMON_ROOM_MENTIONS: 'E2E Common Room - Mentions',     // Game #165 - for character-mentions.spec.ts
   COMMON_ROOM_NOTIFICATIONS: 'E2E Common Room - Notifications', // Game #166 - for notification-flow.spec.ts
-  COMMON_ROOM_MISC: 'E2E Common Room - Misc',             // Game #167 - for character-avatar.spec.ts and misc
+  COMMON_ROOM_MISC: 'E2E Common Room - Misc',             // Game #167 - for misc tests
+  CHARACTER_AVATARS: 'E2E Character Avatars',             // Game #168 - for character-avatar.spec.ts
 
   // Legacy alias (deprecated - use COMMON_ROOM_POSTS instead)
   COMMON_ROOM_TEST: 'E2E Common Room - Posts',    // Alias for Game #164
@@ -41,17 +42,26 @@ export const FIXTURE_GAMES = {
  * @returns Game ID or null if not found
  */
 export async function getGameIdByTitle(page: Page, title: string): Promise<number | null> {
-  // Use the API to fetch all games and find the one with matching title
-  const response = await page.request.get('/api/v1/games/public');
+  // Use page.evaluate to make fetch call with auth token from localStorage
+  // This ensures we're using the same context as the logged-in user
+  const result = await page.evaluate(async (titleToFind) => {
+    const token = localStorage.getItem('auth_token');
 
-  if (!response.ok()) {
-    throw new Error(`Failed to fetch games: ${response.status()}`);
-  }
+    const response = await fetch('/api/v1/games/public', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
 
-  const games = await response.json();
-  const game = games.find((g: any) => g.title === title);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch games: ${response.status}`);
+    }
 
-  return game ? game.id : null;
+    const games = await response.json();
+    const game = games.find((g: any) => g.title === titleToFind);
+
+    return game ? game.id : null;
+  }, title);
+
+  return result;
 }
 
 /**

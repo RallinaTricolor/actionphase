@@ -41,7 +41,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     <div className="max-w-md mx-auto surface-base rounded-lg shadow-md border border-theme-default p-6">
       <h2 className="text-2xl font-bold text-content-primary mb-6">Login</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" data-testid="login-form">
         <Input
           label="Username"
           id="username"
@@ -51,6 +51,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           value={formData.username}
           onChange={handleChange}
           placeholder="Enter your username"
+          data-testid="login-username"
         />
 
         <Input
@@ -62,6 +63,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           value={formData.password}
           onChange={handleChange}
           placeholder="Enter your password"
+          data-testid="login-password"
         />
 
         <ErrorDisplay
@@ -76,6 +78,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           variant="primary"
           loading={isLoading}
           className="w-full"
+          data-testid="login-submit"
         >
           Login
         </Button>

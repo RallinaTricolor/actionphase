@@ -145,6 +145,7 @@ $RECYCLE.BIN/
 test-results/
 frontend/coverage/
 frontend/test-results/
+frontend/e2e/visual/*snapshots*
 frontend/playwright-report/
 backend/coverage.out
 backend/test-results

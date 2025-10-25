@@ -70,6 +70,7 @@ export function GameActions({
           variant="primary"
           onClick={onApplyToGame}
           disabled={actionLoading}
+          data-testid={`apply-button-${game.id}`}
         >
           Apply to Join
         </Button>

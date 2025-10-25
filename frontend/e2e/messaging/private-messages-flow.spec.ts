@@ -9,7 +9,7 @@ import { waitForModal } from '../utils/waits';
  * Journey 5: Players Exchange Private Messages
  *
  * Tests the complete private messaging flow between players.
- * Uses test fixtures (Game #2: "The Heist at Goldstone Bank") with existing characters.
+ * Uses E2E fixture game "E2E Test: Action Submission" with existing characters.
  * Character creation is tested separately in Journey 3.
  *
  * REFACTORED: Using Page Object Model and shared utilities
@@ -29,10 +29,10 @@ test.describe('Private Messages Flow', () => {
       // === Player 1 creates a conversation with Player 2 ===
       await loginAs(player1Page, 'PLAYER_1');
 
-      // Use "The Heist at Goldstone Bank" from fixtures
-      // TestPlayer1 has character: Shade (Whisper)
-      // TestPlayer2 has character: Rook (Hound)
-      const gameId = await getFixtureGameId(player1Page, 'HEIST');
+      // Use E2E Messages game
+      // TestPlayer1 has character: E2E Test Char 1
+      // TestPlayer2 has character: E2E Test Char 2
+      const gameId = await getFixtureGameId(player1Page, 'E2E_MESSAGES');
       await navigateToGame(player1Page, gameId);
 
       // Navigate to Messages tab
@@ -48,15 +48,15 @@ test.describe('Private Messages Flow', () => {
       const conversationTitle = `Test Conversation ${Date.now()}`;
       await player1Page.fill('input[placeholder*="Planning the heist"]', conversationTitle);
 
-      // Select Rook as participant (checkbox in the modal)
-      await player1Page.click('label:has-text("Rook (Hound)")');
+      // Select E2E Test Char 2 (Player 2's character) as participant
+      await player1Page.click('label:has-text("E2E Test Char 2")');
 
       // Click "Create Conversation" button
       await player1Page.click('button:has-text("Create Conversation")');
       await player1Page.waitForLoadState('networkidle');
 
       // === Player 1 sends first message ===
-      const messageContent = `Hello Rook! This is a test message from Shade at ${Date.now()}`;
+      const messageContent = `Hello from Player 1! Test message at ${Date.now()}`;
       await player1Page.fill('textarea[placeholder*="Type your message"]', messageContent);
       await player1Page.click('button:has-text("Send")');
       await player1Page.waitForLoadState('networkidle');
@@ -79,8 +79,11 @@ test.describe('Private Messages Flow', () => {
       await player2Page.locator(`text=${conversationTitle}`).first().click();
       await player2Page.waitForLoadState('networkidle');
 
-      // Verify Player 1's message is visible
-      await assertTextVisible(player2Page, messageContent);
+      // Wait for conversation messages to load (give UI time to render the thread)
+      await player2Page.waitForTimeout(1000);
+
+      // Verify Player 1's message is visible in the conversation thread
+      await expect(player2Page.locator(`text=${messageContent}`).last()).toBeVisible({ timeout: 5000 });
 
       // === Player 2 replies ===
       const replyContent = `Hi Shade! Got your message. Rook replying at ${Date.now()}`;
@@ -104,8 +107,11 @@ test.describe('Private Messages Flow', () => {
       await player1Page.locator(`text=${conversationTitle}`).first().click();
       await player1Page.waitForLoadState('networkidle');
 
-      // Verify Player 2's reply is visible
-      await assertTextVisible(player1Page, replyContent);
+      // Wait for conversation messages to load
+      await player1Page.waitForTimeout(1000);
+
+      // Verify Player 2's reply is visible in the conversation thread
+      await expect(player1Page.locator(`text=${replyContent}`).last()).toBeVisible({ timeout: 5000 });
     } finally {
       await player1Context.close();
       await player2Context.close();

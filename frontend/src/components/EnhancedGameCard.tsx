@@ -10,6 +10,7 @@ interface EnhancedGameCardProps {
   onApplyClick?: () => void;
   isJoining?: boolean;
   showApplyButton?: boolean;
+  'data-testid'?: string;
 }
 
 export function EnhancedGameCard({
@@ -17,7 +18,8 @@ export function EnhancedGameCard({
   onClick,
   onApplyClick,
   isJoining = false,
-  showApplyButton = false
+  showApplyButton = false,
+  'data-testid': dataTestId
 }: EnhancedGameCardProps) {
   const isUserGame = game.user_relationship === 'gm' || game.user_relationship === 'participant';
   const hasApplied = game.user_relationship === 'applied';
@@ -43,6 +45,7 @@ export function EnhancedGameCard({
           : 'border-theme-default hover:border-theme-strong'
       }`}
       onClick={onClick}
+      data-testid={dataTestId}
     >
       {/* Card Header */}
       <div className="p-4 border-b border-theme-default">
@@ -70,7 +73,7 @@ export function EnhancedGameCard({
         {/* Badges Row */}
         <div className="flex flex-wrap gap-2 items-center">
           {/* State Badge */}
-          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${GAME_STATE_COLORS[game.state]}`}>
+          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${GAME_STATE_COLORS[game.state]}`} data-testid={`game-status-${game.state}`}>
             {GAME_STATE_LABELS[game.state]}
           </span>
 
@@ -168,6 +171,7 @@ export function EnhancedGameCard({
               onApplyClick();
             }}
             className="w-full"
+            data-testid={`apply-button-${game.id}`}
           >
             Apply to Join
           </Button>

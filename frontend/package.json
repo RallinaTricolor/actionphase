@@ -12,10 +12,18 @@
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --grep @smoke",
+    "test:e2e:critical": "playwright test --grep @critical",
+    "test:e2e:auth": "playwright test --grep @auth",
+    "test:e2e:game": "playwright test --grep @game",
+    "test:e2e:character": "playwright test --grep @character",
+    "test:e2e:message": "playwright test --grep @message",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:visual": "playwright test e2e/visual/",
+    "test:e2e:visual:update": "playwright test e2e/visual/ --update-snapshots"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

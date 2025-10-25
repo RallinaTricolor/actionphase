@@ -248,8 +248,10 @@ func (h *Handler) Start() {
 		// All phase routes require authentication
 		r.Group(func(r chi.Router) {
 			tokenAuth := h.getTokenAuth()
+			userService := &db.UserService{DB: h.App.Pool}
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
 
 			// Phase management
 			r.Post("/{id}/activate", phaseHandler.ActivatePhase)
@@ -267,8 +269,10 @@ func (h *Handler) Start() {
 		// All notification routes require authentication
 		r.Group(func(r chi.Router) {
 			tokenAuth := h.getTokenAuth()
+			userService := &db.UserService{DB: h.App.Pool}
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
 
 			// Notification management
 			r.Get("/", notificationHandler.GetNotifications)
@@ -289,8 +293,10 @@ func (h *Handler) Start() {
 		// Dashboard route requires authentication
 		r.Group(func(r chi.Router) {
 			tokenAuth := h.getTokenAuth()
+			userService := &db.UserService{DB: h.App.Pool}
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
 
 			// Get user's dashboard
 			r.Get("/", dashboardHandler.GetUserDashboard)

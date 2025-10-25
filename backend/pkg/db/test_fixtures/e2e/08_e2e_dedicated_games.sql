@@ -1,8 +1,19 @@
 -- Dedicated E2E Test Games
 -- These games are specifically for tests that modify state (complete, cancel, etc.)
 -- They should be reset between test runs
+--
+-- IDEMPOTENT: Safe to run multiple times - deletes existing E2E games before recreating
 
 BEGIN;
+
+-- Delete existing E2E dedicated games to prevent duplicates
+DELETE FROM games WHERE title IN (
+  'E2E Test: Game to Complete',
+  'E2E Test: Game to Cancel',
+  'E2E Test: Game to Pause',
+  'E2E Test: Action Submission',
+  'E2E Test: Private Messages'
+);
 
 DO $$
 DECLARE
@@ -15,11 +26,14 @@ DECLARE
   game_cancel_id INTEGER;
   game_pause_id INTEGER;
   game_action_id INTEGER;
+  game_messages_id INTEGER;
   phase_id INTEGER;
   char1_id INTEGER;
   char2_id INTEGER;
   char3_id INTEGER;
   char4_id INTEGER;
+  char5_id INTEGER;
+  char6_id INTEGER;
 BEGIN
   -- Get user IDs
   SELECT id INTO gm_id FROM users WHERE email = 'test_gm@example.com';
@@ -219,6 +233,54 @@ BEGIN
     true,
     NULL,
     NOW() - INTERVAL '30 minutes'
+  );
+
+  -- ============================================
+  -- E2E Game: For Private Messages Testing
+  -- ============================================
+  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  VALUES (
+    'E2E Test: Private Messages',
+    'This game is dedicated for private messages testing in E2E tests.',
+    'Test',
+    gm_id,
+    5,
+    'in_progress',
+    true,
+    NOW() - INTERVAL '8 days',
+    NOW()
+  ) RETURNING id INTO game_messages_id;
+
+  -- Add participants
+  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
+  VALUES
+    (game_messages_id, p1_id, 'player', 'active', NOW() - INTERVAL '7 days'),
+    (game_messages_id, p2_id, 'player', 'active', NOW() - INTERVAL '7 days'),
+    (game_messages_id, p3_id, 'player', 'active', NOW() - INTERVAL '7 days'),
+    (game_messages_id, p4_id, 'player', 'active', NOW() - INTERVAL '7 days');
+
+  -- Add characters for messaging
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES
+    (game_messages_id, p1_id, 'E2E Test Char 1', 'player_character', 'approved', NOW() - INTERVAL '7 days', NOW()) RETURNING id INTO char5_id;
+
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES
+    (game_messages_id, p2_id, 'E2E Test Char 2', 'player_character', 'approved', NOW() - INTERVAL '7 days', NOW()) RETURNING id INTO char6_id;
+
+  -- Add active action phase
+  INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
+  VALUES (
+    game_messages_id,
+    'action',
+    1,
+    'Current Phase',
+    'Active phase for testing private messages',
+    NOW() - INTERVAL '3 hours',
+    NOW() + INTERVAL '21 hours',
+    true,
+    false,
+    NOW() - INTERVAL '3 hours'
   );
 
 END $$;

@@ -25,8 +25,8 @@ test.describe('User Authentication', () => {
     // Verify we're on the dashboard
     await assertUrl(page, '/dashboard');
 
-    // Verify user is authenticated (logout button is visible)
-    await expect(page.locator('button:has-text("Logout")')).toBeVisible();
+    // Verify user is authenticated (navbar with Dashboard link is visible)
+    await expect(page.locator('nav a[href="/dashboard"]').first()).toBeVisible();
 
     // Verify token was stored
     expect(token).toBeTruthy();
@@ -41,8 +41,8 @@ test.describe('User Authentication', () => {
     // Verify we're back on login page
     await assertUrl(page, '/login');
 
-    // Verify logout button is no longer visible
-    await expect(page.locator('button:has-text("Logout")')).not.toBeVisible();
+    // Verify navbar is no longer visible (user is logged out)
+    await expect(page.locator('nav a[href="/dashboard"]').first()).not.toBeVisible();
   });
 
   test('should successfully login and logout as Player', async ({ page }) => {
@@ -51,7 +51,7 @@ test.describe('User Authentication', () => {
 
     // Verify authentication
     await assertUrl(page, '/dashboard');
-    await expect(page.locator('button:has-text("Logout")')).toBeVisible();
+    await expect(page.locator('nav a[href="/dashboard"]').first()).toBeVisible();
     expect(token).toBeTruthy();
 
     // Logout
@@ -59,7 +59,7 @@ test.describe('User Authentication', () => {
 
     // Verify logout
     await assertUrl(page, '/login');
-    await expect(page.locator('button:has-text("Logout")')).not.toBeVisible();
+    await expect(page.locator('nav a[href="/dashboard"]').first()).not.toBeVisible();
   });
 
   test('should allow re-login after logout', async ({ page }) => {
@@ -74,7 +74,7 @@ test.describe('User Authentication', () => {
     // Second login (verify we can login again)
     await loginAs(page, 'GM');
     await assertUrl(page, '/dashboard');
-    await expect(page.locator('button:has-text("Logout")')).toBeVisible();
+    await expect(page.locator('nav a[href="/dashboard"]').first()).toBeVisible();
   });
 
   test('should handle invalid credentials', async ({ page }) => {
@@ -87,8 +87,8 @@ test.describe('User Authentication', () => {
     // Should show error message
     await expect(page.locator('text=/invalid|error|failed/i')).toBeVisible({ timeout: 5000 });
 
-    // Logout button should not be visible
-    await expect(page.locator('button:has-text("Logout")')).not.toBeVisible();
+    // Navbar should not be visible (not authenticated)
+    await expect(page.locator('nav a[href="/dashboard"]').first()).not.toBeVisible();
   });
 
   test('should redirect to login when accessing protected route while unauthenticated', async ({ page }) => {
@@ -121,7 +121,7 @@ test.describe('User Authentication', () => {
 
     // Should still be authenticated
     await assertUrl(page, '/dashboard');
-    await expect(page.locator('button:has-text("Logout")')).toBeVisible();
+    await expect(page.locator('nav a[href="/dashboard"]').first()).toBeVisible();
   });
 
   test('should navigate to games page after login', async ({ page }) => {
@@ -135,7 +135,7 @@ test.describe('User Authentication', () => {
     // Should be on games page
     await assertUrl(page, '/games');
 
-    // Should still be authenticated
-    await expect(page.locator('button:has-text("Logout")')).toBeVisible();
+    // Should still be authenticated (navbar visible)
+    await expect(page.locator('nav a[href="/dashboard"]').first()).toBeVisible();
   });
 });

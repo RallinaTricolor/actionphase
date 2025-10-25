@@ -61,7 +61,7 @@ export const GamesList = ({
   };
 
   return (
-    <Card variant="elevated" padding="lg">
+    <Card variant="elevated" padding="lg" data-testid="games-list">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {games.map((game) => (
           <EnhancedGameCard
@@ -71,6 +71,7 @@ export const GamesList = ({
             onApplyClick={onApplyToGame ? () => onApplyToGame(game.id, 'player') : undefined}
             isJoining={isJoining}
             showApplyButton={shouldShowApplyButton(game)}
+            data-testid={`game-card-${game.id}`}
           />
         ))}
       </div>

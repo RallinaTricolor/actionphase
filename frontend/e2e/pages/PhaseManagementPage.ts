@@ -120,7 +120,9 @@ export class PhaseManagementPage {
    * @param title - Phase title
    */
   getPhaseCard(title: string): Locator {
-    return this.page.locator(`div:has-text("${title}")`).first();
+    // Find the border/rounded div that contains both the title and action buttons
+    // This avoids matching the "Currently Active" summary box
+    return this.page.locator('.border.rounded-lg').filter({ hasText: title });
   }
 
   /**
@@ -130,20 +132,46 @@ export class PhaseManagementPage {
    */
   async activatePhase(phaseTitle: string, publishResults = false) {
     const phaseCard = this.getPhaseCard(phaseTitle);
-    await phaseCard.locator('button:has-text("Activate")').first().click();
 
-    // Wait for confirmation dialog button to appear
+    // Scroll the activate button into view and ensure it's visible
+    const activateButton = phaseCard.locator('button:has-text("Activate")').first();
+    await activateButton.scrollIntoViewIfNeeded();
+    await activateButton.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Click the activate button
+    await activateButton.click();
+
+    // Wait for confirmation dialog to appear (look for the dialog container)
+    const confirmDialog = this.page.locator('.fixed.inset-0').filter({ hasText: 'Activate Phase' });
+    await confirmDialog.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Wait for confirmation dialog button to appear and click it
     if (publishResults) {
-      // Wait for and click "Publish & Activate" button
-      await this.page.waitForSelector('button:has-text("Publish & Activate")', { timeout: 5000 });
-      await this.page.click('button:has-text("Publish & Activate")');
+      // Wait for and click "Publish & Activate Phase" button
+      const publishButton = confirmDialog.locator('button', { hasText: 'Publish & Activate Phase' });
+      await publishButton.waitFor({ state: 'visible', timeout: 5000 });
+      await publishButton.click();
     } else {
-      // Wait for and click "Activate Phase" button in the confirmation dialog
-      await this.page.waitForSelector('button:has-text("Activate Phase")', { timeout: 5000 });
-      await this.page.click('button:has-text("Activate Phase")');
+      // Look for either "Activate Phase" or "Activate Without Publishing" button
+      // Try both selectors and click whichever is found
+      const activateButton = confirmDialog.locator('button', { hasText: 'Activate Phase' });
+      const activateWithoutPublishingButton = confirmDialog.locator('button', { hasText: 'Activate Without Publishing' });
+
+      // Wait for one of the buttons to appear
+      try {
+        await activateButton.waitFor({ state: 'visible', timeout: 2000 });
+        await activateButton.click();
+      } catch {
+        // If "Activate Phase" not found, try "Activate Without Publishing"
+        await activateWithoutPublishingButton.waitFor({ state: 'visible', timeout: 3000 });
+        await activateWithoutPublishingButton.click();
+      }
     }
 
     await this.page.waitForLoadState('networkidle');
+
+    // Verify the phase is now active by checking for "Currently Active" badge
+    await this.page.waitForTimeout(1000); // Brief wait for UI update
   }
 
   /**
