@@ -20,39 +20,16 @@ import { navigateToGame } from '../utils/navigation';
 test.describe('Permissions & Access Control', () => {
 
   test.describe('GM-Only Features', () => {
-    test('player cannot create or activate phases', async ({ page }) => {
+    test('player cannot access phase management tab', async ({ page }) => {
       await loginAs(page, 'PLAYER_1');
 
       // Use E2E Action game which has an active phase
       const gameId = await getFixtureGameId(page, 'E2E_ACTION');
       await navigateToGame(page, gameId);
 
-      // Navigate to Phase Management tab
-      await page.click('[role="tab"]:has-text("Phase Management")');
-      await page.waitForLoadState('networkidle');
-
-      // Verify "Create Phase" button is not visible to player
-      const createPhaseButton = page.locator('button:has-text("Create Phase")');
-      await expect(createPhaseButton).not.toBeVisible();
-
-      // Verify "Activate" buttons are not visible
-      const activateButtons = page.locator('button:has-text("Activate")');
-      await expect(activateButtons).toHaveCount(0);
-    });
-
-    test('player cannot access phase management actions', async ({ page }) => {
-      await loginAs(page, 'PLAYER_2');
-
-      const gameId = await getFixtureGameId(page, 'E2E_ACTION');
-      await navigateToGame(page, gameId);
-
-      // Try to access Phase Management
-      await page.click('[role="tab"]:has-text("Phase Management")');
-      await page.waitForLoadState('networkidle');
-
-      // Verify player sees read-only view (no action buttons)
-      const editButtons = page.locator('button:has-text("Edit"), button:has-text("Delete"), button:has-text("End Phase")');
-      await expect(editButtons).toHaveCount(0);
+      // Verify Phases tab is not visible to players at all
+      const phasesTab = page.locator('button:has-text("Phases")');
+      await expect(phasesTab).not.toBeVisible();
     });
 
     test('player cannot edit game settings', async ({ page }) => {
@@ -84,35 +61,31 @@ test.describe('Permissions & Access Control', () => {
         const gameId = await getFixtureGameId(player1Page, 'E2E_ACTION');
         await navigateToGame(player1Page, gameId);
 
-        // Get Player 1's character ID from the page
-        await player1Page.click('[role="tab"]:has-text("Characters")');
+        // Navigate to People/Characters tab
+        await player1Page.click('button:has-text("People"), button:has-text("Characters")');
         await player1Page.waitForLoadState('networkidle');
 
         // Player 1 should see edit button for their own character
-        const player1EditButton = player1Page.locator('button:has-text("Edit"), button[title*="Edit"]').first();
+        const player1EditButton = player1Page.locator('button:has-text("Edit")').first();
         await expect(player1EditButton).toBeVisible();
 
         // Player 2 logs in and views same game
         await loginAs(player2Page, 'PLAYER_2');
         await navigateToGame(player2Page, gameId);
 
-        await player2Page.click('[role="tab"]:has-text("Characters")');
+        await player2Page.click('button:has-text("People"), button:has-text("Characters")');
         await player2Page.waitForLoadState('networkidle');
 
         // Look for Player 1's character (E2E Test Char 1)
-        const player1Character = player2Page.locator('text="E2E Test Char 1"').first();
-        await expect(player1Character).toBeVisible();
+        const player1Character = player2Page.locator('text="E2E Test Char 1"');
+        await expect(player1Character.first()).toBeVisible();
 
-        // Player 2 should NOT see edit button for Player 1's character
-        // They should only see their own character's edit button
-        const characterCards = player2Page.locator('[data-testid="character-card"], div:has-text("E2E Test Char 1")').first();
-        const editButtonInPlayer1Card = characterCards.locator('button:has-text("Edit"), button[title*="Edit"]');
+        // Find the specific card/container for Player 1's character using the character name
+        const player1CharacterCard = player2Page.locator('div:has-text("E2E Test Char 1"):has-text("test_player1")');
 
-        // If there's an edit button, it should be disabled or not exist
-        const editButtonCount = await editButtonInPlayer1Card.count();
-        if (editButtonCount > 0) {
-          await expect(editButtonInPlayer1Card).toBeDisabled();
-        }
+        // Player 2 should NOT see an edit button within Player 1's character card
+        const editButtonInPlayer1Card = player1CharacterCard.locator('button:has-text("Edit")');
+        await expect(editButtonInPlayer1Card).not.toBeVisible();
       } finally {
         await player1Context.close();
         await player2Context.close();
@@ -125,34 +98,48 @@ test.describe('Permissions & Access Control', () => {
       const gameId = await getFixtureGameId(page, 'CHARACTER_AVATARS');
       await navigateToGame(page, gameId);
 
-      // Navigate to characters
-      await page.click('[role="tab"]:has-text("Characters")');
+      // Navigate to People/Characters tab
+      await page.click('button:has-text("People"), button:has-text("Characters")');
       await page.waitForLoadState('networkidle');
 
-      // Find Player 1's character - should have upload button
-      const ownCharacter = page.locator('div:has-text("E2E Test Char 1")').first();
-      const ownUploadButton = ownCharacter.locator('button:has-text("Upload"), button[title*="Upload"]');
-      await expect(ownUploadButton).toBeVisible();
+      // Click Edit Sheet for Player 1's character to open modal
+      const editButton = page.locator('button:has-text("Edit Sheet")').first();
+      await expect(editButton).toBeVisible({ timeout: 10000 });
+      await editButton.click();
 
-      // Find another player's character - should NOT have upload button for Player 1
-      const otherCharacter = page.locator('div:has-text("E2E Test Char 2"), div:has-text("E2E Test Char 3")').first();
-      if (await otherCharacter.isVisible()) {
-        const otherUploadButton = otherCharacter.locator('button:has-text("Upload"), button[title*="Upload"]');
-        await expect(otherUploadButton).not.toBeVisible();
-      }
+      // Wait for character sheet modal to open
+      await expect(page.locator('h2:has-text("E2E Test Char 1")')).toBeVisible();
+
+      // Upload button should be visible for owner
+      const uploadButton = page.locator('button[title="Upload Avatar"]');
+      await expect(uploadButton).toBeVisible();
+
+      // Close the modal using Escape key
+      await page.keyboard.press('Escape');
+      await page.waitForLoadState('networkidle');
+
+      // Now verify Player 1 cannot see Edit Sheet button for Player 2's character
+      // Player 1's character shows first, Player 2's character should be visible but not editable
+      const player2CharacterName = page.locator('text="E2E Test Char 2"');
+      await expect(player2CharacterName).toBeVisible();
+
+      // Count all Edit Sheet buttons - should only be 1 (for Player 1's own character)
+      const allEditButtons = page.locator('button:has-text("Edit Sheet")');
+      await expect(allEditButtons).toHaveCount(1);
     });
   });
 
-  test.describe('Audience Read-Only Access', () => {
-    test('audience cannot submit actions', async ({ page }) => {
+  test.describe('Audience/NPC Permissions', () => {
+    test('audience members cannot submit actions (even with NPCs)', async ({ page }) => {
       await loginAs(page, 'AUDIENCE');
 
       const gameId = await getFixtureGameId(page, 'E2E_ACTION');
       await navigateToGame(page, gameId);
 
       // Try to access Actions tab
-      const actionsTab = page.locator('[role="tab"]:has-text("Actions")');
+      const actionsTab = page.locator('button:has-text("Actions")');
 
+      // NPCs cannot submit actions - only Player Characters can
       // Audience might see the tab but should not see submit button
       if (await actionsTab.isVisible()) {
         await actionsTab.click();
@@ -163,40 +150,27 @@ test.describe('Permissions & Access Control', () => {
       }
     });
 
-    test('audience cannot send messages', async ({ page }) => {
-      await loginAs(page, 'AUDIENCE');
+    // NOTE: Audience members without assigned NPCs cannot participate in roleplay
+    // Audience members WITH assigned NPCs CAN:
+    // - Post and comment in common room as their NPC
+    // - Send private messages as their NPC
+    // - But CANNOT submit actions (NPCs don't participate in action resolution)
 
-      const gameId = await getFixtureGameId(page, 'E2E_MESSAGES');
-      await navigateToGame(page, gameId);
-
-      // Navigate to Messages tab
-      const messagesTab = page.locator('[role="tab"]:has-text("Messages")');
-
-      if (await messagesTab.isVisible()) {
-        await messagesTab.click();
-        await page.waitForLoadState('networkidle');
-
-        // Should not see "New Conversation" button
-        const newConversationButton = page.locator('button:has-text("New Conversation"), button[title="New Conversation"]');
-        await expect(newConversationButton).not.toBeVisible();
-      }
-    });
-
-    test('audience cannot post in common room', async ({ page }) => {
+    test('audience without characters cannot post in common room', async ({ page }) => {
       await loginAs(page, 'AUDIENCE');
 
       const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POSTS');
       await navigateToGame(page, gameId);
 
       // Navigate to Common Room
-      await page.click('[role="tab"]:has-text("Common Room")');
+      await page.click('button:has-text("Common Room")');
       await page.waitForLoadState('networkidle');
 
-      // Should not see "Create Post" or "New Post" button
+      // Should not see "Create Post" or "New Post" button if no characters
       const createPostButton = page.locator('button:has-text("Create Post"), button:has-text("New Post")');
       await expect(createPostButton).not.toBeVisible();
 
-      // Should not see "Add Comment" buttons
+      // Should not see "Add Comment" buttons if no characters
       const addCommentButtons = page.locator('button:has-text("Add Comment")');
       await expect(addCommentButtons).toHaveCount(0);
     });
@@ -254,33 +228,6 @@ test.describe('Permissions & Access Control', () => {
         await player3Context.close();
       }
     });
-
-    test('direct URL access to unauthorized conversation is blocked', async ({ page }) => {
-      await loginAs(page, 'PLAYER_3');
-
-      // Try to access a conversation ID that Player 3 is not part of
-      // Using a likely conversation ID from fixtures (adjust if needed)
-      const gameId = await getFixtureGameId(page, 'E2E_MESSAGES');
-
-      // Attempt direct navigation to a conversation (this would be a conversation between Player 1 and Player 2)
-      // The actual ID would need to be known or we'd need to create one first
-      // For now, we'll verify the behavior by checking if unauthorized access shows an error or redirects
-
-      await page.goto(`/games/${gameId}`);
-      await page.waitForLoadState('networkidle');
-
-      // Try to access messages tab
-      await page.click('button:has-text("Messages")');
-      await page.waitForLoadState('networkidle');
-
-      // Verify Player 3 only sees their own conversations
-      // They should not see conversations they're not part of in the list
-      const conversationList = page.locator('[data-testid="conversation-list"], div:has(button:has-text("Messages"))');
-      await expect(conversationList).toBeVisible();
-
-      // The conversation list should be empty or only show their conversations
-      // (This assumes Player 3 has no conversations in the fixture)
-    });
   });
 
   test.describe('Unpublished Content Visibility', () => {
@@ -292,31 +239,16 @@ test.describe('Permissions & Access Control', () => {
       const gameId = await getFixtureGameId(page, 'E2E_ACTION');
       await navigateToGame(page, gameId);
 
-      // Navigate to phase history or results
-      await page.click('[role="tab"]:has-text("Phase History"), [role="tab"]:has-text("Results")');
+      // Navigate to History tab (phase history / results)
+      await page.click('button:has-text("History")');
       await page.waitForLoadState('networkidle');
+
+      // Wait for phase history heading
+      await page.waitForSelector('h2:has-text("Phase History")', { timeout: 5000 });
 
       // Verify no "Draft" or "Unpublished" labels are visible
       const draftLabels = page.locator('text=/Draft|Unpublished|Not Published/i');
       await expect(draftLabels).toHaveCount(0);
-    });
-
-    test('player cannot see inactive phases', async ({ page }) => {
-      await loginAs(page, 'PLAYER_2');
-      const gameId = await getFixtureGameId(page, 'E2E_ACTION');
-      await navigateToGame(page, gameId);
-
-      // Navigate to Phase Management (read-only for players)
-      await page.click('[role="tab"]:has-text("Phase Management")');
-      await page.waitForLoadState('networkidle');
-
-      // Look for any phases marked as "draft" or "inactive" or "not published"
-      const inactivePhaseBadges = page.locator('[data-testid="phase-status"]:has-text("Inactive"), [data-testid="phase-status"]:has-text("Draft")');
-
-      // Players should not see phases that haven't been activated/published
-      // They should only see the active phase and completed phases
-      const activePhaseCount = await page.locator('[data-testid="phase-status"]:has-text("Active"), div:has-text("Active Phase")').count();
-      expect(activePhaseCount).toBeGreaterThan(0); // At least one active phase should be visible
     });
   });
 
@@ -327,7 +259,8 @@ test.describe('Permissions & Access Control', () => {
       const gameId = await getFixtureGameId(page, 'E2E_ACTION');
       await navigateToGame(page, gameId);
 
-      await page.click('[role="tab"]:has-text("Characters")');
+      // Navigate to People/Characters tab
+      await page.click('button:has-text("People"), button:has-text("Characters")');
       await page.waitForLoadState('networkidle');
 
       // Look for their own character
@@ -347,7 +280,8 @@ test.describe('Permissions & Access Control', () => {
       const gameId = await getFixtureGameId(page, 'E2E_ACTION');
       await navigateToGame(page, gameId);
 
-      await page.click('[role="tab"]:has-text("Characters")');
+      // Navigate to People/Characters tab
+      await page.click('button:has-text("People"), button:has-text("Characters")');
       await page.waitForLoadState('networkidle');
 
       // GM should see all characters and have access to management actions
