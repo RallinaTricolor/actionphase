@@ -77,7 +77,7 @@ test.describe('Phase Management Flow', () => {
     await expect(activatedPhaseCard.locator('div:has-text("Currently Active")').last()).toBeVisible({ timeout: 10000 });
   });
 
-  test('GM can view phase history', async ({ page }) => {
+  test('GM can view history', async ({ page }) => {
     // Login as GM
     await loginAs(page, 'GM');
 

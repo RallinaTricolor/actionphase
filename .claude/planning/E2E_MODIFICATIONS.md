@@ -1,0 +1,20 @@
+- General
+  - Better selectors? Dedicated data-test-id attributes?
+- character-avatar.spec.ts
+  - "should not delete avatar when user cancels confirmation dialog"
+    - Has an if statement that might skip most of the functionality of the test
+- character-sheet-management.spec.ts
+  - Need a test to validate that a player cannot edit abilities, skills, inventory, or currency
+  - Need a test to validate that a GM can edit abilities, skills, inventory, and currency
+- action-results-flow.spec.ts
+  - "player can see character mentions in results"
+    - Not useful currently, the @ mention isn't a link and the test doesn't validate that
+    - Make the @ mention a link and add a test to validate that (use the same component as we use in common room messages, and if there isn't a component for it, create one--there are plans to expand this feature)
+- action-submission-flow.spec.ts
+  - Missing a test for GM sending results to players (this probably needs to be in action-submission-flow.spec.ts)
+    - GM needs to be able to edit draft results (in addition to sending another result), which is not currently possible and should be implemented + tested
+  - "Player can submit a new action for active action phase"
+    - Should be renamed to "PLayer can edit a draft action for active action phase"
+    - Need another test that actually does what this one says--create a new action submission from scratch
+- character-creation-flow.spec.ts
+  - Needs a new fixture to avoid having to create a new game every time

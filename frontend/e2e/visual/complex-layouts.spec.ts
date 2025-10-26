@@ -322,12 +322,12 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
     });
   });
 
-  test.describe('Phase History - Timeline View', () => {
-    test('Phase history - full timeline - light mode', async ({ page }) => {
+  test.describe('History - Timeline View', () => {
+    test('History - full timeline - light mode', async ({ page }) => {
       await page.emulateMedia({ colorScheme: 'light' });
       await loginAs(page, 'PLAYER_1');
 
-      // Use game with complex phase history
+      // Use game with complex history
       const gameTitle = FIXTURE_GAMES.COMPLEX_HISTORY.title;
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
@@ -335,7 +335,7 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.locator(`text=${gameTitle}`).first().click();
       await page.waitForLoadState('networkidle');
 
-      // Navigate to Phase History tab
+      // Navigate to History tab
       const historyTab = page.locator('[data-testid="tab-history"], [data-testid="tab-phases"], button:has-text("History"), button:has-text("Phases"), a:has-text("History"), a:has-text("Phases")').first();
       const tabExists = await historyTab.isVisible().catch(() => false);
 

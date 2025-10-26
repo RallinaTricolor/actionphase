@@ -26,6 +26,8 @@
   - Default tab for an "in_progress" game is "people" but it should be "common room" or "actions"
   - History tab common rooms can have replies made to them if the phase is still active
   - Leaving a game should relinquish control of character
+  - "Leave Game" button should be less prominent -- people tab
+  - Action Result flow is a little off now. If the GM starts a new common room immediately after publishing results, the only place to see your results is in the history tab
 - General
   - "Player replied to your comment" should be a hard link to the comment in question, currently just the common room
   - As all roles, the deep discussion thread on Shadows Over Innsmouth has one reply that just says "Loading replies..." instead of the full comment chain
