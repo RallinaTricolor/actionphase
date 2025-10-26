@@ -15,7 +15,7 @@ import { waitForModal } from '../utils/waits';
  * - Eliminated all waitForTimeout calls (was 9)
  * - Uses GameDetailsPage for navigation
  * - Uses smart waits for modals
- * - Uses dedicated E2E_ACTION game (safe to modify)
+ * - Uses dedicated E2E_GAME_SETTINGS game (safe to modify)
  *
  * NOTE: Tests run serially to prevent race conditions when modifying the same game
  */
@@ -26,7 +26,7 @@ test.describe.serial('GM Edits Game Settings', () => {
     // Look up game ID once before all tests
     const page = await browser.newPage();
     await loginAs(page, 'GM');
-    gameId = await getFixtureGameId(page, 'E2E_ACTION');
+    gameId = await getFixtureGameId(page, 'E2E_GAME_SETTINGS');
     await page.close();
   });
 

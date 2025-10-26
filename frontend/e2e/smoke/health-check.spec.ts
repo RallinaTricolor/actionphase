@@ -96,3 +96,35 @@ test.describe('Smoke: Application Health', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 });
+
+test.describe('Smoke: Notification System', () => {
+  test(tagTest([tags.SMOKE], 'Notification bell is visible after login'), async ({ page }) => {
+    const { loginAs } = await import('../fixtures/auth-helpers');
+
+    await loginAs(page, 'PLAYER_1');
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Notification bell should be visible
+    const notificationBell = page.locator('[data-testid="notification-bell"]');
+    await expect(notificationBell).toBeVisible();
+  });
+
+  test(tagTest([tags.SMOKE], 'Notification API endpoint responds'), async ({ page }) => {
+    const { loginAs } = await import('../fixtures/auth-helpers');
+
+    await loginAs(page, 'PLAYER_1');
+
+    // Wait for unread count API call
+    const responsePromise = page.waitForResponse(
+      response => response.url().includes('/api/v1/notifications/unread-count')
+    );
+
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Verify the API response
+    const response = await responsePromise;
+    expect(response.status()).toBe(200);
+  });
+});

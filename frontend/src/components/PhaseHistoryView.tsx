@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { getActionPhaseLabel, getActionPhaseColor } from '../types/phases';
 import { CommonRoom } from './CommonRoom';
-import { Button } from './ui';
+import { Button, Alert } from './ui';
+import { useUserActionResults, useGameActionResults } from '../hooks/useActionResults';
+import { MarkdownPreview } from './MarkdownPreview';
 
 interface PhaseHistoryViewProps {
   gameId: number;
@@ -21,6 +23,15 @@ export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: Phase
   });
 
   const phases = phasesData || [];
+
+  // Fetch action results (use appropriate hook based on isGM)
+  const { data: userActionResults, isLoading: isLoadingUserResults, error: userResultsError } = useUserActionResults(gameId);
+  const { data: gmActionResults, isLoading: isLoadingGMResults, error: gmResultsError } = useGameActionResults(gameId);
+
+  // Use GM results if GM, otherwise user results
+  const actionResults = isGM ? gmActionResults : userActionResults;
+  const isLoadingResults = isGM ? isLoadingGMResults : isLoadingUserResults;
+  const resultsError = isGM ? gmResultsError : userResultsError;
 
   // Get the selected phase details
   const selectedPhase = phases.find(p => p.id === selectedPhaseId);
@@ -41,7 +52,7 @@ export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: Phase
   }
 
   if (selectedPhaseId && selectedPhase) {
-    // Show Common Room for selected phase only if it's a common_room phase
+    // Show Common Room or Action Results for selected phase
     return (
       <div>
         <Button
@@ -63,14 +74,57 @@ export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: Phase
             isGM={isGM}
           />
         ) : (
-          <div className="surface-base rounded-lg shadow-md p-8 text-center">
-            <svg className="w-12 h-12 mx-auto mb-3 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <h3 className="text-lg font-medium text-content-primary mb-2">Action Phase</h3>
-            <p className="text-content-secondary">
-              This was an action phase. Common Room discussions are only available for common_room phases.
-            </p>
+          <div className="surface-base rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-bold text-content-primary mb-4">
+              {selectedPhase.title || getActionPhaseLabel(selectedPhase)} - Action Results
+            </h3>
+            {isLoadingResults ? (
+              <div className="p-4">
+                <p className="text-content-secondary">Loading action results...</p>
+              </div>
+            ) : resultsError ? (
+              <Alert variant="danger">Error loading action results</Alert>
+            ) : (() => {
+              // Filter results for this specific phase
+              const phaseResults = (actionResults || []).filter(r => r.phase_id === selectedPhaseId);
+
+              if (phaseResults.length === 0) {
+                return (
+                  <div className="p-4 surface-raised border border-theme-default rounded">
+                    <p className="text-content-secondary">No action results for this phase.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {phaseResults.map((result) => (
+                    <div key={result.id} className="p-4 surface-raised border border-theme-default rounded shadow-sm">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          {!result.is_published && (
+                            <span className="inline-block px-2 py-1 text-xs bg-warning-subtle text-warning rounded mr-2">
+                              Draft (Unpublished)
+                            </span>
+                          )}
+                          {result.sent_at && (
+                            <span className="text-xs text-content-tertiary">
+                              {new Date(result.sent_at).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="prose dark:prose-invert max-w-none">
+                        <MarkdownPreview content={result.content} />
+                      </div>
+                      {result.gm_username && (
+                        <p className="text-xs text-content-tertiary mt-3">From: {result.gm_username}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
@@ -102,13 +156,15 @@ export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: Phase
             const isActive = phase.id === currentPhaseId;
             const isCommonRoom = phase.phase_type === 'common_room';
 
-            // Action phases have no content to display, so they should not be clickable
+            // Action phases are now clickable to view action results
             if (!isCommonRoom) {
               return (
-                <div
+                <Button
                   key={phase.id}
-                  className={`w-full border rounded-lg p-4 opacity-60 cursor-not-allowed ${
-                    isActive ? 'border-interactive-primary bg-interactive-primary-subtle' : 'border-theme-subtle'
+                  variant="ghost"
+                  onClick={() => setSelectedPhaseId(phase.id)}
+                  className={`w-full text-left border rounded-lg p-4 hover:border-theme-subtle ${
+                    isActive ? 'border-interactive-primary bg-interactive-primary-subtle' : 'border-theme-default'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -121,9 +177,6 @@ export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: Phase
                         {phase.description && (
                           <p className="text-sm text-content-secondary mt-1">{phase.description}</p>
                         )}
-                        <p className="text-xs text-content-tertiary mt-1 italic">
-                          (No viewable content for action phases)
-                        </p>
                       </div>
                     </div>
 
@@ -133,9 +186,12 @@ export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: Phase
                           Active
                         </span>
                       )}
+                      <svg className="w-5 h-5 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
                   </div>
-                </div>
+                </Button>
               );
             }
 

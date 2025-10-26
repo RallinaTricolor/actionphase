@@ -21,8 +21,22 @@ export const FIXTURE_GAMES = {
   E2E_CANCEL: 'E2E Test: Game to Cancel',         // For testing game cancellation
   E2E_PAUSE: 'E2E Test: Game to Pause',           // For testing pause/resume
   E2E_ACTION: 'E2E Test: Action Submission',      // For testing action submissions
+  E2E_ACTION_RESULTS: 'E2E Test: Action Results', // For testing action results viewing
+  E2E_LIFECYCLE: 'E2E Test: Phase Lifecycle',     // For testing complete phase lifecycle
   E2E_MESSAGES: 'E2E Test: Private Messages',     // For testing private messages (dedicated game)
   E2E_PM: 'E2E Test: Private Messages',           // Alias for E2E_MESSAGES
+  E2E_CHARACTER_SHEETS: 'E2E Test: Character Sheets', // For testing character sheet management
+  E2E_GAME_SETTINGS: 'E2E Test: Game Settings',   // For testing game settings modifications
+  E2E_GAME_APPLICATION_SUBMIT: 'E2E Test: Game Application - Submit', // Fresh game for testing player application submission
+  E2E_GAME_APPLICATION_VIEW: 'E2E Test: Game Application - View', // Game with pending application for GM to view
+  E2E_GAME_APPLICATION_APPROVE: 'E2E Test: Game Application - Approve', // Game with pending application for GM to approve
+  E2E_GAME_APPLICATION_REJECT: 'E2E Test: Game Application - Reject', // Game with pending application for GM to reject
+  E2E_GAME_APPLICATION_DUPLICATE: 'E2E Test: Game Application - Duplicate', // Game with existing application for duplicate prevention test
+  E2E_GAME_LIFECYCLE_START: 'E2E Test: Game Lifecycle - Start', // Game in recruitment ready to start
+  E2E_GAME_LIFECYCLE_PAUSE: 'E2E Test: Game Lifecycle - Pause', // Active game ready to pause
+  E2E_GAME_LIFECYCLE_RESUME: 'E2E Test: Game Lifecycle - Resume', // Paused game ready to resume
+  E2E_GAME_LIFECYCLE_COMPLETE: 'E2E Test: Game Lifecycle - Complete', // Active game ready to complete
+  E2E_GAME_LIFECYCLE_CANCEL: 'E2E Test: Game Lifecycle - Cancel', // Active game ready to cancel
 
   // Isolated Common Room games for parallel E2E testing (one per test file)
   COMMON_ROOM_POSTS: 'E2E Common Room - Posts',           // Game #164 - for common-room.spec.ts
