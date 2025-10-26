@@ -32,10 +32,9 @@ export class GameHandoutsPage {
 
     // Click on Handouts tab
     const handoutsTab = this.page.locator('button:has-text("Handouts"), a:has-text("Handouts")');
-    if (await handoutsTab.isVisible()) {
-      await handoutsTab.click();
-      await this.page.waitForLoadState('networkidle');
-    }
+    await handoutsTab.waitFor({ state: 'visible', timeout: 5000 });
+    await handoutsTab.click();
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
@@ -43,27 +42,28 @@ export class GameHandoutsPage {
    *
    * @param title - Handout title
    * @param content - Handout content (markdown supported)
-   * @param isPublic - Whether handout is visible to all players
+   * @param isPublic - Whether handout is visible to all players (published vs draft)
    */
   async createHandout(title: string, content: string, isPublic: boolean = true) {
     await this.createHandoutButton.click();
 
-    // Fill handout form
-    await this.page.locator('input[name="title"], [data-testid="handout-title"]').fill(title);
-    await this.page.locator('textarea[name="content"], [data-testid="handout-content"]').fill(content);
+    // Wait for modal to appear
+    await this.page.waitForSelector('text=Create New Handout', { timeout: 5000 });
 
-    // Set visibility
-    if (isPublic) {
-      const publicRadio = this.page.locator('input[type="radio"][value="public"], input[type="checkbox"][name="is_public"]');
-      if (await publicRadio.isVisible()) {
-        await publicRadio.click();
-      }
-    }
+    // Fill handout form using accessible labels
+    await this.page.getByLabel('Title').fill(title);
+    await this.page.getByLabel('Content').fill(content);
 
-    // Submit
-    const submitButton = this.page.locator('button:has-text("Create"), button:has-text("Save")');
+    // Set status (published or draft)
+    const status = isPublic ? 'published' : 'draft';
+    await this.page.getByLabel('Status').selectOption(status);
+
+    // Submit - scope to form to avoid ambiguity with the "Create Handout" button that opens the modal
+    const submitButton = this.page.locator('form').getByRole('button', { name: 'Create Handout' });
     await submitButton.click();
 
+    // Wait for modal to close and content to load
+    await this.page.waitForSelector('text=Create New Handout', { state: 'hidden', timeout: 5000 });
     await this.page.waitForLoadState('networkidle');
   }
 
@@ -86,13 +86,19 @@ export class GameHandoutsPage {
   }
 
   /**
-   * Open a handout by title
+   * Open a handout by title (clicks the "View" button)
    *
    * @param title - Handout title to open
    */
   async openHandout(title: string) {
-    const handout = this.page.locator(`[data-testid="handout-${title}"], .handout-card:has-text("${title}")`).first();
-    await handout.click();
+    // Find the card containing this title and click its View button
+    const heading = this.page.getByRole('heading', { name: title, level: 3 });
+    await heading.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Find the View button within the same card
+    const card = heading.locator('xpath=ancestor::div[contains(@class, "space-y")]');
+    const viewButton = card.getByRole('button', { name: 'View' });
+    await viewButton.click();
     await this.page.waitForLoadState('networkidle');
   }
 
@@ -104,17 +110,27 @@ export class GameHandoutsPage {
    * @param newContent - New content
    */
   async editHandout(currentTitle: string, newTitle: string, newContent: string) {
-    await this.openHandout(currentTitle);
+    // Find the card containing this title and click its Edit button
+    const heading = this.page.getByRole('heading', { name: currentTitle, level: 3 });
+    await heading.waitFor({ state: 'visible', timeout: 5000 });
 
-    const editButton = this.page.locator('button:has-text("Edit")');
+    // Find the Edit button within the same card
+    const card = heading.locator('xpath=ancestor::div[contains(@class, "space-y")]');
+    const editButton = card.getByRole('button', { name: 'Edit' });
     await editButton.click();
 
-    await this.page.locator('input[name="title"], [data-testid="handout-title"]').fill(newTitle);
-    await this.page.locator('textarea[name="content"], [data-testid="handout-content"]').fill(newContent);
+    // Wait for edit modal
+    await this.page.waitForSelector('text=Edit Handout', { timeout: 5000 });
 
-    const saveButton = this.page.locator('button:has-text("Save")');
+    // Fill form using accessible labels
+    await this.page.getByLabel('Title').fill(newTitle);
+    await this.page.getByLabel('Content').fill(newContent);
+
+    const saveButton = this.page.locator('form').getByRole('button', { name: /Save|Update/ });
     await saveButton.click();
 
+    // Wait for modal to close
+    await this.page.waitForSelector('text=Edit Handout', { state: 'hidden', timeout: 5000 });
     await this.page.waitForLoadState('networkidle');
   }
 
@@ -124,16 +140,28 @@ export class GameHandoutsPage {
    * @param title - Handout title to delete
    */
   async deleteHandout(title: string) {
-    await this.openHandout(title);
+    // Find the card containing this title and click its Delete button
+    const heading = this.page.getByRole('heading', { name: title, level: 3 });
+    await heading.waitFor({ state: 'visible', timeout: 5000 });
 
-    const deleteButton = this.page.locator('button:has-text("Delete")');
+    // Find the Delete button within the same card
+    const card = heading.locator('xpath=ancestor::div[contains(@class, "space-y")]');
+    const deleteButton = card.getByRole('button', { name: 'Delete' });
+
+    // Set up dialog handler BEFORE clicking Delete (HandoutCard uses window.confirm)
+    // Use once() to handle only this specific dialog
+    this.page.once('dialog', dialog => {
+      console.log('Dialog message:', dialog.message());
+      dialog.accept();
+    });
+
     await deleteButton.click();
 
-    // Confirm deletion
-    const confirmButton = this.page.locator('button:has-text("Confirm"), button:has-text("Delete")').last();
-    await confirmButton.click();
-
+    // Wait for the deletion to complete
     await this.page.waitForLoadState('networkidle');
+
+    // Give a bit more time for the UI to update
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -142,8 +170,14 @@ export class GameHandoutsPage {
    * @param title - Handout title to check
    */
   async hasHandout(title: string): Promise<boolean> {
-    const handout = this.page.locator(`:text("${title}")`);
-    return await handout.isVisible().catch(() => false);
+    try {
+      // Look specifically for a level 3 heading with this title
+      const heading = this.page.getByRole('heading', { name: title, level: 3 });
+      await heading.waitFor({ state: 'visible', timeout: 3000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -162,6 +196,11 @@ export class GameHandoutsPage {
    * Check if current user can create handouts (GM only)
    */
   async canCreateHandouts(): Promise<boolean> {
-    return await this.createHandoutButton.isVisible().catch(() => false);
+    try {
+      await this.createHandoutButton.waitFor({ state: 'visible', timeout: 3000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

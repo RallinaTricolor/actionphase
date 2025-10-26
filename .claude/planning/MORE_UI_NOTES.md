@@ -24,9 +24,8 @@
 - Players
   - Description of Phases isn't visible anywhere
   - Default tab for an "in_progress" game is "people" but it should be "common room" or "actions"
-  - In common room phases, the "Actions" tab isn't visible which means you can't see your past results
-    - We should either re-enable this tab or update the History tab to have a view of your actions for the various action phases
   - History tab common rooms can have replies made to them if the phase is still active
+  - Leaving a game should relinquish control of character
 - General
   - "Player replied to your comment" should be a hard link to the comment in question, currently just the common room
   - As all roles, the deep discussion thread on Shadows Over Innsmouth has one reply that just says "Loading replies..." instead of the full comment chain

@@ -12,7 +12,8 @@ DELETE FROM games WHERE title IN (
   'E2E Test: Game to Cancel',
   'E2E Test: Game to Pause',
   'E2E Test: Action Submission',
-  'E2E Test: Private Messages'
+  'E2E Test: Private Messages',
+  'E2E Test: Game Settings'
 );
 
 DO $$
@@ -27,6 +28,7 @@ DECLARE
   game_pause_id INTEGER;
   game_action_id INTEGER;
   game_messages_id INTEGER;
+  game_settings_id INTEGER;
   phase_id INTEGER;
   char1_id INTEGER;
   char2_id INTEGER;
@@ -34,6 +36,7 @@ DECLARE
   char4_id INTEGER;
   char5_id INTEGER;
   char6_id INTEGER;
+  char7_id INTEGER;
 BEGIN
   -- Get user IDs
   SELECT id INTO gm_id FROM users WHERE email = 'test_gm@example.com';
@@ -268,6 +271,10 @@ BEGIN
   VALUES
     (game_messages_id, p2_id, 'E2E Test Char 2', 'player_character', 'approved', NOW() - INTERVAL '7 days', NOW()) RETURNING id INTO char6_id;
 
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES
+    (game_messages_id, p3_id, 'E2E Test Char 3', 'player_character', 'approved', NOW() - INTERVAL '7 days', NOW()) RETURNING id INTO char7_id;
+
   -- Add active action phase
   INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
   VALUES (
@@ -283,6 +290,43 @@ BEGIN
     NOW() - INTERVAL '3 hours'
   );
 
+  -- ============================================
+  -- E2E Game: For Game Settings Testing
+  -- ============================================
+  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  VALUES (
+    'E2E Test: Game Settings',
+    'This game is dedicated for testing game settings modifications (title, description, genre, etc.).',
+    'Test',
+    gm_id,
+    4,
+    'in_progress',
+    true,
+    NOW() - INTERVAL '5 days',
+    NOW()
+  ) RETURNING id INTO game_settings_id;
+
+  -- Add a single participant (minimal setup)
+  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
+  VALUES
+    (game_settings_id, p1_id, 'player', 'active', NOW() - INTERVAL '4 days');
+
+  -- Add a simple active phase
+  INSERT INTO game_phases (game_id, phase_type, phase_number, title, start_time, deadline, is_active, is_published, created_at)
+  VALUES (
+    game_settings_id,
+    'common_room',
+    1,
+    'Planning Phase',
+    NOW() - INTERVAL '1 hour',
+    NOW() + INTERVAL '23 hours',
+    true,
+    false,
+    NOW() - INTERVAL '1 hour'
+  );
+
 END $$;
+
+SELECT 'E2E Dedicated Games fixtures created successfully!' AS message;
 
 COMMIT;

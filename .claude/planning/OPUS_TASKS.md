@@ -2,7 +2,6 @@
   - Focus on specific things in individual sessions
   - Too much code in API functions?
 - Test coverage and useful tests
-  - Are E2E tests validating the right things?
 - Game integrity and security (assume people could build a 3rd party client)
 - Usability / accessibility improvements
   - Lots of reading! Optimize for reading lots of text

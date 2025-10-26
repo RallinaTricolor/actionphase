@@ -1,6 +1,7 @@
 import React from 'react';
 import { useUserActionResults } from '../hooks/useActionResults';
 import { Alert } from './ui';
+import { MarkdownPreview } from './MarkdownPreview';
 
 interface ActionResultsListProps {
   gameId: number;
@@ -49,7 +50,7 @@ export const ActionResultsList: React.FC<ActionResultsListProps> = ({ gameId }) 
             )}
           </div>
           <div className="prose dark:prose-invert max-w-none">
-            <p className="text-content-primary">{result.content}</p>
+            <MarkdownPreview content={result.content} />
           </div>
           {result.gm_username && (
             <p className="text-xs text-content-tertiary mt-2">From: {result.gm_username}</p>
