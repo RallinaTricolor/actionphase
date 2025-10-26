@@ -54,8 +54,7 @@ export function useGameTabs({
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<string>(tabParam || 'default');
-  const [userSelectedTab, setUserSelectedTab] = useState(!!tabParam); // True if URL param exists on initial load
-  const hasProcessedUrlParam = useRef(false); // Track if we've already processed the initial URL param
+  const hasSetInitialTab = useRef(false); // Track if we've set the initial tab
 
   // Phase-aware tab configuration
   const tabs: Tab[] = useMemo(() => {
@@ -190,7 +189,8 @@ export function useGameTabs({
 
     // Don't run if game data hasn't loaded yet - wait for actual game state
     // This prevents redirecting URL params before we know what tabs should exist
-    if (!gameState) {
+    // Also skip 'setup' state as it's transient during loading
+    if (!gameState || gameState === 'setup') {
       return;
     }
 
@@ -200,57 +200,43 @@ export function useGameTabs({
     if (urlTab) {
       // If URL tab is valid, use it
       if (tabs.some(t => t.id === urlTab)) {
-        hasProcessedUrlParam.current = true;
-        // Always mark as user-selected when URL param is present
-        if (!userSelectedTab) {
-          setUserSelectedTab(true);
-        }
-        // Only update activeTab if it's different
+        hasSetInitialTab.current = true;
         if (activeTab !== urlTab) {
           setActiveTab(urlTab);
         }
-        return; // Valid URL param - we're done
+        return;
       } else {
-        // Invalid URL param - but only redirect if we've seen it as valid before
-        // This prevents redirecting during initial load when tabs haven't loaded yet
-        if (hasProcessedUrlParam.current) {
+        // Invalid URL param - redirect to default tab
+        if (hasSetInitialTab.current) {
           setActiveTab(defaultTab);
           const newParams = new URLSearchParams(searchParams);
           newParams.set('tab', defaultTab);
           setSearchParams(newParams, { replace: true });
         }
-        return; // Handled invalid URL param - we're done
+        return;
       }
     }
 
-    if (!userSelectedTab && activeTab === 'default') {
-      // User hasn't manually selected a tab - apply smart default
-      // This allows the default to update when phase data loads
+    // No URL parameter - set the default tab in URL
+    if (!hasSetInitialTab.current) {
       setActiveTab(defaultTab);
-
-      // Set the URL parameter on initial load (replace so no new history entry)
       const newParams = new URLSearchParams(searchParams);
       newParams.set('tab', defaultTab);
       setSearchParams(newParams, { replace: true });
+      hasSetInitialTab.current = true;
     } else if (!tabs.some(t => t.id === activeTab)) {
       // Current tab is no longer valid (e.g., action phase ended) - reset to default
-      // This only runs when there's NO URL param (checked above)
       setActiveTab(defaultTab);
-      setUserSelectedTab(false);
-
-      // Update URL to reflect the reset
       const newParams = new URLSearchParams(searchParams);
       newParams.set('tab', defaultTab);
       setSearchParams(newParams, { replace: true });
     }
-  }, [tabs, defaultTab, activeTab, userSelectedTab, searchParams, setSearchParams]);
+  }, [tabs, defaultTab, activeTab, searchParams, setSearchParams, gameState]);
 
-  // Wrapper for setActiveTab that tracks user selection and updates URL
+  // Wrapper for setActiveTab that updates URL with new tab
   const handleSetActiveTab = (tabId: string) => {
     setActiveTab(tabId);
-    setUserSelectedTab(true);
-
-    // Update URL with new tab parameter (push new history entry for back button support)
+    // Update URL with new tab parameter (creates history entry)
     const newParams = new URLSearchParams(searchParams);
     newParams.set('tab', tabId);
     setSearchParams(newParams, { replace: false });

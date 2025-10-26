@@ -9,7 +9,6 @@ import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useGameListing } from '../hooks/useGameListing';
 import { useToast } from '../contexts/ToastContext';
-import type { EnrichedGameListItem } from '../types/games';
 
 export const GamesPage = () => {
   const navigate = useNavigate();
@@ -43,10 +42,6 @@ export const GamesPage = () => {
 
     return () => clearTimeout(timeoutId);
   }, [searchInput, setSearch]);
-
-  const handleGameClick = (game: EnrichedGameListItem) => {
-    navigate(`/games/${game.id}`);
-  };
 
   const handleCreateGame = () => {
     setShowCreateModal(true);
@@ -170,7 +165,6 @@ export const GamesPage = () => {
           games={games}
           loading={isLoading}
           error={isError ? (error?.message ?? null) : null}
-          onGameClick={handleGameClick}
           onApplyToGame={handleApplyToGame}
           isJoining={isJoining}
         />
