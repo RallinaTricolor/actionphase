@@ -121,6 +121,13 @@ export class GameDetailsPage {
   }
 
   /**
+   * Navigate to People tab (in_progress games)
+   */
+  async goToPeople() {
+    await this.goToTab('People');
+  }
+
+  /**
    * Navigate to Characters section
    * Handles both game states:
    * - character_creation: Direct "Characters" tab

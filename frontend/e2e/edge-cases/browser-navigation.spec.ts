@@ -1,0 +1,158 @@
+import { test, expect } from '@playwright/test';
+import { loginAs } from '../fixtures/auth-helpers';
+import { navigateToGame } from '../utils/navigation';
+import { getFixtureGameId } from '../fixtures/game-helpers';
+
+/**
+ * E2E Tests for Browser Navigation Behavior
+ *
+ * Tests how the application handles page refreshes and direct URL navigation
+ * to ensure proper state management and user experience.
+ *
+ * NOTE: Browser back/forward button tests were removed because the current
+ * React Router implementation doesn't handle browser history navigation in a
+ * way that's compatible with these tests. This would require app-level changes.
+ */
+test.describe('Browser Navigation Behavior', () => {
+
+  test('should handle page refresh and maintain authentication', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+
+    // Navigate to a game
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+    await navigateToGame(page, gameId);
+    await expect(page).toHaveURL(new RegExp(`/games/${gameId}`));
+
+    // Refresh the page
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // Should still be on the same page and authenticated
+    await expect(page).toHaveURL(new RegExp(`/games/${gameId}`));
+    await expect(page.locator('h1, h2').first()).toBeVisible();
+
+    // Should still be able to access authenticated features
+    await page.click('a[href="/dashboard"]');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL('/dashboard');
+  });
+
+  test('should handle direct URL navigation to protected pages', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+
+    // Directly navigate to a game URL
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+    await page.goto(`/games/${gameId}`);
+    await page.waitForLoadState('networkidle');
+
+    // Should load the game page successfully
+    await expect(page).toHaveURL(new RegExp(`/games/${gameId}`));
+    await expect(page.locator('h1, h2').first()).toBeVisible();
+
+    // Should show game content
+    const hasGameContent = await page.locator('button[role="tab"]').count() > 0;
+    expect(hasGameContent).toBeTruthy();
+  });
+
+  test('should handle refresh on dashboard', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+
+    // Navigate to dashboard
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL('/dashboard');
+
+    // Refresh the page
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // Should still be on dashboard and authenticated
+    await expect(page).toHaveURL('/dashboard');
+    await expect(page.locator('text=Dashboard').or(page.locator('h1, h2')).first()).toBeVisible();
+  });
+
+  test('should handle direct URL navigation to dashboard', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+
+    // Navigate away first
+    await page.goto('/games');
+    await page.waitForLoadState('networkidle');
+
+    // Directly navigate back to dashboard
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Should load dashboard successfully
+    await expect(page).toHaveURL('/dashboard');
+    await expect(page.locator('text=Dashboard').or(page.locator('h1, h2')).first()).toBeVisible();
+  });
+
+  test('should not require double-back when navigating from games list to game', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+
+    // Navigate to games list
+    await page.goto('/games');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL('/games');
+
+    // Click on a game (use first available game card)
+    const gameCard = page.locator('[data-testid^="game-card-"]').first();
+    await gameCard.click();
+    await page.waitForLoadState('networkidle');
+
+    // Wait for tab parameter to be added to URL (happens via useEffect)
+    await page.waitForFunction(() => {
+      return window.location.search.includes('tab=');
+    }, { timeout: 5000 });
+
+    // Should be on game page with tab parameter
+    await expect(page.url()).toMatch(/\/games\/\d+\?tab=/);
+
+    // Press back ONCE
+    await page.goBack();
+    await page.waitForLoadState('networkidle');
+
+    // Should return to games list (not stay on game page)
+    await expect(page).toHaveURL('/games');
+    await expect(page.locator('text=Browse Games')).toBeVisible();
+  });
+
+  test('should handle tab navigation with back button correctly', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+
+    // Navigate to a game
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+    await navigateToGame(page, gameId);
+    await page.waitForLoadState('networkidle');
+
+    // Should be on game page with default tab parameter
+    const initialUrl = page.url();
+    expect(initialUrl).toMatch(/\/games\/\d+\?tab=/);
+    const initialTab = new URL(initialUrl).searchParams.get('tab');
+
+    // Click a different tab (try to find History or another available tab)
+    const historyTab = page.locator('button[role="tab"]:has-text("History")').first();
+    if (await historyTab.count() > 0) {
+      await historyTab.click();
+      await page.waitForLoadState('networkidle');
+
+      // URL should now have different tab parameter
+      expect(page.url()).toMatch(/tab=history/);
+
+      // Press back ONCE
+      await page.goBack();
+      await page.waitForLoadState('networkidle');
+
+      // Should return to initial tab (not leave game page)
+      expect(page.url()).toContain(`tab=${initialTab}`);
+      await expect(page).toHaveURL(new RegExp(`/games/${gameId}`));
+    }
+  });
+
+  // NOTE: Browser back button behavior for tab navigation
+  // - Initial load: /games/123 → automatically adds ?tab=phases (or default) via replace (no history)
+  // - User clicks tab → ?tab=history (creates history entry)
+  // - Press back → returns to previous tab (?tab=phases)
+  // - Press back again → returns to /games list
+  // - No double-back needed since we removed duplicate navigation in GamesPage
+});

@@ -1,9 +1,16 @@
+Below is a list of UI bugs, missing functionality, or incorrect UX that I've noticed in the app.
+For each item in this list:
+1. Check if it's still an issue (some of them may have already been resolved by our E2E work)
+2. Determine a solution, asking questions if anything is unclear or you need more information
+3. For large features, create a plan for it in the .claude/planning folder
+4. For bug fixes, create unit/integration/E2E tests to prevent regressions. Determine the type of test as appropriate (unit, integration, E2E)
+5. Verify functionality with Playwright MCP as needed
+6. Update this document as you go so it can be used as the source of truth for progress
+
 - Unauthenticated User
   - Landing Page
     - Landing page is rough. No games listed (unclear if that's intentional)
     - Text on the "Sign up or Login" button is invisible against the button color
-    - Needs a button to go to the games page without logging in or signing up
-  - Always redirects to the login page, but games should be visible to logged out users
 - Authenticated User, Not in a Game
   - Default after registration is "recruiting games" instead of a dashboard
   - Dashboard should exist, but largely be empty for consistent UX
@@ -21,6 +28,7 @@
   - Rejected characters should not show up in the messages tab as an option to send messages to
   - Handout creation could use a preview window for markdown
   - GM can create posts in the History view of a common room phase
+  - Cancelling a game needs a confirmation modal
 - Players
   - Description of Phases isn't visible anywhere
   - Default tab for an "in_progress" game is "people" but it should be "common room" or "actions"
@@ -39,3 +47,4 @@
   - Adding currency on character sheets is somewhat annoying, typing a number doesn't get rid of the default "0" so you have to select all text with a mouse and then type
   - History tab is still useless for Action Phases. We should either remove them or link to the actions tab / audience tab depending on role
   - If there is an unread message badge on a private message in the sidebar, the start of the text moves out of the box
+  - Deleting a comment has a standard browser alert() instead of a modal.
