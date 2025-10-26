@@ -133,9 +133,9 @@ test.describe.serial('Complete Phase Lifecycle', () => {
     await expect(page.getByRole('heading', { name: 'Submitted Actions' })).toBeVisible({ timeout: 10000 });
   });
 
-  test('complete lifecycle: verify phase history shows all created phases', async ({ page }) => {
+  test('complete lifecycle: verify history shows all created phases', async ({ page }) => {
     // Previous tests created and activated an action phase
-    // This test verifies the complete phase history is visible
+    // This test verifies the complete history is visible
 
     await loginAs(page, 'PLAYER_1');
 
@@ -146,8 +146,8 @@ test.describe.serial('Complete Phase Lifecycle', () => {
     await page.click('button:has-text("History")');
     await page.waitForLoadState('networkidle');
 
-    // Wait for phase history to load
-    await expect(page.locator('h2:has-text("Phase History")')).toBeVisible({ timeout: 10000 });
+    // Wait for history to load
+    await expect(page.locator('h2:has-text("History")')).toBeVisible({ timeout: 10000 });
 
     // Verify we see both the initial common room (Phase 1)
     await expect(page.locator('text=Initial Common Room').first()).toBeVisible();

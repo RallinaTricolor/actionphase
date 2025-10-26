@@ -3,10 +3,10 @@ import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
-import { PhaseHistoryView } from '../PhaseHistoryView';
+import { HistoryView } from '../HistoryView';
 import type { GamePhase } from '../../types/phases';
 
-describe('PhaseHistoryView', () => {
+describe('HistoryView', () => {
   const mockGameId = 1;
   const mockCurrentPhaseId = 3;
 
@@ -50,6 +50,13 @@ describe('PhaseHistoryView', () => {
     server.use(
       http.get('/api/v1/games/:gameId/phases', () => {
         return HttpResponse.json(phases);
+      }),
+      // Mock action results endpoints (returns empty array since we're testing history display, not results)
+      http.get('/api/v1/games/:gameId/results/mine', () => {
+        return HttpResponse.json([]);
+      }),
+      http.get('/api/v1/games/:gameId/results', () => {
+        return HttpResponse.json([]);
       })
     );
   };
@@ -62,7 +69,7 @@ describe('PhaseHistoryView', () => {
   describe('Bug #4: Action Phases clickable but have no content', () => {
     it('should make common_room phases clickable', async () => {
       renderWithProviders(
-        <PhaseHistoryView
+        <HistoryView
           gameId={mockGameId}
           currentPhaseId={mockCurrentPhaseId}
           isGM={false}
@@ -79,9 +86,9 @@ describe('PhaseHistoryView', () => {
       expect(openingButton).not.toBeDisabled();
     });
 
-    it('should make action phases non-clickable since they have no content', async () => {
+    it('should make action phases clickable to view results', async () => {
       renderWithProviders(
-        <PhaseHistoryView
+        <HistoryView
           gameId={mockGameId}
           currentPhaseId={mockCurrentPhaseId}
           isGM={false}
@@ -92,37 +99,10 @@ describe('PhaseHistoryView', () => {
       const actionPhaseTitle = await screen.findByRole('heading', { name: /action phase/i });
       expect(actionPhaseTitle).toBeInTheDocument();
 
-      // Action phases should NOT be in a clickable button
-      // They should be in a div or have a visual indicator they're not interactive
-      const actionContainer = actionPhaseTitle.closest('button');
-
-      // Action phases should NOT be buttons at all
-      expect(actionContainer).toBeNull();
-
-      // Should be in a div instead
-      const divContainer = actionPhaseTitle.closest('div[class*="cursor-not-allowed"]');
-      expect(divContainer).toBeInTheDocument();
-    });
-
-    it('should visually distinguish non-clickable action phases', async () => {
-      renderWithProviders(
-        <PhaseHistoryView
-          gameId={mockGameId}
-          currentPhaseId={mockCurrentPhaseId}
-          isGM={false}
-        />
-      );
-
-      // Wait for phases to load
-      await screen.findByText('Opening Ceremony');
-
-      // Find action phase element by heading role
-      const actionPhaseHeading = screen.getByRole('heading', { name: /action phase/i });
-      const actionPhaseContainer = actionPhaseHeading.closest('[class*="border"]');
-
-      // Should have visual indication it's not interactive
-      // e.g., opacity-60, cursor-not-allowed, border-theme-subtle
-      expect(actionPhaseContainer?.className).toMatch(/opacity-60|cursor-not-allowed|border-theme-subtle/);
+      // Action phases SHOULD now be clickable buttons (to view action results)
+      const actionButton = actionPhaseTitle.closest('button');
+      expect(actionButton).toBeInTheDocument();
+      expect(actionButton).not.toBeDisabled();
     });
   });
 });

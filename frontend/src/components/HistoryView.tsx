@@ -7,13 +7,13 @@ import { Button, Alert } from './ui';
 import { useUserActionResults, useGameActionResults } from '../hooks/useActionResults';
 import { MarkdownPreview } from './MarkdownPreview';
 
-interface PhaseHistoryViewProps {
+interface HistoryViewProps {
   gameId: number;
   currentPhaseId?: number;
   isGM?: boolean;
 }
 
-export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: PhaseHistoryViewProps) {
+export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryViewProps) {
   const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(null);
 
   const { data: phasesData, isLoading } = useQuery({
@@ -63,7 +63,7 @@ export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: Phase
           <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Phase History
+          Back to History
         </Button>
         {selectedPhase.phase_type === 'common_room' ? (
           <CommonRoom
@@ -134,7 +134,7 @@ export function PhaseHistoryView({ gameId, currentPhaseId, isGM = false }: Phase
   return (
     <div className="surface-base rounded-lg shadow-md p-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-content-primary mb-2">Phase History</h2>
+        <h2 className="text-2xl font-bold text-content-primary mb-2">History</h2>
         <p className="text-content-secondary">
           View Common Room discussions from previous phases
         </p>

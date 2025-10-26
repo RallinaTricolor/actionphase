@@ -172,9 +172,9 @@ export class GameDetailsPage {
   }
 
   /**
-   * Navigate to Phase History tab
+   * Navigate to History tab
    */
-  async goToPhaseHistory() {
+  async goToHistory() {
     await this.goToTab('History');
   }
 

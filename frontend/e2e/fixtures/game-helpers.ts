@@ -13,7 +13,7 @@ export const FIXTURE_GAMES = {
   HEIST: 'The Heist at Goldstone Bank',           // In-progress, has phases, characters
   WESTMARCH: 'Chronicles of Westmarch',           // In-progress, lots of phases (pagination test)
   SHADOWS: 'Shadows Over Innsmouth',              // In-progress, common room phase
-  DRAGON: 'The Dragon of Mount Krag',             // In-progress, complex phase history
+  DRAGON: 'The Dragon of Mount Krag',             // In-progress, complex history
   MANOR: 'The Mystery of Blackwood Manor',        // Recruitment state
 
   // Dedicated E2E fixtures (STATE-MODIFYING - safe to complete/cancel/modify)

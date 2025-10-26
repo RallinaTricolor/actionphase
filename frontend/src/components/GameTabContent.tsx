@@ -8,7 +8,7 @@ import { ActionsList } from './ActionsList';
 import { ActionResultsList } from './ActionResultsList';
 import { CommonRoom } from './CommonRoom';
 import { PrivateMessages } from './PrivateMessages';
-import { PhaseHistoryView } from './PhaseHistoryView';
+import { HistoryView } from './HistoryView';
 import { RemovePlayerButton } from './RemovePlayerButton';
 import { AddPlayerModal } from './AddPlayerModal';
 import { InactiveCharactersList } from './InactiveCharactersList';
@@ -236,9 +236,9 @@ export function GameTabContent({
     );
   }
 
-  // Phase History Tab (In Progress)
-  if (activeTab === 'phase-history' && game.state === 'in_progress') {
-    return <PhaseHistoryView gameId={gameId} currentPhaseId={currentPhaseData?.phase?.id} isGM={isGM} />;
+  // History Tab (In Progress)
+  if (activeTab === 'history' && game.state === 'in_progress') {
+    return <HistoryView gameId={gameId} currentPhaseId={currentPhaseData?.phase?.id} isGM={isGM} />;
   }
 
   // Private Messages Tab (In Progress)

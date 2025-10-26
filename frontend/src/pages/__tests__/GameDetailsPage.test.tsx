@@ -105,6 +105,21 @@ describe('GameDetailsPage', () => {
       }),
       http.get('http://localhost:3000/api/v1/games/:id/characters/controllable', () => {
         return HttpResponse.json([])
+      }),
+      // Action results endpoints (needed by HistoryView component when displayed)
+      http.get('http://localhost:3000/api/v1/games/:id/results/mine', () => {
+        return HttpResponse.json([])
+      }),
+      http.get('http://localhost:3000/api/v1/games/:id/results', () => {
+        return HttpResponse.json([])
+      }),
+      // Actions endpoint (needed by action-related hooks)
+      http.get('http://localhost:3000/api/v1/games/:id/actions/mine', () => {
+        return HttpResponse.json([])
+      }),
+      // Inactive characters endpoint
+      http.get('http://localhost:3000/api/v1/games/:id/characters/inactive', () => {
+        return HttpResponse.json([])
       })
     )
   }

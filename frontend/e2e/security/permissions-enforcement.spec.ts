@@ -239,12 +239,12 @@ test.describe('Permissions & Access Control', () => {
       const gameId = await getFixtureGameId(page, 'E2E_ACTION');
       await navigateToGame(page, gameId);
 
-      // Navigate to History tab (phase history / results)
+      // Navigate to History tab (history / results)
       await page.click('button:has-text("History")');
       await page.waitForLoadState('networkidle');
 
-      // Wait for phase history heading
-      await page.waitForSelector('h2:has-text("Phase History")', { timeout: 5000 });
+      // Wait for history heading
+      await page.waitForSelector('h2:has-text("History")', { timeout: 5000 });
 
       // Verify no "Draft" or "Unpublished" labels are visible
       const draftLabels = page.locator('text=/Draft|Unpublished|Not Published/i');

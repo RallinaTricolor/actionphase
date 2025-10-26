@@ -88,7 +88,7 @@ export const FIXTURE_GAMES = {
     expectedState: 'in_progress',
     expectedPhase: 'action',
   },
-  // Game #5: Complex phase history (6 previous phases)
+  // Game #5: Complex history (6 previous phases)
   COMPLEX_HISTORY: {
     title: 'The Dragon of Mount Krag',
     expectedState: 'in_progress',

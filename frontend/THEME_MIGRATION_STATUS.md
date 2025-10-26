@@ -47,7 +47,7 @@
 - ✅ PrivateMessages
 - ✅ ThreadedComment
 - ✅ CurrentPhaseCard
-- ✅ PhaseHistoryView
+- ✅ HistoryView
 - ✅ ActionSubmission
 - ✅ CreateActionResultForm
 - ✅ EnhancedGameCard
