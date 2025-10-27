@@ -23,11 +23,11 @@ export function HandoutCard({
   const statusBadgeVariant = handout.status === 'published' ? 'success' : 'warning';
 
   return (
-    <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow">
+    <Card variant="default" padding="md" className="hover:shadow-lg transition-shadow" data-testid="handout-card">
       <div className="flex flex-col space-y-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-content-primary">{handout.title}</h3>
+            <h3 className="text-lg font-semibold text-content-primary" data-testid="handout-title">{handout.title}</h3>
             <div className="mt-1">
               <Badge variant={statusBadgeVariant}>
                 {handout.status === 'published' ? 'Published' : 'Draft'}

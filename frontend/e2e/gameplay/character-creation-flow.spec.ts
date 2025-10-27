@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { GameApplicationsPage } from '../pages/GameApplicationsPage';
+import { CharacterWorkflowPage } from '../pages/CharacterWorkflowPage';
 import { navigateToGame } from '../utils/navigation';
 import { assertTextVisible } from '../utils/assertions';
 import { waitForModal } from '../utils/waits';
@@ -34,47 +36,53 @@ test.describe('Character Creation Flow', () => {
       const timestamp = Date.now();
       const gameTitle = `E2E Character Test ${timestamp}`;
 
-      await gmPage.click('a[href="/games"]');
-      await gmPage.click('button:has-text("Create Game")');
+      await gmPage.getByRole('link', { name: 'Games' }).click();
+      await gmPage.getByRole('button', { name: 'Create Game' }).click();
       // Wait for the game creation form to appear
       await gmPage.waitForSelector('#title', { timeout: 5000 });
       await gmPage.fill('#title', gameTitle);
       await gmPage.fill('#description', 'E2E test for player character creation');
       await gmPage.fill('#genre', 'Test');
       await gmPage.fill('#max_players', '4');
-      await gmPage.click('form button[type="submit"]:has-text("Create Game")');
+      await gmPage.locator('form').getByRole('button', { name: 'Create Game', exact: true }).click();
       await gmPage.waitForURL(/\/games\/\d+/);
+      await gmPage.waitForLoadState('networkidle');
 
       // Extract game ID from URL
       const gameUrl = gmPage.url();
       const gameId = gameUrl.match(/\/games\/(\d+)/)?.[1];
 
       // Start recruitment
-      await gmPage.click('button:has-text("Start Recruitment")');
+      await gmPage.getByRole('button', { name: 'Start Recruitment' }).click();
       await gmPage.waitForLoadState('networkidle');
 
       // === Player Application ===
-      // Login as player and apply to the game
+      // Login as player and apply to the game using POM
       await loginAs(playerPage, 'PLAYER_1');
-      await navigateToGame(playerPage, parseInt(gameId!));
-
-      // Apply to join the game
-      await playerPage.click('button:has-text("Apply to Join")');
-      // Wait for the application form to appear
-      await playerPage.waitForSelector('button:has-text("Submit Application")', { timeout: 5000 });
-      await playerPage.click('button:has-text("Submit Application")');
+      const playerApplicationsPage = new GameApplicationsPage(playerPage, parseInt(gameId!));
+      await playerPage.goto(`/games/${gameId}`);
       await playerPage.waitForLoadState('networkidle');
 
+      // Apply to join using POM
+      await playerApplicationsPage.submitApplication('I would like to join this game', 'player');
+
+      // Wait for submission to process
+      await playerPage.waitForTimeout(1000);
+
       // === GM Approval ===
-      // GM approves the player using GameDetailsPage
-      const gmGamePage = new GameDetailsPage(gmPage);
-      await gmGamePage.goToApplications();
-      await expect(gmPage.locator('h3:has-text("TestPlayer1")')).toBeVisible({ timeout: 5000 });
-      await gmPage.click('button:has-text("Approve")');
+      // GM approves the player using POM
+      const gmApplicationsPage = new GameApplicationsPage(gmPage, parseInt(gameId!));
+      await gmApplicationsPage.goto();
       await gmPage.waitForLoadState('networkidle');
 
+      // Approve player using POM
+      await gmApplicationsPage.approveApplication('TestPlayer1');
+
+      // Wait for approval to process
+      await gmPage.waitForTimeout(1000);
+
       // GM transitions game to character_creation state
-      await gmPage.click('button:has-text("Close Recruitment")');
+      await gmPage.getByRole('button', { name: 'Close Recruitment' }).click();
       await gmPage.waitForLoadState('networkidle');
 
       // === Player Creates Character ===
@@ -82,28 +90,23 @@ test.describe('Character Creation Flow', () => {
       await playerPage.reload();
       await playerPage.waitForLoadState('networkidle');
 
-      // Use GameDetailsPage for navigation
-      const playerGamePage = new GameDetailsPage(playerPage);
-      await playerGamePage.goToCharacters();
+      // Use CharacterWorkflowPage POM for character creation
+      const playerCharPage = new CharacterWorkflowPage(playerPage, parseInt(gameId!));
+      await playerCharPage.goto();
+      await playerPage.waitForLoadState('networkidle');
 
       // Verify Characters section loaded
       await assertTextVisible(playerPage, 'Characters');
 
-      // Click "Create Character"
-      await playerPage.click('button:has-text("Create Character")');
-      // Wait for the character creation form to appear
-      await playerPage.waitForSelector('#name', { timeout: 5000 });
-
-      // Fill in character details
+      // Create character using POM
       const characterName = `Test Character ${Date.now()}`;
-      await playerPage.fill('#name', characterName);
+      await playerCharPage.createCharacter(characterName);
 
-      // Submit the form
-      await playerPage.click('form button[type="submit"]:has-text("Create Character")');
-      await playerPage.waitForLoadState('networkidle');
+      // Wait for character creation to complete
+      await playerPage.waitForTimeout(1000);
 
-      // Verify character appears in character list
-      await expect(playerPage.locator(`h4:has-text("${characterName}")`)).toBeVisible({ timeout: 10000 });
+      // Verify character appears using POM
+      expect(await playerCharPage.hasCharacter(characterName)).toBe(true);
       await assertTextVisible(playerPage, 'Your Character');
     } finally {
       await gmContext.close();
@@ -119,19 +122,19 @@ test.describe('Character Creation Flow', () => {
     // This saves ~3-4 seconds by avoiding game creation
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_MISC');
 
-    // Use GameDetailsPage for navigation
-    const gamePage = new GameDetailsPage(page);
-    await gamePage.goto(gameId);
-    await gamePage.goToCharacters();
+    // Use CharacterWorkflowPage POM for navigation
+    const charPage = new CharacterWorkflowPage(page, gameId);
+    await charPage.goto();
+    await page.waitForLoadState('networkidle');
 
     // Wait for Characters section to load
     await assertTextVisible(page, 'Characters');
 
     // GM should see "Create Character" button
-    await expect(page.locator('button:has-text("Create Character")')).toBeVisible({ timeout: 5000 });
+    expect(await charPage.canCreateCharacter()).toBe(true);
 
-    // Click "Create Character"
-    await page.click('button:has-text("Create Character")');
+    // Click "Create Character" and fill form
+    await page.click('button[data-testid="create-character-button"]');
     // Wait for the character creation form to appear
     await page.waitForSelector('#name', { timeout: 5000 });
 
@@ -143,11 +146,14 @@ test.describe('Character Creation Flow', () => {
     await page.selectOption('#character_type', 'npc');
 
     // Submit the form
-    await page.click('form button[type="submit"]:has-text("Create Character")');
+    await page.click('button[data-testid="character-submit-button"]');
     await page.waitForLoadState('networkidle');
 
-    // Verify NPC appears in character list
-    await expect(page.locator(`h4:has-text("${npcName}")`)).toBeVisible({ timeout: 10000 });
+    // Wait for character creation to complete
+    await page.waitForTimeout(1000);
+
+    // Verify NPC appears using POM
+    expect(await charPage.hasCharacter(npcName)).toBe(true);
 
     // Verify it's in the NPCs section
     await assertTextVisible(page, 'NPCs');

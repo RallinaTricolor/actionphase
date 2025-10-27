@@ -251,26 +251,54 @@ test.describe('Character Avatar Feature', () => {
       // Open upload modal
       await page.click('button[title="Upload Avatar"]');
 
-      // If remove button exists, test cancellation
+      // Check if avatar exists, upload one if not
       const removeButton = page.locator('button:has-text("Remove Avatar")');
+      const hasAvatar = await removeButton.isVisible();
 
-      if (await removeButton.isVisible()) {
-        // Set up dialog handler to dismiss (cancel)
-        let dialogShown = false;
-        page.on('dialog', dialog => {
-          dialogShown = true;
-          expect(dialog.message()).toContain('Are you sure');
-          dialog.dismiss();
-        });
+      if (!hasAvatar) {
+        // Upload an avatar first
+        const testImagePath = path.join(__dirname, '../fixtures/test-avatar.jpg');
+        const fileInput = page.locator('input[type="file"]');
+        await fileInput.setInputFiles(testImagePath);
 
-        await removeButton.click();
+        const uploadButton = page.locator('button:has-text("Upload")').last();
 
-        // Verify dialog was shown
-        expect(dialogShown).toBe(true);
+        // Wait for upload POST to complete
+        const uploadPromise = page.waitForResponse(
+          resp => resp.url().includes('/avatar') && resp.request().method() === 'POST',
+          { timeout: 15000 }
+        );
 
-        // Modal should still be open (deletion cancelled)
+        await uploadButton.click();
+        await uploadPromise;
+
+        // Modal closes after upload - need to reopen it to test deletion cancellation
+        await expect(page.locator('text=Upload Avatar for')).not.toBeVisible({ timeout: 5000 });
+        await page.click('button[title="Upload Avatar"]');
         await expect(page.locator('text=Upload Avatar for')).toBeVisible();
       }
+
+      // Now test cancellation - avatar should exist at this point
+      await expect(removeButton).toBeVisible();
+
+      // Set up dialog handler to dismiss (cancel)
+      let dialogShown = false;
+      page.on('dialog', dialog => {
+        dialogShown = true;
+        expect(dialog.message()).toContain('Are you sure');
+        dialog.dismiss();
+      });
+
+      await removeButton.click();
+
+      // Verify dialog was shown
+      expect(dialogShown).toBe(true);
+
+      // Modal should still be open (deletion cancelled)
+      await expect(page.locator('text=Upload Avatar for')).toBeVisible();
+
+      // Avatar should still exist (not deleted)
+      await expect(page.locator('text=Current Avatar:')).toBeVisible();
     });
   });
 

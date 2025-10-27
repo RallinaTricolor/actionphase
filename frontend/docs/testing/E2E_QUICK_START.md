@@ -69,6 +69,78 @@ All test users have the password: **`testpassword123`**
 
 ---
 
+## Page Object Models (POMs)
+
+**Rule: Always use Page Object Models when writing or refactoring tests.**
+
+POMs encapsulate page interactions and provide stable, reusable methods for test automation.
+
+### Available POMs
+
+All POMs are located in `frontend/e2e/pages/`:
+
+#### **CharacterSheetPage** - `CharacterSheetPage.ts`
+Character sheet viewing and editing
+- Module navigation: `goToBioModule()`, `goToAbilitiesModule()`, `goToInventoryModule()`
+- Tab navigation: `goToAbilitiesTab()`, `goToSkillsTab()`, `goToCurrencyTab()`
+- Workflows: `addAbility()`, `isModuleVisible()`
+- Permissions: `canAddAbility()`, `canAddSkill()`, `canAddItem()`, `canAddCurrency()`
+
+#### **GameSettingsPage** - `GameSettingsPage.ts`
+Edit Game modal workflow
+- Modal control: `openEditModal()`, `saveChanges()`, `cancel()`
+- Updates: `updateTitle()`, `updateDescription()`, `updateGenre()`, `updateMaxPlayers()`
+- Toggles: `toggleAnonymous()`, `isAnonymous()`
+
+#### **ParticipantsPage** - `ParticipantsPage.ts`
+Participant/people management
+- Navigation: `goto()`, `goToParticipantsTab()`
+- Lists: `getParticipantsList()`, `getParticipantsByRole()`, `getParticipantsCount()`
+- Search: `searchParticipants()`, `hasParticipant()`, `getParticipantRole()`
+
+#### **AvatarManagementPage** - `AvatarManagementPage.ts`
+Avatar upload and management
+- Upload: `uploadAvatar()`, `uploadAndSaveAvatar()`, `waitForPreview()`
+- Actions: `saveAvatar()`, `cancelUpload()`, `deleteAvatar()`
+- Checks: `hasPreview()`, `canUploadAvatar()`, `getUploadError()`
+
+### Usage Example
+
+```typescript
+import { CharacterSheetPage } from '../pages/CharacterSheetPage';
+import { GameSettingsPage } from '../pages/GameSettingsPage';
+
+test('example test', async ({ page }) => {
+  // Initialize POMs
+  const sheetPage = new CharacterSheetPage(page);
+  const settingsPage = new GameSettingsPage(page);
+
+  // Use POM methods instead of inline selectors
+  await sheetPage.goToAbilitiesModule();
+  await sheetPage.goToAbilitiesTab(2);
+
+  await settingsPage.openEditModal();
+  await settingsPage.updateTitle('New Title');
+  await settingsPage.saveChanges();
+});
+```
+
+### POM-First Development
+
+When writing new tests:
+1. Check if a POM exists for the workflow
+2. If not, create the POM first (in `e2e/pages/`)
+3. Use POM methods in your test
+4. Tests should read like user stories
+
+**Benefits:**
+- ✅ Stable, semantic selectors (`getByRole`, `getByTestId`)
+- ✅ UI changes only require POM updates
+- ✅ Tests are self-documenting
+- ✅ Reusable across multiple test files
+
+---
+
 ## Current Test Coverage
 
 ### ✅ Implemented

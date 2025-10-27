@@ -60,6 +60,7 @@ export function GameActions({
           onClick={() => onStateChange(action.state)}
           disabled={actionLoading}
           className={action.color}
+          data-testid={`${action.state}-button`}
         >
           {action.label}
         </Button>
@@ -81,6 +82,7 @@ export function GameActions({
           variant="warning"
           onClick={onWithdrawApplication}
           disabled={actionLoading}
+          data-testid="withdraw-application-button"
         >
           Withdraw Application
         </Button>

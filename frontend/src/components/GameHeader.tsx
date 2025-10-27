@@ -11,7 +11,7 @@ export function GameHeader({ game }: GameHeaderProps) {
     <div>
       <h1 className="text-3xl font-bold text-content-primary mb-2">{game.title}</h1>
       <div className="flex items-center gap-4">
-        <Badge className={GAME_STATE_COLORS[game.state]}>
+        <Badge className={GAME_STATE_COLORS[game.state]} data-testid="game-status-badge">
           {GAME_STATE_LABELS[game.state]}
         </Badge>
         <span className="text-content-secondary">GM: {game.gm_username}</span>

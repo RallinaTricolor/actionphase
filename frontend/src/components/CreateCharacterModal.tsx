@@ -65,7 +65,7 @@ export function CreateCharacterModal({
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Create Character">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" data-testid="character-form">
         {/* Character Name */}
         <Input
           label="Character Name"
@@ -75,6 +75,7 @@ export function CreateCharacterModal({
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
           placeholder="Enter character name..."
+          data-testid="character-name-input"
         />
 
         {/* Character Type */}
@@ -114,6 +115,7 @@ export function CreateCharacterModal({
             variant="primary"
             loading={createCharacterMutation.isPending}
             disabled={!formData.name.trim()}
+            data-testid="character-submit-button"
           >
             Create Character
           </Button>

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
+import { GameDetailsPage } from '../pages/GameDetailsPage';
 
 /**
  * E2E Tests for Game Lifecycle Management
@@ -14,7 +15,9 @@ import { getFixtureGameId } from '../fixtures/game-helpers';
  *
  * Uses dedicated E2E fixtures (E2E_GAME_LIFECYCLE_*) with games in specific states
  *
- * CRITICAL: This tests CORE game state management mechanics
+ * REFACTORED: Using GameDetailsPage POM exclusively
+ * - Eliminated inline selectors
+ * - Improved reliability with dedicated POM methods
  */
 
 test.describe('Game Lifecycle Management', () => {
@@ -23,18 +26,18 @@ test.describe('Game Lifecycle Management', () => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GAME_LIFECYCLE_START');
 
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
 
     // Verify we're on the right game page
-    await expect(page.locator('text=E2E Test: Game Lifecycle - Start')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('E2E Test: Game Lifecycle - Start')).toBeVisible({ timeout: 10000 });
 
     // Should see "Start Game" button for character_creation state
-    const startButton = page.getByRole('button', { name: 'Start Game' });
+    const startButton = gamePage.getButton('Start Game');
     await expect(startButton).toBeVisible({ timeout: 10000 });
 
-    // Click start game button
-    await startButton.click();
+    // Start the game using POM
+    await gamePage.startGame();
 
     // Wait for state transition
     await page.waitForTimeout(2000);
@@ -51,22 +54,15 @@ test.describe('Game Lifecycle Management', () => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GAME_LIFECYCLE_PAUSE');
 
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
 
     // Should see "Pause Game" button for in_progress state
-    const pauseButton = page.getByRole('button', { name: 'Pause Game' }).first();
+    const pauseButton = gamePage.getButton('Pause Game');
     await expect(pauseButton).toBeVisible({ timeout: 10000 });
 
-    // Click pause button - this opens confirmation dialog
-    await pauseButton.click();
-
-    // Wait for modal to appear with heading (use first() to avoid strict mode - there are 2 headings)
-    await expect(page.getByRole('heading', { name: 'Pause Game' }).first()).toBeVisible({ timeout: 5000 });
-
-    // Find and click "Pause Game" button in the modal (the last one is the confirm button)
-    const confirmButton = page.getByRole('button', { name: 'Pause Game' }).last();
-    await confirmButton.click();
+    // Pause the game using POM (handles confirmation modal)
+    await gamePage.pauseGame();
 
     // Wait for state transition
     await page.waitForTimeout(2000);
@@ -76,22 +72,22 @@ test.describe('Game Lifecycle Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Should now see "Resume Game" button
-    await expect(page.getByRole('button', { name: 'Resume Game' })).toBeVisible({ timeout: 10000 });
+    await expect(gamePage.getButton('Resume Game')).toBeVisible({ timeout: 10000 });
   });
 
   test('GM can resume paused game', async ({ page }) => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GAME_LIFECYCLE_RESUME');
 
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
 
     // Should see "Resume Game" button for paused state
-    const resumeButton = page.getByRole('button', { name: 'Resume Game' });
+    const resumeButton = gamePage.getButton('Resume Game');
     await expect(resumeButton).toBeVisible({ timeout: 10000 });
 
-    // Click resume button
-    await resumeButton.click();
+    // Resume the game using POM
+    await gamePage.resumeGame();
 
     // Wait for state transition
     await page.waitForTimeout(2000);
@@ -108,27 +104,15 @@ test.describe('Game Lifecycle Management', () => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GAME_LIFECYCLE_COMPLETE');
 
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
 
     // Should see "Complete Game" button for in_progress state
-    const completeButton = page.getByRole('button', { name: 'Complete Game' }).first();
+    const completeButton = gamePage.getButton('Complete Game');
     await expect(completeButton).toBeVisible({ timeout: 10000 });
 
-    // Click complete button - this opens confirmation dialog
-    await completeButton.click();
-
-    // Wait for modal to appear with heading
-    await expect(page.getByRole('heading', { name: 'Complete Game' })).toBeVisible({ timeout: 5000 });
-
-    // Find the confirmation input field and type "completed"
-    const confirmInput = page.getByPlaceholder('completed');
-    await expect(confirmInput).toBeVisible({ timeout: 5000 });
-    await confirmInput.fill('completed');
-
-    // Find and click "Complete Game" button in dialog
-    const confirmButton = page.getByRole('button', { name: 'Complete Game' }).last();
-    await confirmButton.click();
+    // Complete the game using POM (handles confirmation modal)
+    await gamePage.completeGame();
 
     // Wait for state transition
     await page.waitForTimeout(2000);
@@ -145,15 +129,15 @@ test.describe('Game Lifecycle Management', () => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GAME_LIFECYCLE_CANCEL');
 
-    await page.goto(`/games/${gameId}`);
-    await page.waitForLoadState('networkidle');
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
 
     // Should see "Cancel Game" button for recruitment state
-    const cancelButton = page.getByRole('button', { name: 'Cancel Game' });
+    const cancelButton = gamePage.getButton('Cancel Game');
     await expect(cancelButton).toBeVisible({ timeout: 10000 });
 
-    // Click cancel button
-    await cancelButton.click();
+    // Cancel the game using POM
+    await gamePage.cancelGame();
 
     // Wait for state transition
     await page.waitForTimeout(2000);

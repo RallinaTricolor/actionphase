@@ -23,7 +23,7 @@ export function CreateHandoutModal({ onClose, onSubmit, isSubmitting }: CreateHa
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="surface-base rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="p-6" data-testid="handout-form">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-content-primary">Create New Handout</h3>
             <Button
@@ -51,6 +51,7 @@ export function CreateHandoutModal({ onClose, onSubmit, isSubmitting }: CreateHa
                 }))}
                 placeholder="e.g., 'Combat Rules' or 'World Lore'"
                 required
+                data-testid="handout-title-input"
               />
             </div>
 
@@ -67,6 +68,7 @@ export function CreateHandoutModal({ onClose, onSubmit, isSubmitting }: CreateHa
                 rows={10}
                 required
                 helperText="Supports Markdown formatting"
+                data-testid="handout-content-input"
               />
             </div>
 
@@ -81,6 +83,7 @@ export function CreateHandoutModal({ onClose, onSubmit, isSubmitting }: CreateHa
                 }))}
                 required
                 helperText="Draft handouts are only visible to you. Published handouts are visible to all players."
+                data-testid="handout-status-select"
               >
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>

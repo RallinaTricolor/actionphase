@@ -39,7 +39,6 @@ vi.mock('../../components/GamesList', () => ({
     games,
     loading,
     error,
-    onGameClick,
     onApplyToGame,
     isJoining
   }: any) => (
@@ -48,11 +47,6 @@ vi.mock('../../components/GamesList', () => ({
       <div>Loading: {String(loading)}</div>
       <div>Error: {error || 'none'}</div>
       <div>Is Joining: {String(isJoining)}</div>
-      {onGameClick && (
-        <button onClick={() => onGameClick({ id: 123, title: 'Test Game' })}>
-          Test Game Click
-        </button>
-      )}
       {onApplyToGame && (
         <button onClick={() => onApplyToGame(456)}>Apply to Game</button>
       )}
@@ -116,15 +110,6 @@ describe('GamesPage', () => {
     expect(screen.getByText('Discover and join role-playing games in the ActionPhase community')).toBeInTheDocument()
 
     expect(screen.getByRole('button', { name: 'Create Game' })).toBeInTheDocument()
-  })
-
-  it('navigates to game details when game is clicked', () => {
-    renderWithProviders(<GamesPage />)
-
-    const gameClickButton = screen.getByText('Test Game Click')
-    fireEvent.click(gameClickButton)
-
-    expect(mockNavigate).toHaveBeenCalledWith('/games/123')
   })
 
   it('opens create game modal', () => {

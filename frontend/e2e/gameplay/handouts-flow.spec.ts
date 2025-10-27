@@ -20,15 +20,16 @@ import { GameHandoutsPage } from '../pages/GameHandoutsPage';
 
 test.describe('Handouts Flow', () => {
 
-  test('GM can create and publish a handout with markdown content', async ({ page }) => {
+  test('GM can create handout with markdown and players can view it', async ({ page }) => {
+    // === GM creates handout with markdown ===
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
-    const handoutsPage = new GameHandoutsPage(page, gameId);
-    await handoutsPage.goto();
+    const gmHandoutsPage = new GameHandoutsPage(page, gameId);
+    await gmHandoutsPage.goto();
 
     // Verify GM can create handouts
-    const canCreate = await handoutsPage.canCreateHandouts();
+    const canCreate = await gmHandoutsPage.canCreateHandouts();
     expect(canCreate).toBe(true);
 
     // Create handout with markdown
@@ -48,52 +49,36 @@ This is a **test handout** with markdown formatting.
 Example dice roll: 1d20 + 5
 \`\`\``;
 
-    await handoutsPage.createHandout(handoutTitle, handoutContent, true);
+    await gmHandoutsPage.createHandout(handoutTitle, handoutContent, true);
     await page.waitForLoadState('networkidle');
 
     // Verify handout appears in list
-    const hasHandout = await handoutsPage.hasHandout(handoutTitle);
+    let hasHandout = await gmHandoutsPage.hasHandout(handoutTitle);
     expect(hasHandout).toBe(true);
 
     // Verify can open and view handout
-    await handoutsPage.openHandout(handoutTitle);
+    await gmHandoutsPage.openHandout(handoutTitle);
 
     // Verify markdown is rendered (check for heading and list items)
     await expect(page.locator('text=Welcome Adventurers')).toBeVisible();
     await expect(page.locator('text=Always roll for initiative')).toBeVisible();
-  });
 
-  test('player can view published handouts', async ({ page }) => {
-    // First, GM creates and publishes a handout
-    const gmPage = page;
-    await loginAs(gmPage, 'GM');
-    const gameId = await getFixtureGameId(gmPage, 'E2E_ACTION');
-
-    const gmHandoutsPage = new GameHandoutsPage(gmPage, gameId);
-    await gmHandoutsPage.goto();
-
-    const handoutTitle = `Player Visible Handout ${Date.now()}`;
-    const handoutContent = 'This handout is visible to all players.';
-
-    await gmHandoutsPage.createHandout(handoutTitle, handoutContent, true);
-    await gmPage.waitForLoadState('networkidle');
-
-    // Now login as player and verify they can see it
-    await loginAs(gmPage, 'PLAYER_1');
-    const playerHandoutsPage = new GameHandoutsPage(gmPage, gameId);
+    // === Player views the same handout ===
+    await loginAs(page, 'PLAYER_1');
+    const playerHandoutsPage = new GameHandoutsPage(page, gameId);
     await playerHandoutsPage.goto();
 
     // Player should see the handout
-    const hasHandout = await playerHandoutsPage.hasHandout(handoutTitle);
+    hasHandout = await playerHandoutsPage.hasHandout(handoutTitle);
     expect(hasHandout).toBe(true);
 
     // Player can open and read it
     await playerHandoutsPage.openHandout(handoutTitle);
-    await expect(gmPage.locator('text=This handout is visible to all players')).toBeVisible();
+    await expect(page.locator('text=Welcome Adventurers')).toBeVisible();
 
     // Player should NOT see Create Handout button (GM-only feature)
-    const canCreate = await playerHandoutsPage.canCreateHandouts();
-    expect(canCreate).toBe(false);
+    const playerCanCreate = await playerHandoutsPage.canCreateHandouts();
+    expect(playerCanCreate).toBe(false);
   });
 
   test('GM can edit existing handout', async ({ page }) => {
@@ -146,26 +131,6 @@ Example dice roll: 1d20 + 5
     expect(hasHandout).toBe(false);
   });
 
-  test('handout supports character mentions', async ({ page }) => {
-    await loginAs(page, 'GM');
-    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
-
-    const handoutsPage = new GameHandoutsPage(page, gameId);
-    await handoutsPage.goto();
-
-    // Create handout with character mention
-    const handoutTitle = `Handout with Mentions ${Date.now()}`;
-    const handoutContent = 'Attention @E2E Test Char 1! Please review this information.';
-
-    await handoutsPage.createHandout(handoutTitle, handoutContent, true);
-    await page.waitForLoadState('networkidle');
-
-    // Open handout and verify mention is displayed
-    await handoutsPage.openHandout(handoutTitle);
-    await expect(page.locator('text=@E2E Test Char 1')).toBeVisible();
-    await expect(page.locator('text=Please review this information')).toBeVisible();
-  });
-
   test('multiple handouts display correctly in list', async ({ page }) => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_ACTION');
@@ -195,5 +160,51 @@ Example dice roll: 1d20 + 5
     await expect(page.locator(`text=${handout1}`)).toBeVisible();
     await expect(page.locator(`text=${handout2}`)).toBeVisible();
     await expect(page.locator(`text=${handout3}`)).toBeVisible();
+  });
+
+  test('players cannot see draft handouts', async ({ page }) => {
+    // GM creates both a draft and a published handout
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+
+    const gmHandoutsPage = new GameHandoutsPage(page, gameId);
+    await gmHandoutsPage.goto();
+
+    const timestamp = Date.now();
+    const draftTitle = `Draft Handout ${timestamp}`;
+    const publishedTitle = `Published Handout ${timestamp}`;
+
+    // Create draft handout (isPublic: false)
+    await gmHandoutsPage.createHandout(draftTitle, 'This is a draft - players should NOT see this', false);
+    await page.waitForLoadState('networkidle');
+
+    // Create published handout for comparison
+    await gmHandoutsPage.goto();
+    await gmHandoutsPage.createHandout(publishedTitle, 'This is published - players should see this', true);
+    await page.waitForLoadState('networkidle');
+
+    // Verify GM can see both handouts
+    await gmHandoutsPage.goto();
+    const gmCanSeeDraft = await gmHandoutsPage.hasHandout(draftTitle);
+    const gmCanSeePublished = await gmHandoutsPage.hasHandout(publishedTitle);
+    expect(gmCanSeeDraft).toBe(true);
+    expect(gmCanSeePublished).toBe(true);
+
+    // Login as player and check visibility
+    await loginAs(page, 'PLAYER_1');
+    const playerHandoutsPage = new GameHandoutsPage(page, gameId);
+    await playerHandoutsPage.goto();
+
+    // Player should NOT see the draft handout
+    const playerCanSeeDraft = await playerHandoutsPage.hasHandout(draftTitle);
+    expect(playerCanSeeDraft).toBe(false);
+
+    // Player SHOULD see the published handout
+    const playerCanSeePublished = await playerHandoutsPage.hasHandout(publishedTitle);
+    expect(playerCanSeePublished).toBe(true);
+
+    // Verify player can open and read the published handout
+    await playerHandoutsPage.openHandout(publishedTitle);
+    await expect(page.locator('text=This is published')).toBeVisible();
   });
 });

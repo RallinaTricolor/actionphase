@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { ActionResultsPage } from '../pages/ActionResultsPage';
 
 /**
  * E2E Tests for Action Results Flow
@@ -26,18 +27,11 @@ test.describe('Action Results Flow', () => {
   test('player can view their published action results', async ({ page }) => {
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'E2E_ACTION_RESULTS');
+    const resultsPage = new ActionResultsPage(page, gameId);
 
-    const gamePage = new GameDetailsPage(page);
-    await gamePage.goto(gameId);
-    await page.waitForLoadState('networkidle');
-
-    // Navigate to History tab to see past phases
-    await page.getByRole('tab', { name: 'History' }).click();
-    await page.waitForLoadState('networkidle');
-
-    // Click on Phase 1 (completed action phase) to view action results
-    await page.locator('text=Phase 1').first().click();
-    await page.waitForLoadState('networkidle');
+    // Navigate to History tab and view Phase 1 results using POM
+    await resultsPage.goto();
+    await resultsPage.viewPhaseResults(1);
 
     // Should see action results heading for the phase
     await expect(page.getByRole('heading', { name: /Completed Action Phase/ })).toBeVisible({ timeout: 10000 });
@@ -59,18 +53,11 @@ test.describe('Action Results Flow', () => {
   test('player can see character mentions in results', async ({ page }) => {
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'E2E_ACTION_RESULTS');
+    const resultsPage = new ActionResultsPage(page, gameId);
 
-    const gamePage = new GameDetailsPage(page);
-    await gamePage.goto(gameId);
-    await page.waitForLoadState('networkidle');
-
-    // Navigate to History tab
-    await page.getByRole('tab', { name: 'History' }).click();
-    await page.waitForLoadState('networkidle');
-
-    // Click on Phase 1 to view action results
-    await page.locator('text=Phase 1').first().click();
-    await page.waitForLoadState('networkidle');
+    // Navigate to History tab and view Phase 1 results using POM
+    await resultsPage.goto();
+    await resultsPage.viewPhaseResults(1);
 
     // Player 1's result contains a character mention: "@Result Test Char 2"
     await expect(page.locator('text=@Result Test Char 2')).toBeVisible({ timeout: 10000 });
@@ -81,18 +68,11 @@ test.describe('Action Results Flow', () => {
     // Player 2 should have published results (based on fixture)
     await loginAs(page, 'PLAYER_2');
     const gameId = await getFixtureGameId(page, 'E2E_ACTION_RESULTS');
+    const resultsPage = new ActionResultsPage(page, gameId);
 
-    const gamePage = new GameDetailsPage(page);
-    await gamePage.goto(gameId);
-    await page.waitForLoadState('networkidle');
-
-    // Navigate to History tab
-    await page.getByRole('tab', { name: 'History' }).click();
-    await page.waitForLoadState('networkidle');
-
-    // Click on Phase 1 to view action results
-    await page.locator('text=Phase 1').first().click();
-    await page.waitForLoadState('networkidle');
+    // Navigate to History tab and view Phase 1 results using POM
+    await resultsPage.goto();
+    await resultsPage.viewPhaseResults(1);
 
     // Should see action results heading
     await expect(page.getByRole('heading', { name: /Completed Action Phase/ })).toBeVisible({ timeout: 10000 });
@@ -113,18 +93,11 @@ test.describe('Action Results Flow', () => {
     // Player 3 has an UNPUBLISHED result in the fixture
     await loginAs(page, 'PLAYER_3');
     const gameId = await getFixtureGameId(page, 'E2E_ACTION_RESULTS');
+    const resultsPage = new ActionResultsPage(page, gameId);
 
-    const gamePage = new GameDetailsPage(page);
-    await gamePage.goto(gameId);
-    await page.waitForLoadState('networkidle');
-
-    // Navigate to History tab
-    await page.getByRole('tab', { name: 'History' }).click();
-    await page.waitForLoadState('networkidle');
-
-    // Click on Phase 1 to view action results
-    await page.locator('text=Phase 1').first().click();
-    await page.waitForLoadState('networkidle');
+    // Navigate to History tab and view Phase 1 results using POM
+    await resultsPage.goto();
+    await resultsPage.viewPhaseResults(1);
 
     // Should NOT see unpublished result content
     await expect(page.locator('text=DRAFT: The symbols appear to be a warning')).not.toBeVisible();
@@ -138,18 +111,11 @@ test.describe('Action Results Flow', () => {
     // Player 4 has no results in the fixture
     await loginAs(page, 'PLAYER_4');
     const gameId = await getFixtureGameId(page, 'E2E_ACTION_RESULTS');
+    const resultsPage = new ActionResultsPage(page, gameId);
 
-    const gamePage = new GameDetailsPage(page);
-    await gamePage.goto(gameId);
-    await page.waitForLoadState('networkidle');
-
-    // Navigate to History tab
-    await page.getByRole('tab', { name: 'History' }).click();
-    await page.waitForLoadState('networkidle');
-
-    // Click on Phase 1 to view action results
-    await page.locator('text=Phase 1').first().click();
-    await page.waitForLoadState('networkidle');
+    // Navigate to History tab and view Phase 1 results using POM
+    await resultsPage.goto();
+    await resultsPage.viewPhaseResults(1);
 
     // Should see empty state message
     await expect(page.locator('text=No action results for this phase')).toBeVisible({ timeout: 10000 });

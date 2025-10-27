@@ -63,7 +63,7 @@ export const ApplyToGameModal = ({
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={`Apply to ${gameTitle}`}>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6" data-testid="application-form">
         {error && (
           <Alert variant="danger">{error}</Alert>
         )}
@@ -79,6 +79,7 @@ export const ApplyToGameModal = ({
               ? 'Actively participate in the game'
               : 'Watch and follow the game story'
           }
+          data-testid="application-role-select"
         >
           <option value="player">Player</option>
           <option value="audience">Audience</option>

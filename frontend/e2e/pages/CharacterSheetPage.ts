@@ -110,4 +110,154 @@ export class CharacterSheetPage {
       texts.filter((t): t is string => t !== null)
     );
   }
+
+  // ========== Character Sheet Modal Module Navigation ==========
+  // Methods for navigating within the character sheet modal
+  // (Bio/Background, Abilities & Skills, Inventory modules)
+
+  /**
+   * Navigate to Bio/Background module
+   */
+  async goToBioModule() {
+    await this.page.getByRole('button', { name: 'Bio/Background' }).click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Navigate to Abilities & Skills module
+   */
+  async goToAbilitiesModule() {
+    await this.page.getByRole('button', { name: 'Abilities & Skills' }).click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Navigate to Inventory module
+   */
+  async goToInventoryModule() {
+    await this.page.getByRole('button', { name: 'Inventory' }).click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Navigate to Abilities tab (within Abilities & Skills module)
+   * @param count - Expected count to display (e.g., "Abilities (2)")
+   */
+  async goToAbilitiesTab(count?: number) {
+    const buttonName = count !== undefined ? `Abilities (${count})` : /Abilities \(\d+\)/;
+    await this.page.getByRole('button', { name: buttonName }).click();
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Navigate to Skills tab (within Abilities & Skills module)
+   * @param count - Expected count to display (e.g., "Skills (2)")
+   */
+  async goToSkillsTab(count?: number) {
+    const buttonName = count !== undefined ? `Skills (${count})` : /Skills \(\d+\)/;
+    await this.page.getByRole('button', { name: buttonName }).click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Navigate to Items tab (within Inventory module - default tab)
+   */
+  async goToItemsTab() {
+    // Items tab is usually the default, but click if needed
+    const itemsTab = this.page.getByRole('button', { name: /Items/ });
+    if (await itemsTab.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await itemsTab.click();
+      await this.page.waitForLoadState('networkidle');
+    }
+  }
+
+  /**
+   * Navigate to Currency tab (within Inventory module)
+   * @param count - Expected count to display (e.g., "Currency (2)")
+   */
+  async goToCurrencyTab(count?: number) {
+    const buttonName = count !== undefined ? `Currency (${count})` : /Currency \(\d+\)/;
+    await this.page.getByRole('button', { name: buttonName }).click();
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Add a new ability (requires "Add Ability" button to be visible)
+   * @param name - Ability name
+   * @param description - Ability description
+   */
+  async addAbility(name: string, description: string) {
+    await this.page.getByRole('button', { name: 'Add Ability' }).click();
+    await this.page.waitForTimeout(500);
+
+    // Fill in ability form
+    await this.page.fill('input[placeholder*="ability name" i]', name);
+    await this.page.fill('textarea[placeholder*="description" i], textarea[placeholder*="Describe" i]', description);
+
+    // Save the ability
+    const saveButton = this.page.getByRole('button', { name: /Save|Add/ }).first();
+    await saveButton.click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Check if "Add Ability" button is visible (GM/owner permission check)
+   */
+  async canAddAbility(): Promise<boolean> {
+    try {
+      await this.page.getByRole('button', { name: 'Add Ability' }).waitFor({ state: 'visible', timeout: 2000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if "Add Skill" button is visible (GM/owner permission check)
+   */
+  async canAddSkill(): Promise<boolean> {
+    try {
+      await this.page.getByRole('button', { name: 'Add Skill' }).waitFor({ state: 'visible', timeout: 2000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if "Add Item" button is visible (GM/owner permission check)
+   */
+  async canAddItem(): Promise<boolean> {
+    try {
+      await this.page.getByRole('button', { name: 'Add Item' }).waitFor({ state: 'visible', timeout: 2000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if "Add Currency" button is visible (GM/owner permission check)
+   */
+  async canAddCurrency(): Promise<boolean> {
+    try {
+      await this.page.getByRole('button', { name: 'Add Currency' }).waitFor({ state: 'visible', timeout: 2000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if a specific module button is visible
+   * Used to verify permission boundaries (e.g., players shouldn't see Inventory)
+   */
+  async isModuleVisible(moduleName: 'Bio/Background' | 'Abilities & Skills' | 'Inventory'): Promise<boolean> {
+    try {
+      await this.page.getByRole('button', { name: moduleName }).waitFor({ state: 'visible', timeout: 2000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }

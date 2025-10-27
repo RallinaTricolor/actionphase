@@ -4,6 +4,7 @@ import { getFixtureGameId } from '../fixtures/game-helpers';
 import { navigateToGame } from '../utils/navigation';
 import { assertTextVisible } from '../utils/assertions';
 import { waitForModal } from '../utils/waits';
+import { MessagingPage } from '../pages/MessagingPage';
 
 /**
  * Journey 5: Players Exchange Private Messages
@@ -33,85 +34,48 @@ test.describe('Private Messages Flow', () => {
       // TestPlayer1 has character: E2E Test Char 1
       // TestPlayer2 has character: E2E Test Char 2
       const gameId = await getFixtureGameId(player1Page, 'E2E_MESSAGES');
-      await navigateToGame(player1Page, gameId);
 
-      // Navigate to Messages tab
-      await player1Page.click('button:has-text("Messages")');
-      await player1Page.waitForLoadState('networkidle');
+      const player1Messaging = new MessagingPage(player1Page);
+      await player1Messaging.goto(gameId);
 
-      // Click "New Conversation" button (it has title attribute, no text)
-      await player1Page.click('button[title="New Conversation"]');
-      // Wait for the conversation form to appear
-      await player1Page.waitForSelector('input[placeholder*="Planning the heist"]', { timeout: 5000 });
-
-      // Fill in conversation title
+      // Create conversation with Player 2's character
       const conversationTitle = `Test Conversation ${Date.now()}`;
-      await player1Page.fill('input[placeholder*="Planning the heist"]', conversationTitle);
-
-      // Select E2E Test Char 2 (Player 2's character) as participant
-      await player1Page.click('label:has-text("E2E Test Char 2")');
-
-      // Click "Create Conversation" button
-      await player1Page.click('button:has-text("Create Conversation")');
-      await player1Page.waitForLoadState('networkidle');
+      await player1Messaging.createConversation(conversationTitle, ['E2E Test Char 2']);
 
       // === Player 1 sends first message ===
       const messageContent = `Hello from Player 1! Test message at ${Date.now()}`;
-      await player1Page.fill('textarea[placeholder*="Type your message"]', messageContent);
-      await player1Page.click('button:has-text("Send")');
-      await player1Page.waitForLoadState('networkidle');
-
-      // Verify message appears in Player 1's view
-      await assertTextVisible(player1Page, messageContent);
+      await player1Messaging.sendMessage(messageContent);
 
       // === Player 2 sees the conversation and message ===
       await loginAs(player2Page, 'PLAYER_2');
-      await navigateToGame(player2Page, gameId);
 
-      // Navigate to Messages tab
-      await player2Page.click('button:has-text("Messages")');
-      await player2Page.waitForLoadState('networkidle');
+      const player2Messaging = new MessagingPage(player2Page);
+      await player2Messaging.goto(gameId);
 
-      // See conversation in the list (should show the conversation title or participant names)
-      await assertTextVisible(player2Page, conversationTitle);
+      // See conversation in the list
+      await player2Messaging.verifyConversationExists(conversationTitle);
 
-      // Click on the conversation to open it
-      await player2Page.locator(`text=${conversationTitle}`).first().click();
-      await player2Page.waitForLoadState('networkidle');
+      // Open the conversation
+      await player2Messaging.openConversation(conversationTitle);
 
-      // Wait for conversation messages to load (give UI time to render the thread)
-      await player2Page.waitForTimeout(1000);
-
-      // Verify Player 1's message is visible in the conversation thread
-      await expect(player2Page.locator(`text=${messageContent}`).last()).toBeVisible({ timeout: 5000 });
+      // Verify Player 1's message is visible
+      await player2Messaging.verifyMessageExists(messageContent);
 
       // === Player 2 replies ===
       const replyContent = `Hi Shade! Got your message. Rook replying at ${Date.now()}`;
-      await player2Page.fill('textarea[placeholder*="Type your message"]', replyContent);
-      await player2Page.click('button:has-text("Send")');
-      await player2Page.waitForLoadState('networkidle');
-
-      // Verify reply appears in Player 2's view
-      await assertTextVisible(player2Page, replyContent);
+      await player2Messaging.sendMessage(replyContent);
 
       // === Player 1 sees the reply ===
       // Reload to fetch new messages
       await player1Page.reload();
       await player1Page.waitForLoadState('networkidle');
 
-      // Navigate back to Messages
-      await player1Page.click('button:has-text("Messages")');
-      await player1Page.waitForLoadState('networkidle');
+      // Navigate back to Messages and open conversation
+      await player1Messaging.navigateToMessages();
+      await player1Messaging.openConversation(conversationTitle);
 
-      // Conversation should already be selected or click it again
-      await player1Page.locator(`text=${conversationTitle}`).first().click();
-      await player1Page.waitForLoadState('networkidle');
-
-      // Wait for conversation messages to load
-      await player1Page.waitForTimeout(1000);
-
-      // Verify Player 2's reply is visible in the conversation thread
-      await expect(player1Page.locator(`text=${replyContent}`).last()).toBeVisible({ timeout: 5000 });
+      // Verify Player 2's reply is visible
+      await player1Messaging.verifyMessageExists(replyContent);
     } finally {
       await player1Context.close();
       await player2Context.close();
@@ -135,105 +99,64 @@ test.describe('Private Messages Flow', () => {
       // TestPlayer2 has character: E2E Test Char 2
       // TestPlayer3 has character: E2E Test Char 3
       const gameId = await getFixtureGameId(player1Page, 'E2E_MESSAGES');
-      await navigateToGame(player1Page, gameId);
 
-      // Navigate to Messages tab
-      await player1Page.click('button:has-text("Messages")');
-      await player1Page.waitForLoadState('networkidle');
+      const player1Messaging = new MessagingPage(player1Page);
+      await player1Messaging.goto(gameId);
 
-      // Click "New Conversation" button
-      await player1Page.click('button[title="New Conversation"]');
-      await player1Page.waitForSelector('input[placeholder*="Planning the heist"]', { timeout: 5000 });
-
-      // Fill in conversation title
+      // Create group conversation with Player 2 and Player 3's characters
       const groupTitle = `Group Chat ${Date.now()}`;
-      await player1Page.fill('input[placeholder*="Planning the heist"]', groupTitle);
-
-      // Select BOTH E2E Test Char 2 AND E2E Test Char 3 as participants (3-person conversation)
-      await player1Page.click('label:has-text("E2E Test Char 2")');
-      await player1Page.click('label:has-text("E2E Test Char 3")');
-
-      // Click "Create Conversation" button
-      await player1Page.click('button:has-text("Create Conversation")');
-      await player1Page.waitForLoadState('networkidle');
+      await player1Messaging.createConversation(groupTitle, ['E2E Test Char 2', 'E2E Test Char 3']);
 
       // === Player 1 sends first message ===
       const player1Message = `Hello everyone! Player 1 here at ${Date.now()}`;
-      await player1Page.fill('textarea[placeholder*="Type your message"]', player1Message);
-      await player1Page.click('button:has-text("Send")');
-      await player1Page.waitForLoadState('networkidle');
-
-      // Verify message appears
-      await assertTextVisible(player1Page, player1Message);
+      await player1Messaging.sendMessage(player1Message);
 
       // === Player 2 sees the group conversation ===
       await loginAs(player2Page, 'PLAYER_2');
-      await navigateToGame(player2Page, gameId);
 
-      await player2Page.click('button:has-text("Messages")');
-      await player2Page.waitForLoadState('networkidle');
+      const player2Messaging = new MessagingPage(player2Page);
+      await player2Messaging.goto(gameId);
 
-      // See group conversation in the list
-      await assertTextVisible(player2Page, groupTitle);
-
-      // Click on the conversation
-      await player2Page.locator(`text=${groupTitle}`).first().click();
-      await player2Page.waitForLoadState('networkidle');
-      await player2Page.waitForTimeout(1000);
+      // See and open group conversation
+      await player2Messaging.verifyConversationExists(groupTitle);
+      await player2Messaging.openConversation(groupTitle);
 
       // Verify Player 1's message is visible
-      await expect(player2Page.locator(`text=${player1Message}`).last()).toBeVisible({ timeout: 5000 });
+      await player2Messaging.verifyMessageExists(player1Message);
 
       // Player 2 sends a message
       const player2Message = `Hi from Player 2 at ${Date.now()}`;
-      await player2Page.fill('textarea[placeholder*="Type your message"]', player2Message);
-      await player2Page.click('button:has-text("Send")');
-      await player2Page.waitForLoadState('networkidle');
-
-      await assertTextVisible(player2Page, player2Message);
+      await player2Messaging.sendMessage(player2Message);
 
       // === Player 3 also sees the group conversation ===
       await loginAs(player3Page, 'PLAYER_3');
-      await navigateToGame(player3Page, gameId);
 
-      await player3Page.click('button:has-text("Messages")');
-      await player3Page.waitForLoadState('networkidle');
+      const player3Messaging = new MessagingPage(player3Page);
+      await player3Messaging.goto(gameId);
 
-      // See group conversation in the list
-      await assertTextVisible(player3Page, groupTitle);
-
-      // Click on the conversation
-      await player3Page.locator(`text=${groupTitle}`).first().click();
-      await player3Page.waitForLoadState('networkidle');
-      await player3Page.waitForTimeout(1000);
+      // See and open group conversation
+      await player3Messaging.verifyConversationExists(groupTitle);
+      await player3Messaging.openConversation(groupTitle);
 
       // Verify BOTH previous messages are visible to Player 3
-      await expect(player3Page.locator(`text=${player1Message}`).last()).toBeVisible({ timeout: 5000 });
-      await expect(player3Page.locator(`text=${player2Message}`).last()).toBeVisible({ timeout: 5000 });
+      await player3Messaging.verifyMessageExists(player1Message);
+      await player3Messaging.verifyMessageExists(player2Message);
 
       // Player 3 sends a message
       const player3Message = `Player 3 joining the conversation at ${Date.now()}`;
-      await player3Page.fill('textarea[placeholder*="Type your message"]', player3Message);
-      await player3Page.click('button:has-text("Send")');
-      await player3Page.waitForLoadState('networkidle');
-
-      await assertTextVisible(player3Page, player3Message);
+      await player3Messaging.sendMessage(player3Message);
 
       // === Verify Player 1 sees all messages from all participants ===
       await player1Page.reload();
       await player1Page.waitForLoadState('networkidle');
 
-      await player1Page.click('button:has-text("Messages")');
-      await player1Page.waitForLoadState('networkidle');
-
-      await player1Page.locator(`text=${groupTitle}`).first().click();
-      await player1Page.waitForLoadState('networkidle');
-      await player1Page.waitForTimeout(1000);
+      await player1Messaging.navigateToMessages();
+      await player1Messaging.openConversation(groupTitle);
 
       // Verify all three messages are visible
-      await expect(player1Page.locator(`text=${player1Message}`).last()).toBeVisible({ timeout: 5000 });
-      await expect(player1Page.locator(`text=${player2Message}`).last()).toBeVisible({ timeout: 5000 });
-      await expect(player1Page.locator(`text=${player3Message}`).last()).toBeVisible({ timeout: 5000 });
+      await player1Messaging.verifyMessageExists(player1Message);
+      await player1Messaging.verifyMessageExists(player2Message);
+      await player1Messaging.verifyMessageExists(player3Message);
 
     } finally {
       await player1Context.close();

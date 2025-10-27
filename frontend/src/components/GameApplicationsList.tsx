@@ -89,7 +89,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameAp
   const reviewedApplications = applications.filter(app => app.status !== 'pending');
 
   return (
-    <Card variant="elevated" padding="lg">
+    <Card variant="elevated" padding="lg" data-testid="applications-list">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-content-primary">Applications</h2>
         <div className="text-sm text-content-tertiary">
@@ -107,7 +107,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameAp
         <>
           {/* Pending Applications */}
           {pendingApplications.length > 0 && (
-            <div className="mb-8">
+            <div className="mb-8" data-testid="applications-pending-section">
               <h3 className="text-lg font-semibold text-content-primary mb-4 flex items-center">
                 Pending Review
                 <Badge variant="warning" size="sm" className="ml-2">
@@ -131,7 +131,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameAp
 
           {/* Reviewed Applications */}
           {reviewedApplications.length > 0 && (
-            <div>
+            <div data-testid="applications-reviewed-section">
               <h3 className="text-lg font-semibold text-content-primary mb-4 flex items-center">
                 Reviewed Applications
                 <Badge variant="neutral" size="sm" className="ml-2">

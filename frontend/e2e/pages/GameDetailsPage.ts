@@ -33,21 +33,24 @@ export class GameDetailsPage {
    * Get the game title heading
    */
   get gameTitle(): Locator {
-    return this.page.locator('h1, h2').first();
+    return this.page.getByRole('heading', { level: 1 })
+      .or(this.page.getByRole('heading', { level: 2 }))
+      .first();
   }
 
   /**
    * Get the game state badge
    */
   get stateBadge(): Locator {
-    return this.page.locator('[data-testid="game-state-badge"], .badge').first();
+    return this.page.getByTestId('game-state-badge')
+      .or(this.page.locator('[role="status"]').first());
   }
 
   /**
    * Get a button by its text
    */
   getButton(text: string): Locator {
-    return this.page.locator(`button:has-text("${text}")`);
+    return this.page.getByRole('button', { name: new RegExp(text, 'i') });
   }
 
   /**
@@ -107,6 +110,60 @@ export class GameDetailsPage {
   }
 
   /**
+   * Pause the game (GM only)
+   * Handles confirmation modal
+   */
+  async pauseGame() {
+    // Click initial pause button
+    await this.clickButton('Pause Game');
+
+    // Wait for confirmation modal
+    await this.page.waitForLoadState('networkidle');
+
+    // Click confirm button in modal (last one is the confirm)
+    const confirmButton = this.page.getByRole('button', { name: 'Pause Game' }).last();
+    await confirmButton.click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Resume the game (GM only)
+   */
+  async resumeGame() {
+    await this.clickButton('Resume Game');
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Complete the game (GM only)
+   * Handles confirmation modal with text input
+   */
+  async completeGame() {
+    // Click initial complete button
+    await this.clickButton('Complete Game');
+
+    // Wait for confirmation modal
+    await this.page.waitForLoadState('networkidle');
+
+    // Type confirmation text
+    const confirmInput = this.page.getByPlaceholder('completed');
+    await confirmInput.fill('completed');
+
+    // Click confirm button in modal (last one is the confirm)
+    const confirmButton = this.page.getByRole('button', { name: 'Complete Game' }).last();
+    await confirmButton.click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Cancel the game (GM only)
+   */
+  async cancelGame() {
+    await this.clickButton('Cancel Game');
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
    * Navigate to Applications tab
    */
   async goToApplications() {
@@ -135,7 +192,7 @@ export class GameDetailsPage {
    */
   async goToCharacters() {
     // Check if there's a direct Characters tab
-    const directTab = this.page.locator('button[role="tab"]:has-text("Characters")');
+    const directTab = this.page.getByRole('tab', { name: 'Characters' });
     const hasDirectTab = await directTab.count() > 0;
 
     if (hasDirectTab) {
@@ -145,7 +202,7 @@ export class GameDetailsPage {
     } else {
       // Navigate via People tab (in_progress state)
       await this.goToTab('People');
-      await this.page.click('button:has-text("Characters")');
+      await this.page.getByRole('button', { name: 'Characters' }).click();
       await this.page.waitForLoadState('networkidle');
     }
   }
@@ -186,14 +243,51 @@ export class GameDetailsPage {
   }
 
   /**
+   * Navigate to Common Room tab
+   */
+  async goToCommonRoom() {
+    await this.goToTab('Common Room');
+  }
+
+  /**
+   * Navigate to Handouts tab
+   */
+  async goToHandouts() {
+    await this.goToTab('Handouts');
+  }
+
+  /**
+   * Navigate to Audience tab
+   */
+  async goToAudience() {
+    await this.goToTab('Audience');
+  }
+
+  /**
+   * Navigate to Game Info tab
+   */
+  async goToGameInfo() {
+    await this.goToTab('Game Info');
+  }
+
+  /**
+   * Navigate to Settings (button, not tab)
+   */
+  async goToSettings() {
+    const settingsButton = this.page.getByRole('button', { name: 'Settings' });
+    await settingsButton.click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
    * Approve an application (GM only)
    * @param playerUsername - Username of the player to approve
    */
   async approveApplication(playerUsername: string) {
     await this.goToApplications();
 
-    const applicationRow = this.page.locator(`tr:has-text("${playerUsername}")`);
-    await applicationRow.locator('button:has-text("Approve")').click();
+    const applicationRow = this.page.getByRole('row').filter({ hasText: playerUsername });
+    await applicationRow.getByRole('button', { name: 'Approve' }).click();
 
     await this.page.waitForLoadState('networkidle');
   }
@@ -205,8 +299,8 @@ export class GameDetailsPage {
   async rejectApplication(playerUsername: string) {
     await this.goToApplications();
 
-    const applicationRow = this.page.locator(`tr:has-text("${playerUsername}")`);
-    await applicationRow.locator('button:has-text("Reject")').click();
+    const applicationRow = this.page.getByRole('row').filter({ hasText: playerUsername });
+    await applicationRow.getByRole('button', { name: 'Reject' }).click();
 
     await this.page.waitForLoadState('networkidle');
   }
@@ -229,7 +323,7 @@ export class GameDetailsPage {
    * Verify a specific tab is active
    */
   async verifyActiveTab(tabName: string) {
-    const activeTab = this.page.locator(`button:has-text("${tabName}")[aria-selected="true"]`);
+    const activeTab = this.page.getByRole('tab', { name: tabName, selected: true });
     await waitForVisible(activeTab);
   }
 
@@ -238,8 +332,8 @@ export class GameDetailsPage {
    */
   async getParticipantCount(): Promise<number> {
     await this.goToParticipants();
-    const rows = this.page.locator('table tbody tr');
-    return await rows.count();
+    const rows = this.page.getByRole('table').getByRole('row');
+    return await rows.count() - 1; // Subtract header row
   }
 
   /**
@@ -247,7 +341,7 @@ export class GameDetailsPage {
    */
   async verifyParticipantExists(username: string) {
     await this.goToParticipants();
-    const row = this.page.locator(`tr:has-text("${username}")`);
+    const row = this.page.getByRole('row').filter({ hasText: username });
     await waitForVisible(row);
   }
 
@@ -256,7 +350,7 @@ export class GameDetailsPage {
    */
   async verifyApplicationStatus(username: string, status: string) {
     await this.goToApplications();
-    const row = this.page.locator(`tr:has-text("${username}"):has-text("${status}")`);
+    const row = this.page.getByRole('row').filter({ hasText: username }).filter({ hasText: status });
     await waitForVisible(row);
   }
 }

@@ -2,12 +2,13 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { CommonRoomPage } from '../pages/CommonRoomPage';
 import { waitForVisible } from '../utils/waits';
+import { getFixtureGameId } from '../fixtures/game-helpers';
 
 /**
  * E2E Tests for Character Mentions Feature
  *
  * Tests character mention autocomplete and rendering in Common Room posts.
- * Uses test fixture Game #165 ("E2E Common Room - Mentions") with:
+ * Uses test fixture ("E2E Common Room - Mentions") with:
  * - Active common_room phase
  * - Characters: "GM Test Character", "Test Player 1 Character", "Test Player 2 Character"
  *
@@ -19,7 +20,6 @@ import { waitForVisible } from '../utils/waits';
  * - Improved readability and maintainability
  */
 test.describe('Character Mentions', () => {
-  const gameId = 165; // Isolated fixture game for character-mentions tests
 
   test('should allow user to mention character in comment with autocomplete', async ({ browser }) => {
     const gmContext = await browser.newContext();
@@ -32,6 +32,7 @@ test.describe('Character Mentions', () => {
       // === GM creates a post ===
       await loginAs(gmPage, 'GM');
 
+      const gameId = await getFixtureGameId(gmPage, 'COMMON_ROOM_MENTIONS');
       const gmCommonRoom = new CommonRoomPage(gmPage);
       await gmCommonRoom.goto(gameId);
 
@@ -86,6 +87,7 @@ test.describe('Character Mentions', () => {
   test('should filter autocomplete as user types', async ({ page }) => {
     await loginAs(page, 'GM');
 
+    const gameId = await getFixtureGameId(page, 'COMMON_ROOM_MENTIONS');
     const commonRoom = new CommonRoomPage(page);
     await commonRoom.goto(gameId);
 
@@ -123,7 +125,11 @@ test.describe('Character Mentions', () => {
 
     // Now only "Test Player 1 Character" should match
     await waitForVisible(commonRoom.autocompleteDropdown);
-    await expect(page.locator('[role="listbox"] >> text=Test Player 1 Character')).toBeVisible();
+    await expect(page.getByRole('listbox').getByText('Test Player 1 Character', { exact: true })).toBeVisible();
+
+    // Verify other characters are filtered OUT
+    await expect(page.getByRole('listbox').getByText('Test Player 2 Character', { exact: true })).not.toBeVisible();
+    await expect(page.getByRole('listbox').getByText('GM Test Character', { exact: true })).not.toBeVisible();
   });
 
   test('should render mentions with markdown formatting', async ({ browser }) => {
@@ -137,6 +143,7 @@ test.describe('Character Mentions', () => {
       // === GM creates a post ===
       await loginAs(gmPage, 'GM');
 
+      const gameId = await getFixtureGameId(gmPage, 'COMMON_ROOM_MENTIONS');
       const gmCommonRoom = new CommonRoomPage(gmPage);
       await gmCommonRoom.goto(gameId);
 
@@ -161,12 +168,12 @@ test.describe('Character Mentions', () => {
       // Verify comment with markdown and mention rendering
       await playerCommonRoom.verifyCommentExists('this bold text');
 
-      // Verify bold text is actually bold
-      const boldElement = playerPage.locator('strong:has-text("this bold text")').first();
+      // Verify bold text is actually bold (rendered in <strong> tag)
+      const boldElement = playerPage.locator('strong').filter({ hasText: 'this bold text' }).first();
       await expect(boldElement).toBeVisible();
 
-      // Verify italic text is actually italic
-      const italicElement = playerPage.locator('em:has-text("this italic")').first();
+      // Verify italic text is actually italic (rendered in <em> tag)
+      const italicElement = playerPage.locator('em').filter({ hasText: 'this italic' }).first();
       await expect(italicElement).toBeVisible();
 
       // Verify mention is highlighted
@@ -188,6 +195,7 @@ test.describe('Character Mentions', () => {
       // GM creates a post
       await loginAs(gmPage, 'GM');
 
+      const gameId = await getFixtureGameId(gmPage, 'COMMON_ROOM_MENTIONS');
       const gmCommonRoom = new CommonRoomPage(gmPage);
       await gmCommonRoom.goto(gameId);
 
@@ -237,6 +245,7 @@ test.describe('Character Mentions', () => {
   test('should allow GM to mention all characters in post creation with autocomplete', async ({ page }) => {
     await loginAs(page, 'GM');
 
+    const gameId = await getFixtureGameId(page, 'COMMON_ROOM_MENTIONS');
     const commonRoom = new CommonRoomPage(page);
     await commonRoom.goto(gameId);
 
@@ -274,7 +283,7 @@ test.describe('Character Mentions', () => {
 
     // Verify the post appears with the mention
     await commonRoom.verifyPostExists('you are assigned to the north gate');
-    await expect(page.locator('text=@Test Player 1 Character').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('@Test Player 1 Character').first()).toBeVisible({ timeout: 5000 });
 
     // Success! This test verifies the bug fix:
     // - Before fix: Autocomplete only showed GM's characters
@@ -293,6 +302,7 @@ test.describe('Character Mentions', () => {
       // === GM creates a post ===
       await loginAs(gmPage, 'GM');
 
+      const gameId = await getFixtureGameId(gmPage, 'COMMON_ROOM_MENTIONS');
       const gmCommonRoom = new CommonRoomPage(gmPage);
       await gmCommonRoom.goto(gameId);
 

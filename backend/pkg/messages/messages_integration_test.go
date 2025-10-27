@@ -484,8 +484,8 @@ func setupMessageTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 			r.Post("/posts/{postId}/comments", messageHandler.CreateComment)
 			r.Get("/posts/{postId}/comments", messageHandler.GetPostComments)
 			r.Get("/comments/recent", messageHandler.ListRecentCommentsWithParents)
-			r.Put("/comments/{commentId}", messageHandler.UpdateComment)
-			r.Delete("/comments/{commentId}", messageHandler.DeleteComment)
+			r.Patch("/posts/{postId}/comments/{commentId}", messageHandler.UpdateComment)
+			r.Delete("/posts/{postId}/comments/{commentId}", messageHandler.DeleteComment)
 
 			// Other routes
 			r.Get("/messages/{messageId}", messageHandler.GetMessage)
@@ -701,7 +701,7 @@ func TestMessageAPI_UpdateDeleteComment(t *testing.T) {
 		}
 		payloadBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/comments/"+strconv.Itoa(int(comment.ID)), bytes.NewBuffer(payloadBytes))
+		req := httptest.NewRequest("PATCH", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/posts/"+strconv.Itoa(int(post.ID))+"/comments/"+strconv.Itoa(int(comment.ID)), bytes.NewBuffer(payloadBytes))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+gmToken)
 		w := httptest.NewRecorder()
@@ -722,7 +722,7 @@ func TestMessageAPI_UpdateDeleteComment(t *testing.T) {
 		}
 		payloadBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/comments/99999", bytes.NewBuffer(payloadBytes))
+		req := httptest.NewRequest("PATCH", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/posts/"+strconv.Itoa(int(post.ID))+"/comments/99999", bytes.NewBuffer(payloadBytes))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+gmToken)
 		w := httptest.NewRecorder()
@@ -739,7 +739,7 @@ func TestMessageAPI_UpdateDeleteComment(t *testing.T) {
 		}
 		payloadBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/comments/"+strconv.Itoa(int(comment.ID)), bytes.NewBuffer(payloadBytes))
+		req := httptest.NewRequest("PATCH", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/posts/"+strconv.Itoa(int(post.ID))+"/comments/"+strconv.Itoa(int(comment.ID)), bytes.NewBuffer(payloadBytes))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
@@ -760,7 +760,7 @@ func TestMessageAPI_UpdateDeleteComment(t *testing.T) {
 		})
 		core.AssertNoError(t, err, "Comment creation should succeed")
 
-		req := httptest.NewRequest("DELETE", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/comments/"+strconv.Itoa(int(commentToDelete.ID)), nil)
+		req := httptest.NewRequest("DELETE", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/posts/"+strconv.Itoa(int(post.ID))+"/comments/"+strconv.Itoa(int(commentToDelete.ID)), nil)
 		req.Header.Set("Authorization", "Bearer "+gmToken)
 		w := httptest.NewRecorder()
 
@@ -770,7 +770,7 @@ func TestMessageAPI_UpdateDeleteComment(t *testing.T) {
 	})
 
 	t.Run("delete_comment_not_found", func(t *testing.T) {
-		req := httptest.NewRequest("DELETE", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/comments/99999", nil)
+		req := httptest.NewRequest("DELETE", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/posts/"+strconv.Itoa(int(post.ID))+"/comments/99999", nil)
 		req.Header.Set("Authorization", "Bearer "+gmToken)
 		w := httptest.NewRecorder()
 
@@ -781,7 +781,7 @@ func TestMessageAPI_UpdateDeleteComment(t *testing.T) {
 	})
 
 	t.Run("delete_comment_unauthorized", func(t *testing.T) {
-		req := httptest.NewRequest("DELETE", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/comments/"+strconv.Itoa(int(comment.ID)), nil)
+		req := httptest.NewRequest("DELETE", "/api/v1/games/"+strconv.Itoa(int(gameID))+"/posts/"+strconv.Itoa(int(post.ID))+"/comments/"+strconv.Itoa(int(comment.ID)), nil)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)

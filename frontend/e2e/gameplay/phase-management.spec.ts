@@ -43,7 +43,7 @@ test.describe('Phase Management Flow', () => {
     await phasePage.verifyPhaseExists(phaseName);
 
     // Verify "Activate" button is visible (phases are created but not active)
-    await expect(page.locator('button:has-text("Activate")').last()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Activate' }).last()).toBeVisible();
   });
 
   test('GM can activate a phase', async ({ page }) => {
@@ -74,7 +74,7 @@ test.describe('Phase Management Flow', () => {
     // Verify the SPECIFIC phase we activated shows as "Currently Active"
     // Check the phase card itself shows "Currently Active" indicator
     const activatedPhaseCard = phasePage.getPhaseCard(phaseName);
-    await expect(activatedPhaseCard.locator('div:has-text("Currently Active")').last()).toBeVisible({ timeout: 10000 });
+    await expect(activatedPhaseCard.getByText('Currently Active').last()).toBeVisible({ timeout: 10000 });
   });
 
   test('GM can view history', async ({ page }) => {
@@ -90,11 +90,11 @@ test.describe('Phase Management Flow', () => {
 
     // Fixture game has Phase 1 (common room, previous) and Phase 2 (action, active)
     // Verify we can see both phases
-    await expect(page.locator('span:has-text("Phase 1")').first()).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('span:has-text("Phase 2")').first()).toBeVisible();
+    await expect(page.locator('span').filter({ hasText: /^Phase 1$/ }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('span').filter({ hasText: /^Phase 2$/ }).first()).toBeVisible();
 
     // Verify phase titles from fixtures
-    await expect(page.locator('h4:has-text("Discussion Phase")')).toBeVisible(); // Phase 1
-    await expect(page.locator('h4:has-text("Action Phase")')).toBeVisible(); // Phase 2 (active)
+    await expect(page.getByRole('heading', { name: 'Discussion Phase', level: 4 })).toBeVisible(); // Phase 1
+    await expect(page.getByRole('heading', { name: 'Action Phase', level: 4 })).toBeVisible(); // Phase 2 (active)
   });
 });
