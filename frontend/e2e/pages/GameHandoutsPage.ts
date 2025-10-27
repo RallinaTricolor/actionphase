@@ -95,8 +95,8 @@ export class GameHandoutsPage {
     const heading = this.page.getByRole('heading', { name: title, level: 3 });
     await heading.waitFor({ state: 'visible', timeout: 5000 });
 
-    // Find the View button within the same card
-    const card = heading.locator('xpath=ancestor::div[contains(@class, "space-y")]');
+    // Find the handout card containing this heading
+    const card = this.page.getByTestId('handout-card').filter({ has: heading });
     const viewButton = card.getByRole('button', { name: 'View' });
     await viewButton.click();
     await this.page.waitForLoadState('networkidle');
@@ -114,8 +114,8 @@ export class GameHandoutsPage {
     const heading = this.page.getByRole('heading', { name: currentTitle, level: 3 });
     await heading.waitFor({ state: 'visible', timeout: 5000 });
 
-    // Find the Edit button within the same card
-    const card = heading.locator('xpath=ancestor::div[contains(@class, "space-y")]');
+    // Find the handout card containing this heading
+    const card = this.page.getByTestId('handout-card').filter({ has: heading });
     const editButton = card.getByRole('button', { name: 'Edit' });
     await editButton.click();
 
@@ -144,8 +144,8 @@ export class GameHandoutsPage {
     const heading = this.page.getByRole('heading', { name: title, level: 3 });
     await heading.waitFor({ state: 'visible', timeout: 5000 });
 
-    // Find the Delete button within the same card
-    const card = heading.locator('xpath=ancestor::div[contains(@class, "space-y")]');
+    // Find the handout card containing this heading
+    const card = this.page.getByTestId('handout-card').filter({ has: heading });
     const deleteButton = card.getByRole('button', { name: 'Delete' });
 
     // Set up dialog handler BEFORE clicking Delete (HandoutCard uses window.confirm)

@@ -38,7 +38,7 @@ test.describe('Notification System', () => {
       // Test the notification UI components work
       await loginAs(page, 'PLAYER_1');
 
-      const gameId = 166; // COMMON_ROOM_NOTIFICATIONS (isolated for notification-flow.spec.ts)
+      const gameId = await getFixtureGameId(page, 'COMMON_ROOM_NOTIFICATIONS');
       await navigateToGame(page, gameId);
 
       // 1. Verify notification bell is present
@@ -105,12 +105,10 @@ test.describe('Notification System', () => {
         await player2CommonRoom.goto(gameId);
 
         // Find Player 1's comment and click Reply
-        const player1Comment = replierPage.locator(`text=${player1CommentText}`).first();
-        await player1Comment.scrollIntoViewIfNeeded();
-
         // Look for the reply button near Player 1's comment
-        const commentContainer = replierPage.locator(`div:has-text("${player1CommentText}")`).first();
-        const replyButton = commentContainer.locator('button:has-text("Reply")').first();
+        const commentContainer = replierPage.locator('div').filter({ hasText: player1CommentText }).first();
+        const replyButton = commentContainer.getByRole('button', { name: 'Reply' }).first();
+        // Playwright's click automatically scrolls the element into view if needed
         await replyButton.click();
         await replierPage.waitForLoadState('networkidle');
 
@@ -134,7 +132,7 @@ test.describe('Notification System', () => {
         await expect(dropdown).toBeVisible();
 
         // Wait for loading to complete and notification to appear
-        const replyNotification = originalPosterPage.locator('.notification-item:has-text("replied")').first();
+        const replyNotification = originalPosterPage.locator('.notification-item').filter({ hasText: 'replied' }).first();
         await expect(replyNotification).toBeVisible({ timeout: 20000 });
 
         // 6. Click notification and verify navigation
@@ -182,11 +180,11 @@ test.describe('Notification System', () => {
         const mentionerCommonRoom = new CommonRoomPage(mentionerPage);
         await mentionerCommonRoom.goto(gameId);
 
-        const postCard = mentionerPage.locator(`div:has-text("${postContent}")`).first();
-        await postCard.locator('button:has-text("Add Comment")').first().click();
+        const postCard = mentionerPage.locator('div').filter({ hasText: postContent }).first();
+        await postCard.getByRole('button', { name: 'Add Comment' }).first().click();
         await mentionerPage.waitForLoadState('networkidle');
 
-        const commentTextarea = postCard.locator('textarea[placeholder*="Write a comment"]');
+        const commentTextarea = postCard.getByPlaceholder(/Write a comment/i);
         await commentTextarea.fill('Hey @Test Player 4 Character, what do you think?');
 
         const form = postCard.locator('form').first();
@@ -204,7 +202,7 @@ test.describe('Notification System', () => {
         await expect(dropdown).toBeVisible();
 
         // Wait for loading to complete and notification to appear
-        const mentionNotification = mentionedUserPage.locator('.notification-item:has-text("mentioned")').first();
+        const mentionNotification = mentionedUserPage.locator('.notification-item').filter({ hasText: 'mentioned' }).first();
         await expect(mentionNotification).toBeVisible({ timeout: 20000 });
 
         // 6. Click and verify navigation with correct tab parameter
@@ -271,7 +269,7 @@ test.describe('Notification System', () => {
         await expect(dropdown).toBeVisible();
 
         // Wait for loading to complete and notification to appear
-        const phaseNotification = playerPage.locator(`.notification-item:has-text("${phaseTitle}")`).first();
+        const phaseNotification = playerPage.locator('.notification-item').filter({ hasText: phaseTitle }).first();
         await expect(phaseNotification).toBeVisible({ timeout: 20000 });
 
         // 6. Click and verify navigation
@@ -300,7 +298,7 @@ test.describe('Notification System', () => {
         await page.click('[data-testid="notification-bell"]');
 
         // Click "Mark all as read" button
-        await page.click('button:has-text("Mark all read")');
+        await page.getByRole('button', { name: 'Mark all read' }).click();
         await page.waitForLoadState('networkidle');
 
         // Close and reopen dropdown
@@ -325,13 +323,15 @@ test.describe('Notification System', () => {
 
       if (await firstNotification.isVisible()) {
         // Get the notification title to verify it's deleted
-        const notificationTitle = await firstNotification.locator('h4').textContent();
+        const notificationTitle = await firstNotification.getByRole('heading', { level: 4 }).textContent();
 
         // Set up dialog handler BEFORE clicking delete
         page.once('dialog', dialog => dialog.accept());
 
         // Click delete button
-        await firstNotification.locator('button[title="Delete notification"]').click();
+        await firstNotification.getByRole('button', { name: 'Delete notification' }).or(
+          firstNotification.locator('button[title="Delete notification"]')
+        ).click();
         await page.waitForLoadState('networkidle');
 
         // Close and reopen dropdown to ensure UI is refreshed
@@ -339,7 +339,9 @@ test.describe('Notification System', () => {
         await page.click('[data-testid="notification-bell"]'); // Reopen
 
         // Notification should no longer be visible
-        await expect(page.locator(`.notification-item:has-text("${notificationTitle}")`)).not.toBeVisible({ timeout: 5000 });
+        if (notificationTitle) {
+          await expect(page.locator('.notification-item').filter({ hasText: notificationTitle })).not.toBeVisible({ timeout: 5000 });
+        }
       }
     });
 
@@ -352,8 +354,8 @@ test.describe('Notification System', () => {
       await page.click('[data-testid="notification-bell"]');
 
       // Should show empty state
-      const emptyState = page.locator('text="No notifications"');
-      const emptyMessage = page.locator('text="You\'re all caught up!"');
+      const emptyState = page.getByText('No notifications');
+      const emptyMessage = page.getByText("You're all caught up!");
 
       await expect(emptyState).toBeVisible();
       await expect(emptyMessage).toBeVisible();
@@ -405,7 +407,7 @@ test.describe('Notification System', () => {
         await senderPage.fill('input[placeholder*="Planning the heist"], input[placeholder*="title"]', conversationTitle);
 
         // Select Player 2's character as participant
-        await senderPage.click('label:has-text("E2E Test Char 2"), label:has-text("TestPlayer2")');
+        await senderPage.getByLabel(/E2E Test Char 2|TestPlayer2/).first().click();
 
         // Click "Create Conversation" button
         await senderPage.click('button:has-text("Create Conversation")');

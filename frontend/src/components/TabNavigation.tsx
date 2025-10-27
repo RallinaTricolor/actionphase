@@ -39,6 +39,7 @@ export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationPro
               `}
               aria-selected={isActive}
               aria-current={isActive ? 'page' : undefined}
+              data-testid={`tab-${tab.id}`}
             >
               {tab.icon && <span className="flex-shrink-0">{tab.icon}</span>}
               <span>{tab.label}</span>

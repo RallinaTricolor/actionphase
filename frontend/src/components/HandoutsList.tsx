@@ -109,13 +109,14 @@ export function HandoutsList({ gameId, isGM }: HandoutsListProps) {
 
   return (
     <>
-      <Card variant="elevated" padding="lg">
+      <Card variant="elevated" padding="lg" data-testid="handouts-list">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-content-primary">Handouts</h2>
           {isGM && (
             <Button
               variant="primary"
               onClick={() => setShowCreateModal(true)}
+              data-testid="create-handout-button"
             >
               Create Handout
             </Button>

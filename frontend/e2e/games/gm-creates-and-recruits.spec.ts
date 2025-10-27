@@ -23,7 +23,8 @@ test.describe('GM Creates Game & Recruits Players', () => {
     await navigateToGamesList(page);
 
     // Click "Create Game" button to open modal
-    await page.click('button:has-text("Create Game")');
+    // Using more specific selector with role
+    await page.getByRole('button', { name: 'Create Game' }).click();
 
     // Wait for modal to be fully visible and form fields to be ready
     await expect(page.locator('#title')).toBeVisible({ timeout: 5000 });
@@ -34,8 +35,8 @@ test.describe('GM Creates Game & Recruits Players', () => {
     await page.fill('#genre', 'Test Genre');
     await page.fill('#max_players', '4');
 
-    // Submit the form
-    await page.click('form button[type="submit"]:has-text("Create Game")');
+    // Submit the form using form context
+    await page.locator('form').locator('button[type="submit"]').click();
 
     // Wait for redirect to game details page
     await page.waitForURL(/\/games\/\d+/, { timeout: 10000 });
@@ -72,10 +73,10 @@ test.describe('GM Creates Game & Recruits Players', () => {
     const gamePage = new GameDetailsPage(page);
     await gamePage.startRecruitment();
 
-    // Verify state changed to Recruitment
-    await expect(page.locator('button:has-text("Start Recruitment")')).not.toBeVisible({ timeout: 5000 });
+    // Verify state changed to Recruitment (button no longer visible)
+    await expect(page.getByRole('button', { name: 'Start Recruitment' })).not.toBeVisible({ timeout: 5000 });
 
     // Verify recruitment-specific content
-    await expect(page.locator('h3:has-text("Recruitment Deadline")').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Recruitment Deadline/i, level: 3 }).first()).toBeVisible();
   });
 });

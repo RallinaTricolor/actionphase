@@ -95,7 +95,7 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
   const unpublishedCount = unpublishedCountData?.count || 0;
 
   return (
-    <div className={`surface-base rounded-lg border border-theme-default ${className}`}>
+    <div className={`surface-base rounded-lg border border-theme-default ${className}`} data-testid="actions-list">
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -227,7 +227,7 @@ interface ActionCardProps {
 function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardProps) {
   const [showResultForm, setShowResultForm] = useState(false);
   return (
-    <div className="border border-theme-default rounded-lg overflow-hidden hover:border-interactive-primary transition-colors">
+    <div className="border border-theme-default rounded-lg overflow-hidden hover:border-interactive-primary transition-colors" data-testid="action-card">
       <button
         onClick={onToggleExpand}
         className="w-full px-4 py-3 flex items-center justify-between text-left hover:surface-raised transition-colors"

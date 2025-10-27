@@ -38,7 +38,7 @@ CREATE TABLE messages (
 
     -- Timestamps
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    edited_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    edited_at TIMESTAMP,
     deleted_at TIMESTAMP,
 
     -- Constraints
@@ -127,11 +127,10 @@ CREATE TRIGGER set_message_thread_depth
     FOR EACH ROW
     EXECUTE FUNCTION update_message_thread_depth();
 
--- Function to update updated_at timestamp
+-- Function to update deleted_at timestamp when soft deleting
 CREATE OR REPLACE FUNCTION update_message_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = NOW();
     IF NEW.is_deleted = true AND OLD.is_deleted = false THEN
         NEW.deleted_at = NOW();
     END IF;

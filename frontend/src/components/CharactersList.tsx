@@ -136,7 +136,7 @@ export function CharactersList({
   }
 
   return (
-    <Card variant="elevated" padding="lg">
+    <Card variant="elevated" padding="lg" data-testid="characters-list">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-content-primary">Characters</h2>
         {canCreateCharacter() && (
@@ -144,6 +144,7 @@ export function CharactersList({
             variant="primary"
             size="sm"
             onClick={() => setIsCreateModalOpen(true)}
+            data-testid="create-character-button"
           >
             Create Character
           </Button>
@@ -304,7 +305,7 @@ function CharacterCard({
   onViewSheet
 }: CharacterCardProps) {
   return (
-    <div className="border border-theme-default rounded-lg p-4 surface-base hover:shadow-sm transition-shadow">
+    <div className="border border-theme-default rounded-lg p-4 surface-base hover:shadow-sm transition-shadow" data-testid="character-card">
       <div className="flex justify-between items-start">
         <div className="flex gap-3 flex-grow">
           <CharacterAvatar
@@ -314,8 +315,8 @@ function CharacterCard({
           />
           <div className="flex-grow">
             <div className="flex items-center space-x-2 mb-1">
-              <h4 className="font-medium text-content-primary">{character.name}</h4>
-              <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
+              <h4 className="font-medium text-content-primary" data-testid="character-name">{character.name}</h4>
+              <Badge variant={getStatusBadgeVariant(character.status)} size="sm" data-testid="character-status-badge">
                 {character.status}
               </Badge>
               {/* Only show ownership badge if not anonymous or if GM */}
@@ -352,6 +353,7 @@ function CharacterCard({
               variant={canEditSheet ? 'primary' : 'secondary'}
               size="sm"
               onClick={onViewSheet}
+              data-testid="edit-character-button"
             >
               {canEditSheet ? 'Edit Sheet' : 'View Sheet'}
             </Button>
@@ -376,6 +378,7 @@ function CharacterCard({
                 size="sm"
                 onClick={() => onApprove(character.id, 'approved')}
                 className="bg-success hover:bg-success-hover"
+                data-testid="approve-character-button"
               >
                 Approve
               </Button>
@@ -383,6 +386,7 @@ function CharacterCard({
                 variant="danger"
                 size="sm"
                 onClick={() => onApprove(character.id, 'rejected')}
+                data-testid="reject-character-button"
               >
                 Reject
               </Button>

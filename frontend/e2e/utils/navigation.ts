@@ -21,12 +21,13 @@ export async function navigateToGame(page: Page, gameId: number) {
 
 /**
  * Navigate to a tab on the game details page
+ * CRITICAL: Uses getByRole('tab') for proper accessibility and reliability
  * @param page - Playwright page object
  * @param tabName - Name of the tab to navigate to
  */
 export async function navigateToGameTab(page: Page, tabName: string) {
-  // Click the tab button
-  await page.click(`button:has-text("${tabName}")`);
+  // Click the tab using proper role selector
+  await page.getByRole('tab', { name: tabName }).click();
 
   // Wait for network activity to settle (important for tabs that load data)
   await page.waitForLoadState('networkidle');
@@ -36,14 +37,17 @@ export async function navigateToGameTab(page: Page, tabName: string) {
   const tabIndicators: Record<string, string> = {
     'Common Room': 'h2:has-text("Common Room")',
     'Phases': 'h2:has-text("Phase Management")',
+    'Phase Management': 'h2:has-text("Phase Management")',
     'Applications': 'h2:has-text("Applications"), h3:has-text("Applications")',
     'Participants': 'h2:has-text("Participants"), h3:has-text("Participants")',
     'People': 'h2:has-text("Characters"), h3:has-text("Characters")',
     'Characters': 'h2:has-text("Characters")',
     'Actions': 'h2:has-text("Actions")',
-    // Submit Action tab has variable content, so we just wait for networkidle
+    'Submit Action': '', // Variable content, networkidle is sufficient
     'Messages': 'h2:has-text("Messages")',
     'History': 'h2:has-text("History")',
+    'Handouts': '', // Variable content
+    'Audience': '', // Variable content
   };
 
   const indicator = tabIndicators[tabName];

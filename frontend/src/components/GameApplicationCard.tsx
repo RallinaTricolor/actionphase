@@ -61,7 +61,7 @@ export const GameApplicationCard = ({
   };
 
   return (
-    <div className="surface-base border border-theme-default rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+    <div className="surface-base border border-theme-default rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow" data-testid="application-card">
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-lg font-semibold text-content-primary">
@@ -74,7 +74,7 @@ export const GameApplicationCard = ({
             <p className="text-sm text-content-secondary">{application.email}</p>
           )}
         </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${APPLICATION_STATUS_COLORS[application.status]}`}>
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${APPLICATION_STATUS_COLORS[application.status]}`} data-testid="application-status-badge">
           {APPLICATION_STATUS_LABELS[application.status]}
         </span>
       </div>
@@ -104,6 +104,7 @@ export const GameApplicationCard = ({
                 size="sm"
                 onClick={handleReject}
                 disabled={actionLoading}
+                data-testid="reject-application-button"
               >
                 {actionLoading ? 'Processing...' : 'Reject'}
               </Button>
@@ -112,6 +113,7 @@ export const GameApplicationCard = ({
                 size="sm"
                 onClick={handleApprove}
                 disabled={actionLoading}
+                data-testid="approve-application-button"
               >
                 {actionLoading ? 'Processing...' : 'Approve'}
               </Button>
@@ -123,6 +125,7 @@ export const GameApplicationCard = ({
               size="sm"
               onClick={handleReject}
               disabled={actionLoading}
+              data-testid="reject-application-button"
             >
               {actionLoading ? 'Processing...' : 'Reject'}
             </Button>
@@ -133,6 +136,7 @@ export const GameApplicationCard = ({
               size="sm"
               onClick={handleApprove}
               disabled={actionLoading}
+              data-testid="approve-application-button"
             >
               {actionLoading ? 'Processing...' : 'Approve'}
             </Button>

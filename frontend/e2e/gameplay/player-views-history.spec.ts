@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
-import { GameDetailsPage } from '../pages/GameDetailsPage';
-import { assertTextVisible } from '../utils/assertions';
+import { HistoryPage } from '../pages/HistoryPage';
 
 /**
  * Journey 7: Player Views History
@@ -10,9 +9,9 @@ import { assertTextVisible } from '../utils/assertions';
  * Tests that players can view history and navigate through past phases.
  * Uses E2E fixture game "E2E Test: Action Submission" with Phase 1 (common_room) and Phase 2 (action).
  *
- * REFACTORED: Using Page Object Model and shared utilities
- * - Eliminated all waitForTimeout calls (was 5)
- * - Improved navigation with GameDetailsPage
+ * REFACTORED: Using HistoryPage POM exclusively
+ * - Eliminated all inline selectors
+ * - Improved reliability with dedicated POM methods
  */
 test.describe('Player Views History', () => {
   test('Player can view history list', async ({ page }) => {
@@ -22,25 +21,24 @@ test.describe('Player Views History', () => {
     // Use E2E Action Submission game which has history
     const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
-    const gamePage = new GameDetailsPage(page);
-    await gamePage.goto(gameId);
+    const historyPage = new HistoryPage(page, gameId);
+    await historyPage.goto();
 
-    // Navigate to History tab
-    await gamePage.goToHistory();
+    // Verify we're on history page
+    await historyPage.verifyOnPage();
 
-    // Verify history heading is visible
-    await assertTextVisible(page, 'History');
-
-    // Verify both phases are visible in the list
-    await expect(page.locator('span:has-text("Phase 1")').first()).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('span:has-text("Phase 2")').first()).toBeVisible();
+    // Verify phase numbers are visible
+    const phaseNumbers = await historyPage.getPhaseNumbers();
+    expect(phaseNumbers).toContain('Phase 1');
+    expect(phaseNumbers).toContain('Phase 2');
 
     // Verify phase titles from E2E fixtures are displayed
-    await expect(page.locator('h4:has-text("Discussion Phase")')).toBeVisible(); // Phase 1 (common_room)
-    await expect(page.locator('h4:has-text("Action Phase")')).toBeVisible(); // Phase 2 (active action)
+    await historyPage.verifyPhaseExists('Discussion Phase'); // Phase 1 (common_room)
+    await historyPage.verifyPhaseExists('Action Phase'); // Phase 2 (active action)
 
     // Verify active phase is marked as "Active"
-    await expect(page.locator('span:has-text("Active")')).toBeVisible();
+    const hasActive = await historyPage.hasActivePhase();
+    expect(hasActive).toBe(true);
   });
 
   test('Player can view details of a common_room phase', async ({ page }) => {
@@ -50,50 +48,40 @@ test.describe('Player Views History', () => {
     // Use E2E Action Submission game
     const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
-    const gamePage = new GameDetailsPage(page);
-    await gamePage.goto(gameId);
-
-    // Navigate to History tab
-    await gamePage.goToHistory();
+    const historyPage = new HistoryPage(page, gameId);
+    await historyPage.goto();
 
     // Click on Phase 1 (common_room phase)
-    await page.locator('button:has-text("Discussion Phase")').click();
-    await page.waitForLoadState('networkidle');
-
-    // Verify we're now viewing the phase details
-    await expect(page.locator('button:has-text("Back to History")')).toBeVisible({ timeout: 5000 });
+    await historyPage.viewPhaseDetails('Discussion Phase');
 
     // Verify Common Room content is visible
-    await assertTextVisible(page, 'Common Room');
-    await assertTextVisible(page, 'Discussion Phase');
+    const hasCommonRoom = await historyPage.hasCommonRoomContent();
+    expect(hasCommonRoom).toBe(true);
   });
 
   test('Player can navigate back from phase details', async ({ page }) => {
     // Login as Player 1
     await loginAs(page, 'PLAYER_1');
 
-    // Use "The Heist at Goldstone Bank" from fixtures
+    // Use E2E Action Submission game
     const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
-    const gamePage = new GameDetailsPage(page);
-    await gamePage.goto(gameId);
-
-    // Navigate to History tab
-    await gamePage.goToHistory();
+    const historyPage = new HistoryPage(page, gameId);
+    await historyPage.goto();
 
     // Click on Phase 1 (common_room phase)
-    await page.locator('button:has-text("Discussion Phase")').click();
-    await page.waitForLoadState('networkidle');
+    await historyPage.viewPhaseDetails('Discussion Phase');
 
-    // Verify we're viewing phase details
-    await expect(page.locator('button:has-text("Back to History")')).toBeVisible({ timeout: 5000 });
+    // Verify we're viewing phase details by checking for Common Room content
+    const hasCommonRoom = await historyPage.hasCommonRoomContent();
+    expect(hasCommonRoom).toBe(true);
 
-    // Click back button
-    await page.click('button:has-text("Back to History")');
-    await page.waitForLoadState('networkidle');
+    // Navigate back
+    await historyPage.goBackToHistory();
 
     // Verify we're back at the phase list
-    await assertTextVisible(page, 'History');
-    await expect(page.locator('span:has-text("Phase 1")').first()).toBeVisible();
+    await historyPage.verifyOnPage();
+    const phaseNumbers = await historyPage.getPhaseNumbers();
+    expect(phaseNumbers).toContain('Phase 1');
   });
 });

@@ -16,10 +16,10 @@ test.describe('Smoke: Application Health', () => {
     await page.goto('/');
 
     // Verify the page loaded
-    await expect(page.locator('h1')).toContainText('ActionPhase');
+    await expect(page.getByRole('heading', { name: /ActionPhase/i, level: 1 })).toBeVisible();
 
-    // Verify login link is present (use .first() to avoid strict mode violation)
-    await expect(page.locator('a[href="/login"]').first()).toBeVisible();
+    // Verify login link is present
+    await expect(page.getByRole('link', { name: /Sign In|Log In|Login/i }).first()).toBeVisible();
   });
 
   test(tagTest([tags.SMOKE], 'API health endpoint responds'), async ({ request }) => {
@@ -60,10 +60,10 @@ test.describe('Smoke: Application Health', () => {
     await page.goto('/login');
 
     // Click the toggle to show registration
-    await page.click('text="Don\'t have an account? Sign up"');
+    await page.getByRole('button', { name: /Don't have an account\? Sign up/i }).click();
 
     // Verify registration form appears
-    await expect(page.locator('text="Already have an account? Sign in"')).toBeVisible();
+    await expect(page.getByText(/Already have an account\? Sign in/i)).toBeVisible();
   });
 
   test(tagTest([tags.SMOKE], 'Static assets load correctly'), async ({ page }) => {

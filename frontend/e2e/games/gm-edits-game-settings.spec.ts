@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { GameSettingsPage } from '../pages/GameSettingsPage';
 import { waitForModal } from '../utils/waits';
 
 /**
@@ -37,24 +38,20 @@ test.describe.serial('GM Edits Game Settings', () => {
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // Click "Edit Game" button
-    await page.click('button:has-text("Edit Game")');
-    await waitForModal(page, 'Edit Game');
+    const settingsPage = new GameSettingsPage(page);
 
     // Update game title and description
     const newTitle = `Updated Game Title ${Date.now()}`;
     const newDescription = `This is an updated description for testing purposes. ${Date.now()}`;
 
-    await page.fill('#title', newTitle);
-    await page.fill('#description', newDescription);
-
-    // Click "Save Changes" button
-    await page.click('button:has-text("Save Changes")');
-    await page.waitForLoadState('networkidle');
+    await settingsPage.openEditModal();
+    await settingsPage.updateTitle(newTitle);
+    await settingsPage.updateDescription(newDescription);
+    await settingsPage.saveChanges();
 
     // Verify modal is closed and changes are visible
-    await expect(page.locator('h2:has-text("Edit Game")')).not.toBeVisible();
-    await expect(page.locator(`h1:has-text("${newTitle}")`)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Edit Game', level: 2 })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: newTitle, level: 1 })).toBeVisible();
   });
 
   test('GM can edit game settings (genre, max players)', async ({ page }) => {
@@ -64,30 +61,20 @@ test.describe.serial('GM Edits Game Settings', () => {
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // Click "Edit Game" button
-    await page.click('button:has-text("Edit Game")');
-    await waitForModal(page, 'Edit Game');
+    const settingsPage = new GameSettingsPage(page);
 
     // Update genre and max players
     const newGenre = `Fantasy ${Date.now()}`;
-    await page.fill('#genre', newGenre);
-    await page.fill('#max_players', '6');
-
-    // Click "Save Changes" button
-    await page.click('button:has-text("Save Changes")');
-    await page.waitForLoadState('networkidle');
+    await settingsPage.openEditModal();
+    await settingsPage.updateGenre(newGenre);
+    await settingsPage.updateMaxPlayers(6);
+    await settingsPage.saveChanges();
 
     // Verify changes by opening edit modal again
-    await page.click('button:has-text("Edit Game")');
-    await waitForModal(page, 'Edit Game');
-
-    // Verify genre and max players were saved
-    await expect(page.locator('#genre')).toHaveValue(newGenre);
-    await expect(page.locator('#max_players')).toHaveValue('6');
-
-    // Close modal
-    await page.click('button:has-text("Cancel")');
-    await page.waitForLoadState('networkidle');
+    await settingsPage.openEditModal();
+    expect(await settingsPage.getGenre()).toBe(newGenre);
+    expect(await settingsPage.getMaxPlayers()).toBe('6');
+    await settingsPage.cancel();
   });
 
   test('GM can toggle anonymous mode', async ({ page }) => {
@@ -97,31 +84,17 @@ test.describe.serial('GM Edits Game Settings', () => {
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // Click "Edit Game" button
-    await page.click('button:has-text("Edit Game")');
-    await waitForModal(page, 'Edit Game');
+    const settingsPage = new GameSettingsPage(page);
 
-    // Get current state of anonymous checkbox
-    const anonymousCheckbox = page.locator('#is_anonymous');
-    const wasChecked = await anonymousCheckbox.isChecked();
-
-    // Toggle anonymous mode
-    await anonymousCheckbox.click();
-
-    // Click "Save Changes" button
-    await page.click('button:has-text("Save Changes")');
-    await page.waitForLoadState('networkidle');
+    // Get current state and toggle
+    await settingsPage.openEditModal();
+    const wasChecked = await settingsPage.isAnonymous();
+    await settingsPage.toggleAnonymous();
+    await settingsPage.saveChanges();
 
     // Verify change by opening edit modal again
-    await page.click('button:has-text("Edit Game")');
-    await waitForModal(page, 'Edit Game');
-
-    // Verify checkbox state changed
-    const isNowChecked = await page.locator('#is_anonymous').isChecked();
-    expect(isNowChecked).toBe(!wasChecked);
-
-    // Close modal
-    await page.click('button:has-text("Cancel")');
-    await page.waitForLoadState('networkidle');
+    await settingsPage.openEditModal();
+    expect(await settingsPage.isAnonymous()).toBe(!wasChecked);
+    await settingsPage.cancel();
   });
 });

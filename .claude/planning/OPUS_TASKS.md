@@ -1,10 +1,10 @@
 - More code refactoring/reorg
   - Focus on specific things in individual sessions
   - Too much code in API functions?
+  - Antipatterns?
 - Test coverage and useful tests
 - Game integrity and security (assume people could build a 3rd party client)
 - Usability / accessibility improvements
   - Lots of reading! Optimize for reading lots of text
 - User registration security (prevent bots, email verification, captcha)
-- Antipatterns in the code?
 - Logging, monitoring, application traces
