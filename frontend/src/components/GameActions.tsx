@@ -22,7 +22,6 @@ interface GameActionsProps {
   onApplyToGame: () => void;
   onWithdrawApplication: () => void;
   onLeaveGame: () => void;
-  onJoinAsAudience: () => void;
 }
 
 export function GameActions({
@@ -39,7 +38,6 @@ export function GameActions({
   onApplyToGame,
   onWithdrawApplication,
   onLeaveGame,
-  onJoinAsAudience,
 }: GameActionsProps) {
   return (
     <div className="flex gap-4">
@@ -85,18 +83,6 @@ export function GameActions({
           data-testid="withdraw-application-button"
         >
           Withdraw Application
-        </Button>
-      )}
-
-      {/* Join as Audience - Available during recruitment and in_progress for non-participants */}
-      {!isGM && !isCheckingAuth && userRole === 'none' && !userApplication &&
-       (game.state === 'recruitment' || game.state === 'in_progress') && (
-        <Button
-          variant="secondary"
-          onClick={onJoinAsAudience}
-          disabled={actionLoading}
-        >
-          Join as Audience
         </Button>
       )}
 
