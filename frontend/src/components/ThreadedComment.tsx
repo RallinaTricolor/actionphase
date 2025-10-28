@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import type { Message } from '../types/messages';
@@ -48,6 +48,7 @@ export function ThreadedComment({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const isMountedRef = useRef(true);
+  const hasLoadedRef = useRef(false);
 
   const { adminModeEnabled } = useAdminMode();
   const { isGM } = useGamePermissions(gameId);
@@ -61,8 +62,10 @@ export function ThreadedComment({
 
   // Track component mount status
   useEffect(() => {
+    isMountedRef.current = true; // Explicitly set to true on mount
     return () => {
       isMountedRef.current = false;
+      hasLoadedRef.current = false; // Reset so component can reload if remounted
     };
   }, []);
 
@@ -73,21 +76,16 @@ export function ThreadedComment({
     }
   }, [controllableCharacters, selectedCharacterId]);
 
-  // Load replies immediately when component mounts if there are replies
-  useEffect(() => {
-    if (hasReplies && replies.length === 0) {
-      loadReplies();
-    }
-  }, [hasReplies]);
-
+  // Define loadReplies as a regular function (not useCallback to avoid dependency issues)
   const loadReplies = async () => {
-    if (!isMountedRef.current) return;
+    if (!isMountedRef.current || hasLoadedRef.current) return;
 
     try {
       setLoadingReplies(true);
       const response = await apiClient.messages.getPostComments(gameId, comment.id);
       if (isMountedRef.current) {
         setReplies(response.data);
+        hasLoadedRef.current = true; // Only mark as loaded after successful state update
       }
     } catch (err) {
       console.error('Failed to load replies:', err);
@@ -97,6 +95,13 @@ export function ThreadedComment({
       }
     }
   };
+
+  // Load replies immediately when component mounts if there are replies
+  useEffect(() => {
+    if (hasReplies && !hasLoadedRef.current) {
+      loadReplies();
+    }
+  }, [hasReplies]);
 
   const handleCopyLink = async () => {
     const url = `${window.location.origin}/games/${gameId}?tab=common-room&comment=${comment.id}`;
@@ -185,6 +190,7 @@ export function ThreadedComment({
       // Ensure replies are shown and reload to display the new one
       setShowReplies(true);
       console.log('[ThreadedComment] Loading replies...');
+      hasLoadedRef.current = false; // Reset so we can reload with new reply
       await loadReplies();
       console.log('[ThreadedComment] Replies loaded (state may be stale in log)');
     } catch (err) {

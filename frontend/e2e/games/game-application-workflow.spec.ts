@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
-import { getFixtureGameId } from '../fixtures/game-helpers';
+import { getFixtureGameId, getWorkerUsername } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { GameApplicationsPage } from '../pages/GameApplicationsPage';
 
@@ -68,9 +68,9 @@ test.describe('Game Application Workflow', () => {
     // Navigate to applications tab using POM
     await applicationsPage.goto();
 
-    // Should see application from PLAYER_4 (username: TestPlayer4)
+    // Should see application from PLAYER_4 (username: TestPlayer4 or TestPlayer4_N for worker N)
     const pendingApplications = await applicationsPage.getPendingApplications();
-    expect(pendingApplications).toContain('TestPlayer4');
+    expect(pendingApplications).toContain(getWorkerUsername('TestPlayer4'));
 
     // Verify pending applications count
     const pendingCount = await applicationsPage.getPendingApplicationsCount();
@@ -87,12 +87,12 @@ test.describe('Game Application Workflow', () => {
     await applicationsPage.goto();
     await page.waitForLoadState('networkidle');
 
-    // Should see PLAYER_3's application (username: TestPlayer3)
+    // Should see PLAYER_3's application (username: TestPlayer3 or TestPlayer3_N for worker N)
     const pendingApplications = await applicationsPage.getPendingApplications();
-    expect(pendingApplications).toContain('TestPlayer3');
+    expect(pendingApplications).toContain(getWorkerUsername('TestPlayer3'));
 
     // Approve PLAYER_3's application using POM
-    await applicationsPage.approveApplication('TestPlayer3');
+    await applicationsPage.approveApplication(getWorkerUsername('TestPlayer3'));
 
     // Wait for approval to process
     await page.waitForTimeout(2000);

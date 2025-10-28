@@ -2,12 +2,14 @@
 -- Creates a dedicated game with action results in various states (published, unpublished)
 -- for testing the complete action results workflow
 --
+-- Game IDs: 326 (offset by worker: Worker 1 = 1326, Worker 2 = 2326, etc.)
+--
 -- IDEMPOTENT: Safe to run multiple times - deletes existing data before recreating
 
 BEGIN;
 
 -- Delete existing action results test game to prevent duplicates
-DELETE FROM games WHERE title = 'E2E Test: Action Results';
+DELETE FROM games WHERE id = 326;
 
 DO $$
 DECLARE
@@ -16,7 +18,7 @@ DECLARE
   p2_id INTEGER;
   p3_id INTEGER;
   p4_id INTEGER;
-  game_id INTEGER;
+  game_id INTEGER := 326;
   completed_phase_id INTEGER;
   char1_id INTEGER;
   char2_id INTEGER;
@@ -36,8 +38,9 @@ BEGIN
   -- ============================================
   -- E2E Game: For Action Results Testing
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
   VALUES (
+    game_id,
     'E2E Test: Action Results',
     'This game is dedicated for testing action results creation, viewing, and notifications.',
     'Test',
@@ -47,7 +50,7 @@ BEGIN
     true,
     NOW() - INTERVAL '10 days',
     NOW()
-  ) RETURNING id INTO game_id;
+  );
 
   -- Add participants
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
@@ -188,6 +191,10 @@ BEGIN
   );
 
 END $$;
+
+-- Reset the games sequence to prevent duplicate key errors
+-- This ensures new game creations don't collide with hardcoded fixture IDs
+SELECT setval('games_id_seq', (SELECT MAX(id) FROM games) + 1);
 
 COMMIT;
 

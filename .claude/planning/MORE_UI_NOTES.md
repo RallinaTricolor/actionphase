@@ -30,6 +30,7 @@ For each item in this list:
   - BUG: GM can create posts in the History view of a common room phase
   - FEATURE: Cancelling a game needs a confirmation modal
   - FEATURE: GMs should be able to edit results before publishing them. Currently there is no way to view or edit pending results.
+  - FEATURE: Is the npc_assignments table vs. user_id on a character worth it to maintain as a split? Could we just make a character_assignments table and use that to avoid having to check all of this extra logic?
 - Players
   - UI: Description of Phases isn't visible anywhere
   - UI: Default tab for an "in_progress" game is "people" but it should be "common room" or "actions"
@@ -50,3 +51,5 @@ For each item in this list:
   - UI: Adding currency on character sheets is somewhat annoying, typing a number doesn't get rid of the default "0" so you have to select all text with a mouse and then type
   - UI: If there is an unread message badge on a private message in the sidebar, the start of the text moves out of the box
   - UI: Deleting a comment has a standard browser alert() instead of a modal.
+  - FEATURE: Players, Audience Members, and Game Masters should be able to delete private messages as well as conversations. There's not a lot of screen real estate here so the UI will need to be slick.
+  - FEATURE: We need pagination for the /games endpoint, it currently loads all games

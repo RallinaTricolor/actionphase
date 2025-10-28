@@ -3,18 +3,13 @@
 -- They should be reset between test runs
 --
 -- IDEMPOTENT: Safe to run multiple times - deletes existing E2E games before recreating
+--
+-- Game IDs: 350-355 (offset by worker: Worker 1 = 10350-10355, etc.)
 
 BEGIN;
 
 -- Delete existing E2E dedicated games to prevent duplicates
-DELETE FROM games WHERE title IN (
-  'E2E Test: Game to Complete',
-  'E2E Test: Game to Cancel',
-  'E2E Test: Game to Pause',
-  'E2E Test: Action Submission',
-  'E2E Test: Private Messages',
-  'E2E Test: Game Settings'
-);
+DELETE FROM games WHERE id IN (350, 351, 352, 353, 354, 355);
 
 DO $$
 DECLARE
@@ -23,12 +18,13 @@ DECLARE
   p2_id INTEGER;
   p3_id INTEGER;
   p4_id INTEGER;
-  game_complete_id INTEGER;
-  game_cancel_id INTEGER;
-  game_pause_id INTEGER;
-  game_action_id INTEGER;
-  game_messages_id INTEGER;
-  game_settings_id INTEGER;
+  -- Hardcoded game IDs for worker offset support
+  game_complete_id INT := 350;
+  game_cancel_id INT := 351;
+  game_pause_id INT := 352;
+  game_action_id INT := 353;
+  game_messages_id INT := 354;
+  game_settings_id INT := 355;
   phase_id INTEGER;
   char1_id INTEGER;
   char2_id INTEGER;
@@ -46,10 +42,11 @@ BEGIN
   SELECT id INTO p4_id FROM users WHERE email = 'test_player4@example.com';
 
   -- ============================================
-  -- E2E Game: For Completion Testing
+  -- GAME #350: For Completion Testing
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
   VALUES (
+    game_complete_id,
     'E2E Test: Game to Complete',
     'This game is dedicated for completion testing in E2E tests.',
     'Test',
@@ -59,7 +56,7 @@ BEGIN
     true,
     NOW() - INTERVAL '5 days',
     NOW()
-  ) RETURNING id INTO game_complete_id;
+  );
 
   -- Add participants
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
@@ -83,10 +80,11 @@ BEGIN
   );
 
   -- ============================================
-  -- E2E Game: For Cancellation Testing
+  -- GAME #351: For Cancellation Testing
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
   VALUES (
+    game_cancel_id,
     'E2E Test: Game to Cancel',
     'This game is dedicated for cancellation testing in E2E tests.',
     'Test',
@@ -96,7 +94,7 @@ BEGIN
     true,
     NOW() - INTERVAL '2 days',
     NOW()
-  ) RETURNING id INTO game_cancel_id;
+  );
 
   -- Add some pending applications
   INSERT INTO game_applications (game_id, user_id, role, status, applied_at)
@@ -105,10 +103,11 @@ BEGIN
     (game_cancel_id, p2_id, 'player', 'pending', NOW() - INTERVAL '1 day');
 
   -- ============================================
-  -- E2E Game: For Pause/Resume Testing
+  -- GAME #352: For Pause/Resume Testing
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
   VALUES (
+    game_pause_id,
     'E2E Test: Game to Pause',
     'This game is dedicated for pause/resume testing in E2E tests.',
     'Test',
@@ -118,7 +117,7 @@ BEGIN
     true,
     NOW() - INTERVAL '10 days',
     NOW()
-  ) RETURNING id INTO game_pause_id;
+  );
 
   -- Add participants
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
@@ -142,10 +141,11 @@ BEGIN
   );
 
   -- ============================================
-  -- E2E Game: For Action Submission Testing
+  -- GAME #353: For Action Submission Testing
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
   VALUES (
+    game_action_id,
     'E2E Test: Action Submission',
     'This game is dedicated for action submission testing in E2E tests.',
     'Test',
@@ -155,7 +155,7 @@ BEGIN
     true,
     NOW() - INTERVAL '8 days',
     NOW()
-  ) RETURNING id INTO game_action_id;
+  );
 
   -- Add participants
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
@@ -238,11 +238,14 @@ BEGIN
     NOW() - INTERVAL '30 minutes'
   );
 
+  RAISE NOTICE 'Created Game #%: E2E Test: Action Submission', game_action_id;
+
   -- ============================================
-  -- E2E Game: For Private Messages Testing
+  -- GAME #354: For Private Messages Testing
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
   VALUES (
+    game_messages_id,
     'E2E Test: Private Messages',
     'This game is dedicated for private messages testing in E2E tests.',
     'Test',
@@ -252,7 +255,7 @@ BEGIN
     true,
     NOW() - INTERVAL '8 days',
     NOW()
-  ) RETURNING id INTO game_messages_id;
+  );
 
   -- Add participants
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
@@ -291,10 +294,11 @@ BEGIN
   );
 
   -- ============================================
-  -- E2E Game: For Game Settings Testing
+  -- GAME #355: For Game Settings Testing
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
   VALUES (
+    game_settings_id,
     'E2E Test: Game Settings',
     'This game is dedicated for testing game settings modifications (title, description, genre, etc.).',
     'Test',
@@ -304,7 +308,7 @@ BEGIN
     true,
     NOW() - INTERVAL '5 days',
     NOW()
-  ) RETURNING id INTO game_settings_id;
+  );
 
   -- Add a single participant (minimal setup)
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
@@ -325,7 +329,13 @@ BEGIN
     NOW() - INTERVAL '1 hour'
   );
 
+  RAISE NOTICE 'Created 6 E2E dedicated test games (350-355) for worker-specific parallel testing';
+
 END $$;
+
+-- Reset the games sequence to prevent duplicate key errors
+-- This ensures new game creations don't collide with hardcoded fixture IDs
+SELECT setval('games_id_seq', (SELECT MAX(id) FROM games) + 1);
 
 SELECT 'E2E Dedicated Games fixtures created successfully!' AS message;
 

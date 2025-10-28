@@ -167,13 +167,24 @@ load-demo:
   DB_NAME=actionphase ./backend/pkg/db/test_fixtures/apply_demo.sh
   echo "✅ Demo data loaded (rich, human-friendly content)"
 
-# Load E2E test fixtures
+# Load E2E test fixtures (worker-specific for parallel execution)
 load-e2e:
   #!/usr/bin/env bash
   set -euo pipefail
-  echo "🤖 Loading E2E test fixtures..."
-  DB_NAME=actionphase ./backend/pkg/db/test_fixtures/apply_e2e.sh
-  echo "✅ E2E fixtures loaded (isolated test games)"
+  echo "🤖 Loading E2E test fixtures for parallel execution (6 workers)..."
+
+  # Apply common fixtures first
+  echo "📦 Applying common fixtures..."
+  bash ./backend/pkg/db/test_fixtures/apply_common.sh
+
+  # Apply worker-specific fixtures for all 6 workers
+  echo "🔧 Applying worker-specific fixtures..."
+  for i in 0 1 2 3 4 5; do
+    echo "  Worker $i..."
+    DB_NAME=actionphase ./backend/pkg/db/test_fixtures/apply_e2e_worker.sh $i > /dev/null 2>&1
+  done
+
+  echo "✅ E2E fixtures loaded for 6 parallel workers (isolated test games)"
 
 # Load all data (dev only) - same as test-fixtures but with new structure
 load-all:

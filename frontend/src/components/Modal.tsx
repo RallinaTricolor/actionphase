@@ -22,13 +22,13 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 z-0 bg-black/60 backdrop-blur-sm transition-opacity"
           onClick={onClose}
           aria-hidden="true"
         />
 
         {/* Modal */}
-        <div className="relative surface-raised rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-border-primary">
+        <div className="relative z-10 surface-raised rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-border-primary">
           {title && (
             <div className="px-6 py-4 border-b border-theme-default">
               <div className="flex items-center justify-between">

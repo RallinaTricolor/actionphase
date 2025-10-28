@@ -65,6 +65,8 @@ export class GameSettingsPage {
    */
   async saveChanges() {
     await this.page.getByRole('button', { name: 'Save Changes' }).click();
+    // Wait for the modal to close before proceeding
+    await this.page.getByRole('heading', { name: 'Edit Game', level: 2 }).waitFor({ state: 'hidden' });
     await this.page.waitForLoadState('networkidle');
   }
 
@@ -73,6 +75,8 @@ export class GameSettingsPage {
    */
   async cancel() {
     await this.page.getByRole('button', { name: 'Cancel' }).click();
+    // Wait for the modal to close before proceeding
+    await this.page.getByRole('heading', { name: 'Edit Game', level: 2 }).waitFor({ state: 'hidden' });
     await this.page.waitForLoadState('networkidle');
   }
 

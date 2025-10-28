@@ -44,7 +44,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   const loading = isLoadingGame || isLoadingParticipants;
 
   // Get current phase data
-  const { data: currentPhaseData } = useQuery({
+  const { data: currentPhaseData, isLoading: isLoadingPhase } = useQuery({
     queryKey: ['currentPhase', gameId],
     queryFn: () => apiClient.phases.getCurrentPhase(gameId).then(res => res.data),
     enabled: !!gameId && game?.state === 'in_progress',
@@ -222,6 +222,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
                 game={game}
                 participants={participants}
                 currentPhaseData={currentPhaseData}
+                isLoadingPhase={isLoadingPhase}
                 isGM={isGM}
                 isParticipant={isParticipant}
                 currentUserId={currentUserId}

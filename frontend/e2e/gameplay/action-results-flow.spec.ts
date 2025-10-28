@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
-import { getFixtureGameId } from '../fixtures/game-helpers';
+import { getFixtureGameId, getWorkerUsername } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { ActionResultsPage } from '../pages/ActionResultsPage';
 
@@ -46,8 +46,8 @@ test.describe('Action Results Flow', () => {
     await expect(page.locator('text=You discovered')).toBeVisible();
     await expect(page.locator('text=A secret passage!')).toBeVisible();
 
-    // Should see GM attribution
-    await expect(page.locator('text=From: TestGM').first()).toBeVisible();
+    // Should see GM attribution (TestGM or TestGM_N for worker N)
+    await expect(page.locator(`text=From: ${getWorkerUsername('TestGM')}`).first()).toBeVisible();
   });
 
   test('player can see character mentions in results', async ({ page }) => {

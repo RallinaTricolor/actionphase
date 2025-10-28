@@ -3,6 +3,7 @@ import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { GameApplicationsPage } from '../pages/GameApplicationsPage';
+import { GamesListPage } from '../pages/GamesListPage';
 import { CharacterWorkflowPage } from '../pages/CharacterWorkflowPage';
 import { navigateToGame } from '../utils/navigation';
 import { assertTextVisible } from '../utils/assertions';
@@ -31,26 +32,22 @@ test.describe('Character Creation Flow', () => {
 
     try {
       // === GM Setup ===
-      // Login as GM and create a game
+      // Login as GM and create a game using POM
       await loginAs(gmPage, 'GM');
       const timestamp = Date.now();
       const gameTitle = `E2E Character Test ${timestamp}`;
 
-      await gmPage.getByRole('link', { name: 'Games' }).click();
-      await gmPage.getByRole('button', { name: 'Create Game' }).click();
-      // Wait for the game creation form to appear
-      await gmPage.waitForSelector('#title', { timeout: 5000 });
-      await gmPage.fill('#title', gameTitle);
-      await gmPage.fill('#description', 'E2E test for player character creation');
-      await gmPage.fill('#genre', 'Test');
-      await gmPage.fill('#max_players', '4');
-      await gmPage.locator('form').getByRole('button', { name: 'Create Game', exact: true }).click();
-      await gmPage.waitForURL(/\/games\/\d+/);
+      // Navigate to games list and create game using POM
+      await gmPage.goto('/games');
       await gmPage.waitForLoadState('networkidle');
 
-      // Extract game ID from URL
-      const gameUrl = gmPage.url();
-      const gameId = gameUrl.match(/\/games\/(\d+)/)?.[1];
+      const gamesListPage = new GamesListPage(gmPage);
+      const gameId = await gamesListPage.createGame({
+        title: gameTitle,
+        description: 'E2E test for player character creation',
+        genre: 'Test',
+        maxPlayers: 4
+      });
 
       // Start recruitment
       await gmPage.getByRole('button', { name: 'Start Recruitment' }).click();
@@ -157,5 +154,38 @@ test.describe('Character Creation Flow', () => {
 
     // Verify it's in the NPCs section
     await assertTextVisible(page, 'NPCs');
+  });
+
+  test('Player can create character using E2E fixture (optimized)', async ({ page }) => {
+    // This test uses the E2E_CHARACTER_CREATION fixture
+    // which is already in character_creation state with an approved player
+    // This saves ~4-5 seconds by avoiding the full game setup workflow
+
+    await loginAs(page, 'PLAYER_1');
+
+    // Use the dedicated character creation fixture
+    const gameId = await getFixtureGameId(page, 'E2E_CHARACTER_CREATION');
+
+    // Use CharacterWorkflowPage POM for character creation
+    const charPage = new CharacterWorkflowPage(page, gameId);
+    await charPage.goto();
+    await page.waitForLoadState('networkidle');
+
+    // Verify Characters section loaded
+    await assertTextVisible(page, 'Characters');
+
+    // Player should be able to create a character
+    expect(await charPage.canCreateCharacter()).toBe(true);
+
+    // Create character using POM
+    const characterName = `Fast Test Character ${Date.now()}`;
+    await charPage.createCharacter(characterName);
+
+    // Wait for character creation to complete
+    await page.waitForTimeout(1000);
+
+    // Verify character appears using POM
+    expect(await charPage.hasCharacter(characterName)).toBe(true);
+    await assertTextVisible(page, 'Your Character');
   });
 });

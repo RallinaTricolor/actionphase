@@ -85,17 +85,28 @@ func (s *ConversationService) CreateConversation(ctx context.Context, req Create
 			return nil, fmt.Errorf("failed to get character %d: %w", charID, err)
 		}
 
-		// For NPCs without a user_id, use the GM's user_id
+		// Determine the user ID for this participant
 		var participantUserID int32
-		if !char.UserID.Valid {
-			// Get the game to find the GM
-			game, err := qtx.GetGame(ctx, req.GameID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get game: %w", err)
-			}
-			participantUserID = game.GmUserID
-		} else {
+		if char.UserID.Valid {
+			// Player character - use the character's user_id
 			participantUserID = char.UserID.Int32
+			slog.Info("Using player character user ID", "character_id", charID, "user_id", participantUserID)
+		} else {
+			// NPC - check if assigned to a user (e.g., audience member)
+			assignment, err := qtx.GetNPCAssignment(ctx, charID)
+			if err == nil {
+				// NPC is assigned to a user - use that user's ID
+				participantUserID = assignment.AssignedUserID
+				slog.Info("Using NPC assignment", "character_id", charID, "assigned_user_id", participantUserID)
+			} else {
+				// NPC is not assigned - default to GM
+				slog.Info("NPC not assigned, using GM", "character_id", charID, "assignment_error", err)
+				game, err := qtx.GetGame(ctx, req.GameID)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get game: %w", err)
+				}
+				participantUserID = game.GmUserID
+			}
 		}
 
 		_, err = qtx.AddConversationParticipant(ctx, models.AddConversationParticipantParams{

@@ -26,6 +26,7 @@ interface GameTabContentProps {
   game: GameWithDetails;
   participants: GameParticipant[];
   currentPhaseData?: { phase: GamePhase | null };
+  isLoadingPhase?: boolean;
   isGM: boolean;
   isParticipant: boolean;
   currentUserId: number | null;
@@ -43,6 +44,7 @@ export function GameTabContent({
   game,
   participants,
   currentPhaseData,
+  isLoadingPhase = false,
   isGM,
   isParticipant,
   currentUserId,
@@ -193,15 +195,40 @@ export function GameTabContent({
   }
 
   // Common Room Tab (In Progress - common_room phases)
-  if (activeTab === 'common-room' && game.state === 'in_progress' && currentPhaseData?.phase?.phase_type === 'common_room') {
+  if (activeTab === 'common-room' && game.state === 'in_progress') {
+    // Show loading only on initial load (when we have no data yet)
+    if (isLoadingPhase && !currentPhaseData) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-interactive-primary"></div>
+        </div>
+      );
+    }
+
+    // Render CommonRoom if phase is common_room type
+    // This stays mounted during refetches since currentPhaseData persists
+    if (currentPhaseData?.phase?.phase_type === 'common_room') {
+      return (
+        <CommonRoom
+          gameId={gameId}
+          phaseId={currentPhaseData.phase.id}
+          phaseTitle={currentPhaseData.phase.title || `Phase ${currentPhaseData.phase.phase_number}`}
+          isCurrentPhase={true}
+          isGM={isGM}
+        />
+      );
+    }
+
+    // Phase exists but is not common_room type
     return (
-      <CommonRoom
-        gameId={gameId}
-        phaseId={currentPhaseData?.phase?.id}
-        phaseTitle={currentPhaseData?.phase?.title || `Phase ${currentPhaseData?.phase?.phase_number}`}
-        isCurrentPhase={true}
-        isGM={isGM}
-      />
+      <div className="text-center py-12">
+        <p className="text-content-secondary">
+          Common Room is only available during Discussion phases.
+        </p>
+        <p className="text-content-tertiary mt-2">
+          Current phase: {currentPhaseData?.phase?.phase_type}
+        </p>
+      </div>
     );
   }
 

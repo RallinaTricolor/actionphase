@@ -255,10 +255,80 @@ BEGIN
   RAISE NOTICE 'Created Game #168: E2E Character Avatars';
 
   -- ============================================
+  -- ISOLATED GAMES FOR common-room.spec.ts PARALLEL TESTING (605-610)
+  -- ============================================
+  -- Each test in common-room.spec.ts needs its own game to avoid race conditions
+
+  -- Game #605: "GM can create a post in Common Room"
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  VALUES (605, 'E2E Common Room - Create Post', 'Test GM creating posts.', 'Test', gm_id, 5, 'in_progress', true, NOW() - INTERVAL '5 days', NOW());
+  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
+  VALUES (605, p1_id, 'player', 'active', NOW() - INTERVAL '4 days'), (605, p2_id, 'player', 'active', NOW() - INTERVAL '4 days');
+  INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
+  VALUES (605, 'common_room', 1, 'Discussion', 'Common room for testing.', NOW() - INTERVAL '1 hour', NOW() + INTERVAL '23 hours', true, true, NOW() - INTERVAL '1 hour');
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES (605, gm_id, 'GM', 'npc', 'approved', NOW() - INTERVAL '4 days', NOW()), (605, p1_id, 'Player 1', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()), (605, p2_id, 'Player 2', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
+
+  -- Game #606: "Player can view GM posts in Common Room"
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  VALUES (606, 'E2E Common Room - View Posts', 'Test player viewing GM posts.', 'Test', gm_id, 5, 'in_progress', true, NOW() - INTERVAL '5 days', NOW());
+  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
+  VALUES (606, p1_id, 'player', 'active', NOW() - INTERVAL '4 days'), (606, p2_id, 'player', 'active', NOW() - INTERVAL '4 days');
+  INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
+  VALUES (606, 'common_room', 1, 'Discussion', 'Common room for testing.', NOW() - INTERVAL '1 hour', NOW() + INTERVAL '23 hours', true, true, NOW() - INTERVAL '1 hour');
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES (606, gm_id, 'GM', 'npc', 'approved', NOW() - INTERVAL '4 days', NOW()), (606, p1_id, 'Player 1', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()), (606, p2_id, 'Player 2', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
+
+  -- Game #607: "Player can comment on GM post"
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  VALUES (607, 'E2E Common Room - Comment', 'Test player commenting on posts.', 'Test', gm_id, 5, 'in_progress', true, NOW() - INTERVAL '5 days', NOW());
+  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
+  VALUES (607, p1_id, 'player', 'active', NOW() - INTERVAL '4 days'), (607, p2_id, 'player', 'active', NOW() - INTERVAL '4 days');
+  INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
+  VALUES (607, 'common_room', 1, 'Discussion', 'Common room for testing.', NOW() - INTERVAL '1 hour', NOW() + INTERVAL '23 hours', true, true, NOW() - INTERVAL '1 hour');
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES (607, gm_id, 'GM', 'npc', 'approved', NOW() - INTERVAL '4 days', NOW()), (607, p1_id, 'Player 1', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()), (607, p2_id, 'Player 2', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
+
+  -- Game #608: "Players can reply to each others comments (nested replies)"
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  VALUES (608, 'E2E Common Room - Nested Replies', 'Test nested comment replies.', 'Test', gm_id, 5, 'in_progress', true, NOW() - INTERVAL '5 days', NOW());
+  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
+  VALUES (608, p1_id, 'player', 'active', NOW() - INTERVAL '4 days'), (608, p2_id, 'player', 'active', NOW() - INTERVAL '4 days');
+  INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
+  VALUES (608, 'common_room', 1, 'Discussion', 'Common room for testing.', NOW() - INTERVAL '1 hour', NOW() + INTERVAL '23 hours', true, true, NOW() - INTERVAL '1 hour');
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES (608, gm_id, 'GM', 'npc', 'approved', NOW() - INTERVAL '4 days', NOW()), (608, p1_id, 'Player 1', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()), (608, p2_id, 'Player 2', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
+
+  -- Game #609: "Multiple players can reply to the same comment"
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  VALUES (609, 'E2E Common Room - Multiple Replies', 'Test multiple players replying.', 'Test', gm_id, 5, 'in_progress', true, NOW() - INTERVAL '5 days', NOW());
+  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
+  VALUES (609, p1_id, 'player', 'active', NOW() - INTERVAL '4 days'), (609, p2_id, 'player', 'active', NOW() - INTERVAL '4 days');
+  INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
+  VALUES (609, 'common_room', 1, 'Discussion', 'Common room for testing.', NOW() - INTERVAL '1 hour', NOW() + INTERVAL '23 hours', true, true, NOW() - INTERVAL '1 hour');
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES (609, gm_id, 'GM', 'npc', 'approved', NOW() - INTERVAL '4 days', NOW()), (609, p1_id, 'Player 1', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()), (609, p2_id, 'Player 2', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
+
+  -- Game #610: "Deep nesting shows Continue this thread button at max depth"
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  VALUES (610, 'E2E Common Room - Deep Nesting', 'Test deep nested comments.', 'Test', gm_id, 5, 'in_progress', true, NOW() - INTERVAL '5 days', NOW());
+  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
+  VALUES (610, p1_id, 'player', 'active', NOW() - INTERVAL '4 days'), (610, p2_id, 'player', 'active', NOW() - INTERVAL '4 days');
+  INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
+  VALUES (610, 'common_room', 1, 'Discussion', 'Common room for testing.', NOW() - INTERVAL '1 hour', NOW() + INTERVAL '23 hours', true, true, NOW() - INTERVAL '1 hour');
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES (610, gm_id, 'GM', 'npc', 'approved', NOW() - INTERVAL '4 days', NOW()), (610, p1_id, 'Player 1', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW()), (610, p2_id, 'Player 2', 'player_character', 'approved', NOW() - INTERVAL '4 days', NOW());
+
+  -- ============================================
   -- Summary
   -- ============================================
   RAISE NOTICE 'Created 5 isolated Common Room test games (164-168) for parallel E2E testing';
+  RAISE NOTICE 'Created 6 isolated games (605-610) for common-room.spec.ts parallel testing';
 
 END $$;
+
+-- Reset the games sequence to prevent duplicate key errors
+-- This ensures new game creations don't collide with hardcoded fixture IDs
+SELECT setval('games_id_seq', (SELECT MAX(id) FROM games) + 1);
 
 COMMIT;

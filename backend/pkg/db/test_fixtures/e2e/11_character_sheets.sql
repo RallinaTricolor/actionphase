@@ -2,19 +2,21 @@
 -- Creates a game with characters that have various character data for testing sheet management
 -- Tests: Adding/removing abilities, skills, inventory items, currency management
 --
+-- Game IDs: 328 (offset by worker: Worker 1 = 1328, Worker 2 = 2328, etc.)
+--
 -- IDEMPOTENT: Safe to run multiple times - deletes existing data before recreating
 
 BEGIN;
 
 -- Delete existing character sheet test game to prevent duplicates
-DELETE FROM games WHERE title = 'E2E Test: Character Sheets';
+DELETE FROM games WHERE id = 328;
 
 DO $$
 DECLARE
   gm_id INTEGER;
   p1_id INTEGER;
   p2_id INTEGER;
-  game_id INTEGER;
+  game_id INTEGER := 328;
   char1_id INTEGER;
   char2_id INTEGER;
   char_empty_id INTEGER;
@@ -27,8 +29,9 @@ BEGIN
   -- ============================================
   -- E2E Game: For Character Sheet Testing
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
   VALUES (
+    game_id,
     'E2E Test: Character Sheets',
     'This game tests character sheet management: adding abilities, skills, items, currency',
     'Test',
@@ -38,7 +41,7 @@ BEGIN
     true,
     NOW() - INTERVAL '7 days',
     NOW()
-  ) RETURNING id INTO game_id;
+  );
 
   -- Add participants
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
@@ -126,6 +129,10 @@ BEGIN
     (char_empty_id, 'bio', 'appearance', 'A new adventurer', 'text', true, NOW(), NOW());
 
 END $$;
+
+-- Reset the games sequence to prevent duplicate key errors
+-- This ensures new game creations don't collide with hardcoded fixture IDs
+SELECT setval('games_id_seq', (SELECT MAX(id) FROM games) + 1);
 
 COMMIT;
 

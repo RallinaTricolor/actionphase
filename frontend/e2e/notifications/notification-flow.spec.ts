@@ -346,18 +346,36 @@ test.describe('Notification System', () => {
     });
 
     test('should show empty state when no notifications', async ({ page }) => {
-      await loginAs(page, 'AUDIENCE'); // User with likely no notifications
+      await loginAs(page, 'AUDIENCE');
 
       await page.goto('/dashboard');
 
       // Open notifications
       await page.click('[data-testid="notification-bell"]');
 
-      // Should show empty state
+      // Wait for notifications to load
+      await page.waitForTimeout(1000);
+
+      // Dismiss all existing notifications to ensure empty state
+      const dismissButtons = page.locator('[data-testid="dismiss-notification"]');
+      const count = await dismissButtons.count();
+
+      if (count > 0) {
+        // Dismiss all notifications
+        for (let i = 0; i < count; i++) {
+          const firstDismiss = page.locator('[data-testid="dismiss-notification"]').first();
+          if (await firstDismiss.isVisible()) {
+            await firstDismiss.click();
+            await page.waitForTimeout(300); // Wait for dismissal animation
+          }
+        }
+      }
+
+      // Should now show empty state
       const emptyState = page.getByText('No notifications');
       const emptyMessage = page.getByText("You're all caught up!");
 
-      await expect(emptyState).toBeVisible();
+      await expect(emptyState).toBeVisible({ timeout: 5000 });
       await expect(emptyMessage).toBeVisible();
     });
   });

@@ -164,4 +164,140 @@ test.describe('Private Messages Flow', () => {
       await player3Context.close();
     }
   });
+
+  test('GM can send private messages as different NPCs', async ({ browser }) => {
+    const gmContext = await browser.newContext();
+    const playerContext = await browser.newContext();
+
+    const gmPage = await gmContext.newPage();
+    const playerPage = await playerContext.newPage();
+
+    try {
+      // === GM creates conversation with Player as Detective Morrison ===
+      await loginAs(gmPage, 'GM');
+
+      const gameId = await getFixtureGameId(gmPage, 'E2E_GM_MESSAGING');
+      const gmMessaging = new MessagingPage(gmPage);
+      await gmMessaging.goto(gameId);
+
+      // Create conversation as Detective Morrison NPC
+      const detectiveConvoTitle = `Investigation ${Date.now()}`;
+      await gmMessaging.createConversation(
+        detectiveConvoTitle,
+        ['E2E Test Char 1'],  // Player 1's character
+        'Detective Morrison'  // GM's NPC sending the message
+      );
+
+      // GM (as Detective) sends message
+      const detectiveMessage = `This is Detective Morrison. I need your help with the case.`;
+      await gmMessaging.sendMessage(detectiveMessage);
+
+      // === Player sees conversation from Detective Morrison ===
+      await loginAs(playerPage, 'PLAYER_1');
+
+      const playerMessaging = new MessagingPage(playerPage);
+      await playerMessaging.goto(gameId);
+
+      await playerMessaging.verifyConversationExists(detectiveConvoTitle);
+      await playerMessaging.openConversation(detectiveConvoTitle);
+      await playerMessaging.verifyMessageExists(detectiveMessage);
+
+      // Player replies
+      const playerReply = `Hello Detective, how can I help?`;
+      await playerMessaging.sendMessage(playerReply);
+
+      // === GM creates DIFFERENT conversation as Whisper (different NPC) ===
+      await gmPage.reload();
+      await gmPage.waitForLoadState('networkidle');
+      await gmMessaging.navigateToMessages();
+
+      const informantConvoTitle = `Secret Intel ${Date.now()}`;
+      await gmMessaging.createConversation(
+        informantConvoTitle,
+        ['E2E Test Char 1'],
+        'Whisper (Informant)'  // Different NPC
+      );
+
+      // GM (as Whisper) sends message
+      const informantMessage = `Psst... I have information you might need.`;
+      await gmMessaging.sendMessage(informantMessage);
+
+      // === Player sees BOTH conversations from different NPCs ===
+      await playerPage.reload();
+      await playerPage.waitForLoadState('networkidle');
+      await playerMessaging.navigateToMessages();
+
+      // Verify both conversations exist
+      await playerMessaging.verifyConversationExists(detectiveConvoTitle);
+      await playerMessaging.verifyConversationExists(informantConvoTitle);
+
+      // Open the informant conversation
+      await playerMessaging.openConversation(informantConvoTitle);
+      await playerMessaging.verifyMessageExists(informantMessage);
+
+    } finally {
+      await gmContext.close();
+      await playerContext.close();
+    }
+  });
+
+  test('Audience member can send private messages as assigned NPC', async ({ browser }) => {
+    test.setTimeout(45000); // Audience character loading may take time
+
+    const audienceContext = await browser.newContext();
+    const playerContext = await browser.newContext();
+
+    const audiencePage = await audienceContext.newPage();
+    const playerPage = await playerContext.newPage();
+
+    try {
+      // === Audience member creates conversation as The Narrator ===
+      await loginAs(audiencePage, 'AUDIENCE');
+
+      const gameId = await getFixtureGameId(audiencePage, 'E2E_GM_MESSAGING');
+      const audienceMessaging = new MessagingPage(audiencePage);
+      await audienceMessaging.goto(gameId);
+
+      // Wait for page to fully load
+      await audiencePage.waitForTimeout(2000);
+
+      // Create conversation as The Narrator (audience member's assigned NPC)
+      const narratorConvoTitle = `Narrative Insight ${Date.now()}`;
+      await audienceMessaging.createConversation(
+        narratorConvoTitle,
+        ['E2E Test Char 1'],  // Player 1's character
+        'The Narrator'  // Audience member's NPC
+      );
+
+      // Audience (as Narrator) sends message
+      const narratorMessage = `From the shadows, a voice speaks: "The truth lies deeper than you think..."`;
+      await audienceMessaging.sendMessage(narratorMessage);
+
+      // === Player sees conversation from The Narrator ===
+      await loginAs(playerPage, 'PLAYER_1');
+
+      const playerMessaging = new MessagingPage(playerPage);
+      await playerMessaging.goto(gameId);
+
+      await playerMessaging.verifyConversationExists(narratorConvoTitle);
+      await playerMessaging.openConversation(narratorConvoTitle);
+      await playerMessaging.verifyMessageExists(narratorMessage);
+
+      // Player can reply
+      const playerReply = `Who are you? How do you know this?`;
+      await playerMessaging.sendMessage(playerReply);
+
+      // === Audience member sees the reply ===
+      await audiencePage.reload();
+      await audiencePage.waitForLoadState('networkidle');
+      await audienceMessaging.navigateToMessages();
+      await audienceMessaging.openConversation(narratorConvoTitle);
+
+      await audienceMessaging.verifyMessageExists(playerReply);
+
+    } finally {
+      await audienceContext.close();
+      await playerContext.close();
+    }
+  });
 });

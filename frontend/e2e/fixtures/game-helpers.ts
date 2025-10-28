@@ -45,20 +45,78 @@ export const FIXTURE_GAMES = {
   COMMON_ROOM_MISC: 'E2E Common Room - Misc',             // Game #167 - for misc tests
   CHARACTER_AVATARS: 'E2E Character Avatars',             // Game #168 - for character-avatar.spec.ts
 
+  // Isolated games for common-room.spec.ts individual tests (605-610)
+  COMMON_ROOM_CREATE_POST: 'E2E Common Room - Create Post',       // Game #605 - "GM can create a post"
+  COMMON_ROOM_VIEW_POSTS: 'E2E Common Room - View Posts',         // Game #606 - "Player can view GM posts"
+  COMMON_ROOM_COMMENT: 'E2E Common Room - Comment',               // Game #607 - "Player can comment on GM post"
+  COMMON_ROOM_NESTED_REPLIES: 'E2E Common Room - Nested Replies', // Game #608 - "Players can reply to each others comments"
+  COMMON_ROOM_MULTIPLE_REPLIES: 'E2E Common Room - Multiple Replies', // Game #609 - "Multiple players can reply to the same comment"
+  COMMON_ROOM_DEEP_NESTING: 'E2E Common Room - Deep Nesting',     // Game #610 - "Deep nesting shows Continue this thread button"
+
+  // Character workflow games (isolated for parallel testing)
+  E2E_CHARACTER_CREATION: 'E2E Test: Character Creation',  // character_creation state with approved player (no character)
+  E2E_CHARACTER_PENDING_STATE: 'E2E Test: Character Approval - Pending State',  // For "character starts in pending state" test
+  E2E_CHARACTER_VIEW_PENDING: 'E2E Test: Character Approval - View Pending',   // For "GM can view pending characters" test
+  E2E_CHARACTER_APPROVE: 'E2E Test: Character Approval - Approve',             // For "GM can approve character" test
+  E2E_CHARACTER_REJECT: 'E2E Test: Character Approval - Reject',               // For "GM can reject character" test
+  E2E_CHARACTER_RESUBMIT: 'E2E Test: Character Approval - Resubmit',           // For "rejected character can be resubmitted" test
+  E2E_CHARACTER_IN_GAME: 'E2E Test: Character Approval - In Game',             // For "approved characters appear in active game" test
+  E2E_CHARACTER_APPROVAL: 'E2E Test: Character Approval - Pending State',      // Deprecated alias - use specific fixtures instead
+  E2E_GM_MESSAGING: 'E2E Test: GM Messaging',              // in_progress with GM having multiple NPCs for messaging tests
+
   // Legacy alias (deprecated - use COMMON_ROOM_POSTS instead)
   COMMON_ROOM_TEST: 'E2E Common Room - Posts',    // Alias for Game #164
 } as const;
 
 /**
+ * Get worker index for parallel test execution
+ * @returns Worker index (0-5)
+ */
+function getWorkerIndex(): number {
+  const workerIndex = process.env.TEST_PARALLEL_INDEX
+    ? parseInt(process.env.TEST_PARALLEL_INDEX, 10)
+    : 0;
+  return workerIndex;
+}
+
+/**
+ * Get worker-specific username for test assertions
+ * @param baseUsername - Base username (e.g., "TestPlayer4", "TestGM")
+ * @returns Worker-specific username (e.g., "TestPlayer4" for worker 0, "TestPlayer4_1" for worker 1)
+ */
+export function getWorkerUsername(baseUsername: string): string {
+  const workerIndex = getWorkerIndex();
+  return workerIndex === 0 ? baseUsername : `${baseUsername}_${workerIndex}`;
+}
+
+/**
+ * Calculate worker-specific game ID
+ * Each worker gets games with IDs offset by worker_index * 10000
+ * @param baseGameId - Base game ID from fixture (e.g., 200 for E2E_ACTION)
+ * @returns Worker-specific game ID (e.g., 200 for worker 0, 10200 for worker 1)
+ */
+function getWorkerGameId(baseGameId: number): number {
+  const workerIndex = getWorkerIndex();
+  const gameIdOffset = workerIndex * 10000;
+  return baseGameId + gameIdOffset;
+}
+
+/**
  * Get a game ID by its title (resilient to fixture resets)
+ * For parallel execution, this searches only the current worker's games
  * @param page - Playwright page object
  * @param title - Game title to search for
  * @returns Game ID or null if not found
  */
 export async function getGameIdByTitle(page: Page, title: string): Promise<number | null> {
+  // Calculate worker-specific game ID range
+  const workerIndex = getWorkerIndex();
+  const minId = workerIndex * 10000;
+  const maxId = minId + 9999;
+
   // Use page.evaluate to make fetch call with auth token from localStorage
   // This ensures we're using the same context as the logged-in user
-  const result = await page.evaluate(async (titleToFind) => {
+  const result = await page.evaluate(async ({ titleToFind, minId, maxId }) => {
     const token = localStorage.getItem('auth_token');
 
     const response = await fetch('/api/v1/games/public', {
@@ -70,10 +128,16 @@ export async function getGameIdByTitle(page: Page, title: string): Promise<numbe
     }
 
     const games = await response.json();
-    const game = games.find((g: any) => g.title === titleToFind);
+
+    // Filter to only this worker's games (by ID range) and match title
+    const game = games.find((g: any) =>
+      g.title === titleToFind &&
+      g.id >= minId &&
+      g.id <= maxId
+    );
 
     return game ? game.id : null;
-  }, title);
+  }, { titleToFind: title, minId, maxId });
 
   return result;
 }
