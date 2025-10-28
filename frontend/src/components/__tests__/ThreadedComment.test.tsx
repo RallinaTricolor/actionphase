@@ -1349,6 +1349,298 @@ describe('ThreadedComment', () => {
     });
   });
 
+  describe('Deleted Comments', () => {
+    const mockDeletedComment: Message = {
+      ...mockComment,
+      is_deleted: true,
+      deleted_at: '2025-01-15T12:00:00Z',
+      deleted_by_user_id: mockCurrentUserId,
+    };
+
+    const mockDeletedCommentWithReplies: Message = {
+      ...mockDeletedComment,
+      reply_count: 2,
+    };
+
+    it('renders "[Comment deleted]" placeholder for deleted comments', () => {
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockDeletedComment}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      expect(screen.getByText('[Comment deleted]')).toBeInTheDocument();
+      expect(screen.queryByText('This is a test comment')).not.toBeInTheDocument();
+    });
+
+    it('does not show Reply button for deleted comments', () => {
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockDeletedComment}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: /^reply$/i })).not.toBeInTheDocument();
+    });
+
+    it('does not show Edit button for deleted comments owned by user', () => {
+      const ownDeletedComment: Message = {
+        ...mockDeletedComment,
+        author_id: mockCurrentUserId,
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={ownDeletedComment}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument();
+    });
+
+    it('does not show Delete button for deleted comments owned by user', () => {
+      const ownDeletedComment: Message = {
+        ...mockDeletedComment,
+        author_id: mockCurrentUserId,
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={ownDeletedComment}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+    });
+
+    it('still shows Copy link button for deleted comments', () => {
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockDeletedComment}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /copy link/i })).toBeInTheDocument();
+    });
+
+    it('still shows Parent link for deleted comments with parent', () => {
+      const deletedCommentWithParent: Message = {
+        ...mockDeletedComment,
+        parent_id: 999,
+        thread_depth: 2,
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={deletedCommentWithParent}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      expect(screen.getByRole('link', { name: /parent/i })).toBeInTheDocument();
+    });
+
+    it('shows reply count button for deleted comments with replies', () => {
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockDeletedCommentWithReplies}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /2 replies/i })).toBeInTheDocument();
+    });
+
+    it('loads and displays nested replies under deleted comments', async () => {
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockDeletedCommentWithReplies}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      // Wait for replies to load automatically
+      await waitFor(() => {
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
+        expect(screen.getByText('Another reply')).toBeInTheDocument();
+      });
+
+      // Deleted comment placeholder should still be visible
+      expect(screen.getByText('[Comment deleted]')).toBeInTheDocument();
+    });
+
+    it('renders character name and username for deleted comments', () => {
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockDeletedComment}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      // Character name and username should still be shown
+      expect(screen.getByText('Other Character')).toBeInTheDocument();
+      expect(screen.getByText(/@otheruser/)).toBeInTheDocument();
+    });
+
+    it('does not show edited indicator for deleted comments', () => {
+      const deletedEditedComment: Message = {
+        ...mockDeletedComment,
+        is_edited: true,
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={deletedEditedComment}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      // Should not show (edited) indicator for deleted comments
+      expect(screen.queryByText('(edited)')).not.toBeInTheDocument();
+    });
+
+    it('preserves thread structure with deleted middle comment', async () => {
+      // Create a scenario: Comment A (active) → Comment B (deleted with replies) → Comment C (active)
+      const commentA: Message = {
+        id: 100,
+        game_id: mockGameId,
+        author_id: 200,
+        character_id: 3,
+        content: 'Comment A - top level',
+        message_type: 'comment',
+        thread_depth: 0,
+        author_username: 'user1',
+        character_name: 'Character 1',
+        reply_count: 1, // Has one reply (deleted comment B)
+        is_edited: false,
+        is_deleted: false,
+        created_at: '2025-01-15T10:00:00Z',
+        updated_at: '2025-01-15T10:00:00Z',
+      };
+
+      const commentB: Message = {
+        id: 101,
+        game_id: mockGameId,
+        parent_id: 100,
+        author_id: 300,
+        character_id: 4,
+        content: 'Comment B - deleted middle',
+        message_type: 'comment',
+        thread_depth: 1,
+        author_username: 'user2',
+        character_name: 'Character 2',
+        reply_count: 1, // Has one reply (comment C)
+        is_edited: false,
+        is_deleted: true,
+        deleted_at: '2025-01-15T11:30:00Z',
+        created_at: '2025-01-15T11:00:00Z',
+        updated_at: '2025-01-15T11:00:00Z',
+      };
+
+      const commentC: Message = {
+        id: 102,
+        game_id: mockGameId,
+        parent_id: 101,
+        author_id: 400,
+        character_id: 5,
+        content: 'Comment C - nested under deleted B',
+        message_type: 'comment',
+        thread_depth: 2,
+        author_username: 'user3',
+        character_name: 'Character 3',
+        reply_count: 0,
+        is_edited: false,
+        is_deleted: false,
+        created_at: '2025-01-15T12:00:00Z',
+        updated_at: '2025-01-15T12:00:00Z',
+      };
+
+      // Mock API responses
+      server.use(
+        http.get('/api/v1/games/:gameId/posts/100/comments', () => {
+          return HttpResponse.json([commentB]); // Comment A's replies
+        }),
+        http.get('/api/v1/games/:gameId/posts/101/comments', () => {
+          return HttpResponse.json([commentC]); // Comment B's replies
+        })
+      );
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={commentA}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      // Wait for comment A to load its replies (deleted comment B)
+      await waitFor(() => {
+        expect(screen.getByText('[Comment deleted]')).toBeInTheDocument();
+      });
+
+      // Wait for deleted comment B to load its replies (comment C)
+      await waitFor(() => {
+        expect(screen.getByText('Comment C - nested under deleted B')).toBeInTheDocument();
+      });
+
+      // Verify the full thread structure is preserved:
+      // - Comment A (active) is visible
+      expect(screen.getByText('Comment A - top level')).toBeInTheDocument();
+      // - Comment B (deleted) shows placeholder
+      expect(screen.getByText('[Comment deleted]')).toBeInTheDocument();
+      // - Comment C (active under deleted B) is visible
+      expect(screen.getByText('Comment C - nested under deleted B')).toBeInTheDocument();
+    });
+  });
+
   describe('Bug #2: Parent link navigation', () => {
     it('should link to post in common room when parent is a post (thread_depth === 1)', () => {
       // Top-level reply to a post (thread_depth === 1)

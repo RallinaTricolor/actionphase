@@ -6,6 +6,7 @@ import { Button } from './ui';
 
 interface ThreadViewModalProps {
   gameId: number;
+  postId: number; // The root post ID
   comment: Message; // Pass the comment object directly instead of just ID
   characters: Character[];
   controllableCharacters: Character[];
@@ -22,6 +23,7 @@ interface ThreadViewModalProps {
  */
 export function ThreadViewModal({
   gameId,
+  postId,
   comment,
   characters,
   controllableCharacters,
@@ -65,9 +67,11 @@ export function ThreadViewModal({
             <ThreadedComment
               comment={comment}
               gameId={gameId}
+              postId={postId} // Pass the root post ID
               characters={characters}
               controllableCharacters={controllableCharacters}
               onCreateReply={onCreateReply}
+              onCommentDeleted={onClose} // Close modal when the displayed comment or its children are deleted
               currentUserId={currentUserId}
               depth={0}
               maxDepth={10}  // Allow deep nesting in modal view (up to 10 additional levels)
@@ -82,6 +86,7 @@ export function ThreadViewModal({
       {nestedModalComment && (
         <ThreadViewModal
           gameId={gameId}
+          postId={postId} // Pass through the root post ID
           comment={nestedModalComment}
           characters={characters}
           controllableCharacters={controllableCharacters}

@@ -1264,6 +1264,182 @@ func TestMessageService_CommentWithMentions(t *testing.T) {
 	})
 }
 
+// TestMessageService_ThreadPreservation tests that deleted comments are included in API responses
+// to preserve thread structure (e.g., A → [B deleted] → C)
+func TestMessageService_ThreadPreservation(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &MessageService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
+
+	// Setup
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	game := testDB.CreateTestGame(t, int32(player.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Test Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Create parent post
+	post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID:      game.ID,
+		AuthorID:    int32(player.ID),
+		CharacterID: char.ID,
+		Content:     "Parent post",
+		Visibility:  string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	t.Run("GetPostComments includes deleted comments to preserve thread structure", func(t *testing.T) {
+		// Create comment A (top-level)
+		commentA, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    post.ID,
+			Content:     "Comment A - top level",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create comment B (reply to A - will be deleted)
+		commentB, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    commentA.ID,
+			Content:     "Comment B - middle (will be deleted)",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create comment C (reply to B - nested under deleted comment)
+		commentC, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    commentB.ID,
+			Content:     "Comment C - nested under B",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Delete comment B
+		err = service.DeleteComment(context.Background(), commentB.ID, int32(player.ID))
+		require.NoError(t, err)
+
+		// Get replies to comment A - should include deleted comment B
+		repliesA, err := service.GetPostComments(context.Background(), commentA.ID)
+		require.NoError(t, err)
+		assert.Len(t, repliesA, 1, "Should return deleted comment B to preserve thread structure")
+		assert.Equal(t, commentB.ID, repliesA[0].ID)
+		assert.True(t, repliesA[0].IsDeleted, "Comment B should be marked as deleted")
+
+		// Get replies to comment B - should return comment C
+		repliesB, err := service.GetPostComments(context.Background(), commentB.ID)
+		require.NoError(t, err)
+		assert.Len(t, repliesB, 1, "Deleted comment B should still have accessible children")
+		assert.Equal(t, commentC.ID, repliesB[0].ID)
+		assert.False(t, repliesB[0].IsDeleted, "Comment C should not be deleted")
+	})
+
+	t.Run("reply_count includes deleted comments", func(t *testing.T) {
+		// Create parent comment
+		parent, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    post.ID,
+			Content:     "Parent comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create active reply
+		_, err = service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    parent.ID,
+			Content:     "Active reply",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create reply that will be deleted
+		deletedReply, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    parent.ID,
+			Content:     "Reply to be deleted",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Delete the second reply
+		err = service.DeleteComment(context.Background(), deletedReply.ID, int32(player.ID))
+		require.NoError(t, err)
+
+		// Get parent comment - reply_count should include both active and deleted replies
+		refreshedParent, err := service.GetComment(context.Background(), parent.ID)
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), refreshedParent.ReplyCount, "reply_count should include deleted comments to preserve thread structure")
+	})
+
+	t.Run("comment_count on posts includes deleted comments", func(t *testing.T) {
+		// Create new post
+		newPost, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			Content:     "Post for comment count test",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create active comment
+		_, err = service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    newPost.ID,
+			Content:     "Active comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create comment that will be deleted
+		deletedComment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    newPost.ID,
+			Content:     "Comment to be deleted",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Delete the second comment
+		err = service.DeleteComment(context.Background(), deletedComment.ID, int32(player.ID))
+		require.NoError(t, err)
+
+		// Get post - comment_count should include both active and deleted comments
+		refreshedPost, err := service.GetPost(context.Background(), newPost.ID)
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), refreshedPost.CommentCount, "comment_count should include deleted comments to preserve thread structure")
+	})
+}
+
 // Helper function
 func int32Ptr(v int32) *int32 {
 	return &v

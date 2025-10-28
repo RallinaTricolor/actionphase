@@ -57,14 +57,20 @@ export function useDeleteComment() {
       return response.data;
     },
     onSuccess: async (_, variables) => {
-      // Invalidate post comments to reflect the deletion
+      // Invalidate all queries related to comments in this game
+      // This ensures all comment lists (including nested replies) are refetched
       await queryClient.invalidateQueries({
-        queryKey: ['postComments', variables.gameId, variables.postId]
+        queryKey: ['postComments', variables.gameId]
       });
 
       // Also invalidate game posts to update comment counts
       await queryClient.invalidateQueries({
         queryKey: ['gamePosts', variables.gameId]
+      });
+
+      // Invalidate comment replies queries
+      await queryClient.invalidateQueries({
+        queryKey: ['commentReplies', variables.gameId]
       });
     },
   });

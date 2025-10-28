@@ -1,3 +1,4 @@
 - New comment highlighting E2E test? Haven't checked it in a while
 - Recruitment applications should be publicly viewable
 - Text length limits, multiple action submissions?
+- Admin mode E2E tests

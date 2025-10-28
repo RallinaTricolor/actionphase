@@ -378,9 +378,11 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                   key={comment.id}
                   comment={comment}
                   gameId={gameId}
+                  postId={post.id} // Pass the root post ID
                   characters={characters}
                   controllableCharacters={controllableCharacters}
                   onCreateReply={onCreateComment}
+                  onCommentDeleted={loadComments} // Reload comments when one is deleted
                   currentUserId={currentUserId}
                   depth={0}
                   maxDepth={5}
@@ -401,6 +403,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       {threadModalComment !== null && (
         <ThreadViewModal
           gameId={gameId}
+          postId={post.id} // Pass the root post ID
           comment={threadModalComment}
           characters={characters}
           controllableCharacters={controllableCharacters}
