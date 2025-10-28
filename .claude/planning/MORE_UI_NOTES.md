@@ -282,9 +282,18 @@ For each item in this list:
 11. ✓ No delete button for characters - Add delete functionality with confirmation - FIXED (GM-only, with activity validation)
 12. ✓ Handout creation no preview - Add markdown preview pane/toggle - FIXED (Preview/Edit toggle button)
 13. ✓ Delete comment uses browser alert - Replace with custom modal - FIXED (ConfirmModal component)
-14. ✅ Public Profile + Physical Appearance redundancy - Consolidate character sheet fields
-15. ✅ Private Notes + Secrets redundancy - Consolidate character sheet fields
-16. ✅ Phase description not visible - Display phase description in Common Room view
+14. ✓ Public Profile + Physical Appearance redundancy - Consolidate character sheet fields - FIXED (single "Character Description" field)
+    - **Status**: FIXED - Consolidated Bio module from 2 fields to 1 comprehensive field
+    - **Location**: Character Sheet → Bio/Background tab
+    - **Changes**: Modified CHARACTER_MODULES in frontend/src/types/characters.ts
+15. ✓ Private Notes + Secrets redundancy - Consolidate character sheet fields - FIXED (single "Private Notes & Secrets" field)
+    - **Status**: FIXED - Consolidated Notes module from 2 fields to 1 comprehensive field
+    - **Location**: Character Sheet → Private Notes tab
+    - **Changes**: Modified CHARACTER_MODULES in frontend/src/types/characters.ts
+16. ✓ Phase description not visible - Display phase description in Common Room view - FIXED (CommonRoom displays description in Card)
+    - **Status**: FIXED - Added phaseDescription prop to CommonRoom component, displays in bordered Card with MarkdownPreview
+    - **Location**: Game Common Room tab (current phase) and History view (historical phases)
+    - **Changes**: Modified CommonRoom.tsx, GameTabContent.tsx, HistoryView.tsx
 
 ### Moderate Complexity
 17. ✅ Players can edit abilities, skills, items, currency - Add permission checks for character stat editing
