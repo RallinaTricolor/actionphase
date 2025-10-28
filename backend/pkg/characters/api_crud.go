@@ -299,3 +299,63 @@ func (h *Handler) GetUserControllableCharacters(w http.ResponseWriter, r *http.R
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
+
+// DeleteCharacter deletes a character (GM only, character must have no activity)
+func (h *Handler) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
+	characterIDStr := chi.URLParam(r, "id")
+	characterID, err := strconv.ParseInt(characterIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid character ID")))
+		return
+	}
+
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
+		return
+	}
+
+	// Get character to check game ownership
+	characterService := &services.CharacterService{DB: h.App.Pool}
+	character, err := characterService.GetCharacter(r.Context(), int32(characterID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get character", "error", err, "character_id", characterID)
+		render.Render(w, r, core.ErrNotFound("character not found"))
+		return
+	}
+
+	// Get game to check GM permissions
+	gameService := &services.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), character.GameID)
+	if err != nil {
+		h.App.Logger.Error("Failed to get game", "error", err, "game_id", character.GameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Only GM can delete characters
+	isGM := core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game)
+	if !isGM {
+		render.Render(w, r, core.ErrForbidden("only the GM can delete characters"))
+		return
+	}
+
+	// Attempt to delete character
+	err = characterService.DeleteCharacter(r.Context(), int32(characterID))
+	if err != nil {
+		h.App.Logger.Error("Failed to delete character", "error", err, "character_id", characterID)
+		// Check if error is about activity - return 400 Bad Request
+		if err.Error() == "cannot delete character with existing messages" ||
+			err.Error() == "cannot delete character with existing action submissions" {
+			render.Render(w, r, core.ErrInvalidRequest(err))
+			return
+		}
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Success - return 204 No Content
+	w.WriteHeader(http.StatusNoContent)
+}

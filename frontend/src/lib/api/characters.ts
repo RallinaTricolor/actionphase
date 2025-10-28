@@ -38,6 +38,10 @@ export class CharactersApi extends BaseApiClient {
     return this.client.post(`/api/v1/characters/${id}/assign`, data);
   }
 
+  async deleteCharacter(id: number) {
+    return this.client.delete(`/api/v1/characters/${id}`);
+  }
+
   // Character Data endpoints
   async setCharacterData(id: number, data: CharacterDataRequest) {
     return this.client.post(`/api/v1/characters/${id}/data`, data);

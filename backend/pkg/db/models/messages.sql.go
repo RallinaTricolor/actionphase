@@ -59,6 +59,22 @@ func (q *Queries) CheckCommentOwnership(ctx context.Context, id int32) (CheckCom
 	return i, err
 }
 
+const countMessagesByCharacter = `-- name: CountMessagesByCharacter :one
+SELECT COUNT(*)
+FROM messages
+WHERE character_id = $1
+  AND is_deleted = false
+`
+
+// Count messages (posts and comments) by a specific character
+// Used to check if character can be deleted
+func (q *Queries) CountMessagesByCharacter(ctx context.Context, characterID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countMessagesByCharacter, characterID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createComment = `-- name: CreateComment :one
 
 INSERT INTO messages (

@@ -135,10 +135,52 @@ For each item in this list:
             - ✓ GM can see "Approve" and "Reject" buttons
           - **Conclusion**: Feature works perfectly in production environment
         - [ ] 5. E2E test in `e2e/characters/gm-creates-player-character.spec.ts`
-  - ✅ FEATURE: There is no way to delete characters currently
-      - **Status**: Confirmed - Only "Edit Sheet" buttons visible on character cards, no delete option
-      - **Location**: /games/50704?tab=people as TestGM
-      - **Expected**: Should have delete button with confirmation for characters (with appropriate restrictions)
+  - ✓ FEATURE: There is no way to delete characters currently
+      - **Status**: FIXED - GM can now delete characters with confirmation modal
+      - **Location**: /games/300?tab=characters as TestGM
+      - **Implementation Details**:
+        - Backend: DELETE /api/v1/characters/:id endpoint (GM only)
+        - Validation: Prevents deletion of characters with existing messages or action submissions
+        - Frontend: Delete button on character cards with confirmation modal
+        - Modal shows character name and warning about restrictions
+        - Successful deletion refreshes character list
+      - **Test Pyramid Progress**:
+        - [✓] 1. Backend unit tests in `pkg/characters/api_crud_test.go` - 6 tests passing
+          - Successfully delete character with no activity
+          - Prevent deletion when character has messages
+          - Prevent deletion when character has action submissions
+          - CASCADE delete character_data
+          - CASCADE delete npc_assignments
+          - Delete nonexistent character returns error
+        - [✓] 2. API verification with curl - **✅ VERIFIED WORKING**
+          - ✓ Created test character 126 (no activity)
+          - ✓ Deleted character 126 → HTTP 204 No Content
+          - ✓ Created message for character 73
+          - ✓ Attempted to delete character 73 → HTTP 400 with error "cannot delete character with existing messages"
+        - [✓] 3. Frontend component tests - **✅ 8 NEW TESTS PASSING (40 total in CharactersList.test.tsx)**
+          - GM should see delete button for all characters
+          - Player should NOT see delete button
+          - Clicking delete button opens confirmation modal
+          - Confirmation modal displays character name
+          - Clicking confirm button calls delete API
+          - Modal closes on successful deletion
+          - Displays error message if deletion fails
+          - Cancel button closes modal without deleting
+        - [✓] 4. Manual testing with Playwright MCP - **✅ VERIFIED WORKING**
+          - Logged in as TestGM on game 300
+          - Created test character "Test Character to Delete" (NPC)
+          - Verified Delete button visible on character card
+          - Clicked Delete button → Confirmation modal appeared
+          - Modal displayed character name and warning correctly
+          - Clicked "Delete Character" → Character successfully deleted
+          - Character list refreshed showing "No characters created yet"
+        - [✓] 5. E2E tests in `e2e/characters/character-deletion.spec.ts` - **✅ 5 TESTS PASSING**
+          - ✓ GM can delete character with no activity
+          - ✓ Error shown when deleting character with messages (test creates message first)
+          - ✓ Canceling deletion keeps character
+          - ✓ Players don't see delete button
+          - ✓ Only GM sees delete button
+          - **Test Coverage**: Complete workflow from creation to deletion with all edge cases
   - ⏸️ FEATURE: Rejecting a character is permanent, there should be a way to approve a character that has been rejected (and vice versa)
   - ⏸️ BUG: Rejected characters should not show up in the messages tab as an option to send messages to
   - ✅ UI: Handout creation could use a preview window for markdown
@@ -230,9 +272,9 @@ For each item in this list:
 8. ✓ Audience badge shows as "Player" - Fix dashboard role display logic - FIXED (getRoleDisplay function)
 9. ✓ GM post form not minimized - Add collapse/expand functionality - FIXED (shouldStartCollapsed prop)
 10. ✓ GM can't create player characters (403) - Fix permission + add player assignment - FIXED (backend permissions + user selector)
-11. ✅ No delete button for characters - Add delete functionality with confirmation
+11. ✓ No delete button for characters - Add delete functionality with confirmation - FIXED (GM-only, with activity validation)
 12. ✅ Handout creation no preview - Add markdown preview pane/toggle
-13. ✅ Delete comment uses browser alert - Replace with custom modal
+13. ✓ Delete comment uses browser alert - Replace with custom modal - FIXED (ConfirmModal component)
 14. ✅ Public Profile + Physical Appearance redundancy - Consolidate character sheet fields
 15. ✅ Private Notes + Secrets redundancy - Consolidate character sheet fields
 16. ✅ Phase description not visible - Display phase description in Common Room view

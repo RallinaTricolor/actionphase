@@ -250,3 +250,10 @@ SELECT COUNT(*)
 FROM action_submissions acts
 WHERE acts.game_id = sqlc.arg(game_id)
   AND (CASE WHEN sqlc.arg(phase_id) = 0 THEN TRUE ELSE acts.phase_id = sqlc.arg(phase_id) END);
+
+-- name: CountActionSubmissionsByCharacter :one
+-- Count action submissions for a specific character
+-- Used to check if character can be deleted
+SELECT COUNT(*)
+FROM action_submissions
+WHERE character_id = $1;

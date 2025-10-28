@@ -230,6 +230,7 @@ func (h *Handler) Start() {
 			r.Post("/{id}/approve", characterHandler.ApproveCharacter)
 			r.Post("/{id}/assign", characterHandler.AssignNPC)
 			r.Put("/{id}/reassign", characterHandler.ReassignCharacter) // GM reassigns inactive character
+			r.Delete("/{id}", characterHandler.DeleteCharacter)         // GM deletes character with no activity
 			r.Post("/{id}/data", characterHandler.SetCharacterData)
 			r.Get("/{id}/data", characterHandler.GetCharacterData)
 

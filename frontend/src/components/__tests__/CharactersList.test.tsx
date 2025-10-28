@@ -435,4 +435,205 @@ describe('CharactersList', () => {
       })
     })
   })
+
+  describe('Delete character functionality', () => {
+    it('GM should see delete button for all characters', async () => {
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
+      )
+
+      await waitFor(() => {
+        const deleteButtons = screen.getAllByTestId('delete-character-button')
+        // Should have delete buttons for all 3 characters
+        expect(deleteButtons.length).toBe(3)
+      })
+    })
+
+    it('Player should NOT see delete button', async () => {
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="player" currentUserId={1} />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Hero Character')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('delete-character-button')).not.toBeInTheDocument()
+    })
+
+    it('clicking delete button opens confirmation modal', async () => {
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
+      )
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+      })
+
+      const deleteButtons = screen.getAllByTestId('delete-character-button')
+      fireEvent.click(deleteButtons[0])
+
+      await waitFor(() => {
+        expect(screen.getByText('Delete Character?')).toBeInTheDocument()
+      })
+
+      expect(screen.getByText(/Are you sure you want to delete/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+      expect(screen.getByTestId('confirm-delete-character-button')).toBeInTheDocument()
+    })
+
+    it('confirmation modal displays character name', async () => {
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
+      )
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+      })
+
+      const deleteButtons = screen.getAllByTestId('delete-character-button')
+      fireEvent.click(deleteButtons[0])
+
+      await waitFor(() => {
+        expect(screen.getByText(/Are you sure you want to delete/)).toBeInTheDocument()
+      })
+
+      // Verify character name appears in the confirmation text
+      expect(screen.getByText(/Are you sure you want to delete/)).toHaveTextContent('Hero Character')
+    })
+
+    it('clicking confirm button calls delete API', async () => {
+      let deletedCharacterId: string | null = null
+
+      server.use(
+        http.delete('http://localhost:3000/api/v1/characters/:id', ({ params }) => {
+          deletedCharacterId = params.id as string
+          return new HttpResponse(null, { status: 204 })
+        })
+      )
+
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
+      )
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+      })
+
+      const deleteButtons = screen.getAllByTestId('delete-character-button')
+      fireEvent.click(deleteButtons[0])
+
+      await waitFor(() => {
+        expect(screen.getByTestId('confirm-delete-character-button')).toBeInTheDocument()
+      })
+
+      const confirmButton = screen.getByTestId('confirm-delete-character-button')
+      fireEvent.click(confirmButton)
+
+      await waitFor(() => {
+        expect(deletedCharacterId).toBe('1')
+      })
+    })
+
+    it('modal closes on successful deletion', async () => {
+      server.use(
+        http.delete('http://localhost:3000/api/v1/characters/:id', () => {
+          return new HttpResponse(null, { status: 204 })
+        })
+      )
+
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
+      )
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+      })
+
+      const deleteButtons = screen.getAllByTestId('delete-character-button')
+      fireEvent.click(deleteButtons[0])
+
+      await waitFor(() => {
+        expect(screen.getByTestId('confirm-delete-character-button')).toBeInTheDocument()
+      })
+
+      const confirmButton = screen.getByTestId('confirm-delete-character-button')
+      fireEvent.click(confirmButton)
+
+      await waitFor(() => {
+        expect(screen.queryByText('Delete Character?')).not.toBeInTheDocument()
+      })
+    })
+
+    it('displays error message if deletion fails', async () => {
+      server.use(
+        http.delete('http://localhost:3000/api/v1/characters/:id', () => {
+          return HttpResponse.json(
+            { error: 'cannot delete character with existing messages' },
+            { status: 400 }
+          )
+        })
+      )
+
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
+      )
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+      })
+
+      const deleteButtons = screen.getAllByTestId('delete-character-button')
+      fireEvent.click(deleteButtons[0])
+
+      await waitFor(() => {
+        expect(screen.getByTestId('confirm-delete-character-button')).toBeInTheDocument()
+      })
+
+      const confirmButton = screen.getByTestId('confirm-delete-character-button')
+      fireEvent.click(confirmButton)
+
+      await waitFor(() => {
+        expect(screen.getByText(/cannot delete character with existing messages/)).toBeInTheDocument()
+      })
+
+      // Modal should remain open on error
+      expect(screen.getByText('Delete Character?')).toBeInTheDocument()
+    })
+
+    it('cancel button closes modal without deleting', async () => {
+      let deleteWasCalled = false
+
+      server.use(
+        http.delete('http://localhost:3000/api/v1/characters/:id', () => {
+          deleteWasCalled = true
+          return new HttpResponse(null, { status: 204 })
+        })
+      )
+
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
+      )
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+      })
+
+      const deleteButtons = screen.getAllByTestId('delete-character-button')
+      fireEvent.click(deleteButtons[0])
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+      })
+
+      const cancelButton = screen.getByRole('button', { name: 'Cancel' })
+      fireEvent.click(cancelButton)
+
+      await waitFor(() => {
+        expect(screen.queryByText('Delete Character?')).not.toBeInTheDocument()
+      })
+
+      expect(deleteWasCalled).toBe(false)
+    })
+  })
 })

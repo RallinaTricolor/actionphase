@@ -385,3 +385,11 @@ JOIN users u ON pm.sender_user_id = u.id
 LEFT JOIN characters c ON pm.sender_character_id = c.id
 WHERE pm.conversation_id = $1
 ORDER BY pm.created_at ASC;
+
+-- name: CountMessagesByCharacter :one
+-- Count messages (posts and comments) by a specific character
+-- Used to check if character can be deleted
+SELECT COUNT(*)
+FROM messages
+WHERE character_id = $1
+  AND is_deleted = false;

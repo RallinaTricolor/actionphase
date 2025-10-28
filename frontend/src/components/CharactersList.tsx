@@ -27,6 +27,7 @@ export function CharactersList({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [npcToAssign, setNpcToAssign] = useState<Character | null>(null);
+  const [characterToDelete, setCharacterToDelete] = useState<Character | null>(null);
   const queryClient = useQueryClient();
 
   const { data: charactersData, isLoading } = useQuery({
@@ -54,8 +55,26 @@ export function CharactersList({
     }
   });
 
+  const deleteCharacterMutation = useMutation({
+    mutationFn: (characterId: number) => apiClient.characters.deleteCharacter(characterId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
+      setCharacterToDelete(null);
+    },
+    onError: (error: any) => {
+      // Error will be displayed in the confirmation modal
+      console.error('Failed to delete character:', error);
+    }
+  });
+
   const handleApproveCharacter = (characterId: number, status: 'approved' | 'rejected') => {
     approveCharacterMutation.mutate({ characterId, status });
+  };
+
+  const handleDeleteCharacter = () => {
+    if (characterToDelete) {
+      deleteCharacterMutation.mutate(characterToDelete.id);
+    }
   };
 
   // Filter characters based on user role and status
@@ -180,6 +199,7 @@ export function CharactersList({
                     isAnonymous={isAnonymous}
                     onApprove={handleApproveCharacter}
                     onAssignNPC={setNpcToAssign}
+                    onDelete={setCharacterToDelete}
                     getStatusBadgeVariant={getStatusBadgeVariant}
                     canViewSheet={canViewCharacterSheet(character)}
                     canEditSheet={canEditCharacterSheet(character)}
@@ -204,6 +224,7 @@ export function CharactersList({
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
                           onAssignNPC={setNpcToAssign}
+                          onDelete={setCharacterToDelete}
                           getStatusBadgeVariant={getStatusBadgeVariant}
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
@@ -228,6 +249,7 @@ export function CharactersList({
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
                           onAssignNPC={setNpcToAssign}
+                          onDelete={setCharacterToDelete}
                           getStatusBadgeVariant={getStatusBadgeVariant}
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
@@ -284,6 +306,51 @@ export function CharactersList({
           }}
         />
       )}
+
+      {/* Delete Character Confirmation Modal */}
+      {characterToDelete && (
+        <Modal
+          isOpen={true}
+          onClose={() => setCharacterToDelete(null)}
+          title="Delete Character?"
+        >
+          <div className="space-y-4">
+            <p className="text-content-primary">
+              Are you sure you want to delete <strong>{characterToDelete.name}</strong>?
+            </p>
+            <p className="text-sm text-content-secondary">
+              This action cannot be undone. Characters with existing messages or action submissions cannot be deleted.
+            </p>
+
+            {deleteCharacterMutation.isError && (
+              <div className="p-3 bg-danger/10 border border-danger rounded-md">
+                <p className="text-sm text-danger">
+                  {(deleteCharacterMutation.error as any)?.response?.data?.error ||
+                   'Failed to delete character. The character may have existing activity.'}
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="secondary"
+                onClick={() => setCharacterToDelete(null)}
+                disabled={deleteCharacterMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteCharacter}
+                loading={deleteCharacterMutation.isPending}
+                data-testid="confirm-delete-character-button"
+              >
+                Delete Character
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </Card>
   );
 }
@@ -295,6 +362,7 @@ interface CharacterCardProps {
   isAnonymous?: boolean;
   onApprove: (characterId: number, status: 'approved' | 'rejected') => void;
   onAssignNPC?: (character: Character) => void;
+  onDelete?: (character: Character) => void;
   getStatusBadgeVariant: (status: string) => BadgeVariant;
   canViewSheet: boolean;
   canEditSheet: boolean;
@@ -308,6 +376,7 @@ function CharacterCard({
   isAnonymous = false,
   onApprove,
   onAssignNPC,
+  onDelete,
   getStatusBadgeVariant,
   canViewSheet,
   canEditSheet,
@@ -400,6 +469,18 @@ function CharacterCard({
                 Reject
               </Button>
             </div>
+          )}
+
+          {/* Delete Character Button (GM only) */}
+          {userRole === 'gm' && onDelete && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => onDelete(character)}
+              data-testid="delete-character-button"
+            >
+              Delete
+            </Button>
           )}
         </div>
       </div>
