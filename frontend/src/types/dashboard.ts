@@ -12,7 +12,7 @@ export interface DashboardGameCard {
   genre?: string | null;
   gm_user_id: number;
   gm_username: string;
-  user_role: string; // player, gm, co_gm
+  user_role: string; // player, gm, co_gm, audience
   has_pending_action: boolean;
   pending_applications: number;
   unread_messages: number;

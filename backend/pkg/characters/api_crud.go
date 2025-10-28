@@ -64,31 +64,42 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For player characters: user must be a participant
-	// For NPCs: user must be GM
-	if data.CharacterType == "player_character" {
-		participants, err := gameService.GetGameParticipants(r.Context(), int32(gameID))
-		if err != nil {
-			h.App.Logger.Error("Failed to get game participants", "error", err)
-			render.Render(w, r, core.ErrInternalError(err))
-			return
-		}
+	// Check permissions based on character type
+	isGM := core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game)
 
-		isParticipant := false
-		for _, participant := range participants {
-			if participant.UserID == authUser.ID && participant.Role == "player" {
-				isParticipant = true
-				break
+	if data.CharacterType == "player_character" {
+		// GMs can create player characters for any player
+		// Regular players can only create characters for themselves
+		if !isGM {
+			participants, err := gameService.GetGameParticipants(r.Context(), int32(gameID))
+			if err != nil {
+				h.App.Logger.Error("Failed to get game participants", "error", err)
+				render.Render(w, r, core.ErrInternalError(err))
+				return
+			}
+
+			isParticipant := false
+			for _, participant := range participants {
+				if participant.UserID == authUser.ID && participant.Role == "player" {
+					isParticipant = true
+					break
+				}
+			}
+
+			if !isParticipant {
+				render.Render(w, r, core.ErrForbidden("only game participants can create player characters"))
+				return
 			}
 		}
 
-		if !isParticipant {
-			render.Render(w, r, core.ErrForbidden("only game participants can create player characters"))
+		// If GM is creating the character, they must specify which player
+		if isGM && data.UserID == nil {
+			render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("user_id is required when GM creates player characters")))
 			return
 		}
 	} else {
 		// For NPCs, only GM can create them (considers admin mode)
-		if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+		if !isGM {
 			render.Render(w, r, core.ErrForbidden("only the GM can create NPCs"))
 			return
 		}
@@ -99,7 +110,13 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 
 	var reqUserID *int32
 	if data.CharacterType == "player_character" {
-		reqUserID = &authUser.ID
+		if isGM {
+			// GM creating player character - use provided UserID (already validated as required above)
+			reqUserID = data.UserID
+		} else {
+			// Regular player creating their own character - use authenticated user's ID
+			reqUserID = &authUser.ID
+		}
 	}
 	// For NPCs, UserID can be nil (GM-controlled) or assigned later
 

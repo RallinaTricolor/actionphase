@@ -134,6 +134,17 @@ describe('DashboardGameCard', () => {
     expect(screen.getByText('GM')).toBeInTheDocument();
   });
 
+  it('displays audience role correctly', () => {
+    const audienceGame: GameCardType = {
+      ...baseGame,
+      user_role: 'audience',
+    };
+
+    renderWithProviders(<DashboardGameCard game={audienceGame} />);
+
+    expect(screen.getByText('Audience')).toBeInTheDocument();
+  });
+
   it('shows description when available', () => {
     const gameWithDescription: GameCardType = {
       ...baseGame,

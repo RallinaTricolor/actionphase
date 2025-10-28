@@ -35,6 +35,7 @@ export interface CharacterData {
 export interface CreateCharacterRequest {
   name: string;
   character_type: 'player_character' | 'npc';
+  user_id?: number; // Optional: for GMs to assign player characters to specific players
 }
 
 export interface CharacterDataRequest {

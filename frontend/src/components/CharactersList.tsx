@@ -35,8 +35,16 @@ export function CharactersList({
     refetchInterval: 30000 // Refetch every 30 seconds
   });
 
+  // Fetch game participants for user assignment (when GM creates player characters)
+  const { data: participantsData } = useQuery({
+    queryKey: ['gameParticipants', gameId],
+    queryFn: () => apiClient.games.getGameParticipants(gameId).then(res => res.data || []),
+    enabled: userRole === 'gm' // Only fetch for GMs
+  });
+
   // Ensure characters is always an array
   const characters = charactersData || [];
+  const participants = participantsData || [];
 
   const approveCharacterMutation = useMutation({
     mutationFn: ({ characterId, status }: { characterId: number; status: 'approved' | 'rejected' }) =>
@@ -239,6 +247,7 @@ export function CharactersList({
         onClose={() => setIsCreateModalOpen(false)}
         gameId={gameId}
         userRole={userRole}
+        participants={participants}
       />
 
       {/* Character Sheet Modal */}
