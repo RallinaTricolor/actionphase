@@ -24,25 +24,25 @@ For each item in this list:
       - **Status**: Confirmed - Landing page shows "No games match your current filters" with no games visible
       - **Location**: http://localhost:5173/ (logged out)
       - **Note**: Unclear if this is intentional design or if public/recruiting games should be shown to unauthenticated users
-    - ✅ UI: Text on the "Sign up or Login" button is invisible against the button color
-      - **Status**: White text on blue button background - completely unreadable
+    - ✓ UI: Text on the "Sign up or Login" button is invisible against the button color
+      - **Status**: FIXED - Added not-prose class to prevent .prose styles from overriding button text color
       - **Location**: Bottom of landing page (http://localhost:5173/ when logged out)
 - Authenticated User, Not in a Game
   - ⏸️ UI: Default after registration is "recruiting games" instead of a dashboard
   - ⏸️ FEATURE: Dashboard should exist, but largely be empty for consistent UX
-  - ✅ UI: Default tab for an "in_progress" game is "phases" but it should be "common room" if available
-      - **Status**: Confirmed - game loads with "Phases" tab selected instead of "Common Room"
+  - ✓ UI: Default tab for an "in_progress" game is "phases" but it should be "common room" if available
+      - **Status**: FIXED - Added missing dependencies to useGameTabs memo, now defaults to common-room correctly
       - **Location**: /games/50704?tab=phases (should default to ?tab=common-room)
-  - ✅ BUG: The "New Comments" sub-tab returns a 403 (it should not)
-      - **Status**: Confirmed - Returns 403 Forbidden error for non-participants
+  - ✓ BUG: The "New Comments" sub-tab returns a 403 (it should not)
+      - **Status**: FIXED - Removed permission check from ListRecentCommentsWithParents to match GetGamePosts (publicly viewable)
       - **Location**: /games/50704?tab=common-room → Click "New Comments" as TestPlayer4 (non-participant)
-      - **Expected**: Non-participants should be able to view new comments or receive a better error message
+      - **Fix**: Backend: api.go removed participant check, comments are now publicly viewable like posts
   - ✅ UI: The "Apply to Join" dialogue allows you to join as a player or the audience, but there's a "Join as Audience" button right next to it
       - **Status**: Confirmed - "Apply to Join" modal has Role dropdown with Player/Audience options, but separate "Join as Audience" button exists next to it
       - **Location**: /games/50702 (recruiting game) - Both buttons visible side-by-side
       - **Expected**: Should have single entry point for joining (either unified button or remove "Join as Audience")
-  - ✅ UI: On the "Participants" tab, "GameParticipants" is one word and it lists "Audiences" (instead of Audience Members) as a category which is incorrect
-      - **Status**: Confirmed - button shows "GameParticipants (3)" and heading shows "GameParticipants"
+  - ✓ UI: On the "Participants" tab, "GameParticipants" is one word and it lists "Audiences" (instead of Audience Members) as a category which is incorrect
+      - **Status**: FIXED - Changed "GameParticipants" to "Game Participants" in PeopleView.tsx
       - **Location**: /games/50704?tab=people
   - ✅ BUG: Joining a game that is in the recruiting state as audience results in the game showing up on your dashboard with you having applied, rather than joined as an audience member
       - **Status**: Confirmed - Dashboard shows "Player" badge instead of "Audience" badge for audience members in recruiting games
@@ -67,8 +67,8 @@ For each item in this list:
       - **Status**: Confirmed - Handout creation form has Content textarea with Markdown support but no preview window
       - **Location**: /games/50704?tab=handouts → Click "Create Handout"
       - **Expected**: Should have preview pane or toggle to see rendered markdown
-  - ✅ BUG: GM can create posts in the History view of a common room phase
-      - **Status**: Confirmed - "Create New GM Post" form appears in History tab for active phase
+  - ✓ BUG: GM can create posts in the History view of a common room phase
+      - **Status**: FIXED - HistoryView passes isCurrentPhase={false}, making CommonRoom read-only
       - **Location**: /games/50704?tab=history → Click on "Phase 1 Arrival at the Harbor"
       - **Expected**: History view should be read-only for active phases
   - ⏸️ FEATURE: Cancelling a game needs a confirmation modal
@@ -79,13 +79,13 @@ For each item in this list:
       - **Status**: Confirmed - Phase description is only visible in History tab phase cards, not in Common Room view
       - **Location**: /games/50704?tab=common-room shows "Common Room - Arrival at the Harbor" header but description ("The investigators arrive at Innsmouth harbor...") is nowhere visible
       - **Expected**: Phase description should be displayed somewhere in the Common Room view, perhaps near the phase title or deadline
-  - ✅ UI: Default tab for an "in_progress" game is "people" but it should be "common room" or "actions"
-      - **Status**: Confirmed - Game loads with "People" tab selected instead of "Common Room"
+  - ✓ UI: Default tab for an "in_progress" game is "people" but it should be "common room" or "actions"
+      - **Status**: FIXED - Added missing dependencies to useGameTabs memo, now defaults correctly
       - **Location**: /games/50704 defaults to ?tab=people
       - **Expected**: Should default to ?tab=common-room for in_progress games, or ?tab=actions if there's an active action phase
       - **Note**: This is duplicate of the "Authenticated User, Not in a Game" item about default tabs
-  - ✅ BUG: History tab common rooms can have replies made to them if the phase is still active
-      - **Status**: Confirmed - "Reply" and "Add Comment" buttons are visible and functional in History tab for active phases
+  - ✓ BUG: History tab common rooms can have replies made to them if the phase is still active
+      - **Status**: FIXED - HistoryView passes isCurrentPhase={false}, cascades readOnly prop to disable reply/comment buttons
       - **Location**: /games/50704?tab=history → Click on active "Phase 1 Arrival at the Harbor"
       - **Expected**: History view should be read-only, no reply/comment buttons for active phases
   - ⏸️ BUG: Leaving a game should relinquish control of character
@@ -126,8 +126,8 @@ For each item in this list:
       - **Note**: Tested with Playwright fill() method and "0" was correctly replaced with "5". May need manual keyboard testing to verify actual behavior.
   - ⏸️ UI: If there is an unread message badge on a private message in the sidebar, the start of the text moves out of the box
       - **Note**: Requires active private messages with unread badges to verify. Cannot test with current demo data.
-  - ✅ UI: Deleting a comment has a standard browser alert() instead of a modal.
-      - **Status**: Confirmed - Uses browser confirm() dialog: "Are you sure you want to delete this comment? This action cannot be undone."
+  - ✓ UI: Deleting a comment has a standard browser alert() instead of a modal.
+      - **Status**: FIXED - Created ConfirmModal component, replaced browser confirm() with custom modal
       - **Location**: Any comment with Delete button → Click Delete
       - **Expected**: Should use custom modal for consistency with app design
   - ⏸️ FEATURE: Players, Audience Members, and Game Masters should be able to delete private messages as well as conversations. There's not a lot of screen real estate here so the UI will need to be slick.
@@ -142,12 +142,12 @@ For each item in this list:
 **Remaining to Verify**: ~20 items (require specific scenarios or cannot test with demo data)
 
 ### Quick Wins (Confirmed & Easy to Fix)
-1. ✅ Sign up button invisible text - CSS fix
-2. ✅ "GameParticipants" spacing - String literal fix
-3. ✅ Default tab should be Common Room - Logic fix in GameDetailsPage (appears in both Authenticated/Players sections)
-4. ✅ GM can post in History view - Add conditional rendering
-5. ✅ Players can post in History view - Same fix as #4, conditional rendering
-6. ✅ New Comments 403 error for non-participants - Permission/error handling fix
+1. ✓ Sign up button invisible text - CSS fix - FIXED (added not-prose class)
+2. ✓ "GameParticipants" spacing - String literal fix - FIXED
+3. ✓ Default tab should be Common Room - Logic fix in GameDetailsPage - FIXED (useGameTabs dependency array)
+4. ✓ GM can post in History view - Add conditional rendering - FIXED (HistoryView passes isCurrentPhase={false})
+5. ✓ Players can post in History view - Same fix as #4 - FIXED (readOnly prop cascade)
+6. ✓ New Comments 403 error for non-participants - Permission/error handling fix - FIXED (removed permission check)
 7. ✅ Apply to Join vs Join as Audience redundancy - Remove redundant button
 8. ✅ Audience badge shows as "Player" - Fix dashboard role display logic
 9. ✅ GM post form not minimized - Add collapse/expand functionality
