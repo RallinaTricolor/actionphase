@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import CharacterAvatar from './CharacterAvatar';
 
 interface MentionedCharacter {
   id: number;
   name: string;
+  username?: string; // Player's username (optional for backwards compatibility)
+  character_type?: string; // Type of character (optional)
+  avatar_url?: string; // Character's avatar URL (optional)
 }
 
 interface MarkdownPreviewProps {
@@ -42,6 +46,10 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   mentionedCharacters = [],
   className = '',
 }) => {
+  // State for tracking hovered mention
+  const [hoveredMentionId, setHoveredMentionId] = useState<number | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
+
   // Create a custom sanitize schema that allows <mark> elements with data-mention-id
   const sanitizeSchema = React.useMemo(() => {
     return {
@@ -53,6 +61,12 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       },
     };
   }, []);
+
+  // Get the hovered character's full details
+  const hoveredCharacter = React.useMemo(() => {
+    if (hoveredMentionId === null) return null;
+    return mentionedCharacters.find((char) => char.id === hoveredMentionId) || null;
+  }, [hoveredMentionId, mentionedCharacters]);
 
   // Replace @CharacterName mentions with highlighted spans
   // BUT skip mentions inside code blocks (inline or fenced)
@@ -186,10 +200,29 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           // Custom mark element for character mentions
           mark({ node, children, ...props }) {
             const mentionId = (props as any)['data-mention-id'];
+
+            const handleMouseEnter = (e: React.MouseEvent<HTMLElement>) => {
+              if (mentionId) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHoveredMentionId(parseInt(mentionId));
+                setTooltipPosition({
+                  top: rect.bottom + 4, // 4px below the mention (viewport-relative for fixed positioning)
+                  left: rect.left,
+                });
+              }
+            };
+
+            const handleMouseLeave = () => {
+              setHoveredMentionId(null);
+              setTooltipPosition(null);
+            };
+
             return (
               <mark
-                className="bg-interactive-primary-subtle text-interactive-primary px-1 rounded font-medium cursor-pointer hover:bg-interactive-primary"
+                className="bg-interactive-primary-subtle text-interactive-primary px-1 rounded font-medium cursor-pointer hover:bg-interactive-primary relative"
                 data-mention-id={mentionId}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
                 {...props}
               >
                 {children}
@@ -270,6 +303,38 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       >
         {processedContent}
       </ReactMarkdown>
+
+      {/* Tooltip for character mentions */}
+      {hoveredCharacter && tooltipPosition && (
+        <div
+          className="fixed z-50 px-3 py-2 text-sm bg-gray-900 dark:bg-gray-800 border border-border-primary rounded-lg shadow-lg pointer-events-none"
+          style={{
+            top: `${tooltipPosition.top}px`,
+            left: `${tooltipPosition.left}px`,
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <CharacterAvatar
+              avatarUrl={hoveredCharacter.avatar_url}
+              characterName={hoveredCharacter.name}
+              size="sm"
+            />
+            <div>
+              <div className="font-semibold text-white">{hoveredCharacter.name}</div>
+              {hoveredCharacter.username && (
+                <div className="text-xs text-gray-300 mt-0.5">
+                  Player: {hoveredCharacter.username}
+                </div>
+              )}
+              {hoveredCharacter.character_type && (
+                <div className="text-xs text-gray-400 mt-0.5 capitalize">
+                  {hoveredCharacter.character_type.replace('_', ' ')}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

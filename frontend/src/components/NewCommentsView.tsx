@@ -1,8 +1,9 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import { useRecentComments } from '../hooks/useRecentComments';
 import { CommentWithParentCard } from './CommentWithParentCard';
-import { Spinner, Alert } from './ui';
+import { Spinner, Alert, Button } from './ui';
 
 interface NewCommentsViewProps {
   gameId: number;
@@ -22,10 +23,14 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch,
   } = useRecentComments(gameId);
 
   // Infinite scroll sentinel ref
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Set up intersection observer for infinite scrolling
   useEffect(() => {
@@ -98,8 +103,33 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
     navigate(`/games/${gameId}/common-room?postId=${comment.parent_id}#comment-${comment.id}`);
   };
 
+  // Handle refresh button click
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* Header with refresh button */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-content-primary">Recent Comments</h3>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing || isLoading}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+        </Button>
+      </div>
+
       {/* Comments list */}
       {allComments.map((comment) => (
         <CommentWithParentCard

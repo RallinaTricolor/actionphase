@@ -68,6 +68,7 @@ describe('NewCommentsView', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
+      refetch: vi.fn(),
     } as any);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
@@ -85,6 +86,7 @@ describe('NewCommentsView', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
+      refetch: vi.fn(),
     } as any);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
@@ -102,6 +104,7 @@ describe('NewCommentsView', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
+      refetch: vi.fn(),
     } as any);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
@@ -127,6 +130,7 @@ describe('NewCommentsView', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
+      refetch: vi.fn(),
     } as any);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
@@ -160,6 +164,7 @@ describe('NewCommentsView', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
+      refetch: vi.fn(),
     } as any);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
@@ -181,6 +186,7 @@ describe('NewCommentsView', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
+      refetch: vi.fn(),
     } as any);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
@@ -199,6 +205,7 @@ describe('NewCommentsView', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: true,
       isFetchingNextPage: true,
+      refetch: vi.fn(),
     } as any);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
@@ -226,6 +233,7 @@ describe('NewCommentsView', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: true,
       isFetchingNextPage: false,
+      refetch: vi.fn(),
     } as any);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
@@ -254,6 +262,7 @@ describe('NewCommentsView', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
+      refetch: vi.fn(),
     } as any);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
@@ -271,11 +280,146 @@ describe('NewCommentsView', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
+      refetch: vi.fn(),
     } as any);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
     expect(screen.getByText(/failed to load recent comments/i)).toBeInTheDocument();
     expect(screen.getByText('Unknown error')).toBeInTheDocument();
+  });
+
+  describe('Refresh Button', () => {
+    it('renders refresh button with comments', () => {
+      const refetch = vi.fn();
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+        data: {
+          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        refetch,
+      } as any);
+
+      render(<NewCommentsView gameId={1} />, { wrapper });
+
+      expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
+    });
+
+    it('calls refetch when refresh button is clicked', async () => {
+      const refetch = vi.fn().mockResolvedValue({});
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+        data: {
+          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        refetch,
+      } as any);
+
+      render(<NewCommentsView gameId={1} />, { wrapper });
+
+      const refreshButton = screen.getByRole('button', { name: /refresh/i });
+      refreshButton.click();
+
+      await waitFor(() => {
+        expect(refetch).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('disables refresh button while refreshing', async () => {
+      const refetch = vi.fn().mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 100))
+      );
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+        data: {
+          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        refetch,
+      } as any);
+
+      render(<NewCommentsView gameId={1} />, { wrapper });
+
+      const refreshButton = screen.getByRole('button', { name: /refresh/i });
+      refreshButton.click();
+
+      // Button should be disabled during refresh
+      await waitFor(() => {
+        expect(refreshButton).toBeDisabled();
+      });
+
+      // Wait for refresh to complete
+      await waitFor(() => {
+        expect(refreshButton).not.toBeDisabled();
+      });
+    });
+
+    it('shows "Refreshing..." text while refreshing', async () => {
+      const refetch = vi.fn().mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 100))
+      );
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+        data: {
+          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        refetch,
+      } as any);
+
+      render(<NewCommentsView gameId={1} />, { wrapper });
+
+      const refreshButton = screen.getByRole('button', { name: /refresh/i });
+      refreshButton.click();
+
+      // Should show "Refreshing..." text
+      await waitFor(() => {
+        expect(screen.getByText(/refreshing/i)).toBeInTheDocument();
+      });
+
+      // Wait for refresh to complete and text to return to "Refresh"
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
+      });
+    });
+
+    it('disables refresh button while initially loading', () => {
+      const refetch = vi.fn();
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        isError: false,
+        error: null,
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        refetch,
+      } as any);
+
+      render(<NewCommentsView gameId={1} />, { wrapper });
+
+      // Loading spinner should be shown, but let's check if we can find any button
+      // In this case, the component shows loading state before rendering the refresh button
+      // So we expect the button to not be in the document during initial load
+      expect(screen.queryByRole('button', { name: /refresh/i })).not.toBeInTheDocument();
+    });
   });
 });

@@ -326,8 +326,14 @@ export function ThreadedComment({
               content={comment.content}
               mentionedCharacters={comment.mentioned_character_ids?.map(id => {
                 const char = characters.find(c => c.id === id);
-                return char ? { id: char.id, name: char.name } : null;
-              }).filter((c): c is { id: number; name: string } => c !== null) || []}
+                return char ? {
+                  id: char.id,
+                  name: char.name,
+                  username: char.username,
+                  character_type: char.character_type,
+                  avatar_url: char.avatar_url
+                } : null;
+              }).filter((c): c is { id: number; name: string; username?: string; character_type?: string; avatar_url?: string } => c !== null) || []}
             />
           </div>
         )}
