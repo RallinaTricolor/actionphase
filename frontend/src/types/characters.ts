@@ -126,15 +126,8 @@ export const CHARACTER_MODULES: CharacterModule[] = [
       {
         name: 'background',
         type: 'text',
-        label: 'Public Profile',
-        placeholder: 'What\'s visible at a glance...',
-        isPublic: true
-      },
-      {
-        name: 'appearance',
-        type: 'text',
-        label: 'Physical Appearance',
-        placeholder: 'Describe how your character looks...',
+        label: 'Character Description',
+        placeholder: 'Describe your character\'s appearance, personality, background, and any publicly visible information...',
         isPublic: true
       }
     ]
@@ -147,15 +140,8 @@ export const CHARACTER_MODULES: CharacterModule[] = [
       {
         name: 'private_notes',
         type: 'text',
-        label: 'Private Notes',
-        placeholder: 'Your private character notes...',
-        isPublic: false
-      },
-      {
-        name: 'secrets',
-        type: 'text',
-        label: 'Character Secrets',
-        placeholder: 'Secrets about your character...',
+        label: 'Private Notes & Secrets',
+        placeholder: 'Your private character notes, secrets, motivations, and hidden information...',
         isPublic: false
       }
     ]

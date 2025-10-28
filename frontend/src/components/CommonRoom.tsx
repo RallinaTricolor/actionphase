@@ -2,24 +2,26 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
-import { Button, Alert, Spinner } from './ui';
+import { Button, Alert, Spinner, Card } from './ui';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { CreatePostForm } from './CreatePostForm';
 import { PostCard } from './PostCard';
 import { ThreadViewModal } from './ThreadViewModal';
 import { NewCommentsView } from './NewCommentsView';
+import { MarkdownPreview } from './MarkdownPreview';
 import { getRootPostId } from '../utils/commentUtils';
 
 interface CommonRoomProps {
   gameId: number;
   phaseId?: number;
   phaseTitle?: string;
+  phaseDescription?: string;
   isCurrentPhase?: boolean;
   isGM?: boolean;
 }
 
-export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true, isGM = false }: CommonRoomProps) {
+export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, isCurrentPhase = true, isGM = false }: CommonRoomProps) {
   // Get current user from AuthContext
   const { currentUser } = useAuth();
   const currentUserId = currentUser?.id;
@@ -184,6 +186,13 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
               : 'View GM posts and join the discussion. Comment on posts to interact with other players.'
             : 'Historical discussions from this phase. New posts can only be created by the GM in the current phase.'}
         </p>
+
+        {/* Phase Description */}
+        {phaseDescription && (
+          <Card variant="bordered" padding="sm" className="mt-4">
+            <MarkdownPreview content={phaseDescription} />
+          </Card>
+        )}
       </div>
 
       {/* Tab Navigation */}

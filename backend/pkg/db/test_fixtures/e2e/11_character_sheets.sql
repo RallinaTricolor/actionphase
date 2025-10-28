@@ -59,9 +59,7 @@ BEGIN
   -- Character 1: Bio data (public)
   INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, is_public, created_at, updated_at)
   VALUES
-    (char1_id, 'bio', 'appearance', 'A weathered ranger with keen eyes', 'text', true, NOW(), NOW()),
-    (char1_id, 'bio', 'personality', 'Cautious but loyal', 'text', true, NOW(), NOW()),
-    (char1_id, 'bio', 'background', 'Former member of the King''s Guard', 'text', true, NOW(), NOW());
+    (char1_id, 'bio', 'background', 'A weathered ranger with keen eyes. Former member of the King''s Guard. Cautious but loyal.', 'text', true, NOW(), NOW());
 
   -- Character 1: Abilities data (2 abilities, 2 skills)
   INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, is_public, created_at, updated_at)
@@ -93,8 +91,7 @@ BEGIN
   -- Character 2: Bio data
   INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, is_public, created_at, updated_at)
   VALUES
-    (char2_id, 'bio', 'appearance', 'A mysterious mage in dark robes', 'text', true, NOW(), NOW()),
-    (char2_id, 'bio', 'personality', 'Scholarly and reserved', 'text', true, NOW(), NOW());
+    (char2_id, 'bio', 'background', 'A mysterious mage in dark robes. Scholarly and reserved.', 'text', true, NOW(), NOW());
 
   -- Character 2: Abilities data (3 abilities, 1 skill)
   INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, is_public, created_at, updated_at)
@@ -126,7 +123,7 @@ BEGIN
   -- Character 3: Only minimal bio (rest will be added via E2E tests)
   INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, is_public, created_at, updated_at)
   VALUES
-    (char_empty_id, 'bio', 'appearance', 'A new adventurer', 'text', true, NOW(), NOW());
+    (char_empty_id, 'bio', 'background', 'A new adventurer', 'text', true, NOW(), NOW());
 
 END $$;
 
