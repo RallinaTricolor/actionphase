@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { ThreadedComment } from '../components/ThreadedComment';
+import { getRootPostId } from '../utils/commentUtils';
 
 /**
  * Focused view for a specific comment thread
@@ -90,6 +91,7 @@ export function ThreadViewPage() {
         <ThreadedComment
           comment={comment}
           gameId={Number(gameId)!}
+          postId={getRootPostId(comment)} // Calculate root post ID from comment
           characters={[]}
           controllableCharacters={[]}
           onCreateReply={async () => {}}
@@ -113,6 +115,7 @@ export function ThreadViewPage() {
                 key={reply.id}
                 comment={reply}
                 gameId={Number(gameId)!}
+                postId={getRootPostId(reply)} // Calculate root post ID from reply
                 characters={[]}
                 controllableCharacters={[]}
                 onCreateReply={async () => {}}

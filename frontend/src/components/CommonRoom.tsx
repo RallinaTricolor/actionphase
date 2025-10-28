@@ -9,6 +9,7 @@ import { CreatePostForm } from './CreatePostForm';
 import { PostCard } from './PostCard';
 import { ThreadViewModal } from './ThreadViewModal';
 import { NewCommentsView } from './NewCommentsView';
+import { getRootPostId } from '../utils/commentUtils';
 
 interface CommonRoomProps {
   gameId: number;
@@ -272,6 +273,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
       {threadModalComment && (
         <ThreadViewModal
           gameId={gameId}
+          postId={getRootPostId(threadModalComment)} // Calculate root post ID from comment
           comment={threadModalComment}
           characters={allCharacters}
           controllableCharacters={controllableCharacters}

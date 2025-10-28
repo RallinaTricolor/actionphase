@@ -24,7 +24,7 @@ SELECT m.*,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
-       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
+       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
@@ -36,7 +36,7 @@ SELECT m.*,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
-       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as reply_count
+       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id) as reply_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
@@ -48,7 +48,7 @@ SELECT m.*,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
-       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
+       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
@@ -64,7 +64,7 @@ SELECT m.*,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
-       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
+       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
@@ -114,7 +114,7 @@ SELECT m.*,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
-       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as reply_count
+       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id) as reply_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
@@ -124,17 +124,17 @@ WHERE m.id = $1;
 -- Get direct comments for a specific post
 -- For threaded display, call this recursively on the frontend
 -- Sorted newest first (DESC) for better UX - users see latest comments at top
+-- INCLUDES deleted comments to preserve thread structure - UI will show "[Comment deleted]" placeholder
 SELECT m.*,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
-       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as reply_count
+       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id) as reply_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
 WHERE m.parent_id = $1
   AND m.message_type = 'comment'
-  AND m.is_deleted = false
 ORDER BY m.created_at DESC;
 
 -- NOTE: GetCommentThread with recursive CTE is not supported by sqlc
@@ -187,17 +187,17 @@ WHERE parent_id = $1
 
 -- name: GetAllDescendantComments :many
 -- Get all descendant comments recursively for counting
+-- Includes deleted comments to preserve thread structure counts
 WITH RECURSIVE comment_tree AS (
   SELECT messages.id as comment_id
   FROM messages
-  WHERE messages.parent_id = $1 AND messages.is_deleted = false
+  WHERE messages.parent_id = $1
 
   UNION ALL
 
   SELECT m.id as comment_id
   FROM messages m
   INNER JOIN comment_tree ct ON m.parent_id = ct.comment_id
-  WHERE m.is_deleted = false
 )
 SELECT comment_id as id FROM comment_tree;
 
@@ -206,7 +206,7 @@ SELECT m.*,
        u.username as author_username,
        c.name as character_name,
        c.avatar_url as character_avatar_url,
-       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id AND is_deleted = false) as comment_count
+       (SELECT COUNT(*) FROM messages WHERE parent_id = m.id) as comment_count
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id

@@ -15,9 +15,11 @@ import { ConfirmModal } from './ConfirmModal';
 interface ThreadedCommentProps {
   comment: Message;
   gameId: number;
+  postId: number; // The root post ID (required for API calls)
   characters: Character[]; // All game characters (for autocomplete)
   controllableCharacters: Character[]; // Characters the user can control (for "Reply as" dropdown)
   onCreateReply: (parentId: number, characterId: number, content: string) => Promise<void>;
+  onCommentDeleted?: () => void; // Callback when a comment is deleted (to trigger parent reload)
   currentUserId?: number;
   depth?: number;
   maxDepth?: number; // Maximum nesting depth before showing "Continue thread" button
@@ -29,9 +31,11 @@ interface ThreadedCommentProps {
 export function ThreadedComment({
   comment,
   gameId,
+  postId,
   characters,
   controllableCharacters,
   onCreateReply,
+  onCommentDeleted,
   currentUserId,
   depth = 0,
   maxDepth = 5,
@@ -148,7 +152,7 @@ export function ThreadedComment({
     try {
       await updateCommentMutation.mutateAsync({
         gameId,
-        postId: comment.parent_id || comment.id,
+        postId, // Use the root post ID passed as prop
         commentId: comment.id,
         data: { content: editContent.trim() }
       });
@@ -168,9 +172,13 @@ export function ThreadedComment({
       setIsDeleting(true);
       await deleteCommentMutation.mutateAsync({
         gameId,
-        postId: comment.parent_id || comment.id,
+        postId, // Use the root post ID passed as prop
         commentId: comment.id
       });
+      // Success - the mutation will invalidate queries and trigger refetch
+      setShowDeleteConfirm(false);
+      // Notify parent to reload its replies
+      onCommentDeleted?.();
     } catch (err) {
       console.error('Failed to delete comment:', err);
       showError('Failed to delete comment. Please try again.');
@@ -178,6 +186,13 @@ export function ThreadedComment({
       setIsDeleting(false);
     }
   };
+
+  // Handler for when a nested comment is deleted - reload this comment's replies
+  const handleNestedCommentDeleted = useCallback(() => {
+    // Reset the loaded flag and reload replies
+    hasLoadedRef.current = false;
+    loadReplies();
+  }, []);
 
 
   const handleSubmitReply = async (e: React.FormEvent) => {
@@ -251,7 +266,7 @@ export function ThreadedComment({
             <span className="font-semibold text-sm text-content-primary">{comment.character_name}</span>
             <span className="text-xs text-content-secondary ml-2">
               @{comment.author_username} · {formatDate(comment.created_at)}
-              {comment.is_edited && (
+              {comment.is_edited && !comment.is_deleted && (
                 <span className="ml-1 text-content-tertiary" title={comment.edited_at ? `Last edited ${formatDate(comment.edited_at)}` : undefined}>
                   (edited{comment.edit_count && comment.edit_count > 1 ? ` ${comment.edit_count}x` : ''})
                 </span>
@@ -266,8 +281,18 @@ export function ThreadedComment({
           </div>
         </div>
 
-        {/* Comment Content - Edit Mode or Display Mode */}
-        {isEditing ? (
+        {/* Comment Content - Edit Mode, Deleted State, or Display Mode */}
+        {comment.is_deleted ? (
+          // Deleted comment - show placeholder to preserve thread structure
+          <div className="text-sm text-content-tertiary italic mb-2 py-1">
+            <span className="opacity-60">[Comment deleted]</span>
+            {comment.deleted_at && (
+              <span className="ml-2 text-xs opacity-50">
+                {formatDate(comment.deleted_at)}
+              </span>
+            )}
+          </div>
+        ) : isEditing ? (
           <div className="mb-3">
             <CommentEditor
               value={editContent}
@@ -309,7 +334,7 @@ export function ThreadedComment({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 text-xs text-content-secondary">
-          {!isAtMaxDepth && !isEditing && !readOnly && (
+          {!isAtMaxDepth && !isEditing && !readOnly && !comment.is_deleted && (
             <Button
               variant="ghost"
               size="sm"
@@ -356,7 +381,7 @@ export function ThreadedComment({
             )}
           </Button>
 
-          {isAuthor && !isEditing && (
+          {isAuthor && !isEditing && !comment.is_deleted && (
             <Button
               variant="ghost"
               size="sm"
@@ -371,7 +396,7 @@ export function ThreadedComment({
             </Button>
           )}
 
-          {(isAuthor || isGM || adminModeEnabled) && !isEditing && (
+          {(isAuthor || isGM || adminModeEnabled) && !isEditing && !comment.is_deleted && (
             <Button
               variant="ghost"
               size="sm"
@@ -496,9 +521,11 @@ export function ThreadedComment({
                 key={reply.id}
                 comment={reply}
                 gameId={gameId}
+                postId={postId} // Pass through the root post ID
                 characters={characters}
                 controllableCharacters={controllableCharacters}
                 onCreateReply={onCreateReply}
+                onCommentDeleted={handleNestedCommentDeleted} // Reload replies when nested comment is deleted
                 currentUserId={currentUserId}
                 depth={depth + 1}
                 maxDepth={maxDepth}
