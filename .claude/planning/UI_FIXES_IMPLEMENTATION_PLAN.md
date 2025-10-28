@@ -701,54 +701,67 @@ WHERE secrets IS NOT NULL AND secrets != '';
 
 ---
 
-### 3.6 Handout Creation Missing Markdown Preview
+### 3.6 Handout Creation Missing Markdown Preview ✓ COMPLETED
 
 **Issue**: Handout content field has no preview for markdown
 
-**Files to Modify**:
-- `frontend/src/components/HandoutCreationForm.tsx` or similar
-- Add preview pane/toggle
+**Status**: ✅ FIXED (October 28, 2025)
+
+**Files Modified**:
+- `frontend/src/components/CreateHandoutModal.tsx` - Added preview toggle functionality
 
 **Implementation**:
 ```tsx
 const [showPreview, setShowPreview] = useState(false);
 
-<div className="space-y-2">
-  <div className="flex justify-between items-center">
-    <Label>Content</Label>
+<div>
+  <div className="flex justify-between items-center mb-2">
+    <label htmlFor="handout-content" className="block text-sm font-medium text-content-primary">
+      Content <span className="text-danger">*</span>
+    </label>
     <button
       type="button"
       onClick={() => setShowPreview(!showPreview)}
-      className="text-sm text-primary"
+      className="text-sm text-primary hover:text-primary-hover font-medium"
+      data-testid="preview-toggle-button"
     >
       {showPreview ? 'Edit' : 'Preview'}
     </button>
   </div>
 
   {showPreview ? (
-    <Card variant="bordered" padding="md">
-      <MarkdownPreview content={content} />
-    </Card>
+    <div className="surface-secondary border border-border-primary rounded-lg p-4 min-h-[240px] overflow-y-auto" data-testid="handout-preview">
+      {formData.content ? (
+        <MarkdownPreview content={formData.content} />
+      ) : (
+        <p className="text-content-tertiary italic">No content to preview...</p>
+      )}
+    </div>
   ) : (
     <Textarea
-      value={content}
-      onChange={setContent}
-      placeholder="Write your handout content using Markdown..."
-      rows={12}
+      id="handout-content"
+      value={formData.content}
+      onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+      placeholder="Write your handout content here... (Markdown supported)"
+      rows={10}
+      required
+      helperText="Supports Markdown formatting: **bold**, *italic*, # headings, [links](url)"
+      data-testid="handout-content-input"
     />
   )}
-
-  <p className="text-xs text-text-secondary">
-    Markdown supported: **bold**, *italic*, # headings, [links](url)
-  </p>
 </div>
 ```
 
-**Testing**:
-- As GM: Create handout
-- Write markdown content
-- Toggle preview → Verify renders correctly
-- Switch back to edit → Verify content preserved
+**Testing**: ✅ COMPLETED
+- ✓ As TestGM: Opened handout creation modal
+- ✓ Wrote markdown content with headings, bold, italic, lists, links
+- ✓ Toggled preview → Verified markdown renders correctly
+- ✓ Button changed to "Edit" in preview mode
+- ✓ Switched back to edit → Verified content preserved
+- ✓ Button changed back to "Preview" in edit mode
+- ✓ Empty content shows placeholder message in preview
+
+**Verification**: Manually tested with Playwright MCP on game 164
 
 **Complexity**: ⭐⭐ (Simple)
 
