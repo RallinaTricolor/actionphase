@@ -296,8 +296,8 @@ For each item in this list:
     - **Changes**: Modified CommonRoom.tsx, GameTabContent.tsx, HistoryView.tsx
 
 ### Moderate Complexity
-17. ✅ Players can edit abilities, skills, items, currency - Add permission checks for character stat editing
-18. ✅ Leave Game button too prominent - UI restructure to make button less prominent
+17. ✓ Players can edit abilities, skills, items, currency - Add permission checks for character stat editing
+18. ✓ Leave Game button too prominent - UI restructure to make button less prominent
 19. ✓ Games pagination - Add pagination to /games endpoint
     - **Status**: FIXED - Added full-stack pagination with comprehensive test coverage
     - **Location**: /games page
@@ -371,19 +371,337 @@ For each item in this list:
       - Frontend Tests: ✅ All 1684 tests passing
     - **Backwards Compatible**: Works with existing mentions that only have id/name (avatar optional)
 
-### Items Requiring Specific Test Scenarios (Cannot Verify with Demo Data)
-1. ⏸️ BUG: Leaving a game should relinquish control of character - Requires testing leave functionality
-2. ⏸️ FEATURE: Action Result flow - Requires GM to publish results and start new common room
-3. ⏸️ BUG: "Player replied to your comment" notification link - Requires active notifications
-4. ⏸️ FEATURE: GMs editing results before publishing - Requires pending results to exist
-5. ⏸️ FEATURE: Cancelling a game needs confirmation modal - Requires testing cancel action
-6. ⏸️ FEATURE: Rejecting/approving characters - Requires rejected characters to test
-7. ⏸️ BUG: Rejected characters in messages tab - Requires rejected characters
-8. ⏸️ UI: Unread message badge text overflow - Requires unread private messages
-9. ⏸️ FEATURE: Delete private messages/conversations - Requires implementing feature first
-10. ⏸️ UI: Character sheet rounded borders - Needs visual design spec verification
-11. ⏸️ UI: Currency input default "0" behavior - Needs manual keyboard testing
-12. ⏸️ FEATURE: NPC assignments table refactor - Architecture decision, not a UI bug
+### Items Requiring Specific Test Scenarios - Detailed Evaluation
+
+#### 1. ⏸️ BUG: Leaving a game should relinquish control of character
+- **Status**: NEEDS VERIFICATION - Can test with existing fixtures
+- **Test Setup**: Use Game #302 (GM Messaging) with TestPlayer1
+- **Current Behavior**: Unknown - need to verify if leaving game properly removes character control
+- **Required Data**: ✅ Available - Multiple games with player participation
+- **Verification Steps**:
+  1. Navigate to game with controlled character
+  2. Click "Leave Game" button
+  3. Verify character is no longer controllable by player
+  4. Check Messages tab doesn't show character
+  5. Verify character appears as NPC to other players
+- **Implementation**: If bug exists, update leave game handler to clear character_player_id
+- **Complexity**: Low (Backend + Frontend)
+- **Priority**: Medium - Affects game integrity
+
+#### 2. ✅ EVALUATED: Action Result visibility when GM starts new Common Room immediately
+- **Status**: UX EVALUATION COMPLETE - Ready for implementation
+- **Original Issue**: "If the GM starts a new common room immediately after publishing results, the only place to see your results is in the history tab"
+- **Test Setup**: Game #326 (E2E Test: Action Results) - Phase 1 (action, expired) → Phase 2 (common room, active)
+- **Testing Date**: October 28, 2025
+- **Tested As**: TestGM (GM role) and TestPlayer1 (Player role)
+
+##### Current Behavior (CONFIRMED)
+**What Works:**
+- ✅ Results ARE accessible to players via History tab → Phase 1 → Results
+- ✅ Results display correctly with narrative and game mechanics
+- ✅ GMs can view all results (published + draft)
+- ✅ Players can only see published results
+
+**UX Problems Discovered:**
+1. **Hidden Results Problem**
+   - When GM starts new common room after publishing results:
+   - Phase description says: "Players discuss the results of their investigations"
+   - But provides NO link, button, or indicator of where to find those results
+   - Players must discover History tab → Phase 1 → Results path themselves
+
+2. **Multi-Step Discovery Journey** (7 steps to find results!)
+   ```
+   1. Log in and see common room
+   2. Read phase description mentioning results
+   3. Look for results (NOT FOUND)
+   4. Discover History tab exists
+   5. Click History tab
+   6. Realize Phase 1 might contain results
+   7. Click Phase 1 to finally view results
+   ```
+
+3. **Misleading Context**
+   - Phase description directly references results
+   - Creates expectation results should be visible in current context
+   - Results feel "lost" or "buried" in history
+
+4. **Technical Issues**
+   - Console shows 403 Forbidden errors when loading History tab as player
+   - Results still display (from different endpoint), but suggests permission confusion
+
+##### Recommended Solution: Combination Approach
+
+**Implement Option A + Option B for optimal UX:**
+
+**Option A: Enhanced Phase Indicator (Quick Win - 2-4 hours)**
+```
+Current Phase: Discussion 📋 Previous results available
+                         └─ Dropdown: "View Phase 1 Results"
+```
+- Add indicator to current phase chip when previous phase has results
+- Dropdown menu with direct link to results
+- Minimal architectural change
+- Clear visual cue
+
+**Option B: Embedded Results Section (Better Long-Term - 4-8 hours)**
+```
+┌─────────────────────────────────────────────┐
+│  📋 Recent Action Results (Phase 1)         │
+│  ▼ Basement Investigation Results           │
+│  ▼ Library Research Results                 │
+│                                              │
+│  [View Full Results in History]             │
+└─────────────────────────────────────────────┘
+```
+- Add collapsible "Recent Results" section at top of Common Room
+- Show when:
+  - Current phase is common_room
+  - Previous phase was action with published results
+  - No new action phase has started since
+- Results displayed in collapsed/expandable cards
+- Auto-collapse after first view (tracked in localStorage)
+- "View Full Results" button links to History → Phase X
+
+##### Implementation Tasks
+
+**Phase 1: Quick Fix (Phase Indicator Enhancement)**
+- [ ] Update `CurrentPhaseIndicator` component (frontend/src/components/CurrentPhaseIndicator.tsx)
+- [ ] Add logic to detect if previous phase has published results
+- [ ] Add visual indicator (📋 icon) to phase chip
+- [ ] Add dropdown menu with "View Previous Results" link
+- [ ] Link navigates to History tab with phase expanded
+- **Estimated Time**: 2-4 hours
+- **Complexity**: Low
+
+**Phase 2: Better UX (Embedded Results Section)**
+- [ ] Create `RecentResultsSection` component
+- [ ] Add API hook to fetch previous phase results
+- [ ] Integrate into `CommonRoom` component
+- [ ] Add collapse/expand state with localStorage persistence
+- [ ] Style to match design system (Card, Badge components)
+- [ ] Add "View Full Results" link to History
+- **Estimated Time**: 4-8 hours
+- **Complexity**: Medium
+
+**Phase 3: Technical Cleanup**
+- [ ] Investigate and fix 403 errors in History tab for players
+- [ ] Verify permissions for results endpoints are correct
+- [ ] Add loading states and error handling
+- [ ] Add smooth transition animations
+- **Estimated Time**: 2-4 hours
+- **Complexity**: Low-Medium
+
+##### Alternative Options Considered
+
+**Option C: Results Banner** (Not Recommended)
+- Dismissible banner: "📋 New action results available! [View Results]"
+- **Rejected**: Can be ignored or dismissed too quickly
+
+**Option D: Dedicated Results Tab** (Future Enhancement)
+- New "Results" tab showing all published results chronologically
+- **Deferred**: More significant architectural change, consider for v2
+
+##### Files to Modify
+
+**Frontend Components:**
+- `frontend/src/components/CurrentPhaseIndicator.tsx` - Add results indicator
+- `frontend/src/components/CommonRoom.tsx` - Integrate RecentResultsSection
+- `frontend/src/components/RecentResultsSection.tsx` - NEW component
+- `frontend/src/components/GameDetailView.tsx` - Update phase history logic
+
+**API Hooks:**
+- `frontend/src/hooks/usePhaseResults.ts` - Fetch previous phase results
+- `frontend/src/hooks/usePhases.ts` - Add logic to detect previous action phase
+
+**Backend Verification:**
+- Check permissions on `/api/v1/games/:id/phases/:phaseId/results` endpoint
+- Investigate 403 errors for player role
+
+- **Complexity**: Medium (Frontend implementation + minor backend fixes)
+- **Priority**: High - Core game loop UX, directly affects player engagement and satisfaction
+
+#### 3. ⏸️ BUG: "Player replied to your comment" notification link
+- **Status**: NEEDS TESTING - Can create test scenario
+- **Test Setup**: Use Game #606 or #607 for comment testing
+- **Current Behavior**: Unknown - notification link may not navigate correctly
+- **Required Data**: ✅ Can Create - Add comment as Player 2, reply as Player 1
+- **Verification Steps**:
+  1. Login as TestPlayer2
+  2. Create comment on a post
+  3. Login as TestPlayer1
+  4. Reply to TestPlayer2's comment
+  5. Login as TestPlayer2
+  6. Click notification for reply
+  7. Verify navigation to correct comment with highlight
+- **Implementation**: Check notification link format and CommonRoom navigation
+- **Complexity**: Low (Frontend navigation)
+- **Priority**: Medium - UX issue
+
+#### 4. ⏸️ FEATURE: Add UI for editing pending (unpublished) results
+- **Status**: NEEDS IMPLEMENTATION - Backend supports pending results, but no edit UI exists
+- **Current Behavior**: GMs can create results, but there's no way to edit them before publishing
+- **Test Setup**: Game with pending action results (unpublished)
+- **Required Data**: ⚠️ PARTIAL - Need game with action submissions to create results
+- **Backend Verification Needed**:
+  1. Confirm API supports PATCH/PUT on results where published=false
+  2. Verify backend prevents editing published results (published=true)
+  3. Check what fields can be edited (result_data, etc.)
+- **Frontend Implementation Required**:
+  1. Add "Edit Result" button/interface for pending results
+  2. Create modal or inline edit form for result content
+  3. Allow editing result_data (markdown content)
+  4. Show "Draft" or "Pending" status indicator
+  5. Disable editing once published
+- **Verification Steps** (after implementation):
+  1. As GM, create results for action submissions
+  2. Verify "Edit" button appears on pending results
+  3. Click edit, modify result content
+  4. Save changes and verify they persist
+  5. Publish results
+  6. Verify edit button disappears/disables after publishing
+- **Implementation Tasks**:
+  - [ ] Backend: Verify/add PATCH endpoint for results (check published=false)
+  - [ ] Frontend: Add ResultEditModal component
+  - [ ] Frontend: Add "Edit Result" button to results list
+  - [ ] Frontend: Add visual indicator for pending vs published results
+  - [ ] Frontend: Disable edit for published results
+  - [ ] Tests: Backend unit tests for result updates
+  - [ ] Tests: Frontend component tests for edit UI
+  - [ ] Tests: E2E test for complete edit workflow
+- **Complexity**: Medium (Backend verification + Frontend implementation)
+- **Priority**: High - Critical GM workflow gap, prevents result corrections before publishing
+
+#### 5. ⏸️ FEATURE: Cancelling a game needs confirmation modal
+- **Status**: NEEDS IMPLEMENTATION - Missing confirmation
+- **Test Setup**: Game #338 (Recruitment state) or any game
+- **Current Behavior**: Likely cancels immediately without confirmation
+- **Required Data**: ✅ Available - Any game GM can cancel
+- **Verification Steps**:
+  1. As GM, navigate to game settings
+  2. Click "Cancel Game" button
+  3. Verify confirmation modal appears
+  4. Test "Cancel" (dismiss) and "Confirm" (proceed) options
+  5. Verify game cancelled only on confirmation
+- **Implementation**: Add confirmation modal to game settings cancel action
+- **Complexity**: Low (Frontend modal)
+- **Priority**: High - Prevents accidental game deletion
+
+#### 6. ⏸️ FEATURE: Rejecting/approving characters - UI improvements
+- **Status**: NEEDS TESTING - Functionality exists, verify UX
+- **Test Setup**: Games #301, #601, #603 (character approval scenarios)
+- **Current Behavior**: Character approval exists, may need UX improvements
+- **Required Data**: ⚠️ PARTIAL - Need characters in pending state
+- **Verification Steps**:
+  1. As GM, navigate to character approval interface
+  2. Test approve/reject actions
+  3. Verify player receives notification
+  4. Check rejected character can be edited
+  5. Verify resubmission workflow
+- **Implementation**: Test existing flow, add improvements if needed
+- **Complexity**: Medium (Full workflow)
+- **Priority**: Medium - Core character creation flow
+
+#### 7. ⏸️ BUG: Rejected characters in messages tab
+- **Status**: NEEDS VERIFICATION - Related to #6
+- **Test Setup**: Create rejected character scenario
+- **Current Behavior**: Rejected characters may incorrectly appear in messages
+- **Required Data**: ⚠️ Need rejected character
+- **Verification Steps**:
+  1. Create character and have GM reject it
+  2. Navigate to game Messages tab
+  3. Verify rejected character doesn't appear in character selector
+  4. Verify can't send messages as rejected character
+- **Implementation**: Filter rejected characters from messages character list
+- **Complexity**: Low (Frontend filtering)
+- **Priority**: Low - Edge case
+
+#### 8. ⏸️ UI: Unread message badge text overflow
+- **Status**: NEEDS VISUAL VERIFICATION - Create scenario
+- **Test Setup**: Game #302 or #354 (private messages)
+- **Current Behavior**: Badge may overflow with large numbers (99+)
+- **Required Data**: ⚠️ Need many unread messages
+- **Verification Steps**:
+  1. Create multiple unread private messages
+  2. Check badge display at various counts (9, 10, 99, 100+)
+  3. Verify text doesn't overflow container
+  4. Test "99+" truncation works correctly
+- **Implementation**: Add max-width and truncation (99+) to badge
+- **Complexity**: Very Low (CSS fix)
+- **Priority**: Low - Visual polish
+
+#### 9. ⏸️ FEATURE: Delete private messages/conversations
+- **Status**: NOT IMPLEMENTED - Feature doesn't exist
+- **Test Setup**: N/A - Requires implementation first
+- **Current Behavior**: No delete functionality exists
+- **Required Data**: N/A
+- **Verification Steps**: (After implementation)
+  1. Navigate to private messages
+  2. Select message or conversation
+  3. Click delete button
+  4. Verify confirmation modal
+  5. Confirm deletion removes messages
+  6. Verify can't restore deleted messages
+- **Implementation**: Full feature implementation required
+  - Backend: Delete message API endpoints
+  - Backend: Soft delete vs hard delete decision
+  - Frontend: Delete button UI
+  - Frontend: Confirmation modal
+- **Complexity**: High (Full feature)
+- **Priority**: Medium - Quality of life feature
+
+#### 10. ⏸️ UI: Character sheet rounded borders
+- **Status**: NEEDS VISUAL VERIFICATION - Design decision
+- **Test Setup**: Any character sheet
+- **Current Behavior**: Unknown - need to check current styling
+- **Required Data**: ✅ Available - Any character
+- **Verification Steps**:
+  1. Open character sheet
+  2. Review border-radius on containers
+  3. Check consistency with design system
+  4. Verify dark mode compatibility
+- **Implementation**: Apply consistent border-radius from design tokens
+- **Complexity**: Very Low (CSS update)
+- **Priority**: Very Low - Visual polish
+
+#### 11. ⏸️ UI: Currency input default "0" behavior
+- **Status**: NEEDS MANUAL TESTING - Keyboard interaction
+- **Test Setup**: Character sheet inventory/currency tab
+- **Current Behavior**: May auto-fill "0" when focused, unclear UX
+- **Required Data**: ✅ Available - Any character with currency
+- **Verification Steps**:
+  1. Open character sheet currency section
+  2. Focus empty currency input
+  3. Test typing behavior (does "0" interfere?)
+  4. Test backspace/delete behavior
+  5. Verify clear and intuitive UX
+- **Implementation**: Adjust placeholder vs value behavior
+- **Complexity**: Low (Input component update)
+- **Priority**: Low - Minor UX improvement
+
+#### 12. ⏸️ FEATURE: NPC assignments table refactor
+- **Status**: ARCHITECTURE DECISION - Not a bug
+- **Test Setup**: GM view of NPCs
+- **Current Behavior**: Current NPC assignment works, may need UX improvements
+- **Required Data**: ✅ Available - Games with NPCs
+- **Verification Steps**:
+  1. Review current NPC assignment interface
+  2. Evaluate if table/list view would improve UX
+  3. Gather user feedback on current approach
+  4. Decide if refactor needed
+- **Implementation**: Depends on decision - may not need changes
+- **Complexity**: Medium (If implemented)
+- **Priority**: Very Low - Enhancement, not bug
+
+### Recommended Action Order:
+1. **Immediate** (#5): Add cancel game confirmation modal - prevents data loss
+2. **High Priority** (#2, #4): UX evaluation for action results visibility + implement result editing UI
+   - #2: Evaluate and improve result visibility after GM starts new common room
+   - #4: Add edit functionality for pending (unpublished) results
+3. **Quick Wins** (#8): Fix unread badge overflow - quick CSS fix
+4. **Short-term** (#1, #3): Test and fix leave game and notification bugs
+5. **Medium-term** (#6): Test character approval workflow and UX improvements
+6. **Long-term** (#9): Implement delete messages feature
+7. **Polish** (#7, #10, #11, #12): Visual refinements and architecture decisions
 
 ### Already Fixed
 1. ✓ Deep discussion thread "Loading replies..." bug

@@ -67,7 +67,8 @@ ORDER BY
    FROM notifications n
    WHERE n.game_id = g.id AND n.user_id = $1 AND n.is_read = false) DESC,
   -- Finally by recently updated
-  g.updated_at DESC;
+  g.updated_at DESC
+LIMIT 15;
 
 -- name: GetUserRecentMessages :many
 -- Get recent messages from games user participates in OR is GM of (excluding their own messages)
