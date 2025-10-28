@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button, Input, Textarea, Select } from './ui';
+import { MarkdownPreview } from './MarkdownPreview';
 import type { CreateHandoutRequest } from '../types/handouts';
 
 interface CreateHandoutModalProps {
@@ -14,6 +15,7 @@ export function CreateHandoutModal({ onClose, onSubmit, isSubmitting }: CreateHa
     content: '',
     status: 'draft'
   });
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,20 +58,46 @@ export function CreateHandoutModal({ onClose, onSubmit, isSubmitting }: CreateHa
             </div>
 
             <div>
-              <Textarea
-                id="handout-content"
-                label="Content"
-                value={formData.content}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  content: e.target.value
-                }))}
-                placeholder="Write your handout content here... (Markdown supported)"
-                rows={10}
-                required
-                helperText="Supports Markdown formatting"
-                data-testid="handout-content-input"
-              />
+              <div className="flex justify-between items-center mb-2">
+                <label htmlFor="handout-content" className="block text-sm font-medium text-content-primary">
+                  Content <span className="text-danger">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(!showPreview)}
+                  className="text-sm text-interactive-primary hover:text-interactive-primary-hover font-medium transition-colors"
+                  data-testid="preview-toggle-button"
+                >
+                  {showPreview ? 'Edit' : 'Preview'}
+                </button>
+              </div>
+
+              {showPreview ? (
+                <div
+                  className="surface-secondary border border-border-primary rounded-lg p-4 min-h-[240px] overflow-y-auto"
+                  data-testid="handout-preview"
+                >
+                  {formData.content ? (
+                    <MarkdownPreview content={formData.content} />
+                  ) : (
+                    <p className="text-content-tertiary italic">No content to preview...</p>
+                  )}
+                </div>
+              ) : (
+                <Textarea
+                  id="handout-content"
+                  value={formData.content}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    content: e.target.value
+                  }))}
+                  placeholder="Write your handout content here... (Markdown supported)"
+                  rows={10}
+                  required
+                  helperText="Supports Markdown formatting: **bold**, *italic*, # headings, [links](url)"
+                  data-testid="handout-content-input"
+                />
+              )}
             </div>
 
             <div>

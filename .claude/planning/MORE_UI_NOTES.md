@@ -183,10 +183,17 @@ For each item in this list:
           - **Test Coverage**: Complete workflow from creation to deletion with all edge cases
   - ⏸️ FEATURE: Rejecting a character is permanent, there should be a way to approve a character that has been rejected (and vice versa)
   - ⏸️ BUG: Rejected characters should not show up in the messages tab as an option to send messages to
-  - ✅ UI: Handout creation could use a preview window for markdown
-      - **Status**: Confirmed - Handout creation form has Content textarea with Markdown support but no preview window
-      - **Location**: /games/50704?tab=handouts → Click "Create Handout"
-      - **Expected**: Should have preview pane or toggle to see rendered markdown
+  - ✓ UI: Handout creation could use a preview window for markdown
+      - **Status**: FIXED - Added Preview/Edit toggle button with MarkdownPreview component
+      - **Location**: /games/164?tab=handouts → Click "Create Handout"
+      - **Implementation**: Toggle button switches between textarea (Edit) and rendered markdown (Preview)
+      - **Features**:
+        - Preview button shows rendered markdown with proper formatting
+        - Edit button returns to textarea with content preserved
+        - Helper text shows supported markdown syntax
+        - Empty content shows "No content to preview..." placeholder
+      - **Files Modified**: `frontend/src/components/CreateHandoutModal.tsx`
+      - **Verified**: Manually tested with Playwright MCP - markdown renders correctly (headings, bold, italic, lists, links)
   - ✓ BUG: GM can create posts in the History view of a common room phase
       - **Status**: FIXED - HistoryView passes isCurrentPhase={false}, making CommonRoom read-only
       - **Location**: /games/50704?tab=history → Click on "Phase 1 Arrival at the Harbor"
@@ -273,7 +280,7 @@ For each item in this list:
 9. ✓ GM post form not minimized - Add collapse/expand functionality - FIXED (shouldStartCollapsed prop)
 10. ✓ GM can't create player characters (403) - Fix permission + add player assignment - FIXED (backend permissions + user selector)
 11. ✓ No delete button for characters - Add delete functionality with confirmation - FIXED (GM-only, with activity validation)
-12. ✅ Handout creation no preview - Add markdown preview pane/toggle
+12. ✓ Handout creation no preview - Add markdown preview pane/toggle - FIXED (Preview/Edit toggle button)
 13. ✓ Delete comment uses browser alert - Replace with custom modal - FIXED (ConfirmModal component)
 14. ✅ Public Profile + Physical Appearance redundancy - Consolidate character sheet fields
 15. ✅ Private Notes + Secrets redundancy - Consolidate character sheet fields
