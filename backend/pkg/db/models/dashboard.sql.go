@@ -107,6 +107,7 @@ ORDER BY
    WHERE n.game_id = g.id AND n.user_id = $1 AND n.is_read = false) DESC,
   -- Finally by recently updated
   g.updated_at DESC
+LIMIT 15
 `
 
 type GetUserDashboardGamesRow struct {
