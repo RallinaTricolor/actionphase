@@ -3,6 +3,7 @@
   - Too much code in API functions?
   - Antipatterns?
 - Test coverage and useful tests
+  - Are we mostly happy path testing?
 - Game integrity and security (assume people could build a 3rd party client)
 - Usability / accessibility improvements
   - Lots of reading! Optimize for reading lots of text

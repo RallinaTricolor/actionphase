@@ -2,12 +2,14 @@
 -- Creates a fresh game ready to test the complete phase lifecycle workflow
 -- for testing GM creating phases, players submitting actions, GM creating results
 --
+-- Game IDs: 327 (offset by worker: Worker 1 = 1327, Worker 2 = 2327, etc.)
+--
 -- IDEMPOTENT: Safe to run multiple times - deletes existing data before recreating
 
 BEGIN;
 
 -- Delete existing lifecycle test game to prevent duplicates
-DELETE FROM games WHERE title = 'E2E Test: Phase Lifecycle';
+DELETE FROM games WHERE id = 327;
 
 DO $$
 DECLARE
@@ -15,7 +17,7 @@ DECLARE
   p1_id INTEGER;
   p2_id INTEGER;
   p3_id INTEGER;
-  game_id INTEGER;
+  game_id INTEGER := 327;
   initial_phase_id INTEGER;
   char1_id INTEGER;
   char2_id INTEGER;
@@ -30,8 +32,9 @@ BEGIN
   -- ============================================
   -- E2E Game: For Phase Lifecycle Testing
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
   VALUES (
+    game_id,
     'E2E Test: Phase Lifecycle',
     'This game tests the complete phase lifecycle: common room -> action phase -> results -> new common room',
     'Test',
@@ -41,7 +44,7 @@ BEGIN
     true,
     NOW() - INTERVAL '5 days',
     NOW()
-  ) RETURNING id INTO game_id;
+  );
 
   -- Add participants
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
@@ -79,6 +82,10 @@ BEGIN
   ) RETURNING id INTO initial_phase_id;
 
 END $$;
+
+-- Reset the games sequence to prevent duplicate key errors
+-- This ensures new game creations don't collide with hardcoded fixture IDs
+SELECT setval('games_id_seq', (SELECT MAX(id) FROM games) + 1);
 
 COMMIT;
 

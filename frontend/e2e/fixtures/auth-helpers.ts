@@ -1,9 +1,27 @@
-import { Page, expect } from '@playwright/test';
+import { Page, expect, test } from '@playwright/test';
 import { TEST_USERS, TestUser } from './test-users';
 
 /**
  * Authentication Helper Functions for E2E Tests
  */
+
+/**
+ * Get username for parallel test execution
+ * Uses worker-specific usernames to prevent race conditions between parallel workers.
+ * Each worker gets dedicated users and fixture data with isolated game IDs.
+ *
+ * @param baseUsername - Base username (e.g., 'TestGM', 'TestPlayer1')
+ * @returns Worker-specific username (e.g., 'TestGM_1' for worker 1)
+ */
+function getWorkerSpecificUsername(baseUsername: string): string {
+  // Get Playwright worker index from environment variable
+  const workerIndex = process.env.TEST_PARALLEL_INDEX
+    ? parseInt(process.env.TEST_PARALLEL_INDEX, 10)
+    : 0;
+
+  // Worker 0 uses base username (no suffix), others get _N suffix
+  return workerIndex === 0 ? baseUsername : `${baseUsername}_${workerIndex}`;
+}
 
 /**
  * Login as a specific test user
@@ -13,6 +31,10 @@ import { TEST_USERS, TestUser } from './test-users';
  */
 export async function loginAs(page: Page, userKey: keyof typeof TEST_USERS) {
   const user = TEST_USERS[userKey];
+
+  // Get worker-specific username and email
+  const workerUsername = getWorkerSpecificUsername(user.username);
+  const workerEmail = workerUsername.toLowerCase().replace('test', 'test_') + '@example.com';
 
   // Navigate to login page first
   await page.goto('/login');
@@ -26,8 +48,8 @@ export async function loginAs(page: Page, userKey: keyof typeof TEST_USERS) {
   // Refresh to ensure clean state
   await page.goto('/login');
 
-  // Fill in login form
-  await page.fill('input[name="username"]', user.username);
+  // Fill in login form with worker-specific credentials
+  await page.fill('input[name="username"]', workerUsername);
   await page.fill('input[name="password"]', user.password);
 
   // Submit form

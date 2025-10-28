@@ -77,6 +77,42 @@ export class MessagingPage {
   }
 
   /**
+   * Select which character to send messages as (for users with multiple characters)
+   * @param characterName - Character name to select as sender
+   */
+  async selectSendingCharacter(characterName: string) {
+    // Check if there's a select dropdown (multiple characters case)
+    const characterSelect = this.page.locator('select').filter({ hasText: /Select your character/ }).or(
+      this.page.locator('select').first()
+    );
+
+    const selectCount = await characterSelect.count();
+
+    if (selectCount > 0) {
+      // Multiple characters - select from dropdown
+      const options = await characterSelect.locator('option').all();
+      for (const option of options) {
+        const text = await option.textContent();
+        if (text && text.includes(characterName)) {
+          const value = await option.getAttribute('value');
+          if (value) {
+            await characterSelect.selectOption(value);
+            return;
+          }
+        }
+      }
+      throw new Error(`Could not find character "${characterName}" in dropdown`);
+    } else {
+      // Single character - verify it's the right one (it's auto-selected)
+      const displayedCharacter = await this.page.getByText(characterName).first();
+      if (await displayedCharacter.count() === 0) {
+        throw new Error(`Expected character "${characterName}" to be auto-selected, but it's not displayed`);
+      }
+      // Character is already selected, nothing to do
+    }
+  }
+
+  /**
    * Select a character as participant
    * @param characterName - Character name to select
    */
@@ -89,12 +125,18 @@ export class MessagingPage {
    * Create a new conversation
    * @param title - Conversation title
    * @param participants - Array of character names to include
+   * @param sendingCharacter - (Optional) Character to send as (for users with multiple characters)
    */
-  async createConversation(title: string, participants: string[]) {
+  async createConversation(title: string, participants: string[], sendingCharacter?: string) {
     await this.openNewConversationForm();
 
     // Fill in title
     await this.conversationTitleInput.fill(title);
+
+    // Select sending character if specified (for GMs with multiple NPCs, etc.)
+    if (sendingCharacter) {
+      await this.selectSendingCharacter(sendingCharacter);
+    }
 
     // Select participants
     for (const participant of participants) {

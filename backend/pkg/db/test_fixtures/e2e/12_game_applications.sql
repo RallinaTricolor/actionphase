@@ -3,11 +3,13 @@
 -- Tests: Player applies → GM receives notification → GM reviews → GM approves/rejects
 --
 -- IDEMPOTENT: Safe to run multiple times - deletes existing data before recreating
+--
+-- Game IDs: 329-333 (offset by worker: Worker 1 = 10329-10333, etc.)
 
 BEGIN;
 
 -- Delete existing game application test games to prevent duplicates
-DELETE FROM games WHERE title LIKE 'E2E Test: Game Application%';
+DELETE FROM games WHERE id IN (329, 330, 331, 332, 333);
 
 DO $$
 DECLARE
@@ -16,11 +18,12 @@ DECLARE
   player2_id INTEGER;
   player3_id INTEGER;
   player4_id INTEGER;
-  game1_id INTEGER;
-  game2_id INTEGER;
-  game3_id INTEGER;
-  game4_id INTEGER;
-  game5_id INTEGER;
+  -- Hardcoded game IDs for worker offset support
+  game1_id INT := 329;
+  game2_id INT := 330;
+  game3_id INT := 331;
+  game4_id INT := 332;
+  game5_id INT := 333;
 BEGIN
   -- Get user IDs
   SELECT id INTO gm_id FROM users WHERE email = 'test_gm@example.com';
@@ -30,9 +33,10 @@ BEGIN
   SELECT id INTO player4_id FROM users WHERE email = 'test_player4@example.com';
 
   -- ============================================
-  -- Game 1: For testing player submission (fresh, no applications)
+  -- Game #329: For testing player submission (fresh, no applications)
   -- ============================================
   INSERT INTO games (
+    id,
     title,
     description,
     genre,
@@ -44,6 +48,7 @@ BEGIN
     updated_at
   )
   VALUES (
+    game1_id,
     'E2E Test: Game Application - Submit',
     'Fresh recruitment game for testing player application submission.',
     'Fantasy',
@@ -53,12 +58,13 @@ BEGIN
     true,
     NOW() - INTERVAL '3 days',
     NOW()
-  ) RETURNING id INTO game1_id;
+  );
 
   -- ============================================
-  -- Game 2: For testing GM viewing applications (with pending application)
+  -- Game #330: For testing GM viewing applications (with pending application)
   -- ============================================
   INSERT INTO games (
+    id,
     title,
     description,
     genre,
@@ -70,6 +76,7 @@ BEGIN
     updated_at
   )
   VALUES (
+    game2_id,
     'E2E Test: Game Application - View',
     'Game with pending application for testing GM application review.',
     'Fantasy',
@@ -79,7 +86,7 @@ BEGIN
     true,
     NOW() - INTERVAL '3 days',
     NOW()
-  ) RETURNING id INTO game2_id;
+  );
 
   -- Add pending application from PLAYER_4
   INSERT INTO game_applications (game_id, user_id, role, message, status, applied_at)
@@ -93,9 +100,10 @@ BEGIN
   );
 
   -- ============================================
-  -- Game 3: For testing GM approving application
+  -- Game #331: For testing GM approving application
   -- ============================================
   INSERT INTO games (
+    id,
     title,
     description,
     genre,
@@ -107,6 +115,7 @@ BEGIN
     updated_at
   )
   VALUES (
+    game3_id,
     'E2E Test: Game Application - Approve',
     'Game with pending application for testing GM approval.',
     'Fantasy',
@@ -116,7 +125,7 @@ BEGIN
     true,
     NOW() - INTERVAL '3 days',
     NOW()
-  ) RETURNING id INTO game3_id;
+  );
 
   -- Add pending application from PLAYER_3
   INSERT INTO game_applications (game_id, user_id, role, message, status, applied_at)
@@ -130,9 +139,10 @@ BEGIN
   );
 
   -- ============================================
-  -- Game 4: For testing GM rejecting application
+  -- Game #332: For testing GM rejecting application
   -- ============================================
   INSERT INTO games (
+    id,
     title,
     description,
     genre,
@@ -144,6 +154,7 @@ BEGIN
     updated_at
   )
   VALUES (
+    game4_id,
     'E2E Test: Game Application - Reject',
     'Game with pending application for testing GM rejection.',
     'Fantasy',
@@ -153,7 +164,7 @@ BEGIN
     true,
     NOW() - INTERVAL '3 days',
     NOW()
-  ) RETURNING id INTO game4_id;
+  );
 
   -- Add pending application from PLAYER_1
   INSERT INTO game_applications (game_id, user_id, role, message, status, applied_at)
@@ -167,9 +178,10 @@ BEGIN
   );
 
   -- ============================================
-  -- Game 5: For testing duplicate application prevention
+  -- Game #333: For testing duplicate application prevention
   -- ============================================
   INSERT INTO games (
+    id,
     title,
     description,
     genre,
@@ -181,6 +193,7 @@ BEGIN
     updated_at
   )
   VALUES (
+    game5_id,
     'E2E Test: Game Application - Duplicate',
     'Game with existing application for testing duplicate prevention.',
     'Fantasy',
@@ -190,7 +203,7 @@ BEGIN
     true,
     NOW() - INTERVAL '3 days',
     NOW()
-  ) RETURNING id INTO game5_id;
+  );
 
   -- Add existing application from PLAYER_2
   INSERT INTO game_applications (game_id, user_id, role, message, status, applied_at)
@@ -206,6 +219,10 @@ BEGIN
   RAISE NOTICE 'Game Application Workflow fixtures created: Games % % % % %', game1_id, game2_id, game3_id, game4_id, game5_id;
 
 END $$;
+
+-- Reset the games sequence to prevent duplicate key errors
+-- This ensures new game creations don't collide with hardcoded fixture IDs
+SELECT setval('games_id_seq', (SELECT MAX(id) FROM games) + 1);
 
 COMMIT;
 

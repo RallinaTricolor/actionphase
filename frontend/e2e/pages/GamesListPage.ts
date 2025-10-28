@@ -44,4 +44,46 @@ export class GamesListPage {
     await this.filterDropdown.selectOption(status);
     await this.page.waitForLoadState('networkidle');
   }
+
+  /**
+   * Create a new game via the modal form
+   * @param gameData - Game details (title, description, genre, maxPlayers)
+   * @returns The new game ID extracted from the URL after creation
+   */
+  async createGame(gameData: {
+    title: string;
+    description: string;
+    genre?: string;
+    maxPlayers?: number;
+  }): Promise<number> {
+    // Open the create game modal
+    await this.page.getByRole('button', { name: 'Create Game' }).click();
+
+    // Wait for modal form to be ready
+    await this.page.waitForSelector('#title', { timeout: 5000 });
+
+    // Fill in game details
+    await this.page.fill('#title', gameData.title);
+    await this.page.fill('#description', gameData.description);
+
+    if (gameData.genre) {
+      await this.page.fill('#genre', gameData.genre);
+    }
+
+    if (gameData.maxPlayers) {
+      await this.page.fill('#max_players', gameData.maxPlayers.toString());
+    }
+
+    // Submit the form by clicking the submit button
+    const navigationPromise = this.page.waitForURL(/\/games\/\d+/, { timeout: 10000 });
+    await this.page.getByTestId('create-game-submit').click();
+    await navigationPromise;
+    await this.page.waitForLoadState('networkidle');
+
+    // Extract and return the game ID from the URL
+    const gameUrl = this.page.url();
+    const gameId = parseInt(gameUrl.match(/\/games\/(\d+)/)?.[1] || '0');
+
+    return gameId;
+  }
 }

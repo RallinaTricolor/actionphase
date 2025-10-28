@@ -2,22 +2,24 @@
 -- Creates multiple games in different states for testing state transitions
 -- Tests: GM manages game states (recruitment → in_progress → paused → completed/cancelled)
 --
+-- Game IDs: 334-338 (offset by worker: Worker 1 = 1334-1338, Worker 2 = 2334-2338, etc.)
+--
 -- IDEMPOTENT: Safe to run multiple times - deletes existing data before recreating
 
 BEGIN;
 
 -- Delete existing game lifecycle test games to prevent duplicates
-DELETE FROM games WHERE title LIKE 'E2E Test: Game Lifecycle%';
+DELETE FROM games WHERE id IN (334, 335, 336, 337, 338);
 
 DO $$
 DECLARE
   gm_id INTEGER;
   player1_id INTEGER;
-  game1_id INTEGER;  -- Ready to start (recruitment → in_progress)
-  game2_id INTEGER;  -- Active game (in_progress → paused)
-  game3_id INTEGER;  -- Paused game (paused → in_progress)
-  game4_id INTEGER;  -- Active game (in_progress → completed)
-  game5_id INTEGER;  -- Active game (in_progress → cancelled)
+  game1_id INTEGER := 334;  -- Ready to start (recruitment → in_progress)
+  game2_id INTEGER := 335;  -- Active game (in_progress → paused)
+  game3_id INTEGER := 336;  -- Paused game (paused → in_progress)
+  game4_id INTEGER := 337;  -- Active game (in_progress → completed)
+  game5_id INTEGER := 338;  -- Active game (in_progress → cancelled)
 BEGIN
   -- Get user IDs
   SELECT id INTO gm_id FROM users WHERE email = 'test_gm@example.com';
@@ -27,6 +29,7 @@ BEGIN
   -- Game 1: Ready to start (character_creation → in_progress)
   -- ============================================
   INSERT INTO games (
+    id,
     title,
     description,
     genre,
@@ -38,6 +41,7 @@ BEGIN
     updated_at
   )
   VALUES (
+    game1_id,
     'E2E Test: Game Lifecycle - Start',
     'Game in character_creation state ready to start.',
     'Fantasy',
@@ -47,7 +51,7 @@ BEGIN
     true,
     NOW() - INTERVAL '7 days',
     NOW()
-  ) RETURNING id INTO game1_id;
+  );
 
   -- Add approved player so game can start
   INSERT INTO game_participants (game_id, user_id, role)
@@ -57,6 +61,7 @@ BEGIN
   -- Game 2: Active game (in_progress → paused)
   -- ============================================
   INSERT INTO games (
+    id,
     title,
     description,
     genre,
@@ -68,6 +73,7 @@ BEGIN
     updated_at
   )
   VALUES (
+    game2_id,
     'E2E Test: Game Lifecycle - Pause',
     'Active game that can be paused.',
     'Sci-Fi',
@@ -77,7 +83,7 @@ BEGIN
     true,
     NOW() - INTERVAL '30 days',
     NOW()
-  ) RETURNING id INTO game2_id;
+  );
 
   INSERT INTO game_participants (game_id, user_id, role)
   VALUES (game2_id, player1_id, 'player');
@@ -86,6 +92,7 @@ BEGIN
   -- Game 3: Paused game (paused → in_progress)
   -- ============================================
   INSERT INTO games (
+    id,
     title,
     description,
     genre,
@@ -97,6 +104,7 @@ BEGIN
     updated_at
   )
   VALUES (
+    game3_id,
     'E2E Test: Game Lifecycle - Resume',
     'Paused game that can be resumed.',
     'Horror',
@@ -106,7 +114,7 @@ BEGIN
     true,
     NOW() - INTERVAL '45 days',
     NOW()
-  ) RETURNING id INTO game3_id;
+  );
 
   INSERT INTO game_participants (game_id, user_id, role)
   VALUES (game3_id, player1_id, 'player');
@@ -115,6 +123,7 @@ BEGIN
   -- Game 4: Active game (in_progress → completed)
   -- ============================================
   INSERT INTO games (
+    id,
     title,
     description,
     genre,
@@ -126,6 +135,7 @@ BEGIN
     updated_at
   )
   VALUES (
+    game4_id,
     'E2E Test: Game Lifecycle - Complete',
     'Active game ready to be completed.',
     'Fantasy',
@@ -135,7 +145,7 @@ BEGIN
     true,
     NOW() - INTERVAL '90 days',
     NOW()
-  ) RETURNING id INTO game4_id;
+  );
 
   INSERT INTO game_participants (game_id, user_id, role)
   VALUES (game4_id, player1_id, 'player');
@@ -144,6 +154,7 @@ BEGIN
   -- Game 5: Recruitment game (recruitment → cancelled)
   -- ============================================
   INSERT INTO games (
+    id,
     title,
     description,
     genre,
@@ -155,6 +166,7 @@ BEGIN
     updated_at
   )
   VALUES (
+    game5_id,
     'E2E Test: Game Lifecycle - Cancel',
     'Recruitment game that can be cancelled.',
     'Mystery',
@@ -164,7 +176,7 @@ BEGIN
     true,
     NOW() - INTERVAL '14 days',
     NOW()
-  ) RETURNING id INTO game5_id;
+  );
 
   INSERT INTO game_participants (game_id, user_id, role)
   VALUES (game5_id, player1_id, 'player');
@@ -172,6 +184,10 @@ BEGIN
   RAISE NOTICE 'Game Lifecycle fixtures created: Games % % % % %', game1_id, game2_id, game3_id, game4_id, game5_id;
 
 END $$;
+
+-- Reset the games sequence to prevent duplicate key errors
+-- This ensures new game creations don't collide with hardcoded fixture IDs
+SELECT setval('games_id_seq', (SELECT MAX(id) FROM games) + 1);
 
 COMMIT;
 

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { GamesListPage } from '../pages/GamesListPage';
 import { navigateToGamesList } from '../utils/navigation';
 import { assertTextVisible } from '../utils/assertions';
 
@@ -14,7 +15,10 @@ import { assertTextVisible } from '../utils/assertions';
  * - Improved consistency with GameDetailsPage
  */
 test.describe('GM Creates Game & Recruits Players', () => {
-  // Helper function to create a game
+  // Configure tests to run serially to avoid database conflicts
+  test.describe.configure({ mode: 'serial' });
+
+  // Helper function to create a game using POM
   async function createTestGame(page: any) {
     const timestamp = Date.now();
     const gameTitle = `E2E Test Game ${timestamp}`;
@@ -22,24 +26,14 @@ test.describe('GM Creates Game & Recruits Players', () => {
 
     await navigateToGamesList(page);
 
-    // Click "Create Game" button to open modal
-    // Using more specific selector with role
-    await page.getByRole('button', { name: 'Create Game' }).click();
-
-    // Wait for modal to be fully visible and form fields to be ready
-    await expect(page.locator('#title')).toBeVisible({ timeout: 5000 });
-
-    // Fill in game details
-    await page.fill('#title', gameTitle);
-    await page.fill('#description', gameDescription);
-    await page.fill('#genre', 'Test Genre');
-    await page.fill('#max_players', '4');
-
-    // Submit the form using form context
-    await page.locator('form').locator('button[type="submit"]').click();
-
-    // Wait for redirect to game details page
-    await page.waitForURL(/\/games\/\d+/, { timeout: 10000 });
+    // Use GamesListPage POM to create the game
+    const gamesListPage = new GamesListPage(page);
+    await gamesListPage.createGame({
+      title: gameTitle,
+      description: gameDescription,
+      genre: 'Test Genre',
+      maxPlayers: 4
+    });
 
     return { gameTitle, gameDescription };
   }

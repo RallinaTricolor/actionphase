@@ -330,20 +330,31 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For NPCs (no user_id), verify the user is the GM
+	// For NPCs (no user_id), verify the user is either assigned to the NPC or is the GM
 	if !char.UserID.Valid {
-		h.App.Logger.Info("NPC detected, verifying GM status", "character_id", char.ID, "game_id", char.GameID)
-		game, err := conversationService.Queries.GetGame(ctx, char.GameID)
-		if err != nil {
-			h.App.Logger.Error("Failed to get game", "error", err, "game_id", char.GameID)
-			render.Render(w, r, core.ErrInternalError(err))
-			return
-		}
-		h.App.Logger.Info("GM check", "game_gm_user_id", game.GmUserID, "request_user_id", userID)
-		if game.GmUserID != userID {
-			h.App.Logger.Warn("User is not GM for NPC", "character_id", char.ID, "game_gm_user_id", game.GmUserID, "request_user_id", userID)
-			render.Render(w, r, core.ErrForbidden("only the GM can send messages as NPCs"))
-			return
+		h.App.Logger.Info("NPC detected, checking assignment or GM status", "character_id", char.ID, "game_id", char.GameID, "user_id", userID)
+
+		// First check if the NPC is assigned to this user
+		assignment, err := conversationService.Queries.GetNPCAssignment(ctx, char.ID)
+		isAssigned := (err == nil && assignment.AssignedUserID == userID)
+
+		if isAssigned {
+			h.App.Logger.Info("NPC is assigned to user", "character_id", char.ID, "assigned_user_id", userID)
+		} else {
+			// Not assigned - check if user is the GM
+			h.App.Logger.Info("NPC not assigned to user, verifying GM status", "character_id", char.ID)
+			game, err := conversationService.Queries.GetGame(ctx, char.GameID)
+			if err != nil {
+				h.App.Logger.Error("Failed to get game", "error", err, "game_id", char.GameID)
+				render.Render(w, r, core.ErrInternalError(err))
+				return
+			}
+			h.App.Logger.Info("GM check", "game_gm_user_id", game.GmUserID, "request_user_id", userID)
+			if game.GmUserID != userID {
+				h.App.Logger.Warn("User is not GM for NPC and NPC not assigned to user", "character_id", char.ID, "game_gm_user_id", game.GmUserID, "request_user_id", userID)
+				render.Render(w, r, core.ErrForbidden("only the GM or assigned user can send messages as this NPC"))
+				return
+			}
 		}
 	}
 

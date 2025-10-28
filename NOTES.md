@@ -3,3 +3,4 @@
 - Talent trees
 - Multiple GMs per game
 - OpenAPI docs in CI
+- Polls for Voting
