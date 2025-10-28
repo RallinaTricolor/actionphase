@@ -2,39 +2,29 @@
 
 Quick reference for testing the ActionPhase backend API using curl.
 
-## Quick Start (Using Justfile Commands)
+## Quick Start (Using API Test Script)
 
-**Recommended**: Use the justfile commands for easier API testing:
+**Recommended**: Use the `api-test.sh` script for easier API testing:
 
 ```bash
-# Check API health
-just api-health
-
 # Login as TestPlayer1 (saves token to /tmp/api-token.txt)
-just api-login-player
+./backend/scripts/api-test.sh login-player
 
 # Login as TestGM
-just api-login-gm
+./backend/scripts/api-test.sh login-gm
 
-# Login as any user
-just api-login TestPlayer2
+# Use saved token for authenticated requests
+curl -s -H "Authorization: Bearer $(cat /tmp/api-token.txt)" \
+  "http://localhost:3000/api/v1/games" | jq '.'
 
-# Check token status
-just api-test-token
+# Check API health (no auth needed)
+curl -s http://localhost:3000/health | jq '.'
 
-# Get games, posts, comments
-just api-games
-just api-posts 164
-just api-comments 183
-
-# Test mentions feature end-to-end
-just api-test-mentions
-
-# Quick status check
-just api-status
+# Get metrics (no auth needed)
+curl -s http://localhost:3000/metrics
 ```
 
-See `just --list` for all available API testing commands.
+See `./backend/scripts/api-test.sh` for usage examples.
 
 ## Prerequisites
 

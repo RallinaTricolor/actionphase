@@ -2,6 +2,8 @@
 
 **IMPORTANT: Read this file before working on frontend state management.**
 
+**Last Verified**: October 27, 2025
+
 **Comprehensive Documentation:** `/docs/features/STATE_MANAGEMENT.md` (single source of truth)
 
 This file provides quick context for AI. For complete details, see the comprehensive doc.

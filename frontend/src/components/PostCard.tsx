@@ -20,9 +20,10 @@ interface PostCardProps {
   onCreateComment: (postId: number, characterId: number, content: string) => Promise<void>;
   currentUserId?: number;
   'data-testid'?: string;
+  readOnly?: boolean; // Disable all interactive features (for history view)
 }
 
-export function PostCard({ post, gameId, characters, controllableCharacters, onCreateComment, currentUserId, 'data-testid': dataTestId }: PostCardProps) {
+export function PostCard({ post, gameId, characters, controllableCharacters, onCreateComment, currentUserId, 'data-testid': dataTestId, readOnly = false }: PostCardProps) {
   const [showComments, setShowComments] = useState(true);
   const [isCommenting, setIsCommenting] = useState(false);
   const [topLevelComments, setTopLevelComments] = useState<Message[]>([]);
@@ -290,7 +291,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
             </span>
           </Button>
 
-          {!isCommenting && (
+          {!isCommenting && !readOnly && (
             <Button
               variant="primary"
               onClick={() => setIsCommenting(true)}
@@ -305,7 +306,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
         </div>
 
         {/* Inline Reply Form (at top level) */}
-        {isCommenting && (
+        {isCommenting && !readOnly && (
           <div className="px-4 pb-4">
             <form onSubmit={handleSubmitComment} className="surface-base rounded-lg p-4 border border-theme-default shadow-sm">
             {controllableCharacters.length > 0 ? (
@@ -385,6 +386,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                   maxDepth={5}
                   unreadCommentIDs={unreadCommentIDs}
                   onOpenThread={(comment) => setThreadModalComment(comment)}
+                  readOnly={readOnly}
                 />
               ))}
             </div>

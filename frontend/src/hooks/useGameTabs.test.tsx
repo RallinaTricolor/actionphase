@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { renderHook } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { renderHook, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { useGameTabs } from './useGameTabs';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
+  <MemoryRouter initialEntries={['/games/1']}>{children}</MemoryRouter>
 );
 
 describe('useGameTabs', () => {
@@ -221,6 +221,116 @@ describe('useGameTabs', () => {
       // Assert: Actions tab should NOT be present
       const actionsTab = result.current.tabs.find(tab => tab.id === 'actions');
       expect(actionsTab).toBeUndefined();
+    });
+  });
+
+  describe('Default tab behavior', () => {
+    it('should default to common-room tab for in_progress games with common_room phase', async () => {
+      // Arrange: In-progress game with common room phase
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'in_progress',
+            isGM: false,
+            participantCount: 3,
+            currentPhaseType: 'common_room',
+            isAudience: false,
+            isParticipant: true,
+            hasCharacters: true,
+          }),
+        { wrapper }
+      );
+
+      // Wait for useEffect to complete and update activeTab
+      await waitFor(() => {
+        expect(result.current.activeTab).toBe('common-room');
+      });
+    });
+
+    it('should default to actions tab for in_progress games with action phase', () => {
+      // Arrange: In-progress game with action phase
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'in_progress',
+            isGM: false,
+            participantCount: 3,
+            currentPhaseType: 'action',
+            isAudience: false,
+            isParticipant: true,
+            hasCharacters: true,
+          }),
+        { wrapper }
+      );
+
+      // Assert: Active tab should be actions
+      expect(result.current.activeTab).toBe('actions');
+    });
+
+    it('should default to phases tab for GM when no common room or action phase', async () => {
+      // Arrange: In-progress game, GM, no common room or action phase
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'in_progress',
+            isGM: true,
+            participantCount: 3,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: false,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      // Wait for useEffect to complete and update activeTab
+      await waitFor(() => {
+        expect(result.current.activeTab).toBe('phases');
+      });
+    });
+
+    it('should default to applications tab for GM in recruitment state', async () => {
+      // Arrange: Recruitment game, GM
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'recruitment',
+            isGM: true,
+            participantCount: 0,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: false,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      // Wait for useEffect to complete and update activeTab
+      await waitFor(() => {
+        expect(result.current.activeTab).toBe('applications');
+      });
+    });
+
+    it('should default to info tab for players in recruitment state', async () => {
+      // Arrange: Recruitment game, regular user
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'recruitment',
+            isGM: false,
+            participantCount: 0,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: false,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      // Wait for useEffect to complete and update activeTab
+      await waitFor(() => {
+        expect(result.current.activeTab).toBe('info');
+      });
     });
   });
 });

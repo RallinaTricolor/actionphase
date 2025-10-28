@@ -8,9 +8,6 @@ This guide explains how to run the different types of tests in the ActionPhase b
 ```bash
 # Run only mock-based tests - fastest option
 just test-mocks
-
-# Alternative: Run mock tests only
-just test-no-db
 ```
 
 ### Full Test Suite (Requires Database)
@@ -20,9 +17,6 @@ just test-db-setup
 
 # Run all tests
 just test
-
-# Run tests in parallel for speed
-just test-parallel
 ```
 
 ## Test Types
@@ -67,7 +61,6 @@ These tests use a real database and test the full stack including:
 
 ```bash
 just test              # All tests (sequential)
-just test-parallel     # All tests (parallel - faster)
 ```
 
 ## Database Setup
@@ -110,13 +103,12 @@ just test
 | Command | Description | Speed | Database Required |
 |---------|-------------|-------|-------------------|
 | `just test-mocks` | Mock-based unit tests only | ⚡ Fastest | ❌ No |
-| `just test-no-db` | Alternative mock-only tests | ⚡ Fastest | ❌ No |
 | `just test-integration` | Integration tests only | 🐢 Slow | ✅ Yes |
 | `just test` | All tests (sequential) | 🐢 Slow | ⚠️ Optional |
-| `just test-parallel` | All tests (parallel) | ⚡ Fast | ⚠️ Optional |
-| `just test-verbose` | All tests with verbose output | 🐢 Slow | ⚠️ Optional |
 | `just test-coverage` | Tests with coverage report | 🐢 Slow | ⚠️ Optional |
 | `just test-race` | Tests with race condition detection | 🐢 Slow | ⚠️ Optional |
+| `just test-clean` | Clean test cache and artifacts | ⚡ Fast | ❌ No |
+| `just test-run <pattern>` | Run specific test by pattern | ⚡ Fast | ⚠️ Optional |
 
 ## Continuous Integration
 
@@ -130,7 +122,7 @@ just test-mocks  # Run in ~1 second
 ### Full CI (pre-merge)
 ```bash
 just test-db-setup
-just test-parallel
+just test
 ```
 
 ## Troubleshooting
@@ -147,11 +139,11 @@ ERROR: database "actionphase_test" does not exist
 
 ### Tests Hanging or Running Slowly
 ```bash
-# Use parallel execution
-just test-parallel
-
-# Or run only fast tests
+# Use mock tests for faster feedback
 just test-mocks
+
+# Or run specific tests
+just test-run TestNamePattern
 ```
 
 ### Connection Refused Errors

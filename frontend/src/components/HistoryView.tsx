@@ -70,7 +70,7 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
             gameId={gameId}
             phaseId={selectedPhaseId}
             phaseTitle={selectedPhase.title || getActionPhaseLabel(selectedPhase)}
-            isCurrentPhase={selectedPhaseId === currentPhaseId}
+            isCurrentPhase={false} // Always read-only in history view
             isGM={isGM}
           />
         ) : (

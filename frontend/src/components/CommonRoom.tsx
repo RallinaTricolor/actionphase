@@ -256,6 +256,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
                   onCreateComment={handleCreateComment}
                   currentUserId={currentUserId}
                   data-testid={`post-${post.id}`}
+                  readOnly={!isCurrentPhase}
                 />
               ))}
             </div>

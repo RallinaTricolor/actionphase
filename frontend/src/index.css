@@ -27,6 +27,13 @@
   --color-text-muted*: initial;
   --color-text-disabled*: initial;
 
+  /* Semantic Content Colors */
+  --color-content-primary*: initial;
+  --color-content-secondary*: initial;
+  --color-content-tertiary*: initial;
+  --color-content-disabled*: initial;
+  --color-content-inverse*: initial;
+
   /* Semantic Border Colors */
   --color-border-primary*: initial;
   --color-border-secondary*: initial;

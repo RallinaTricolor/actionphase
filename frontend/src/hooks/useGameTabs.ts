@@ -136,7 +136,7 @@ export function useGameTabs({
     }
 
     return tabList;
-  }, [gameState, isGM, participantCount, currentPhaseType]);
+  }, [gameState, isGM, participantCount, currentPhaseType, isParticipant, isAudience, hasCharacters]);
 
   // Smart default tab selection logic based on game context
   const defaultTab = useMemo(() => {

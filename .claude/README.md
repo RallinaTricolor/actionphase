@@ -26,9 +26,11 @@ This directory contains all AI-specific context and instructions for working wit
 - And more...
 
 ### `/commands/` - Custom Slash Commands
-**Custom slash commands for specialized workflows**
+**Detailed protocols for common tasks**
 
-(Currently empty - add custom commands here as needed)
+- **debug-e2e-test.md** - Mandatory protocol for debugging E2E test failures using Playwright MCP
+- **implement-features.md** - Structured approach for implementing multiple features with TodoWrite
+- **challenge-assumptions.md** - Protocol for clarifying ambiguous requirements before implementation
 
 ### `/planning/` - Session Planning & Task Tracking
 **Persistent planning documents that survive across sessions:**

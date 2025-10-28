@@ -2,6 +2,9 @@
 
 **IMPORTANT: Read this file before working with test data and fixtures.**
 
+**Last Updated**: October 27, 2025
+**Last Verified**: October 27, 2025
+
 ## Test Fixture System
 
 ActionPhase uses SQL-based test fixtures for comprehensive test coverage across all game states and phases.
