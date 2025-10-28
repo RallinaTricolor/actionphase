@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🔴 CRITICAL: Git Operations
+
+**NEVER create git commits autonomously. The user will handle all git operations.**
+- Do NOT use `git commit` commands
+- Do NOT use `git add` commands
+- The user will review changes and commit when ready
+- You may suggest what to commit, but do not execute git commands
+
 ## AI Context Directory
 
 **IMPORTANT: Before performing specific coding tasks, read the relevant context files from `.claude/context/`**
@@ -112,6 +120,25 @@ pwd  # Check current directory
 - Frontend commands run from `/frontend`
 - Backend commands run from root `/`
 - E2E tests run from `/frontend`
+
+### Process Management
+**ALWAYS use lsof to find running server processes before killing them:**
+```bash
+# Find processes by port
+lsof -ti:3000  # Backend server
+lsof -ti:5173  # Frontend server
+lsof -ti:5432  # PostgreSQL
+
+# Kill specific process by PID
+kill <PID>
+
+# Kill process on specific port
+lsof -ti:3000 | xargs kill
+```
+- **NEVER indiscriminately kill processes** (e.g., `pkill -f go` kills ALL Go processes)
+- **DO NOT use pkill without specific targeting**
+- **ALWAYS verify** what process you're killing with `lsof` first
+- Use port-specific targeting when possible
 
 ### Search Reliability
 **When grep/search fails to find known strings:**

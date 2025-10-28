@@ -222,6 +222,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, isCurrentPhase = true,
               allCharacters={allCharacters}
               onSubmit={handleCreatePost}
               isSubmitting={isCreatingPost}
+              shouldStartCollapsed={posts.length > 0}
             />
           )}
 

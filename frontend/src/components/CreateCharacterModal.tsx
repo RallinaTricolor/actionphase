@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { CreateCharacterRequest } from '../types/characters';
+import type { GameParticipant } from '../types/games';
 import { Modal } from './Modal';
 import { Input, Button, Alert, Select } from './ui';
 
@@ -10,18 +11,23 @@ interface CreateCharacterModalProps {
   onClose: () => void;
   gameId: number;
   userRole?: string; // 'gm', 'player', 'audience'
+  participants?: GameParticipant[]; // Game participants for user selection
 }
 
 export function CreateCharacterModal({
   isOpen,
   onClose,
   gameId,
-  userRole = 'player'
+  userRole = 'player',
+  participants = []
 }: CreateCharacterModalProps) {
   const [formData, setFormData] = useState<CreateCharacterRequest>({
     name: '',
     character_type: 'player_character'
   });
+
+  // Get players (participants with role="player")
+  const players = participants.filter(p => p.role === 'player');
 
   const queryClient = useQueryClient();
 
@@ -48,6 +54,19 @@ export function CreateCharacterModal({
     onClose();
     setFormData({ name: '', character_type: 'player_character' });
   };
+
+  // Clear user_id when switching away from player_character
+  useEffect(() => {
+    if (formData.character_type !== 'player_character') {
+      setFormData(prev => {
+        const { user_id, ...rest } = prev;
+        return rest;
+      });
+    }
+  }, [formData.character_type]);
+
+  // Determine if we should show user selector
+  const showUserSelector = userRole === 'gm' && formData.character_type === 'player_character';
 
   // Determine available character types based on user role
   const getAvailableCharacterTypes = () => {
@@ -100,6 +119,28 @@ export function CreateCharacterModal({
           ))}
         </Select>
 
+        {/* User Selector (for GMs creating player characters) */}
+        {showUserSelector && (
+          <Select
+            label="Assign to Player"
+            id="user_id"
+            value={formData.user_id || ''}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              user_id: e.target.value ? Number(e.target.value) : undefined
+            }))}
+            required
+            helperText="Select which player will control this character"
+          >
+            <option value="">Select a player...</option>
+            {players.map((player) => (
+              <option key={player.user_id} value={player.user_id}>
+                {player.username}
+              </option>
+            ))}
+          </Select>
+        )}
+
         {/* Action Buttons */}
         <div className="flex justify-end space-x-3 pt-4">
           <Button
@@ -114,7 +155,7 @@ export function CreateCharacterModal({
             type="submit"
             variant="primary"
             loading={createCharacterMutation.isPending}
-            disabled={!formData.name.trim()}
+            disabled={!formData.name.trim() || (showUserSelector && !formData.user_id)}
             data-testid="character-submit-button"
           >
             Create Character

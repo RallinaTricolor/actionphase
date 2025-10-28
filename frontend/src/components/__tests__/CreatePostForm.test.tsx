@@ -634,6 +634,130 @@ describe('CreatePostForm', () => {
     });
   });
 
+  describe('Collapse/Expand Behavior', () => {
+    it('starts expanded when shouldStartCollapsed is false', () => {
+      renderWithProviders(
+        <CreatePostForm
+          gameId={1}
+          characters={[mockCharacters[0]]}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+          shouldStartCollapsed={false}
+        />
+      );
+
+      // Form should be visible
+      expect(screen.getByLabelText(/post content/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /create gm post/i })).toBeInTheDocument();
+    });
+
+    it('starts collapsed when shouldStartCollapsed is true', () => {
+      renderWithProviders(
+        <CreatePostForm
+          gameId={1}
+          characters={[mockCharacters[0]]}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+          shouldStartCollapsed={true}
+        />
+      );
+
+      // Form should be collapsed - no textarea
+      expect(screen.queryByLabelText(/post content/i)).not.toBeInTheDocument();
+
+      // Collapsed button should be visible
+      expect(screen.getByRole('button', { name: /create new gm post/i })).toBeInTheDocument();
+    });
+
+    it('expands form when clicking collapsed button', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <CreatePostForm
+          gameId={1}
+          characters={[mockCharacters[0]]}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+          shouldStartCollapsed={true}
+        />
+      );
+
+      // Click expand button
+      const expandButton = screen.getByRole('button', { name: /create new gm post/i });
+      await user.click(expandButton);
+
+      // Form should now be visible
+      expect(screen.getByLabelText(/post content/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /create gm post/i })).toBeInTheDocument();
+    });
+
+    it('collapses form when clicking collapse button', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <CreatePostForm
+          gameId={1}
+          characters={[mockCharacters[0]]}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+          shouldStartCollapsed={false}
+        />
+      );
+
+      // Click collapse button
+      const collapseButton = screen.getByRole('button', { name: /collapse form/i });
+      await user.click(collapseButton);
+
+      // Form should now be collapsed
+      expect(screen.queryByLabelText(/post content/i)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /create new gm post/i })).toBeInTheDocument();
+    });
+
+    it('preserves content when collapsing and expanding', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <CreatePostForm
+          gameId={1}
+          characters={[mockCharacters[0]]}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+          shouldStartCollapsed={false}
+        />
+      );
+
+      // Type some content
+      const textarea = screen.getByLabelText(/post content/i);
+      await user.type(textarea, 'Test content');
+
+      // Collapse
+      const collapseButton = screen.getByRole('button', { name: /collapse form/i });
+      await user.click(collapseButton);
+
+      // Expand
+      const expandButton = screen.getByRole('button', { name: /create new gm post/i });
+      await user.click(expandButton);
+
+      // Content should be preserved
+      const newTextarea = screen.getByLabelText(/post content/i);
+      expect(newTextarea).toHaveValue('Test content');
+    });
+
+    it('defaults to expanded when shouldStartCollapsed is not provided', () => {
+      renderWithProviders(
+        <CreatePostForm
+          gameId={1}
+          characters={[mockCharacters[0]]}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+        />
+      );
+
+      // Form should be visible by default
+      expect(screen.getByLabelText(/post content/i)).toBeInTheDocument();
+    });
+  });
+
   describe('Integration', () => {
     it('handles complete post creation workflow', async () => {
       const user = userEvent.setup();

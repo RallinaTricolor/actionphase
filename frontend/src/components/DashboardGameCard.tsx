@@ -16,7 +16,13 @@ export function DashboardGameCard({ game }: DashboardGameCardProps) {
     normal: 'text-semantic-success bg-semantic-success-subtle',
   }[game.deadline_status];
 
-  const roleDisplay = game.user_role === 'gm' || game.user_role === 'co_gm' ? 'GM' : 'Player';
+  const getRoleDisplay = (role: string): string => {
+    if (role === 'gm' || role === 'co_gm') return 'GM';
+    if (role === 'audience') return 'Audience';
+    return 'Player';
+  };
+
+  const roleDisplay = getRoleDisplay(game.user_role);
 
   return (
     <Link

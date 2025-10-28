@@ -6,6 +6,7 @@ import "net/http"
 type CreateCharacterRequest struct {
 	Name          string `json:"name" validate:"required,min=1,max=255"`
 	CharacterType string `json:"character_type" validate:"required"`
+	UserID        *int32 `json:"user_id,omitempty"` // Optional: for GMs to assign player characters to specific players
 }
 
 func (r *CreateCharacterRequest) Bind(req *http.Request) error {
