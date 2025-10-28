@@ -16,22 +16,20 @@ ActionPhase follows Test-Driven Development (TDD) where practical:
 
 ## Current Test Coverage Status
 
-**Last updated: October 2025**
+**Last updated: October 27, 2025**
+**Last verified: October 27, 2025**
 
-### Backend Coverage
-- **72 test functions** across 13 test files
-- **Services WITHOUT tests** (0% coverage):
-  - `pkg/db/services/messages.go` (~300 lines)
-  - `pkg/db/services/conversations.go` (~250 lines)
-  - `pkg/db/services/game_applications.go` (~350 lines)
+📊 **For current test metrics, see: [Test Coverage Reference](/docs/testing/TEST_COVERAGE_REFERENCE.md)**
 
-### Frontend Coverage
-- **2 component tests** out of 40+ components (~5% coverage)
-- Components tested: LoginForm, BackendStatus
-- **38+ components UNTESTED**
+### Quick Summary
+- **Total Tests**: 1,489 passing (Backend: 467, Frontend: 1,022)
+- **Backend Coverage**: 75.0% line coverage
+- **Frontend Coverage**: ~60% estimated coverage
+- **Status**: Production-ready with mature testing patterns
 
-### Critical Gap
-**Integration tests FAILING** due to schema drift - missing `is_anonymous` column in test database.
+### Detailed Reports
+- **Comprehensive breakdown**: [COVERAGE_STATUS.md](/docs/testing/COVERAGE_STATUS.md)
+- **Testing strategy**: [ADR-007](/docs/adrs/007-testing-strategy.md)
 
 ## Testing Strategy by Layer
 

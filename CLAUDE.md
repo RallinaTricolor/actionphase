@@ -10,8 +10,13 @@ The `.claude/` directory contains organized AI context and instructions:
 - **`.claude/README.md`** - Complete index of all AI context and documentation
 - **`.claude/context/`** - Essential context to read before specific tasks
 - **`.claude/reference/`** - Detailed implementation guides
-- **`.claude/commands/`** - Custom slash commands
+- **`.claude/commands/`** - Detailed protocols for common tasks (debug-e2e-test, implement-features, challenge-assumptions)
 - **`.claude/planning/`** - Persistent planning documents and multi-session task tracking
+
+**🔴 MANDATORY COMMANDS TO CHECK**:
+- E2E test failing? → See `.claude/commands/debug-e2e-test.md`
+- Multiple features? → See `.claude/commands/implement-features.md`
+- Request unclear? → See `.claude/commands/challenge-assumptions.md`
 
 ### When to Read Context Files
 
@@ -30,6 +35,14 @@ The `.claude/` directory contains organized AI context and instructions:
 5. **THEN** write E2E test
 
 **See `.claude/context/TESTING.md` section "E2E Tests (Playwright)" for mandatory checklist.**
+
+**🔴 E2E TEST DEBUGGING - MANDATORY PROTOCOL**:
+When an E2E test fails, you MUST:
+1. **Use Playwright MCP FIRST** - Navigate to the page and manually test the flow
+2. **Check browser console** - Use `mcp__playwright__browser_console_messages`
+3. **Verify feature works** - Only modify test if feature works manually
+4. **Never assume** - Don't assume timeouts mean "not implemented"
+**See `.claude/commands/debug-e2e-test.md` for detailed protocol**
 
 **Before Implementing Features**:
 1. Read **`.claude/context/ARCHITECTURE.md`** for architectural patterns
@@ -87,6 +100,40 @@ ActionPhase is a modern gaming platform with Clean Architecture principles:
 **For architectural details, read `.claude/context/ARCHITECTURE.md`**
 
 ---
+
+## 🚨 CRITICAL FAILURE PREVENTION
+
+### Working Directory Awareness
+**ALWAYS verify your working directory before running commands:**
+```bash
+pwd  # Check current directory
+# Expected: /Users/jhouser/Personal/actionphase/frontend OR /backend
+```
+- Frontend commands run from `/frontend`
+- Backend commands run from root `/`
+- E2E tests run from `/frontend`
+
+### Search Reliability
+**When grep/search fails to find known strings:**
+1. Use case-insensitive search: `grep -i "pattern"`
+2. Try glob patterns: `**/*.tsx` instead of specific paths
+3. Check for typos in search terms
+4. Use Task tool with subagent_type=Explore for complex searches
+
+### Task Management Rules
+**MANDATORY TodoWrite usage:**
+- Never work on more than 3 features simultaneously
+- Each todo item must be completable in <10 minutes
+- Mark items complete IMMEDIATELY after finishing
+- Only ONE item should be in_progress at a time
+
+### Documentation Locations
+**Consistent documentation placement:**
+- User guides → `/docs/guides/`
+- API documentation → `/docs/api/`
+- Architecture decisions → `/docs/adrs/`
+- AI context updates → `.claude/context/`
+- Planning documents → `.claude/planning/`
 
 ## Quick Start Commands
 

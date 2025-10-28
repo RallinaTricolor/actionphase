@@ -5,8 +5,7 @@ Welcome to the ActionPhase documentation! This directory contains comprehensive 
 ## 📚 Documentation Index
 
 ### Getting Started
-- **[Developer Onboarding Guide](DEVELOPER_ONBOARDING.md)** - Get up and running in under 30 minutes
-- **[MVP Status & Development Plan](../.claude/planning/completed/MVP_STATUS.md)** - Current project status, completed features, and roadmap
+- **[Developer Onboarding Guide](getting-started/DEVELOPER_ONBOARDING.md)** - Get up and running in under 30 minutes
 - **[Project README](../README.md)** - Project overview and quick start
 - **[Environment Setup](../backend/README.md)** - Detailed setup instructions
 
@@ -26,13 +25,13 @@ Welcome to the ActionPhase documentation! This directory contains comprehensive 
 - **[ADR-007: Testing Strategy](adrs/007-testing-strategy.md)** - Multi-layer testing approach
 
 ### Development Guides
-- **[Logging Standards](../.claude/LOGGING_STANDARDS.md)** - Comprehensive logging guidelines
-- **[AI-Friendly Improvements](../.claude/AI_FRIENDLY_IMPROVEMENTS.md)** - Code quality roadmap
+- **[Logging Standards](../.claude/reference/LOGGING_STANDARDS.md)** - Comprehensive logging guidelines
+- **[AI-Friendly Improvements](../.claude/reference/AI_FRIENDLY_IMPROVEMENTS.md)** - Code quality roadmap
 
 ## 🚀 Quick Navigation
 
 ### New to ActionPhase?
-Start with the **[Developer Onboarding Guide](DEVELOPER_ONBOARDING.md)** to get your development environment running in minutes.
+Start with the **[Developer Onboarding Guide](getting-started/DEVELOPER_ONBOARDING.md)** to get your development environment running in minutes.
 
 ### Understanding the System?
 Read the **[System Architecture](architecture/SYSTEM_ARCHITECTURE.md)** for a complete overview, then explore **[Component Interactions](architecture/COMPONENT_INTERACTIONS.md)** for detailed communication patterns.

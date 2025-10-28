@@ -102,7 +102,7 @@ export const HomePage = () => {
               </div>
 
               {!isAuthenticated && (
-                <div className="mt-8 p-6 bg-surface-raised rounded-lg text-center">
+                <div className="mt-8 p-6 bg-surface-raised rounded-lg text-center not-prose">
                   <p className="text-content-secondary mb-4">
                     Ready to join the adventure?
                   </p>

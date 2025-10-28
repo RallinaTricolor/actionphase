@@ -60,7 +60,7 @@ export function PeopleView({
               }
             `}
           >
-            GameParticipants ({participants.length})
+            Game Participants ({participants.length})
           </button>
         </nav>
       </div>
@@ -76,11 +76,11 @@ export function PeopleView({
         />
       )}
 
-      {/* GameParticipants sub-tab */}
+      {/* Game Participants sub-tab */}
       {activeSubTab === 'participants' && (
         <>
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-content-primary">GameParticipants</h2>
+            <h2 className="text-2xl font-bold text-content-primary">Game Participants</h2>
             {isGM && (
               <Button
                 variant="primary"

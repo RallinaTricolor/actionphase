@@ -10,6 +10,7 @@ import { Button, Select } from './ui';
 import { useAdminMode } from '../hooks/useAdminMode';
 import { useUpdateComment, useDeleteComment } from '../hooks/useCommentMutations';
 import { useGamePermissions } from '../hooks/useGamePermissions';
+import { ConfirmModal } from './ConfirmModal';
 
 interface ThreadedCommentProps {
   comment: Message;
@@ -22,6 +23,7 @@ interface ThreadedCommentProps {
   maxDepth?: number; // Maximum nesting depth before showing "Continue thread" button
   unreadCommentIDs?: number[]; // IDs of comments that are "new since last visit"
   onOpenThread?: (comment: Message) => void; // Callback to open thread modal with comment object
+  readOnly?: boolean; // Disable all interactive features (for history view)
 }
 
 export function ThreadedComment({
@@ -34,7 +36,8 @@ export function ThreadedComment({
   depth = 0,
   maxDepth = 5,
   unreadCommentIDs = [],
-  onOpenThread
+  onOpenThread,
+  readOnly = false
 }: ThreadedCommentProps) {
   const { showSuccess: _showSuccess, showError } = useToast();
   const [replies, setReplies] = useState<Message[]>([]);
@@ -47,6 +50,7 @@ export function ThreadedComment({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isMountedRef = useRef(true);
   const hasLoadedRef = useRef(false);
 
@@ -155,11 +159,11 @@ export function ThreadedComment({
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
 
+  const handleConfirmDelete = async () => {
     try {
       setIsDeleting(true);
       await deleteCommentMutation.mutateAsync({
@@ -305,7 +309,7 @@ export function ThreadedComment({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 text-xs text-content-secondary">
-          {!isAtMaxDepth && !isEditing && (
+          {!isAtMaxDepth && !isEditing && !readOnly && (
             <Button
               variant="ghost"
               size="sm"
@@ -371,7 +375,7 @@ export function ThreadedComment({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleDelete}
+              onClick={handleDeleteClick}
               disabled={isDeleting}
               className="text-xs h-auto p-0 hover:text-semantic-danger font-medium text-semantic-danger flex items-center gap-1"
               title={isAuthor ? "Delete this comment" : (isGM ? "Delete this comment (GM)" : "Delete this comment (admin)")}
@@ -403,7 +407,7 @@ export function ThreadedComment({
       </div>
 
       {/* Reply Form */}
-      {isReplying && (
+      {isReplying && !readOnly && (
         <div className="mb-3 surface-raised rounded p-3 border border-theme-default">
           <form onSubmit={handleSubmitReply}>
             {controllableCharacters.length > 0 ? (
@@ -500,11 +504,24 @@ export function ThreadedComment({
                 maxDepth={maxDepth}
                 unreadCommentIDs={unreadCommentIDs}
                 onOpenThread={onOpenThread}
+                readOnly={readOnly}
               />
             ))
           )}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Comment"
+        message="Are you sure you want to delete this comment? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

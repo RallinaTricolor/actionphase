@@ -24,13 +24,13 @@ cd backend
 just dev-setup
 
 # 3. Start the development servers (opens two terminals)
-just dev          # Backend server (http://localhost:8080)
-just run-frontend # Frontend server (http://localhost:3000)
+just dev          # Backend server (http://localhost:3000)
+just run-frontend # Frontend server (http://localhost:5173)
 ```
 
 **That's it!** 🎉 You should now have:
-- Backend API running on http://localhost:8080
-- Frontend app running on http://localhost:3000
+- Backend API running on http://localhost:3000
+- Frontend app running on http://localhost:5173
 - PostgreSQL database running in Docker
 - All dependencies installed
 
@@ -38,11 +38,11 @@ just run-frontend # Frontend server (http://localhost:3000)
 
 ```bash
 # Test the API
-curl http://localhost:8080/ping
+curl http://localhost:3000/ping
 # Should return: {"message": "pong", "status": "healthy"}
 
 # Test frontend
-open http://localhost:3000
+open http://localhost:5173
 # Should show the ActionPhase login/registration page
 ```
 
@@ -367,8 +367,8 @@ go mod download      # Re-download modules
 
 ### Backend Debugging
 - **Structured Logs**: Every request has a correlation ID for tracing
-- **Metrics Endpoint**: http://localhost:8080/metrics - real-time performance data
-- **Health Endpoint**: http://localhost:8080/health - service status
+- **Metrics Endpoint**: http://localhost:3000/metrics - real-time performance data
+- **Health Endpoint**: http://localhost:3000/health - service status
 - **Database Logs**: Check Docker logs for SQL queries
 
 ### Frontend Debugging
