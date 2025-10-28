@@ -251,6 +251,14 @@ test.describe('Character Mentions', () => {
 
     // Verify Common Room is loaded
     await expect(commonRoom.heading).toBeVisible({ timeout: 5000 });
+
+    // Expand form if collapsed (posts may exist from previous tests)
+    const expandButton = page.locator('button:has-text("Create New GM Post")').first();
+    if (await expandButton.isVisible().catch(() => false)) {
+      await expandButton.click();
+      await page.waitForTimeout(300);
+    }
+
     await expect(commonRoom.createPostHeading).toBeVisible({ timeout: 5000 });
 
     // Click to focus the textarea

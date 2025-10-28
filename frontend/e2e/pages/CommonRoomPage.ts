@@ -62,6 +62,16 @@ export class CommonRoomPage {
    * @param content - Post content
    */
   async createPost(content: string) {
+    // Check if form is collapsed - if so, expand it first
+    const expandButton = this.page.locator('button:has-text("Create New GM Post")').first();
+    if (await expandButton.isVisible().catch(() => false)) {
+      await expandButton.click();
+      // Wait for form to expand
+      await this.page.waitForTimeout(300);
+    }
+
+    // Wait for textarea to be visible before filling
+    await waitForVisible(this.postTextarea);
     await this.postTextarea.fill(content);
     await this.page.waitForTimeout(500); // Allow form to process input
     await this.createPostButton.click();
