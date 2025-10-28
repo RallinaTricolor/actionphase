@@ -12,7 +12,6 @@ import (
 	"github.com/go-chi/render"
 
 	"actionphase/pkg/core"
-	models "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
 	messagesvc "actionphase/pkg/db/services/messages"
 )
@@ -858,53 +857,8 @@ func (h *Handler) ListRecentCommentsWithParents(w http.ResponseWriter, r *http.R
 		offset = parsedOffset
 	}
 
-	// Get user ID from token for authorization
-	userID, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
-		return
-	}
-
-	// Check if user is participant or GM of the game
-	queries := models.New(h.App.Pool)
-
-	// First check if user is the GM
-	game, err := queries.GetGame(ctx, int32(gameID))
-	if err != nil {
-		h.App.Logger.Error("Failed to get game", "error", err, "game_id", gameID)
-		render.Render(w, r, core.ErrInternalError(err))
-		return
-	}
-
-	isGM := game.GmUserID == userID
-
-	// If not GM, check if they're a participant
-	var hasAccess bool
-	if isGM {
-		hasAccess = true
-	} else {
-		isParticipant, err := queries.CheckParticipantExists(ctx, models.CheckParticipantExistsParams{
-			GameID: int32(gameID),
-			UserID: userID,
-		})
-		if err != nil {
-			h.App.Logger.Error("Failed to check game participation", "error", err, "game_id", gameID, "user_id", userID)
-			render.Render(w, r, core.ErrInternalError(err))
-			return
-		}
-		hasAccess = isParticipant
-	}
-
-	if !hasAccess {
-		h.App.Logger.Warn("User attempted to access game they're not part of",
-			"game_id", gameID,
-			"user_id", userID)
-		render.Render(w, r, core.ErrForbidden("You are not a participant in this game"))
-		return
-	}
-
 	// Get comments with parents from service
+	// Note: No permission check required - comments are publicly viewable like posts
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 	comments, err := messageService.ListRecentCommentsWithParents(ctx, int32(gameID), int32(limit), int32(offset))
 	if err != nil {
@@ -923,7 +877,6 @@ func (h *Handler) ListRecentCommentsWithParents(w http.ResponseWriter, r *http.R
 
 	h.App.Logger.Info("Listed recent comments with parents",
 		"game_id", gameID,
-		"user_id", userID,
 		"limit", limit,
 		"offset", offset,
 		"count", len(comments),
