@@ -86,16 +86,6 @@ export function GameActions({
         </Button>
       )}
 
-      {/* Leave Game - Available for participants AND audience members */}
-      {!isGM && (isParticipant || userRole === 'audience') && game.state !== 'completed' && game.state !== 'cancelled' && (
-        <Button
-          variant="danger"
-          onClick={onLeaveGame}
-          disabled={actionLoading}
-        >
-          Leave Game
-        </Button>
-      )}
     </div>
   );
 }

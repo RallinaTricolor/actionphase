@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import type { InventoryItem, CurrencyEntry } from '../types/characters';
 import { ItemCard } from './ItemCard';
 import { CurrencyCard } from './CurrencyCard';
@@ -24,13 +24,6 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
   const [activeTab, setActiveTab] = useState<'items' | 'currency'>('items');
   const [showAddItem, setShowAddItem] = useState(false);
   const [showAddCurrency, setShowAddCurrency] = useState(false);
-
-  // Switch to items tab if user can't edit and is viewing currency
-  useEffect(() => {
-    if (!canEdit && activeTab === 'currency') {
-      setActiveTab('items');
-    }
-  }, [canEdit, activeTab]);
 
   const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -91,19 +84,17 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
         >
           Items ({items.length})
         </Button>
-        {canEdit && (
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('currency')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'currency'
-                ? 'border-interactive-primary text-interactive-primary'
-                : 'border-transparent text-content-secondary hover:text-content-primary'
-            }`}
-          >
-            Currency ({currency.length})
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          onClick={() => setActiveTab('currency')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'currency'
+              ? 'border-interactive-primary text-interactive-primary'
+              : 'border-transparent text-content-secondary hover:text-content-primary'
+          }`}
+        >
+          Currency ({currency.length})
+        </Button>
       </div>
 
       {/* Items Tab */}
@@ -157,18 +148,20 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
         </div>
       )}
 
-      {/* Currency Tab - Only show if user can edit (currency is private) */}
-      {activeTab === 'currency' && canEdit && (
+      {/* Currency Tab */}
+      {activeTab === 'currency' && (
         <div>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium text-content-primary">Currency & Resources</h3>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setShowAddCurrency(true)}
-            >
-              Add Currency
-            </Button>
+            {canEdit && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setShowAddCurrency(true)}
+              >
+                Add Currency
+              </Button>
+            )}
           </div>
 
           {currency.length === 0 ? (

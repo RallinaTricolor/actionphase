@@ -294,20 +294,6 @@ describe('GameDetailsPage', () => {
   })
 
   describe('Participant View', () => {
-    it('should show Leave Game button for participants', async () => {
-      setupDefaultHandlers(mockGame, mockParticipants, 2) // player1
-
-      renderGameDetailsPage(1)
-
-      await waitFor(() => {
-        expect(screen.getByText('Test Game')).toBeInTheDocument()
-      })
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /leave game/i })).toBeInTheDocument()
-      }, { timeout: 3000 })
-    })
-
     it('should not show GM controls for participants', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 2)
 

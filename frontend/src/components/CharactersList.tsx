@@ -124,13 +124,19 @@ export function CharactersList({
     return false;
   };
 
-  // Check if user can edit character sheet
+  // Check if user can edit character sheet (bio/notes fields)
   const canEditCharacterSheet = (character: Character) => {
     // GM can edit all character sheets
     if (userRole === 'gm') return true;
     // Users can edit their own characters (regardless of approval status)
     if (isUserCharacter(character)) return true;
     return false;
+  };
+
+  // Check if user can edit character stats (abilities, skills, items, currency)
+  // This is GM-only functionality
+  const canEditCharacterStats = (character: Character) => {
+    return userRole === 'gm';
   };
 
   // Get character status badge variant
@@ -287,6 +293,7 @@ export function CharactersList({
             <CharacterSheet
               characterId={selectedCharacterId}
               canEdit={canEditCharacterSheet(character)}
+              canEditStats={canEditCharacterStats(character)}
               onClose={() => setSelectedCharacterId(null)}
             />
           </Modal>

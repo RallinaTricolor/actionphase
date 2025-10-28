@@ -210,6 +210,8 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
                 isParticipant={isParticipant}
                 currentUserId={currentUserId}
                 userCharacters={userCharacters}
+                onLeaveGame={handleLeaveGame}
+                actionLoading={actionLoading}
               />
             </div>
           </div>

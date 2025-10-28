@@ -12,10 +12,11 @@ import { Button, Textarea, Badge } from './ui';
 interface CharacterSheetProps {
   characterId: number;
   canEdit?: boolean;
+  canEditStats?: boolean; // Separate permission for abilities, skills, items, currency (GM only)
   onClose?: () => void;
 }
 
-export function CharacterSheet({ characterId, canEdit = false, onClose }: CharacterSheetProps) {
+export function CharacterSheet({ characterId, canEdit = false, canEditStats = false, onClose }: CharacterSheetProps) {
   const [activeModule, setActiveModule] = useState('bio');
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -237,7 +238,7 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
               <AbilitiesManager
                 abilities={parseJsonField('abilities', 'abilities') as CharacterAbility[]}
                 skills={parseJsonField('abilities', 'skills') as CharacterSkill[]}
-                canEdit={canEdit}
+                canEdit={canEditStats}
                 onAbilitiesChange={(abilities) => saveJsonField('abilities', 'abilities', abilities)}
                 onSkillsChange={(skills) => saveJsonField('abilities', 'skills', skills)}
               />
@@ -245,7 +246,7 @@ export function CharacterSheet({ characterId, canEdit = false, onClose }: Charac
               <InventoryManager
                 items={parseJsonField('inventory', 'items') as InventoryItem[]}
                 currency={parseJsonField('inventory', 'currency') as CurrencyEntry[]}
-                canEdit={canEdit}
+                canEdit={canEditStats}
                 onItemsChange={(items) => saveJsonField('inventory', 'items', items)}
                 onCurrencyChange={(currency) => saveJsonField('inventory', 'currency', currency)}
               />

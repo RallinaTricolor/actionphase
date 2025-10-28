@@ -50,6 +50,33 @@ func (h *Handler) SetCharacterData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Additional check: only GMs can edit character stats (abilities, skills, items, currency)
+	isStatField := (data.ModuleType == "abilities" && (data.FieldName == "abilities" || data.FieldName == "skills")) ||
+		(data.ModuleType == "inventory" && (data.FieldName == "items" || data.FieldName == "currency"))
+
+	if isStatField {
+		// Verify user is the GM of this character's game
+		queries := models.New(h.App.Pool)
+		character, err := queries.GetCharacter(r.Context(), int32(characterID))
+		if err != nil {
+			h.App.Logger.Error("Failed to get character for GM check", "error", err)
+			render.Render(w, r, core.ErrInternalError(err))
+			return
+		}
+
+		game, err := queries.GetGame(r.Context(), character.GameID)
+		if err != nil {
+			h.App.Logger.Error("Failed to get game for GM check", "error", err)
+			render.Render(w, r, core.ErrInternalError(err))
+			return
+		}
+
+		if game.GmUserID != userID {
+			render.Render(w, r, core.ErrForbidden("only GMs can edit character stats (abilities, skills, items, currency)"))
+			return
+		}
+	}
+
 	// Set character data
 	err = characterService.SetCharacterData(r.Context(), services.CharacterDataRequest{
 		CharacterID: int32(characterID),

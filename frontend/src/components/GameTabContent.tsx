@@ -31,6 +31,8 @@ interface GameTabContentProps {
   isParticipant: boolean;
   currentUserId: number | null;
   userCharacters: Character[];
+  onLeaveGame?: () => void;
+  actionLoading?: boolean;
 }
 
 const formatDate = (dateString?: string) => {
@@ -49,6 +51,8 @@ export function GameTabContent({
   isParticipant,
   currentUserId,
   userCharacters,
+  onLeaveGame,
+  actionLoading = false,
 }: GameTabContentProps) {
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
 
@@ -72,6 +76,8 @@ export function GameTabContent({
         currentUserId={currentUserId}
         gameState={game.state}
         isAnonymous={game.is_anonymous || false}
+        onLeaveGame={onLeaveGame}
+        actionLoading={actionLoading}
       />
     );
   }

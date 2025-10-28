@@ -4,6 +4,7 @@ import { GamesList } from '../components/GamesList';
 import { CreateGameForm } from '../components/CreateGameForm';
 import { Modal } from '../components/Modal';
 import { FilterBar } from '../components/FilterBar';
+import { Pagination } from '../components/Pagination';
 import { Input } from '../components/ui';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -28,6 +29,8 @@ export const GamesPage = () => {
     setParticipation,
     setHasOpenSpots,
     setSortBy,
+    setPage,
+    setPageSize,
     clearFilters,
     isLoading,
     isError,
@@ -169,6 +172,22 @@ export const GamesPage = () => {
           isJoining={isJoining}
         />
       </div>
+
+      {/* Pagination */}
+      {!isLoading && !isError && games.length > 0 && metadata.total_pages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={metadata.page}
+            totalPages={metadata.total_pages}
+            pageSize={metadata.page_size}
+            hasNextPage={metadata.has_next_page}
+            hasPreviousPage={metadata.has_previous_page}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            isLoading={isLoading}
+          />
+        </div>
+      )}
 
       {/* Create Game Modal */}
       <Modal

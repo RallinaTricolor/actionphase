@@ -13,6 +13,8 @@ type GameListingFilters struct {
 	SortBy              string   // 'recent_activity', 'created', 'start_date', 'alphabetical'
 	AdminMode           bool     // Admin mode: bypasses is_public filter when user is admin
 	AdminUserID         *int32   // User ID requesting admin mode (for validation)
+	Page                int      // Page number (1-indexed, default: 1)
+	PageSize            int      // Number of items per page (default: 20, max: 100)
 }
 
 // EnrichedGameListItem extends GameListItem with user context and urgency
@@ -45,9 +47,14 @@ type EnrichedGameListItem struct {
 
 // GameListingMetadata provides context for the listing
 type GameListingMetadata struct {
-	TotalCount      int      `json:"total_count"`      // Total count of all public games
-	FilteredCount   int      `json:"filtered_count"`   // Count of games matching filters
-	AvailableStates []string `json:"available_states"` // Game states with at least one game
+	TotalCount      int      `json:"total_count"`       // Total count of all public games
+	FilteredCount   int      `json:"filtered_count"`    // Count of games matching filters
+	AvailableStates []string `json:"available_states"`  // Game states with at least one game
+	Page            int      `json:"page"`              // Current page number (1-indexed)
+	PageSize        int      `json:"page_size"`         // Number of items per page
+	TotalPages      int      `json:"total_pages"`       // Total number of pages
+	HasNextPage     bool     `json:"has_next_page"`     // Whether there's a next page
+	HasPreviousPage bool     `json:"has_previous_page"` // Whether there's a previous page
 }
 
 // GameListingResponse is the full response for listing endpoint
