@@ -32,6 +32,16 @@ import { waitForModal } from '../utils/waits';
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Notification System', () => {
+  // Clean up messages and notifications between tests to prevent test contamination
+  // Serial tests share the same game fixture, so we need to clean up after each test
+  test.afterEach(async () => {
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+
+    // Delete messages and notifications from game 166 between tests
+    await execAsync(`PGPASSWORD=example psql -h localhost -U postgres -d actionphase -c "DELETE FROM messages WHERE game_id = 166; DELETE FROM notifications WHERE game_id = 166;"`);
+  });
 
   test.describe('Notification UI', () => {
     test('should display and interact with notification bell', async ({ page }) => {
