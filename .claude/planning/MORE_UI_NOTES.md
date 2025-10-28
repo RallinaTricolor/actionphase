@@ -37,10 +37,10 @@ For each item in this list:
       - **Status**: FIXED - Removed permission check from ListRecentCommentsWithParents to match GetGamePosts (publicly viewable)
       - **Location**: /games/50704?tab=common-room → Click "New Comments" as TestPlayer4 (non-participant)
       - **Fix**: Backend: api.go removed participant check, comments are now publicly viewable like posts
-  - ✅ UI: The "Apply to Join" dialogue allows you to join as a player or the audience, but there's a "Join as Audience" button right next to it
-      - **Status**: Confirmed - "Apply to Join" modal has Role dropdown with Player/Audience options, but separate "Join as Audience" button exists next to it
-      - **Location**: /games/50702 (recruiting game) - Both buttons visible side-by-side
-      - **Expected**: Should have single entry point for joining (either unified button or remove "Join as Audience")
+  - ✓ UI: The "Apply to Join" dialogue allows you to join as a player or the audience, but there's a "Join as Audience" button right next to it
+      - **Status**: FIXED - Removed separate "Join as Audience" button, kept unified "Apply to Join" modal with role selection
+      - **Location**: /games/50702 (recruiting game) - Both buttons were visible side-by-side
+      - **Fix**: Removed redundant button from GameActions, removed handler from GameDetailsPage
   - ✓ UI: On the "Participants" tab, "GameParticipants" is one word and it lists "Audiences" (instead of Audience Members) as a category which is incorrect
       - **Status**: FIXED - Changed "GameParticipants" to "Game Participants" in PeopleView.tsx
       - **Location**: /games/50704?tab=people
@@ -148,7 +148,7 @@ For each item in this list:
 4. ✓ GM can post in History view - Add conditional rendering - FIXED (HistoryView passes isCurrentPhase={false})
 5. ✓ Players can post in History view - Same fix as #4 - FIXED (readOnly prop cascade)
 6. ✓ New Comments 403 error for non-participants - Permission/error handling fix - FIXED (removed permission check)
-7. ✅ Apply to Join vs Join as Audience redundancy - Remove redundant button
+7. ✓ Apply to Join vs Join as Audience redundancy - Remove redundant button - FIXED (removed "Join as Audience" button)
 8. ✅ Audience badge shows as "Player" - Fix dashboard role display logic
 9. ✅ GM post form not minimized - Add collapse/expand functionality
 10. ✅ GM can't create player characters (403) - Fix permission + add player assignment
