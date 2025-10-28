@@ -35,6 +35,8 @@ export function useGameListing() {
     const participationParam = searchParams.get('participation');
     const openSpotsParam = searchParams.get('has_open_spots');
     const sortByParam = searchParams.get('sort_by');
+    const pageParam = searchParams.get('page');
+    const pageSizeParam = searchParams.get('page_size');
 
     return {
       search: searchParam || undefined,
@@ -43,6 +45,8 @@ export function useGameListing() {
       has_open_spots: openSpotsParam === 'true' ? true : openSpotsParam === 'false' ? false : undefined,
       sort_by: (sortByParam as SortBy) || 'recent_activity',
       admin_mode: adminModeEnabled, // Add admin mode from context
+      page: pageParam ? parseInt(pageParam, 10) : 1,
+      page_size: pageSizeParam ? parseInt(pageSizeParam, 10) : 20,
     };
   }, [searchParams, adminModeEnabled]);
 
@@ -109,6 +113,24 @@ export function useGameListing() {
         }
       }
 
+      // Update or remove page
+      if ('page' in updates) {
+        if (updates.page && updates.page !== 1) {
+          newParams.set('page', updates.page.toString());
+        } else {
+          newParams.delete('page'); // Default to page 1
+        }
+      }
+
+      // Update or remove page_size
+      if ('page_size' in updates) {
+        if (updates.page_size && updates.page_size !== 20) {
+          newParams.set('page_size', updates.page_size.toString());
+        } else {
+          newParams.delete('page_size'); // Default to 20
+        }
+      }
+
       setSearchParams(newParams);
     },
     [searchParams, setSearchParams]
@@ -150,6 +172,20 @@ export function useGameListing() {
     [updateFilters]
   );
 
+  const setPage = useCallback(
+    (page: number) => {
+      updateFilters({ page });
+    },
+    [updateFilters]
+  );
+
+  const setPageSize = useCallback(
+    (pageSize: number) => {
+      updateFilters({ page_size: pageSize, page: 1 }); // Reset to page 1 when changing page size
+    },
+    [updateFilters]
+  );
+
   // Clear all filters
   const clearFilters = useCallback(() => {
     setSearchParams(new URLSearchParams());
@@ -162,6 +198,11 @@ export function useGameListing() {
       total_count: 0,
       filtered_count: 0,
       available_states: [],
+      page: 1,
+      page_size: 20,
+      total_pages: 1,
+      has_next_page: false,
+      has_previous_page: false,
     },
 
     // Current filter state
@@ -173,6 +214,8 @@ export function useGameListing() {
     setParticipation,
     setHasOpenSpots,
     setSortBy,
+    setPage,
+    setPageSize,
     updateFilters,
     clearFilters,
 

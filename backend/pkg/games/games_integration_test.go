@@ -622,6 +622,7 @@ func setupGameTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 				r.Use(core.RequireAuthenticationMiddleware(userService))
 
 				// Game listing and viewing
+				r.Get("/", gameHandler.GetFilteredGames) // Main game listing endpoint with filters
 				r.Get("/public", gameHandler.GetAllGames)
 				r.Get("/recruiting", gameHandler.GetRecruitingGames)
 				r.Get("/{id}", gameHandler.GetGame)

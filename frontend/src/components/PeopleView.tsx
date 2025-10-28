@@ -14,6 +14,8 @@ interface PeopleViewProps {
   currentUserId: number | null;
   gameState?: string;
   isAnonymous?: boolean;
+  onLeaveGame?: () => void;
+  actionLoading?: boolean;
 }
 
 type SubTab = 'characters' | 'participants';
@@ -28,7 +30,9 @@ export function PeopleView({
   isGM,
   currentUserId,
   gameState,
-  isAnonymous = false
+  isAnonymous = false,
+  onLeaveGame,
+  actionLoading = false
 }: PeopleViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('characters');
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
@@ -104,27 +108,44 @@ export function PeopleView({
                       {role.replace('_', ' ')}s ({roleGameParticipants.length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {roleGameParticipants.map((participant) => (
-                        <div key={participant.id} className="border border-theme-default rounded-lg p-4 surface-raised">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <div className="font-medium text-content-primary">{participant.username}</div>
-                                {participant.role === 'audience' && <AudienceMemberBadge />}
+                      {roleGameParticipants.map((participant) => {
+                        const isCurrentUser = participant.user_id === currentUserId;
+                        const canLeaveGame = !isGM && isCurrentUser && onLeaveGame && gameState !== 'completed' && gameState !== 'cancelled';
+
+                        return (
+                          <div key={participant.id} className="border border-theme-default rounded-lg p-4 surface-raised">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="font-medium text-content-primary">{participant.username}</div>
+                                  {participant.role === 'audience' && <AudienceMemberBadge />}
+                                  {isCurrentUser && <span className="text-xs text-content-tertiary">(You)</span>}
+                                </div>
+                                <div className="text-sm text-content-tertiary">
+                                  Joined {new Date(participant.joined_at).toLocaleDateString()}
+                                </div>
+                                {canLeaveGame && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={onLeaveGame}
+                                    disabled={actionLoading}
+                                    className="mt-2 text-content-tertiary hover:text-semantic-danger"
+                                  >
+                                    Leave Game
+                                  </Button>
+                                )}
                               </div>
-                              <div className="text-sm text-content-tertiary">
-                                Joined {new Date(participant.joined_at).toLocaleDateString()}
-                              </div>
+                              {isGM && !isCurrentUser && (
+                                <RemovePlayerButton
+                                  gameId={gameId}
+                                  participant={participant}
+                                />
+                              )}
                             </div>
-                            {isGM && participant.user_id !== currentUserId && (
-                              <RemovePlayerButton
-                                gameId={gameId}
-                                participant={participant}
-                              />
-                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );

@@ -574,10 +574,26 @@ func (h *Handler) GetFilteredGames(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters
 	queryParams := r.URL.Query()
 
+	// Parse pagination parameters with defaults
+	page := 1
+	pageSize := 20
+	if pageParam := queryParams.Get("page"); pageParam != "" {
+		if p, err := strconv.Atoi(pageParam); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if pageSizeParam := queryParams.Get("page_size"); pageSizeParam != "" {
+		if ps, err := strconv.Atoi(pageSizeParam); err == nil && ps > 0 && ps <= 100 {
+			pageSize = ps
+		}
+	}
+
 	// Build filters from query parameters
 	filters := core.GameListingFilters{
-		Search: queryParams.Get("search"),
-		SortBy: queryParams.Get("sort_by"),
+		Search:   queryParams.Get("search"),
+		SortBy:   queryParams.Get("sort_by"),
+		Page:     page,
+		PageSize: pageSize,
 	}
 
 	// Parse states array (comma-separated)
@@ -630,6 +646,11 @@ func (h *Handler) GetFilteredGames(w http.ResponseWriter, r *http.Request) {
 			TotalCount:      result.Metadata.TotalCount,
 			FilteredCount:   result.Metadata.FilteredCount,
 			AvailableStates: result.Metadata.AvailableStates,
+			Page:            result.Metadata.Page,
+			PageSize:        result.Metadata.PageSize,
+			TotalPages:      result.Metadata.TotalPages,
+			HasNextPage:     result.Metadata.HasNextPage,
+			HasPreviousPage: result.Metadata.HasPreviousPage,
 		},
 	}
 

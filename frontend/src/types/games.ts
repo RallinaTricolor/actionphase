@@ -149,6 +149,11 @@ export interface GameListingMetadata {
   total_count: number;
   filtered_count: number;
   available_states: GameState[];
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_next_page: boolean;
+  has_previous_page: boolean;
 }
 
 export interface GameListingResponse {
@@ -166,6 +171,8 @@ export interface GameListingFilters {
   has_open_spots?: boolean;
   sort_by?: SortBy;
   admin_mode?: boolean;
+  page?: number;
+  page_size?: number;
 }
 
 export const DEADLINE_URGENCY_COLORS: Record<DeadlineUrgency, string> = {

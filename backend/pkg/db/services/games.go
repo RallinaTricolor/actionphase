@@ -338,10 +338,11 @@ func (gs *GameService) GetFilteredGames(ctx context.Context, filters core.GameLi
 	queries := models.New(gs.DB)
 
 	// Convert filters to sqlc parameters
-	// Note: sqlc generated Column1-8 parameter names, mapping:
+	// Note: sqlc generated Column1-10 parameter names, mapping:
 	// Column1 = user_id, Column2 = states, Column3 = participation_filter
 	// Column4 = has_open_spots, Column5 = sort_by
 	// Column6 = admin_mode, Column7 = admin_user_id, Column8 = search
+	// Column9 = limit, Column10 = offset
 	var userID int32
 	if filters.UserID != nil {
 		userID = *filters.UserID
@@ -368,16 +369,46 @@ func (gs *GameService) GetFilteredGames(ctx context.Context, filters core.GameLi
 		adminUserID = *filters.AdminUserID
 	}
 
-	// Execute query
-	rows, err := queries.GetFilteredGames(ctx, models.GetFilteredGamesParams{
+	// Set pagination defaults if not provided
+	page := filters.Page
+	if page == 0 {
+		page = 1
+	}
+	pageSize := filters.PageSize
+	if pageSize == 0 {
+		pageSize = 20
+	}
+
+	// Calculate pagination
+	limit := int32(pageSize)
+	offset := int32((page - 1) * pageSize)
+
+	// Get filtered count first (for pagination metadata)
+	filteredCount, err := queries.CountFilteredGames(ctx, models.CountFilteredGamesParams{
 		Column1: userID,
 		Column2: filters.States,
 		Column3: participationFilter,
 		Column4: hasOpenSpots,
-		Column5: sortBy,
-		Column6: filters.AdminMode,
-		Column7: adminUserID,
-		Column8: filters.Search,
+		Column5: filters.AdminMode,
+		Column6: adminUserID,
+		Column7: filters.Search,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to count games: %w", err)
+	}
+
+	// Execute query with pagination
+	rows, err := queries.GetFilteredGames(ctx, models.GetFilteredGamesParams{
+		Column1:  userID,
+		Column2:  filters.States,
+		Column3:  participationFilter,
+		Column4:  hasOpenSpots,
+		Column5:  sortBy,
+		Column6:  filters.AdminMode,
+		Column7:  adminUserID,
+		Column8:  filters.Search,
+		Column9:  limit,
+		Column10: offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch games: %w", err)
@@ -389,18 +420,30 @@ func (gs *GameService) GetFilteredGames(ctx context.Context, filters core.GameLi
 		games[i] = enrichedGameFromRow(row)
 	}
 
-	// Fetch metadata (available filters)
+	// Fetch base metadata (available filters and total count)
 	metadata, err := gs.getListingMetadata(ctx, queries)
 	if err != nil {
 		// Don't fail the entire request, just use empty metadata
 		metadata = core.GameListingMetadata{
-			TotalCount:      len(games),
-			FilteredCount:   len(games),
+			TotalCount:      0,
+			FilteredCount:   int(filteredCount),
 			AvailableStates: []string{},
 		}
 	} else {
-		metadata.FilteredCount = len(games)
+		metadata.FilteredCount = int(filteredCount)
 	}
+
+	// Calculate pagination metadata
+	totalPages := (int(filteredCount) + pageSize - 1) / pageSize // Ceiling division
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	metadata.Page = page
+	metadata.PageSize = pageSize
+	metadata.TotalPages = totalPages
+	metadata.HasNextPage = page < totalPages
+	metadata.HasPreviousPage = page > 1
 
 	return &core.GameListingResponse{
 		Games:    games,

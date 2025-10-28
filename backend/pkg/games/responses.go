@@ -98,6 +98,11 @@ type GameListingMetadataResponse struct {
 	TotalCount      int      `json:"total_count"`
 	FilteredCount   int      `json:"filtered_count"`
 	AvailableStates []string `json:"available_states"`
+	Page            int      `json:"page"`
+	PageSize        int      `json:"page_size"`
+	TotalPages      int      `json:"total_pages"`
+	HasNextPage     bool     `json:"has_next_page"`
+	HasPreviousPage bool     `json:"has_previous_page"`
 }
 
 // GameListingResponse represents the full game listing response

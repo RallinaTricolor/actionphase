@@ -104,7 +104,11 @@ ORDER BY
   END ASC NULLS LAST,
 
   -- Secondary sort by ID for consistency
-  g.id DESC;
+  g.id DESC
+
+-- Pagination
+LIMIT $9::int
+OFFSET $10::int;
 
 -- Parameters:
 -- $1: user_id (int, nullable) - for participation enrichment
@@ -115,9 +119,54 @@ ORDER BY
 -- $6: admin_mode (boolean) - bypass is_public filter if user is admin
 -- $7: admin_user_id (int, nullable) - user ID to validate admin status
 -- $8: search (text, nullable) - case-insensitive search in title and description
+-- $9: limit (int) - number of records per page
+-- $10: offset (int) - number of records to skip
 
 -- name: CountPublicGames :one
 SELECT COUNT(*) FROM games WHERE is_public = true;
+
+-- name: CountFilteredGames :one
+-- Count games matching the same filters as GetFilteredGames (for pagination metadata)
+SELECT COUNT(*)
+FROM games g
+WHERE
+  -- Show public games, OR games user is in, OR all games if admin mode enabled and user is admin
+  (g.is_public = true OR
+   ($5::boolean IS TRUE AND $6::int IS NOT NULL AND EXISTS(SELECT 1 FROM users WHERE id = $6 AND is_admin = true)) OR
+   ($1::int IS NOT NULL AND (g.gm_user_id = $1 OR EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1 AND status = 'active'))))
+
+  -- Filter by states (optional array of states)
+  AND ($2::text[] IS NULL OR g.state = ANY($2::text[]))
+
+  -- Filter by user participation (optional)
+  AND (
+    $3::text IS NULL OR $3 = '' OR
+    ($3 = 'my_games' AND ($1::int IS NOT NULL AND (g.gm_user_id = $1 OR EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1 AND status = 'active')))) OR
+    ($3 = 'applied' AND ($1::int IS NOT NULL AND EXISTS(SELECT 1 FROM game_applications WHERE game_id = g.id AND user_id = $1 AND status = 'pending'))) OR
+    ($3 = 'not_joined' AND ($1::int IS NOT NULL AND g.gm_user_id != $1 AND NOT EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1)))
+  )
+
+  -- Filter by open spots (only filter when explicitly true)
+  AND (
+    $4::boolean IS NOT true OR
+    (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') < g.max_players)
+  )
+
+  -- Filter by search text (case-insensitive search in title and description)
+  AND (
+    $7::text IS NULL OR $7 = '' OR
+    g.title ILIKE '%' || $7 || '%' OR
+    g.description::text ILIKE '%' || $7 || '%'
+  );
+
+-- Parameters:
+-- $1: user_id (int, nullable) - for participation enrichment
+-- $2: states (text[], nullable) - array of game states to filter
+-- $3: participation_filter (text, nullable) - 'my_games', 'applied', 'not_joined'
+-- $4: has_open_spots (boolean, nullable) - only games with available spots
+-- $5: admin_mode (boolean) - bypass is_public filter if user is admin
+-- $6: admin_user_id (int, nullable) - user ID to validate admin status
+-- $7: search (text, nullable) - case-insensitive search in title and description
 
 -- name: GetAvailableStates :many
 SELECT DISTINCT state

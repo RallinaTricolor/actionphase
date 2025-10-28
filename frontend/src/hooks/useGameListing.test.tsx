@@ -258,6 +258,8 @@ describe('useGameListing', () => {
         sort_by: 'created',
         admin_mode: false,
         search: undefined,
+        page: 1, // Default pagination
+        page_size: 20, // Default pagination
       });
     });
   });
@@ -577,6 +579,128 @@ describe('useGameListing', () => {
       });
 
       expect(result.current.filters.has_open_spots).toBe(false);
+    });
+  });
+
+  describe('Pagination', () => {
+    it('parses page and page_size from URL', async () => {
+      vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
+        data: mockResponse,
+      } as any);
+
+      const { result } = renderHook(() => useGameListing(), {
+        wrapper: createWrapper('/games?page=3&page_size=50'),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.filters.page).toBe(3);
+      expect(result.current.filters.page_size).toBe(50);
+    });
+
+    it('uses default pagination values when not in URL', async () => {
+      vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
+        data: mockResponse,
+      } as any);
+
+      const { result } = renderHook(() => useGameListing(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.filters.page).toBe(1);
+      expect(result.current.filters.page_size).toBe(20);
+    });
+
+    it('provides setPage function', async () => {
+      vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
+        data: mockResponse,
+      } as any);
+
+      const { result } = renderHook(() => useGameListing(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(typeof result.current.setPage).toBe('function');
+    });
+
+    it('provides setPageSize function', async () => {
+      vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
+        data: mockResponse,
+      } as any);
+
+      const { result } = renderHook(() => useGameListing(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(typeof result.current.setPageSize).toBe('function');
+    });
+
+    it('returns metadata with pagination fields', async () => {
+      const paginatedResponse = {
+        ...mockResponse,
+        metadata: {
+          ...mockResponse.metadata,
+          page: 2,
+          page_size: 20,
+          total_pages: 5,
+          has_next_page: true,
+          has_previous_page: true,
+        },
+      };
+
+      vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
+        data: paginatedResponse,
+      } as any);
+
+      const { result } = renderHook(() => useGameListing(), {
+        wrapper: createWrapper('/games?page=2'),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.metadata.page).toBe(2);
+      expect(result.current.metadata.page_size).toBe(20);
+      expect(result.current.metadata.total_pages).toBe(5);
+      expect(result.current.metadata.has_next_page).toBe(true);
+      expect(result.current.metadata.has_previous_page).toBe(true);
+    });
+
+    it('provides default metadata when no data', () => {
+      vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
+        data: mockResponse,
+      } as any);
+
+      const { result } = renderHook(() => useGameListing(), {
+        wrapper: createWrapper(),
+      });
+
+      // Before loading completes, default metadata should be available
+      expect(result.current.metadata).toEqual({
+        total_count: 0,
+        filtered_count: 0,
+        available_states: [],
+        page: 1,
+        page_size: 20,
+        total_pages: 1,
+        has_next_page: false,
+        has_previous_page: false,
+      });
     });
   });
 });

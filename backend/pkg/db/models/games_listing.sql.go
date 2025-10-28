@@ -11,6 +11,66 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countFilteredGames = `-- name: CountFilteredGames :one
+SELECT COUNT(*)
+FROM games g
+WHERE
+  -- Show public games, OR games user is in, OR all games if admin mode enabled and user is admin
+  (g.is_public = true OR
+   ($5::boolean IS TRUE AND $6::int IS NOT NULL AND EXISTS(SELECT 1 FROM users WHERE id = $6 AND is_admin = true)) OR
+   ($1::int IS NOT NULL AND (g.gm_user_id = $1 OR EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1 AND status = 'active'))))
+
+  -- Filter by states (optional array of states)
+  AND ($2::text[] IS NULL OR g.state = ANY($2::text[]))
+
+  -- Filter by user participation (optional)
+  AND (
+    $3::text IS NULL OR $3 = '' OR
+    ($3 = 'my_games' AND ($1::int IS NOT NULL AND (g.gm_user_id = $1 OR EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1 AND status = 'active')))) OR
+    ($3 = 'applied' AND ($1::int IS NOT NULL AND EXISTS(SELECT 1 FROM game_applications WHERE game_id = g.id AND user_id = $1 AND status = 'pending'))) OR
+    ($3 = 'not_joined' AND ($1::int IS NOT NULL AND g.gm_user_id != $1 AND NOT EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1)))
+  )
+
+  -- Filter by open spots (only filter when explicitly true)
+  AND (
+    $4::boolean IS NOT true OR
+    (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') < g.max_players)
+  )
+
+  -- Filter by search text (case-insensitive search in title and description)
+  AND (
+    $7::text IS NULL OR $7 = '' OR
+    g.title ILIKE '%' || $7 || '%' OR
+    g.description::text ILIKE '%' || $7 || '%'
+  )
+`
+
+type CountFilteredGamesParams struct {
+	Column1 int32    `json:"column_1"`
+	Column2 []string `json:"column_2"`
+	Column3 string   `json:"column_3"`
+	Column4 bool     `json:"column_4"`
+	Column5 bool     `json:"column_5"`
+	Column6 int32    `json:"column_6"`
+	Column7 string   `json:"column_7"`
+}
+
+// Count games matching the same filters as GetFilteredGames (for pagination metadata)
+func (q *Queries) CountFilteredGames(ctx context.Context, arg CountFilteredGamesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countFilteredGames,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
+		arg.Column6,
+		arg.Column7,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countPublicGames = `-- name: CountPublicGames :one
 
 SELECT COUNT(*) FROM games WHERE is_public = true
@@ -25,6 +85,8 @@ SELECT COUNT(*) FROM games WHERE is_public = true
 // $6: admin_mode (boolean) - bypass is_public filter if user is admin
 // $7: admin_user_id (int, nullable) - user ID to validate admin status
 // $8: search (text, nullable) - case-insensitive search in title and description
+// $9: limit (int) - number of records per page
+// $10: offset (int) - number of records to skip
 func (q *Queries) CountPublicGames(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countPublicGames)
 	var count int64
@@ -33,12 +95,21 @@ func (q *Queries) CountPublicGames(ctx context.Context) (int64, error) {
 }
 
 const getAvailableStates = `-- name: GetAvailableStates :many
+
 SELECT DISTINCT state
 FROM games
 WHERE is_public = true
 ORDER BY state ASC
 `
 
+// Parameters:
+// $1: user_id (int, nullable) - for participation enrichment
+// $2: states (text[], nullable) - array of game states to filter
+// $3: participation_filter (text, nullable) - 'my_games', 'applied', 'not_joined'
+// $4: has_open_spots (boolean, nullable) - only games with available spots
+// $5: admin_mode (boolean) - bypass is_public filter if user is admin
+// $6: admin_user_id (int, nullable) - user ID to validate admin status
+// $7: search (text, nullable) - case-insensitive search in title and description
 func (q *Queries) GetAvailableStates(ctx context.Context) ([]pgtype.Text, error) {
 	rows, err := q.db.Query(ctx, getAvailableStates)
 	if err != nil {
@@ -165,17 +236,22 @@ ORDER BY
 
   -- Secondary sort by ID for consistency
   g.id DESC
+
+LIMIT $9::int
+OFFSET $10::int
 `
 
 type GetFilteredGamesParams struct {
-	Column1 int32       `json:"column_1"`
-	Column2 []string    `json:"column_2"`
-	Column3 string      `json:"column_3"`
-	Column4 bool        `json:"column_4"`
-	Column5 interface{} `json:"column_5"`
-	Column6 bool        `json:"column_6"`
-	Column7 int32       `json:"column_7"`
-	Column8 string      `json:"column_8"`
+	Column1  int32       `json:"column_1"`
+	Column2  []string    `json:"column_2"`
+	Column3  string      `json:"column_3"`
+	Column4  bool        `json:"column_4"`
+	Column5  interface{} `json:"column_5"`
+	Column6  bool        `json:"column_6"`
+	Column7  int32       `json:"column_7"`
+	Column8  string      `json:"column_8"`
+	Column9  int32       `json:"column_9"`
+	Column10 int32       `json:"column_10"`
 }
 
 type GetFilteredGamesRow struct {
@@ -203,6 +279,7 @@ type GetFilteredGamesRow struct {
 }
 
 // Get games with filters, sorting, and user participation enrichment
+// Pagination
 func (q *Queries) GetFilteredGames(ctx context.Context, arg GetFilteredGamesParams) ([]GetFilteredGamesRow, error) {
 	rows, err := q.db.Query(ctx, getFilteredGames,
 		arg.Column1,
@@ -213,6 +290,8 @@ func (q *Queries) GetFilteredGames(ctx context.Context, arg GetFilteredGamesPara
 		arg.Column6,
 		arg.Column7,
 		arg.Column8,
+		arg.Column9,
+		arg.Column10,
 	)
 	if err != nil {
 		return nil, err

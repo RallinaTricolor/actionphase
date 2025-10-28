@@ -50,6 +50,12 @@ export class GamesApi extends BaseApiClient {
     if (filters?.admin_mode === true) {
       params.append('admin_mode', 'true');
     }
+    if (filters?.page) {
+      params.append('page', filters.page.toString());
+    }
+    if (filters?.page_size) {
+      params.append('page_size', filters.page_size.toString());
+    }
 
     const queryString = params.toString();
     const url = queryString ? `/api/v1/games/?${queryString}` : '/api/v1/games/';
