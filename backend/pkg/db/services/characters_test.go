@@ -770,3 +770,155 @@ func TestCharacterService_AssignNPCToUser_AudienceNPC(t *testing.T) {
 		core.AssertEqual(t, true, canEdit, "Assigned user should be able to edit audience NPC")
 	})
 }
+
+func TestCharacterService_DeleteCharacter(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "action_submissions", "character_data", "npc_assignments", "characters", "game_phases", "games", "sessions", "users")
+
+	// Setup test fixtures
+	fixtures := testDB.SetupFixtures(t)
+	characterService := &CharacterService{DB: testDB.Pool}
+	queries := models.New(testDB.Pool)
+
+	t.Run("successfully delete character with no activity", func(t *testing.T) {
+		// Create character with no activity
+		character, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID:        fixtures.TestGame.ID,
+			UserID:        core.Int32Ptr(int32(fixtures.TestUser.ID)),
+			Name:          "Clean Character",
+			CharacterType: "player_character",
+		})
+		core.AssertNoError(t, err, "Failed to create character")
+
+		// Delete character
+		err = characterService.DeleteCharacter(context.Background(), character.ID)
+		core.AssertNoError(t, err, "Failed to delete character with no activity")
+
+		// Verify character is deleted
+		_, err = queries.GetCharacter(context.Background(), character.ID)
+		core.AssertError(t, err, "Character should be deleted")
+	})
+
+	t.Run("prevent deletion when character has messages", func(t *testing.T) {
+		// Create character
+		character, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID:        fixtures.TestGame.ID,
+			UserID:        core.Int32Ptr(int32(fixtures.TestUser.ID)),
+			Name:          "Character With Messages",
+			CharacterType: "player_character",
+		})
+		core.AssertNoError(t, err, "Failed to create character")
+
+		// Create a message from this character using raw SQL
+		_, err = testDB.Pool.Exec(context.Background(), `
+			INSERT INTO messages (game_id, author_id, character_id, content, message_type, visibility)
+			VALUES ($1, $2, $3, $4, 'post', 'game')
+		`, fixtures.TestGame.ID, fixtures.TestUser.ID, character.ID, "Test message")
+		core.AssertNoError(t, err, "Failed to create message")
+
+		// Attempt to delete character - should fail
+		err = characterService.DeleteCharacter(context.Background(), character.ID)
+		core.AssertError(t, err, "Should not allow deletion of character with messages")
+
+		// Verify character still exists
+		retrieved, err := queries.GetCharacter(context.Background(), character.ID)
+		core.AssertNoError(t, err, "Character should still exist")
+		core.AssertEqual(t, character.ID, retrieved.ID, "Character should not be deleted")
+	})
+
+	t.Run("prevent deletion when character has action submissions", func(t *testing.T) {
+		// Create character
+		character, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID:        fixtures.TestGame.ID,
+			UserID:        core.Int32Ptr(int32(fixtures.TestUser.ID)),
+			Name:          "Character With Actions",
+			CharacterType: "player_character",
+		})
+		core.AssertNoError(t, err, "Failed to create character")
+
+		// Create a phase using raw SQL
+		var phaseID int32
+		err = testDB.Pool.QueryRow(context.Background(), `
+			INSERT INTO game_phases (game_id, phase_type, phase_number, title, start_time)
+			VALUES ($1, 'action', 1, 'Test Phase', NOW())
+			RETURNING id
+		`, fixtures.TestGame.ID).Scan(&phaseID)
+		core.AssertNoError(t, err, "Failed to create phase")
+
+		// Create action submission for this character using raw SQL
+		_, err = testDB.Pool.Exec(context.Background(), `
+			INSERT INTO action_submissions (game_id, user_id, phase_id, character_id, content)
+			VALUES ($1, $2, $3, $4, $5)
+		`, fixtures.TestGame.ID, fixtures.TestUser.ID, phaseID, character.ID, "Test action")
+		core.AssertNoError(t, err, "Failed to create action submission")
+
+		// Attempt to delete character - should fail
+		err = characterService.DeleteCharacter(context.Background(), character.ID)
+		core.AssertError(t, err, "Should not allow deletion of character with action submissions")
+
+		// Verify character still exists
+		retrieved, err := queries.GetCharacter(context.Background(), character.ID)
+		core.AssertNoError(t, err, "Character should still exist")
+		core.AssertEqual(t, character.ID, retrieved.ID, "Character should not be deleted")
+	})
+
+	t.Run("delete character with character_data", func(t *testing.T) {
+		// Create character
+		character, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID:        fixtures.TestGame.ID,
+			UserID:        core.Int32Ptr(int32(fixtures.TestUser.ID)),
+			Name:          "Character With Data",
+			CharacterType: "player_character",
+		})
+		core.AssertNoError(t, err, "Failed to create character")
+
+		// Add character data
+		err = characterService.SetCharacterData(context.Background(), CharacterDataRequest{
+			CharacterID: character.ID,
+			ModuleType:  "bio",
+			FieldName:   "background",
+			FieldValue:  "Test background",
+			FieldType:   "text",
+			IsPublic:    true,
+		})
+		core.AssertNoError(t, err, "Failed to set character data")
+
+		// Delete character - should succeed (character_data CASCADE deletes)
+		err = characterService.DeleteCharacter(context.Background(), character.ID)
+		core.AssertNoError(t, err, "Should allow deletion of character with character_data (CASCADE)")
+
+		// Verify character is deleted
+		_, err = queries.GetCharacter(context.Background(), character.ID)
+		core.AssertError(t, err, "Character should be deleted")
+	})
+
+	t.Run("delete NPC with assignment", func(t *testing.T) {
+		// Create NPC
+		npc, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID:        fixtures.TestGame.ID,
+			UserID:        nil,
+			Name:          "Assigned NPC",
+			CharacterType: "npc",
+		})
+		core.AssertNoError(t, err, "Failed to create NPC")
+
+		// Assign NPC
+		player := testDB.CreateTestUser(t, "npcplayer", "npcplayer@example.com")
+		err = characterService.AssignNPCToUser(context.Background(), npc.ID, int32(player.ID), int32(fixtures.TestUser.ID))
+		core.AssertNoError(t, err, "Failed to assign NPC")
+
+		// Delete NPC - should succeed (npc_assignments CASCADE deletes)
+		err = characterService.DeleteCharacter(context.Background(), npc.ID)
+		core.AssertNoError(t, err, "Should allow deletion of NPC with assignment (CASCADE)")
+
+		// Verify NPC is deleted
+		_, err = queries.GetCharacter(context.Background(), npc.ID)
+		core.AssertError(t, err, "NPC should be deleted")
+	})
+
+	t.Run("delete nonexistent character", func(t *testing.T) {
+		err := characterService.DeleteCharacter(context.Background(), 99999)
+		core.AssertError(t, err, "Should fail for nonexistent character")
+	})
+}

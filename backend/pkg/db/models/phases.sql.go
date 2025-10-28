@@ -65,6 +65,21 @@ func (q *Queries) CanUserSubmitToPhase(ctx context.Context, arg CanUserSubmitToP
 	return can_submit, err
 }
 
+const countActionSubmissionsByCharacter = `-- name: CountActionSubmissionsByCharacter :one
+SELECT COUNT(*)
+FROM action_submissions
+WHERE character_id = $1
+`
+
+// Count action submissions for a specific character
+// Used to check if character can be deleted
+func (q *Queries) CountActionSubmissionsByCharacter(ctx context.Context, characterID pgtype.Int4) (int64, error) {
+	row := q.db.QueryRow(ctx, countActionSubmissionsByCharacter, characterID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countAllActionSubmissions = `-- name: CountAllActionSubmissions :one
 SELECT COUNT(*)
 FROM action_submissions acts

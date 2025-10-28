@@ -239,6 +239,73 @@ func (cs *CharacterService) DeactivatePlayerCharacters(ctx context.Context, game
 	})
 }
 
+// DeleteCharacter deletes a character if it has no activity (messages or actions)
+// Returns error if character has messages or action submissions
+func (cs *CharacterService) DeleteCharacter(ctx context.Context, characterID int32) error {
+	queries := models.New(cs.DB)
+
+	// Verify character exists
+	character, err := queries.GetCharacter(ctx, characterID)
+	if err != nil {
+		return fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Check if character has any messages
+	hasMessages, err := cs.characterHasMessages(ctx, characterID)
+	if err != nil {
+		return fmt.Errorf("failed to check character messages: %w", err)
+	}
+
+	if hasMessages {
+		return fmt.Errorf("cannot delete character with existing messages")
+	}
+
+	// Check if character has any action submissions
+	hasActions, err := cs.characterHasActionSubmissions(ctx, characterID)
+	if err != nil {
+		return fmt.Errorf("failed to check character actions: %w", err)
+	}
+
+	if hasActions {
+		return fmt.Errorf("cannot delete character with existing action submissions")
+	}
+
+	// All checks passed - delete character
+	// Note: character_data and npc_assignments will CASCADE delete
+	err = queries.DeleteCharacter(ctx, character.ID)
+	if err != nil {
+		return fmt.Errorf("failed to delete character: %w", err)
+	}
+
+	return nil
+}
+
+// characterHasMessages checks if a character has any messages (posts or comments)
+func (cs *CharacterService) characterHasMessages(ctx context.Context, characterID int32) (bool, error) {
+	queries := models.New(cs.DB)
+
+	// Count messages by this character
+	count, err := queries.CountMessagesByCharacter(ctx, characterID)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+// characterHasActionSubmissions checks if a character has any action submissions
+func (cs *CharacterService) characterHasActionSubmissions(ctx context.Context, characterID int32) (bool, error) {
+	queries := models.New(cs.DB)
+
+	// Count action submissions for this character
+	count, err := queries.CountActionSubmissionsByCharacter(ctx, pgtype.Int4{Int32: characterID, Valid: true})
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
 // ============================================================================
 // Audience Participation Methods (NPC Assignment)
 // ============================================================================
