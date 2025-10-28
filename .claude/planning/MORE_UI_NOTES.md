@@ -280,7 +280,7 @@ For each item in this list:
 9. ✓ GM post form not minimized - Add collapse/expand functionality - FIXED (shouldStartCollapsed prop)
 10. ✓ GM can't create player characters (403) - Fix permission + add player assignment - FIXED (backend permissions + user selector)
 11. ✓ No delete button for characters - Add delete functionality with confirmation - FIXED (GM-only, with activity validation)
-12. ✓ Handout creation no preview - Add markdown preview pane/toggle - FIXED (Preview/Edit toggle button)
+    12. ✓ Handout creation no preview - Add markdown preview pane/toggle - FIXED (Preview/Edit toggle button)
 13. ✓ Delete comment uses browser alert - Replace with custom modal - FIXED (ConfirmModal component)
 14. ✓ Public Profile + Physical Appearance redundancy - Consolidate character sheet fields - FIXED (single "Character Description" field)
     - **Status**: FIXED - Consolidated Bio module from 2 fields to 1 comprehensive field
@@ -298,11 +298,78 @@ For each item in this list:
 ### Moderate Complexity
 17. ✅ Players can edit abilities, skills, items, currency - Add permission checks for character stat editing
 18. ✅ Leave Game button too prominent - UI restructure to make button less prominent
-19. ✅ Games pagination - Add pagination to /games endpoint
+19. ✓ Games pagination - Add pagination to /games endpoint
+    - **Status**: FIXED - Added full-stack pagination with comprehensive test coverage
+    - **Location**: /games page
+    - **Implementation**:
+      - Backend: Added page/page_size parameters to game listing API with validation (default page=1, page_size=20, max=100)
+      - Backend: Added pagination metadata (total_pages, has_next_page, has_previous_page, filtered_count)
+      - Frontend: Created reusable Pagination component with page numbers and size selector
+      - Frontend: Integrated pagination into useGameListing hook with URL synchronization
+      - Frontend: Updated GamesPage to display pagination controls
+    - **Test Coverage**:
+      - Backend: 4 test functions with 14 subtests (defaults, custom values, invalid params, metadata)
+      - Frontend Component: 14 tests for Pagination UI
+      - Frontend Hook: 6 new tests for pagination state management (26 total tests)
+    - **Bug Fixes**:
+      - Fixed divide by zero error when filters.PageSize is 0
+      - Fixed currency tab visibility for non-GM players
+    - **Files Modified**: 23 files (backend + frontend)
+    - **All Tests Passing**: Backend ✓, Frontend 75 files (1678 tests) ✓
 
 ### Features to Implement
-20. ✅ New Comments refresh button - Add button to reload comments without page refresh
-21. ✅ @ mention interactivity - Add hover modal or click action for character mentions
+20. ✓ New Comments refresh button - Add button to reload comments without page refresh
+    - **Status**: FIXED - Added refresh button with loading state to NewCommentsView component
+    - **Location**: /games/{id}?tab=common-room → New Comments sub-tab
+    - **Implementation**:
+      - Added RefreshCw icon from lucide-react with animated spin on refresh
+      - Button disabled while refreshing or initially loading
+      - Uses React Query's refetch function for data refresh
+      - Button text changes from "Refresh" to "Refreshing..." during operation
+      - Positioned in header next to "Recent Comments" title
+    - **Files Modified**:
+      - `frontend/src/components/NewCommentsView.tsx` - Added refresh button and state
+      - `frontend/src/components/__tests__/NewCommentsView.test.tsx` - Added 6 tests for refresh functionality (19 total tests passing)
+    - **Test Coverage**:
+      - ✓ Refresh button renders with comments
+      - ✓ Calls refetch when clicked
+      - ✓ Disables button while refreshing
+      - ✓ Shows "Refreshing..." text while loading
+      - ✓ Disables button during initial load
+    - **Frontend Tests**: ✅ All 75 test files passing (1684 tests)
+
+21. ✓ @ mention interactivity - Add hover tooltip for character mentions
+    - **Status**: FIXED & IMPROVED - Added interactive hover tooltip with avatar and improved visibility
+    - **Location**: Any common room post or comment with @mentions (e.g., /games/{id}?tab=common-room)
+    - **Implementation**:
+      - Added hover state tracking in MarkdownPreview component
+      - Tooltip shows character avatar, name, player username, and character type
+      - Uses `position: fixed` with viewport-relative coordinates (4px below mention)
+      - Solid dark background (bg-gray-900 dark:bg-gray-800) for excellent readability
+      - Flexbox layout with avatar on left, text on right
+      - Expanded MentionedCharacter interface to include username, character_type, and avatar_url (backwards compatible)
+    - **Bug Fixes**:
+      1. **Data Issue**: Updated ThreadedComment to pass complete character data (username, character_type, avatar_url) to MarkdownPreview
+      2. **Positioning Issue**: Fixed tooltip positioning calculation - removed window.scrollY/scrollX offset (not needed for fixed positioning)
+      3. **Transparency Issue**: Changed from bg-bg-secondary to solid bg-gray-900/gray-800 for better contrast and readability
+    - **Features**:
+      - Hover over any @ mention to see tooltip
+      - Tooltip displays: Character avatar (CharacterAvatar component), Character Name (bold white), Player username (gray), Character type (lighter gray)
+      - Smooth transition on hover/leave
+      - Non-interactive (pointer-events-none) to prevent tooltip flickering
+      - Correctly positions within viewport regardless of scroll position
+      - Avatar displays proper character initials with colored background
+    - **Files Modified**:
+      - `frontend/src/components/MarkdownPreview.tsx` - Added CharacterAvatar import, updated tooltip rendering with avatar and solid background
+      - `frontend/src/components/ThreadedComment.tsx` - Updated character data mapping to include avatar_url
+    - **Testing**:
+      - Manually verified on Game #606 (E2E Common Room - View Posts)
+      - Tooltip correctly displays avatar, name, username, and character type with excellent readability
+      - Solid background ensures text is readable over any content
+      - Tooltip positioning works correctly with page scroll
+      - Screenshot saved: `.playwright-mcp/mention-tooltip-improved.png`
+      - Frontend Tests: ✅ All 1684 tests passing
+    - **Backwards Compatible**: Works with existing mentions that only have id/name (avatar optional)
 
 ### Items Requiring Specific Test Scenarios (Cannot Verify with Demo Data)
 1. ⏸️ BUG: Leaving a game should relinquish control of character - Requires testing leave functionality
