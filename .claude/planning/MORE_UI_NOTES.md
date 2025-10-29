@@ -699,17 +699,18 @@ Current Phase: Discussion 📋 Previous results available
 - **Complexity**: Low (Frontend filtering)
 - **Priority**: Low - Edge case
 
-#### 8. ⏸️ UI: Unread message badge text overflow
-- **Status**: NEEDS VISUAL VERIFICATION - Create scenario
-- **Test Setup**: Game #302 or #354 (private messages)
-- **Current Behavior**: Badge may overflow with large numbers (99+)
-- **Required Data**: ⚠️ Need many unread messages
-- **Verification Steps**:
-  1. Create multiple unread private messages
-  2. Check badge display at various counts (9, 10, 99, 100+)
-  3. Verify text doesn't overflow container
-  4. Test "99+" truncation works correctly
-- **Implementation**: Add max-width and truncation (99+) to badge
+#### 8. ✓ UI: Unread message badge text overflow
+- **Status**: FIXED - Badge now properly constrained within sidebar
+- **Location**: Private messages sidebar in ConversationList component
+- **Issue**: Unread badge caused conversation title to overflow out of sidebar container
+- **Root Cause**: Flex layout without proper min-width constraints on truncated text
+- **Fix Applied**:
+  - Added `min-w-0` to flex container to allow children to shrink below content width
+  - Added `min-w-0 flex-1` to h3 title to enable proper truncation in flex layout
+  - Added "99+" truncation for counts > 99 (consistency with NotificationBell)
+  - Badge kept `flex-shrink-0` to prevent shrinking
+- **Files Modified**: `frontend/src/components/ConversationList.tsx` (lines 145-146)
+- **Tests**: ✅ All 8 ConversationList tests passing
 - **Complexity**: Very Low (CSS fix)
 - **Priority**: Low - Visual polish
 
