@@ -39,6 +39,14 @@ vi.mock('../../components/UpcomingDeadlinesCard', () => ({
   ),
 }));
 
+vi.mock('../../components/Dashboard/ActivityTabs', () => ({
+  ActivityTabs: ({ deadlines, messages }: any) => (
+    <div data-testid="activity-tabs">
+      Deadlines: {deadlines.length}, Messages: {messages.length}
+    </div>
+  ),
+}));
+
 import { useDashboard } from '../../hooks/useDashboard';
 
 describe('DashboardPage', () => {
@@ -260,11 +268,12 @@ describe('DashboardPage', () => {
 
     renderWithProviders(<DashboardPage />);
 
-    expect(screen.getByTestId('recent-activity-card')).toBeInTheDocument();
-    expect(screen.getByText(/messages: 2/i)).toBeInTheDocument();
+    // Mobile: ActivityTabs should be present
+    expect(screen.getByTestId('activity-tabs')).toBeInTheDocument();
 
+    // Desktop: individual cards should be present
+    expect(screen.getByTestId('recent-activity-card')).toBeInTheDocument();
     expect(screen.getByTestId('upcoming-deadlines-card')).toBeInTheDocument();
-    expect(screen.getByText(/deadlines: 2/i)).toBeInTheDocument();
   });
 
   it('shows mixed role games section when user has games with both roles', () => {
