@@ -30,9 +30,10 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
   const { currentUser } = useAuth();
   const currentUserId = currentUser?.id;
 
-  // URL search params for deep linking to comments
+  // URL search params for deep linking to comments and sub-tab navigation
   const [searchParams, setSearchParams] = useSearchParams();
   const commentIdParam = searchParams.get('comment');
+  const viewParam = searchParams.get('view') as 'posts' | 'newComments' | null;
 
   const [posts, setPosts] = useState<Message[]>([]);
   const [controllableCharacters, setControllableCharacters] = useState<Character[]>([]);
@@ -41,7 +42,8 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
   const [error, setError] = useState<string | null>(null);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
-  const [activeTab, setActiveTab] = useState<'posts' | 'newComments'>('posts');
+  // Initialize activeTab from URL parameter, default to 'posts'
+  const [activeTab, setActiveTab] = useState<'posts' | 'newComments'>(viewParam || 'posts');
   const navigate = useNavigate();
 
   // Fetch previous phase results (if applicable)
@@ -51,9 +53,30 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     loadData();
   }, [gameId, phaseId]);
 
+  // Sync activeTab state with URL parameter
+  useEffect(() => {
+    const currentView = searchParams.get('view') as 'posts' | 'newComments' | null;
+    if (currentView && currentView !== activeTab) {
+      setActiveTab(currentView);
+    } else if (!currentView && activeTab !== 'posts') {
+      // Default to 'posts' if no view parameter
+      setActiveTab('posts');
+    }
+  }, [searchParams]);
+
   // Auto-scroll to comment from URL parameter
   useEffect(() => {
     if (!commentIdParam || loading) return;
+
+    // If there's a comment parameter, ensure we're on the 'posts' tab
+    if (activeTab !== 'posts') {
+      // Update both state and URL parameter (replace current URL to avoid extra history entry)
+      setActiveTab('posts');
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('view', 'posts');
+      setSearchParams(newParams, { replace: true }); // Replace to avoid extra history entry
+      return; // Let the tab switch complete, then the effect will re-run
+    }
 
     // Wait for DOM to be ready, then try to scroll to comment
     const timer = setTimeout(async () => {
@@ -62,10 +85,10 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
         // Comment is visible in the DOM - scroll to it
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-        // Highlight the comment briefly
-        element.classList.add('ring-4', 'ring-semantic-warning', 'ring-opacity-75');
+        // Highlight the comment briefly with theme-aware info color
+        element.classList.add('ring-4', 'ring-info');
         setTimeout(() => {
-          element.classList.remove('ring-4', 'ring-semantic-warning', 'ring-opacity-75');
+          element.classList.remove('ring-4', 'ring-info');
         }, 3000);
 
         // Clear the comment parameter from URL after scrolling
@@ -102,7 +125,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     }, 500); // Wait for comments to load and expand
 
     return () => clearTimeout(timer);
-  }, [commentIdParam, loading, searchParams, setSearchParams, gameId, navigate]);
+  }, [commentIdParam, loading, searchParams, setSearchParams, gameId, navigate, activeTab]);
 
   const loadData = async () => {
     try {
@@ -206,7 +229,11 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       <div className="border-b border-border-primary mb-6">
         <nav className="flex space-x-8">
           <button
-            onClick={() => setActiveTab('posts')}
+            onClick={() => {
+              const newParams = new URLSearchParams(searchParams);
+              newParams.set('view', 'posts');
+              setSearchParams(newParams, { replace: false });
+            }}
             className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === 'posts'
                 ? 'border-accent-primary text-accent-primary'
@@ -216,7 +243,11 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
             Posts
           </button>
           <button
-            onClick={() => setActiveTab('newComments')}
+            onClick={() => {
+              const newParams = new URLSearchParams(searchParams);
+              newParams.set('view', 'newComments');
+              setSearchParams(newParams, { replace: false });
+            }}
             className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === 'newComments'
                 ? 'border-accent-primary text-accent-primary'

@@ -199,7 +199,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   const isLongContent = post.content.length > 500;
 
   return (
-    <div ref={postRef} data-testid={dataTestId || "post-card"} className="mb-8">
+    <div ref={postRef} id={`comment-${post.id}`} data-testid={dataTestId || "post-card"} className="mb-8">
       {/* Post Card - Contains both post and comments */}
       <div className="surface-base rounded-xl shadow-lg border border-theme-default overflow-hidden">
       {/* GM Post Header Section */}

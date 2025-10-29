@@ -514,6 +514,10 @@
     border-color: rgb(var(--color-info));
   }
 
+  .ring-info {
+    --tw-ring-color: rgb(var(--color-info));
+  }
+
   /* Border tokens */
   .border-theme-default {
     border-color: rgb(var(--color-border-default));
