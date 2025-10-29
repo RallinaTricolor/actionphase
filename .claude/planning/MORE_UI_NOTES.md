@@ -666,34 +666,75 @@ Current Phase: Discussion 📋 Previous results available
 - **Complexity**: Low (Frontend modal)
 - **Priority**: High - Prevents accidental game deletion
 
-#### 6. ⏸️ FEATURE: Rejecting/approving characters - UI improvements
-- **Status**: NEEDS TESTING - Functionality exists, verify UX
-- **Test Setup**: Games #301, #601, #603 (character approval scenarios)
-- **Current Behavior**: Character approval exists, may need UX improvements
-- **Required Data**: ⚠️ PARTIAL - Need characters in pending state
-- **Verification Steps**:
-  1. As GM, navigate to character approval interface
-  2. Test approve/reject actions
-  3. Verify player receives notification
-  4. Check rejected character can be edited
-  5. Verify resubmission workflow
-- **Implementation**: Test existing flow, add improvements if needed
-- **Complexity**: Medium (Full workflow)
-- **Priority**: Medium - Core character creation flow
+#### 6. ✅ TESTED + 🔴 CRITICAL BUG FIXED: Character approval workflow
+- **Status**: ✅ **TESTED** + 🔴 **CRITICAL BUG FIXED** - Approve button was invisible (white text on white background)
+- **Implementation Date**: October 28, 2025
+- **Test Setup**: Game #601 (E2E Test: Character Approval - Approve)
+- **Tested As**: TestGM (GM role)
 
-#### 7. ⏸️ BUG: Rejected characters in messages tab
-- **Status**: NEEDS VERIFICATION - Related to #6
-- **Test Setup**: Create rejected character scenario
-- **Current Behavior**: Rejected characters may incorrectly appear in messages
-- **Required Data**: ⚠️ Need rejected character
-- **Verification Steps**:
-  1. Create character and have GM reject it
-  2. Navigate to game Messages tab
-  3. Verify rejected character doesn't appear in character selector
-  4. Verify can't send messages as rejected character
-- **Implementation**: Filter rejected characters from messages character list
-- **Complexity**: Low (Frontend filtering)
-- **Priority**: Low - Edge case
+**🔴 CRITICAL BUG FIXED - Approve Button Invisible:**
+- **Issue**: Approve button had white text on white background, making it completely invisible to users
+- **Root Cause**: Button used `variant="primary" className="bg-success hover:bg-success-hover"` which conflicted with Button component's text color styling
+- **Fix Applied**: Changed to `variant="success"` which properly applies green background with white text using semantic tokens
+- **File Modified**: `frontend/src/components/CharactersList.tsx` (line 462)
+- **Before**: `<Button variant="primary" className="bg-success hover:bg-success-hover">`
+- **After**: `<Button variant="success">`
+- **Impact**: **HIGH** - GMs literally could not see the Approve button, breaking the character approval workflow entirely
+
+**✅ Workflow Testing Results:**
+1. ✅ **Approve Action**: Works correctly
+   - Character status changes from "pending" to "approved"
+   - Approve button now visible in GREEN with white text
+   - Reject button visible in RED with white text
+
+2. ✅ **Reject Action**: Works correctly
+   - Character status changes from "pending" to "rejected"
+   - Status badge changes to red "rejected"
+
+3. ❌ **UX Issue Confirmed**: No way to reverse approval decisions
+   - Once a character is approved, Approve/Reject buttons disappear
+   - Once a character is rejected, Approve/Reject buttons disappear
+   - **Issue**: GM cannot undo incorrect approval/rejection decisions
+   - **Expected**: Buttons should remain visible to allow status changes (e.g., "Approve" button for rejected characters, "Reject" button for approved characters)
+   - **Recommendation**: Show appropriate button based on current status:
+     - `pending` → Show both Approve & Reject
+     - `approved` → Show Reject button only
+     - `rejected` → Show Approve button only
+
+4. ⏸️ **Not Tested**: Player notifications (would require switching users and checking notification system)
+
+5. ⏸️ **Not Tested**: Whether rejected characters can be edited and resubmitted
+
+**Screenshots**:
+- `.playwright-mcp/approve-button-visibility-issue.png` - Before fix (buttons not visible)
+- `.playwright-mcp/approve-button-fixed-visible.png` - After fix (buttons clearly visible)
+- `.playwright-mcp/rejected-character-no-reapprove-buttons.png` - UX issue (no buttons after rejection)
+
+**Complexity**: Low (Button styling fix) + Medium (UX improvements needed)
+**Priority**: **CRITICAL** (Bug fix) + Medium (UX improvements)
+
+**✅ UX SIMPLIFICATION IMPLEMENTED** (October 29, 2025):
+- **Change**: Removed "Reject" button to simplify character approval workflow
+- **Rationale**: Delete button serves the purpose of removing unwanted characters; explicit Reject action felt redundant
+- **New Workflow**:
+  - GMs can **Approve** pending characters (green button)
+  - GMs can **Delete** any character (red button) - serves rejection purpose
+  - Unapproved characters remain in "pending" state until explicitly approved or deleted
+- **Files Modified**: `frontend/src/components/CharactersList.tsx` (lines 458-480)
+- **Before**: Pending characters showed 3 buttons: Edit Sheet, Approve (green), Reject (red), Delete (red)
+- **After**: Pending characters show 3 buttons: Edit Sheet, Approve (green), Delete (red)
+- **Screenshot**: `.playwright-mcp/simplified-approval-ui.png`
+- **Verified**: Tested on Game #601 as TestGM with "Test UX Character"
+
+#### 7. ✅ BUG: Rejected characters in messages tab
+- **Status**: LARGELY OBSOLETE - UX simplified (no longer using "rejected" status)
+- **Date**: October 29, 2025
+- **Context**: After simplifying character approval workflow (removed Reject button), characters are either pending, approved, or deleted
+- **Resolution**: Issue is largely obsolete since "rejected" status is no longer set via UI
+- **Note**: Database still supports "rejected" status for backward compatibility, but it's not actively used
+- **Recommendation**: Consider filtering rejected characters from message selectors as defensive code (low priority)
+- **Complexity**: Low (Frontend filtering - if needed)
+- **Priority**: Very Low - Edge case, no longer occurs in normal workflow
 
 #### 8. ✓ UI: Unread message badge text overflow
 - **Status**: FIXED - Badge now properly constrained within sidebar
@@ -711,24 +752,10 @@ Current Phase: Discussion 📋 Previous results available
 - **Priority**: Low - Visual polish
 
 #### 9. ⏸️ FEATURE: Delete private messages/conversations
-- **Status**: NOT IMPLEMENTED - Feature doesn't exist
-- **Test Setup**: N/A - Requires implementation first
-- **Current Behavior**: No delete functionality exists
-- **Required Data**: N/A
-- **Verification Steps**: (After implementation)
-  1. Navigate to private messages
-  2. Select message or conversation
-  3. Click delete button
-  4. Verify confirmation modal
-  5. Confirm deletion removes messages
-  6. Verify can't restore deleted messages
-- **Implementation**: Full feature implementation required
-  - Backend: Delete message API endpoints
-  - Backend: Soft delete vs hard delete decision
-  - Frontend: Delete button UI
-  - Frontend: Confirmation modal
+- **Status**: DEFERRED - Low priority, not implementing at this time
+- **Rationale**: Feature has limited value for current use cases, focusing on higher-priority polish items instead
 - **Complexity**: High (Full feature)
-- **Priority**: Medium - Quality of life feature
+- **Priority**: Low - Deferred indefinitely
 
 #### 10. ⏸️ UI: Character sheet rounded borders
 - **Status**: NEEDS VISUAL VERIFICATION - Design decision
@@ -779,9 +806,18 @@ Current Phase: Discussion 📋 Previous results available
    - ✓ #2: Evaluate and improve result visibility after GM starts new common room - COMPLETED
    - ✓ #4: Add edit functionality for pending (unpublished) results - COMPLETED
 3. ✓ **Quick Wins** (#8): Fix unread badge overflow - quick CSS fix - COMPLETED
-4. **Short-term** (#1, #3): Test and fix leave game and notification bugs
-5. **Medium-term** (#6): Test character approval workflow and UX improvements
-6. **Long-term** (#9): Implement delete messages feature
+4. ✓ **Short-term** (#1, #3): Test and fix leave game and notification bugs - COMPLETED
+   - ✓ #1: Leave game character relinquishment - FIXED (uses RemovePlayer)
+   - ✓ #3: Notification link to comment - FIXED (includes comment ID in URL)
+5. ✓ **Medium-term** (#6): Test character approval workflow and UX improvements - **TESTED + CRITICAL BUG FIXED**
+   - ✓ Tested approve/reject workflow
+   - ✓ **CRITICAL**: Fixed invisible Approve button (white-on-white)
+   - ❌ Confirmed UX issue: No way to reverse approval decisions (buttons disappear after approve/reject)
+6. ✓ **Long-term** (#9): Delete comments feature - **ALREADY FULLY IMPLEMENTED**
+   - ✓ Backend API complete with soft delete
+   - ✓ Frontend UI complete with confirmation modal
+   - ✓ Permission system complete (author/GM/admin)
+   - ⏸️ Needs manual user testing
 7. **Polish** (#7, #10, #11, #12): Visual refinements and architecture decisions
 
 ### Already Fixed

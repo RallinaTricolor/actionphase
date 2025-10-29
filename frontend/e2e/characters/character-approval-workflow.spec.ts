@@ -12,11 +12,9 @@ import { navigateToGame } from '../utils/navigation';
  * Tests the complete character approval process including:
  * - Character starts in pending state after creation
  * - GM can view pending characters
- * - GM can reject characters with feedback
- * - Player sees rejection reason
- * - Player can update rejected character
  * - GM can approve characters
  * - Approved characters appear in game
+ * - Character resubmission workflow (rejected → edited → resubmitted → pending)
  *
  * This tests CORE content quality control mechanics
  *
@@ -210,55 +208,6 @@ test.describe('Character Approval Workflow', () => {
 
       const playerStatus = await playerCharPage.getCharacterStatus(characterName);
       expect(playerStatus).toBe('approved');
-    } finally {
-      await gmContext.close();
-      await playerContext.close();
-    }
-  });
-
-  test('GM can reject character and player sees rejection', async ({ browser }) => {
-    const gmContext = await browser.newContext();
-    const playerContext = await browser.newContext();
-    const gmPage = await gmContext.newPage();
-    const playerPage = await playerContext.newPage();
-
-    try {
-      await loginAs(gmPage, 'GM');
-      await loginAs(playerPage, 'PLAYER_2');
-
-      // Use isolated fixture for parallel testing (Game #305)
-      const gameId = await getFixtureGameId(playerPage, 'E2E_CHARACTER_REJECT');
-
-      // Player creates character using POM
-      const playerCharPage = new CharacterWorkflowPage(playerPage, gameId);
-      await playerCharPage.goto();
-
-      const characterName = `Reject Test ${Date.now()}`;
-      await playerCharPage.createCharacter(characterName);
-
-      // GM rejects character using POM
-      await gmPage.reload();
-      await gmPage.waitForLoadState('networkidle');
-
-      const gmCharPage = new CharacterWorkflowPage(gmPage, gameId);
-      await gmCharPage.goto();
-
-      // Reject character using POM (no more xpath!)
-      await gmCharPage.rejectCharacter(characterName);
-
-      // Verify character shows as rejected
-      const gmStatus = await gmCharPage.getCharacterStatus(characterName);
-      expect(gmStatus).toBe('rejected');
-
-      // Player sees rejected status
-      await playerPage.reload();
-      await playerPage.waitForLoadState('networkidle');
-      await playerCharPage.goto();
-
-      // Character should still be visible with rejected status
-      expect(await playerCharPage.hasCharacter(characterName)).toBe(true);
-      const playerStatus = await playerCharPage.getCharacterStatus(characterName);
-      expect(playerStatus).toBe('rejected');
     } finally {
       await gmContext.close();
       await playerContext.close();

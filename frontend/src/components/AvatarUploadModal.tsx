@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useUploadCharacterAvatar, useDeleteCharacterAvatar } from '../hooks/useCharacterAvatar';
 import CharacterAvatar from './CharacterAvatar';
 import { Button, Alert } from './ui';
+import { Modal } from './Modal';
 
 interface AvatarUploadModalProps {
   isOpen: boolean;
@@ -137,24 +138,13 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
     onClose();
   };
 
-  if (!isOpen) return null;
-
   const isUploading = uploadMutation.isPending;
   const isDeleting = deleteMutation.isPending;
   const hasError = uploadMutation.isError || deleteMutation.isError;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="surface-base rounded-lg shadow-xl max-w-md w-full mx-4">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-theme-default">
-          <h2 className="text-xl font-bold text-content-primary">
-            Upload Avatar for {characterName}
-          </h2>
-        </div>
-
-        {/* Body */}
-        <div className="px-6 py-4">
+    <Modal isOpen={isOpen} onClose={handleClose} title={`Upload Avatar for ${characterName}`}>
+      <div>
           {/* Current Avatar (if exists) */}
           {currentAvatarUrl && (
             <div className="mb-4">
@@ -232,27 +222,26 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
               {uploadMutation.error?.message || deleteMutation.error?.message || 'An error occurred'}
             </Alert>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-theme-default flex justify-end gap-3">
-          <Button
-            variant="ghost"
-            onClick={handleClose}
-            disabled={isUploading || isDeleting}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleUpload}
-            disabled={!selectedFile || isUploading || isDeleting || !!validationError}
-          >
-            {isUploading ? 'Uploading...' : 'Upload'}
-          </Button>
-        </div>
       </div>
-    </div>
+
+      {/* Footer */}
+      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-theme-default">
+        <Button
+          variant="ghost"
+          onClick={handleClose}
+          disabled={isUploading || isDeleting}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleUpload}
+          disabled={!selectedFile || isUploading || isDeleting || !!validationError}
+        >
+          {isUploading ? 'Uploading...' : 'Upload'}
+        </Button>
+      </div>
+    </Modal>
   );
 };
 

@@ -682,6 +682,16 @@ WHERE c.game_id = $1
     -- If user is GM, all NPCs (GMs can control any NPC in their game)
     (g.gm_user_id = $2 AND c.character_type = 'npc')
   )
+  AND (
+    -- If game is in_progress and user is not GM, exclude pending/rejected characters
+    (g.state = 'in_progress' AND g.gm_user_id != $2 AND c.status NOT IN ('pending', 'rejected'))
+    OR
+    -- If user is GM, include all characters regardless of status
+    (g.gm_user_id = $2)
+    OR
+    -- If game is not in_progress, include all characters regardless of status
+    (g.state != 'in_progress')
+  )
 ORDER BY c.character_type, c.name
 `
 
@@ -706,6 +716,7 @@ type GetUserControllableCharactersRow struct {
 // 1. Their own player characters (where user_id matches)
 // 2. NPCs assigned to them via npc_assignments
 // 3. If they're the GM, all NPCs (for emergency situations, GMs can control any NPC)
+// 4. When game is in_progress, pending/rejected characters are only visible to GMs
 func (q *Queries) GetUserControllableCharacters(ctx context.Context, arg GetUserControllableCharactersParams) ([]GetUserControllableCharactersRow, error) {
 	rows, err := q.db.Query(ctx, getUserControllableCharacters, arg.GameID, arg.UserID)
 	if err != nil {

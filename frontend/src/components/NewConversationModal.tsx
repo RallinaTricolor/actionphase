@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 import { Button, Input, Select, Checkbox, Alert } from './ui';
+import { Modal } from './Modal';
 
 interface NewConversationModalProps {
   gameId: number;
@@ -100,27 +101,18 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
   };
 
   // Get characters that are not controlled by the user (available as participants)
+  // Exclude pending/rejected characters from recipient selection for everyone (including GMs)
+  // GMs can still see these characters in CharactersList for management purposes
   const availableParticipants = allCharacters.filter(
-    char => !characters.some(c => c.id === char.id)
+    char =>
+      !characters.some(c => c.id === char.id) &&
+      char.status !== 'pending' &&
+      char.status !== 'rejected'
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="surface-base rounded-lg shadow-xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-content-primary">New Conversation</h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="text-content-tertiary hover:text-content-secondary h-auto p-0"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </Button>
-        </div>
-
+    <Modal isOpen={true} onClose={onClose} title="New Conversation">
+      <div>
         {error && (
           <Alert variant="danger" className="mb-4">
             {error}
@@ -240,6 +232,6 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
           </Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

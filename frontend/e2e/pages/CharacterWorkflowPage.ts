@@ -116,24 +116,6 @@ export class CharacterWorkflowPage {
   }
 
   /**
-   * Reject a character (GM only)
-   *
-   * @param characterName - Name of character to reject
-   */
-  async rejectCharacter(characterName: string) {
-    const card = await this.findCharacterCard(characterName);
-
-    // Click the reject button
-    const rejectButton = card.getByTestId('reject-character-button');
-    await rejectButton.waitFor({ state: 'visible', timeout: 3000 });
-    await rejectButton.click();
-    await this.page.waitForLoadState('networkidle');
-
-    // Give UI time to update
-    await this.page.waitForTimeout(500);
-  }
-
-  /**
    * Get the status of a specific character
    *
    * @param characterName - Character name to check
