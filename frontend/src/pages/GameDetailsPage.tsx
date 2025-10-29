@@ -18,6 +18,7 @@ import { ApplyToGameModal } from '../components/ApplyToGameModal';
 import { EditGameModal } from '../components/EditGameModal';
 import { CompleteGameConfirmationDialog } from '../components/CompleteGameConfirmationDialog';
 import { PauseGameConfirmationDialog } from '../components/PauseGameConfirmationDialog';
+import { CancelGameConfirmationDialog } from '../components/CancelGameConfirmationDialog';
 
 interface GameDetailsPageProps {
   gameId: number;
@@ -79,6 +80,9 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     showPauseDialog,
     setShowPauseDialog,
     handleConfirmPause,
+    showCancelDialog,
+    setShowCancelDialog,
+    handleConfirmCancel,
   } = useGameStateManagement({
     gameId,
     refetchGameData,
@@ -255,6 +259,16 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           isOpen={showPauseDialog}
           onClose={() => setShowPauseDialog(false)}
           onConfirm={handleConfirmPause}
+          gameTitle={game.title}
+        />
+      )}
+
+      {/* Cancel Game Confirmation Dialog */}
+      {game && (
+        <CancelGameConfirmationDialog
+          isOpen={showCancelDialog}
+          onClose={() => setShowCancelDialog(false)}
+          onConfirm={handleConfirmCancel}
           gameTitle={game.title}
         />
       )}

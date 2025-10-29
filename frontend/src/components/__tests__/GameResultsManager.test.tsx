@@ -768,6 +768,171 @@ describe('GameResultsManager', () => {
     });
   });
 
+  describe('Collapse/Expand Functionality', () => {
+    it('shows collapse button for long unpublished results (>200 characters)', async () => {
+      const longContent = 'A'.repeat(250); // 250 characters
+      const longResult: ActionResult = {
+        ...mockUnpublishedResult,
+        content: longContent,
+      };
+      setupDefaultHandlers([longResult]);
+
+      renderWithProviders(<GameResultsManager gameId={mockGameId} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/show full content/i)).toBeInTheDocument();
+      });
+    });
+
+    it('does NOT show collapse button for short unpublished results (<=200 characters)', async () => {
+      const shortContent = 'A'.repeat(150); // 150 characters
+      const shortResult: ActionResult = {
+        ...mockUnpublishedResult,
+        content: shortContent,
+      };
+      setupDefaultHandlers([shortResult]);
+
+      renderWithProviders(<GameResultsManager gameId={mockGameId} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(shortContent)).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText(/show full content/i)).not.toBeInTheDocument();
+    });
+
+    it('does NOT show collapse button for published results (always expanded)', async () => {
+      const longContent = 'A'.repeat(350);
+      const longPublishedResult: ActionResult = {
+        ...mockPublishedResult,
+        content: longContent,
+      };
+      setupDefaultHandlers([longPublishedResult]);
+
+      renderWithProviders(<GameResultsManager gameId={mockGameId} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(longContent)).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText(/show full content/i)).not.toBeInTheDocument();
+    });
+
+    it('shows truncated preview when collapsed', async () => {
+      const longContent = 'This is a very long unpublished result that exceeds the 200 character limit and should be collapsed by default. It contains important information that the GM is still drafting and needs to review before publishing to players. The content goes on and on with more details.';
+      const longResult: ActionResult = {
+        ...mockUnpublishedResult,
+        content: longContent,
+      };
+      setupDefaultHandlers([longResult]);
+
+      renderWithProviders(<GameResultsManager gameId={mockGameId} />);
+
+      await waitFor(() => {
+        // Should see first 200 characters + "..."
+        const preview = longContent.substring(0, 200) + '...';
+        expect(screen.getByText(preview)).toBeInTheDocument();
+        // Should NOT see the full content initially
+        expect(screen.queryByText(longContent)).not.toBeInTheDocument();
+      });
+    });
+
+    it('expands to show full content when "Show full content" is clicked', async () => {
+      const user = userEvent.setup();
+      const longContent = 'This is a very long unpublished result that exceeds the 200 character limit. It contains important information that the GM is still drafting and needs to review before publishing to players. The content continues with more narrative details about the game.';
+      const longResult: ActionResult = {
+        ...mockUnpublishedResult,
+        content: longContent,
+      };
+      setupDefaultHandlers([longResult]);
+
+      renderWithProviders(<GameResultsManager gameId={mockGameId} />);
+
+      // Wait for truncated preview
+      await waitFor(() => {
+        const preview = longContent.substring(0, 200) + '...';
+        expect(screen.getByText(preview)).toBeInTheDocument();
+      });
+
+      // Click expand button
+      await user.click(screen.getByText(/show full content/i));
+
+      // Should now see full content
+      await waitFor(() => {
+        expect(screen.getByText(longContent)).toBeInTheDocument();
+        expect(screen.getByText(/show less/i)).toBeInTheDocument();
+      });
+    });
+
+    it('collapses to show preview when "Show less" is clicked', async () => {
+      const user = userEvent.setup();
+      const longContent = 'This is a very long unpublished result that needs to be collapsed. It has lots of details about what happened during the action phase and the consequences of the player\'s choices. The GM is still working on perfecting this narrative before sending it.';
+      const longResult: ActionResult = {
+        ...mockUnpublishedResult,
+        content: longContent,
+      };
+      setupDefaultHandlers([longResult]);
+
+      renderWithProviders(<GameResultsManager gameId={mockGameId} />);
+
+      // Expand first
+      await waitFor(() => {
+        expect(screen.getByText(/show full content/i)).toBeInTheDocument();
+      });
+      await user.click(screen.getByText(/show full content/i));
+
+      // Wait for expansion
+      await waitFor(() => {
+        expect(screen.getByText(longContent)).toBeInTheDocument();
+      });
+
+      // Collapse
+      await user.click(screen.getByText(/show less/i));
+
+      // Should see preview again
+      await waitFor(() => {
+        const preview = longContent.substring(0, 200) + '...';
+        expect(screen.getByText(preview)).toBeInTheDocument();
+        expect(screen.queryByText(longContent)).not.toBeInTheDocument();
+      });
+    });
+
+    it('maintains separate collapse state for multiple long results', async () => {
+      const user = userEvent.setup();
+      const longResult1: ActionResult = {
+        ...mockUnpublishedResult,
+        id: 1,
+        content: 'First result content that is very long and exceeds 200 characters. This contains the narrative about what happened to the first player during their investigation. The GM has drafted this carefully but hasn\'t published it yet. More content continues here.',
+      };
+      const longResult2: ActionResult = {
+        ...mockUnpublishedResult,
+        id: 2,
+        content: 'Second result content that is also very long and exceeds 200 characters. This one describes what happened to the second player in a different part of the story. The consequences are significant and the GM wants to refine this before sending.',
+      };
+      setupDefaultHandlers([longResult1, longResult2]);
+
+      renderWithProviders(<GameResultsManager gameId={mockGameId} />);
+
+      // Wait for both collapsed results
+      await waitFor(() => {
+        const buttons = screen.getAllByText(/show full content/i);
+        expect(buttons).toHaveLength(2);
+      });
+
+      // Expand only the first result
+      const expandButtons = screen.getAllByText(/show full content/i);
+      await user.click(expandButtons[0]);
+
+      // First should be expanded, second still collapsed
+      await waitFor(() => {
+        expect(screen.getByText(longResult1.content)).toBeInTheDocument();
+        expect(screen.queryByText(longResult2.content)).not.toBeInTheDocument();
+        expect(screen.getByText(/show less/i)).toBeInTheDocument();
+        expect(screen.getByText(/show full content/i)).toBeInTheDocument(); // Second is still collapsed
+      });
+    });
+  });
+
   describe('Integration', () => {
     it('handles complete edit workflow', async () => {
       const user = userEvent.setup();

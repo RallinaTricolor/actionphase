@@ -6,6 +6,7 @@ import { PhaseManagement } from './PhaseManagement';
 import { ActionSubmission } from './ActionSubmission';
 import { ActionsList } from './ActionsList';
 import { ActionResultsList } from './ActionResultsList';
+import { GameResultsManager } from './GameResultsManager';
 import { CommonRoom } from './CommonRoom';
 import { PrivateMessages } from './PrivateMessages';
 import { HistoryView } from './HistoryView';
@@ -250,10 +251,16 @@ export function GameTabContent({
     return (
       <>
         {isGM ? (
-          <ActionsList
-            gameId={gameId}
-            currentPhase={currentPhaseData?.phase}
-          />
+          <>
+            <ActionsList
+              gameId={gameId}
+              currentPhase={currentPhaseData?.phase}
+              className="mb-6"
+            />
+            <GameResultsManager
+              gameId={gameId}
+            />
+          </>
         ) : (
           <>
             <div className="mb-6">

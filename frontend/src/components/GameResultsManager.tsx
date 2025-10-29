@@ -62,7 +62,7 @@ export function GameResultsManager({ gameId, className = '' }: GameResultsManage
 
         {/* Unpublished Results Section */}
         {unpublishedResults.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6" data-testid="unpublished-results-section">
             <h3 className="text-lg font-semibold text-content-primary mb-3 flex items-center">
               <svg className="w-5 h-5 text-semantic-warning mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -86,7 +86,7 @@ export function GameResultsManager({ gameId, className = '' }: GameResultsManage
 
         {/* Published Results Section */}
         {publishedResults.length > 0 && (
-          <div>
+          <div data-testid="published-results-section">
             <h3 className="text-lg font-semibold text-content-primary mb-3 flex items-center">
               <svg className="w-5 h-5 text-semantic-success mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -122,7 +122,12 @@ interface ResultCardProps {
 
 function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: ResultCardProps) {
   const [editedContent, setEditedContent] = useState(result.content);
+  const [isExpanded, setIsExpanded] = useState(false);
   const updateMutation = useUpdateActionResult(gameId);
+
+  // Determine if content should be collapsible (long unpublished results)
+  const isCollapsible = !result.is_published && result.content.length > 200;
+  const previewContent = result.content.substring(0, 200) + '...';
 
   const handleSave = async () => {
     if (editedContent.trim() === result.content) {
@@ -222,9 +227,33 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
             )}
           </div>
         ) : (
-          <div className="surface-base p-4 rounded border border-theme-default whitespace-pre-wrap text-content-primary">
-            {result.content}
-          </div>
+          <>
+            <div className="surface-base p-4 rounded border border-theme-default whitespace-pre-wrap text-content-primary">
+              {isCollapsible && !isExpanded ? previewContent : result.content}
+            </div>
+            {isCollapsible && (
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="mt-2 text-sm text-interactive-primary hover:text-interactive-primary-hover font-medium flex items-center"
+              >
+                {isExpanded ? (
+                  <>
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                    Show less
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    Show full content
+                  </>
+                )}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

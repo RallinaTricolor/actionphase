@@ -121,3 +121,195 @@ test.describe('Action Results Flow', () => {
     await expect(page.locator('text=No action results for this phase')).toBeVisible({ timeout: 10000 });
   });
 });
+
+/**
+ * E2E Tests for GM Editing Action Results
+ *
+ * Tests the complete GM result editing workflow including:
+ * - GM can view unpublished results in GameResultsManager
+ * - GM can edit unpublished result content
+ * - GM can save changes to unpublished results
+ * - Edited results remain unpublished until explicitly published
+ * - Players still cannot see unpublished results after edit
+ *
+ * Uses dedicated E2E fixture (E2E_GM_EDITING_RESULTS) which includes:
+ * - Game #327 with ACTIVE action phase (deadline passed, GM writing results)
+ * - Unpublished result for Player 3 (GM can edit this)
+ * - Published results for Player 1 and Player 2 (cannot be edited)
+ *
+ * CRITICAL: This tests CORE GM workflow - editing draft results before publishing
+ */
+test.describe('GM Action Results Editing', () => {
+
+  test('GM can view unpublished results in GameResultsManager', async ({ page }) => {
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_GM_EDITING_RESULTS');
+    const gamePage = new GameDetailsPage(page);
+
+    // Navigate to game and go to Actions tab
+    await gamePage.goto(gameId);
+    await gamePage.goToActions();
+
+    // Should see GameResultsManager heading
+    await expect(page.getByRole('heading', { name: 'Action Results', exact: true })).toBeVisible({ timeout: 10000 });
+
+    // Should see Unpublished Results section
+    await expect(page.getByText('Unpublished Results (Editable)')).toBeVisible({ timeout: 10000 });
+
+    // Should see the unpublished result for TestPlayer3
+    await expect(page.locator('text=DRAFT: The symbols appear to be a warning')).toBeVisible({ timeout: 10000 });
+
+    // Should see Draft badge
+    await expect(page.locator('text=Draft').first()).toBeVisible();
+  });
+
+  test('GM can edit unpublished result content', async ({ page }) => {
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_GM_EDITING_RESULTS');
+    const gamePage = new GameDetailsPage(page);
+
+    // Navigate to game and go to Actions tab
+    await gamePage.goto(gameId);
+    await gamePage.goToActions();
+
+    // Wait for GameResultsManager to load
+    await expect(page.getByText('Unpublished Results (Editable)')).toBeVisible({ timeout: 10000 });
+
+    // Click Edit button on unpublished result
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+
+    // Should see textarea with current content
+    const textarea = page.getByRole('textbox');
+    await expect(textarea).toBeVisible();
+    await expect(textarea).toHaveValue(/DRAFT: The symbols/);
+
+    // Modify the content
+    await textarea.clear();
+    await textarea.fill('UPDATED: The ancient symbols reveal a dire warning about the approaching storm. You must act quickly to prevent disaster.');
+
+    // Should see Save Changes and Cancel buttons
+    await expect(page.getByRole('button', { name: 'Save Changes' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
+  });
+
+  test('GM can save edited result successfully', async ({ page }) => {
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_GM_EDITING_RESULTS');
+    const gamePage = new GameDetailsPage(page);
+
+    // Navigate to game and go to Actions tab
+    await gamePage.goto(gameId);
+    await gamePage.goToActions();
+
+    // Wait for GameResultsManager to load
+    await expect(page.getByText('Unpublished Results (Editable)')).toBeVisible({ timeout: 10000 });
+
+    // Click Edit button
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+
+    // Modify content
+    const textarea = page.getByRole('textbox');
+    await textarea.clear();
+    const updatedContent = 'FINAL EDIT: The investigation reveals crucial evidence about the cult\'s plans. Time: ' + Date.now();
+    await textarea.fill(updatedContent);
+
+    // Click Save Changes
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+
+    // Edit form should close
+    await expect(page.getByRole('textbox')).not.toBeVisible({ timeout: 10000 });
+
+    // Updated content should be visible
+    await expect(page.locator(`text=${updatedContent.substring(0, 50)}`)).toBeVisible({ timeout: 10000 });
+
+    // Should still see Draft badge (result remains unpublished)
+    await expect(page.locator('text=Draft').first()).toBeVisible();
+  });
+
+  test('GM can cancel editing without saving changes', async ({ page }) => {
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_GM_EDITING_RESULTS');
+    const gamePage = new GameDetailsPage(page);
+
+    // Navigate to game and go to Actions tab
+    await gamePage.goto(gameId);
+    await gamePage.goToActions();
+
+    // Wait for GameResultsManager and capture original content
+    await expect(page.getByText('Unpublished Results (Editable)')).toBeVisible({ timeout: 10000 });
+    const originalContent = await page.locator('text=DRAFT: The symbols').textContent();
+
+    // Click Edit button
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+
+    // Modify content
+    const textarea = page.getByRole('textbox');
+    await textarea.clear();
+    await textarea.fill('This change should be cancelled and not saved');
+
+    // Click Cancel
+    await page.getByRole('button', { name: 'Cancel' }).click();
+
+    // Edit form should close
+    await expect(page.getByRole('textbox')).not.toBeVisible({ timeout: 10000 });
+
+    // Original content should still be visible (changes were discarded)
+    await expect(page.locator('text=DRAFT: The symbols')).toBeVisible();
+  });
+
+  test('players cannot see unpublished results even after GM edits them', async ({ page }) => {
+    // First, GM edits the unpublished result
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_GM_EDITING_RESULTS');
+    const gamePage = new GameDetailsPage(page);
+
+    await gamePage.goto(gameId);
+    await gamePage.goToActions();
+
+    await expect(page.getByText('Unpublished Results (Editable)')).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+
+    const textarea = page.getByRole('textbox');
+    await textarea.clear();
+    await textarea.fill('EDITED BY GM: This content has been updated but not published yet');
+    await page.getByRole('button', { name: 'Save Changes' }).click();
+
+    await expect(page.getByRole('textbox')).not.toBeVisible({ timeout: 10000 });
+
+    // Now login as Player 3 and verify they still cannot see the edited result
+    await loginAs(page, 'PLAYER_3');
+    const resultsPage = new ActionResultsPage(page, gameId);
+
+    // Navigate to History tab and view Phase 1 results
+    await resultsPage.goto();
+    await resultsPage.viewPhaseResults(1);
+
+    // Should NOT see the edited unpublished result
+    await expect(page.locator('text=EDITED BY GM')).not.toBeVisible();
+    await expect(page.locator('text=DRAFT: The symbols')).not.toBeVisible();
+
+    // Should see empty state message since unpublished results don't show
+    await expect(page.locator('text=No action results for this phase')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('GM cannot edit published results', async ({ page }) => {
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_GM_EDITING_RESULTS');
+    const gamePage = new GameDetailsPage(page);
+
+    // Navigate to game and go to Actions tab
+    await gamePage.goto(gameId);
+    await gamePage.goToActions();
+
+    // Wait for GameResultsManager to load
+    await expect(page.getByTestId('published-results-section')).toBeVisible({ timeout: 10000 });
+
+    // Published results section should NOT have Edit buttons
+    const publishedSection = page.getByTestId('published-results-section');
+    await expect(publishedSection.getByRole('button', { name: 'Edit', exact: true })).not.toBeVisible();
+
+    // Unpublished results section SHOULD have Edit buttons
+    const unpublishedSection = page.getByTestId('unpublished-results-section');
+    await expect(unpublishedSection.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
+  });
+});
