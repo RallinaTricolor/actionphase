@@ -791,19 +791,34 @@ Current Phase: Discussion 📋 Previous results available
 - **Complexity**: Low (Input state pattern change)
 - **Priority**: Low - Minor UX improvement
 
-#### 12. ⏸️ FEATURE: NPC assignments table refactor
-- **Status**: ARCHITECTURE DECISION - Not a bug
-- **Test Setup**: GM view of NPCs
-- **Current Behavior**: Current NPC assignment works, may need UX improvements
-- **Required Data**: ✅ Available - Games with NPCs
-- **Verification Steps**:
-  1. Review current NPC assignment interface
-  2. Evaluate if table/list view would improve UX
-  3. Gather user feedback on current approach
-  4. Decide if refactor needed
-- **Implementation**: Depends on decision - may not need changes
-- **Complexity**: Medium (If implemented)
-- **Priority**: Very Low - Enhancement, not bug
+#### 12. ✓ ARCHITECTURE DECISION: NPC assignments workflow evaluation
+- **Status**: REVIEWED - Current implementation is optimal
+- **Decision Date**: October 29, 2025
+- **Analysis**: Evaluated character assignment workflows for player characters vs NPCs
+- **Current Implementation**:
+  - **Player Characters**: Assigned during creation (required field in CreateCharacterModal)
+  - **NPCs**: Assigned post-creation via separate "Assign NPC" button/modal (optional)
+- **Decision**: Maintain status quo - different workflows serve different purposes
+- **Rationale**:
+  1. Player characters must always be assigned to a player (game design constraint)
+  2. NPCs need flexibility to exist unassigned and support reassignment to audience members
+  3. Different workflows reinforce correct mental models for different character types
+  4. No user feedback suggesting current approach is problematic
+  5. Low-volume operations (1-2 player chars per player, ~5-10 NPCs typical) don't warrant table UI
+- **Comparison Analysis**:
+  - **Player Chars**: Single-step (assign during creation), required, no reassignment
+  - **NPCs**: Two-step (create then assign), optional, supports reassignment
+  - **Semantic difference**: Workflows reinforce that player chars are always owned, NPCs are optionally assigned
+- **Future Enhancement** (only if user feedback indicates need):
+  - Consider bulk NPC assignment table view for games with 10+ NPCs
+  - Current card-based approach with individual "Assign NPC" buttons is clear and works well
+- **Files Reviewed**:
+  - `frontend/src/components/CreateCharacterModal.tsx` (lines 122-142: player character assignment)
+  - `frontend/src/components/CharactersList.tsx` (lines 253-274: NPC cards with assign buttons)
+  - `frontend/src/components/AssignNPCModal.tsx` (complete NPC assignment modal)
+- **Recommendation**: CLOSED - No action required, current design is optimal for use case
+- **Complexity**: N/A (No changes)
+- **Priority**: N/A (Closed)
 
 ### Recommended Action Order:
 1. ✓ **Immediate** (#5): Add cancel game confirmation modal - prevents data loss - COMPLETED
