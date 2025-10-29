@@ -306,7 +306,7 @@ func (s *NotificationService) NotifyCommentReply(ctx context.Context, originalCo
 		Title:       fmt.Sprintf("%s replied to your comment", replierCharacterName),
 		RelatedType: stringPtr("comment"),
 		RelatedID:   &replyID,
-		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=common-room", gameID)),
+		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=common-room&comment=%d", gameID, replyID)),
 	})
 	return err
 }
@@ -320,7 +320,7 @@ func (s *NotificationService) NotifyCharacterMention(ctx context.Context, charac
 		Title:       fmt.Sprintf("%s mentioned %s", mentioningCharacterName, mentionedCharacterName),
 		RelatedType: stringPtr("comment"),
 		RelatedID:   &commentID,
-		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=common-room", gameID)),
+		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=common-room&comment=%d", gameID, commentID)),
 	})
 	return err
 }

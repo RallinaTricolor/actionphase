@@ -376,20 +376,19 @@ For each item in this list:
 
 ### Items Requiring Specific Test Scenarios - Detailed Evaluation
 
-#### 1. ⏸️ BUG: Leaving a game should relinquish control of character
-- **Status**: NEEDS VERIFICATION - Can test with existing fixtures
-- **Test Setup**: Use Game #302 (GM Messaging) with TestPlayer1
-- **Current Behavior**: Unknown - need to verify if leaving game properly removes character control
-- **Required Data**: ✅ Available - Multiple games with player participation
-- **Verification Steps**:
-  1. Navigate to game with controlled character
-  2. Click "Leave Game" button
-  3. Verify character is no longer controllable by player
-  4. Check Messages tab doesn't show character
-  5. Verify character appears as NPC to other players
-- **Implementation**: If bug exists, update leave game handler to clear character_player_id
-- **Complexity**: Low (Backend + Frontend)
-- **Priority**: Medium - Affects game integrity
+#### 1. ✓ BUG: Leaving a game should relinquish control of character
+- **Status**: FIXED - Characters now properly deactivated when player leaves
+- **Location**: Backend API endpoint for leaving games
+- **Root Cause**: `LeaveGame` endpoint only removed participant from `game_participants` but didn't deactivate characters
+- **Fix Applied**:
+  - Changed `LeaveGame` endpoint to call `RemovePlayer` service method instead of `RemoveGameParticipant`
+  - `RemovePlayer` handles both participant removal AND character deactivation in a transaction
+  - Self-initiated leaves use `userID` as both removed user and initiator for audit trail
+  - Characters are set to `is_active = false` when player leaves
+- **Files Modified**: `backend/pkg/games/api_participants.go` (line 39)
+- **Tests**: ✅ All games package tests passing (including leave_game test)
+- **Complexity**: Low (Backend fix)
+- **Priority**: Medium - Game integrity issue
 
 #### 2. ✓ FIXED: Action Result visibility when GM starts new Common Room immediately (Option B)
 - **Status**: IMPLEMENTED - Option B: Embedded Results Section
@@ -564,21 +563,18 @@ Current Phase: Discussion 📋 Previous results available
 - **Complexity**: Medium (Frontend implementation + minor backend fixes)
 - **Priority**: High - Core game loop UX, directly affects player engagement and satisfaction
 
-#### 3. ⏸️ BUG: "Player replied to your comment" notification link
-- **Status**: NEEDS TESTING - Can create test scenario
-- **Test Setup**: Use Game #606 or #607 for comment testing
-- **Current Behavior**: Unknown - notification link may not navigate correctly
-- **Required Data**: ✅ Can Create - Add comment as Player 2, reply as Player 1
-- **Verification Steps**:
-  1. Login as TestPlayer2
-  2. Create comment on a post
-  3. Login as TestPlayer1
-  4. Reply to TestPlayer2's comment
-  5. Login as TestPlayer2
-  6. Click notification for reply
-  7. Verify navigation to correct comment with highlight
-- **Implementation**: Check notification link format and CommonRoom navigation
-- **Complexity**: Low (Frontend navigation)
+#### 3. ✅ FIXED: "Player replied to your comment" notification link
+- **Status**: ✅ **FIXED** - Notifications now link directly to specific comments
+- **Implementation Date**: October 28, 2025
+- **Changes Made**:
+  - Updated `NotifyCommentReply()` in `backend/pkg/db/services/notification_service.go:309`
+  - Changed link from `/games/{id}?tab=common-room` to `/games/{id}?tab=common-room&comment={commentId}`
+  - Also fixed `NotifyCharacterMention()` (line 323) with same pattern
+  - Frontend CommonRoom component already had full support for `?comment={id}` parameter (CommonRoom.tsx:55-105)
+  - Comment is scrolled into view and highlighted with yellow ring for 3 seconds
+  - Deeply nested comments (beyond depth 5) are automatically opened in ThreadViewModal
+- **Backend Tests**: All notification service tests pass
+- **Complexity**: Low (Backend URL format only)
 - **Priority**: Medium - UX issue
 
 #### 4. ✅ FEATURE: Add UI for editing pending (unpublished) results
@@ -778,11 +774,11 @@ Current Phase: Discussion 📋 Previous results available
 - **Priority**: Very Low - Enhancement, not bug
 
 ### Recommended Action Order:
-1. **Immediate** (#5): Add cancel game confirmation modal - prevents data loss
-2. **High Priority** (#2, #4): UX evaluation for action results visibility + implement result editing UI
-   - #2: Evaluate and improve result visibility after GM starts new common room
-   - #4: Add edit functionality for pending (unpublished) results
-3. **Quick Wins** (#8): Fix unread badge overflow - quick CSS fix
+1. ✓ **Immediate** (#5): Add cancel game confirmation modal - prevents data loss - COMPLETED
+2. ✓ **High Priority** (#2, #4): UX evaluation for action results visibility + implement result editing UI - COMPLETED
+   - ✓ #2: Evaluate and improve result visibility after GM starts new common room - COMPLETED
+   - ✓ #4: Add edit functionality for pending (unpublished) results - COMPLETED
+3. ✓ **Quick Wins** (#8): Fix unread badge overflow - quick CSS fix - COMPLETED
 4. **Short-term** (#1, #3): Test and fix leave game and notification bugs
 5. **Medium-term** (#6): Test character approval workflow and UX improvements
 6. **Long-term** (#9): Implement delete messages feature
