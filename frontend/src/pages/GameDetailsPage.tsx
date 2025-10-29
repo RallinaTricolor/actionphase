@@ -18,6 +18,7 @@ import { EditGameModal } from '../components/EditGameModal';
 import { CompleteGameConfirmationDialog } from '../components/CompleteGameConfirmationDialog';
 import { PauseGameConfirmationDialog } from '../components/PauseGameConfirmationDialog';
 import { CancelGameConfirmationDialog } from '../components/CancelGameConfirmationDialog';
+import { LeaveGameConfirmationDialog } from '../components/LeaveGameConfirmationDialog';
 
 interface GameDetailsPageProps {
   gameId: number;
@@ -81,6 +82,9 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     showCancelDialog,
     setShowCancelDialog,
     handleConfirmCancel,
+    showLeaveDialog,
+    setShowLeaveDialog,
+    handleConfirmLeave,
   } = useGameStateManagement({
     gameId,
     refetchGameData,
@@ -268,6 +272,17 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           onClose={() => setShowCancelDialog(false)}
           onConfirm={handleConfirmCancel}
           gameTitle={game.title}
+        />
+      )}
+
+      {/* Leave Game Confirmation Dialog */}
+      {game && (
+        <LeaveGameConfirmationDialog
+          isOpen={showLeaveDialog}
+          onClose={() => setShowLeaveDialog(false)}
+          onConfirm={handleConfirmLeave}
+          gameTitle={game.title}
+          isSubmitting={actionLoading}
         />
       )}
     </div>

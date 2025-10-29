@@ -23,6 +23,7 @@ export function useGameStateManagement({
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
 
   const handleStateChange = async (newState: GameState) => {
     // Show confirmation dialog for completing game
@@ -93,15 +94,18 @@ export function useGameStateManagement({
     }
   };
 
-  const handleLeaveGame = async () => {
-    if (!confirm('Are you sure you want to leave this game?')) return;
+  const handleLeaveGame = () => {
+    setShowLeaveDialog(true);
+  };
 
+  const handleConfirmLeave = async () => {
     try {
       setActionLoading(true);
       await apiClient.games.leaveGame(gameId);
       await refetchGameData();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to leave game');
+      throw err; // Re-throw so dialog can handle it
     } finally {
       setActionLoading(false);
     }
@@ -147,5 +151,8 @@ export function useGameStateManagement({
     showCancelDialog,
     setShowCancelDialog,
     handleConfirmCancel,
+    showLeaveDialog,
+    setShowLeaveDialog,
+    handleConfirmLeave,
   };
 }
