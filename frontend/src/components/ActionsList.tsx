@@ -4,6 +4,7 @@ import { apiClient } from '../lib/api';
 import { Button, Select, Badge } from './ui';
 import type { ActionWithDetails, GamePhase } from '../types/phases';
 import { CreateActionResultForm } from './CreateActionResultForm';
+import { Modal } from './Modal';
 
 interface ActionsListProps {
   gameId: number;
@@ -141,33 +142,32 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
         )}
 
         {/* Confirmation Dialog */}
-        {showPublishConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="surface-base rounded-lg max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold text-content-primary mb-2">Publish All Results?</h3>
-              <p className="text-sm text-content-secondary mb-6">
-                This will publish {unpublishedCount} {unpublishedCount === 1 ? 'result' : 'results'} and make {unpublishedCount === 1 ? 'it' : 'them'} visible to players. This action cannot be undone.
-              </p>
-              <div className="flex justify-end space-x-3">
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowPublishConfirm(false)}
-                  disabled={publishAllMutation.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => publishAllMutation.mutate()}
-                  disabled={publishAllMutation.isPending}
-                  className="bg-semantic-success hover:bg-semantic-success-hover"
-                >
-                  {publishAllMutation.isPending ? 'Publishing...' : 'Confirm & Publish'}
-                </Button>
-              </div>
-            </div>
+        <Modal
+          isOpen={showPublishConfirm}
+          onClose={() => setShowPublishConfirm(false)}
+          title="Publish All Results?"
+        >
+          <p className="text-sm text-content-secondary mb-6">
+            This will publish {unpublishedCount} {unpublishedCount === 1 ? 'result' : 'results'} and make {unpublishedCount === 1 ? 'it' : 'them'} visible to players. This action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-3">
+            <Button
+              variant="ghost"
+              onClick={() => setShowPublishConfirm(false)}
+              disabled={publishAllMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => publishAllMutation.mutate()}
+              disabled={publishAllMutation.isPending}
+              className="bg-semantic-success hover:bg-semantic-success-hover"
+            >
+              {publishAllMutation.isPending ? 'Publishing...' : 'Confirm & Publish'}
+            </Button>
           </div>
-        )}
+        </Modal>
 
         {/* Phase Filter - Only show action phases */}
         {actionPhases.length > 0 && (

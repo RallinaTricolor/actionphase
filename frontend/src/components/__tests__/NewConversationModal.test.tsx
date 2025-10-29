@@ -122,10 +122,11 @@ describe('NewConversationModal', () => {
         />
       )
 
-      const backdrop = container.querySelector('.bg-black.bg-opacity-50')
+      // Check for the Modal component structure (backdrop with blur)
+      const backdrop = container.querySelector('.backdrop-blur-sm')
       expect(backdrop).toBeInTheDocument()
 
-      const modalContainer = container.querySelector('.surface-base.rounded-lg')
+      const modalContainer = container.querySelector('.surface-raised.rounded-lg')
       expect(modalContainer).toBeInTheDocument()
     })
   })

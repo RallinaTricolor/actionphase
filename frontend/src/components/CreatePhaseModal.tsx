@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PHASE_TYPE_DESCRIPTIONS } from '../types/phases';
 import type { CreatePhaseRequest } from '../types/phases';
 import { Button, Select, Input, Textarea, DateTimeInput } from './ui';
+import { Modal } from './Modal';
 
 interface CreatePhaseModalProps {
   onClose: () => void;
@@ -21,24 +22,9 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="surface-base rounded-lg shadow-xl max-w-md w-full">
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-content-primary">Create New Phase</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="text-content-tertiary hover:text-content-secondary h-auto p-0"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </Button>
-          </div>
-
-          <div className="space-y-4">
+    <Modal isOpen={true} onClose={onClose} title="Create New Phase">
+      <form onSubmit={handleSubmit}>
+        <div className="space-y-4">
             <div>
               <Select
                 id="phase-type"
@@ -97,26 +83,25 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
                 helperText="Set a deadline to create urgency for this phase"
               />
             </div>
-          </div>
+        </div>
 
-          <div className="flex justify-end space-x-3 mt-6">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Creating...' : 'Create Phase'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end space-x-3 mt-6">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Creating...' : 'Create Phase'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

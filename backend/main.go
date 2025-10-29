@@ -180,6 +180,48 @@ func runMigrations(logger *slog.Logger, pool *pgxpool.Pool) error {
 	}
 	defer m.Close()
 
+	// Check for dirty migrations and auto-fix
+	version, dirty, err := m.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		// If we can't get version info, something is wrong
+		return fmt.Errorf("failed to get migration version: %w", err)
+	}
+
+	if dirty {
+		logger.Warn("Detected dirty migration state, attempting to fix...",
+			"version", version)
+
+		// Force the version to clean state
+		// This marks the migration as complete in the schema_migrations table
+		if err := m.Force(int(version)); err != nil {
+			return fmt.Errorf("failed to force clean migration state: %w", err)
+		}
+
+		logger.Info("Migration state fixed", "version", version)
+
+		// Close the current migrate instance and create a fresh one
+		// This ensures the migrate library properly detects the current clean state
+		m.Close()
+
+		// Recreate driver and migrate instance
+		driver, err = postgres.WithInstance(database, &postgres.Config{})
+		if err != nil {
+			return fmt.Errorf("failed to recreate migration driver: %w", err)
+		}
+
+		m, err = migrate.NewWithDatabaseInstance(
+			"file://pkg/db/migrations",
+			"postgres",
+			driver,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to recreate migration instance: %w", err)
+		}
+		defer m.Close()
+
+		logger.Info("Migration instance recreated, continuing with pending migrations...")
+	}
+
 	// Apply migrations
 	err = m.Up()
 	if err != nil && err != migrate.ErrNoChange {

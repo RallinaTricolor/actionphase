@@ -23,7 +23,7 @@ export function CreateHandoutModal({ onClose, onSubmit, isSubmitting }: CreateHa
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="surface-base rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit} className="p-6" data-testid="handout-form">
           <div className="flex items-center justify-between mb-4">

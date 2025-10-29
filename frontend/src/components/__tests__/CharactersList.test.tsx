@@ -146,7 +146,7 @@ describe('CharactersList', () => {
       expect(screen.getByText('Villain NPC')).toBeInTheDocument()
     })
 
-    it('GM should see approve/reject buttons for pending characters', async () => {
+    it('GM should see approve button for pending characters', async () => {
       renderWithProviders(
         <CharactersList gameId={123} userRole="gm" currentUserId={1} />
       )
@@ -154,11 +154,9 @@ describe('CharactersList', () => {
       await waitFor(() => {
         expect(screen.getByText('Approve')).toBeInTheDocument()
       })
-
-      expect(screen.getByText('Reject')).toBeInTheDocument()
     })
 
-    it('GM should NOT see approve/reject buttons for approved characters', async () => {
+    it('GM should NOT see approve button for approved characters', async () => {
       server.use(
         http.get('http://localhost:3000/api/v1/games/:gameId/characters', () => {
           return HttpResponse.json([mockCharacters[0]]) // Only approved character
@@ -174,7 +172,6 @@ describe('CharactersList', () => {
       })
 
       expect(screen.queryByText('Approve')).not.toBeInTheDocument()
-      expect(screen.queryByText('Reject')).not.toBeInTheDocument()
     })
   })
 
@@ -195,7 +192,7 @@ describe('CharactersList', () => {
       expect(screen.getByText('Villain NPC')).toBeInTheDocument()
     })
 
-    it('Player should NOT see approve/reject buttons', async () => {
+    it('Player should NOT see approve button', async () => {
       renderWithProviders(
         <CharactersList gameId={123} userRole="player" currentUserId={1} />
       )
@@ -205,7 +202,6 @@ describe('CharactersList', () => {
       })
 
       expect(screen.queryByText('Approve')).not.toBeInTheDocument()
-      expect(screen.queryByText('Reject')).not.toBeInTheDocument()
     })
   })
 
@@ -385,13 +381,13 @@ describe('CharactersList', () => {
       })
     })
 
-    it('should call reject mutation when reject button is clicked', async () => {
-      let rejectPayload: any = null
+    it('should call delete mutation when delete button is clicked for pending characters', async () => {
+      let deletedCharacterId: string | null = null
 
       server.use(
-        http.post('http://localhost:3000/api/v1/characters/:id/approve', async ({ request }) => {
-          rejectPayload = await request.json()
-          return HttpResponse.json({ success: true })
+        http.delete('http://localhost:3000/api/v1/characters/:id', ({ params }) => {
+          deletedCharacterId = params.id as string
+          return new HttpResponse(null, { status: 204 })
         })
       )
 
@@ -400,14 +396,23 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Reject')).toBeInTheDocument()
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
       })
 
-      const rejectButton = screen.getByText('Reject')
-      fireEvent.click(rejectButton)
+      // Click delete button for pending character (second character)
+      const deleteButtons = screen.getAllByTestId('delete-character-button')
+      fireEvent.click(deleteButtons[1])
+
+      // Confirm deletion in modal
+      await waitFor(() => {
+        expect(screen.getByTestId('confirm-delete-character-button')).toBeInTheDocument()
+      })
+
+      const confirmButton = screen.getByTestId('confirm-delete-character-button')
+      fireEvent.click(confirmButton)
 
       await waitFor(() => {
-        expect(rejectPayload).toEqual({ status: 'rejected' })
+        expect(deletedCharacterId).toBe('2')
       })
     })
   })

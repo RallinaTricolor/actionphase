@@ -77,12 +77,20 @@ export function CharactersList({
     }
   };
 
-  // Filter characters based on user role and status
+  // Filter characters based on user role, game state, and status
   // GM sees all characters
-  // Players see approved characters + their own characters (regardless of status)
+  // Players see approved characters + their own characters (with restrictions)
+  // Once game is in_progress, players can't see/use pending characters at all
   const visibleCharacters = userRole === 'gm'
     ? characters
-    : characters.filter(char => char.status === 'approved' || char.user_id === currentUserId);
+    : characters.filter(char => {
+        // If game is in_progress, exclude pending/rejected characters for players
+        if (gameState === 'in_progress' && (char.status === 'pending' || char.status === 'rejected')) {
+          return false;
+        }
+        // Otherwise, show approved characters + their own characters
+        return char.status === 'approved' || char.user_id === currentUserId;
+      });
 
   // Group characters by type
   const playerCharacters = visibleCharacters.filter(char => char.character_type === 'player_character');
@@ -457,25 +465,14 @@ function CharacterCard({
 
           {/* GM Actions */}
           {userRole === 'gm' && character.status === 'pending' && (
-            <div className="flex space-x-2">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => onApprove(character.id, 'approved')}
-                className="bg-success hover:bg-success-hover"
-                data-testid="approve-character-button"
-              >
-                Approve
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => onApprove(character.id, 'rejected')}
-                data-testid="reject-character-button"
-              >
-                Reject
-              </Button>
-            </div>
+            <Button
+              variant="success"
+              size="sm"
+              onClick={() => onApprove(character.id, 'approved')}
+              data-testid="approve-character-button"
+            >
+              Approve
+            </Button>
           )}
 
           {/* Delete Character Button (GM only) */}

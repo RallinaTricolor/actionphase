@@ -2,6 +2,7 @@ package characters
 
 import (
 	"actionphase/pkg/core"
+	models "actionphase/pkg/db/models"
 	services "actionphase/pkg/db/services"
 	"encoding/json"
 	"fmt"
@@ -200,6 +201,22 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get game to check state for filtering
+	gameService := &services.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get game", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Get authenticated user to check if they're the GM
+	authUser := core.GetAuthenticatedUser(r.Context())
+	var isGM bool
+	if authUser != nil {
+		isGM = core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game)
+	}
+
 	characterService := &services.CharacterService{DB: h.App.Pool}
 	characters, err := characterService.GetCharactersByGame(r.Context(), int32(gameID))
 	if err != nil {
@@ -208,10 +225,27 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Filter characters based on game state and user role
+	// When game is in_progress:
+	// - GMs see ALL characters (including pending/rejected) for management in CharactersList
+	// - Non-GMs only see approved/active characters
+	// Frontend will handle additional filtering for recipient selection (all users, including GMs)
+	filteredCharacters := make([]models.GetCharactersByGameRow, 0)
+	for _, char := range characters {
+		// If game is in_progress and user is NOT GM, exclude pending/rejected characters
+		if game.State.String == "in_progress" && !isGM {
+			if char.Status.String == "pending" || char.Status.String == "rejected" {
+				continue // Skip this character for non-GMs
+			}
+		}
+
+		filteredCharacters = append(filteredCharacters, char)
+	}
+
 	// Convert to response format
 	// Initialize as empty slice to ensure JSON encodes as [] not null
 	response := make([]map[string]interface{}, 0)
-	for _, char := range characters {
+	for _, char := range filteredCharacters {
 		charData := map[string]interface{}{
 			"id":             char.ID,
 			"game_id":        char.GameID,

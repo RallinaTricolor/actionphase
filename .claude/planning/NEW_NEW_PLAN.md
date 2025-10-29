@@ -2,3 +2,4 @@
 - Recruitment applications should be publicly viewable
 - Text length limits, multiple action submissions?
 - Admin mode E2E tests
+- Delete private messages?
