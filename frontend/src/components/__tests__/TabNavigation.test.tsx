@@ -1,0 +1,383 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { TabNavigation, type Tab } from '../TabNavigation';
+
+describe('TabNavigation', () => {
+  const mockOnTabChange = vi.fn();
+
+  const mockTabs: Tab[] = [
+    { id: 'tab1', label: 'First Tab' },
+    { id: 'tab2', label: 'Second Tab', badge: 5 },
+    { id: 'tab3', label: 'Third Tab', icon: <span>📝</span> },
+    { id: 'tab4', label: 'Fourth Tab', badge: 'New', icon: <span>🔔</span> },
+  ];
+
+  beforeEach(() => {
+    mockOnTabChange.mockClear();
+  });
+
+  describe('Desktop View', () => {
+    it('renders all tabs as buttons on desktop', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      // All tabs should be rendered as buttons (desktop view uses role="tab")
+      expect(screen.getByRole('tab', { name: /First Tab/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Second Tab/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Third Tab/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Fourth Tab/i })).toBeInTheDocument();
+    });
+
+    it('displays badges for tabs that have them', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      // Badge for tab2 (numeric)
+      expect(screen.getByText('5')).toBeInTheDocument();
+      // Badge for tab4 (string)
+      expect(screen.getByText('New')).toBeInTheDocument();
+    });
+
+    it('displays icons for tabs that have them', () => {
+      const { container } = render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      // Icons should be rendered (checking for the emoji text)
+      expect(container.innerHTML).toContain('📝');
+      expect(container.innerHTML).toContain('🔔');
+    });
+
+    it('applies active styling to the current tab', () => {
+      const { container } = render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab2"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      const activeTab = screen.getByRole('tab', { name: /Second Tab/i });
+
+      // Check that aria-selected is true
+      expect(activeTab).toHaveAttribute('aria-selected', 'true');
+      expect(activeTab).toHaveAttribute('aria-current', 'page');
+
+      // Check for active styling classes
+      expect(activeTab.className).toContain('border-interactive-primary');
+      expect(activeTab.className).toContain('text-interactive-primary');
+    });
+
+    it('applies inactive styling to non-active tabs', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      const inactiveTab = screen.getByRole('tab', { name: /Second Tab/i });
+
+      // Check that aria-selected is false (implicit when not true)
+      expect(inactiveTab).toHaveAttribute('aria-selected', 'false');
+      expect(inactiveTab).not.toHaveAttribute('aria-current');
+
+      // Check for inactive styling classes
+      expect(inactiveTab.className).toContain('border-transparent');
+      expect(inactiveTab.className).toContain('text-content-secondary');
+    });
+
+    it('calls onTabChange when a tab is clicked', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      const tab2 = screen.getByRole('tab', { name: /Second Tab/i });
+      await user.click(tab2);
+
+      expect(mockOnTabChange).toHaveBeenCalledTimes(1);
+      expect(mockOnTabChange).toHaveBeenCalledWith('tab2');
+    });
+
+    it('has correct testid attributes for tabs', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      expect(screen.getByTestId('tab-tab1')).toBeInTheDocument();
+      expect(screen.getByTestId('tab-tab2')).toBeInTheDocument();
+      expect(screen.getByTestId('tab-tab3')).toBeInTheDocument();
+      expect(screen.getByTestId('tab-tab4')).toBeInTheDocument();
+    });
+  });
+
+  describe('Mobile View (Dropdown)', () => {
+    it('renders a select dropdown for mobile', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      // Select should be present (hidden on desktop, visible on mobile via CSS)
+      const select = screen.getByLabelText('Select a tab');
+      expect(select).toBeInTheDocument();
+      expect(select.tagName).toBe('SELECT');
+    });
+
+    it('displays all tabs as options in the dropdown', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      // All tabs should be options
+      expect(screen.getByRole('option', { name: 'First Tab' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /Second Tab/ })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /Third Tab/ })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /Fourth Tab/ })).toBeInTheDocument();
+    });
+
+    it('includes badges in option labels', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      // Badge should be included in the text
+      expect(screen.getByRole('option', { name: 'Second Tab (5)' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Fourth Tab (New)' })).toBeInTheDocument();
+    });
+
+    it('sets the selected option to the active tab', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab2"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      const select = screen.getByLabelText('Select a tab') as HTMLSelectElement;
+      expect(select.value).toBe('tab2');
+
+      const selectedOption = screen.getByRole('option', { name: /Second Tab/ }) as HTMLOptionElement;
+      expect(selectedOption.selected).toBe(true);
+    });
+
+    it('calls onTabChange when dropdown selection changes', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      const select = screen.getByLabelText('Select a tab');
+      await user.selectOptions(select, 'tab3');
+
+      expect(mockOnTabChange).toHaveBeenCalledTimes(1);
+      expect(mockOnTabChange).toHaveBeenCalledWith('tab3');
+    });
+
+    it('has accessible label for the dropdown', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      // Label should exist (even if visually hidden with sr-only)
+      const label = screen.getByText('Select a tab');
+      expect(label).toBeInTheDocument();
+      expect(label.tagName).toBe('LABEL');
+      expect(label.className).toContain('sr-only');
+    });
+  });
+
+  describe('Responsive Behavior', () => {
+    it('applies correct responsive classes for mobile dropdown', () => {
+      const { container } = render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      // Mobile dropdown container should have md:hidden
+      const dropdownContainer = container.querySelector('.md\\:hidden');
+      expect(dropdownContainer).toBeInTheDocument();
+    });
+
+    it('applies correct responsive classes for desktop tabs', () => {
+      const { container } = render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      // Desktop tabs container should have hidden md:flex
+      const tablist = screen.getByRole('tablist');
+      expect(tablist.className).toContain('hidden');
+      expect(tablist.className).toContain('md:flex');
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('handles single tab', () => {
+      const singleTab: Tab[] = [{ id: 'only', label: 'Only Tab' }];
+
+      render(
+        <TabNavigation
+          tabs={singleTab}
+          activeTab="only"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      expect(screen.getByRole('tab', { name: 'Only Tab' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Only Tab' })).toBeInTheDocument();
+    });
+
+    it('handles tabs with no badges or icons', () => {
+      const simpleTabs: Tab[] = [
+        { id: 'simple1', label: 'Simple One' },
+        { id: 'simple2', label: 'Simple Two' },
+      ];
+
+      render(
+        <TabNavigation
+          tabs={simpleTabs}
+          activeTab="simple1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      expect(screen.getByRole('tab', { name: 'Simple One' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Simple Two' })).toBeInTheDocument();
+    });
+
+    it('handles badge value of 0', () => {
+      const tabsWithZero: Tab[] = [
+        { id: 'zero', label: 'Zero Badge', badge: 0 },
+      ];
+
+      render(
+        <TabNavigation
+          tabs={tabsWithZero}
+          activeTab="zero"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      // Badge with 0 should still be displayed
+      expect(screen.getByText('0')).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Zero Badge (0)' })).toBeInTheDocument();
+    });
+
+    it('handles long tab labels gracefully', () => {
+      const longLabelTabs: Tab[] = [
+        { id: 'long', label: 'This is a very long tab label that might wrap on mobile devices' },
+      ];
+
+      render(
+        <TabNavigation
+          tabs={longLabelTabs}
+          activeTab="long"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      // Should render without errors
+      expect(screen.getByRole('tab', { name: /This is a very long/ })).toBeInTheDocument();
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('has proper ARIA attributes on tablist', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      const tablist = screen.getByRole('tablist');
+      expect(tablist).toHaveAttribute('aria-label', 'Tabs');
+    });
+
+    it('has proper role attributes on tab buttons', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      mockTabs.forEach(tab => {
+        const tabButton = screen.getByRole('tab', { name: new RegExp(tab.label) });
+        expect(tabButton).toHaveAttribute('role', 'tab');
+      });
+    });
+
+    it('properly associates label with select element', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      const label = screen.getByText('Select a tab');
+      const select = screen.getByLabelText('Select a tab');
+
+      expect(label).toHaveAttribute('for', 'tab-select');
+      expect(select).toHaveAttribute('id', 'tab-select');
+    });
+  });
+});

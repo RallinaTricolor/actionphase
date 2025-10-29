@@ -14,14 +14,38 @@ interface TabNavigationProps {
 }
 
 /**
- * TabNavigation - Tab component with semantic theme tokens
+ * TabNavigation - Responsive tab component with dropdown on mobile
  *
- * Now uses semantic tokens instead of hard-coded colors for automatic theme adaptation.
+ * Desktop: Horizontal tab bar with icons and labels
+ * Mobile: Dropdown select menu for better space utilization
  */
 export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationProps) {
+  const activeTabData = tabs.find((tab) => tab.id === activeTab);
+
   return (
     <div className="border-b border-theme-default surface-base rounded-t-lg">
-      <nav className="flex -mb-px overflow-x-auto" role="tablist" aria-label="Tabs">
+      {/* Mobile: Dropdown Select */}
+      <div className="md:hidden">
+        <label htmlFor="tab-select" className="sr-only">
+          Select a tab
+        </label>
+        <select
+          id="tab-select"
+          value={activeTab}
+          onChange={(e) => onTabChange(e.target.value)}
+          className="block w-full py-3 px-4 text-base font-medium bg-bg-primary text-content-primary border-0 focus:outline-none focus:ring-2 focus:ring-interactive-primary rounded-t-lg"
+        >
+          {tabs.map((tab) => (
+            <option key={tab.id} value={tab.id}>
+              {tab.label}
+              {tab.badge !== undefined ? ` (${tab.badge})` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Desktop: Horizontal Tab Bar */}
+      <nav className="hidden md:flex -mb-px overflow-x-auto" role="tablist" aria-label="Tabs">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
