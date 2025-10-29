@@ -12,7 +12,7 @@ import (
 	"github.com/go-chi/render"
 )
 
-// LeaveGame removes a user from game participants
+// LeaveGame removes a user from game participants and deactivates their characters
 func (h *Handler) LeaveGame(w http.ResponseWriter, r *http.Request) {
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
@@ -34,14 +34,15 @@ func (h *Handler) LeaveGame(w http.ResponseWriter, r *http.Request) {
 	applicationService := &db.GameApplicationService{DB: h.App.Pool}
 
 	// First, try to remove user from game participants (if they are a participant)
+	// Use RemovePlayer which handles both participant removal and character deactivation
 	participantRemoved := false
-	err = gameService.RemoveGameParticipant(r.Context(), int32(gameID), userID)
+	err = gameService.RemovePlayer(r.Context(), int32(gameID), userID, userID) // Self-initiated leave
 	if err != nil {
 		// Log but don't fail - user might not be a participant (might just have an application)
 		h.App.Logger.Debug("User not found in participants (might have application instead)", "game_id", gameID, "user_id", userID)
 	} else {
 		participantRemoved = true
-		h.App.Logger.Info("Removed user from game participants", "game_id", gameID, "user_id", userID)
+		h.App.Logger.Info("User left game (participant removed, characters deactivated)", "game_id", gameID, "user_id", userID)
 	}
 
 	// Also check for and withdraw any pending applications
