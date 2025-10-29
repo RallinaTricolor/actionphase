@@ -28,8 +28,8 @@ export function GameActions({
   game,
   isGM,
   isCheckingAuth,
-  isParticipant,
-  userRole,
+  isParticipant: _isParticipant,
+  userRole: _userRole,
   userApplication,
   actionLoading,
   stateActions,
@@ -37,7 +37,7 @@ export function GameActions({
   onStateChange,
   onApplyToGame,
   onWithdrawApplication,
-  onLeaveGame,
+  onLeaveGame: _onLeaveGame,
 }: GameActionsProps) {
   return (
     <div className="flex gap-4">

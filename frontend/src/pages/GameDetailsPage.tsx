@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useGameContext } from '../contexts/GameContext';
-import { useToast } from '../contexts/ToastContext';
 import { useGameApplication } from '../hooks/useGameApplication';
 import { useGameStateManagement } from '../hooks/useGameStateManagement';
 import { useGameTabs } from '../hooks/useGameTabs';
@@ -28,7 +27,6 @@ interface GameDetailsPageProps {
 export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   // Get data from contexts
   const { currentUser, isCheckingAuth } = useAuth();
-  const { showError } = useToast();
   const {
     game,
     participants,
