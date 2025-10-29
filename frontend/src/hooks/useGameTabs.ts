@@ -143,7 +143,7 @@ export function useGameTabs({
     if (tabs.length === 0) return 'default';
 
     // Priority 1: In-progress game - phase-aware defaults
-    if (gameState === 'in_progress' && currentPhaseType) {
+    if (gameState === 'in_progress') {
       if (currentPhaseType === 'common_room') {
         // Common room phase - everyone goes to common room
         if (tabs.some(t => t.id === 'common-room')) return 'common-room';
@@ -154,6 +154,12 @@ export function useGameTabs({
         // Players: Submit or review their action
         if (tabs.some(t => t.id === 'actions')) return 'actions';
       }
+
+      // No active phase or unknown phase type - prefer common-room or phases
+      // Check for common-room tab first (most engaging for players)
+      if (tabs.some(t => t.id === 'common-room')) return 'common-room';
+      // GM without common room? Go to phases management
+      if (isGM && tabs.some(t => t.id === 'phases')) return 'phases';
     }
 
     // Priority 2: Recruitment - applications for GM, info for players
@@ -194,6 +200,12 @@ export function useGameTabs({
       return;
     }
 
+    // For in_progress games, wait for phase data to load before setting default tab
+    // This prevents setting wrong default (People) when currentPhaseType is still loading
+    if (gameState === 'in_progress' && currentPhaseType === undefined && !hasSetInitialTab.current) {
+      return;
+    }
+
     // Check if there's a URL param
     const urlTab = searchParams.get('tab');
 
@@ -231,7 +243,7 @@ export function useGameTabs({
       newParams.set('tab', defaultTab);
       setSearchParams(newParams, { replace: true });
     }
-  }, [tabs, defaultTab, activeTab, searchParams, setSearchParams, gameState]);
+  }, [tabs, defaultTab, activeTab, searchParams, setSearchParams, gameState, currentPhaseType]);
 
   // Wrapper for setActiveTab that updates URL with new tab
   const handleSetActiveTab = (tabId: string) => {
