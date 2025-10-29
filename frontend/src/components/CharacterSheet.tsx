@@ -358,7 +358,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
 
         {/* Error Display */}
         {saveCharacterDataMutation.error && (
-          <div className="mt-4 p-3 bg-semantic-danger-subtle border border-semantic-danger rounded-md">
+          <div className="mt-4 p-3 bg-semantic-danger-subtle border border-semantic-danger rounded-lg">
             <p className="text-sm text-semantic-danger">
               Failed to save: {
                 saveCharacterDataMutation.error instanceof Error
