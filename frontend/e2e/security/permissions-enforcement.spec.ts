@@ -61,8 +61,13 @@ test.describe('Permissions & Access Control', () => {
         const gameId = await getFixtureGameId(player1Page, 'E2E_ACTION');
         await navigateToGame(player1Page, gameId);
 
-        // Navigate to People/Characters tab
-        await player1Page.getByRole('button', { name: /People|Characters/ }).click();
+        // Wait for tab parameter to be set (useGameTabs sets default tab)
+        await player1Page.waitForFunction(() => window.location.search.includes('tab='), { timeout: 5000 });
+
+        // Navigate to People tab (use 'tab' role, not 'button')
+        const peopleTab = player1Page.getByRole('tab', { name: /People/ });
+        await peopleTab.waitFor({ state: 'visible', timeout: 5000 });
+        await peopleTab.click();
         await player1Page.waitForLoadState('networkidle');
 
         // Player 1 should see edit button for their own character
@@ -73,7 +78,11 @@ test.describe('Permissions & Access Control', () => {
         await loginAs(player2Page, 'PLAYER_2');
         await navigateToGame(player2Page, gameId);
 
-        await player2Page.getByRole('button', { name: /People|Characters/ }).click();
+        // Wait for tab parameter to be set and navigate to People tab
+        await player2Page.waitForFunction(() => window.location.search.includes('tab='), { timeout: 5000 });
+        const player2PeopleTab = player2Page.getByRole('tab', { name: /People/ });
+        await player2PeopleTab.waitFor({ state: 'visible', timeout: 5000 });
+        await player2PeopleTab.click();
         await player2Page.waitForLoadState('networkidle');
 
         // Look for Player 1's character (E2E Test Char 1)
@@ -87,8 +96,19 @@ test.describe('Permissions & Access Control', () => {
         const editButtonInPlayer1Card = player1CharacterCard.getByRole('button', { name: 'Edit' });
         await expect(editButtonInPlayer1Card).not.toBeVisible();
       } finally {
-        await player1Context.close();
-        await player2Context.close();
+        // Close contexts gracefully (may already be closed if test timed out)
+        try {
+          await player1Page.close().catch(() => {});
+          await player2Page.close().catch(() => {});
+        } catch {
+          // Pages may already be closed
+        }
+        try {
+          await player1Context.close().catch(() => {});
+          await player2Context.close().catch(() => {});
+        } catch {
+          // Contexts may already be closed
+        }
       }
     });
 

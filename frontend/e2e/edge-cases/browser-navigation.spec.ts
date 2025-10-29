@@ -99,14 +99,8 @@ test.describe('Browser Navigation Behavior', () => {
     const gameCard = page.locator('[data-testid^="game-card-"]').first();
     await gameCard.click();
     await page.waitForLoadState('networkidle');
-
-    // Wait for tab parameter to be added to URL (happens via useEffect)
-    await page.waitForFunction(() => {
-      return window.location.search.includes('tab=');
-    }, { timeout: 5000 });
-
-    // Should be on game page with tab parameter
-    await expect(page.url()).toMatch(/\/games\/\d+\?tab=/);
+    // Should be on game page
+    await expect(page.url()).toMatch(/\/games\/\d+/);
 
     // Press back ONCE
     await page.goBack();

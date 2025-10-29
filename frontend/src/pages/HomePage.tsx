@@ -1,10 +1,14 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { GamesList } from '../components/GamesList';
 import { BackendStatus } from '../components/BackendStatus';
 
 export const HomePage = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
+
+  // Redirect authenticated users to dashboard
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-surface-sunken">
@@ -18,29 +22,12 @@ export const HomePage = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    to="/dashboard"
-                    className="bg-interactive-primary text-white px-4 py-2 rounded-md hover:bg-interactive-primary focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2"
-                  >
-                    Dashboard
-                  </Link>
-                  <button
-                    onClick={logout}
-                    className="text-content-secondary hover:text-content-primary px-4 py-2 rounded-md border border-theme-default hover:bg-surface-raised"
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <Link
-                  to="/login"
-                  className="bg-interactive-primary text-white px-4 py-2 rounded-md hover:bg-interactive-primary focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2"
-                >
-                  Login
-                </Link>
-              )}
+              <Link
+                to="/login"
+                className="bg-interactive-primary text-white px-4 py-2 rounded-md hover:bg-interactive-primary focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2"
+              >
+                Login
+              </Link>
             </div>
           </div>
         </div>
@@ -53,21 +40,23 @@ export const HomePage = () => {
           <BackendStatus />
         </div>
 
-        {/* Games Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-content-primary">Available Games</h2>
-              <p className="text-content-secondary mt-1">Join a game or browse ongoing campaigns</p>
-            </div>
-            {isAuthenticated && (
-              <button className="bg-semantic-success text-white px-4 py-2 rounded-md hover:bg-semantic-success-hover focus:outline-none focus:ring-2 focus:ring-semantic-success focus:ring-offset-2">
-                Create Game
-              </button>
-            )}
+        {/* Hero CTA */}
+        <div className="mb-8 bg-surface-base shadow rounded-lg overflow-hidden">
+          <div className="px-8 py-12 text-center">
+            <h2 className="text-3xl font-bold text-content-primary mb-4">
+              Welcome to ActionPhase
+            </h2>
+            <p className="text-lg text-content-secondary mb-8 max-w-2xl mx-auto">
+              A collaborative storytelling platform for play-by-post RPG games.
+              Join ongoing campaigns or create your own adventure.
+            </p>
+            <Link
+              to="/login"
+              className="inline-block bg-interactive-primary text-white px-8 py-4 rounded-md text-lg font-semibold hover:bg-interactive-primary-hover focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2 transition-colors"
+            >
+              Get Started - Sign Up or Login
+            </Link>
           </div>
-
-          <GamesList games={[]} loading={false} error={null} />
         </div>
 
         {/* Info Section */}
@@ -101,19 +90,17 @@ export const HomePage = () => {
                 </div>
               </div>
 
-              {!isAuthenticated && (
-                <div className="mt-8 p-6 bg-surface-raised rounded-lg text-center not-prose">
-                  <p className="text-content-secondary mb-4">
-                    Ready to join the adventure?
-                  </p>
-                  <Link
-                    to="/login"
-                    className="inline-block bg-interactive-primary text-white px-6 py-3 rounded-md hover:bg-interactive-primary-hover focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2"
-                  >
-                    Sign Up or Login
-                  </Link>
-                </div>
-              )}
+              <div className="mt-8 p-6 bg-surface-raised rounded-lg text-center not-prose">
+                <p className="text-content-secondary mb-4">
+                  Ready to join the adventure?
+                </p>
+                <Link
+                  to="/login"
+                  className="inline-block bg-interactive-primary text-white px-6 py-3 rounded-md hover:bg-interactive-primary-hover focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2"
+                >
+                  Sign Up or Login
+                </Link>
+              </div>
             </div>
           </div>
         </div>

@@ -126,7 +126,7 @@ export function PeopleView({
                                 </div>
                                 {canLeaveGame && (
                                   <Button
-                                    variant="ghost"
+                                    variant="danger"
                                     size="sm"
                                     onClick={onLeaveGame}
                                     disabled={actionLoading}

@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useDashboard } from '../hooks/useDashboard';
 import { DashboardGameCard } from '../components/DashboardGameCard';
 import { UrgentActionsCard } from '../components/UrgentActionsCard';
@@ -10,15 +9,7 @@ import { UpcomingDeadlinesCard } from '../components/UpcomingDeadlinesCard';
  * DashboardPage - Main user dashboard showing games, actions, and activity
  */
 export function DashboardPage() {
-  const navigate = useNavigate();
   const { data: dashboard, isLoading, error } = useDashboard();
-
-  // Redirect to recruiting games if user has no games
-  useEffect(() => {
-    if (dashboard && !dashboard.has_games) {
-      navigate('/games/recruiting');
-    }
-  }, [dashboard, navigate]);
 
   if (isLoading) {
     return (
@@ -64,66 +55,86 @@ export function DashboardPage() {
           </div>
         )}
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Games */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Player Games */}
-            {dashboard.player_games.length > 0 && (
-              <section>
-                <h2 className="text-2xl font-bold text-content-primary mb-4">
-                  My Games as Player
-                </h2>
-                <div className="space-y-4">
-                  {dashboard.player_games.map((game) => (
-                    <DashboardGameCard key={game.game_id} game={game} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* GM Games */}
-            {dashboard.gm_games.length > 0 && (
-              <section>
-                <h2 className="text-2xl font-bold text-content-primary mb-4">
-                  Games I'm Running
-                </h2>
-                <div className="space-y-4">
-                  {dashboard.gm_games.map((game) => (
-                    <DashboardGameCard key={game.game_id} game={game} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Mixed Role Games */}
-            {dashboard.mixed_role_games.length > 0 && (
-              <section>
-                <h2 className="text-2xl font-bold text-content-primary mb-4">
-                  Other Games
-                </h2>
-                <div className="space-y-4">
-                  {dashboard.mixed_role_games.map((game) => (
-                    <DashboardGameCard key={game.game_id} game={game} />
-                  ))}
-                </div>
-              </section>
-            )}
+        {/* Empty State for Users Without Games */}
+        {!dashboard.has_games ? (
+          <div className="bg-surface-base shadow rounded-lg overflow-hidden">
+            <div className="px-8 py-12 text-center">
+              <h2 className="text-2xl font-bold text-content-primary mb-4">
+                Welcome to ActionPhase!
+              </h2>
+              <p className="text-lg text-content-secondary mb-8 max-w-2xl mx-auto">
+                You're not currently in any games. Browse available games to join or create your own campaign.
+              </p>
+              <Link
+                to="/games"
+                className="inline-block bg-interactive-primary text-white px-6 py-3 rounded-md font-semibold hover:bg-interactive-primary-hover focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2 transition-colors"
+              >
+                Browse Games
+              </Link>
+            </div>
           </div>
+        ) : (
+          /* Main Content Grid */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column - Games */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Player Games */}
+              {dashboard.player_games.length > 0 && (
+                <section>
+                  <h2 className="text-2xl font-bold text-content-primary mb-4">
+                    My Games as Player
+                  </h2>
+                  <div className="space-y-4">
+                    {dashboard.player_games.map((game) => (
+                      <DashboardGameCard key={game.game_id} game={game} />
+                    ))}
+                  </div>
+                </section>
+              )}
 
-          {/* Right Column - Activity & Deadlines */}
-          <div className="space-y-8">
-            {/* Upcoming Deadlines */}
-            {dashboard.upcoming_deadlines.length > 0 && (
-              <UpcomingDeadlinesCard deadlines={dashboard.upcoming_deadlines} />
-            )}
+              {/* GM Games */}
+              {dashboard.gm_games.length > 0 && (
+                <section>
+                  <h2 className="text-2xl font-bold text-content-primary mb-4">
+                    Games I'm Running
+                  </h2>
+                  <div className="space-y-4">
+                    {dashboard.gm_games.map((game) => (
+                      <DashboardGameCard key={game.game_id} game={game} />
+                    ))}
+                  </div>
+                </section>
+              )}
 
-            {/* Recent Activity */}
-            {dashboard.recent_messages.length > 0 && (
-              <RecentActivityCard messages={dashboard.recent_messages} />
-            )}
+              {/* Mixed Role Games */}
+              {dashboard.mixed_role_games.length > 0 && (
+                <section>
+                  <h2 className="text-2xl font-bold text-content-primary mb-4">
+                    Other Games
+                  </h2>
+                  <div className="space-y-4">
+                    {dashboard.mixed_role_games.map((game) => (
+                      <DashboardGameCard key={game.game_id} game={game} />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+
+            {/* Right Column - Activity & Deadlines */}
+            <div className="space-y-8">
+              {/* Upcoming Deadlines */}
+              {dashboard.upcoming_deadlines.length > 0 && (
+                <UpcomingDeadlinesCard deadlines={dashboard.upcoming_deadlines} />
+              )}
+
+              {/* Recent Activity */}
+              {dashboard.recent_messages.length > 0 && (
+                <RecentActivityCard messages={dashboard.recent_messages} />
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

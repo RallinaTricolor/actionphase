@@ -1,17 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test-utils';
 import { DashboardPage } from '../DashboardPage';
-
-// Mock react-router-dom
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
 
 // Mock the useDashboard hook
 vi.mock('../../hooks/useDashboard', () => ({
@@ -81,7 +71,7 @@ describe('DashboardPage', () => {
     expect(screen.getByText(/please try refreshing the page/i)).toBeInTheDocument();
   });
 
-  it('redirects to recruiting page when user has no games', async () => {
+  it('shows empty state when user has no games', () => {
     vi.mocked(useDashboard).mockReturnValue({
       data: {
         user_id: 1,
@@ -99,9 +89,9 @@ describe('DashboardPage', () => {
 
     renderWithProviders(<DashboardPage />);
 
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/games/recruiting');
-    });
+    expect(screen.getByText(/welcome to actionphase!/i)).toBeInTheDocument();
+    expect(screen.getByText(/you're not currently in any games/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /browse games/i })).toBeInTheDocument();
   });
 
   it('displays dashboard when user has games', () => {
