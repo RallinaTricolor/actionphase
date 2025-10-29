@@ -38,7 +38,6 @@ export function LeaveGameConfirmationDialog({
       isOpen={isOpen}
       onClose={onClose}
       title="Leave Game"
-      size="md"
     >
       <div className="space-y-4">
         <p className="text-content-primary">
