@@ -220,7 +220,10 @@ For each item in this list:
       - **Status**: Confirmed - "Leave Game" button is prominently displayed in game header section
       - **Location**: /games/50704 - visible in game header below game stats
       - **Expected**: Button should be less prominent, possibly moved to a settings menu or made smaller/less visible
-  - ⏸️ FEATURE: Action Result flow is a little off now. If the GM starts a new common room immediately after publishing results, the only place to see your results is in the history tab
+  - ✓ FEATURE: Action Result flow is a little off now. If the GM starts a new common room immediately after publishing results, the only place to see your results is in the history tab
+      - **Status**: FIXED - Implemented Option B: Embedded Results Section (see detailed implementation in section 2 below)
+      - **Location**: Common Room tab shows "Recent Action Results" section when applicable
+      - **Implementation**: RecentResultsSection component displays at top of Common Room, auto-collapses after first view
   - ✅ BUG: Players are able to edit their abilities, skills, items, and currency--this is GM only functionality.
       - **Status**: Confirmed - Players can add abilities, skills, items, and currency to their own characters
       - **Location**: /games/50704?tab=people → Edit Sheet → Abilities & Skills / Inventory tabs
@@ -388,11 +391,11 @@ For each item in this list:
 - **Complexity**: Low (Backend + Frontend)
 - **Priority**: Medium - Affects game integrity
 
-#### 2. ✅ EVALUATED: Action Result visibility when GM starts new Common Room immediately
-- **Status**: UX EVALUATION COMPLETE - Ready for implementation
+#### 2. ✓ FIXED: Action Result visibility when GM starts new Common Room immediately (Option B)
+- **Status**: IMPLEMENTED - Option B: Embedded Results Section
 - **Original Issue**: "If the GM starts a new common room immediately after publishing results, the only place to see your results is in the history tab"
+- **Implementation Date**: October 28, 2025
 - **Test Setup**: Game #326 (E2E Test: Action Results) - Phase 1 (action, expired) → Phase 2 (common room, active)
-- **Testing Date**: October 28, 2025
 - **Tested As**: TestGM (GM role) and TestPlayer1 (Player role)
 
 ##### Current Behavior (CONFIRMED)
@@ -473,15 +476,56 @@ Current Phase: Discussion 📋 Previous results available
 - **Estimated Time**: 2-4 hours
 - **Complexity**: Low
 
-**Phase 2: Better UX (Embedded Results Section)**
-- [ ] Create `RecentResultsSection` component
-- [ ] Add API hook to fetch previous phase results
-- [ ] Integrate into `CommonRoom` component
-- [ ] Add collapse/expand state with localStorage persistence
-- [ ] Style to match design system (Card, Badge components)
-- [ ] Add "View Full Results" link to History
-- **Estimated Time**: 4-8 hours
+**✓ Implemented: Embedded Results Section (Option B)**
+- [✓] Created `RecentResultsSection` component with collapsible design
+- [✓] Added `usePreviousPhaseResults` hook to fetch previous phase results
+- [✓] Integrated into `CommonRoom` component
+- [✓] Added collapse/expand state with localStorage persistence
+- [✓] Styled to match design system (Card, Badge components)
+- [✓] Added "View Full Results" link to History
+- **Actual Time**: ~4 hours
 - **Complexity**: Medium
+
+**Implementation Details:**
+- **New Component**: `frontend/src/components/RecentResultsSection.tsx`
+  - Displays recent action results at top of Common Room
+  - Collapsible header with 📋 icon, phase title, and result count badge
+  - Individual result cards with expand/collapse functionality
+  - Preview shows first 150 characters, full content with MarkdownPreview
+  - "View Full Results" buttons navigate to History tab with phase selected
+  - localStorage tracks viewed state: `results-viewed-${gameId}-${previousPhaseId}`
+  - Auto-collapses after first view for cleaner UX
+
+- **New Hook**: `frontend/src/hooks/usePreviousPhaseResults.ts`
+  - Business logic for determining when to show results
+  - Fetches game phases and action results in parallel
+  - Shows results when:
+    - Current phase is `common_room`
+    - Previous phase was `action` with published results
+    - No newer action phases between previous and current
+  - Returns: `shouldShowResults`, `results[]`, `previousPhaseId`, `previousPhaseTitle`
+  - Handles both GM (all results) and player (published only) endpoints
+
+- **Modified Components**:
+  - `frontend/src/components/CommonRoom.tsx`:
+    - Added `currentPhase?: GamePhase | null` prop
+    - Integrated `usePreviousPhaseResults` hook
+    - Renders `RecentResultsSection` when `isCurrentPhase && shouldShowResults`
+  - `frontend/src/components/GameTabContent.tsx`:
+    - Passes `currentPhase` prop to `CommonRoom` component
+
+**Testing:**
+- ✅ Manually tested with Playwright MCP on Game #326 (E2E Test: Action Results)
+- ✅ Verified results display correctly with expand/collapse functionality
+- ✅ Confirmed localStorage persistence works (auto-collapse on second visit)
+- ✅ Verified "View Full Results" button navigates to History tab correctly
+- ✅ Tested as both GM and Player roles
+
+**Result:**
+- Players now see recent action results immediately when entering Common Room
+- Results are contextually placed at top of discussion area
+- Clean UX with collapse/expand and one-time viewing tracking
+- Seamless navigation to full results in History tab
 
 **Phase 3: Technical Cleanup**
 - [ ] Investigate and fix 403 errors in History tab for players

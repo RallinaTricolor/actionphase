@@ -5,11 +5,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button, Alert, Spinner, Card } from './ui';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
+import type { GamePhase } from '../types/phases';
 import { CreatePostForm } from './CreatePostForm';
 import { PostCard } from './PostCard';
 import { ThreadViewModal } from './ThreadViewModal';
 import { NewCommentsView } from './NewCommentsView';
 import { MarkdownPreview } from './MarkdownPreview';
+import { RecentResultsSection } from './RecentResultsSection';
+import { usePreviousPhaseResults } from '../hooks/usePreviousPhaseResults';
 import { getRootPostId } from '../utils/commentUtils';
 
 interface CommonRoomProps {
@@ -17,11 +20,12 @@ interface CommonRoomProps {
   phaseId?: number;
   phaseTitle?: string;
   phaseDescription?: string;
+  currentPhase?: GamePhase | null;
   isCurrentPhase?: boolean;
   isGM?: boolean;
 }
 
-export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, isCurrentPhase = true, isGM = false }: CommonRoomProps) {
+export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, currentPhase, isCurrentPhase = true, isGM = false }: CommonRoomProps) {
   // Get current user from AuthContext
   const { currentUser } = useAuth();
   const currentUserId = currentUser?.id;
@@ -39,6 +43,9 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, isCu
   const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'newComments'>('posts');
   const navigate = useNavigate();
+
+  // Fetch previous phase results (if applicable)
+  const previousPhaseResults = usePreviousPhaseResults(gameId, currentPhase, isGM);
 
   useEffect(() => {
     loadData();
@@ -220,6 +227,16 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, isCu
           </button>
         </nav>
       </div>
+
+      {/* Recent Results Section - only for current phase */}
+      {isCurrentPhase && previousPhaseResults.shouldShowResults && (
+        <RecentResultsSection
+          gameId={gameId}
+          results={previousPhaseResults.results}
+          previousPhaseId={previousPhaseResults.previousPhaseId!}
+          previousPhaseTitle={previousPhaseResults.previousPhaseTitle!}
+        />
+      )}
 
       {/* Tab Content */}
       {activeTab === 'posts' ? (

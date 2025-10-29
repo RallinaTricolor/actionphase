@@ -220,6 +220,7 @@ export function GameTabContent({
           phaseId={currentPhaseData.phase.id}
           phaseTitle={currentPhaseData.phase.title || `Phase ${currentPhaseData.phase.phase_number}`}
           phaseDescription={currentPhaseData.phase.description}
+          currentPhase={currentPhaseData.phase}
           isCurrentPhase={true}
           isGM={isGM}
         />
