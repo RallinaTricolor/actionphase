@@ -25,7 +25,7 @@ export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationPro
   return (
     <div className="border-b border-theme-default surface-base rounded-t-lg">
       {/* Mobile: Dropdown Select */}
-      <div className="md:hidden">
+      <div className="md:hidden relative">
         <label htmlFor="tab-select" className="sr-only">
           Select a tab
         </label>
@@ -33,7 +33,8 @@ export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationPro
           id="tab-select"
           value={activeTab}
           onChange={(e) => onTabChange(e.target.value)}
-          className="block w-full py-3 px-4 text-base font-medium bg-bg-primary text-content-primary border-0 focus:outline-none focus:ring-2 focus:ring-interactive-primary rounded-t-lg"
+          className="block w-full py-3 pl-4 pr-10 text-base font-semibold surface-raised text-content-primary border border-border-primary rounded-t-lg shadow-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:border-interactive-primary transition-all"
+          style={{ backgroundImage: 'none' }}
         >
           {tabs.map((tab) => (
             <option key={tab.id} value={tab.id}>
@@ -42,6 +43,12 @@ export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationPro
             </option>
           ))}
         </select>
+        {/* Dropdown chevron icon */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+          <svg className="h-5 w-5 text-content-secondary" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+          </svg>
+        </div>
       </div>
 
       {/* Desktop: Horizontal Tab Bar */}
