@@ -8,11 +8,37 @@ import type { CommentWithParent } from '../../types/messages';
 // Mock the useRecentComments hook
 vi.mock('../../hooks/useRecentComments');
 
-// Mock the CommentWithParentCard component
+// Mock navigate function
+const mockNavigate = vi.fn();
+
+// Mock react-router-dom
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+// Mock the CommentWithParentCard component to expose callback props
 vi.mock('../CommentWithParentCard', () => ({
-  CommentWithParentCard: ({ comment }: { comment: CommentWithParent }) => (
+  CommentWithParentCard: ({
+    comment,
+    onNavigateToParent,
+    onNavigateToComment
+  }: {
+    comment: CommentWithParent;
+    onNavigateToParent: () => void;
+    onNavigateToComment: () => void;
+  }) => (
     <div data-testid={`comment-${comment.id}`}>
       {comment.content}
+      <button data-testid={`navigate-to-comment-${comment.id}`} onClick={onNavigateToComment}>
+        View Comment
+      </button>
+      <button data-testid={`navigate-to-parent-${comment.id}`} onClick={onNavigateToParent}>
+        View Parent
+      </button>
     </div>
   ),
 }));
@@ -287,6 +313,117 @@ describe('NewCommentsView', () => {
 
     expect(screen.getByText(/failed to load recent comments/i)).toBeInTheDocument();
     expect(screen.getByText('Unknown error')).toBeInTheDocument();
+  });
+
+  describe('Deep Linking', () => {
+    beforeEach(() => {
+      mockNavigate.mockClear();
+    });
+
+    it('generates correct deep link to comment when "View Comment" is clicked', () => {
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+        data: {
+          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        refetch: vi.fn(),
+      } as any);
+
+      render(<NewCommentsView gameId={1} />, { wrapper });
+
+      // Click the "View Comment" button from the mocked card
+      const viewCommentButton = screen.getByTestId('navigate-to-comment-1');
+      viewCommentButton.click();
+
+      // Verify navigate was called with correct deep link
+      expect(mockNavigate).toHaveBeenCalledWith('/games/1?tab=common-room&comment=1');
+    });
+
+    it('generates correct deep link to parent comment when "View Parent" is clicked', () => {
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+        data: {
+          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        refetch: vi.fn(),
+      } as any);
+
+      render(<NewCommentsView gameId={1} />, { wrapper });
+
+      // Click the "View Parent" button from the mocked card
+      const viewParentButton = screen.getByTestId('navigate-to-parent-1');
+      viewParentButton.click();
+
+      // Verify navigate was called with correct deep link to parent
+      expect(mockNavigate).toHaveBeenCalledWith('/games/1?tab=common-room&comment=100');
+    });
+
+    it('does not navigate to parent when parent_id is null', () => {
+      const commentWithoutParent = { ...mockComment, parent_id: null };
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+        data: {
+          pages: [{ comments: [commentWithoutParent], total: 1, limit: 20, offset: 0 }],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        refetch: vi.fn(),
+      } as any);
+
+      render(<NewCommentsView gameId={1} />, { wrapper });
+
+      // Click the "View Parent" button
+      const viewParentButton = screen.getByTestId('navigate-to-parent-1');
+      viewParentButton.click();
+
+      // Verify navigate was NOT called when parent_id is null
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it('generates correct deep links for multiple comments', () => {
+      const comments = [
+        { ...mockComment, id: 10, parent_id: 100, content: 'First comment' },
+        { ...mockComment, id: 20, parent_id: 200, content: 'Second comment' },
+      ];
+
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+        data: {
+          pages: [{ comments, total: 2, limit: 20, offset: 0 }],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        refetch: vi.fn(),
+      } as any);
+
+      render(<NewCommentsView gameId={1} />, { wrapper });
+
+      // Click first comment's "View Comment" button
+      screen.getByTestId('navigate-to-comment-10').click();
+      expect(mockNavigate).toHaveBeenCalledWith('/games/1?tab=common-room&comment=10');
+
+      mockNavigate.mockClear();
+
+      // Click second comment's "View Parent" button
+      screen.getByTestId('navigate-to-parent-20').click();
+      expect(mockNavigate).toHaveBeenCalledWith('/games/1?tab=common-room&comment=200');
+    });
   });
 
   describe('Refresh Button', () => {

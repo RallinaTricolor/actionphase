@@ -92,15 +92,14 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
   const handleNavigateToParent = (comment: typeof allComments[0]) => {
     if (!comment.parent_id) return;
 
-    // Navigate to the post with the comment ID in the URL hash
-    navigate(`/games/${gameId}/common-room?postId=${comment.parent_id}#comment-${comment.id}`);
+    // Navigate to Common Room with deep link to parent comment
+    navigate(`/games/${gameId}?tab=common-room&comment=${comment.parent_id}`);
   };
 
   // Navigate to the comment itself in the Common Room
   const handleNavigateToComment = (comment: typeof allComments[0]) => {
-    if (!comment.parent_id) return;
-
-    navigate(`/games/${gameId}/common-room?postId=${comment.parent_id}#comment-${comment.id}`);
+    // Navigate to Common Room with deep link to this comment
+    navigate(`/games/${gameId}?tab=common-room&comment=${comment.id}`);
   };
 
   // Handle refresh button click

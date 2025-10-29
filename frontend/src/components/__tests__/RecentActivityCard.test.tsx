@@ -117,16 +117,46 @@ describe('RecentActivityCard', () => {
     expect(screen.getByText('Private message')).toBeInTheDocument();
   });
 
-  it('links to game detail page', () => {
+  it('generates deep link for post messages', () => {
     const message: DashboardMessage = {
       ...baseMessage,
+      message_id: 123,
       game_id: 42,
+      message_type: 'post',
     };
 
     renderWithProviders(<RecentActivityCard messages={[message]} />);
 
     const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', '/games/42');
+    expect(link).toHaveAttribute('href', '/games/42?tab=common-room&comment=123');
+  });
+
+  it('generates deep link for comment messages', () => {
+    const message: DashboardMessage = {
+      ...baseMessage,
+      message_id: 456,
+      game_id: 99,
+      message_type: 'comment',
+    };
+
+    renderWithProviders(<RecentActivityCard messages={[message]} />);
+
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/games/99?tab=common-room&comment=456');
+  });
+
+  it('generates link to messages tab for private messages', () => {
+    const message: DashboardMessage = {
+      ...baseMessage,
+      message_id: 789,
+      game_id: 10,
+      message_type: 'private_message',
+    };
+
+    renderWithProviders(<RecentActivityCard messages={[message]} />);
+
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/games/10?tab=messages');
   });
 
   it('displays multiple messages', () => {
