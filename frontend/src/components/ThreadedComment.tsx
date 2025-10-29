@@ -113,8 +113,31 @@ export function ThreadedComment({
 
   const handleCopyLink = async () => {
     const url = `${window.location.origin}/games/${gameId}?tab=common-room&comment=${comment.id}`;
+
     try {
-      await navigator.clipboard.writeText(url);
+      // Check if Clipboard API is available (requires HTTPS or localhost)
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Fallback for non-secure contexts (HTTP)
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+          document.execCommand('copy');
+          textArea.remove();
+        } catch (execErr) {
+          textArea.remove();
+          throw execErr;
+        }
+      }
+
       if (isMountedRef.current) {
         setLinkCopied(true);
         // Reset after 2 seconds
@@ -126,7 +149,7 @@ export function ThreadedComment({
       }
     } catch (err) {
       console.error('Failed to copy link:', err);
-      // Fallback: show toast with link if clipboard API fails
+      // Fallback: show toast with link if both methods fail
       if (isMountedRef.current) {
         showError(`Failed to copy. Link: ${url}`);
       }
