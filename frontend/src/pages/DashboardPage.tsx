@@ -4,6 +4,7 @@ import { DashboardGameCard } from '../components/DashboardGameCard';
 import { UrgentActionsCard } from '../components/UrgentActionsCard';
 import { RecentActivityCard } from '../components/RecentActivityCard';
 import { UpcomingDeadlinesCard } from '../components/UpcomingDeadlinesCard';
+import { ActivityTabs } from '../components/Dashboard/ActivityTabs';
 
 /**
  * DashboardPage - Main user dashboard showing games, actions, and activity
@@ -76,6 +77,14 @@ export function DashboardPage() {
         ) : (
           /* Main Content Grid */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Mobile: Activity/Deadlines Tabs (shown at top before games) */}
+            <div className="lg:hidden">
+              <ActivityTabs
+                deadlines={dashboard.upcoming_deadlines}
+                messages={dashboard.recent_messages}
+              />
+            </div>
+
             {/* Left Column - Games */}
             <div className="lg:col-span-2 space-y-8">
               {/* Player Games */}
@@ -121,8 +130,8 @@ export function DashboardPage() {
               )}
             </div>
 
-            {/* Right Column - Activity & Deadlines */}
-            <div className="space-y-8">
+            {/* Desktop: Right Column - Activity & Deadlines */}
+            <div className="hidden lg:block space-y-8">
               {/* Upcoming Deadlines */}
               {dashboard.upcoming_deadlines.length > 0 && (
                 <UpcomingDeadlinesCard deadlines={dashboard.upcoming_deadlines} />
