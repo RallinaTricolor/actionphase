@@ -21,7 +21,8 @@ export const FIXTURE_GAMES = {
   E2E_CANCEL: 'E2E Test: Game to Cancel',         // For testing game cancellation
   E2E_PAUSE: 'E2E Test: Game to Pause',           // For testing pause/resume
   E2E_ACTION: 'E2E Test: Action Submission',      // For testing action submissions
-  E2E_ACTION_RESULTS: 'E2E Test: Action Results', // For testing action results viewing
+  E2E_ACTION_RESULTS: 'E2E Test: Action Results', // For testing action results viewing (completed phase + common room)
+  E2E_GM_EDITING_RESULTS: 'E2E Test: GM Editing Results', // For testing GM editing unpublished results (active action phase)
   E2E_LIFECYCLE: 'E2E Test: Phase Lifecycle',     // For testing complete phase lifecycle
   E2E_MESSAGES: 'E2E Test: Private Messages',     // For testing private messages (dedicated game)
   E2E_PM: 'E2E Test: Private Messages',           // Alias for E2E_MESSAGES

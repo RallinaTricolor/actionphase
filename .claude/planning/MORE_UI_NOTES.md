@@ -581,52 +581,92 @@ Current Phase: Discussion 📋 Previous results available
 - **Complexity**: Low (Frontend navigation)
 - **Priority**: Medium - UX issue
 
-#### 4. ⏸️ FEATURE: Add UI for editing pending (unpublished) results
-- **Status**: NEEDS IMPLEMENTATION - Backend supports pending results, but no edit UI exists
-- **Current Behavior**: GMs can create results, but there's no way to edit them before publishing
-- **Test Setup**: Game with pending action results (unpublished)
-- **Required Data**: ⚠️ PARTIAL - Need game with action submissions to create results
-- **Backend Verification Needed**:
-  1. Confirm API supports PATCH/PUT on results where published=false
-  2. Verify backend prevents editing published results (published=true)
-  3. Check what fields can be edited (result_data, etc.)
-- **Frontend Implementation Required**:
-  1. Add "Edit Result" button/interface for pending results
-  2. Create modal or inline edit form for result content
-  3. Allow editing result_data (markdown content)
-  4. Show "Draft" or "Pending" status indicator
-  5. Disable editing once published
-- **Verification Steps** (after implementation):
-  1. As GM, create results for action submissions
-  2. Verify "Edit" button appears on pending results
-  3. Click edit, modify result content
-  4. Save changes and verify they persist
-  5. Publish results
-  6. Verify edit button disappears/disables after publishing
-- **Implementation Tasks**:
-  - [ ] Backend: Verify/add PATCH endpoint for results (check published=false)
-  - [ ] Frontend: Add ResultEditModal component
-  - [ ] Frontend: Add "Edit Result" button to results list
-  - [ ] Frontend: Add visual indicator for pending vs published results
-  - [ ] Frontend: Disable edit for published results
-  - [ ] Tests: Backend unit tests for result updates
-  - [ ] Tests: Frontend component tests for edit UI
-  - [ ] Tests: E2E test for complete edit workflow
-- **Complexity**: Medium (Backend verification + Frontend implementation)
-- **Priority**: High - Critical GM workflow gap, prevents result corrections before publishing
+#### 4. ✅ FEATURE: Add UI for editing pending (unpublished) results
+- **Status**: ✅ **COMPLETED** - Full edit functionality integrated into Actions tab
+- **Implementation Date**: October 28, 2025
+- **Test Data**: Game #326 ("E2E Test: Action Results") has unpublished result for Player 3
 
-#### 5. ⏸️ FEATURE: Cancelling a game needs confirmation modal
-- **Status**: NEEDS IMPLEMENTATION - Missing confirmation
+**✅ BACKEND - FULLY IMPLEMENTED**:
+- ✅ API Endpoint: `PUT /api/v1/games/{gameId}/results/{resultId}` (backend/pkg/phases/api_results.go:224-297)
+- ✅ Routing: Configured in backend/pkg/http/root.go:170
+- ✅ Service Layer: `UpdateActionResult(ctx, resultID, content)` in backend/pkg/db/services/actions/results.go:113-129
+- ✅ Permission Check: GM-only access enforced
+- ✅ Validation: Only updates unpublished results (is_published=false)
+- ✅ Backend Tests: Comprehensive tests in backend/pkg/db/services/actions/results_test.go
+
+**✅ FRONTEND - FULLY IMPLEMENTED AND INTEGRATED**:
+- ✅ API Client: `updateActionResult(gameId, resultId, {content})` in frontend/src/lib/api/phases.ts:76-78
+- ✅ React Query Hook: `useUpdateActionResult(gameId)` in frontend/src/hooks/useActionResults.ts:43-57
+- ✅ UI Component: `GameResultsManager` with inline editing in frontend/src/components/GameResultsManager.tsx
+  - ✅ Inline text editing (not modal-based)
+  - ✅ Visual indicators: Draft badge, warning colors for unpublished
+  - ✅ Edit button only for unpublished results
+  - ✅ Save/Cancel buttons with loading states
+  - ✅ Error handling and optimistic updates
+  - ✅ Splits results into "Unpublished (Editable)" and "Published" sections
+- ✅ Component Tests: 31 tests passing in frontend/src/components/__tests__/GameResultsManager.test.tsx
+
+**✅ UI INTEGRATION - COMPLETED**:
+- ✅ Integrated into `GameTabContent.tsx` on Actions tab for GMs
+- ✅ Renders below `ActionsList` showing both action submissions and result management
+- ✅ Only visible when: game state is `in_progress`, active tab is `actions`, user is GM
+- ✅ Integration Tests: 5 tests passing in frontend/src/components/__tests__/GameTabContent.test.tsx
+  - ✓ Renders GameResultsManager for GM on actions tab
+  - ✓ Does NOT render GameResultsManager for players
+  - ✓ Passes correct gameId to GameResultsManager
+  - ✓ Only shows when game state is in_progress
+  - ✓ Only shows when actions tab is active
+
+**Implementation Details**:
+- **Modified Component**: `frontend/src/components/GameTabContent.tsx`
+  - Added import for `GameResultsManager`
+  - Modified Actions tab rendering (lines 249-279)
+  - GM view now shows:
+    1. `ActionsList` (existing - shows submitted actions)
+    2. `GameResultsManager` (new - shows results with edit functionality)
+  - Player view unchanged (ActionSubmission + ActionResultsList)
+
+**Verification Results** (Manual Testing with Playwright MCP):
+  1. ✅ Navigated to Game #326 as TestGM
+  2. ✅ Activated Phase 1 (action phase) to make Actions tab visible
+  3. ✅ Clicked Actions tab - GameResultsManager displayed correctly
+  4. ✅ Verified unpublished result for TestPlayer3 visible with "Draft" badge
+  5. ✅ Clicked "Edit" button - textarea appeared with content
+  6. ✅ Modified content to: "UPDATED: The symbols appear to be a warning about an ancient curse..."
+  7. ✅ Clicked "Save Changes" - result updated successfully
+  8. ✅ Verified "Draft" badge and warning styling (yellow background) present
+  9. ✅ Verified published results section displays correctly below
+  10. ✅ Screenshot saved: `.playwright-mcp/game-results-manager-integration.png`
+
+**Files Modified**:
+- `frontend/src/components/GameTabContent.tsx` - Added GameResultsManager import and rendering
+- `frontend/src/components/__tests__/GameTabContent.test.tsx` - Created new test file with 5 integration tests
+
+**Frontend Tests**: ✅ All tests passing (GameTabContent.test.tsx: 5/5 tests)
+
+- **Complexity**: **Low** (Integration only - all logic was already complete)
+- **Priority**: **High** - Critical GM workflow gap, now fully functional
+- **Result**: GMs can now edit unpublished results inline before publishing them to players
+
+#### 5. ✅ FEATURE: Cancelling a game needs confirmation modal
+- **Status**: ✅ COMPLETED - Confirmation modal implemented
 - **Test Setup**: Game #338 (Recruitment state) or any game
-- **Current Behavior**: Likely cancels immediately without confirmation
-- **Required Data**: ✅ Available - Any game GM can cancel
-- **Verification Steps**:
-  1. As GM, navigate to game settings
-  2. Click "Cancel Game" button
-  3. Verify confirmation modal appears
-  4. Test "Cancel" (dismiss) and "Confirm" (proceed) options
-  5. Verify game cancelled only on confirmation
-- **Implementation**: Add confirmation modal to game settings cancel action
+- **Implementation Details**:
+  - Created `CancelGameConfirmationDialog` component matching pattern of Pause/Complete dialogs
+  - Integrated into `useGameStateManagement` hook with state and handlers
+  - Added to `GameDetailsPage` rendering
+  - Shows warning message with red/danger styling
+  - Lists consequences: permanent archive, no further gameplay, cannot be undone
+  - Two buttons: "Keep Game" (dismisses) and "Cancel Game" (danger variant, confirms)
+- **Verification Results**:
+  1. ✅ Modal appears when "Cancel Game" clicked (only in setup/recruitment states)
+  2. ✅ Clear warning message with consequences
+  3. ✅ "Keep Game" button dismisses modal without cancelling
+  4. ✅ "Cancel Game" button proceeds with cancellation after confirmation
+- **Files Modified**:
+  - `frontend/src/components/CancelGameConfirmationDialog.tsx` (new)
+  - `frontend/src/hooks/useGameStateManagement.ts`
+  - `frontend/src/pages/GameDetailsPage.tsx`
 - **Complexity**: Low (Frontend modal)
 - **Priority**: High - Prevents accidental game deletion
 

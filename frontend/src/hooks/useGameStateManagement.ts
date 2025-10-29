@@ -22,6 +22,7 @@ export function useGameStateManagement({
   const [actionLoading, setActionLoading] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showPauseDialog, setShowPauseDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   const handleStateChange = async (newState: GameState) => {
     // Show confirmation dialog for completing game
@@ -33,6 +34,12 @@ export function useGameStateManagement({
     // Show confirmation dialog for pausing game
     if (newState === 'paused') {
       setShowPauseDialog(true);
+      return;
+    }
+
+    // Show confirmation dialog for cancelling game
+    if (newState === 'cancelled') {
+      setShowCancelDialog(true);
       return;
     }
 
@@ -67,6 +74,19 @@ export function useGameStateManagement({
       await refetchGameData();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to pause game');
+      throw err; // Re-throw so dialog can handle it
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    try {
+      setActionLoading(true);
+      await apiClient.games.updateGameState(gameId, { state: 'cancelled' });
+      await refetchGameData();
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to cancel game');
       throw err; // Re-throw so dialog can handle it
     } finally {
       setActionLoading(false);
@@ -124,5 +144,8 @@ export function useGameStateManagement({
     showPauseDialog,
     setShowPauseDialog,
     handleConfirmPause,
+    showCancelDialog,
+    setShowCancelDialog,
+    handleConfirmCancel,
   };
 }

@@ -1,15 +1,15 @@
--- E2E Test Fixture for Action Results
--- Creates a dedicated game with action results in various states (published, unpublished)
--- for testing the complete action results workflow
+-- E2E Test Fixture for GM Editing Action Results
+-- Creates a dedicated game for testing GM result editing workflow
+-- where the action phase is ACTIVE (deadline passed, GM writing results)
 --
--- Game IDs: 326 (offset by worker: Worker 1 = 1326, Worker 2 = 2326, etc.)
+-- Game IDs: 325 (offset by worker: Worker 1 = 1325, Worker 2 = 2325, etc.)
 --
 -- IDEMPOTENT: Safe to run multiple times - deletes existing data before recreating
 
 BEGIN;
 
--- Delete existing action results test game to prevent duplicates
-DELETE FROM games WHERE id = 326;
+-- Delete existing GM editing results test game to prevent duplicates
+DELETE FROM games WHERE id = 325;
 
 DO $$
 DECLARE
@@ -18,8 +18,8 @@ DECLARE
   p2_id INTEGER;
   p3_id INTEGER;
   p4_id INTEGER;
-  game_id INTEGER := 326;
-  completed_phase_id INTEGER;
+  game_id INTEGER := 325;
+  active_phase_id INTEGER;
   char1_id INTEGER;
   char2_id INTEGER;
   char3_id INTEGER;
@@ -36,13 +36,13 @@ BEGIN
   SELECT id INTO p4_id FROM users WHERE email = 'test_player4@example.com';
 
   -- ============================================
-  -- E2E Game: For Action Results Testing
+  -- E2E Game: For GM Editing Action Results
   -- ============================================
   INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
   VALUES (
     game_id,
-    'E2E Test: Action Results',
-    'This game is dedicated for testing action results creation, viewing, and notifications.',
+    'E2E Test: GM Editing Results',
+    'This game is dedicated for testing GM editing unpublished results during active action phase.',
     'Test',
     gm_id,
     4,
@@ -63,42 +63,41 @@ BEGIN
   -- Add characters
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (game_id, p1_id, 'Result Test Char 1', 'player_character', 'approved', NOW() - INTERVAL '9 days', NOW()) RETURNING id INTO char1_id;
+    (game_id, p1_id, 'GM Edit Test Char 1', 'player_character', 'approved', NOW() - INTERVAL '9 days', NOW()) RETURNING id INTO char1_id;
 
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (game_id, p2_id, 'Result Test Char 2', 'player_character', 'approved', NOW() - INTERVAL '9 days', NOW()) RETURNING id INTO char2_id;
+    (game_id, p2_id, 'GM Edit Test Char 2', 'player_character', 'approved', NOW() - INTERVAL '9 days', NOW()) RETURNING id INTO char2_id;
 
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (game_id, p3_id, 'Result Test Char 3', 'player_character', 'approved', NOW() - INTERVAL '9 days', NOW()) RETURNING id INTO char3_id;
+    (game_id, p3_id, 'GM Edit Test Char 3', 'player_character', 'approved', NOW() - INTERVAL '9 days', NOW()) RETURNING id INTO char3_id;
 
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (game_id, p4_id, 'Result Test Char 4', 'player_character', 'approved', NOW() - INTERVAL '9 days', NOW()) RETURNING id INTO char4_id;
+    (game_id, p4_id, 'GM Edit Test Char 4', 'player_character', 'approved', NOW() - INTERVAL '9 days', NOW()) RETURNING id INTO char4_id;
 
-  -- Add a completed action phase with published results
-  INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, end_time, is_active, is_published, created_at)
+  -- Add an ACTIVE action phase (deadline passed, GM writing results)
+  INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
   VALUES (
     game_id,
     'action',
     1,
-    'Completed Action Phase',
-    'Action phase that has ended - results are published',
-    NOW() - INTERVAL '10 days',
+    'Active Action Phase',
+    'Action deadline has passed - GM is writing results before ending phase',
     NOW() - INTERVAL '5 days',
     NOW() - INTERVAL '2 days',
-    false,
     true,
-    NOW() - INTERVAL '10 days'
-  ) RETURNING id INTO completed_phase_id;
+    false,
+    NOW() - INTERVAL '5 days'
+  ) RETURNING id INTO active_phase_id;
 
   -- Add action submissions from all players
   INSERT INTO action_submissions (game_id, user_id, phase_id, character_id, content, is_draft, submitted_at, updated_at)
   VALUES (
     game_id,
     p1_id,
-    completed_phase_id,
+    active_phase_id,
     char1_id,
     'Player 1 investigates the mysterious sounds coming from the basement.',
     false,
@@ -110,7 +109,7 @@ BEGIN
   VALUES (
     game_id,
     p2_id,
-    completed_phase_id,
+    active_phase_id,
     char2_id,
     'Player 2 searches the library for ancient texts about the cult.',
     false,
@@ -122,7 +121,7 @@ BEGIN
   VALUES (
     game_id,
     p3_id,
-    completed_phase_id,
+    active_phase_id,
     char3_id,
     'Player 3 attempts to decode the mysterious symbols on the wall.',
     false,
@@ -135,9 +134,9 @@ BEGIN
   VALUES (
     game_id,
     p1_id,
-    completed_phase_id,
+    active_phase_id,
     action1_id,
-    E'# Basement Investigation Results\n\nYou descend into the basement, flashlight in hand. The sounds grow louder as you approach a hidden door behind some old furniture.\n\n**You discovered:** A secret passage!\n\nMention: @Result Test Char 2 might want to know about this.',
+    E'# Basement Investigation Results\n\nYou descend into the basement, flashlight in hand. The sounds grow louder as you approach a hidden door behind some old furniture.\n\n**You discovered:** A secret passage!\n\nMention: @GM Edit Test Char 2 might want to know about this.',
     gm_id,
     true,
     NOW() - INTERVAL '1 day',
@@ -150,9 +149,9 @@ BEGIN
   VALUES (
     game_id,
     p2_id,
-    completed_phase_id,
+    active_phase_id,
     action2_id,
-    E'# Library Research Results\n\nYour search through the dusty tomes reveals a reference to the \"Order of the Crimson Moon\" - a cult that operated in this town 100 years ago.\n\n**Knowledge Gained:** +1 Occult Lore',
+    E'# Library Research Results\n\nYour search through the dusty tomes reveals a reference to the "Order of the Crimson Moon" - a cult that operated in this town 100 years ago.\n\n**Knowledge Gained:** +1 Occult Lore',
     gm_id,
     true,
     NOW() - INTERVAL '1 day',
@@ -160,12 +159,12 @@ BEGIN
     NOW() - INTERVAL '1 day'
   );
 
-  -- Add UNPUBLISHED action result for Player 3 (to test that players can't see unpublished results)
+  -- Add UNPUBLISHED action result for Player 3 (to test GM editing)
   INSERT INTO action_results (game_id, user_id, phase_id, action_submission_id, content, gm_user_id, is_published, sent_at, created_at, updated_at)
   VALUES (
     game_id,
     p3_id,
-    completed_phase_id,
+    active_phase_id,
     action3_id,
     'DRAFT: The symbols appear to be a warning... (GM still working on this result)',
     gm_id,
@@ -175,19 +174,7 @@ BEGIN
     NOW() - INTERVAL '6 hours'
   );
 
-  -- Add active common room phase (so Recent Results Section can display)
-  INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, is_active, is_published, created_at)
-  VALUES (
-    game_id,
-    'common_room',
-    2,
-    'Discussion Phase',
-    'Players discuss the action results',
-    NOW() - INTERVAL '1 day',
-    true,
-    true,
-    NOW() - INTERVAL '1 day'
-  );
+  -- Note: No Phase 2 yet - GM will activate it after finishing/publishing results
 
 END $$;
 
@@ -198,4 +185,4 @@ SELECT setval('games_id_seq', (SELECT MAX(id) FROM games) + 1);
 COMMIT;
 
 -- Success message
-SELECT 'E2E Action Results fixture created successfully!' as message;
+SELECT 'E2E GM Editing Results fixture created successfully!' as message;

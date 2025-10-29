@@ -157,9 +157,18 @@ export class GameDetailsPage {
 
   /**
    * Cancel the game (GM only)
+   * Handles confirmation modal
    */
   async cancelGame() {
+    // Click initial cancel button
     await this.clickButton('Cancel Game');
+
+    // Wait for confirmation modal
+    await this.page.waitForLoadState('networkidle');
+
+    // Click confirm button in modal (last one is the confirm)
+    const confirmButton = this.page.getByRole('button', { name: 'Cancel Game' }).last();
+    await confirmButton.click();
     await this.page.waitForLoadState('networkidle');
   }
 
@@ -219,6 +228,13 @@ export class GameDetailsPage {
    */
   async goToActions() {
     await this.goToTab('Actions');
+  }
+
+  /**
+   * Navigate to Phases tab (GM view)
+   */
+  async goToPhases() {
+    await this.goToTab('Phases');
   }
 
   /**
