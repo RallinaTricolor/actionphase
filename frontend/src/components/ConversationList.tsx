@@ -142,13 +142,13 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
             <>
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-content-primary truncate">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h3 className="font-semibold text-content-primary truncate min-w-0 flex-1">
                       {conversation.title || 'Untitled Conversation'}
                     </h3>
                     {conversation.unread_count > 0 && (
-                      <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0">
-                        {conversation.unread_count}
+                      <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
+                        {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
                       </span>
                     )}
                   </div>
