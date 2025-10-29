@@ -10,7 +10,7 @@ interface AddCurrencyModalProps {
 
 export const AddCurrencyModal: React.FC<AddCurrencyModalProps> = ({ onAdd, onCancel }) => {
   const [type, setType] = useState('');
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -19,7 +19,7 @@ export const AddCurrencyModal: React.FC<AddCurrencyModalProps> = ({ onAdd, onCan
 
     onAdd({
       type: type.trim(),
-      amount,
+      amount: parseInt(amount) || 0,
       description: description.trim() || undefined
     });
   };
@@ -42,9 +42,9 @@ export const AddCurrencyModal: React.FC<AddCurrencyModalProps> = ({ onAdd, onCan
             label="Amount"
             type="number"
             value={amount}
-            onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0"
             min={0}
-            required
           />
 
           <Input

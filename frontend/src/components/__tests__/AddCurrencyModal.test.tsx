@@ -33,10 +33,12 @@ describe('AddCurrencyModal', () => {
       expect(typeField).toBeRequired();
     });
 
-    it('shows amount field with default value of 0', () => {
+    it('shows amount field with placeholder "0"', () => {
       render(<AddCurrencyModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
-      expect(screen.getByLabelText(/Amount/)).toHaveValue(0);
+      const amountField = screen.getByLabelText(/Amount/) as HTMLInputElement;
+      expect(amountField.placeholder).toBe('0');
+      expect(amountField).toHaveValue(null);
     });
   });
 
@@ -193,13 +195,15 @@ describe('AddCurrencyModal', () => {
   });
 
   describe('Number Field Behavior', () => {
-    it('defaults amount to 0 when cleared', () => {
+    it('allows amount field to be empty', () => {
       render(<AddCurrencyModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const amountInput = screen.getByLabelText(/Amount/) as HTMLInputElement;
-      fireEvent.change(amountInput, { target: { value: '' } });
+      fireEvent.change(amountInput, { target: { value: '100' } });
+      expect(amountInput).toHaveValue(100);
 
-      expect(amountInput).toHaveValue(0);
+      fireEvent.change(amountInput, { target: { value: '' } });
+      expect(amountInput).toHaveValue(null);
     });
   });
 });

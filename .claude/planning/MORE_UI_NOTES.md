@@ -771,19 +771,24 @@ Current Phase: Discussion 📋 Previous results available
 - **Complexity**: Very Low (CSS update)
 - **Priority**: Very Low - Visual polish
 
-#### 11. ⏸️ UI: Currency input default "0" behavior
-- **Status**: NEEDS MANUAL TESTING - Keyboard interaction
-- **Test Setup**: Character sheet inventory/currency tab
-- **Current Behavior**: May auto-fill "0" when focused, unclear UX
-- **Required Data**: ✅ Available - Any character with currency
-- **Verification Steps**:
-  1. Open character sheet currency section
-  2. Focus empty currency input
-  3. Test typing behavior (does "0" interfere?)
-  4. Test backspace/delete behavior
-  5. Verify clear and intuitive UX
-- **Implementation**: Adjust placeholder vs value behavior
-- **Complexity**: Low (Input component update)
+#### 11. ✓ UI: Currency input default "0" behavior
+- **Status**: FIXED - Changed from value to placeholder pattern
+- **Implementation Date**: October 29, 2025
+- **Test Setup**: Character sheet inventory/currency tab → Add Currency modal
+- **Issue**: Amount field pre-filled with "0" requiring manual selection before typing
+- **Fix Applied**:
+  - Changed `amount` state from `useState(0)` to `useState('')`
+  - Changed `onChange` from `setAmount(parseInt(e.target.value) || 0)` to `setAmount(e.target.value)`
+  - Added `placeholder="0"` to show "0" as hint instead of actual value
+  - Removed `required` attribute from amount input to allow empty submission
+  - Parse to integer only on form submission: `parseInt(amount) || 0`
+  - Updated tests to verify placeholder behavior and empty field handling
+  - Now users can simply start typing without selecting text first
+- **Files Modified**:
+  - `frontend/src/components/AddCurrencyModal.tsx` (lines 13, 22, 45-48)
+  - `frontend/src/components/__tests__/AddCurrencyModal.test.tsx` (updated 3 tests)
+- **Test Results**: All 18 tests passing
+- **Complexity**: Low (Input state pattern change)
 - **Priority**: Low - Minor UX improvement
 
 #### 12. ⏸️ FEATURE: NPC assignments table refactor

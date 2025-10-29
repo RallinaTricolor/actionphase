@@ -68,7 +68,7 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
         <Button
           variant="ghost"
           onClick={() => setActiveTab('abilities')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors rounded-none ${
             activeTab === 'abilities'
               ? 'border-interactive-primary text-interactive-primary'
               : 'border-transparent text-content-secondary hover:text-content-primary'
@@ -79,7 +79,7 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
         <Button
           variant="ghost"
           onClick={() => setActiveTab('skills')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors rounded-none ${
             activeTab === 'skills'
               ? 'border-interactive-primary text-interactive-primary'
               : 'border-transparent text-content-secondary hover:text-content-primary'
