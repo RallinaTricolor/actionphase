@@ -135,7 +135,7 @@ export function CharactersList({
 
   // Check if user can edit character stats (abilities, skills, items, currency)
   // This is GM-only functionality
-  const canEditCharacterStats = (character: Character) => {
+  const canEditCharacterStats = () => {
     return userRole === 'gm';
   };
 
@@ -293,7 +293,7 @@ export function CharactersList({
             <CharacterSheet
               characterId={selectedCharacterId}
               canEdit={canEditCharacterSheet(character)}
-              canEditStats={canEditCharacterStats(character)}
+              canEditStats={canEditCharacterStats()}
               onClose={() => setSelectedCharacterId(null)}
             />
           </Modal>

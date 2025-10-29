@@ -324,16 +324,17 @@ export function ThreadedComment({
           <div className="text-sm text-content-primary mb-2">
             <MarkdownPreview
               content={comment.content}
-              mentionedCharacters={comment.mentioned_character_ids?.map(id => {
+              mentionedCharacters={comment.mentioned_character_ids?.flatMap(id => {
                 const char = characters.find(c => c.id === id);
-                return char ? {
+                if (!char) return [];
+                return [{
                   id: char.id,
                   name: char.name,
                   username: char.username,
                   character_type: char.character_type,
-                  avatar_url: char.avatar_url
-                } : null;
-              }).filter((c): c is { id: number; name: string; username?: string; character_type?: string; avatar_url?: string } => c !== null) || []}
+                  avatar_url: char.avatar_url ?? undefined
+                }];
+              }) || []}
             />
           </div>
         )}
