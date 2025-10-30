@@ -230,47 +230,91 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
     <div className="border border-theme-default rounded-lg overflow-hidden hover:border-interactive-primary transition-colors" data-testid="action-card">
       <button
         onClick={onToggleExpand}
-        className="w-full px-4 py-3 flex items-center justify-between text-left hover:surface-raised transition-colors"
+        className="w-full px-4 py-3 text-left hover:surface-raised transition-colors"
       >
-        <div className="flex items-center space-x-3 flex-1">
-          <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-interactive-primary-subtle rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-interactive-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+        {/* Mobile: Vertical Stack Layout */}
+        <div className="md:hidden space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-interactive-primary-subtle rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-interactive-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+              </div>
+              <h4 className="font-medium text-base text-content-primary truncate">{action.username}</h4>
             </div>
+            <svg
+              className={`w-5 h-5 text-content-tertiary transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-2">
-              <h4 className="font-medium text-content-primary">{action.username}</h4>
-              {action.character_name && (
-                <Badge variant="secondary">
-                  as {action.character_name}
-                </Badge>
-              )}
+          {action.character_name && (
+            <div className="ml-10">
+              <Badge variant="secondary" className="truncate max-w-full">
+                as {action.character_name}
+              </Badge>
             </div>
-            <div className="flex items-center space-x-2 mt-1">
-              {action.phase_type && action.phase_number && (
-                <span className="text-xs text-content-secondary">
-                  Phase {action.phase_number} - {action.phase_type.replace('_', ' ')}
-                </span>
-              )}
-              <span className="text-xs text-content-tertiary">•</span>
-              <span className="text-xs text-content-secondary">
-                {new Date(action.submitted_at).toLocaleString()}
+          )}
+          <div className="flex flex-col gap-1 text-xs text-content-secondary ml-10">
+            {action.phase_type && action.phase_number && (
+              <span>
+                Phase {action.phase_number} - {action.phase_type.replace('_', ' ')}
               </span>
-            </div>
+            )}
+            <span className="text-content-tertiary">
+              {new Date(action.submitted_at).toLocaleString()}
+            </span>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <svg
-            className={`w-5 h-5 text-content-tertiary transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+
+        {/* Desktop: Horizontal Layout (Original) */}
+        <div className="hidden md:flex items-center justify-between">
+          <div className="flex items-center space-x-3 flex-1">
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 bg-interactive-primary-subtle rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-interactive-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center space-x-2">
+                <h4 className="font-medium text-content-primary">{action.username}</h4>
+                {action.character_name && (
+                  <Badge variant="secondary">
+                    as {action.character_name}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center space-x-2 mt-1">
+                {action.phase_type && action.phase_number && (
+                  <span className="text-xs text-content-secondary">
+                    Phase {action.phase_number} - {action.phase_type.replace('_', ' ')}
+                  </span>
+                )}
+                <span className="text-xs text-content-tertiary">•</span>
+                <span className="text-xs text-content-secondary">
+                  {new Date(action.submitted_at).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <svg
+              className={`w-5 h-5 text-content-tertiary transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
         </div>
       </button>
 

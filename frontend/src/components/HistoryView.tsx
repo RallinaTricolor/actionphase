@@ -157,57 +157,52 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
             const isActive = phase.id === currentPhaseId;
             const isCommonRoom = phase.phase_type === 'common_room';
 
-            // Action phases are now clickable to view action results
-            if (!isCommonRoom) {
-              return (
-                <Button
-                  key={phase.id}
-                  variant="ghost"
-                  onClick={() => setSelectedPhaseId(phase.id)}
-                  className={`w-full text-left border rounded-lg p-4 hover:border-theme-subtle ${
-                    isActive ? 'border-interactive-primary bg-interactive-primary-subtle' : 'border-theme-default'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className={`px-2 py-1 text-xs rounded-full font-medium border ${phaseColorClass}`}>
-                        Phase {phase.phase_number}
-                      </span>
-                      <div>
-                        <h4 className="font-medium text-content-primary">{phase.title || phaseLabel}</h4>
-                        {phase.description && (
-                          <p className="text-sm text-content-secondary mt-1">{phase.description}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      {isActive && (
-                        <span className="px-2 py-1 text-xs bg-interactive-primary-subtle text-interactive-primary rounded-full font-medium">
-                          Active
-                        </span>
-                      )}
-                      <svg className="w-5 h-5 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </Button>
-              );
-            }
-
+            // All phases use the same card layout
             return (
               <Button
                 key={phase.id}
                 variant="ghost"
                 onClick={() => setSelectedPhaseId(phase.id)}
-                className={`w-full text-left border rounded-lg p-4 hover:border-theme-subtle ${
+                className={`w-full text-left border rounded-lg p-3 md:p-4 hover:border-theme-subtle ${
                   isActive ? 'border-interactive-primary bg-interactive-primary-subtle' : 'border-theme-default'
                 }`}
               >
-                <div className="flex items-center justify-between">
+                {/* Mobile: Vertical Stack Layout */}
+                <div className="md:hidden space-y-3">
+                  {/* Badge + Active indicator */}
+                  <div className="flex items-center justify-between">
+                    <span className={`px-2.5 py-1 text-xs rounded-full font-medium border whitespace-nowrap ${phaseColorClass}`}>
+                      Phase {phase.phase_number}
+                    </span>
+                    {isActive && (
+                      <span className="px-2 py-1 text-xs bg-interactive-primary-subtle text-interactive-primary rounded-full font-medium whitespace-nowrap">
+                        Active
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Title + Description */}
+                  <div>
+                    <h4 className="font-semibold text-base text-content-primary mb-1">
+                      {phase.title || phaseLabel}
+                    </h4>
+                    {phase.description && (
+                      <p className="text-sm text-content-secondary leading-relaxed">{phase.description}</p>
+                    )}
+                  </div>
+
+                  {/* View arrow */}
+                  <div className="flex justify-end">
+                    <svg className="w-5 h-5 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Desktop: Horizontal Layout (Original) */}
+                <div className="hidden md:flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <span className={`px-2 py-1 text-xs rounded-full font-medium border ${phaseColorClass}`}>
+                    <span className={`px-2 py-1 text-xs rounded-full font-medium border whitespace-nowrap ${phaseColorClass}`}>
                       Phase {phase.phase_number}
                     </span>
                     <div>
@@ -220,7 +215,7 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
 
                   <div className="flex items-center space-x-2">
                     {isActive && (
-                      <span className="px-2 py-1 text-xs bg-interactive-primary-subtle text-interactive-primary rounded-full font-medium">
+                      <span className="px-2 py-1 text-xs bg-interactive-primary-subtle text-interactive-primary rounded-full font-medium whitespace-nowrap">
                         Active
                       </span>
                     )}

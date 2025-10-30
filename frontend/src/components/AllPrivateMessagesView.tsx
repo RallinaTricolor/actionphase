@@ -127,7 +127,22 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
   return (
     <div className="space-y-4">
       {/* Header with Read-Only Badge */}
-      <div className="flex items-center justify-between">
+      {/* Mobile: Vertical stack */}
+      <div className="md:hidden space-y-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="text-lg font-semibold text-content-primary">
+            All Private Messages
+          </h2>
+          <Badge variant="primary" size="sm">
+            Read-Only
+          </Badge>
+        </div>
+        <div className="text-sm text-content-secondary">
+          {filteredConversations.length} of {total} conversation{total !== 1 ? 's' : ''}
+        </div>
+      </div>
+      {/* Desktop: Horizontal layout */}
+      <div className="hidden md:flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold text-content-primary">
             All Private Messages
@@ -273,11 +288,42 @@ function ConversationCard({
     <button
       onClick={onSelect}
       className={`
-        w-full text-left p-4 transition-colors cursor-pointer
+        w-full text-left p-3 md:p-4 transition-colors cursor-pointer
         ${isSelected ? 'bg-interactive-primary-subtle border-l-4 border-interactive-primary' : 'hover:bg-bg-tertiary'}
       `}
     >
-      <div className="flex items-start justify-between gap-4">
+      {/* Mobile: Vertical Stack Layout */}
+      <div className="md:hidden space-y-2">
+        {/* Participants */}
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold text-base text-content-primary truncate">
+            {participantNames.join(' • ')}
+          </h3>
+          <Badge variant="neutral" size="sm" className="flex-shrink-0">
+            {conversation.message_count}
+          </Badge>
+        </div>
+
+        {/* Subject (if present) */}
+        {conversation.subject && (
+          <p className="text-sm text-content-primary italic truncate">
+            "{conversation.subject}"
+          </p>
+        )}
+
+        {/* Usernames + Timestamp */}
+        <div className="flex items-center justify-between text-xs">
+          <p className="text-content-secondary truncate">
+            {participantUsernames.join(' • ')}
+          </p>
+          <span className="flex-shrink-0 text-content-tertiary ml-2">
+            {formatDate(conversation.last_message_at || conversation.created_at)}
+          </span>
+        </div>
+      </div>
+
+      {/* Desktop: Horizontal Layout (Original) */}
+      <div className="hidden md:flex items-start justify-between gap-4">
         {/* Main content */}
         <div className="flex-1 min-w-0">
           {/* Participants and message count */}

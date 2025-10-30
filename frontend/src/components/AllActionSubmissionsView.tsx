@@ -89,7 +89,22 @@ export function AllActionSubmissionsView({ gameId }: AllActionSubmissionsViewPro
   return (
     <div className="space-y-4">
       {/* Header with Read-Only Badge */}
-      <div className="flex items-center justify-between">
+      {/* Mobile: Vertical stack */}
+      <div className="md:hidden space-y-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="text-lg font-semibold text-content-primary">
+            All Action Submissions
+          </h2>
+          <Badge variant="primary" size="sm">
+            Read-Only
+          </Badge>
+        </div>
+        <div className="text-sm text-content-secondary">
+          {total} submission{total !== 1 ? 's' : ''} in {selectedPhase?.title || 'this phase'}
+        </div>
+      </div>
+      {/* Desktop: Horizontal layout */}
+      <div className="hidden md:flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold text-content-primary">
             All Action Submissions
