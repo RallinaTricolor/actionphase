@@ -27,6 +27,10 @@ export function useUnreadCount() {
     },
     // Poll every 15 seconds for unread count (more frequent for bell badge)
     refetchInterval: 15000,
+    // Always refetch when component mounts to ensure fresh badge count
+    refetchOnMount: 'always',
+    // Refetch when window regains focus
+    refetchOnWindowFocus: true,
   });
 }
 
