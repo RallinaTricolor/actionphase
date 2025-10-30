@@ -122,7 +122,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
 
         fetchAndShowComment();
       }
-    }, 100); // Wait for comments to load and expand
+    }, 500); // Wait for comments to load and expand
 
     return () => clearTimeout(timer);
   }, [commentIdParam, loading, searchParams, setSearchParams, gameId, navigate, activeTab]);
