@@ -54,6 +54,9 @@ export const FIXTURE_GAMES = {
   COMMON_ROOM_MULTIPLE_REPLIES: 'E2E Common Room - Multiple Replies', // Game #609 - "Multiple players can reply to the same comment"
   COMMON_ROOM_DEEP_NESTING: 'E2E Common Room - Deep Nesting',     // Game #610 - "Deep nesting shows Continue this thread button"
 
+  // Deep linking test (701)
+  DEEP_LINKING_TEST: 'E2E Deep Linking Test',                      // Game #701 - "Deep linking regression tests"
+
   // Character workflow games (isolated for parallel testing)
   E2E_CHARACTER_CREATION: 'E2E Test: Character Creation',  // character_creation state with approved player (no character)
   E2E_CHARACTER_PENDING_STATE: 'E2E Test: Character Approval - Pending State',  // For "character starts in pending state" test
