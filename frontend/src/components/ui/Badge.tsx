@@ -16,7 +16,7 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
  * Each variant uses the semantic color system for automatic theme adaptation.
  */
 const badgeStyles = tv({
-  base: 'inline-flex items-center gap-1.5 rounded-full font-medium border',
+  base: 'inline-flex items-center gap-1.5 rounded-full font-medium border whitespace-nowrap',
   variants: {
     variant: {
       primary: 'bg-semantic-info-subtle text-content-primary border-semantic-info',
