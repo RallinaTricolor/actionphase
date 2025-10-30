@@ -398,8 +398,97 @@ function CharacterCard({
   onViewSheet
 }: CharacterCardProps) {
   return (
-    <div className="border border-theme-default rounded-lg p-4 surface-base hover:shadow-sm transition-shadow" data-testid="character-card">
-      <div className="flex justify-between items-start">
+    <div className="border border-theme-default rounded-lg p-3 md:p-4 surface-base hover:shadow-sm transition-shadow" data-testid="character-card">
+      {/* Mobile: Vertical Stack Layout */}
+      <div className="md:hidden space-y-3">
+        {/* Avatar + Name + Badges */}
+        <div className="flex gap-3">
+          <CharacterAvatar
+            avatarUrl={character.avatar_url}
+            characterName={character.name}
+            size="md"
+          />
+          <div className="flex-grow min-w-0">
+            <h4 className="font-semibold text-base text-content-primary mb-1.5" data-testid="character-name">
+              {character.name}
+            </h4>
+            <div className="flex flex-wrap gap-1.5">
+              <Badge variant={getStatusBadgeVariant(character.status)} size="sm" data-testid="character-status-badge">
+                {character.status}
+              </Badge>
+              {isOwner && (!isAnonymous || userRole === 'gm') && (
+                <Badge variant="secondary" size="sm">
+                  Your Character
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Character Info */}
+        <div className="text-sm text-content-primary space-y-1">
+          {(!isAnonymous || userRole === 'gm') && (
+            <div>
+              Type: <span className="capitalize">{character.character_type.replace('_', ' ')}</span>
+            </div>
+          )}
+          {character.character_type === 'npc' && character.assigned_username && (!isAnonymous || userRole === 'gm') && (
+            <div>Assigned to: {character.assigned_username}</div>
+          )}
+          {character.character_type === 'player_character' && character.username && (!isAnonymous || userRole === 'gm') && (
+            <div>Player: {character.username}</div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-2 pt-2">
+          {canViewSheet && (
+            <Button
+              variant={canEditSheet ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={onViewSheet}
+              data-testid="edit-character-button"
+            >
+              {canEditSheet ? 'Edit Sheet' : 'View Sheet'}
+            </Button>
+          )}
+
+          {userRole === 'gm' && character.character_type === 'npc' && onAssignNPC && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onAssignNPC(character)}
+            >
+              Assign NPC
+            </Button>
+          )}
+
+          {userRole === 'gm' && character.status === 'pending' && (
+            <Button
+              variant="success"
+              size="sm"
+              onClick={() => onApprove(character.id, 'approved')}
+              data-testid="approve-character-button"
+            >
+              Approve
+            </Button>
+          )}
+
+          {userRole === 'gm' && onDelete && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => onDelete(character)}
+              data-testid="delete-character-button"
+            >
+              Delete
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop: Horizontal Layout (Original) */}
+      <div className="hidden md:flex justify-between items-start">
         <div className="flex gap-3 flex-grow">
           <CharacterAvatar
             avatarUrl={character.avatar_url}

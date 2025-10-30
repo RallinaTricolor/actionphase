@@ -71,19 +71,83 @@ export function PhaseCard({
 
   return (
     <div
-      className={`border rounded-lg p-4 transition-colors cursor-pointer ${borderClass}`}
+      className={`border rounded-lg p-3 md:p-4 transition-colors cursor-pointer ${borderClass}`}
       onClick={onSelect}
     >
-      <div className="flex items-center justify-between">
+      {/* Mobile: Vertical Stack Layout */}
+      <div className="md:hidden space-y-3">
+        {/* Header: Badge + Edit button */}
+        <div className="flex items-center justify-between">
+          <span className={`px-2.5 py-1 text-xs rounded-full font-medium border whitespace-nowrap ${phaseColorClass}`}>
+            Phase {phase.phase_number}
+          </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="p-1.5 text-content-tertiary hover:text-content-primary transition-colors"
+            title="Edit phase details"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Title + Type Badge */}
+        <div>
+          <h4 className="font-semibold text-base text-content-primary mb-1">
+            {phase.title || phaseLabel}
+          </h4>
+          {phase.title && (
+            <span className={`inline-block px-2.5 py-1 text-xs rounded font-medium whitespace-nowrap ${phaseColorClass}`}>
+              {phaseLabel}
+            </span>
+          )}
+        </div>
+
+        {/* Description */}
+        <p className="text-sm text-content-secondary leading-relaxed">
+          {phase.description || PHASE_TYPE_DESCRIPTIONS[phase.phase_type]}
+        </p>
+
+        {/* Countdown + Activate button */}
+        <div className="flex items-center justify-between gap-3 pt-2">
+          {phase.deadline && !isEditingDeadline && (
+            <SimpleCountdown
+              deadline={phase.deadline}
+              className="text-content-secondary text-sm"
+            />
+          )}
+          {!isActive && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowActivateConfirm(true);
+              }}
+              disabled={isActivating}
+              className="ml-auto"
+            >
+              {isActivating ? 'Activating...' : 'Activate'}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop: Horizontal Layout (Original) */}
+      <div className="hidden md:flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <span className={`px-2 py-1 text-xs rounded-full font-medium border ${phaseColorClass}`}>
+          <span className={`px-2 py-1 text-xs rounded-full font-medium border whitespace-nowrap ${phaseColorClass}`}>
             Phase {phase.phase_number}
           </span>
           <div>
             <div className="flex items-center gap-2">
               <h4 className="font-medium text-content-primary">{phase.title || phaseLabel}</h4>
               {phase.title && (
-                <span className={`px-2 py-0.5 text-xs rounded font-medium ${phaseColorClass}`}>
+                <span className={`px-2 py-0.5 text-xs rounded font-medium whitespace-nowrap ${phaseColorClass}`}>
                   {phaseLabel}
                 </span>
               )}
