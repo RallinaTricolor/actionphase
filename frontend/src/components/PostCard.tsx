@@ -366,8 +366,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
 
         {/* Threaded Comments */}
         {showComments && (
-          <div className="p-4">
-          {loadingComments ? (
+          loadingComments ? (
             <div className="text-sm text-content-secondary text-center py-4">Loading comments...</div>
           ) : topLevelComments.length === 0 ? (
             <p className="text-sm text-content-secondary italic text-center py-4">No comments yet. Be the first to reply!</p>
@@ -392,8 +391,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                 />
               ))}
             </div>
-          )}
-          </div>
+          )
         )}
       </div>
       </div>
