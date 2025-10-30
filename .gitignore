@@ -150,6 +150,8 @@ frontend/playwright-report/
 backend/coverage.out
 backend/test-results
 
+node_modules/
+
 .playwright-mcp/
 
 backend/actionphase
@@ -158,3 +160,6 @@ backend/uploads/
 # Terraform
 **/.terraform/
 **/.terraform.lock.hcl
+
+.claude/skills-setup
+.claude/tsc-cache
