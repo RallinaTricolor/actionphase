@@ -341,17 +341,19 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                     }}
                   />
                 </div>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
                 <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={sending || !newMessage.trim()}
+                    type="submit"
+                    variant="primary"
+                    disabled={sending || !newMessage.trim()}
                 >
                   {sending ? 'Sending...' : 'Send'}
                 </Button>
+                <p className="text-xs text-content-tertiary mt-1">
+                  Press Ctrl/Cmd + Enter to send
+                </p>
               </div>
-              <p className="text-xs text-content-tertiary mt-1">
-                Press Ctrl/Cmd + Enter to send
-              </p>
             </>
           ) : (
             <p className="text-sm text-content-secondary">

@@ -1,5 +1,6 @@
-- New comment highlighting E2E test? Haven't checked it in a while
+- New comment highlighting E2E test? Haven't checked it in a while (found the issue here)
 - Recruitment applications should be publicly viewable
 - Text length limits, multiple action submissions?
 - Admin mode E2E tests
-- Delete private messages?
+- Edit / delete private messages?
+- Regression tests for deep links
