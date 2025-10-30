@@ -83,7 +83,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       const element = document.getElementById(`comment-${commentIdParam}`);
       if (element) {
         // Comment is visible in the DOM - scroll to it
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
 
         // Highlight the comment briefly with theme-aware info color
         element.classList.add('ring-4', 'ring-info');
@@ -122,7 +122,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
 
         fetchAndShowComment();
       }
-    }, 500); // Wait for comments to load and expand
+    }, 100); // Wait for comments to load and expand
 
     return () => clearTimeout(timer);
   }, [commentIdParam, loading, searchParams, setSearchParams, gameId, navigate, activeTab]);

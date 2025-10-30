@@ -621,64 +621,41 @@ export function ThreadedComment({
         </>
       )}
 
-      {/* Nested Replies (only if under max depth) */}
-      {/* Mobile: hide replies at depth 3+, Desktop: hide at depth 5+ */}
-      <div className="md:hidden">
-        {!isAtMobileMaxDepth && showReplies && (hasReplies || replies.length > 0) && (
-          <div className="space-y-0">
-            {loadingReplies ? (
-              <div className="ml-2 py-2 text-xs text-content-secondary">Loading replies...</div>
-            ) : (
-              replies.map((reply) => (
-                <ThreadedComment
-                  key={reply.id}
-                  comment={reply}
-                  gameId={gameId}
-                  postId={postId}
-                  characters={characters}
-                  controllableCharacters={controllableCharacters}
-                  onCreateReply={onCreateReply}
-                  onCommentDeleted={handleNestedCommentDeleted}
-                  currentUserId={currentUserId}
-                  depth={depth + 1}
-                  maxDepth={maxDepth}
-                  unreadCommentIDs={unreadCommentIDs}
-                  onOpenThread={onOpenThread}
-                  readOnly={readOnly}
-                />
-              ))
+      {/* Nested Replies */}
+      {showReplies && (hasReplies || replies.length > 0) && (
+          <>
+            {/* Show if: under desktop max depth */}
+            {!isAtMaxDepth && (
+                <div className={`space-y-0 ${isAtMobileMaxDepth ? 'hidden md:block' : ''}`}>
+                  {loadingReplies ? (
+                      <div className="ml-2 md:ml-6 py-2 text-xs text-content-secondary">
+                        Loading replies...
+                      </div>
+                  ) : (
+                      replies.map((reply) => (
+                          <ThreadedComment
+                              key={reply.id}
+                              comment={reply}
+                              gameId={gameId}
+                              postId={postId}
+                              characters={characters}
+                              controllableCharacters={controllableCharacters}
+                              onCreateReply={onCreateReply}
+                              onCommentDeleted={handleNestedCommentDeleted}
+                              currentUserId={currentUserId}
+                              depth={depth + 1}
+                              maxDepth={maxDepth}
+                              unreadCommentIDs={unreadCommentIDs}
+                              onOpenThread={onOpenThread}
+                              readOnly={readOnly}
+                          />
+                      ))
+                  )}
+                </div>
             )}
-          </div>
-        )}
-      </div>
-      <div className="hidden md:block">
-        {!isAtMaxDepth && showReplies && (hasReplies || replies.length > 0) && (
-          <div className="space-y-0">
-            {loadingReplies ? (
-              <div className="ml-6 py-2 text-xs text-content-secondary">Loading replies...</div>
-            ) : (
-              replies.map((reply) => (
-                <ThreadedComment
-                  key={reply.id}
-                  comment={reply}
-                  gameId={gameId}
-                  postId={postId} // Pass through the root post ID
-                  characters={characters}
-                  controllableCharacters={controllableCharacters}
-                  onCreateReply={onCreateReply}
-                  onCommentDeleted={handleNestedCommentDeleted} // Reload replies when nested comment is deleted
-                  currentUserId={currentUserId}
-                  depth={depth + 1}
-                  maxDepth={maxDepth}
-                  unreadCommentIDs={unreadCommentIDs}
-                  onOpenThread={onOpenThread}
-                  readOnly={readOnly}
-                />
-              ))
-            )}
-          </div>
-        )}
-      </div>
+          </>
+      )}
+
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal
