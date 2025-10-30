@@ -1,0 +1,594 @@
+{
+  "skills": {
+    "backend-dev-guidelines": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "description": "Comprehensive backend development guide for Go/Chi/PostgreSQL with Clean Architecture patterns, sqlc database access, interface-first development, and service decomposition",
+      "promptTriggers": {
+        "keywords": [
+          "backend",
+          "Go service",
+          "Chi router",
+          "Chi middleware",
+          "sqlc",
+          "database migration",
+          "API handler",
+          "API endpoint",
+          "middleware",
+          "JWT auth",
+          "JWT authentication",
+          "PostgreSQL",
+          "service layer",
+          "repository pattern",
+          "HTTP handler",
+          "REST API",
+          "correlation ID",
+          "structured logging",
+          "service interface",
+          "interfaces.go",
+          "Clean Architecture",
+          "service decomposition",
+          "layered architecture",
+          "pgxpool",
+          "error handling",
+          "input validation",
+          "zerolog"
+        ],
+        "intentPatterns": [
+          "(create|add|implement|write|build).*?(handler|endpoint|API|service|migration|middleware|interface)",
+          "(fix|debug|troubleshoot|resolve).*?(backend|Go|database|API)",
+          "(add|implement|setup|configure).*?(middleware|auth|validation|logging|interface)",
+          "(refactor|improve|optimize|decompose).*?(service|handler|query|backend)",
+          "(define|create).*?interface",
+          "interface.*?first"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "backend/pkg/**/*.go",
+          "backend/cmd/**/*.go",
+          "backend/pkg/db/queries/**/*.sql",
+          "backend/pkg/db/migrations/**/*.sql"
+        ],
+        "pathExclusions": [
+          "**/*_test.go",
+          "**/*.pb.go"
+        ],
+        "contentPatterns": [
+          "chi\\.NewRouter",
+          "http\\.Handler",
+          "func.*\\(w http\\.ResponseWriter",
+          "type.*Service.*interface",
+          "type.*Interface interface",
+          "sqlc",
+          "-- name:",
+          "errors\\.Wrap",
+          "pgxpool\\.Pool",
+          "zerolog",
+          "middleware\\.GetCorrelationID"
+        ]
+      }
+    },
+    "frontend-dev-guidelines": {
+      "type": "guardrail",
+      "enforcement": "warn",
+      "priority": "high",
+      "description": "React/TypeScript patterns with React Query and Tailwind CSS",
+      "promptTriggers": {
+        "keywords": [
+          "component",
+          "React component",
+          "UI component",
+          "React Query",
+          "useQuery",
+          "useMutation",
+          "Tailwind CSS",
+          "dark mode",
+          "AuthContext",
+          "React hook",
+          "custom hook",
+          "frontend state",
+          "Vite",
+          "TypeScript interface",
+          "props",
+          "React Router"
+        ],
+        "intentPatterns": [
+          "(create|add|implement|build).*?(component|hook|page|UI|frontend)",
+          "(fix|debug|troubleshoot).*?(React|frontend|component|UI)",
+          "(style|theme|design).*?(component|page|UI)",
+          "(add|implement).*?(state|context|hook|query)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "frontend/src/**/*.tsx",
+          "frontend/src/**/*.ts",
+          "frontend/src/**/*.css"
+        ],
+        "pathExclusions": [
+          "**/*.test.tsx",
+          "**/*.test.ts",
+          "**/*.spec.ts",
+          "**/node_modules/**"
+        ],
+        "contentPatterns": [
+          "import.*React",
+          "export.*function.*Component",
+          "export.*const.*Component",
+          "useQuery",
+          "useMutation",
+          "useState",
+          "useEffect",
+          "tailwind"
+        ]
+      }
+    },
+    "game-domain": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "description": "Complete game lifecycle patterns: states (setup, recruitment, in_progress, completed), phase transitions (common room, action, results), character workflows (pending, approved, active, dead), messaging (posts, private messages, action submissions, GM results), and the full turn-based game flow",
+      "promptTriggers": {
+        "keywords": [
+          "game lifecycle",
+          "game flow",
+          "game state",
+          "game states",
+          "state transition",
+          "recruitment",
+          "character creation",
+          "in_progress",
+          "game completed",
+          "game cycle",
+          "turn-based",
+          "phase cycle",
+          "common room",
+          "action phase",
+          "results phase",
+          "action submission",
+          "GM results",
+          "character approval",
+          "character workflow",
+          "character status",
+          "character death",
+          "game archive",
+          "phase advancement"
+        ],
+        "intentPatterns": [
+          "(understand|explain|how).*?(game.*?(flow|lifecycle|cycle|work)|turn-based)",
+          "(game|character|phase).*?(state|status|transition|workflow)",
+          "(advance|transition|change).*?(phase|state)",
+          "(create|start|setup|begin).*?game",
+          "(approve|reject|activate).*?character",
+          "(submit|send).*?(action|result)",
+          "(common room|action phase|results phase)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "backend/pkg/db/services/games.go",
+          "backend/pkg/db/services/phases/**/*.go",
+          "backend/pkg/db/services/characters.go",
+          "backend/pkg/db/services/actions/**/*.go",
+          "backend/pkg/db/services/messages/**/*.go",
+          "backend/pkg/games/**/*.go",
+          "backend/pkg/phases/**/*.go",
+          "backend/pkg/characters/**/*.go",
+          "frontend/src/components/games/**/*.tsx",
+          "frontend/src/components/phases/**/*.tsx",
+          "frontend/src/components/characters/**/*.tsx"
+        ],
+        "contentPatterns": [
+          "GameState",
+          "PhaseType",
+          "CharacterStatus",
+          "game_state",
+          "phase_type",
+          "character_status",
+          "action_submissions",
+          "action_results",
+          "common_room",
+          "in_progress",
+          "recruitment"
+        ]
+      }
+    },
+    "game-phase-management": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "description": "Phase service implementation details (more specific than game-domain)",
+      "promptTriggers": {
+        "keywords": [
+          "phase service implementation",
+          "phase validation logic",
+          "phase CRUD operations"
+        ],
+        "intentPatterns": [
+          "(implement|refactor).*?phase.*?service",
+          "(validate|check).*?phase.*?(transition|rules)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "backend/pkg/db/services/phases/**/*.go"
+        ],
+        "contentPatterns": [
+          "PhaseService",
+          "AdvancePhase",
+          "ValidatePhase"
+        ]
+      }
+    },
+    "character-management": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "description": "Character creation and approval workflow patterns",
+      "promptTriggers": {
+        "keywords": [
+          "character",
+          "character creation",
+          "character approval",
+          "character workflow",
+          "approve character",
+          "reject character",
+          "character status",
+          "character sheet",
+          "GM approval",
+          "player character"
+        ],
+        "intentPatterns": [
+          "(create|add|implement).*?character",
+          "(approve|reject|review).*?character",
+          "(implement|add).*?character.*?(workflow|approval)",
+          "(fix|debug).*?character"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "backend/pkg/db/services/characters/**/*.go",
+          "backend/pkg/characters/**/*.go",
+          "frontend/src/components/characters/**/*.tsx"
+        ],
+        "contentPatterns": [
+          "CharacterService",
+          "ApproveCharacter",
+          "CreateCharacter",
+          "character_status",
+          "CharacterStatus"
+        ]
+      }
+    },
+    "messaging-system": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "description": "Private and common room messaging patterns",
+      "promptTriggers": {
+        "keywords": [
+          "message",
+          "private message",
+          "common room",
+          "chat",
+          "messaging",
+          "send message",
+          "receive message",
+          "message history",
+          "unread messages",
+          "message notification"
+        ],
+        "intentPatterns": [
+          "(send|receive|fetch|load).*?message",
+          "(implement|add|create).*?(message|chat|messaging)",
+          "(mark|update).*?(read|unread)",
+          "(fix|debug).*?(message|chat)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "backend/pkg/db/services/messages/**/*.go",
+          "backend/pkg/messages/**/*.go",
+          "frontend/src/components/messages/**/*.tsx",
+          "frontend/src/components/CommonRoom/**/*.tsx"
+        ],
+        "contentPatterns": [
+          "MessageService",
+          "SendMessage",
+          "GetMessages",
+          "PrivateMessage",
+          "CommonRoom"
+        ]
+      }
+    },
+    "testing-patterns": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "description": "Comprehensive testing guide covering test pyramid (unit, API, component, E2E), TDD workflow, Test-Driven Development, regression testing, Playwright E2E patterns, React Testing Library, Go table-driven tests, test fixtures, mandatory E2E checklist, and testing strategy",
+      "promptTriggers": {
+        "keywords": [
+          "test",
+          "testing",
+          "unit test",
+          "E2E test",
+          "e2e test",
+          "end-to-end test",
+          "component test",
+          "integration test",
+          "test fixture",
+          "test pyramid",
+          "TDD",
+          "test-driven",
+          "test-driven development",
+          "Playwright",
+          "React Testing Library",
+          "testify",
+          "test coverage",
+          "write test",
+          "test fails",
+          "test failing",
+          "test broken",
+          "regression test",
+          "how to test",
+          "testing strategy"
+        ],
+        "intentPatterns": [
+          "(write|create|add|implement).*?test",
+          "(how to|how do I).*?test",
+          "test.*?(failing|broken|not working|fails)",
+          "(E2E|e2e|end-to-end).*?test",
+          "test.*(coverage|pyramid|strategy)",
+          "(debug|fix).*?test"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "**/*_test.go",
+          "**/*.test.ts",
+          "**/*.test.tsx",
+          "**/*.spec.ts",
+          "e2e/**/*.spec.ts",
+          "frontend/e2e/**/*.spec.ts"
+        ],
+        "contentPatterns": [
+          "describe\\(",
+          "it\\(",
+          "test\\(",
+          "func Test",
+          "t\\.Run\\("
+        ]
+      }
+    },
+    "test-fixtures": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "description": "Test fixture patterns and E2E test data management (more specific than testing-patterns)",
+      "promptTriggers": {
+        "keywords": [
+          "test fixture",
+          "test data",
+          "E2E test",
+          "e2e test",
+          "Playwright test",
+          "apply fixtures",
+          "test users",
+          "test games",
+          "test scenario",
+          "fixture setup"
+        ],
+        "intentPatterns": [
+          "(create|add|setup).*?(test|fixture|E2E)",
+          "(load|apply|run).*?fixture",
+          "(write|implement).*?E2E.*?test",
+          "(fix|debug).*?(test|E2E|fixture)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "backend/pkg/db/test_fixtures/**/*.sql",
+          "backend/pkg/db/test_fixtures/**/*.sh",
+          "frontend/e2e/**/*.spec.ts",
+          "e2e/**/*.spec.ts"
+        ],
+        "contentPatterns": [
+          "test.describe",
+          "test\\(",
+          "expect\\(",
+          "INSERT INTO.*test",
+          "test_gm",
+          "test_player"
+        ]
+      }
+    },
+    "database-operations": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "medium",
+      "description": "Database migrations and sqlc query patterns",
+      "promptTriggers": {
+        "keywords": [
+          "migration",
+          "database migration",
+          "sqlc",
+          "SQL query",
+          "database schema",
+          "PostgreSQL",
+          "table",
+          "column",
+          "index",
+          "foreign key",
+          "constraint"
+        ],
+        "intentPatterns": [
+          "(create|add|write).*?(migration|table|column|index)",
+          "(generate|run).*?sqlc",
+          "(update|alter|modify).*?(schema|table|database)",
+          "(fix|debug).*?(query|migration|database)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "backend/pkg/db/migrations/**/*.sql",
+          "backend/pkg/db/queries/**/*.sql",
+          "sqlc.yaml"
+        ],
+        "contentPatterns": [
+          "CREATE TABLE",
+          "ALTER TABLE",
+          "-- name:",
+          "-- migrate:",
+          "DROP TABLE",
+          "CREATE INDEX"
+        ]
+      }
+    },
+    "authentication": {
+      "type": "security",
+      "enforcement": "warn",
+      "priority": "high",
+      "description": "JWT authentication and session management patterns",
+      "promptTriggers": {
+        "keywords": [
+          "JWT",
+          "authentication",
+          "auth",
+          "login",
+          "logout",
+          "session",
+          "token",
+          "refresh token",
+          "auth middleware",
+          "auth context",
+          "protected route"
+        ],
+        "intentPatterns": [
+          "(implement|add|create).*?(auth|login|logout|session)",
+          "(secure|protect|guard).*?(route|endpoint|API)",
+          "(validate|verify|check).*?(token|JWT|session)",
+          "(fix|debug).*?(auth|login|session|JWT)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "backend/pkg/auth/**/*.go",
+          "backend/pkg/http/middleware/**/*.go",
+          "frontend/src/contexts/AuthContext.tsx",
+          "frontend/src/lib/api.ts"
+        ],
+        "contentPatterns": [
+          "JWT",
+          "Bearer",
+          "Authorization",
+          "AuthContext",
+          "useAuth",
+          "isAuthenticated"
+        ]
+      }
+    },
+    "route-tester": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "description": "Testing authenticated API routes with JWT Bearer token authentication using api-test.sh",
+      "promptTriggers": {
+        "keywords": [
+          "test route",
+          "test endpoint",
+          "test API",
+          "route testing",
+          "API testing",
+          "authenticated route",
+          "JWT testing",
+          "Bearer token",
+          "test with auth",
+          "api-test.sh",
+          "curl test",
+          "verify endpoint",
+          "test authentication"
+        ],
+        "intentPatterns": [
+          "(test|debug|verify).*?(route|endpoint|API)",
+          "(how to|how do I).*?test.*?(route|endpoint|API)",
+          "test.*?(authenticated|auth|JWT|Bearer)",
+          "(curl|api-test).*?(endpoint|route|API)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "backend/pkg/http/**/*.go",
+          "backend/pkg/*/api.go",
+          "backend/scripts/api-test.sh"
+        ],
+        "contentPatterns": [
+          "r\\.Get\\(",
+          "r\\.Post\\(",
+          "r\\.Put\\(",
+          "r\\.Delete\\(",
+          "chi\\.NewRouter",
+          "middleware\\.RequireAuth"
+        ]
+      }
+    },
+    "skill-developer": {
+      "type": "meta",
+      "enforcement": "suggest",
+      "priority": "high",
+      "description": "Create and manage Claude Code skills - the meta-skill for skill creation",
+      "promptTriggers": {
+        "keywords": [
+          "create skill",
+          "add skill",
+          "new skill",
+          "skill development",
+          "skill trigger",
+          "skill activation",
+          "skill-rules.json",
+          "skill rules",
+          "progressive disclosure",
+          "YAML frontmatter",
+          "500-line rule",
+          "hook system",
+          "UserPromptSubmit",
+          "PreToolUse",
+          "PostToolUse",
+          "skill debugging",
+          "skill not activating",
+          "skill not working"
+        ],
+        "intentPatterns": [
+          "(create|add|develop|write|build).*?skill",
+          "(modify|update|edit|configure).*?skill.*?(rules|triggers|activation)",
+          "(debug|fix|troubleshoot).*?skill",
+          "(understand|explain|how).*?skill.*?(activation|triggers|work)",
+          "(implement|add|create).*?progressive.*?disclosure"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          ".claude/skills/**/*.md",
+          ".claude/skills/skill-rules.json",
+          ".claude/hooks/**/*.ts",
+          ".claude/hooks/**/*.sh"
+        ],
+        "contentPatterns": [
+          "^---\\s*name:",
+          "promptTriggers",
+          "fileTriggers",
+          "enforcement.*:(.*block|suggest|warn)",
+          "progressive disclosure",
+          "YAML frontmatter"
+        ]
+      }
+    }
+  },
+  "globalSettings": {
+    "enableSuggestions": true,
+    "suggestionThreshold": 0.7,
+    "maxSuggestionsPerPrompt": 3,
+    "respectUserPreference": true
+  }
+}
