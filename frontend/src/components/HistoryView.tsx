@@ -155,7 +155,6 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
             const phaseLabel = getActionPhaseLabel(phase);
             const phaseColorClass = getActionPhaseColor(phase);
             const isActive = phase.id === currentPhaseId;
-            const isCommonRoom = phase.phase_type === 'common_room';
 
             // All phases use the same card layout
             return (

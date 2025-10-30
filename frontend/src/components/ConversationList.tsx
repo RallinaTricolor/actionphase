@@ -120,7 +120,7 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
             console.log('[ConversationList] Clicked conversation:', conversation);
             onSelectConversation(conversation.id);
           }}
-          className={`w-full text-left hover:surface-raised transition-colors ${
+          className={`w-full justify-left text-left hover:surface-raised transition-colors rounded-none ${
             selectedConversationId === conversation.id ? 'bg-interactive-primary-subtle border-l-4 border-interactive-primary' : ''
           } ${collapsed ? 'p-2' : 'p-4'}`}
           title={collapsed ? conversation.title || 'Untitled Conversation' : undefined}
