@@ -20,7 +20,6 @@ interface TabNavigationProps {
  * Mobile: Dropdown select menu for better space utilization
  */
 export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationProps) {
-  const activeTabData = tabs.find((tab) => tab.id === activeTab);
 
   return (
     <div className="border-b border-theme-default surface-base rounded-t-lg">
