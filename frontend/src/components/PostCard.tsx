@@ -34,8 +34,11 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   const [isPostCollapsed, setIsPostCollapsed] = useState(false);
   const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
 
-  // Get unread comment IDs for this post
+  // Get unread comment IDs for this post from the query
   const unreadCommentIDs = usePostUnreadCommentIDs(gameId, post.id);
+
+  // Local state to preserve unread IDs and prevent auto-clearing
+  const [localUnreadCommentIDs, setLocalUnreadCommentIDs] = useState<number[]>([]);
 
   // Mutation for marking post as read
   const markAsReadMutation = useMarkPostAsRead();
@@ -53,32 +56,12 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
     }
   }, [controllableCharacters, selectedCharacterId]);
 
-  // Ref to store the mark-as-read callback to avoid re-creating the observer
-  const markAsReadRef = useRef<(() => void) | undefined>(undefined);
-
-  // Update the callback ref whenever dependencies change
+  // Initialize local unread IDs when query result changes (first load only)
   useEffect(() => {
-    markAsReadRef.current = () => {
-      if (hasMarkedAsRead.current) return;
-      // Only mark as read if there are unread comments
-      if (unreadCommentIDs.length === 0) return;
-
-      // Find the newest comment ID if comments are loaded
-      // Comments are sorted DESC (newest first), so the newest is at index 0
-      const newestCommentId = topLevelComments.length > 0
-        ? topLevelComments[0].id
-        : undefined;
-
-      // Mark as read
-      markAsReadMutation.mutate({
-        gameId,
-        postId: post.id,
-        data: newestCommentId ? { last_read_comment_id: newestCommentId } : {}
-      });
-
-      hasMarkedAsRead.current = true;
-    };
-  }, [gameId, post.id, topLevelComments, markAsReadMutation, unreadCommentIDs]);
+    if (unreadCommentIDs.length > 0 && localUnreadCommentIDs.length === 0) {
+      setLocalUnreadCommentIDs(unreadCommentIDs);
+    }
+  }, [unreadCommentIDs, localUnreadCommentIDs.length]);
 
   // Load top-level comments when showing comments
   useEffect(() => {
@@ -91,15 +74,6 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
           const response = await apiClient.messages.getPostComments(gameId, post.id);
           if (isMounted) {
             setTopLevelComments(response.data);
-
-            // Mark as read after comments load successfully (if there are unread comments)
-            // This is better UX than waiting for viewport intersection
-            if (unreadCommentIDs.length > 0 && !hasMarkedAsRead.current) {
-              // Use setTimeout to allow state to settle
-              setTimeout(() => {
-                markAsReadRef.current?.();
-              }, 100);
-            }
           }
         } catch (err) {
           if (isMounted) {
@@ -116,24 +90,24 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
     return () => {
       isMounted = false;
     };
-  }, [showComments, topLevelComments.length, gameId, post.id, unreadCommentIDs.length]);
+  }, [showComments, topLevelComments.length, gameId, post.id]);
 
-  // Mark as read when comments are shown with unread items
-  // This handles the case where comments are already loaded (e.g., from cache or previous view)
+  // Mark post as read immediately when user views it (on page load with unread comments)
   useEffect(() => {
     // Only mark as read if:
-    // 1. Comments are visible
-    // 2. There are unread comments
-    // 3. Comments have loaded (not currently loading)
-    // 4. We haven't already marked this post as read
-    if (showComments && unreadCommentIDs.length > 0 && !loadingComments && topLevelComments.length > 0 && !hasMarkedAsRead.current) {
-      const timer = setTimeout(() => {
-        markAsReadRef.current?.();
-      }, 1000); // 1 second delay to ensure user is actually viewing
+    // 1. There are unread comments (from the query, not local state)
+    // 2. Haven't already marked as read
+    // This happens on mount/page load, ensuring next refresh shows no "NEW" badges
+    if (unreadCommentIDs.length > 0 && !hasMarkedAsRead.current) {
+      markAsReadMutation.mutate({
+        gameId,
+        postId: post.id,
+        data: {} // Mark as read with current timestamp
+      });
 
-      return () => clearTimeout(timer);
+      hasMarkedAsRead.current = true;
     }
-  }, [showComments, unreadCommentIDs.length, loadingComments, topLevelComments.length]);
+  }, [unreadCommentIDs.length, gameId, post.id, markAsReadMutation]);
 
   const loadComments = async (delayMs: number = 0) => {
     try {
@@ -224,9 +198,9 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                     )}
                   </p>
                 </div>
-                {unreadCommentIDs.length > 0 && (
+                {localUnreadCommentIDs.length > 0 && (
                   <span className="px-2 py-1 text-xs font-semibold bg-interactive-primary-subtle text-interactive-primary rounded">
-                    {unreadCommentIDs.length} new {unreadCommentIDs.length === 1 ? 'comment' : 'comments'}
+                    {localUnreadCommentIDs.length} new {localUnreadCommentIDs.length === 1 ? 'comment' : 'comments'}
                   </span>
                 )}
               </div>
@@ -385,7 +359,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                   currentUserId={currentUserId}
                   depth={0}
                   maxDepth={5}
-                  unreadCommentIDs={unreadCommentIDs}
+                  unreadCommentIDs={localUnreadCommentIDs}
                   onOpenThread={(comment) => setThreadModalComment(comment)}
                   readOnly={readOnly}
                 />
@@ -408,7 +382,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
           onClose={() => setThreadModalComment(null)}
           onCreateReply={onCreateComment}
           currentUserId={currentUserId}
-          unreadCommentIDs={unreadCommentIDs}
+          unreadCommentIDs={localUnreadCommentIDs}
         />
       )}
     </div>

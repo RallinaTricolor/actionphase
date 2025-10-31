@@ -98,7 +98,7 @@ describe('ConversationList', () => {
 
       // Wait for conversations to load
       await waitFor(() => {
-        expect(screen.getByText('Shared Conversation')).toBeInTheDocument()
+        expect(screen.getAllByText('Shared Conversation')[0]).toBeInTheDocument()
       })
 
       // CRITICAL: Should only render ONE conversation, not two duplicates
@@ -106,9 +106,9 @@ describe('ConversationList', () => {
       expect(conversationButtons).toHaveLength(1)
 
       // Verify the conversation has the correct data
-      expect(screen.getByText('Shared Conversation')).toBeInTheDocument()
-      expect(screen.getByText('Alice, Bob, Charlie')).toBeInTheDocument()
-      expect(screen.getByText('Hello everyone!')).toBeInTheDocument()
+      expect(screen.getAllByText('Shared Conversation')[0]).toBeInTheDocument()
+      expect(screen.getAllByText('Alice, Bob, Charlie')[0]).toBeInTheDocument()
+      expect(screen.getAllByText('Hello everyone!')[0]).toBeInTheDocument()
     })
 
     it('should handle multiple distinct conversations correctly', async () => {
@@ -165,14 +165,14 @@ describe('ConversationList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Conversation 1')).toBeInTheDocument()
+        expect(screen.getAllByText('Conversation 1')[0]).toBeInTheDocument()
       })
 
       // Should render both distinct conversations
       const conversationButtons = screen.getAllByRole('button')
       expect(conversationButtons).toHaveLength(2)
-      expect(screen.getByText('Conversation 1')).toBeInTheDocument()
-      expect(screen.getByText('Conversation 2')).toBeInTheDocument()
+      expect(screen.getAllByText('Conversation 1')[0]).toBeInTheDocument()
+      expect(screen.getAllByText('Conversation 2')[0]).toBeInTheDocument()
     })
 
     it('should deduplicate mixed duplicates and distinct conversations', async () => {
@@ -244,7 +244,7 @@ describe('ConversationList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Conversation 1')).toBeInTheDocument()
+        expect(screen.getAllByText('Conversation 1')[0]).toBeInTheDocument()
       })
 
       // Should render only 3 distinct conversations, not 4
@@ -340,7 +340,7 @@ describe('ConversationList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Test Conversation')).toBeInTheDocument()
+        expect(screen.getAllByText('Test Conversation')[0]).toBeInTheDocument()
       })
 
       const conversationButton = screen.getByRole('button')
@@ -374,7 +374,7 @@ describe('ConversationList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Test Conversation')).toBeInTheDocument()
+        expect(screen.getAllByText('Test Conversation')[0]).toBeInTheDocument()
       })
 
       const conversationButton = screen.getByRole('button')

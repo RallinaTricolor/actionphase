@@ -289,9 +289,10 @@ describe('ActionsList', () => {
       renderWithProviders(<ActionsList gameId={1} />);
 
       await waitFor(() => {
-        expect(screen.getByText('player1')).toBeInTheDocument();
-        expect(screen.getByText('player2')).toBeInTheDocument();
-        expect(screen.getByText('player3')).toBeInTheDocument();
+        // Using getAllByText because dual-DOM renders username in both mobile and desktop views
+        expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('player2')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('player3')[0]).toBeInTheDocument();
       });
     });
 
@@ -361,16 +362,16 @@ describe('ActionsList', () => {
       renderWithProviders(<ActionsList gameId={1} />);
 
       await waitFor(() => {
-        expect(screen.getByText('player1')).toBeInTheDocument();
-        expect(screen.getByText('player3')).toBeInTheDocument();
+        expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('player3')[0]).toBeInTheDocument();
       });
 
       const select = screen.getByRole('combobox');
       await user.selectOptions(select, '1');
 
       await waitFor(() => {
-        expect(screen.getByText('player1')).toBeInTheDocument();
-        expect(screen.getByText('player2')).toBeInTheDocument();
+        expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('player2')[0]).toBeInTheDocument();
         expect(screen.queryByText('player3')).not.toBeInTheDocument();
       });
     });
@@ -400,7 +401,7 @@ describe('ActionsList', () => {
       renderWithProviders(<ActionsList gameId={1} />);
 
       await waitFor(() => {
-        expect(screen.getByText('player1')).toBeInTheDocument();
+        expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
       });
 
       const select = screen.getByRole('combobox');
@@ -413,8 +414,8 @@ describe('ActionsList', () => {
       await user.selectOptions(select, '');
 
       await waitFor(() => {
-        expect(screen.getByText('player1')).toBeInTheDocument();
-        expect(screen.getByText('player3')).toBeInTheDocument();
+        expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('player3')[0]).toBeInTheDocument();
       });
     });
 
@@ -426,8 +427,8 @@ describe('ActionsList', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('player1')).toBeInTheDocument();
-        expect(screen.getByText('player2')).toBeInTheDocument();
+        expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('player2')[0]).toBeInTheDocument();
         expect(screen.queryByText('player3')).not.toBeInTheDocument();
       });
     });
@@ -456,9 +457,9 @@ describe('ActionsList', () => {
       renderWithProviders(<ActionsList gameId={1} />);
 
       await waitFor(() => {
-        expect(screen.getByText('player1')).toBeInTheDocument();
-        expect(screen.getByText('player2')).toBeInTheDocument();
-        expect(screen.getByText('player3')).toBeInTheDocument();
+        expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('player2')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('player3')[0]).toBeInTheDocument();
       });
     });
 
@@ -468,9 +469,9 @@ describe('ActionsList', () => {
       renderWithProviders(<ActionsList gameId={1} />);
 
       await waitFor(() => {
-        expect(screen.getByText('as Hero Character')).toBeInTheDocument();
-        expect(screen.getByText('as Villain Character')).toBeInTheDocument();
-        expect(screen.getByText('as Rogue Character')).toBeInTheDocument();
+        expect(screen.getAllByText('as Hero Character')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('as Villain Character')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('as Rogue Character')[0]).toBeInTheDocument();
       });
     });
 
@@ -491,7 +492,7 @@ describe('ActionsList', () => {
       renderWithProviders(<ActionsList gameId={1} />);
 
       await waitFor(() => {
-        expect(screen.getByText('player1')).toBeInTheDocument();
+        expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
       });
 
       const timestamps = screen.getAllByText(/\d{1,2}\/\d{1,2}\/\d{4}/);
@@ -504,8 +505,8 @@ describe('ActionsList', () => {
 
       renderWithProviders(<ActionsList gameId={1} />);
 
-      const actionCard = await screen.findByText('player1');
-      await user.click(actionCard);
+      const actionCards = await screen.findAllByText('player1');
+      await user.click(actionCards[0]);
 
       await waitFor(() => {
         expect(
@@ -520,8 +521,8 @@ describe('ActionsList', () => {
 
       renderWithProviders(<ActionsList gameId={1} />);
 
-      const actionCard = await screen.findByText('player1');
-      await user.click(actionCard);
+      const actionCards = await screen.findAllByText('player1');
+      await user.click(actionCards[0]);
 
       await waitFor(() => {
         expect(
@@ -529,7 +530,7 @@ describe('ActionsList', () => {
         ).toBeInTheDocument();
       });
 
-      await user.click(actionCard);
+      await user.click(actionCards[0]);
 
       await waitFor(() => {
         expect(
@@ -544,8 +545,8 @@ describe('ActionsList', () => {
 
       renderWithProviders(<ActionsList gameId={1} />);
 
-      const actionCard = await screen.findByText('player1');
-      await user.click(actionCard);
+      const actionCards = await screen.findAllByText('player1');
+      await user.click(actionCards[0]);
 
       await waitFor(() => {
         expect(
@@ -560,8 +561,8 @@ describe('ActionsList', () => {
 
       renderWithProviders(<ActionsList gameId={1} />);
 
-      const actionCard = await screen.findByText('player1');
-      await user.click(actionCard);
+      const actionCards = await screen.findAllByText('player1');
+      await user.click(actionCards[0]);
 
       await waitFor(() => {
         expect(screen.getByText(/Last updated:/i)).toBeInTheDocument();
@@ -574,8 +575,8 @@ describe('ActionsList', () => {
 
       renderWithProviders(<ActionsList gameId={1} />);
 
-      const actionCard = await screen.findByText('player1');
-      await user.click(actionCard);
+      const actionCards = await screen.findAllByText('player1');
+      await user.click(actionCards[0]);
 
       await waitFor(() => {
         expect(
@@ -590,8 +591,8 @@ describe('ActionsList', () => {
 
       renderWithProviders(<ActionsList gameId={1} />);
 
-      const actionCard = await screen.findByText('player1');
-      await user.click(actionCard);
+      const actionCards = await screen.findAllByText('player1');
+      await user.click(actionCards[0]);
 
       const sendResultButton = await screen.findByRole('button', {
         name: /Send Result to player1/i,
@@ -609,8 +610,8 @@ describe('ActionsList', () => {
 
       renderWithProviders(<ActionsList gameId={1} />);
 
-      const actionCard = await screen.findByText('player1');
-      await user.click(actionCard);
+      const actionCards = await screen.findAllByText('player1');
+      await user.click(actionCards[0]);
 
       const sendResultButton = await screen.findByRole('button', {
         name: /Send Result to player1/i,
@@ -630,8 +631,8 @@ describe('ActionsList', () => {
 
       renderWithProviders(<ActionsList gameId={1} />);
 
-      const actionCard = await screen.findByText('player1');
-      await user.click(actionCard);
+      const actionCards = await screen.findAllByText('player1');
+      await user.click(actionCards[0]);
 
       const sendResultButton = await screen.findByRole('button', {
         name: /Send Result to player1/i,
@@ -649,8 +650,8 @@ describe('ActionsList', () => {
 
       renderWithProviders(<ActionsList gameId={1} />);
 
-      const actionCard = await screen.findByText('player1');
-      await user.click(actionCard);
+      const actionCards = await screen.findAllByText('player1');
+      await user.click(actionCards[0]);
 
       const sendResultButton = await screen.findByRole('button', {
         name: /Send Result to player1/i,
@@ -677,8 +678,8 @@ describe('ActionsList', () => {
 
       renderWithProviders(<ActionsList gameId={1} />);
 
-      const actionCard = await screen.findByText('player1');
-      await user.click(actionCard);
+      const actionCards = await screen.findAllByText('player1');
+      await user.click(actionCards[0]);
 
       const sendResultButton = await screen.findByRole('button', {
         name: /Send Result to player1/i,
@@ -703,8 +704,8 @@ describe('ActionsList', () => {
 
       renderWithProviders(<ActionsList gameId={1} />);
 
-      const player1Card = await screen.findByText('player1');
-      await user.click(player1Card);
+      const player1Cards = await screen.findAllByText('player1');
+      await user.click(player1Cards[0]);
 
       await waitFor(() => {
         expect(
@@ -712,8 +713,8 @@ describe('ActionsList', () => {
         ).toBeInTheDocument();
       });
 
-      const player2Card = await screen.findByText('player2');
-      await user.click(player2Card);
+      const player2Cards = await screen.findAllByText('player2');
+      await user.click(player2Cards[0]);
 
       await waitFor(() => {
         expect(

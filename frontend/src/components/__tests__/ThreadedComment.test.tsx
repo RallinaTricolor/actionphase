@@ -140,7 +140,7 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getByText('Other Character')).toBeInTheDocument();
+      expect(screen.getAllByText('Other Character')[0]).toBeInTheDocument();
     });
 
     it('renders author username', () => {
@@ -155,7 +155,7 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getByText(/@otheruser/)).toBeInTheDocument();
+      expect(screen.getAllByText(/@otheruser/)[0]).toBeInTheDocument();
     });
 
     it('renders timestamp', () => {
@@ -171,7 +171,7 @@ describe('ThreadedComment', () => {
       );
 
       // Should display a formatted timestamp (date shows as full date for 2025-01-15)
-      expect(screen.getByText(/1\/15\/2025|2025/)).toBeInTheDocument();
+      expect(screen.getAllByText(/1\/15\/2025|2025/)[0]).toBeInTheDocument();
     });
 
     it('renders reply button', () => {
@@ -207,7 +207,7 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getByText('You')).toBeInTheDocument();
+      expect(screen.getAllByText('You')[0]).toBeInTheDocument();
     });
 
     it('does not show "You" badge when user is not the author', () => {
@@ -242,7 +242,7 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getByText('(edited)')).toBeInTheDocument();
+      expect(screen.getAllByText('(edited)')[0]).toBeInTheDocument();
     });
 
     it('does not show edited indicator when comment is not edited', () => {
@@ -261,7 +261,7 @@ describe('ThreadedComment', () => {
     });
 
     it('applies indentation when depth is greater than 0', () => {
-      const { container } = renderWithProviders(
+      renderWithProviders(
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
@@ -273,13 +273,13 @@ describe('ThreadedComment', () => {
         />
       );
 
-      const commentContainer = container.querySelector('.ml-6');
-      expect(commentContainer).toBeInTheDocument();
+      // Verify visual indicator (border) is present - this is what users see
+      const commentContainer = screen.getAllByTestId('threaded-comment')[0];
       expect(commentContainer).toHaveClass('border-l-2');
     });
 
     it('does not apply indentation when depth is 0', () => {
-      const { container } = renderWithProviders(
+      renderWithProviders(
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
@@ -291,8 +291,9 @@ describe('ThreadedComment', () => {
         />
       );
 
-      const commentContainer = container.querySelector('.ml-6');
-      expect(commentContainer).not.toBeInTheDocument();
+      // Verify no border on depth 0 (root level comments)
+      const commentContainer = screen.getAllByTestId('threaded-comment')[0];
+      expect(commentContainer).not.toHaveClass('border-l-2');
     });
 
     it('applies different border color based on depth', () => {
@@ -391,7 +392,7 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getByText('▼')).toBeInTheDocument();
+      expect(screen.getAllByText('▼')[0]).toBeInTheDocument();
     });
 
     it('shows collapse icon when replies are hidden', async () => {
@@ -410,7 +411,7 @@ describe('ThreadedComment', () => {
       const toggleButton = screen.getByRole('button', { name: /replies/i });
       await user.click(toggleButton);
 
-      expect(screen.getByText('▶')).toBeInTheDocument();
+      expect(screen.getAllByText('▶')[0]).toBeInTheDocument();
     });
   });
 
@@ -1001,8 +1002,8 @@ describe('ThreadedComment', () => {
 
       await waitFor(() => {
         // Should render the nested replies
-        expect(screen.getByText('Hero')).toBeInTheDocument();
-        expect(screen.getByText('Third Character')).toBeInTheDocument();
+        expect(screen.getAllByText('Hero')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('Third Character')[0]).toBeInTheDocument();
       });
     });
 
@@ -1023,9 +1024,9 @@ describe('ThreadedComment', () => {
         expect(screen.getByText('This is a reply')).toBeInTheDocument();
       });
 
-      // Parent should have depth 1 indentation
-      const parentContainer = container.querySelector('.ml-6.border-l-2');
-      expect(parentContainer).toBeInTheDocument();
+      // Parent should have depth 1 indentation (verify by border presence)
+      const parentContainer = screen.getAllByTestId('threaded-comment')[0];
+      expect(parentContainer).toHaveClass('border-l-2');
 
       // Nested replies would have depth 2, but we can't easily verify this
       // without inspecting the DOM structure more deeply
@@ -1103,7 +1104,7 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getByText(/just now/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/just now/i)[0]).toBeInTheDocument();
     });
 
     it('formats timestamps within an hour as minutes ago', () => {
@@ -1124,7 +1125,7 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getByText(/30m ago/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/30m ago/i)[0]).toBeInTheDocument();
     });
 
     it('formats timestamps within a day as hours ago', () => {
@@ -1145,7 +1146,7 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getByText(/5h ago/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/5h ago/i)[0]).toBeInTheDocument();
     });
 
     it('formats timestamps within a week as days ago', () => {
@@ -1166,7 +1167,7 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getByText(/3d ago/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/3d ago/i)[0]).toBeInTheDocument();
     });
 
     it('formats old timestamps as full date', () => {
@@ -1189,7 +1190,7 @@ describe('ThreadedComment', () => {
 
       // Should display a formatted date - just verify something that looks like a date exists
       // (the exact format varies by locale, so we just check that there's a date pattern)
-      expect(screen.getByText(/\d{1,2}\/\d{1,2}\/\d{4}|\d{4}/)).toBeInTheDocument();
+      expect(screen.getAllByText(/\d{1,2}\/\d{1,2}\/\d{4}|\d{4}/)[0]).toBeInTheDocument();
     });
   });
 
@@ -1519,8 +1520,8 @@ describe('ThreadedComment', () => {
       );
 
       // Character name and username should still be shown
-      expect(screen.getByText('Other Character')).toBeInTheDocument();
-      expect(screen.getByText(/@otheruser/)).toBeInTheDocument();
+      expect(screen.getAllByText('Other Character')[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/@otheruser/)[0]).toBeInTheDocument();
     });
 
     it('does not show edited indicator for deleted comments', () => {
