@@ -486,6 +486,7 @@ func (q *Queries) GetGamePostCount(ctx context.Context, arg GetGamePostCountPara
 }
 
 const getGamePosts = `-- name: GetGamePosts :many
+
 SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
        u.username as author_username,
        c.name as character_name,
@@ -534,6 +535,7 @@ type GetGamePostsRow struct {
 	CommentCount          int64              `json:"comment_count"`
 }
 
+// Return in parent-to-child order
 func (q *Queries) GetGamePosts(ctx context.Context, arg GetGamePostsParams) ([]GetGamePostsRow, error) {
 	rows, err := q.db.Query(ctx, getGamePosts,
 		arg.GameID,
@@ -684,6 +686,159 @@ func (q *Queries) GetMessageReactions(ctx context.Context, messageID int32) ([]G
 			&i.ReactionType,
 			&i.CreatedAt,
 			&i.Username,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMessageWithParentContext = `-- name: GetMessageWithParentContext :many
+WITH RECURSIVE parent_chain AS (
+    -- Base case: Start with the target message
+    SELECT
+        m.id,
+        m.game_id,
+        m.phase_id,
+        m.author_id,
+        m.character_id,
+        m.content,
+        m.message_type,
+        m.parent_id,
+        m.thread_depth,
+        m.visibility,
+        m.mentioned_character_ids,
+        m.is_edited,
+        m.is_deleted,
+        m.deleted_at,
+        m.deleted_by_user_id,
+        m.edited_at,
+        m.edit_count,
+        m.created_at,
+        m.thread_depth as original_depth
+    FROM messages m
+    WHERE m.id = $1
+
+    UNION ALL
+
+    -- Recursive case: Walk up the parent chain to root
+    SELECT
+        m.id,
+        m.game_id,
+        m.phase_id,
+        m.author_id,
+        m.character_id,
+        m.content,
+        m.message_type,
+        m.parent_id,
+        m.thread_depth,
+        m.visibility,
+        m.mentioned_character_ids,
+        m.is_edited,
+        m.is_deleted,
+        m.deleted_at,
+        m.deleted_by_user_id,
+        m.edited_at,
+        m.edit_count,
+        m.created_at,
+        m.thread_depth as original_depth
+    FROM messages m
+    INNER JOIN parent_chain pch ON m.id = pch.parent_id
+)
+SELECT
+    parent_chain.id,
+    parent_chain.game_id,
+    parent_chain.phase_id,
+    parent_chain.author_id,
+    parent_chain.character_id,
+    parent_chain.content,
+    parent_chain.message_type,
+    parent_chain.parent_id,
+    parent_chain.thread_depth,
+    parent_chain.visibility,
+    parent_chain.mentioned_character_ids,
+    parent_chain.is_edited,
+    parent_chain.is_deleted,
+    parent_chain.deleted_at,
+    parent_chain.deleted_by_user_id,
+    parent_chain.edited_at,
+    parent_chain.edit_count,
+    parent_chain.created_at,
+    u.username as author_username,
+    c.name as character_name,
+    c.avatar_url as character_avatar_url,
+    (SELECT COUNT(*) FROM messages WHERE parent_id = parent_chain.id) as reply_count
+FROM parent_chain
+JOIN users u ON parent_chain.author_id = u.id
+LEFT JOIN characters c ON parent_chain.character_id = c.id
+ORDER BY parent_chain.original_depth ASC
+`
+
+type GetMessageWithParentContextRow struct {
+	ID                    int32              `json:"id"`
+	GameID                int32              `json:"game_id"`
+	PhaseID               pgtype.Int4        `json:"phase_id"`
+	AuthorID              int32              `json:"author_id"`
+	CharacterID           int32              `json:"character_id"`
+	Content               string             `json:"content"`
+	MessageType           MessageType        `json:"message_type"`
+	ParentID              pgtype.Int4        `json:"parent_id"`
+	ThreadDepth           int32              `json:"thread_depth"`
+	Visibility            MessageVisibility  `json:"visibility"`
+	MentionedCharacterIds []int32            `json:"mentioned_character_ids"`
+	IsEdited              bool               `json:"is_edited"`
+	IsDeleted             bool               `json:"is_deleted"`
+	DeletedAt             pgtype.Timestamp   `json:"deleted_at"`
+	DeletedByUserID       pgtype.Int4        `json:"deleted_by_user_id"`
+	EditedAt              pgtype.Timestamptz `json:"edited_at"`
+	EditCount             int32              `json:"edit_count"`
+	CreatedAt             pgtype.Timestamp   `json:"created_at"`
+	AuthorUsername        string             `json:"author_username"`
+	CharacterName         pgtype.Text        `json:"character_name"`
+	CharacterAvatarUrl    pgtype.Text        `json:"character_avatar_url"`
+	ReplyCount            int64              `json:"reply_count"`
+}
+
+// Get a message with its full parent chain for deep linking with context
+// Returns messages in parent-to-child order (root → target)
+// Note: Returns ALL parents up to root. Backend can limit depth if needed.
+// $1 = message_id (target comment)
+func (q *Queries) GetMessageWithParentContext(ctx context.Context, id int32) ([]GetMessageWithParentContextRow, error) {
+	rows, err := q.db.Query(ctx, getMessageWithParentContext, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMessageWithParentContextRow
+	for rows.Next() {
+		var i GetMessageWithParentContextRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.PhaseID,
+			&i.AuthorID,
+			&i.CharacterID,
+			&i.Content,
+			&i.MessageType,
+			&i.ParentID,
+			&i.ThreadDepth,
+			&i.Visibility,
+			&i.MentionedCharacterIds,
+			&i.IsEdited,
+			&i.IsDeleted,
+			&i.DeletedAt,
+			&i.DeletedByUserID,
+			&i.EditedAt,
+			&i.EditCount,
+			&i.CreatedAt,
+			&i.AuthorUsername,
+			&i.CharacterName,
+			&i.CharacterAvatarUrl,
+			&i.ReplyCount,
 		); err != nil {
 			return nil, err
 		}

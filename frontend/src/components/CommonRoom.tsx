@@ -42,6 +42,11 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
   const [error, setError] = useState<string | null>(null);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
+  const [threadModalContext, setThreadModalContext] = useState<{
+    parentChain: Message[];
+    hasFullThread: boolean;
+    targetCommentId: number;
+  } | null>(null);
   // Initialize activeTab from URL parameter, default to 'posts'
   const [activeTab, setActiveTab] = useState<'posts' | 'newComments'>(viewParam || 'posts');
   const navigate = useNavigate();
@@ -102,12 +107,28 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
 
         const fetchAndShowComment = async () => {
           try {
-            // Fetch the specific comment (or nested comment)
-            const response = await apiClient.messages.getMessage(gameId, parseInt(commentIdParam));
-            const comment = response.data;
+            // Fetch the comment with parent context (2-3 levels)
+            const { fetchCommentWithParents } = await import('../utils/threadUtils');
+            const { messages, hasFullThread } = await fetchCommentWithParents(
+              gameId,
+              parseInt(commentIdParam),
+              3 // Fetch up to 3 parent levels for context
+            );
 
-            // Open the comment in ThreadViewModal
-            setThreadModalComment(comment);
+            if (messages.length === 0) {
+              throw new Error('No messages fetched');
+            }
+
+            // The target comment is the last one in the array
+            const targetComment = messages[messages.length - 1];
+
+            // Store the comment and its context for the modal
+            setThreadModalComment(targetComment);
+            setThreadModalContext({
+              parentChain: messages,
+              hasFullThread,
+              targetCommentId: parseInt(commentIdParam)
+            });
 
             // Clear the comment parameter from URL
             const newParams = new URLSearchParams(searchParams);
@@ -334,9 +355,15 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
           comment={threadModalComment}
           characters={allCharacters}
           controllableCharacters={controllableCharacters}
-          onClose={() => setThreadModalComment(null)}
+          onClose={() => {
+            setThreadModalComment(null);
+            setThreadModalContext(null);
+          }}
           onCreateReply={handleCreateComment}
           currentUserId={currentUserId}
+          parentChain={threadModalContext?.parentChain}
+          hasFullThread={threadModalContext?.hasFullThread}
+          targetCommentId={threadModalContext?.targetCommentId}
         />
       )}
     </div>
