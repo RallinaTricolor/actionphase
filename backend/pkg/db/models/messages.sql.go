@@ -1027,22 +1027,49 @@ func (q *Queries) GetReactionCounts(ctx context.Context, messageID int32) ([]Get
 }
 
 const getUnreadCommentIDsForPosts = `-- name: GetUnreadCommentIDsForPosts :many
+WITH RECURSIVE comment_threads AS (
+    -- Base case: all top-level comments (direct children of posts)
+    SELECT
+        c.id as comment_id,
+        c.parent_id as post_id,
+        c.created_at,
+        c.author_id
+    FROM messages c
+    WHERE c.parent_id IN (
+        SELECT id FROM messages
+        WHERE game_id = $2 AND message_type = 'post' AND is_deleted = false
+    )
+    AND c.is_deleted = false
+
+    UNION ALL
+
+    -- Recursive case: all nested replies
+    SELECT
+        m.id as comment_id,
+        ct.post_id,
+        m.created_at,
+        m.author_id
+    FROM messages m
+    INNER JOIN comment_threads ct ON m.parent_id = ct.comment_id
+    WHERE m.is_deleted = false
+)
 SELECT
-    m.id as post_id,
+    posts.id as post_id,
     COALESCE(
-        array_agg(c.id ORDER BY c.created_at DESC) FILTER (
-            WHERE ucr.last_read_at IS NULL OR c.created_at > ucr.last_read_at
+        array_agg(ct.comment_id ORDER BY ct.created_at DESC) FILTER (
+            WHERE ucr.last_read_at IS NOT NULL
+            AND ct.created_at > ucr.last_read_at
         ),
         '{}'::integer[]
     ) as unread_comment_ids
-FROM messages m
-LEFT JOIN user_common_room_reads ucr ON ucr.post_id = m.id AND ucr.user_id = $1
-LEFT JOIN messages c ON c.parent_id = m.id AND c.is_deleted = false
-WHERE m.game_id = $2
-  AND m.message_type = 'post'
-  AND m.is_deleted = false
-GROUP BY m.id, ucr.last_read_at
-ORDER BY m.created_at DESC
+FROM messages posts
+LEFT JOIN user_common_room_reads ucr ON ucr.post_id = posts.id AND ucr.user_id = $1
+LEFT JOIN comment_threads ct ON ct.post_id = posts.id AND ct.author_id != $1
+WHERE posts.game_id = $2
+  AND posts.message_type = 'post'
+  AND posts.is_deleted = false
+GROUP BY posts.id
+ORDER BY posts.created_at DESC
 `
 
 type GetUnreadCommentIDsForPostsParams struct {
@@ -1057,7 +1084,12 @@ type GetUnreadCommentIDsForPostsRow struct {
 
 // Get unread comment IDs for each post in a game for a specific user
 // Returns post_id and array of comment IDs that are "new since last visit"
-// A comment is new if it was created after the user's last_read_at timestamp
+// A comment is new if:
+//  1. It was created AFTER the user's last_read_at timestamp
+//  2. It was NOT authored by the current user (users don't see their own comments as NEW)
+//
+// NOTE: If user has never visited (ucr.last_read_at IS NULL), returns empty array
+// This prevents overwhelming users with "NEW" badges on their first visit
 func (q *Queries) GetUnreadCommentIDsForPosts(ctx context.Context, arg GetUnreadCommentIDsForPostsParams) ([]GetUnreadCommentIDsForPostsRow, error) {
 	rows, err := q.db.Query(ctx, getUnreadCommentIDsForPosts, arg.UserID, arg.GameID)
 	if err != nil {

@@ -90,11 +90,11 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Hero Character')).toBeInTheDocument()
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
-      expect(screen.getByText('Pending Character')).toBeInTheDocument()
-      expect(screen.getByText('Villain NPC')).toBeInTheDocument()
+      expect(screen.getAllByText('Pending Character')[0]).toBeInTheDocument()
+      expect(screen.getAllByText('Villain NPC')[0]).toBeInTheDocument()
     })
 
     it('should group characters by type (Player Characters, NPCs)', async () => {
@@ -118,7 +118,7 @@ describe('CharactersList', () => {
         expect(screen.getAllByText('approved').length).toBeGreaterThan(0)
       })
 
-      expect(screen.getByText('pending')).toBeInTheDocument()
+      expect(screen.getAllByText('pending')[0]).toBeInTheDocument()
     })
 
     it('should show ownership badge for user characters', async () => {
@@ -139,11 +139,11 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Hero Character')).toBeInTheDocument()
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
-      expect(screen.getByText('Pending Character')).toBeInTheDocument()
-      expect(screen.getByText('Villain NPC')).toBeInTheDocument()
+      expect(screen.getAllByText('Pending Character')[0]).toBeInTheDocument()
+      expect(screen.getAllByText('Villain NPC')[0]).toBeInTheDocument()
     })
 
     it('GM should see approve button for pending characters', async () => {
@@ -152,7 +152,7 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Approve')).toBeInTheDocument()
+        expect(screen.getAllByText('Approve')[0]).toBeInTheDocument()
       })
     })
 
@@ -168,7 +168,7 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Hero Character')).toBeInTheDocument()
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
       expect(screen.queryByText('Approve')).not.toBeInTheDocument()
@@ -182,14 +182,14 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Hero Character')).toBeInTheDocument()
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
       // Should NOT see other players' pending characters
       expect(screen.queryByText('Pending Character')).not.toBeInTheDocument()
 
       // Should see GM NPC (approved)
-      expect(screen.getByText('Villain NPC')).toBeInTheDocument()
+      expect(screen.getAllByText('Villain NPC')[0]).toBeInTheDocument()
     })
 
     it('Player should NOT see approve button', async () => {
@@ -198,7 +198,7 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Hero Character')).toBeInTheDocument()
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
       expect(screen.queryByText('Approve')).not.toBeInTheDocument()
@@ -295,7 +295,7 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Hero Character')).toBeInTheDocument()
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
       expect(screen.queryByText('Your Character')).not.toBeInTheDocument()
@@ -312,7 +312,7 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Hero Character')).toBeInTheDocument()
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
       expect(screen.queryByText(/Type:/)).not.toBeInTheDocument()
@@ -329,7 +329,7 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Hero Character')).toBeInTheDocument()
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
       expect(screen.queryByText('Player Characters')).not.toBeInTheDocument()
@@ -370,10 +370,10 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Approve')).toBeInTheDocument()
+        expect(screen.getAllByText('Approve')[0]).toBeInTheDocument()
       })
 
-      const approveButton = screen.getByText('Approve')
+      const approveButton = screen.getAllByText('Approve')[0]
       fireEvent.click(approveButton)
 
       await waitFor(() => {
@@ -396,12 +396,14 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+        // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(6)
       })
 
       // Click delete button for pending character (second character)
+      // With dual-DOM: [0]=char1-mobile, [1]=char1-desktop, [2]=char2-mobile (pending), etc.
       const deleteButtons = screen.getAllByTestId('delete-character-button')
-      fireEvent.click(deleteButtons[1])
+      fireEvent.click(deleteButtons[2])
 
       // Confirm deletion in modal
       await waitFor(() => {
@@ -424,8 +426,11 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        const approvedBadge = screen.getAllByText('approved')[0]
-        expect(approvedBadge).toHaveClass('bg-semantic-success-subtle', 'text-content-primary')
+        const approvedBadges = screen.getAllByText('approved')
+        expect(approvedBadges.length).toBeGreaterThan(0)
+        // Check that the badge's parent element has the correct classes
+        const badgeElement = approvedBadges[0].closest('.bg-semantic-success-subtle')
+        expect(badgeElement).toBeInTheDocument()
       })
     })
 
@@ -435,8 +440,11 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        const pendingBadge = screen.getByText('pending')
-        expect(pendingBadge).toHaveClass('bg-semantic-warning-subtle', 'text-content-primary')
+        const pendingBadges = screen.getAllByText('pending')
+        expect(pendingBadges.length).toBeGreaterThan(0)
+        // Check that the badge's parent element has the correct classes
+        const badgeElement = pendingBadges[0].closest('.bg-semantic-warning-subtle')
+        expect(badgeElement).toBeInTheDocument()
       })
     })
   })
@@ -450,7 +458,8 @@ describe('CharactersList', () => {
       await waitFor(() => {
         const deleteButtons = screen.getAllByTestId('delete-character-button')
         // Should have delete buttons for all 3 characters
-        expect(deleteButtons.length).toBe(3)
+        // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
+        expect(deleteButtons.length).toBe(6)
       })
     })
 
@@ -460,7 +469,7 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByText('Hero Character')).toBeInTheDocument()
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
       expect(screen.queryByTestId('delete-character-button')).not.toBeInTheDocument()
@@ -472,7 +481,8 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+        // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(6)
       })
 
       const deleteButtons = screen.getAllByTestId('delete-character-button')
@@ -493,7 +503,8 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+        // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(6)
       })
 
       const deleteButtons = screen.getAllByTestId('delete-character-button')
@@ -522,7 +533,8 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+        // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(6)
       })
 
       const deleteButtons = screen.getAllByTestId('delete-character-button')
@@ -552,7 +564,8 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+        // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(6)
       })
 
       const deleteButtons = screen.getAllByTestId('delete-character-button')
@@ -585,7 +598,8 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+        // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(6)
       })
 
       const deleteButtons = screen.getAllByTestId('delete-character-button')
@@ -621,7 +635,8 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getAllByTestId('delete-character-button').length).toBe(3)
+        // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
+        expect(screen.getAllByTestId('delete-character-button').length).toBe(6)
       })
 
       const deleteButtons = screen.getAllByTestId('delete-character-button')

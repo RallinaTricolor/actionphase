@@ -77,11 +77,11 @@ describe('HistoryView', () => {
       );
 
       // Wait for phases to load
-      const openingPhase = await screen.findByText('Opening Ceremony');
-      expect(openingPhase).toBeInTheDocument();
+      const openingPhase = await screen.findAllByText('Opening Ceremony');
+      expect(openingPhase[0]).toBeInTheDocument();
 
       // Common room phases should be in a button (clickable)
-      const openingButton = openingPhase.closest('button');
+      const openingButton = openingPhase[0].closest('button');
       expect(openingButton).toBeInTheDocument();
       expect(openingButton).not.toBeDisabled();
     });
@@ -96,11 +96,11 @@ describe('HistoryView', () => {
       );
 
       // Wait for phases to load
-      const actionPhaseTitle = await screen.findByRole('heading', { name: /action phase/i });
-      expect(actionPhaseTitle).toBeInTheDocument();
+      const actionPhaseTitle = await screen.findAllByRole('heading', { name: /action phase/i });
+      expect(actionPhaseTitle[0]).toBeInTheDocument();
 
       // Action phases SHOULD now be clickable buttons (to view action results)
-      const actionButton = actionPhaseTitle.closest('button');
+      const actionButton = actionPhaseTitle[0].closest('button');
       expect(actionButton).toBeInTheDocument();
       expect(actionButton).not.toBeDisabled();
     });

@@ -521,8 +521,7 @@ describe('PostCard', () => {
       expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     });
 
-    it('shows message when no characters available', async () => {
-      const user = userEvent.setup();
+    it('hides comment button when no characters available', async () => {
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -533,9 +532,10 @@ describe('PostCard', () => {
         />
       );
 
-      await user.click(screen.getByRole('button', { name: /add comment/i }));
+      // When there are no controllable characters, the "Add comment" button doesn't exist
+      expect(screen.queryByRole('button', { name: /add comment/i })).not.toBeInTheDocument();
 
-      expect(screen.getByText(/you need a character to comment/i)).toBeInTheDocument();
+      // The comment form should not be visible
       expect(screen.queryByPlaceholderText(/write a comment/i)).not.toBeInTheDocument();
     });
   });

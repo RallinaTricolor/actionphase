@@ -109,10 +109,10 @@ describe('PhaseManagement', () => {
       renderWithProviders(<PhaseManagement gameId={1} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Common Room')).toBeInTheDocument()
-        expect(screen.getByText('Action Phase')).toBeInTheDocument()
-        expect(screen.getByText('Phase 1')).toBeInTheDocument()
-        expect(screen.getByText('Phase 2')).toBeInTheDocument()
+        expect(screen.getAllByText('Common Room')[0]).toBeInTheDocument()
+        expect(screen.getAllByText('Action Phase')[0]).toBeInTheDocument()
+        expect(screen.getAllByText('Phase 1')[0]).toBeInTheDocument()
+        expect(screen.getAllByText('Phase 2')[0]).toBeInTheDocument()
       })
     })
 
@@ -149,7 +149,7 @@ describe('PhaseManagement', () => {
       renderWithProviders(<PhaseManagement gameId={1} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Common Room')).toBeInTheDocument()
+        expect(screen.getAllByText('Common Room')[0]).toBeInTheDocument()
       })
 
       const newPhaseButton = screen.getByRole('button', { name: /new phase/i })
@@ -167,7 +167,7 @@ describe('PhaseManagement', () => {
       renderWithProviders(<PhaseManagement gameId={1} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Common Room')).toBeInTheDocument()
+        expect(screen.getAllByText('Common Room')[0]).toBeInTheDocument()
       })
 
       const newPhaseButton = screen.getByRole('button', { name: /new phase/i })
@@ -230,12 +230,12 @@ describe('PhaseManagement', () => {
       renderWithProviders(<PhaseManagement gameId={1} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Action Phase')).toBeInTheDocument()
+        expect(screen.getAllByText('Action Phase')[0]).toBeInTheDocument()
       })
 
-      // Find activate button (should only be on inactive phase)
+      // Find activate button (should only be on inactive phase × 2 for dual-DOM)
       const activateButtons = screen.getAllByRole('button', { name: /^activate$/i })
-      expect(activateButtons.length).toBe(1)
+      expect(activateButtons.length).toBe(2)
     })
 
     it('should show confirmation dialog when activate clicked', async () => {
@@ -244,10 +244,10 @@ describe('PhaseManagement', () => {
       renderWithProviders(<PhaseManagement gameId={1} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Action Phase')).toBeInTheDocument()
+        expect(screen.getAllByText('Action Phase')[0]).toBeInTheDocument()
       })
 
-      const activateButton = screen.getByRole('button', { name: /^activate$/i })
+      const activateButton = screen.getAllByRole('button', { name: /^activate$/i })[0]
       fireEvent.click(activateButton)
 
       await waitFor(() => {
@@ -261,10 +261,10 @@ describe('PhaseManagement', () => {
       renderWithProviders(<PhaseManagement gameId={1} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Action Phase')).toBeInTheDocument()
+        expect(screen.getAllByText('Action Phase')[0]).toBeInTheDocument()
       })
 
-      const activateButton = screen.getByRole('button', { name: /^activate$/i })
+      const activateButton = screen.getAllByRole('button', { name: /^activate$/i })[0]
       fireEvent.click(activateButton)
 
       await waitFor(() => {
@@ -290,10 +290,10 @@ describe('PhaseManagement', () => {
       renderWithProviders(<PhaseManagement gameId={1} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Action Phase')).toBeInTheDocument()
+        expect(screen.getAllByText('Action Phase')[0]).toBeInTheDocument()
       })
 
-      const activateButton = screen.getByRole('button', { name: /^activate$/i })
+      const activateButton = screen.getAllByRole('button', { name: /^activate$/i })[0]
       fireEvent.click(activateButton)
 
       await waitFor(() => {
@@ -311,11 +311,11 @@ describe('PhaseManagement', () => {
       renderWithProviders(<PhaseManagement gameId={1} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Common Room')).toBeInTheDocument()
+        expect(screen.getAllByText('Common Room')[0]).toBeInTheDocument()
       })
 
       const editButtons = screen.getAllByTitle(/edit phase details/i)
-      expect(editButtons.length).toBe(2) // One for each phase
+      expect(editButtons.length).toBe(4) // One for each phase × 2 (dual-DOM)
     })
 
     it('should open edit modal when edit button clicked', async () => {
@@ -324,7 +324,7 @@ describe('PhaseManagement', () => {
       renderWithProviders(<PhaseManagement gameId={1} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Common Room')).toBeInTheDocument()
+        expect(screen.getAllByText('Common Room')[0]).toBeInTheDocument()
       })
 
       const editButtons = screen.getAllByTitle(/edit phase details/i)
@@ -342,7 +342,7 @@ describe('PhaseManagement', () => {
       renderWithProviders(<PhaseManagement gameId={1} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Common Room')).toBeInTheDocument()
+        expect(screen.getAllByText('Common Room')[0]).toBeInTheDocument()
       })
 
       const editButtons = screen.getAllByTitle(/edit phase details/i)
@@ -371,8 +371,8 @@ describe('PhaseManagement', () => {
       renderWithProviders(<PhaseManagement gameId={1} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Players discuss their plans')).toBeInTheDocument()
-        expect(screen.getByText('Submit your actions')).toBeInTheDocument()
+        expect(screen.getAllByText('Players discuss their plans')[0]).toBeInTheDocument()
+        expect(screen.getAllByText('Submit your actions')[0]).toBeInTheDocument()
       })
     })
 
@@ -383,8 +383,8 @@ describe('PhaseManagement', () => {
 
       await waitFor(() => {
         // Check that phase numbers are displayed
-        expect(screen.getByText('Phase 1')).toBeInTheDocument()
-        expect(screen.getByText('Phase 2')).toBeInTheDocument()
+        expect(screen.getAllByText('Phase 1')[0]).toBeInTheDocument()
+        expect(screen.getAllByText('Phase 2')[0]).toBeInTheDocument()
       })
     })
   })

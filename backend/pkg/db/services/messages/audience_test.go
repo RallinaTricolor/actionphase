@@ -265,7 +265,7 @@ func TestGetUnreadCommentIDsForPosts(t *testing.T) {
 	core.AssertNoError(t, err, "Failed to create post 2")
 
 	// Create comments on the posts
-	comment1, err := msgService.CreateComment(context.Background(), core.CreateCommentRequest{
+	_, err = msgService.CreateComment(context.Background(), core.CreateCommentRequest{
 		GameID:      gameID,
 		ParentID:    post1.ID,
 		AuthorID:    int32(gmUser.ID),
@@ -303,28 +303,43 @@ func TestGetUnreadCommentIDsForPosts(t *testing.T) {
 	})
 
 	t.Run("get_unread_comment_ids_after_marking_read", func(t *testing.T) {
-		// Mark post 1 as read
-		lastReadID := comment1.ID
-		_, err := msgService.MarkPostAsRead(context.Background(), int32(playerUser.ID), gameID, post1.ID, &lastReadID)
-		core.AssertNoError(t, err, "Should mark post as read")
+		// First, mark both posts as read to establish initial visit timestamp
+		// This simulates the user visiting the page for the first time
+		_, err := msgService.MarkPostAsRead(context.Background(), int32(playerUser.ID), gameID, post1.ID, nil)
+		core.AssertNoError(t, err, "Should mark post 1 as visited")
 
-		// Now check unread - post 1 should not have unread comments for this user
+		_, err = msgService.MarkPostAsRead(context.Background(), int32(playerUser.ID), gameID, post2.ID, nil)
+		core.AssertNoError(t, err, "Should mark post 2 as visited")
+
+		// Now create a NEW comment on post 2 AFTER the user visited
+		// This comment should show up as unread on the next check
+		newComment, err := msgService.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      gameID,
+			ParentID:    post2.ID,
+			AuthorID:    int32(gmUser.ID),
+			CharacterID: gmChar.ID,
+			Content:     "New comment after visit",
+			Visibility:  "game",
+		})
+		core.AssertNoError(t, err, "Failed to create new comment")
+
+		// Now check unread - post 2 should have the new comment as unread
 		unreadInfo, err := msgService.GetUnreadCommentIDsForPosts(context.Background(), int32(playerUser.ID), gameID)
 		core.AssertNoError(t, err, "Should retrieve unread comment IDs after marking read")
 
 		core.AssertTrue(t, unreadInfo != nil, "Unread info should not be nil")
 
-		// Post 2 should still have unread comments
+		// Post 2 should have the new comment as unread
 		foundPost2 := false
 		for _, info := range unreadInfo {
 			if info.PostID == post2.ID {
 				foundPost2 = true
-				// Should have at least comment2 as unread
+				// Should have exactly 1 unread comment (the new one)
 				core.AssertTrue(t, len(info.UnreadCommentIDs) > 0, "Post 2 should have unread comments")
+				core.AssertTrue(t, containsInt32(info.UnreadCommentIDs, newComment.ID), "Should include the new comment ID")
 			}
 		}
-		// At minimum, we should see post2 in the results since it has unread comments
-		core.AssertTrue(t, foundPost2 || len(unreadInfo) >= 0, "Should have unread info results")
+		core.AssertTrue(t, foundPost2, "Should find post 2 with unread comments")
 	})
 
 	t.Run("get_unread_comment_ids_nonexistent_game", func(t *testing.T) {
@@ -341,4 +356,14 @@ func TestGetUnreadCommentIDsForPosts(t *testing.T) {
 		// Should return results but the user has no read markers, so all comments are unread
 		core.AssertTrue(t, unreadInfo != nil, "Should return results")
 	})
+}
+
+// Helper function to check if a slice contains a specific int32
+func containsInt32(slice []int32, value int32) bool {
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
 }

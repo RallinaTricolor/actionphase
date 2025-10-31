@@ -113,9 +113,9 @@ describe('ThreadedComment - Depth Limiting', () => {
       </QueryClientProvider>
     );
 
-    const continueLink = screen.getByText(/Continue this thread/);
+    const continueLink = screen.getAllByText(/Continue this thread/)[0];
     expect(continueLink).toBeInTheDocument();
-    expect(screen.getByText(/3 replies/)).toBeInTheDocument();
+    expect(screen.getAllByText(/3 replies/)[0]).toBeInTheDocument();
   });
 
   it('should not show "Continue thread" link at max depth without replies', () => {
@@ -177,7 +177,7 @@ describe('ThreadedComment - Depth Limiting', () => {
       </QueryClientProvider>
     );
 
-    const button = screen.getByText(/Continue this thread/).closest('button');
+    const button = screen.getAllByText(/Continue this thread/)[0].closest('button');
     expect(button).toBeInTheDocument();
     button?.click();
     expect(onOpenThread).toHaveBeenCalledWith(commentWithReplies);
@@ -290,7 +290,7 @@ describe('ThreadedComment - Depth Limiting', () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByText(/15 replies/)).toBeInTheDocument();
+    expect(screen.getAllByText(/15 replies/)[0]).toBeInTheDocument();
   });
 
   it('should show singular "reply" for single reply', () => {
@@ -319,7 +319,7 @@ describe('ThreadedComment - Depth Limiting', () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByText(/1 reply/)).toBeInTheDocument();
+    expect(screen.getAllByText(/1 reply/)[0]).toBeInTheDocument();
     expect(screen.queryByText(/1 replies/)).not.toBeInTheDocument();
   });
 });

@@ -456,3 +456,453 @@ func TestMessageService_GetPostsWithUnreadInfo(t *testing.T) {
 		assert.Equal(t, int64(0), postInfo.TotalComments, "Deleted comments should not be counted")
 	})
 }
+
+func TestMessageService_GetUnreadCommentIDsForPosts(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := &MessageService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool}
+
+	// Setup test data
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	game := testDB.CreateTestGame(t, int32(player.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Test Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	t.Run("first visit returns empty array (no NEW badges on first visit)", func(t *testing.T) {
+		// Create a new game and user to isolate this test
+		player2 := testDB.CreateTestUser(t, "player_first_visit", "player_first_visit@example.com")
+		game2 := testDB.CreateTestGame(t, int32(player2.ID), "Test Game - First Visit")
+		_, err := gameService.AddGameParticipant(context.Background(), game2.ID, int32(player2.ID), "player")
+		require.NoError(t, err)
+
+		char2, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        game2.ID,
+			UserID:        int32Ptr(int32(player2.ID)),
+			Name:          "Test Character 2",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		// Create a post
+		post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game2.ID,
+			AuthorID:    int32(player2.ID),
+			CharacterID: char2.ID,
+			Content:     "Post with nested comments",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create 5 top-level comments
+		for i := 0; i < 5; i++ {
+			comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+				GameID:      game2.ID,
+				ParentID:    post.ID,
+				AuthorID:    int32(player2.ID),
+				CharacterID: char2.ID,
+				Content:     "Top-level comment " + string(rune(i+1)),
+				Visibility:  string(models.MessageVisibilityGame),
+			})
+			require.NoError(t, err)
+
+			// Add 2 nested replies to each top-level comment
+			for j := 0; j < 2; j++ {
+				_, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+					GameID:      game2.ID,
+					ParentID:    comment.ID, // Parent is the comment, not the post
+					AuthorID:    int32(player2.ID),
+					CharacterID: char2.ID,
+					Content:     "Nested reply " + string(rune(j+1)),
+					Visibility:  string(models.MessageVisibilityGame),
+				})
+				require.NoError(t, err)
+			}
+		}
+
+		// User has NEVER visited (no entry in user_common_room_reads)
+		// Call GetUnreadCommentIDsForPosts
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player2.ID), game2.ID)
+
+		// Assert: Should return EMPTY array (no "NEW" badges on first visit)
+		require.NoError(t, err)
+		assert.Len(t, result, 1, "Should have one post")
+		assert.Equal(t, post.ID, result[0].PostID)
+		assert.Empty(t, result[0].UnreadCommentIDs, "Should return empty array on first visit (no NEW badges)")
+	})
+
+	t.Run("returns empty array when user has read all comments", func(t *testing.T) {
+		// Create post with comments
+		post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			Content:     "Post for read test",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create 3 comments
+		for i := 0; i < 3; i++ {
+			_, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+				GameID:      game.ID,
+				ParentID:    post.ID,
+				AuthorID:    int32(player.ID),
+				CharacterID: char.ID,
+				Content:     "Comment " + string(rune(i+1)),
+				Visibility:  string(models.MessageVisibilityGame),
+			})
+			require.NoError(t, err)
+		}
+
+		// Mark post as read (this sets last_read_at to NOW())
+		_, err = service.MarkPostAsRead(context.Background(), int32(player.ID), game.ID, post.ID, nil)
+		require.NoError(t, err)
+
+		// Get unread comment IDs
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player.ID), game.ID)
+
+		require.NoError(t, err)
+
+		// Find our post in results
+		var postResult *core.PostUnreadComments
+		for i := range result {
+			if result[i].PostID == post.ID {
+				postResult = result[i]
+				break
+			}
+		}
+
+		require.NotNil(t, postResult, "Post should be in results")
+		assert.Empty(t, postResult.UnreadCommentIDs, "Should have no unread comments after marking as read")
+	})
+
+	t.Run("returns only new comments created after last visit", func(t *testing.T) {
+		// Create a GM user who will author the comments
+		gm := testDB.CreateTestUser(t, "gm_partial_read", "gm_partial_read@example.com")
+		_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(gm.ID), "co_gm")
+		require.NoError(t, err)
+
+		gmUserID := int32(gm.ID)
+		gmChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        game.ID,
+			UserID:        &gmUserID, // Associate with GM user
+			Name:          "GM Character for Partial Read",
+			CharacterType: "npc",
+		})
+		require.NoError(t, err)
+
+		// Create post
+		post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(gm.ID),
+			CharacterID: gmChar.ID,
+			Content:     "Post for partial read test",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create 5 OLD comments (authored by GM, not player)
+		for i := 0; i < 5; i++ {
+			_, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+				GameID:      game.ID,
+				ParentID:    post.ID,
+				AuthorID:    int32(gm.ID),
+				CharacterID: gmChar.ID,
+				Content:     "Old comment " + string(rune(i+1)),
+				Visibility:  string(models.MessageVisibilityGame),
+			})
+			require.NoError(t, err)
+		}
+
+		// Player marks post as read (establishing baseline timestamp)
+		_, err = service.MarkPostAsRead(context.Background(), int32(player.ID), game.ID, post.ID, nil)
+		require.NoError(t, err)
+
+		// Create 3 NEW comments after the read timestamp (authored by GM, not player)
+		newCommentIDs := make([]int32, 3)
+		for i := 0; i < 3; i++ {
+			comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+				GameID:      game.ID,
+				ParentID:    post.ID,
+				AuthorID:    int32(gm.ID),
+				CharacterID: gmChar.ID,
+				Content:     "New comment " + string(rune(i+1)),
+				Visibility:  string(models.MessageVisibilityGame),
+			})
+			require.NoError(t, err)
+			newCommentIDs[i] = comment.ID
+		}
+
+		// Player checks for unread comment IDs
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player.ID), game.ID)
+
+		require.NoError(t, err)
+
+		// Find our post in results
+		var postResult *core.PostUnreadComments
+		for i := range result {
+			if result[i].PostID == post.ID {
+				postResult = result[i]
+				break
+			}
+		}
+
+		require.NotNil(t, postResult, "Post should be in results")
+		assert.Len(t, postResult.UnreadCommentIDs, 3, "Should return only the 3 new comments")
+
+		// Verify the new comment IDs are present
+		for _, newCommentID := range newCommentIDs {
+			assert.Contains(t, postResult.UnreadCommentIDs, newCommentID, "Should contain new comment ID %d", newCommentID)
+		}
+	})
+
+	t.Run("excludes user's own comments from unread list", func(t *testing.T) {
+		// Create a second player who will also comment
+		player2 := testDB.CreateTestUser(t, "player2_exclude", "player2_exclude@example.com")
+		_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
+		require.NoError(t, err)
+
+		player2UserID := int32(player2.ID)
+		char2, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        game.ID,
+			UserID:        &player2UserID,
+			Name:          "Player 2 Character",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		// Create a post
+		post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player2.ID),
+			CharacterID: char2.ID,
+			Content:     "Post for exclusion test",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Player 1 marks post as visited
+		_, err = service.MarkPostAsRead(context.Background(), int32(player.ID), game.ID, post.ID, nil)
+		require.NoError(t, err)
+
+		// Create comments from BOTH users after the visit
+		// Player 1's own comment (should be EXCLUDED)
+		playerOwnComment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			ParentID:    post.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			Content:     "Player 1 own comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Player 2's comment (should be INCLUDED)
+		player2Comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			ParentID:    post.ID,
+			AuthorID:    int32(player2.ID),
+			CharacterID: char2.ID,
+			Content:     "Player 2 comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Another Player 1 comment (should be EXCLUDED)
+		_, err = service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			ParentID:    post.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			Content:     "Player 1 another comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Player 1 checks for unread comments
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player.ID), game.ID)
+		require.NoError(t, err)
+
+		// Find our post in results
+		var postResult *core.PostUnreadComments
+		for i := range result {
+			if result[i].PostID == post.ID {
+				postResult = result[i]
+				break
+			}
+		}
+
+		require.NotNil(t, postResult, "Post should be in results")
+		assert.Len(t, postResult.UnreadCommentIDs, 1, "Should return only Player 2's comment (Player 1's own excluded)")
+		assert.Contains(t, postResult.UnreadCommentIDs, player2Comment.ID, "Should contain Player 2's comment")
+		assert.NotContains(t, postResult.UnreadCommentIDs, playerOwnComment.ID, "Should NOT contain Player 1's own comment")
+	})
+
+	t.Run("includes nested comments from other users but excludes own nested comments", func(t *testing.T) {
+		// Create a second player for this test
+		player3 := testDB.CreateTestUser(t, "player3_nested", "player3_nested@example.com")
+		_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player3.ID), "player")
+		require.NoError(t, err)
+
+		player3UserID := int32(player3.ID)
+		char3, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        game.ID,
+			UserID:        &player3UserID,
+			Name:          "Player 3 Character",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		// Create a post
+		post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player3.ID),
+			CharacterID: char3.ID,
+			Content:     "Post for nested exclusion test",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Player 1 marks post as visited
+		_, err = service.MarkPostAsRead(context.Background(), int32(player.ID), game.ID, post.ID, nil)
+		require.NoError(t, err)
+
+		// Create a top-level comment from Player 3 (INCLUDED)
+		topComment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			ParentID:    post.ID,
+			AuthorID:    int32(player3.ID),
+			CharacterID: char3.ID,
+			Content:     "Player 3 top-level",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create a nested reply from Player 1 (EXCLUDED - user's own)
+		player1Reply, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			ParentID:    topComment.ID, // Reply to top comment
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			Content:     "Player 1 nested reply",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create a deeply nested reply from Player 3 (INCLUDED)
+		deepReply, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			ParentID:    player1Reply.ID, // Reply to Player 1's reply (3 levels deep)
+			AuthorID:    int32(player3.ID),
+			CharacterID: char3.ID,
+			Content:     "Player 3 deep reply",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Player 1 checks for unread comments
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player.ID), game.ID)
+		require.NoError(t, err)
+
+		// Find our post in results
+		var postResult *core.PostUnreadComments
+		for i := range result {
+			if result[i].PostID == post.ID {
+				postResult = result[i]
+				break
+			}
+		}
+
+		require.NotNil(t, postResult, "Post should be in results")
+		assert.Len(t, postResult.UnreadCommentIDs, 2, "Should return Player 3's comments only (2 total)")
+		assert.Contains(t, postResult.UnreadCommentIDs, topComment.ID, "Should contain Player 3's top-level comment")
+		assert.Contains(t, postResult.UnreadCommentIDs, deepReply.ID, "Should contain Player 3's deep nested reply")
+		assert.NotContains(t, postResult.UnreadCommentIDs, player1Reply.ID, "Should NOT contain Player 1's own nested reply")
+	})
+
+	t.Run("excludes deleted comments from unread list", func(t *testing.T) {
+		// Create a second player for this test
+		player4 := testDB.CreateTestUser(t, "player4_deleted", "player4_deleted@example.com")
+		_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player4.ID), "player")
+		require.NoError(t, err)
+
+		player4UserID := int32(player4.ID)
+		char4, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        game.ID,
+			UserID:        &player4UserID,
+			Name:          "Player 4 Character",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		// Create a post
+		post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player4.ID),
+			CharacterID: char4.ID,
+			Content:     "Post for deleted comment test",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Player 1 marks post as visited
+		_, err = service.MarkPostAsRead(context.Background(), int32(player.ID), game.ID, post.ID, nil)
+		require.NoError(t, err)
+
+		// Create comment that will be deleted
+		deletedComment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			ParentID:    post.ID,
+			AuthorID:    int32(player4.ID),
+			CharacterID: char4.ID,
+			Content:     "Comment to be deleted",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create another comment that stays
+		activeComment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			ParentID:    post.ID,
+			AuthorID:    int32(player4.ID),
+			CharacterID: char4.ID,
+			Content:     "Active comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Delete the first comment
+		err = service.DeleteComment(context.Background(), deletedComment.ID, int32(player4.ID))
+		require.NoError(t, err)
+
+		// Player 1 checks for unread comments
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player.ID), game.ID)
+		require.NoError(t, err)
+
+		// Find our post in results
+		var postResult *core.PostUnreadComments
+		for i := range result {
+			if result[i].PostID == post.ID {
+				postResult = result[i]
+				break
+			}
+		}
+
+		require.NotNil(t, postResult, "Post should be in results")
+		assert.Len(t, postResult.UnreadCommentIDs, 1, "Should return only the active comment")
+		assert.Contains(t, postResult.UnreadCommentIDs, activeComment.ID, "Should contain active comment")
+		assert.NotContains(t, postResult.UnreadCommentIDs, deletedComment.ID, "Should NOT contain deleted comment")
+	})
+}
