@@ -21,6 +21,8 @@ import { GameDetailsPage } from '../pages/GameDetailsPage';
  */
 
 test.describe('Game Lifecycle Management', () => {
+  // Run tests serially to avoid race conditions with game state changes
+  test.describe.configure({ mode: 'serial' });
 
   test('GM can start game', async ({ page }) => {
     await loginAs(page, 'GM');
@@ -148,5 +150,46 @@ test.describe('Game Lifecycle Management', () => {
 
     // In cancelled state, GM management buttons should not be visible
     await expect(page.getByRole('button', { name: /Start Game|Pause Game|Resume Game|Complete Game|Cancel Game/ })).not.toBeVisible();
+  });
+
+  test('GM can delete cancelled game', async ({ page }) => {
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_GAME_LIFECYCLE_CANCEL');
+
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
+
+    // If the game isn't already cancelled, cancel it first
+    // (it might already be cancelled by the previous test)
+    const cancelButton = page.getByRole('button', { name: /Cancel Game/i }).locator('visible=true').first();
+    const isCancelButtonVisible = await cancelButton.isVisible().catch(() => false);
+
+    if (isCancelButtonVisible) {
+      // Game is not cancelled yet, cancel it
+      await gamePage.cancelGame();
+      await page.waitForTimeout(2000);
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+    }
+
+    // Now verify game is in cancelled state and we can see Delete button
+    await expect(page.getByText('E2E Test: Game Lifecycle - Cancel')).toBeVisible({ timeout: 10000 });
+
+    // Should see "Delete Game" button for cancelled state
+    const deleteButton = gamePage.getButton('Delete Game');
+    await expect(deleteButton).toBeVisible({ timeout: 10000 });
+
+    // Delete the game using POM (handles confirmation modal)
+    await gamePage.deleteGame();
+
+    // Should redirect to games list after deletion
+    await expect(page).toHaveURL(/\/games/, { timeout: 10000 });
+
+    // Game should no longer exist - verify by trying to navigate back
+    await page.goto(`/games/${gameId}`);
+    await page.waitForLoadState('networkidle');
+
+    // Should show error or not found (game no longer exists)
+    await expect(page.getByText('Game not found')).toBeVisible({ timeout: 10000 });
   });
 });

@@ -22,6 +22,7 @@ interface GameActionsProps {
   onApplyToGame: () => void;
   onWithdrawApplication: () => void;
   onLeaveGame: () => void;
+  onDeleteGame?: () => void;
 }
 
 export function GameActions({
@@ -38,6 +39,7 @@ export function GameActions({
   onApplyToGame,
   onWithdrawApplication,
   onLeaveGame: _onLeaveGame,
+  onDeleteGame,
 }: GameActionsProps) {
   return (
     <div className="flex gap-4">
@@ -83,6 +85,17 @@ export function GameActions({
           data-testid="withdraw-application-button"
         >
           Withdraw Application
+        </Button>
+      )}
+
+      {isGM && game.state === 'cancelled' && onDeleteGame && (
+        <Button
+          variant="danger"
+          onClick={onDeleteGame}
+          disabled={actionLoading}
+          data-testid="delete-game-button"
+        >
+          Delete Game
         </Button>
       )}
 

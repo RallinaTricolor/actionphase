@@ -456,11 +456,23 @@ func (h *Handler) DeleteGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete the game
-	err = gameService.DeleteGame(r.Context(), int32(gameID))
+	// Delete the game (pass userID for authorization in service layer)
+	err = gameService.DeleteGame(r.Context(), int32(gameID), int32(user.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to delete game", "error", err, "game_id", gameID)
-		render.Render(w, r, core.ErrInternalError(err))
+		// Check for specific errors and return appropriate HTTP status codes
+		errMsg := err.Error()
+		switch {
+		case errMsg == "game not found":
+			render.Render(w, r, core.ErrNotFound(errMsg))
+		case errMsg == "only the game master can delete this game":
+			render.Render(w, r, core.ErrForbidden(errMsg))
+		case errMsg == "only cancelled games can be deleted" ||
+			errMsg[:len("only cancelled games can be deleted")] == "only cancelled games can be deleted":
+			render.Render(w, r, core.ErrBadRequest(err))
+		default:
+			render.Render(w, r, core.ErrInternalError(err))
+		}
 		return
 	}
 

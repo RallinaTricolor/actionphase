@@ -299,16 +299,97 @@ func TestGameService_DeleteGame(t *testing.T) {
 	fixtures := testDB.SetupFixtures(t)
 	gameService := &GameService{DB: testDB.Pool}
 
-	// Create a game to delete
-	game := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Game to Delete")
+	// Create a cancelled game that the GM owns
+	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Test Cancelled Game",
+		Description: "A test game to be deleted",
+		GMUserID:    int32(fixtures.TestUser.ID),
+		IsPublic:    true,
+	})
+	core.AssertNoError(t, err, "Failed to create test game")
 
-	// Delete the game
-	err := gameService.DeleteGame(context.Background(), game.ID)
-	core.AssertNoError(t, err, "Failed to delete game")
+	// Cancel the game
+	game, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateCancelled)
+	core.AssertNoError(t, err, "Failed to cancel game")
 
-	// Verify game is deleted
-	_, err = gameService.GetGame(context.Background(), game.ID)
-	core.AssertError(t, err, "Game should be deleted and not findable")
+	// Create an active game for testing state validation
+	activeGame, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Active Game",
+		Description: "Should not be deletable",
+		GMUserID:    int32(fixtures.TestUser.ID),
+		IsPublic:    true,
+	})
+	core.AssertNoError(t, err, "Failed to create active game")
+
+	// Create another GM's cancelled game for testing authorization
+	otherGM := testDB.CreateTestUser(t, "othergm", "other_gm@example.com")
+	otherGMGame, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Other GM's Game",
+		Description: "Owned by different GM",
+		GMUserID:    int32(otherGM.ID),
+		IsPublic:    true,
+	})
+	core.AssertNoError(t, err, "Failed to create other GM's game")
+	otherGMGame, err = gameService.UpdateGameState(context.Background(), otherGMGame.ID, core.GameStateCancelled)
+	core.AssertNoError(t, err, "Failed to cancel other GM's game")
+
+	testCases := []struct {
+		name        string
+		gameID      int32
+		userID      int32
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "successful deletion by GM",
+			gameID:      game.ID,
+			userID:      int32(fixtures.TestUser.ID),
+			expectError: false,
+		},
+		{
+			name:        "non-GM cannot delete",
+			gameID:      otherGMGame.ID,
+			userID:      int32(fixtures.TestUser.ID),
+			expectError: true,
+			errorMsg:    "only the game master can delete this game",
+		},
+		{
+			name:        "cannot delete non-cancelled game",
+			gameID:      activeGame.ID,
+			userID:      int32(fixtures.TestUser.ID),
+			expectError: true,
+			errorMsg:    "only cancelled games can be deleted",
+		},
+		{
+			name:        "cannot delete non-existent game",
+			gameID:      99999,
+			userID:      int32(fixtures.TestUser.ID),
+			expectError: true,
+			errorMsg:    "game not found",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := gameService.DeleteGame(context.Background(), tc.gameID, tc.userID)
+
+			if tc.expectError {
+				core.AssertError(t, err, "Expected error for: "+tc.name)
+				if tc.errorMsg != "" {
+					core.AssertErrorContains(t, err, tc.errorMsg, "Error message mismatch")
+				}
+				return
+			}
+
+			core.AssertNoError(t, err, "Failed to delete game")
+
+			// Verify the game was actually deleted
+			_, err = gameService.GetGame(context.Background(), tc.gameID)
+			core.AssertError(t, err, "Game should not exist after deletion")
+
+			t.Logf("Successfully deleted game ID: %d", tc.gameID)
+		})
+	}
 }
 
 // Benchmark tests for performance monitoring

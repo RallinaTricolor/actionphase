@@ -42,7 +42,9 @@ WHERE id = $1
 RETURNING *;
 
 -- name: DeleteGame :exec
-DELETE FROM games WHERE id = $1;
+-- Only allow deletion of cancelled games
+-- Foreign key constraints will cascade delete related data
+DELETE FROM games WHERE id = $1 AND state = 'cancelled';
 
 -- name: GetGameParticipants :many
 SELECT gp.*, u.username, u.email
