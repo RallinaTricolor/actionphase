@@ -291,7 +291,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
             </span>
           </Button>
 
-          {!isCommenting && !readOnly && (
+          {!isCommenting && !readOnly && controllableCharacters.length > 0 && (
             <Button
               variant="primary"
               onClick={() => setIsCommenting(true)}

@@ -7,6 +7,8 @@ import { AbilitiesManager } from './AbilitiesManager';
 import { InventoryManager } from './InventoryManager';
 import CharacterAvatar from './CharacterAvatar';
 import AvatarUploadModal from './AvatarUploadModal';
+import { TabNavigation } from './TabNavigation';
+import type { Tab } from './TabNavigation';
 import { Button, Textarea, Badge } from './ui';
 
 interface CharacterSheetProps {
@@ -139,13 +141,13 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   }
 
   return (
-    <div className="surface-base rounded-lg shadow-lg min-h-[600px] flex flex-col">
+    <div className="surface-base rounded-lg shadow-lg min-h-[600px] flex flex-col max-w-full overflow-hidden">
       <div className="border-b border-theme-default">
-        <div className="flex justify-between items-center p-8">
-          <div className="flex items-center gap-6">
+        <div className="flex justify-between items-start p-4 md:p-8 gap-3">
+          <div className="flex items-start gap-3 md:gap-6 min-w-0 flex-1">
             {/* Character Avatar */}
             {character && (
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <CharacterAvatar
                   avatarUrl={character.avatar_url}
                   characterName={character.name}
@@ -167,16 +169,16 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                 )}
               </div>
             )}
-            <div>
-              <h2 className="text-2xl font-bold text-content-primary mb-1">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg md:text-2xl font-bold text-content-primary mb-1 truncate">
                 {character?.name || 'Character Sheet'}
               </h2>
               {character && (
-                <div className="flex items-center gap-3">
-                  <Badge variant="primary" size="md">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="primary" size="sm">
                     {character.character_type.replace('_', ' ')}
                   </Badge>
-                  <Badge variant={character.status === 'approved' ? 'success' : 'warning'} size="md">
+                  <Badge variant={character.status === 'approved' ? 'success' : 'warning'} size="sm">
                     {character.status}
                   </Badge>
                 </div>
@@ -188,9 +190,9 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-content-tertiary hover:text-content-secondary h-auto p-2"
+              className="text-content-tertiary hover:text-content-secondary h-auto p-2 flex-shrink-0"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </Button>
@@ -198,39 +200,31 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
         </div>
 
         {/* Module Tabs - Filter out modules user cannot view */}
-        <div className="flex space-x-1 px-8">
-          {CHARACTER_MODULES.filter((module) => {
+        <TabNavigation
+          tabs={CHARACTER_MODULES.filter((module) => {
             // Bio is always visible (public information)
             if (module.type === 'bio') return true;
             // Private modules only visible to editors (GM, owner, audience)
             return canEdit;
-          }).map((module) => (
-            <Button
-              key={module.type}
-              variant="ghost"
-              onClick={() => setActiveModule(module.type)}
-              className={`py-3 px-6 border-b-2 font-medium transition-colors rounded-none ${
-                activeModule === module.type
-                  ? 'border-interactive-primary text-interactive-primary'
-                  : 'border-transparent text-content-secondary hover:text-content-primary hover:border-border-primary'
-              }`}
-            >
-              {module.name}
-            </Button>
-          ))}
-        </div>
+          }).map((module): Tab => ({
+            id: module.type,
+            label: module.name
+          }))}
+          activeTab={activeModule}
+          onTabChange={setActiveModule}
+        />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8">
         {CHARACTER_MODULES.filter(module => {
           // Only render modules the user has permission to view
           if (module.type === 'bio') return true;
           return canEdit;
         }).filter(module => module.type === activeModule).map((module) => (
           <div key={module.type} className="max-w-4xl mx-auto">
-            <div className="mb-6">
-              <h3 className="text-xl font-semibold text-content-primary mb-2">{module.name}</h3>
-              <p className="text-content-secondary">{module.description}</p>
+            <div className="mb-4 md:mb-6">
+              <h3 className="text-lg md:text-xl font-semibold text-content-primary mb-2">{module.name}</h3>
+              <p className="text-sm md:text-base text-content-secondary">{module.description}</p>
             </div>
 
             {/* Render specialized components for abilities and inventory modules */}
@@ -267,15 +261,15 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                   }
 
                   return (
-                    <div key={field.name} className="border border-theme-default rounded-lg p-6 bg-surface-raised shadow-sm">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <label className="block text-base font-semibold text-content-primary mb-1">
+                    <div key={field.name} className="border border-theme-default rounded-lg p-4 md:p-6 bg-surface-raised shadow-sm">
+                      <div className="flex justify-between items-start mb-3 md:mb-4 gap-2">
+                        <div className="flex-1 min-w-0">
+                          <label className="block text-sm md:text-base font-semibold text-content-primary mb-1">
                             {field.label}
                             {field.required && <span className="text-semantic-danger ml-1">*</span>}
                           </label>
                           {fieldData && (
-                            <div className="flex items-center space-x-3 mt-2">
+                            <div className="flex items-center flex-wrap gap-2 md:gap-3 mt-2">
                               <Badge variant={isFieldPublic ? 'success' : 'warning'} size="sm">
                                 {isFieldPublic ? 'Public' : 'Private'}
                               </Badge>
@@ -293,10 +287,10 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                             onClick={() => handleFieldEdit(module.type, field.name)}
                             className="flex-shrink-0"
                           >
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 md:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
-                            Edit
+                            <span className="hidden md:inline">Edit</span>
                           </Button>
                         )}
                       </div>

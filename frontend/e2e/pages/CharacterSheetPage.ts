@@ -117,25 +117,49 @@ export class CharacterSheetPage {
 
   /**
    * Navigate to Bio/Background module
+   * Works with both mobile dropdown and desktop tabs
    */
   async goToBioModule() {
-    await this.page.getByRole('button', { name: 'Bio/Background' }).click();
+    // Try mobile dropdown first
+    const mobileSelect = this.page.locator('select#tab-select');
+    if (await mobileSelect.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await mobileSelect.selectOption('bio');
+    } else {
+      // Desktop tab
+      await this.page.getByRole('tab', { name: 'Bio/Background' }).click();
+    }
     await this.page.waitForLoadState('networkidle');
   }
 
   /**
    * Navigate to Abilities & Skills module
+   * Works with both mobile dropdown and desktop tabs
    */
   async goToAbilitiesModule() {
-    await this.page.getByRole('button', { name: 'Abilities & Skills' }).click();
+    // Try mobile dropdown first
+    const mobileSelect = this.page.locator('select#tab-select');
+    if (await mobileSelect.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await mobileSelect.selectOption('abilities');
+    } else {
+      // Desktop tab
+      await this.page.getByRole('tab', { name: 'Abilities & Skills' }).click();
+    }
     await this.page.waitForLoadState('networkidle');
   }
 
   /**
    * Navigate to Inventory module
+   * Works with both mobile dropdown and desktop tabs
    */
   async goToInventoryModule() {
-    await this.page.getByRole('button', { name: 'Inventory' }).click();
+    // Try mobile dropdown first
+    const mobileSelect = this.page.locator('select#tab-select');
+    if (await mobileSelect.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await mobileSelect.selectOption('inventory');
+    } else {
+      // Desktop tab
+      await this.page.getByRole('tab', { name: 'Inventory' }).click();
+    }
     await this.page.waitForLoadState('networkidle');
   }
 
@@ -252,10 +276,28 @@ export class CharacterSheetPage {
   /**
    * Check if a specific module button is visible
    * Used to verify permission boundaries (e.g., players shouldn't see Inventory)
+   * Works with both mobile dropdown and desktop tabs
    */
   async isModuleVisible(moduleName: 'Bio/Background' | 'Abilities & Skills' | 'Inventory'): Promise<boolean> {
+    // Map display name to module ID
+    const moduleIdMap: Record<string, string> = {
+      'Bio/Background': 'bio',
+      'Abilities & Skills': 'abilities',
+      'Inventory': 'inventory'
+    };
+    const moduleId = moduleIdMap[moduleName];
+
+    // Check mobile dropdown
+    const mobileSelect = this.page.locator('select#tab-select');
+    if (await mobileSelect.isVisible({ timeout: 1000 }).catch(() => false)) {
+      // Check if the option exists in the dropdown
+      const option = mobileSelect.locator(`option[value="${moduleId}"]`);
+      return await option.count() > 0;
+    }
+
+    // Check desktop tabs
     try {
-      await this.page.getByRole('button', { name: moduleName }).waitFor({ state: 'visible', timeout: 2000 });
+      await this.page.getByRole('tab', { name: moduleName }).waitFor({ state: 'visible', timeout: 2000 });
       return true;
     } catch {
       return false;
