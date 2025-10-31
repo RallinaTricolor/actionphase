@@ -120,9 +120,11 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
             console.log('[ConversationList] Clicked conversation:', conversation);
             onSelectConversation(conversation.id);
           }}
-          className={`w-full justify-left text-left hover:surface-raised transition-colors rounded-none ${
-            selectedConversationId === conversation.id ? 'bg-interactive-primary-subtle border-l-4 border-interactive-primary' : ''
-          } ${collapsed ? 'p-2' : 'p-4'}`}
+          className={`w-full justify-start text-left hover:bg-surface-raised transition-colors rounded-none border-l-4 ${
+            selectedConversationId === conversation.id
+              ? 'bg-interactive-primary-subtle border-interactive-primary'
+              : 'border-transparent hover:border-border-primary'
+          } ${collapsed ? 'p-2' : 'px-4 py-3'}`}
           title={collapsed ? conversation.title || 'Untitled Conversation' : undefined}
           data-testid="conversation-item"
         >
@@ -142,27 +144,27 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
             // Full view: show complete information
             <>
               {/* Mobile: Vertical Stack Layout */}
-              <div className="md:hidden">
-                {/* Title + Unread Badge */}
-                <div className="flex items-center gap-2 mb-1">
+              <div className="md:hidden w-full">
+                {/* Title + Timestamp row */}
+                <div className="flex items-baseline justify-between gap-2 mb-1">
                   <h3 className="font-semibold text-base text-content-primary truncate flex-1 min-w-0">
                     {conversation.title || 'Untitled Conversation'}
                   </h3>
-                  {conversation.unread_count > 0 && (
-                    <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
-                      {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                  {conversation.last_message_at && (
+                    <span className="text-xs text-content-tertiary flex-shrink-0 whitespace-nowrap">
+                      {formatDate(conversation.last_message_at)}
                     </span>
                   )}
                 </div>
 
-                {/* Participants + Timestamp on same line for compact layout */}
-                <div className="flex items-baseline justify-between gap-3 mb-0.5">
+                {/* Participants + Unread Badge */}
+                <div className="flex items-center gap-2 mb-0.5">
                   <p className="text-sm text-content-secondary truncate flex-1 min-w-0">
                     {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
                   </p>
-                  {conversation.last_message_at && (
-                    <span className="text-xs text-content-tertiary flex-shrink-0 whitespace-nowrap">
-                      {formatDate(conversation.last_message_at)}
+                  {conversation.unread_count > 0 && (
+                    <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
+                      {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
                     </span>
                   )}
                 </div>
@@ -175,33 +177,32 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
                 )}
               </div>
 
-              {/* Desktop: Horizontal Layout (Original) */}
-              <div className="hidden md:block">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <h3 className="font-semibold text-content-primary truncate min-w-0 flex-1">
-                        {conversation.title || 'Untitled Conversation'}
-                      </h3>
-                      {conversation.unread_count > 0 && (
-                        <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
-                          {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-content-secondary truncate">
-                      {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
-                    </p>
-                  </div>
+              {/* Desktop: Horizontal Layout */}
+              <div className="hidden md:block w-full">
+                <div className="flex items-baseline justify-between gap-3 mb-1">
+                  <h3 className="font-semibold text-base text-content-primary truncate flex-1 min-w-0">
+                    {conversation.title || 'Untitled Conversation'}
+                  </h3>
                   {conversation.last_message_at && (
-                    <span className="text-xs text-content-tertiary ml-2 flex-shrink-0">
+                    <span className="text-xs text-content-tertiary flex-shrink-0 whitespace-nowrap">
                       {formatDate(conversation.last_message_at)}
                     </span>
                   )}
                 </div>
 
+                <div className="flex items-center gap-2 mb-0.5">
+                  <p className="text-sm text-content-secondary truncate flex-1 min-w-0">
+                    {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
+                  </p>
+                  {conversation.unread_count > 0 && (
+                    <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
+                      {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                    </span>
+                  )}
+                </div>
+
                 {conversation.last_message && (
-                  <p className="text-sm text-content-secondary truncate">
+                  <p className="text-sm text-content-tertiary truncate">
                     {conversation.last_message}
                   </p>
                 )}
