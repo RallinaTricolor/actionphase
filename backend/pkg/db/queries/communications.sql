@@ -163,7 +163,17 @@ VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetConversationMessages :many
-SELECT pm.*, u.username as sender_username, c.name as sender_character_name
+SELECT pm.id,
+       pm.conversation_id,
+       pm.sender_user_id,
+       pm.sender_character_id,
+       pm.content,
+       pm.created_at,
+       pm.updated_at,
+       pm.deleted_at,
+       pm.is_deleted,
+       u.username as sender_username,
+       c.name as sender_character_name
 FROM private_messages pm
 JOIN users u ON pm.sender_user_id = u.id
 LEFT JOIN characters c ON pm.sender_character_id = c.id
@@ -189,6 +199,14 @@ WHERE pm.conversation_id = $2
 UPDATE conversations
 SET updated_at = NOW()
 WHERE id = $1;
+
+-- name: GetPrivateMessage :one
+SELECT * FROM private_messages WHERE id = $1;
+
+-- name: SoftDeletePrivateMessage :exec
+UPDATE private_messages
+SET deleted_at = NOW(), is_deleted = true
+WHERE id = $1 AND sender_user_id = $2;
 
 -- name: SoftDeleteMessage :exec
 UPDATE messages

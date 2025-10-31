@@ -45,13 +45,14 @@ func getUserIDFromToken(r *http.Request, app *core.App) (int32, string, error) {
 // Note: This is called from within the games router, so gameId is already in the path context
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/{gameId}/conversations", func(r chi.Router) {
-		r.Post("/", h.CreateConversation)                              // Create new conversation
-		r.Get("/", h.GetUserConversations)                             // Get user's conversations
-		r.Get("/{conversationId}", h.GetConversation)                  // Get conversation details
-		r.Get("/{conversationId}/messages", h.GetConversationMessages) // Get messages
-		r.Post("/{conversationId}/messages", h.SendMessage)            // Send message
-		r.Post("/{conversationId}/read", h.MarkAsRead)                 // Mark as read
-		r.Post("/{conversationId}/participants", h.AddParticipant)     // Add participant
+		r.Post("/", h.CreateConversation)                                   // Create new conversation
+		r.Get("/", h.GetUserConversations)                                  // Get user's conversations
+		r.Get("/{conversationId}", h.GetConversation)                       // Get conversation details
+		r.Get("/{conversationId}/messages", h.GetConversationMessages)      // Get messages
+		r.Post("/{conversationId}/messages", h.SendMessage)                 // Send message
+		r.Delete("/{conversationId}/messages/{messageId}", h.DeleteMessage) // Delete message
+		r.Post("/{conversationId}/read", h.MarkAsRead)                      // Mark as read
+		r.Post("/{conversationId}/participants", h.AddParticipant)          // Add participant
 	})
 }
 
@@ -467,5 +468,56 @@ func (h *Handler) AddParticipant(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
+	})
+}
+
+// DeleteMessage deletes a private message (soft delete)
+func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID, _, err := getUserIDFromToken(r, h.App)
+	if err != nil {
+		h.App.Logger.Error("Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	conversationIDStr := chi.URLParam(r, "conversationId")
+	conversationID, err := strconv.ParseInt(conversationIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid conversation ID")))
+		return
+	}
+
+	messageIDStr := chi.URLParam(r, "messageId")
+	messageID, err := strconv.ParseInt(messageIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid message ID")))
+		return
+	}
+
+	conversationService := db.NewConversationService(h.App.Pool)
+
+	// Delete the message (service handles authorization check)
+	err = conversationService.DeletePrivateMessage(ctx, int32(messageID), userID)
+	if err != nil {
+		if err.Error() == "message not found" {
+			render.Render(w, r, core.ErrNotFound("message not found"))
+			return
+		}
+		if err.Error() == "forbidden: you can only delete your own messages" {
+			render.Render(w, r, core.ErrForbidden("you can only delete your own messages"))
+			return
+		}
+		h.App.Logger.Error("Failed to delete message", "error", err, "message_id", messageID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	h.App.Logger.Info("Message deleted successfully", "message_id", messageID, "conversation_id", conversationID, "user_id", userID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Message deleted successfully",
+		"id":      messageID,
 	})
 }

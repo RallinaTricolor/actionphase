@@ -71,6 +71,6 @@ test.describe('GM Creates Game & Recruits Players', () => {
     await expect(page.getByRole('button', { name: 'Start Recruitment' })).not.toBeVisible({ timeout: 5000 });
 
     // Verify recruitment-specific content
-    await expect(page.getByRole('heading', { name: /Recruitment Deadline/i, level: 3 }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Recruitment Deadline/i, level: 3 }).locator('visible=true').first()).toBeVisible();
   });
 });

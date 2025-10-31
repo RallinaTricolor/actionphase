@@ -1,7 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { navigateToGameAndTab } from '../utils/navigation';
 import { waitForVisible } from '../utils/waits';
-import { assertTextVisible } from '../utils/assertions';
 
 /**
  * Page Object Model for Private Messaging
@@ -81,12 +80,15 @@ export class MessagingPage {
    * @param characterName - Character name to select as sender
    */
   async selectSendingCharacter(characterName: string) {
-    // Check if there's a select dropdown (multiple characters case)
-    const characterSelect = this.page.locator('select').filter({ hasText: /Select your character/ }).or(
-      this.page.locator('select').first()
-    );
+    // Look for character select dropdown using the placeholder text to distinguish from tab select
+    // Filter to only visible select - works for both mobile and desktop viewports
+    const characterSelect = this.page.locator('select').filter({
+      has: this.page.locator('option', { hasText: 'Select your character' })
+    }).locator('visible=true').first();
 
-    const selectCount = await characterSelect.count();
+    const selectCount = await this.page.locator('select').filter({
+      has: this.page.locator('option', { hasText: 'Select your character' })
+    }).count();
 
     if (selectCount > 0) {
       // Multiple characters - select from dropdown
@@ -104,7 +106,7 @@ export class MessagingPage {
       throw new Error(`Could not find character "${characterName}" in dropdown`);
     } else {
       // Single character - verify it's the right one (it's auto-selected)
-      const displayedCharacter = await this.page.getByText(characterName).first();
+      const displayedCharacter = await this.page.getByText(characterName).locator('visible=true').first();
       if (await displayedCharacter.count() === 0) {
         throw new Error(`Expected character "${characterName}" to be auto-selected, but it's not displayed`);
       }
@@ -147,8 +149,8 @@ export class MessagingPage {
     await this.createConversationButton.click();
     await this.page.waitForLoadState('networkidle');
 
-    // Verify conversation was created
-    await assertTextVisible(this.page, title);
+    // Verify conversation was created - filter to visible element (viewport-agnostic)
+    await expect(this.page.getByText(title).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
   }
 
   /**
@@ -160,8 +162,8 @@ export class MessagingPage {
     await this.sendButton.click();
     await this.page.waitForLoadState('networkidle');
 
-    // Verify message appears
-    await assertTextVisible(this.page, message);
+    // Verify message appears - filter to visible element (viewport-agnostic)
+    await expect(this.page.getByText(message).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
   }
 
   /**
@@ -169,7 +171,7 @@ export class MessagingPage {
    * @param conversationTitle - Title of the conversation to open
    */
   async openConversation(conversationTitle: string) {
-    const conversation = this.page.getByText(conversationTitle).first();
+    const conversation = this.page.getByText(conversationTitle).locator('visible=true').first();
     await conversation.click();
     await this.page.waitForLoadState('networkidle');
 
@@ -182,7 +184,8 @@ export class MessagingPage {
    * @param conversationTitle - Title to verify
    */
   async verifyConversationExists(conversationTitle: string) {
-    await assertTextVisible(this.page, conversationTitle);
+    // Filter to visible element (viewport-agnostic)
+    await expect(this.page.getByText(conversationTitle).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
   }
 
   /**
@@ -199,7 +202,8 @@ export class MessagingPage {
    * @param messageContent - Message content to verify
    */
   async verifyMessageExists(messageContent: string) {
-    const message = this.page.getByText(messageContent).last();
+    // Filter to visible element (viewport-agnostic)
+    const message = this.page.getByText(messageContent).locator('visible=true').first();
     await expect(message).toBeVisible({ timeout: 5000 });
   }
 

@@ -45,7 +45,7 @@ test.describe('Character Avatar Feature', () => {
 
       // Find all Edit Sheet buttons and click the first one
       // (Player 1 owns E2E Test Char 1, so their Edit Sheet button should work)
-      const editButton = page.locator('button:has-text("Edit Sheet")').first();
+      const editButton = page.locator('button:has-text("Edit Sheet")').locator('visible=true').first();
       await expect(editButton).toBeVisible({ timeout: 10000 });
       await editButton.click();
 
@@ -73,7 +73,7 @@ test.describe('Character Avatar Feature', () => {
       await expect(preview).toBeVisible();
 
       // Click upload button and wait for upload to complete
-      const submitButton = page.locator('button:has-text("Upload")').last();
+      const submitButton = page.locator('button:has-text("Upload")').locator('visible=true').first();
       await expect(submitButton).toBeEnabled();
 
       // Wait for the upload POST to complete
@@ -92,14 +92,15 @@ test.describe('Character Avatar Feature', () => {
       await expect(page.locator('h2:has-text("E2E Test Char 1")')).toBeVisible();
 
       // The avatar should now show an uploaded image
-      // The simplest check: verify the avatar container has an img child (even if obscured by upload button)
-      const avatarContainer = page.locator('[data-testid="character-avatar"]').last();
+      // Wait for the avatar to update with the new image
+      // We need to find an avatar that has an img element (not showing initials)
+      const avatarImg = page.locator('[data-testid="character-avatar"] img').locator('visible=true').first();
 
-      // Wait for the img element to exist in the DOM
-      await expect(avatarContainer.locator('img')).toBeAttached({ timeout: 5000 });
+      // Wait for the img element to appear (component will re-render with avatar_url)
+      await expect(avatarImg).toBeVisible({ timeout: 10000 });
 
       // Verify the img has a valid src pointing to uploads
-      const imgSrc = await avatarContainer.locator('img').getAttribute('src');
+      const imgSrc = await avatarImg.getAttribute('src');
       expect(imgSrc).toBeTruthy();
       expect(imgSrc).toContain('/uploads/');
     });
@@ -114,7 +115,7 @@ test.describe('Character Avatar Feature', () => {
       await gamePage.goto(gameId);
       await gamePage.goToCharacters();
 
-      const editButton = page.locator('button:has-text("Edit Sheet")').first();
+      const editButton = page.locator('button:has-text("Edit Sheet")').locator('visible=true').first();
       await editButton.click();
 
       // Open upload modal
@@ -132,7 +133,7 @@ test.describe('Character Avatar Feature', () => {
       await expect(page.locator('text=Only JPG, PNG, and WebP')).toBeVisible();
 
       // Upload button should be disabled
-      const uploadButton = page.locator('button:has-text("Upload")').last();
+      const uploadButton = page.locator('button:has-text("Upload")').locator('visible=true').first();
       await expect(uploadButton).toBeDisabled();
     });
 
@@ -146,7 +147,7 @@ test.describe('Character Avatar Feature', () => {
       await gamePage.goto(gameId);
       await gamePage.goToCharacters();
 
-      const editButton = page.locator('button:has-text("Edit Sheet")').first();
+      const editButton = page.locator('button:has-text("Edit Sheet")').locator('visible=true').first();
       await editButton.click();
 
       // Open upload modal
@@ -165,7 +166,7 @@ test.describe('Character Avatar Feature', () => {
       await expect(page.locator('text=File size must be less than 5MB')).toBeVisible();
 
       // Upload button should be disabled
-      const uploadButton = page.locator('button:has-text("Upload")').last();
+      const uploadButton = page.locator('button:has-text("Upload")').locator('visible=true').first();
       await expect(uploadButton).toBeDisabled();
     });
   });
@@ -180,7 +181,7 @@ test.describe('Character Avatar Feature', () => {
       await gamePage.goto(gameId);
       await gamePage.goToCharacters();
 
-      const editButton = page.locator('button:has-text("Edit Sheet")').first();
+      const editButton = page.locator('button:has-text("Edit Sheet")').locator('visible=true').first();
       await editButton.click();
 
       // Open upload modal
@@ -196,7 +197,7 @@ test.describe('Character Avatar Feature', () => {
         const fileInput = page.locator('input[type="file"]');
         await fileInput.setInputFiles(testImagePath);
 
-        const uploadButton = page.locator('button:has-text("Upload")').last();
+        const uploadButton = page.locator('button:has-text("Upload")').locator('visible=true').first();
 
         // Wait for upload POST to complete
         const uploadPromise = page.waitForResponse(
@@ -229,7 +230,7 @@ test.describe('Character Avatar Feature', () => {
       await expect(page.locator('text=Upload Avatar for')).not.toBeVisible();
 
       // Avatar in character sheet should now show initials fallback (no img tag)
-      const avatarContainer = page.locator('[data-testid="character-avatar"]').last();
+      const avatarContainer = page.locator('[data-testid="character-avatar"]').locator('visible=true').first();
       await expect(avatarContainer).toBeVisible();
 
       const avatarImg = avatarContainer.locator('img');
@@ -245,7 +246,7 @@ test.describe('Character Avatar Feature', () => {
       await gamePage.goto(gameId);
       await gamePage.goToCharacters();
 
-      const editButton = page.locator('button:has-text("Edit Sheet")').first();
+      const editButton = page.locator('button:has-text("Edit Sheet")').locator('visible=true').first();
       await editButton.click();
 
       // Open upload modal
@@ -261,7 +262,7 @@ test.describe('Character Avatar Feature', () => {
         const fileInput = page.locator('input[type="file"]');
         await fileInput.setInputFiles(testImagePath);
 
-        const uploadButton = page.locator('button:has-text("Upload")').last();
+        const uploadButton = page.locator('button:has-text("Upload")').locator('visible=true').first();
 
         // Wait for upload POST to complete
         const uploadPromise = page.waitForResponse(
@@ -319,7 +320,7 @@ test.describe('Character Avatar Feature', () => {
 
       // If there are View Sheet buttons, click the first one (should be Player 1's character)
       if (viewButtonCount > 0) {
-        await viewButtons.first().click();
+        await viewButtons.locator('visible=true').first().click();
 
         // Character sheet should open but without upload button
         await expect(page.locator('h2').filter({ hasText: 'E2E Test Char' })).toBeVisible();
@@ -343,7 +344,7 @@ test.describe('Character Avatar Feature', () => {
       await gamePage.goToCharacters();
 
       // Open any player's character - GM should see "Edit Sheet" for all characters
-      const editButton = page.locator('button:has-text("Edit Sheet")').first();
+      const editButton = page.locator('button:has-text("Edit Sheet")').locator('visible=true').first();
       await expect(editButton).toBeVisible({ timeout: 10000 }); // GM should see Edit Sheet
       await editButton.click();
 
@@ -368,11 +369,11 @@ test.describe('Character Avatar Feature', () => {
       await gamePage.goto(gameId);
       await gamePage.goToCharacters();
 
-      const editButton = page.locator('button:has-text("Edit Sheet")').first();
+      const editButton = page.locator('button:has-text("Edit Sheet")').locator('visible=true').first();
       await editButton.click();
 
       // Character sheet should show avatar element
-      const avatar = page.locator('[data-testid="character-avatar"]').first();
+      const avatar = page.locator('[data-testid="character-avatar"]').locator('visible=true').first();
       await expect(avatar).toBeVisible();
     });
 
@@ -386,11 +387,11 @@ test.describe('Character Avatar Feature', () => {
       await gamePage.goToCharacters();
 
       // Assuming E2E Test Char 2 has no avatar
-      const editButton = page.locator('button:has-text("Edit Sheet")').first();
+      const editButton = page.locator('button:has-text("Edit Sheet")').locator('visible=true').first();
       await editButton.click();
 
-      // Avatar element should be visible (use .last() to get the one in the modal, not the list)
-      const avatarContainer = page.locator('[data-testid="character-avatar"]').last();
+      // Avatar element should be visible (use .locator('visible=true').first() to get the one in the modal, not the list)
+      const avatarContainer = page.locator('[data-testid="character-avatar"]').locator('visible=true').first();
       await expect(avatarContainer).toBeVisible();
 
       // Should show initials (text in span), not an image
@@ -435,7 +436,7 @@ test.describe('Character Avatar Feature', () => {
       await gamePage.goto(gameId);
       await gamePage.goToCharacters();
 
-      const editButton = page.locator('button:has-text("Edit Sheet")').first();
+      const editButton = page.locator('button:has-text("Edit Sheet")').locator('visible=true').first();
       await editButton.click();
 
       // Step 1: Upload avatar
@@ -445,7 +446,7 @@ test.describe('Character Avatar Feature', () => {
       const fileInput = page.locator('input[type="file"]');
       await fileInput.setInputFiles(testImagePath);
 
-      const uploadButton = page.locator('button:has-text("Upload")').last();
+      const uploadButton = page.locator('button:has-text("Upload")').locator('visible=true').first();
 
       // Wait for upload POST to complete
       const uploadPromise = page.waitForResponse(
@@ -460,9 +461,9 @@ test.describe('Character Avatar Feature', () => {
       await expect(page.locator('text=Upload Avatar for')).not.toBeVisible({ timeout: 5000 });
 
       // Step 2: Verify avatar is displayed in character sheet
-      let avatarContainer = page.locator('[data-testid="character-avatar"]').last();
-      let avatarImg = avatarContainer.locator('img');
-      await expect(avatarImg).toBeAttached({ timeout: 5000 });
+      // Find the avatar img directly (not the container then img)
+      let avatarImg = page.locator('[data-testid="character-avatar"] img').locator('visible=true').first();
+      await expect(avatarImg).toBeVisible({ timeout: 10000 });
 
       let imgSrc = await avatarImg.getAttribute('src');
       expect(imgSrc).toContain('/uploads/');
@@ -482,10 +483,12 @@ test.describe('Character Avatar Feature', () => {
       await expect(page.locator('text=Upload Avatar for')).not.toBeVisible();
 
       // Step 4: Verify avatar is gone (fallback to initials)
-      avatarContainer = page.locator('[data-testid="character-avatar"]').last();
-      avatarImg = avatarContainer.locator('img');
-      await expect(avatarImg).not.toBeAttached({ timeout: 5000 });
+      // After deletion, the img should not exist and initials should be shown
+      avatarImg = page.locator('[data-testid="character-avatar"] img').locator('visible=true').first();
+      await expect(avatarImg).not.toBeVisible({ timeout: 5000 });
 
+      // Verify initials are shown instead
+      const avatarContainer = page.locator('[data-testid="character-avatar"] span').locator('visible=true').first();
       const initials = await avatarContainer.textContent();
       expect(initials).toBeTruthy();
     });

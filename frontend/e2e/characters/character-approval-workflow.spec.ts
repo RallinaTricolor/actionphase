@@ -231,7 +231,7 @@ test.describe('Character Approval Workflow', () => {
 
       // Character that was previously rejected and has been resubmitted (now pending)
       const characterName = 'Resubmitted Test Character';
-      await expect(gmPage.getByText(characterName).first()).toBeVisible({ timeout: 5000 });
+      await expect(gmPage.getByText(characterName).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
 
       // Verify it's in pending state (simulating resubmission after rejection)
       const status = await gmCharPage.getCharacterStatus(characterName);
@@ -290,7 +290,7 @@ test.describe('Character Approval Workflow', () => {
       await gmPage.waitForLoadState('networkidle');
 
       // Verify approved character is visible
-      await expect(gmPage.getByText(characterName).first()).toBeVisible({ timeout: 10000 });
+      await expect(gmPage.getByText(characterName).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
       // Player should also see their character in the active game
       await playerPage.reload();
@@ -303,7 +303,7 @@ test.describe('Character Approval Workflow', () => {
       await playerPeopleTab.click();
       await playerPage.waitForLoadState('networkidle');
 
-      await expect(playerPage.getByText(characterName).first()).toBeVisible({ timeout: 10000 });
+      await expect(playerPage.getByText(characterName).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
     } finally {
       await gmContext.close();
       await playerContext.close();

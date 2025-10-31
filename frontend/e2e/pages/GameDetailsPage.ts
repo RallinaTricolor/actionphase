@@ -33,24 +33,26 @@ export class GameDetailsPage {
    * Get the game title heading
    */
   get gameTitle(): Locator {
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
     return this.page.getByRole('heading', { level: 1 })
       .or(this.page.getByRole('heading', { level: 2 }))
-      .first();
+      .locator('visible=true').first();
   }
 
   /**
    * Get the game state badge
    */
   get stateBadge(): Locator {
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
     return this.page.getByTestId('game-state-badge')
-      .or(this.page.locator('[role="status"]').first());
+      .or(this.page.locator('[role="status"]').locator('visible=true').first());
   }
 
   /**
-   * Get a button by its text
+   * Get a button by its text (viewport-agnostic)
    */
   getButton(text: string): Locator {
-    return this.page.getByRole('button', { name: new RegExp(text, 'i') });
+    return this.page.getByRole('button', { name: new RegExp(text, 'i') }).locator('visible=true').first();
   }
 
   /**
@@ -120,8 +122,11 @@ export class GameDetailsPage {
     // Wait for confirmation modal
     await this.page.waitForLoadState('networkidle');
 
-    // Click confirm button in modal (last one is the confirm)
-    const confirmButton = this.page.getByRole('button', { name: 'Pause Game' }).last();
+    // Wait for modal to stabilize (animations complete)
+    await this.page.waitForTimeout(500);
+
+    // Click confirm button in modal using testid (avoids ambiguity with initial button)
+    const confirmButton = this.page.getByTestId('pause-game-confirm-button');
     await confirmButton.click();
     await this.page.waitForLoadState('networkidle');
   }
@@ -145,12 +150,15 @@ export class GameDetailsPage {
     // Wait for confirmation modal
     await this.page.waitForLoadState('networkidle');
 
+    // Wait for modal to stabilize
+    await this.page.waitForTimeout(500);
+
     // Type confirmation text
     const confirmInput = this.page.getByPlaceholder('completed');
     await confirmInput.fill('completed');
 
-    // Click confirm button in modal (last one is the confirm)
-    const confirmButton = this.page.getByRole('button', { name: 'Complete Game' }).last();
+    // Click confirm button in modal using testid (avoids ambiguity with initial button)
+    const confirmButton = this.page.getByTestId('complete-game-confirm-button');
     await confirmButton.click();
     await this.page.waitForLoadState('networkidle');
   }
@@ -166,8 +174,11 @@ export class GameDetailsPage {
     // Wait for confirmation modal
     await this.page.waitForLoadState('networkidle');
 
-    // Click confirm button in modal (last one is the confirm)
-    const confirmButton = this.page.getByRole('button', { name: 'Cancel Game' }).last();
+    // Wait for modal to stabilize
+    await this.page.waitForTimeout(500);
+
+    // Click confirm button in modal using testid (avoids ambiguity with initial button)
+    const confirmButton = this.page.getByTestId('cancel-game-confirm-button');
     await confirmButton.click();
     await this.page.waitForLoadState('networkidle');
   }

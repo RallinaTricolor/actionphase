@@ -94,9 +94,10 @@ test.describe('GM Creates Player Character', () => {
     const characterCard = page
       .getByTestId('character-card')
       .filter({ has: page.getByTestId('character-name').filter({ hasText: characterName }) })
-      .first();
+      .locator('visible=true').first();
 
-    const playerAssignment = characterCard.getByText(/TestPlayer1/i);
+    // Look for the "Player:" label followed by the username (dual-DOM safe)
+    const playerAssignment = characterCard.getByText(/Player:.*TestPlayer1/i).locator('visible=true').first();
     await expect(playerAssignment).toBeVisible();
   });
 

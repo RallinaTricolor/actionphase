@@ -71,7 +71,7 @@ test.describe('Permissions & Access Control', () => {
         await player1Page.waitForLoadState('networkidle');
 
         // Player 1 should see edit button for their own character
-        const player1EditButton = player1Page.getByRole('button', { name: 'Edit' }).first();
+        const player1EditButton = player1Page.getByRole('button', { name: 'Edit' }).locator('visible=true').first();
         await expect(player1EditButton).toBeVisible();
 
         // Player 2 logs in and views same game
@@ -86,8 +86,9 @@ test.describe('Permissions & Access Control', () => {
         await player2Page.waitForLoadState('networkidle');
 
         // Look for Player 1's character (E2E Test Char 1)
+        // Filter to visible element (viewport-agnostic)
         const player1Character = player2Page.getByText('E2E Test Char 1');
-        await expect(player1Character.first()).toBeVisible();
+        await expect(player1Character.locator('visible=true').first()).toBeVisible();
 
         // Find the specific card/container for Player 1's character using the character name
         const player1CharacterCard = player2Page.locator('div').filter({ hasText: 'E2E Test Char 1' }).filter({ hasText: 'test_player1' });
@@ -123,7 +124,7 @@ test.describe('Permissions & Access Control', () => {
       await page.waitForLoadState('networkidle');
 
       // Click Edit Sheet for Player 1's character to open modal
-      const editButton = page.getByRole('button', { name: 'Edit Sheet' }).first();
+      const editButton = page.getByRole('button', { name: 'Edit Sheet' }).locator('visible=true').first();
       await expect(editButton).toBeVisible({ timeout: 10000 });
       await editButton.click();
 
@@ -142,8 +143,9 @@ test.describe('Permissions & Access Control', () => {
 
       // Now verify Player 1 cannot see Edit Sheet button for Player 2's character
       // Player 1's character shows first, Player 2's character should be visible but not editable
+      // Filter to visible element (viewport-agnostic)
       const player2CharacterName = page.getByText('E2E Test Char 2');
-      await expect(player2CharacterName).toBeVisible();
+      await expect(player2CharacterName.locator('visible=true').first()).toBeVisible();
 
       // Count all Edit Sheet buttons - should only be 1 (for Player 1's own character)
       const allEditButtons = page.getByRole('button', { name: 'Edit Sheet' });
@@ -242,7 +244,7 @@ test.describe('Permissions & Access Control', () => {
         await titleInput.fill(conversationTitle, { timeout: 5000 });
 
         // Select Player 2's character
-        const player2Option = player1Page.getByText(/E2E Test Char 2|Player 2/i).first();
+        const player2Option = player1Page.getByText(/E2E Test Char 2|Player 2/i).locator('visible=true').first();
         await player2Option.click({ timeout: 3000 });
 
         // Create conversation
@@ -306,7 +308,7 @@ test.describe('Permissions & Access Control', () => {
       await page.waitForLoadState('networkidle');
 
       // Look for their own character
-      const ownCharacter = page.getByText('E2E Test Char 1').first();
+      const ownCharacter = page.getByText('E2E Test Char 1').locator('visible=true').first();
       await expect(ownCharacter).toBeVisible();
 
       // Should not see "Approve" or "Reject" buttons for own character
@@ -330,7 +332,7 @@ test.describe('Permissions & Access Control', () => {
       // This would depend on whether there are pending characters in the fixture
       // At minimum, verify GM can access character management
       const characterManagementSection = page.locator('div').filter({ hasText: /Character|E2E Test Char/ });
-      await expect(characterManagementSection.first()).toBeVisible();
+      await expect(characterManagementSection.locator('visible=true').first()).toBeVisible();
     });
   });
 

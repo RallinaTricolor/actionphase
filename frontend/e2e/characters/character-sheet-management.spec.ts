@@ -30,7 +30,7 @@ test.describe('Character Sheet Management', () => {
   // Close any open modals before each test
   test.beforeEach(async ({ page }) => {
     // Close any open modal by clicking X button or pressing Escape
-    const closeButton = page.locator('button').filter({ has: page.locator('svg') }).first();
+    const closeButton = page.locator('button').filter({ has: page.locator('svg') }).locator('visible=true').first();
     if (await closeButton.isVisible({ timeout: 1000 }).catch(() => false)) {
       await closeButton.click();
       await page.waitForTimeout(500);
@@ -93,8 +93,8 @@ test.describe('Character Sheet Management', () => {
 
     // Verify currency amounts are displayed (names may not be shown in UI)
     await expect(page.locator('text=Currency & Resources')).toBeVisible();
-    await expect(page.locator('text=50').first()).toBeVisible();
-    await expect(page.locator('text=25').first()).toBeVisible(); // .first() to avoid matching footer copyright "2025"
+    await expect(page.locator('text=50').locator('visible=true').first()).toBeVisible();
+    await expect(page.locator('text=25').locator('visible=true').first()).toBeVisible(); // .locator('visible=true').first() to avoid matching footer copyright "2025"
   });
 
   test('GM can view all character sheets', async ({ page }) => {
@@ -107,9 +107,9 @@ test.describe('Character Sheet Management', () => {
     await characterPage.goto();
 
     // Verify GM sees all characters
-    await expect(page.locator('text=Sheet Test Char 1')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=Sheet Test Char 2')).toBeVisible();
-    await expect(page.locator('text=Empty Sheet Char')).toBeVisible();
+    await expect(page.locator('text=Sheet Test Char 1').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Sheet Test Char 2').locator('visible=true').first()).toBeVisible();
+    await expect(page.locator('text=Empty Sheet Char').locator('visible=true').first()).toBeVisible();
 
     // GM should be able to view any character (open char 2, owned by PLAYER_2)
     await characterPage.openCharacterSheet('Sheet Test Char 2');

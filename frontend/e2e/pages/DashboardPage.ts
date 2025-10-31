@@ -29,7 +29,8 @@ export class DashboardPage {
   }
 
   async getGameCardByStatus(status: string): Promise<Locator> {
-    return this.page.locator(`[data-testid="game-status-${status}"]`).first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    return this.page.locator(`[data-testid="game-status-${status}"]`).locator('visible=true').first();
   }
 
   async hasUnreadNotifications(): Promise<boolean> {

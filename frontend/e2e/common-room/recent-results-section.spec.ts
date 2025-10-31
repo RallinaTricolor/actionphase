@@ -105,7 +105,7 @@ test.describe('Recent Results Section in Common Room', () => {
     await expect(page.getByText('Recent Action Results')).toBeVisible({ timeout: 10000 });
 
     // Click "View Full Results" button in header (use first() to avoid strict mode violation)
-    await page.getByRole('button', { name: 'View Full Results' }).first().click();
+    await page.getByRole('button', { name: 'View Full Results' }).locator('visible=true').first().click();
 
     // Should navigate to History tab with phase parameter
     await page.waitForLoadState('networkidle');
@@ -191,7 +191,7 @@ test.describe('Recent Results Section in Common Room', () => {
     await expect(page.getByText('2 results')).toBeVisible();
 
     // Click first result preview to expand it
-    const firstPreview = page.getByText(/You descend into the basement/).first();
+    const firstPreview = page.getByText(/You descend into the basement/).locator('visible=true').first();
     await firstPreview.click();
 
     // Verify first result's full content is visible (heading from markdown)

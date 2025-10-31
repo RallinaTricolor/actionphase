@@ -182,7 +182,17 @@ func (q *Queries) GetConversation(ctx context.Context, id int32) (Conversation, 
 }
 
 const getConversationMessages = `-- name: GetConversationMessages :many
-SELECT pm.id, pm.conversation_id, pm.sender_user_id, pm.sender_character_id, pm.content, pm.created_at, pm.updated_at, u.username as sender_username, c.name as sender_character_name
+SELECT pm.id,
+       pm.conversation_id,
+       pm.sender_user_id,
+       pm.sender_character_id,
+       pm.content,
+       pm.created_at,
+       pm.updated_at,
+       pm.deleted_at,
+       pm.is_deleted,
+       u.username as sender_username,
+       c.name as sender_character_name
 FROM private_messages pm
 JOIN users u ON pm.sender_user_id = u.id
 LEFT JOIN characters c ON pm.sender_character_id = c.id
@@ -198,6 +208,8 @@ type GetConversationMessagesRow struct {
 	Content             string             `json:"content"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+	IsDeleted           pgtype.Bool        `json:"is_deleted"`
 	SenderUsername      string             `json:"sender_username"`
 	SenderCharacterName pgtype.Text        `json:"sender_character_name"`
 }
@@ -219,6 +231,8 @@ func (q *Queries) GetConversationMessages(ctx context.Context, conversationID in
 			&i.Content,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.IsDeleted,
 			&i.SenderUsername,
 			&i.SenderCharacterName,
 		); err != nil {
@@ -389,6 +403,27 @@ func (q *Queries) GetPhaseThreads(ctx context.Context, phaseID pgtype.Int4) ([]G
 		return nil, err
 	}
 	return items, nil
+}
+
+const getPrivateMessage = `-- name: GetPrivateMessage :one
+SELECT id, conversation_id, sender_user_id, sender_character_id, content, created_at, updated_at, deleted_at, is_deleted FROM private_messages WHERE id = $1
+`
+
+func (q *Queries) GetPrivateMessage(ctx context.Context, id int32) (PrivateMessage, error) {
+	row := q.db.QueryRow(ctx, getPrivateMessage, id)
+	var i PrivateMessage
+	err := row.Scan(
+		&i.ID,
+		&i.ConversationID,
+		&i.SenderUserID,
+		&i.SenderCharacterID,
+		&i.Content,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.IsDeleted,
+	)
+	return i, err
 }
 
 const getThread = `-- name: GetThread :one
@@ -849,7 +884,7 @@ func (q *Queries) RemoveConversationParticipant(ctx context.Context, arg RemoveC
 const sendPrivateMessage = `-- name: SendPrivateMessage :one
 INSERT INTO private_messages (conversation_id, sender_user_id, sender_character_id, content)
 VALUES ($1, $2, $3, $4)
-RETURNING id, conversation_id, sender_user_id, sender_character_id, content, created_at, updated_at
+RETURNING id, conversation_id, sender_user_id, sender_character_id, content, created_at, updated_at, deleted_at, is_deleted
 `
 
 type SendPrivateMessageParams struct {
@@ -875,6 +910,8 @@ func (q *Queries) SendPrivateMessage(ctx context.Context, arg SendPrivateMessage
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.IsDeleted,
 	)
 	return i, err
 }
@@ -887,6 +924,22 @@ WHERE id = $1
 
 func (q *Queries) SoftDeleteMessage(ctx context.Context, id int32) error {
 	_, err := q.db.Exec(ctx, softDeleteMessage, id)
+	return err
+}
+
+const softDeletePrivateMessage = `-- name: SoftDeletePrivateMessage :exec
+UPDATE private_messages
+SET deleted_at = NOW(), is_deleted = true
+WHERE id = $1 AND sender_user_id = $2
+`
+
+type SoftDeletePrivateMessageParams struct {
+	ID           int32 `json:"id"`
+	SenderUserID int32 `json:"sender_user_id"`
+}
+
+func (q *Queries) SoftDeletePrivateMessage(ctx context.Context, arg SoftDeletePrivateMessageParams) error {
+	_, err := q.db.Exec(ctx, softDeletePrivateMessage, arg.ID, arg.SenderUserID)
 	return err
 }
 

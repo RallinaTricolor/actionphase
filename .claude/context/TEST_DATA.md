@@ -2,8 +2,8 @@
 
 **IMPORTANT: Read this file before working with test data and fixtures.**
 
-**Last Updated**: October 27, 2025
-**Last Verified**: October 27, 2025
+**Last Updated**: October 30, 2025
+**Last Verified**: October 30, 2025
 
 ## Test Fixture System
 
@@ -266,6 +266,7 @@ e2e/
 - **Game #166**: `E2E Common Room - Notifications` → for `notification-flow.spec.ts`
 - **Game #167**: `E2E Common Room - Misc` → for miscellaneous tests
 - **Game #168**: `E2E Character Avatars` → for `character-avatar.spec.ts`
+- **Game #9999**: `E2E Test Game` → for `private-messages-delete.spec.ts` (private message deletion)
 
 ### When to Create a New Fixture vs Reuse
 
@@ -333,6 +334,30 @@ const gameId = await getFixtureGameId(page, 'MY_FEATURE');
 ```
 
 **Step 4**: Document the fixture's purpose in SQL comments and this file.
+
+### Private Message Deletion Test Fixture (Game 9999)
+
+**Purpose**: Test private message deletion functionality
+**Test File**: `e2e/messaging/private-messages-delete.spec.ts`
+**Fixture File**: `backend/pkg/db/test_fixtures/e2e/17_private_message_deletion.sql`
+
+**Test Data**:
+- **Game**: 9999 (`E2E Test Game` from `08_e2e_dedicated_games.sql`)
+- **Conversation**: 9999 (direct conversation between TestPlayer1 and TestPlayer2)
+- **Characters**:
+  - Character 9991: "Character 1" (TestPlayer1)
+  - Character 9992: "Character 2" (TestPlayer2)
+- **Messages**:
+  - Message 9991: From TestPlayer1 - "Message from Player 1" (not deleted, available for deletion testing)
+  - Message 9992: From TestPlayer2 - "Message from Player 2" (not deleted, tests authorization)
+  - Message 9993: From TestPlayer1 - "[Message deleted]" (already deleted, tests UI hides delete button)
+
+**Test Scenarios**:
+- ✅ Delete own message (Player 1 can delete message 9991)
+- ✅ Cannot delete others' messages (Player 1 cannot delete message 9992)
+- ✅ Deleted messages visible to all participants
+- ✅ Cancel deletion (modal cancel button works)
+- ✅ No delete button on already-deleted messages (message 9993)
 
 ### Test Isolation Principles
 

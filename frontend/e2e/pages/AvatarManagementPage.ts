@@ -139,9 +139,10 @@ export class AvatarManagementPage {
    */
   async getAvatarSrc(): Promise<string | null> {
     try {
+      // Filter to visible element (viewport-agnostic for dual-DOM pattern)
       const avatarImage = this.page.locator('[data-testid="current-avatar"]').or(
         this.page.locator('img[alt*="avatar" i]')
-      ).first();
+      ).locator('visible=true').first();
 
       return await avatarImage.getAttribute('src');
     } catch {

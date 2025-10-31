@@ -43,7 +43,7 @@ test.describe('Phase Management Flow', () => {
     await phasePage.verifyPhaseExists(phaseName);
 
     // Verify "Activate" button is visible (phases are created but not active)
-    await expect(page.getByRole('button', { name: 'Activate' }).last()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Activate' }).locator('visible=true').first()).toBeVisible();
   });
 
   test('GM can activate a phase', async ({ page }) => {
@@ -74,7 +74,7 @@ test.describe('Phase Management Flow', () => {
     // Verify the SPECIFIC phase we activated shows as "Currently Active"
     // Check the phase card itself shows "Currently Active" indicator
     const activatedPhaseCard = phasePage.getPhaseCard(phaseName);
-    await expect(activatedPhaseCard.getByText('Currently Active').last()).toBeVisible({ timeout: 10000 });
+    await expect(activatedPhaseCard.getByText('Currently Active').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('GM can view history', async ({ page }) => {
@@ -90,8 +90,8 @@ test.describe('Phase Management Flow', () => {
 
     // Fixture game has Phase 1 (common room, previous) and Phase 2 (action, active)
     // Verify we can see both phases
-    await expect(page.locator('span').filter({ hasText: /^Phase 1$/ }).first()).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('span').filter({ hasText: /^Phase 2$/ }).first()).toBeVisible();
+    await expect(page.locator('span').filter({ hasText: /^Phase 1$/ }).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('span').filter({ hasText: /^Phase 2$/ }).locator('visible=true').first()).toBeVisible();
 
     // Verify phase titles from fixtures
     await expect(page.getByRole('heading', { name: 'Discussion Phase', level: 4 })).toBeVisible(); // Phase 1

@@ -27,7 +27,8 @@ export class ConversationPage {
     this.messageInput = page.locator('textarea[placeholder*="message"]');
     this.sendMessageButton = page.locator('button[type="submit"]:has-text("Send")');
     this.newConversationButton = page.locator('button:has-text("New Conversation")');
-    this.conversationTitle = page.locator('h1, h2, h3').filter({ hasText: /Conversation/ }).first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    this.conversationTitle = page.locator('h1, h2, h3').filter({ hasText: /Conversation/ }).locator('visible=true').first();
   }
 
   /**
@@ -49,7 +50,8 @@ export class ConversationPage {
   async waitForConversationsToLoad(): Promise<void> {
     // Wait for either conversations or "No conversations" message
     await Promise.race([
-      this.conversationItem.first().waitFor({ state: 'visible', timeout: 5000 }),
+      // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+      this.conversationItem.locator('visible=true').first().waitFor({ state: 'visible', timeout: 5000 }),
       this.page.locator('text=/No conversations/i').waitFor({ state: 'visible', timeout: 5000 })
     ]).catch(() => {
       // Timeout is OK - may not have conversations
@@ -72,7 +74,8 @@ export class ConversationPage {
     const titles: string[] = [];
 
     for (const conv of conversations) {
-      const titleElement = conv.locator('h3, .font-semibold').first();
+      // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+      const titleElement = conv.locator('h3, .font-semibold').locator('visible=true').first();
       const titleText = await titleElement.textContent().catch(() => null);
       if (titleText) {
         titles.push(titleText.trim());
@@ -129,7 +132,8 @@ export class ConversationPage {
   async sendMessage(content: string, characterName?: string): Promise<void> {
     // Select character if specified and dropdown exists
     if (characterName) {
-      const characterSelect = this.page.locator('select').first();
+      // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+      const characterSelect = this.page.locator('select').locator('visible=true').first();
       const isVisible = await characterSelect.isVisible().catch(() => false);
       if (isVisible) {
         await characterSelect.selectOption({ label: characterName });

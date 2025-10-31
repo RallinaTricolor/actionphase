@@ -73,6 +73,7 @@ export function PhaseCard({
     <div
       className={`border rounded-lg p-3 md:p-4 transition-colors cursor-pointer ${borderClass}`}
       onClick={onSelect}
+      data-testid="phase-card"
     >
       {/* Mobile: Vertical Stack Layout */}
       <div className="md:hidden space-y-3">

@@ -37,7 +37,7 @@ test.describe('Action Results Flow', () => {
     await expect(page.getByRole('heading', { name: /Completed Action Phase/ })).toBeVisible({ timeout: 10000 });
 
     // Should see Player 1's published result
-    await expect(page.locator('text=Basement Investigation Results').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Basement Investigation Results').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
     // Should see result content with markdown
     await expect(page.locator('text=You descend into the basement')).toBeVisible();
@@ -47,7 +47,7 @@ test.describe('Action Results Flow', () => {
     await expect(page.locator('text=A secret passage!')).toBeVisible();
 
     // Should see GM attribution (TestGM or TestGM_N for worker N)
-    await expect(page.locator(`text=From: ${getWorkerUsername('TestGM')}`).first()).toBeVisible();
+    await expect(page.locator(`text=From: ${getWorkerUsername('TestGM')}`).locator('visible=true').first()).toBeVisible();
   });
 
   test('player can see character mentions in results', async ({ page }) => {
@@ -78,7 +78,7 @@ test.describe('Action Results Flow', () => {
     await expect(page.getByRole('heading', { name: /Completed Action Phase/ })).toBeVisible({ timeout: 10000 });
 
     // Should see Player 2's result about library research
-    await expect(page.locator('text=Library Research Results').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Library Research Results').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
     // Should see result content
     await expect(page.locator('text=dusty tomes')).toBeVisible();
@@ -160,7 +160,7 @@ test.describe('GM Action Results Editing', () => {
     await expect(page.locator('text=DRAFT: The symbols appear to be a warning')).toBeVisible({ timeout: 10000 });
 
     // Should see Draft badge
-    await expect(page.locator('text=Draft').first()).toBeVisible();
+    await expect(page.locator('text=Draft').locator('visible=true').first()).toBeVisible();
   });
 
   test('GM can edit unpublished result content', async ({ page }) => {
@@ -223,7 +223,7 @@ test.describe('GM Action Results Editing', () => {
     await expect(page.locator(`text=${updatedContent.substring(0, 50)}`)).toBeVisible({ timeout: 10000 });
 
     // Should still see Draft badge (result remains unpublished)
-    await expect(page.locator('text=Draft').first()).toBeVisible();
+    await expect(page.locator('text=Draft').locator('visible=true').first()).toBeVisible();
   });
 
   test('GM can cancel editing without saving changes', async ({ page }) => {

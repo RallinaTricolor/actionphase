@@ -72,6 +72,7 @@ export function CancelGameConfirmationDialog({
             variant="secondary"
             onClick={onClose}
             disabled={isSubmitting}
+            data-testid="cancel-game-keep-button"
           >
             Keep Game
           </Button>
@@ -80,6 +81,7 @@ export function CancelGameConfirmationDialog({
             onClick={handleConfirm}
             disabled={isSubmitting}
             loading={isSubmitting}
+            data-testid="cancel-game-confirm-button"
           >
             {isSubmitting ? 'Cancelling...' : 'Cancel Game'}
           </Button>

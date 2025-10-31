@@ -44,7 +44,8 @@ export class NotificationsPage {
   async waitForNotificationsToLoad(): Promise<void> {
     // Wait for either notifications or empty state
     await Promise.race([
-      this.notificationItems.first().waitFor({ state: 'visible', timeout: 5000 }),
+      // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+      this.notificationItems.locator('visible=true').first().waitFor({ state: 'visible', timeout: 5000 }),
       this.emptyState.waitFor({ state: 'visible', timeout: 5000 })
     ]).catch(() => {
       // Timeout is OK
@@ -186,7 +187,8 @@ export class NotificationsPage {
    */
   async getNotificationType(index: number): Promise<string> {
     const notification = this.notificationItems.nth(index);
-    const typeElement = notification.locator('[data-testid="notification-type"], .notification-type, strong').first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    const typeElement = notification.locator('[data-testid="notification-type"], .notification-type, strong').locator('visible=true').first();
     return await typeElement.textContent() || '';
   }
 
@@ -223,7 +225,8 @@ export class NotificationsPage {
    */
   async getNotificationMessage(index: number): Promise<string> {
     const notification = this.notificationItems.nth(index);
-    const message = notification.locator('p, .message, [class*="text"]').first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    const message = notification.locator('p, .message, [class*="text"]').locator('visible=true').first();
     return await message.textContent() || '';
   }
 

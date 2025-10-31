@@ -75,7 +75,8 @@ export class GameHandoutsPage {
     const titles: string[] = [];
 
     for (const card of handoutCards) {
-      const titleElement = card.locator('h3, h4, [data-testid="handout-title"]').first();
+      // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+      const titleElement = card.locator('h3, h4, [data-testid="handout-title"]').locator('visible=true').first();
       const title = await titleElement.textContent();
       if (title) {
         titles.push(title.trim());
@@ -188,7 +189,8 @@ export class GameHandoutsPage {
   async getHandoutContent(title: string): Promise<string> {
     await this.openHandout(title);
 
-    const contentElement = this.page.locator('[data-testid="handout-content"], .handout-content').first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    const contentElement = this.page.locator('[data-testid="handout-content"], .handout-content').locator('visible=true').first();
     return await contentElement.textContent() || '';
   }
 

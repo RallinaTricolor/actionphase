@@ -97,6 +97,7 @@ export function CompleteGameConfirmationDialog({
             variant="secondary"
             onClick={handleClose}
             disabled={isSubmitting}
+            data-testid="complete-game-cancel-button"
           >
             Cancel
           </Button>
@@ -106,6 +107,7 @@ export function CompleteGameConfirmationDialog({
             disabled={!isConfirmEnabled || isSubmitting}
             loading={isSubmitting}
             className="bg-semantic-success hover:bg-semantic-success-hover text-white"
+            data-testid="complete-game-confirm-button"
           >
             {isSubmitting ? 'Completing...' : 'Complete Game'}
           </Button>

@@ -413,8 +413,8 @@ function CharacterCard({
               {character.name}
             </h4>
             <div className="flex flex-wrap gap-1.5">
-              <Badge variant={getStatusBadgeVariant(character.status)} size="sm" data-testid="character-status-badge">
-                {character.status}
+              <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
+                <span data-testid="character-status-badge">{character.status}</span>
               </Badge>
               {isOwner && (!isAnonymous || userRole === 'gm') && (
                 <Badge variant="secondary" size="sm">
@@ -447,9 +447,8 @@ function CharacterCard({
               variant={canEditSheet ? 'primary' : 'secondary'}
               size="sm"
               onClick={onViewSheet}
-              data-testid="edit-character-button"
             >
-              {canEditSheet ? 'Edit Sheet' : 'View Sheet'}
+              <span data-testid="edit-character-button">{canEditSheet ? 'Edit Sheet' : 'View Sheet'}</span>
             </Button>
           )}
 
@@ -468,9 +467,8 @@ function CharacterCard({
               variant="success"
               size="sm"
               onClick={() => onApprove(character.id, 'approved')}
-              data-testid="approve-character-button"
             >
-              Approve
+              <span data-testid="approve-character-button">Approve</span>
             </Button>
           )}
 
@@ -479,9 +477,8 @@ function CharacterCard({
               variant="danger"
               size="sm"
               onClick={() => onDelete(character)}
-              data-testid="delete-character-button"
             >
-              Delete
+              <span data-testid="delete-character-button">Delete</span>
             </Button>
           )}
         </div>
@@ -498,8 +495,8 @@ function CharacterCard({
           <div className="flex-grow">
             <div className="flex items-center space-x-2 mb-1">
               <h4 className="font-medium text-content-primary" data-testid="character-name">{character.name}</h4>
-              <Badge variant={getStatusBadgeVariant(character.status)} size="sm" data-testid="character-status-badge">
-                {character.status}
+              <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
+                <span data-testid="character-status-badge">{character.status}</span>
               </Badge>
               {/* Only show ownership badge if not anonymous or if GM */}
               {isOwner && (!isAnonymous || userRole === 'gm') && (
@@ -535,9 +532,8 @@ function CharacterCard({
               variant={canEditSheet ? 'primary' : 'secondary'}
               size="sm"
               onClick={onViewSheet}
-              data-testid="edit-character-button"
             >
-              {canEditSheet ? 'Edit Sheet' : 'View Sheet'}
+              <span data-testid="edit-character-button">{canEditSheet ? 'Edit Sheet' : 'View Sheet'}</span>
             </Button>
           )}
 
@@ -558,9 +554,8 @@ function CharacterCard({
               variant="success"
               size="sm"
               onClick={() => onApprove(character.id, 'approved')}
-              data-testid="approve-character-button"
             >
-              Approve
+              <span data-testid="approve-character-button">Approve</span>
             </Button>
           )}
 
@@ -570,9 +565,8 @@ function CharacterCard({
               variant="danger"
               size="sm"
               onClick={() => onDelete(character)}
-              data-testid="delete-character-button"
             >
-              Delete
+              <span data-testid="delete-character-button">Delete</span>
             </Button>
           )}
         </div>

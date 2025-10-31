@@ -108,8 +108,8 @@ test.describe('Game Application Workflow', () => {
     const applyButton = page.getByRole('button', { name: 'Apply to Join' });
     await expect(applyButton).not.toBeVisible();
 
-    // Should see participant tabs (user is now a participant) - use .first() to avoid strict mode violation
-    await expect(page.getByRole('tab', { name: 'Participants' }).or(page.getByRole('tab', { name: 'Game Info' })).first()).toBeVisible({ timeout: 10000 });
+    // Should see participant tabs (user is now a participant) - use .locator('visible=true').first() to avoid strict mode violation
+    await expect(page.getByRole('tab', { name: 'Participants' }).or(page.getByRole('tab', { name: 'Game Info' })).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('GM can reject application with confirmation', async ({ page }) => {
@@ -159,7 +159,7 @@ test.describe('Game Application Workflow', () => {
     expect(await applicationsPage.hasApplyButton()).toBe(false);
 
     // Should see application status instead
-    await expect(page.locator('text=Application Pending').or(page.locator('text=pending')).first()).toBeVisible();
+    await expect(page.locator('text=Application Pending').or(page.locator('text=pending')).locator('visible=true').first()).toBeVisible();
   });
 
   test('player can withdraw their pending application', async ({ page }) => {
@@ -187,9 +187,9 @@ test.describe('Game Application Workflow', () => {
     const pendingIndicator = page.locator('text=Application Pending').or(
       page.locator('text=Pending')
     ).or(
-      page.locator('text=Applied').first()
+      page.locator('text=Applied').locator('visible=true').first()
     );
-    await expect(pendingIndicator.first()).toBeVisible({ timeout: 10000 });
+    await expect(pendingIndicator.locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
     // Handle confirmation dialog if present
     page.once('dialog', dialog => {
@@ -211,7 +211,7 @@ test.describe('Game Application Workflow', () => {
     expect(await applicationsPage.hasApplyButton()).toBe(true);
 
     // Should NOT see pending status anymore
-    const pendingAfterWithdraw = page.locator('text=Application Pending').or(page.locator('text=pending')).first();
+    const pendingAfterWithdraw = page.locator('text=Application Pending').or(page.locator('text=pending')).locator('visible=true').first();
     const stillPending = await pendingAfterWithdraw.isVisible().catch(() => false);
     expect(stillPending).toBe(false);
   });

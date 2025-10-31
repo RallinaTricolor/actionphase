@@ -84,6 +84,49 @@ content = re.sub(
     lambda m: m.group(1) + offset_id(m.group(2)) + m.group(3),
     content, flags=re.IGNORECASE)
 
+# 2a. Offset game_id in INSERT INTO non_games_table (...) SELECT game_id, ... statements
+# Handles pattern: INSERT INTO conversations (id, game_id, ...) SELECT 9991, 354, ...
+# This is critical for fixtures like private message deletion that use SELECT instead of VALUES
+content = re.sub(
+    r'(INSERT INTO (?!games\b)\w+\s*\([^)]*\)\s+SELECT\s+\d+\s*,\s*)(\d{1,3})(\s*,)',
+    lambda m: m.group(1) + offset_id(m.group(2)) + m.group(3),
+    content, flags=re.IGNORECASE)
+
+# 2a-ii. Offset conversation/message IDs in INSERT INTO ... SELECT statements
+# Handles patterns:
+#   - INSERT INTO conversations (...) SELECT 9991, 354, ...
+#   - INSERT INTO private_messages (...) SELECT 99911, 9991, ...
+#   - INSERT INTO conversation_participants (...) SELECT 9991, ...
+# Offsets 4-5 digit IDs (9000-99999 range) used for test-specific conversations/messages
+content = re.sub(
+    r'(INSERT INTO (?:conversations|private_messages|conversation_participants)\s*\([^)]*\)\s+SELECT\s+)(\d{4,5})(\s*,)',
+    lambda m: m.group(1) + offset_id(m.group(2)) + m.group(3),
+    content, flags=re.IGNORECASE)
+
+# 2a-iii. Offset conversation_id references in SELECT statements (for participants and messages)
+# Handles: SELECT 9991, c.user_id, ... (conversation_id in conversation_participants)
+# Handles: SELECT 99911, 9991, c.user_id, ... (message_id, conversation_id in private_messages)
+content = re.sub(
+    r'(SELECT\s+\d{4,5}\s*,\s*)(\d{4,5})(\s*,)',
+    lambda m: m.group(1) + offset_id(m.group(2)) + m.group(3),
+    content, flags=re.IGNORECASE)
+
+# 2a-iv. Offset conversation/message IDs in ON CONFLICT clauses
+# Handles: ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, game_id = 354;
+# WHERE id appears in conversations/messages INSERT statements
+content = re.sub(
+    r'(ON CONFLICT \(id\) DO UPDATE SET [^;]+ game_id = )(\d{1,3})(;)',
+    lambda m: m.group(1) + offset_id(m.group(2)) + m.group(3),
+    content, flags=re.IGNORECASE)
+
+# 2a-i. Offset game_id = NNN in WHERE/JOIN clauses
+# Handles patterns: c.game_id = 354, AND c.game_id = 354, ON c.game_id = 354
+# Matches table aliases (c., u., etc.) or direct column names
+content = re.sub(
+    r'\b(\w+\.)?game_id\s*=\s*(\d{1,3})\b',
+    lambda m: (m.group(1) or '') + 'game_id = ' + offset_id(m.group(2)),
+    content, flags=re.IGNORECASE)
+
 # 2b. Offset subsequent rows in multi-row INSERTs
 # Matches BOTH newline-separated AND inline comma-separated rows
 # Pattern: , (164, user_id, ...) OR newline (164, user_id, ...)
@@ -154,8 +197,24 @@ with open('$temp_file', 'w') as f:
 
 # Apply all E2E fixture files in order
 for file in "$SCRIPT_DIR"/e2e/*.sql; do
-    if [ -f "$file" ] && [ "$(basename "$file")" != "00_worker_setup.sql" ]; then
-        apply_worker_sql "$file"
+    filename=$(basename "$file")
+
+    # Skip worker setup and worker-specific files that don't match this worker
+    if [ -f "$file" ] && [ "$filename" != "00_worker_setup.sql" ]; then
+        # For private message deletion, use worker-specific file (no transformation needed)
+        if [[ "$filename" == 17_private_message_deletion_w*.sql ]]; then
+            # Only process if it matches our worker index
+            if [[ "$filename" == "17_private_message_deletion_w${WORKER_INDEX}.sql" ]]; then
+                echo "  📄 Processing $filename for worker $WORKER_INDEX (no transformation)..."
+                # Apply directly without transformation
+                if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$file"; then
+                    echo "❌ ERROR: Failed to apply $filename for worker $WORKER_INDEX"
+                fi
+            fi
+        else
+            # Process all other files with transformation
+            apply_worker_sql "$file"
+        fi
     fi
 done
 

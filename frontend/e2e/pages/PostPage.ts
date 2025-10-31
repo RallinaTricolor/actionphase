@@ -42,7 +42,8 @@ export class PostPage {
    * Wait for posts to load
    */
   async waitForPostsToLoad(): Promise<void> {
-    await this.postCard.first().waitFor({ state: 'visible', timeout: 5000 });
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    await this.postCard.locator('visible=true').first().waitFor({ state: 'visible', timeout: 5000 });
   }
 
   /**
@@ -111,7 +112,8 @@ export class PostPage {
 
     // Select character if multiple characters available
     if (characterName) {
-      const characterSelect = this.page.locator('select').first();
+      // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+      const characterSelect = this.page.locator('select').locator('visible=true').first();
       const isVisible = await characterSelect.isVisible().catch(() => false);
       if (isVisible) {
         await characterSelect.selectOption({ label: `Reply as ${characterName}` });
@@ -174,7 +176,8 @@ export class PostPage {
    */
   async getPostAuthorCharacter(postIndex: number = 0): Promise<string> {
     const post = this.postCard.nth(postIndex);
-    const authorName = post.locator('h3.font-bold').first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    const authorName = post.locator('h3.font-bold').locator('visible=true').first();
     return await authorName.textContent() || '';
   }
 

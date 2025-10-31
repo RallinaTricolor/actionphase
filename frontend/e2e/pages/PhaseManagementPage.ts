@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { navigateToGameAndTab } from '../utils/navigation';
 import { waitForVisible, waitForModal } from '../utils/waits';
 import { assertTextVisible } from '../utils/assertions';
@@ -110,9 +110,9 @@ export class PhaseManagementPage {
     // Submit form
     await this.submitButton.click();
 
-    // Wait for phase to appear
+    // Wait for phase to appear - filter to visible element (viewport-agnostic)
     await this.page.waitForLoadState('networkidle');
-    await assertTextVisible(this.page, options.title);
+    await expect(this.page.getByText(options.title).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
   }
 
   /**
@@ -134,7 +134,7 @@ export class PhaseManagementPage {
     const phaseCard = this.getPhaseCard(phaseTitle);
 
     // Scroll the activate button into view and ensure it's visible
-    const activateButton = phaseCard.locator('button:has-text("Activate")').first();
+    const activateButton = phaseCard.locator('button:has-text("Activate")').locator('visible=true').first();
     await activateButton.scrollIntoViewIfNeeded();
     await activateButton.waitFor({ state: 'visible', timeout: 5000 });
 
@@ -243,7 +243,8 @@ export class PhaseManagementPage {
    * @param phaseTitle - Phase title to verify
    */
   async verifyPhaseExists(phaseTitle: string) {
-    await assertTextVisible(this.page, phaseTitle);
+    // Filter to visible element (viewport-agnostic)
+    await expect(this.page.getByText(phaseTitle).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
   }
 
   /**

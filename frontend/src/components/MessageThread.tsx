@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
+import { Trash2 } from 'lucide-react';
 import { apiClient } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { Button, Select, Textarea, Alert } from './ui';
 import CharacterAvatar from './CharacterAvatar';
@@ -18,6 +20,7 @@ interface MessageThreadProps {
 }
 
 export function MessageThread({ gameId, conversationId, characters, onMarkedAsRead, conversationInfo }: MessageThreadProps) {
+  const { currentUser } = useAuth();
   const { showError } = useToast();
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
   const [conversation, setConversation] = useState<ConversationWithDetails | null>(null);
@@ -30,6 +33,8 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firstUnreadRef = useRef<HTMLDivElement>(null);
   const [hasScrolledToUnread, setHasScrolledToUnread] = useState(false);
+  const [deleteMessageId, setDeleteMessageId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loading = loadingMessages || loadingConversation;
 
@@ -205,6 +210,24 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
     }
   };
 
+  const handleDeleteMessage = async () => {
+    if (!deleteMessageId) return;
+
+    try {
+      setDeleting(true);
+      await apiClient.conversations.deleteMessage(gameId, conversationId, deleteMessageId);
+
+      // Reload messages to show "[Message deleted]"
+      await loadMessages();
+      setDeleteMessageId(null);
+    } catch (err) {
+      console.error('Failed to delete message:', err);
+      showError('Failed to delete message. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const formatTimestamp = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
@@ -273,7 +296,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                   </div>
                 )}
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 group" data-testid="message">
                   <CharacterAvatar
                     avatarUrl={message.sender_avatar_url}
                     characterName={message.sender_character_name || message.sender_username}
@@ -281,21 +304,37 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                   />
                   <div className="flex flex-col flex-1">
                     <div className="flex items-baseline gap-2 mb-1">
-                      <span className="font-semibold text-content-primary">
+                      <span className="font-semibold text-content-primary" data-testid="message-sender">
                         {message.sender_character_name || message.sender_username}
                       </span>
                       <span className="text-xs text-content-tertiary">
                         {formatTimestamp(message.created_at)}
                       </span>
+                      {/* Delete button - only show for sender's messages */}
+                      {currentUser && message.sender_user_id === currentUser.id && !message.is_deleted && (
+                        <button
+                          onClick={() => setDeleteMessageId(message.id)}
+                          className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-semantic-danger hover:text-content-inverse rounded"
+                          title="Delete message"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
-                    <div className="surface-raised rounded-lg p-3 prose dark:prose-invert prose-sm max-w-none">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeSanitize]}
-                      >
+                    {message.is_deleted ? (
+                      <div className="surface-raised rounded-lg p-3 italic text-content-tertiary">
                         {message.content}
-                      </ReactMarkdown>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="surface-raised rounded-lg p-3 prose dark:prose-invert prose-sm max-w-none">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeSanitize]}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -364,6 +403,34 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
           )}
         </form>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteMessageId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="surface-base border border-theme-default rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-content-primary mb-4">Delete Message?</h3>
+            <p className="text-content-secondary mb-6">
+              This will permanently delete your message. Other participants will see "[Message deleted]" in its place.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => setDeleteMessageId(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteMessage}
+                loading={deleting}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -19,7 +19,7 @@ test.describe('Smoke: Application Health', () => {
     await expect(page.getByRole('heading', { name: /ActionPhase/i, level: 1 })).toBeVisible();
 
     // Verify login link is present
-    await expect(page.getByRole('link', { name: /Sign In|Log In|Login/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Sign In|Log In|Login/i }).locator('visible=true').first()).toBeVisible();
   });
 
   test(tagTest([tags.SMOKE], 'API health endpoint responds'), async ({ request }) => {

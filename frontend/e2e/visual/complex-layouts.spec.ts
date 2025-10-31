@@ -29,12 +29,12 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.waitForLoadState('networkidle');
 
       // Navigate to game
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1000); // Wait for dynamic content
 
       // Ensure we're on Overview tab
-      const overviewTab = page.locator('[data-testid="tab-overview"], button:has-text("Overview"), a:has-text("Overview")').first();
+      const overviewTab = page.locator('[data-testid="tab-overview"], button:has-text("Overview"), a:has-text("Overview")').locator('visible=true').first();
       const tabExists = await overviewTab.isVisible().catch(() => false);
       if (tabExists) {
         await overviewTab.click();
@@ -59,11 +59,11 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1000);
 
-      const overviewTab = page.locator('[data-testid="tab-overview"], button:has-text("Overview"), a:has-text("Overview")').first();
+      const overviewTab = page.locator('[data-testid="tab-overview"], button:has-text("Overview"), a:has-text("Overview")').locator('visible=true').first();
       const tabExists = await overviewTab.isVisible().catch(() => false);
       if (tabExists) {
         await overviewTab.click();
@@ -88,11 +88,11 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
       // Click Characters tab
-      const charactersTab = page.locator('[data-testid="tab-characters"], button:has-text("Characters"), a:has-text("Characters")').first();
+      const charactersTab = page.locator('[data-testid="tab-characters"], button:has-text("Characters"), a:has-text("Characters")').locator('visible=true').first();
       const tabExists = await charactersTab.isVisible().catch(() => false);
       if (tabExists) {
         await charactersTab.click();
@@ -117,10 +117,10 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
-      const charactersTab = page.locator('[data-testid="tab-characters"], button:has-text("Characters"), a:has-text("Characters")').first();
+      const charactersTab = page.locator('[data-testid="tab-characters"], button:has-text("Characters"), a:has-text("Characters")').locator('visible=true').first();
       const tabExists = await charactersTab.isVisible().catch(() => false);
       if (tabExists) {
         await charactersTab.click();
@@ -145,11 +145,11 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
       // Click Posts/Timeline tab
-      const postsTab = page.locator('[data-testid="tab-posts"], [data-testid="tab-timeline"], button:has-text("Posts"), button:has-text("Timeline"), a:has-text("Posts"), a:has-text("Timeline")').first();
+      const postsTab = page.locator('[data-testid="tab-posts"], [data-testid="tab-timeline"], button:has-text("Posts"), button:has-text("Timeline"), a:has-text("Posts"), a:has-text("Timeline")').locator('visible=true').first();
       const tabExists = await postsTab.isVisible().catch(() => false);
       if (tabExists) {
         await postsTab.click();
@@ -175,10 +175,10 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
-      const postsTab = page.locator('[data-testid="tab-posts"], [data-testid="tab-timeline"], button:has-text("Posts"), button:has-text("Timeline"), a:has-text("Posts"), a:has-text("Timeline")').first();
+      const postsTab = page.locator('[data-testid="tab-posts"], [data-testid="tab-timeline"], button:has-text("Posts"), button:has-text("Timeline"), a:has-text("Posts"), a:has-text("Timeline")').locator('visible=true').first();
       const tabExists = await postsTab.isVisible().catch(() => false);
       if (tabExists) {
         await postsTab.click();
@@ -207,12 +207,12 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.waitForLoadState('networkidle');
 
       // Navigate to game
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
       // Try to access character sheet
       // Look for character name or "View Character" button
-      const characterLink = page.locator('[data-testid="character-link"], [data-testid="view-character"], a:has-text("View Character")').first();
+      const characterLink = page.locator('[data-testid="character-link"], [data-testid="view-character"], a:has-text("View Character")').locator('visible=true').first();
       const linkExists = await characterLink.isVisible().catch(() => false);
 
       if (linkExists) {
@@ -238,10 +238,10 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
-      const characterLink = page.locator('[data-testid="character-link"], [data-testid="view-character"], a:has-text("View Character")').first();
+      const characterLink = page.locator('[data-testid="character-link"], [data-testid="view-character"], a:has-text("View Character")').locator('visible=true').first();
       const linkExists = await characterLink.isVisible().catch(() => false);
 
       if (linkExists) {
@@ -267,10 +267,10 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
-      const characterLink = page.locator('[data-testid="character-link"], [data-testid="view-character"], a:has-text("View Character")').first();
+      const characterLink = page.locator('[data-testid="character-link"], [data-testid="view-character"], a:has-text("View Character")').locator('visible=true').first();
       const linkExists = await characterLink.isVisible().catch(() => false);
 
       if (linkExists) {
@@ -279,7 +279,7 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
         await page.waitForTimeout(1000);
 
         // Capture abilities section if it exists
-        const abilitiesSection = page.locator('[data-testid="abilities-section"], [data-testid="character-abilities"], section:has-text("Abilities")').first();
+        const abilitiesSection = page.locator('[data-testid="abilities-section"], [data-testid="character-abilities"], section:has-text("Abilities")').locator('visible=true').first();
         const sectionExists = await abilitiesSection.isVisible().catch(() => false);
 
         if (sectionExists) {
@@ -298,10 +298,10 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
-      const characterLink = page.locator('[data-testid="character-link"], [data-testid="view-character"], a:has-text("View Character")').first();
+      const characterLink = page.locator('[data-testid="character-link"], [data-testid="view-character"], a:has-text("View Character")').locator('visible=true').first();
       const linkExists = await characterLink.isVisible().catch(() => false);
 
       if (linkExists) {
@@ -310,7 +310,7 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
         await page.waitForTimeout(1000);
 
         // Capture inventory section if it exists
-        const inventorySection = page.locator('[data-testid="inventory-section"], [data-testid="character-inventory"], section:has-text("Inventory")').first();
+        const inventorySection = page.locator('[data-testid="inventory-section"], [data-testid="character-inventory"], section:has-text("Inventory")').locator('visible=true').first();
         const sectionExists = await inventorySection.isVisible().catch(() => false);
 
         if (sectionExists) {
@@ -332,11 +332,11 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
       // Navigate to History tab
-      const historyTab = page.locator('[data-testid="tab-history"], [data-testid="tab-phases"], button:has-text("History"), button:has-text("Phases"), a:has-text("History"), a:has-text("Phases")').first();
+      const historyTab = page.locator('[data-testid="tab-history"], [data-testid="tab-phases"], button:has-text("History"), button:has-text("Phases"), a:has-text("History"), a:has-text("Phases")').locator('visible=true').first();
       const tabExists = await historyTab.isVisible().catch(() => false);
 
       if (tabExists) {
@@ -365,10 +365,10 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
-      const historyTab = page.locator('[data-testid="tab-history"], [data-testid="tab-phases"], button:has-text("History"), button:has-text("Phases"), a:has-text("History"), a:has-text("Phases")').first();
+      const historyTab = page.locator('[data-testid="tab-history"], [data-testid="tab-phases"], button:has-text("History"), button:has-text("Phases"), a:has-text("History"), a:has-text("Phases")').locator('visible=true').first();
       const tabExists = await historyTab.isVisible().catch(() => false);
 
       if (tabExists) {
@@ -397,10 +397,10 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
-      const historyTab = page.locator('[data-testid="tab-history"], [data-testid="tab-phases"], button:has-text("History"), button:has-text("Phases"), a:has-text("History"), a:has-text("Phases")').first();
+      const historyTab = page.locator('[data-testid="tab-history"], [data-testid="tab-phases"], button:has-text("History"), button:has-text("Phases"), a:has-text("History"), a:has-text("Phases")').locator('visible=true').first();
       const tabExists = await historyTab.isVisible().catch(() => false);
 
       if (tabExists) {
@@ -409,7 +409,7 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
         await page.waitForTimeout(1000);
 
         // Check for pagination controls
-        const paginationExists = await page.locator('[data-testid="pagination"], nav[aria-label="Pagination"], button:has-text("Next"), button:has-text("Previous")').first().isVisible().catch(() => false);
+        const paginationExists = await page.locator('[data-testid="pagination"], nav[aria-label="Pagination"], button:has-text("Next"), button:has-text("Previous")').locator('visible=true').first().isVisible().catch(() => false);
 
         if (paginationExists) {
           await expect(page).toHaveScreenshot('phase-history-pagination-light.png', {
@@ -485,7 +485,7 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.waitForLoadState('networkidle');
 
       // Navigate to games management tab if it exists
-      const gamesTab = page.locator('[data-testid="admin-games-tab"], button:has-text("Games"), a:has-text("Games")').first();
+      const gamesTab = page.locator('[data-testid="admin-games-tab"], button:has-text("Games"), a:has-text("Games")').locator('visible=true').first();
       const tabExists = await gamesTab.isVisible().catch(() => false);
 
       if (tabExists) {
@@ -514,11 +514,11 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
       // Navigate to Conversations/Messages tab
-      const conversationsTab = page.locator('[data-testid="tab-conversations"], [data-testid="tab-messages"], button:has-text("Conversations"), button:has-text("Messages"), a:has-text("Conversations"), a:has-text("Messages")').first();
+      const conversationsTab = page.locator('[data-testid="tab-conversations"], [data-testid="tab-messages"], button:has-text("Conversations"), button:has-text("Messages"), a:has-text("Conversations"), a:has-text("Messages")').locator('visible=true').first();
       const tabExists = await conversationsTab.isVisible().catch(() => false);
 
       if (tabExists) {
@@ -545,10 +545,10 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
-      const conversationsTab = page.locator('[data-testid="tab-conversations"], [data-testid="tab-messages"], button:has-text("Conversations"), button:has-text("Messages"), a:has-text("Conversations"), a:has-text("Messages")').first();
+      const conversationsTab = page.locator('[data-testid="tab-conversations"], [data-testid="tab-messages"], button:has-text("Conversations"), button:has-text("Messages"), a:has-text("Conversations"), a:has-text("Messages")').locator('visible=true').first();
       const tabExists = await conversationsTab.isVisible().catch(() => false);
 
       if (tabExists) {
@@ -575,10 +575,10 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
-      const conversationsTab = page.locator('[data-testid="tab-conversations"], [data-testid="tab-messages"], button:has-text("Conversations"), button:has-text("Messages"), a:has-text("Conversations"), a:has-text("Messages")').first();
+      const conversationsTab = page.locator('[data-testid="tab-conversations"], [data-testid="tab-messages"], button:has-text("Conversations"), button:has-text("Messages"), a:has-text("Conversations"), a:has-text("Messages")').locator('visible=true').first();
       const tabExists = await conversationsTab.isVisible().catch(() => false);
 
       if (tabExists) {
@@ -587,7 +587,7 @@ test.describe.skip('Visual Regression - Complex Layouts', () => {
         await page.waitForTimeout(500);
 
         // Click first conversation thread
-        const firstThread = page.locator('[data-testid="conversation-item"], [data-testid="message-thread"]').first();
+        const firstThread = page.locator('[data-testid="conversation-item"], [data-testid="message-thread"]').locator('visible=true').first();
         const threadExists = await firstThread.isVisible().catch(() => false);
 
         if (threadExists) {

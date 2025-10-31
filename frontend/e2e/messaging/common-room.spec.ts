@@ -113,7 +113,7 @@ test.describe('Common Room Flow', () => {
 
       // Find the post and expand comments if needed
       const gmPostCard = gmCommonRoom.getPostCard(postContent);
-      const commentsButton = gmPostCard.locator('button', { hasText: /Comments/ }).first();
+      const commentsButton = gmPostCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
       const buttonText = await commentsButton.textContent();
 
       // If comments are hidden, click to show them
@@ -172,7 +172,7 @@ test.describe('Common Room Flow', () => {
 
       // Expand comments if needed
       const postCard = player1CommonRoom.getPostCard(postContent);
-      const commentsButton = postCard.locator('button', { hasText: /Comments/ }).first();
+      const commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
       const buttonText = await commentsButton.textContent();
       if (buttonText?.includes('Show Comments')) {
         await commentsButton.click();
@@ -180,22 +180,22 @@ test.describe('Common Room Flow', () => {
       }
 
       // Find Player 2's comment and click Reply
-      const commentContainer = player1Page.locator('[data-testid="threaded-comment"]').filter({ hasText: player2Comment }).first();
-      const replyButton = commentContainer.getByRole('button', { name: 'Reply' }).first();
+      const commentContainer = player1Page.locator('[data-testid="threaded-comment"]').filter({ hasText: player2Comment }).locator('visible=true').first();
+      const replyButton = commentContainer.getByRole('button', { name: 'Reply' }).locator('visible=true').first();
       await replyButton.click();
 
       // Write the reply
       const player1Reply = `Reply ${Date.now()}: Good idea, let's do it`;
-      const replyTextarea = commentContainer.locator('textarea').first();
+      const replyTextarea = commentContainer.locator('textarea').locator('visible=true').first();
       await replyTextarea.fill(player1Reply);
 
       // Submit the reply
-      const replyForm = commentContainer.locator('form').first();
+      const replyForm = commentContainer.locator('form').locator('visible=true').first();
       await replyForm.evaluate((f: HTMLFormElement) => f.requestSubmit());
       await player1Page.waitForLoadState('networkidle');
 
       // Verify the nested reply appears for Player 1
-      const player1NestedReply = player1Page.locator('[data-testid="threaded-comment"]').filter({ hasText: player1Reply }).first();
+      const player1NestedReply = player1Page.locator('[data-testid="threaded-comment"]').filter({ hasText: player1Reply }).locator('visible=true').first();
       await expect(player1NestedReply).toBeVisible({ timeout: 10000 });
 
       // Wait a bit to ensure the reply is fully persisted to the database
@@ -211,7 +211,7 @@ test.describe('Common Room Flow', () => {
 
       // Expand comments if they're collapsed
       const player2PostCard = player2CommonRoom.getPostCard(postContent);
-      const player2CommentsButton = player2PostCard.locator('button', { hasText: /Comments/ }).first();
+      const player2CommentsButton = player2PostCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
       const player2ButtonText = await player2CommentsButton.textContent();
       if (player2ButtonText?.includes('Show')) {
         await player2CommentsButton.click();
@@ -226,7 +226,7 @@ test.describe('Common Room Flow', () => {
       await expect(player2Page.getByText(player1Reply)).toBeVisible({ timeout: 15000 });
 
       // Verify the reply appears as a nested comment (has the threaded-comment test ID)
-      const nestedReply = player2Page.locator('[data-testid="threaded-comment"]').filter({ hasText: player1Reply }).first();
+      const nestedReply = player2Page.locator('[data-testid="threaded-comment"]').filter({ hasText: player1Reply }).locator('visible=true').first();
       await expect(nestedReply).toBeVisible();
     } finally {
       await gmContext.close();
@@ -280,7 +280,7 @@ test.describe('Common Room Flow', () => {
 
       // Expand comments
       const postCard = gmCommonRoom.getPostCard(postContent);
-      const commentsButton = postCard.locator('button', { hasText: /Comments/ }).first();
+      const commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
       const buttonText = await commentsButton.textContent();
       if (buttonText?.includes('Show Comments')) {
         await commentsButton.click();
@@ -351,7 +351,7 @@ test.describe('Common Room Flow', () => {
 
         // Expand comments if needed
         const postCard = currentCommonRoom.getPostCard(postContent);
-        const commentsButton = postCard.locator('button', { hasText: /Comments/ }).first();
+        const commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
         if (await commentsButton.count() > 0) {
           const buttonText = await commentsButton.textContent();
           if (buttonText?.includes('Show')) {
@@ -361,7 +361,7 @@ test.describe('Common Room Flow', () => {
         }
 
         // Find the previous comment
-        const commentContainer = currentPage.locator('[data-testid="threaded-comment"]').filter({ hasText: previousComment }).first();
+        const commentContainer = currentPage.locator('[data-testid="threaded-comment"]').filter({ hasText: previousComment }).locator('visible=true').first();
 
         // Verify the comment exists before proceeding
         await expect(commentContainer).toBeVisible({ timeout: 10000 });
@@ -393,18 +393,18 @@ test.describe('Common Room Flow', () => {
           console.log(`✓ Deep comment "${previousComment}" visible in modal`);
 
           // === Test: Reply to a comment in the modal ===
-          const modalCommentContainer = modal.locator('[data-testid="threaded-comment"]').filter({ hasText: previousComment }).first();
-          const modalReplyButton = modalCommentContainer.getByRole('button', { name: 'Reply' }).first();
+          const modalCommentContainer = modal.locator('[data-testid="threaded-comment"]').filter({ hasText: previousComment }).locator('visible=true').first();
+          const modalReplyButton = modalCommentContainer.getByRole('button', { name: 'Reply' }).locator('visible=true').first();
           await modalReplyButton.click();
           await currentPage.waitForTimeout(500);
 
           // Write reply in modal
           const modalReply = `Modal Reply - ${Date.now()}`;
-          const modalReplyTextarea = modalCommentContainer.locator('textarea').first();
+          const modalReplyTextarea = modalCommentContainer.locator('textarea').locator('visible=true').first();
           await modalReplyTextarea.fill(modalReply);
 
           // Submit reply in modal
-          const modalReplyForm = modalCommentContainer.locator('form').first();
+          const modalReplyForm = modalCommentContainer.locator('form').locator('visible=true').first();
           await modalReplyForm.evaluate((f: HTMLFormElement) => f.requestSubmit());
           await currentPage.waitForLoadState('networkidle');
 
@@ -422,15 +422,15 @@ test.describe('Common Room Flow', () => {
         }
 
         // Click Reply
-        await replyButton.first().click();
+        await replyButton.locator('visible=true').first().click();
 
         // Write nested reply
         const nestedReply = `Nested Reply Level ${depth} - ${Date.now()}`;
-        const replyTextarea = commentContainer.locator('textarea').first();
+        const replyTextarea = commentContainer.locator('textarea').locator('visible=true').first();
         await replyTextarea.fill(nestedReply);
 
         // Submit
-        const replyForm = commentContainer.locator('form').first();
+        const replyForm = commentContainer.locator('form').locator('visible=true').first();
         await replyForm.evaluate((f: HTMLFormElement) => f.requestSubmit());
         await currentPage.waitForLoadState('networkidle');
 

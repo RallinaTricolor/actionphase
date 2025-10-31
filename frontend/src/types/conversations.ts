@@ -30,6 +30,8 @@ export interface PrivateMessage {
   sender_username: string;
   sender_character_name?: string;
   sender_avatar_url?: string | null;
+  deleted_at?: string;
+  is_deleted?: boolean;
 }
 
 export interface ConversationListItem {
