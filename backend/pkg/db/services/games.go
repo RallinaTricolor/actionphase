@@ -268,10 +268,34 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 	return &updatedGame, err
 }
 
-// DeleteGame - Delete a game
-func (gs *GameService) DeleteGame(ctx context.Context, gameID int32) error {
+// DeleteGame - Delete a cancelled game (GM-only)
+// Only games in 'cancelled' state can be deleted, and only by the GM
+func (gs *GameService) DeleteGame(ctx context.Context, gameID, userID int32) error {
 	queries := models.New(gs.DB)
-	return queries.DeleteGame(ctx, gameID)
+
+	// Fetch the game to verify it exists, check state, and verify GM
+	game, err := queries.GetGame(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("game not found")
+	}
+
+	// Verify the user is the GM
+	if game.GmUserID != userID {
+		return fmt.Errorf("only the game master can delete this game")
+	}
+
+	// Verify the game is in cancelled state
+	if game.State.String != core.GameStateCancelled {
+		return fmt.Errorf("only cancelled games can be deleted (current state: %s)", game.State.String)
+	}
+
+	// Delete the game (SQL query enforces cancelled state as well)
+	err = queries.DeleteGame(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("failed to delete game: %w", err)
+	}
+
+	return nil
 }
 
 // GetGameWithDetails - Get game with additional details like GM username and player count

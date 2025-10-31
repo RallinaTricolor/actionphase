@@ -148,8 +148,8 @@ type GameServiceInterface interface {
 	// UpdateGame updates game details
 	UpdateGame(ctx context.Context, req UpdateGameRequest) (*models.Game, error)
 
-	// DeleteGame removes a game from the system
-	DeleteGame(ctx context.Context, gameID int32) error
+	// DeleteGame removes a game from the system (only allowed for GMs on cancelled games)
+	DeleteGame(ctx context.Context, gameID, userID int32) error
 
 	// LeaveGame allows a user to leave a game
 	LeaveGame(ctx context.Context, gameID, userID int32) error

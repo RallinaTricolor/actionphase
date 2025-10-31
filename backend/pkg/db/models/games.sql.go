@@ -236,9 +236,11 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 }
 
 const deleteGame = `-- name: DeleteGame :exec
-DELETE FROM games WHERE id = $1
+DELETE FROM games WHERE id = $1 AND state = 'cancelled'
 `
 
+// Only allow deletion of cancelled games
+// Foreign key constraints will cascade delete related data
 func (q *Queries) DeleteGame(ctx context.Context, id int32) error {
 	_, err := q.db.Exec(ctx, deleteGame, id)
 	return err

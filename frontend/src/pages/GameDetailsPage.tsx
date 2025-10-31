@@ -19,6 +19,7 @@ import { CompleteGameConfirmationDialog } from '../components/CompleteGameConfir
 import { PauseGameConfirmationDialog } from '../components/PauseGameConfirmationDialog';
 import { CancelGameConfirmationDialog } from '../components/CancelGameConfirmationDialog';
 import { LeaveGameConfirmationDialog } from '../components/LeaveGameConfirmationDialog';
+import { DeleteGameConfirmationDialog } from '../components/DeleteGameConfirmationDialog';
 
 interface GameDetailsPageProps {
   gameId: number;
@@ -103,6 +104,23 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
 
   const actionLoading = appActionLoading || stateActionLoading;
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Delete game handler
+  const handleDeleteGame = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await apiClient.games.deleteGame(gameId);
+      // Redirect to games list after successful deletion
+      window.location.href = '/games';
+    } catch (error) {
+      console.error('Failed to delete game:', error);
+      // Error will be shown by the API client
+    }
+  };
 
   if (loading) {
     return (
@@ -191,6 +209,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
             onApplyToGame={() => setShowApplyModal(true)}
             onWithdrawApplication={handleWithdrawApplication}
             onLeaveGame={handleLeaveGame}
+            onDeleteGame={handleDeleteGame}
           />
         </div>
 
@@ -283,6 +302,16 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           onConfirm={handleConfirmLeave}
           gameTitle={game.title}
           isSubmitting={actionLoading}
+        />
+      )}
+
+      {/* Delete Game Confirmation Dialog */}
+      {game && (
+        <DeleteGameConfirmationDialog
+          isOpen={showDeleteDialog}
+          onClose={() => setShowDeleteDialog(false)}
+          onConfirm={handleConfirmDelete}
+          gameTitle={game.title}
         />
       )}
     </div>

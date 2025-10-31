@@ -184,6 +184,27 @@ export class GameDetailsPage {
   }
 
   /**
+   * Delete the game (GM only)
+   * Handles confirmation modal
+   * Only available for cancelled games
+   */
+  async deleteGame() {
+    // Click initial delete button
+    await this.clickButton('Delete Game');
+
+    // Wait for confirmation modal
+    await this.page.waitForLoadState('networkidle');
+
+    // Wait for modal to stabilize
+    await this.page.waitForTimeout(500);
+
+    // Click confirm button in modal using testid (avoids ambiguity with initial button)
+    const confirmButton = this.page.getByTestId('delete-game-confirm-button');
+    await confirmButton.click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
    * Navigate to Applications tab
    */
   async goToApplications() {
