@@ -47,7 +47,7 @@ test.describe('Game Lifecycle Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Should now see in_progress state buttons (Pause Game, Complete Game)
-    await expect(page.getByRole('button', { name: /Pause Game|Complete Game/ }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: /Pause Game|Complete Game/ }).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('GM can pause game with confirmation', async ({ page }) => {
@@ -97,7 +97,7 @@ test.describe('Game Lifecycle Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Should now see in_progress state buttons
-    await expect(page.getByRole('button', { name: /Pause Game|Complete Game/ }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: /Pause Game|Complete Game/ }).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('GM can complete game with confirmation', async ({ page }) => {

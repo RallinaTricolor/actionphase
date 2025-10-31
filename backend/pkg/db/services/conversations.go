@@ -262,6 +262,13 @@ func (s *ConversationService) GetConversationMessages(ctx context.Context, conve
 		return nil, fmt.Errorf("failed to get conversation messages: %w", err)
 	}
 
+	// Replace content of deleted messages with placeholder text
+	for i := range messages {
+		if messages[i].IsDeleted.Valid && messages[i].IsDeleted.Bool {
+			messages[i].Content = "[Message deleted]"
+		}
+	}
+
 	return messages, nil
 }
 
@@ -462,4 +469,30 @@ func (s *ConversationService) GetUserConversationRead(ctx context.Context, userI
 	}
 
 	return &read, nil
+}
+
+// DeletePrivateMessage soft-deletes a private message
+// Only the message sender can delete their own messages
+func (s *ConversationService) DeletePrivateMessage(ctx context.Context, messageID int32, userID int32) error {
+	// Get the message to verify ownership
+	message, err := s.Queries.GetPrivateMessage(ctx, messageID)
+	if err != nil {
+		return fmt.Errorf("message not found")
+	}
+
+	// Verify the user is the sender
+	if message.SenderUserID != userID {
+		return fmt.Errorf("forbidden: you can only delete your own messages")
+	}
+
+	// Perform soft delete
+	err = s.Queries.SoftDeletePrivateMessage(ctx, models.SoftDeletePrivateMessageParams{
+		ID:           messageID,
+		SenderUserID: userID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete message: %w", err)
+	}
+
+	return nil
 }

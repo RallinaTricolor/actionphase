@@ -195,7 +195,8 @@ export class CharacterSheetPage {
     await this.page.fill('textarea[placeholder*="description" i], textarea[placeholder*="Describe" i]', description);
 
     // Save the ability
-    const saveButton = this.page.getByRole('button', { name: /Save|Add/ }).first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    const saveButton = this.page.getByRole('button', { name: /Save|Add/ }).locator('visible=true').first();
     await saveButton.click();
     await this.page.waitForLoadState('networkidle');
   }

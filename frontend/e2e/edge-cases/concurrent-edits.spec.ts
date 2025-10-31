@@ -33,8 +33,8 @@ test.describe('Concurrent Editing', () => {
       await player2Page.waitForLoadState('networkidle');
 
       // Both should be able to view the game
-      await expect(player1Page.getByRole('heading', { level: 1 }).or(player1Page.getByRole('heading', { level: 2 })).first()).toBeVisible();
-      await expect(player2Page.getByRole('heading', { level: 1 }).or(player2Page.getByRole('heading', { level: 2 })).first()).toBeVisible();
+      await expect(player1Page.getByRole('heading', { level: 1 }).or(player1Page.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
+      await expect(player2Page.getByRole('heading', { level: 1 }).or(player2Page.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
 
       // Both should have tabs visible
       const player1TabCount = await player1Page.getByRole('tab').count();
@@ -69,7 +69,7 @@ test.describe('Concurrent Editing', () => {
 
       // Player stays on main view
       await playerPage.waitForLoadState('networkidle');
-      const playerGameTitle = await playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).first().textContent();
+      const playerGameTitle = await playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).locator('visible=true').first().textContent();
       expect(playerGameTitle).toBeTruthy();
 
       // GM should have "Edit Game" button
@@ -81,10 +81,10 @@ test.describe('Concurrent Editing', () => {
       await gmPage.waitForLoadState('networkidle');
 
       // GM should see edit form (check for form inputs)
-      await expect(gmPage.getByRole('textbox').first().or(gmPage.getByRole('combobox').first())).toBeVisible();
+      await expect(gmPage.getByRole('textbox').locator('visible=true').first().or(gmPage.getByRole('combobox').locator('visible=true').first())).toBeVisible();
 
       // Player should still see game normally (not affected by GM editing)
-      await expect(playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).first()).toBeVisible();
+      await expect(playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
 
     } finally {
       await gmContext.close();
@@ -114,8 +114,8 @@ test.describe('Concurrent Editing', () => {
       await playerPage.waitForLoadState('networkidle');
 
       // Both should see the game
-      await expect(gmPage.getByRole('heading', { level: 1 }).or(gmPage.getByRole('heading', { level: 2 })).first()).toBeVisible();
-      await expect(playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).first()).toBeVisible();
+      await expect(gmPage.getByRole('heading', { level: 1 }).or(gmPage.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
+      await expect(playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
 
       // GM should see edit/management buttons
       const gmEditButton = await gmPage.getByRole('button', { name: 'Edit Game' }).count();
@@ -153,8 +153,8 @@ test.describe('Concurrent Editing', () => {
       await playerPage.waitForLoadState('networkidle');
 
       // Both should see the game
-      const gmGameTitle = await gmPage.getByRole('heading', { level: 1 }).or(gmPage.getByRole('heading', { level: 2 })).first().textContent();
-      const playerGameTitle = await playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).first().textContent();
+      const gmGameTitle = await gmPage.getByRole('heading', { level: 1 }).or(gmPage.getByRole('heading', { level: 2 })).locator('visible=true').first().textContent();
+      const playerGameTitle = await playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).locator('visible=true').first().textContent();
 
       expect(gmGameTitle).toBeTruthy();
       expect(playerGameTitle).toBeTruthy();
@@ -164,11 +164,11 @@ test.describe('Concurrent Editing', () => {
       await playerPage.waitForLoadState('networkidle');
 
       // Player should still see game after refresh
-      await expect(playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).first()).toBeVisible();
+      await expect(playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
       await expect(playerPage).toHaveURL(new RegExp(`/games/${gameId}`));
 
       // GM's view should be unaffected
-      await expect(gmPage.getByRole('heading', { level: 1 }).or(gmPage.getByRole('heading', { level: 2 })).first()).toBeVisible();
+      await expect(gmPage.getByRole('heading', { level: 1 }).or(gmPage.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
       await expect(gmPage).toHaveURL(new RegExp(`/games/${gameId}`));
 
     } finally {

@@ -146,7 +146,7 @@ test.describe('Deep Linking in Common Room', () => {
     await page.locator('h2').filter({ hasText: /Common Room/ }).waitFor({ timeout: 10000 });
 
     // Wait for comments to be visible (they should be expanded by default)
-    await page.locator('[id^="comment-"]').first().waitFor({ timeout: 5000 });
+    await page.locator('[id^="comment-"]').locator('visible=true').first().waitFor({ timeout: 5000 });
 
     // Get the third comment ID from the page (Level 3 comment)
     const commentId = await page.evaluate(() => {
@@ -199,7 +199,7 @@ test.describe('Deep Linking in Common Room', () => {
     await page.locator('h2').filter({ hasText: /Common Room/ }).waitFor({ timeout: 10000 });
 
     // Wait for comments to be visible (they should be expanded by default)
-    await page.locator('[id^="comment-"]').first().waitFor({ timeout: 5000 });
+    await page.locator('[id^="comment-"]').locator('visible=true').first().waitFor({ timeout: 5000 });
 
     const commentId = await page.evaluate(() => {
       const comments = Array.from(document.querySelectorAll('[id^="comment-"]'));
@@ -271,7 +271,7 @@ test.describe('Deep Linking in Common Room', () => {
     await page.locator('h2').filter({ hasText: /Common Room/ }).waitFor({ timeout: 10000 });
 
     // Wait for comments to be visible (they should be expanded by default)
-    await page.locator('[id^="comment-"]').first().waitFor({ timeout: 5000 });
+    await page.locator('[id^="comment-"]').locator('visible=true').first().waitFor({ timeout: 5000 });
 
     const commentId = await page.evaluate(() => {
       const comments = Array.from(document.querySelectorAll('[id^="comment-"]'));

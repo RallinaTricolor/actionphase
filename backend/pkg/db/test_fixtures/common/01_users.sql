@@ -16,7 +16,8 @@ VALUES
   ('TestPlayer3', 'test_player3@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer4', 'test_player4@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer5', 'test_player5@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
-  ('TestAudience', 'test_audience@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW());
+  ('TestAudience', 'test_audience@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW())
+ON CONFLICT (email) DO NOTHING;
 
 -- Worker 1 users
 INSERT INTO users (username, email, password, created_at)
@@ -27,7 +28,8 @@ VALUES
   ('TestPlayer3_1', 'test_player3_1@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer4_1', 'test_player4_1@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer5_1', 'test_player5_1@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
-  ('TestAudience_1', 'test_audience_1@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW());
+  ('TestAudience_1', 'test_audience_1@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW())
+ON CONFLICT (email) DO NOTHING;
 
 -- Worker 2 users
 INSERT INTO users (username, email, password, created_at)
@@ -38,7 +40,8 @@ VALUES
   ('TestPlayer3_2', 'test_player3_2@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer4_2', 'test_player4_2@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer5_2', 'test_player5_2@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
-  ('TestAudience_2', 'test_audience_2@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW());
+  ('TestAudience_2', 'test_audience_2@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW())
+ON CONFLICT (email) DO NOTHING;
 
 -- Worker 3 users
 INSERT INTO users (username, email, password, created_at)
@@ -49,7 +52,8 @@ VALUES
   ('TestPlayer3_3', 'test_player3_3@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer4_3', 'test_player4_3@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer5_3', 'test_player5_3@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
-  ('TestAudience_3', 'test_audience_3@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW());
+  ('TestAudience_3', 'test_audience_3@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW())
+ON CONFLICT (email) DO NOTHING;
 
 -- Worker 4 users
 INSERT INTO users (username, email, password, created_at)
@@ -60,7 +64,8 @@ VALUES
   ('TestPlayer3_4', 'test_player3_4@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer4_4', 'test_player4_4@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer5_4', 'test_player5_4@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
-  ('TestAudience_4', 'test_audience_4@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW());
+  ('TestAudience_4', 'test_audience_4@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW())
+ON CONFLICT (email) DO NOTHING;
 
 -- Worker 5 users
 INSERT INTO users (username, email, password, created_at)
@@ -71,6 +76,7 @@ VALUES
   ('TestPlayer3_5', 'test_player3_5@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer4_5', 'test_player4_5@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
   ('TestPlayer5_5', 'test_player5_5@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW()),
-  ('TestAudience_5', 'test_audience_5@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW());
+  ('TestAudience_5', 'test_audience_5@example.com', '$2a$10$7LH6DSL0M6Dln50UDtKzY.rs7J3a7S/gAZVONnk6QZvouo0pUx/..', NOW())
+ON CONFLICT (email) DO NOTHING;
 
 COMMIT;

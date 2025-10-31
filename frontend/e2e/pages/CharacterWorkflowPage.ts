@@ -88,8 +88,8 @@ export class CharacterWorkflowPage {
     const card = await this.findCharacterCard(characterName);
 
     // Click the "Edit Sheet" or "View Sheet" button
-    const editButton = card.getByTestId('edit-character-button');
-    await editButton.waitFor({ state: 'visible', timeout: 3000 });
+    // Filter to only visible elements - works for both mobile and desktop viewports
+    const editButton = card.getByTestId('edit-character-button').locator('visible=true').first();
     await editButton.click();
 
     // Wait for character sheet modal to appear
@@ -106,8 +106,8 @@ export class CharacterWorkflowPage {
     const card = await this.findCharacterCard(characterName);
 
     // Click the approve button
-    const approveButton = card.getByTestId('approve-character-button');
-    await approveButton.waitFor({ state: 'visible', timeout: 3000 });
+    // Filter to only visible elements - works for both mobile and desktop viewports
+    const approveButton = card.getByTestId('approve-character-button').locator('visible=true').first();
     await approveButton.click();
     await this.page.waitForLoadState('networkidle');
 
@@ -124,7 +124,8 @@ export class CharacterWorkflowPage {
   async getCharacterStatus(characterName: string): Promise<string | null> {
     try {
       const card = await this.findCharacterCard(characterName);
-      const statusBadge = card.getByTestId('character-status-badge');
+      // Get only visible status badge - works for both mobile and desktop viewports
+      const statusBadge = card.getByTestId('character-status-badge').locator('visible=true').first();
       const statusText = await statusBadge.textContent();
       return statusText?.trim().toLowerCase() || null;
     } catch {
@@ -145,7 +146,8 @@ export class CharacterWorkflowPage {
 
     const names: string[] = [];
     for (const card of characterCards) {
-      const nameElement = card.getByTestId('character-name');
+      // Get only visible h4 - works for both mobile and desktop viewports
+      const nameElement = card.locator('h4').locator('visible=true').first();
       const name = await nameElement.textContent();
       if (name) {
         names.push(name.trim());
@@ -221,7 +223,8 @@ export class CharacterWorkflowPage {
 
     // Find the card containing the character name
     for (const card of allCards) {
-      const nameElement = card.getByTestId('character-name');
+      // Get only visible h4 - works for both mobile and desktop viewports
+      const nameElement = card.locator('h4').locator('visible=true').first();
       const name = await nameElement.textContent();
       if (name?.trim() === characterName) {
         return card;

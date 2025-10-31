@@ -63,7 +63,8 @@ export class CommonRoomPage {
    */
   async createPost(content: string) {
     // Check if form is collapsed - if so, expand it first
-    const expandButton = this.page.locator('button:has-text("Create New GM Post")').first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    const expandButton = this.page.locator('button:has-text("Create New GM Post")').locator('visible=true').first();
     if (await expandButton.isVisible().catch(() => false)) {
       await expandButton.click();
       // Wait for form to expand
@@ -88,7 +89,8 @@ export class CommonRoomPage {
    * @param content - Partial or full post content
    */
   getPostCard(content: string): Locator {
-    return this.page.locator(`div:has-text("${content}")`).first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    return this.page.locator(`div:has-text("${content}")`).locator('visible=true').first();
   }
 
   /**
@@ -97,7 +99,8 @@ export class CommonRoomPage {
    */
   async openCommentForm(postContent: string) {
     const postCard = this.getPostCard(postContent);
-    await postCard.locator('button:has-text("Add Comment")').first().click();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    await postCard.locator('button:has-text("Add Comment")').locator('visible=true').first().click();
 
     // Wait for comment textarea to be visible
     const textarea = postCard.locator('textarea[placeholder*="Write a comment"]');
@@ -150,7 +153,8 @@ export class CommonRoomPage {
    */
   async submitComment(postContent: string) {
     const postCard = this.getPostCard(postContent);
-    const form = postCard.locator('form').first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    const form = postCard.locator('form').locator('visible=true').first();
 
     await form.evaluate((f: HTMLFormElement) => f.requestSubmit());
 
@@ -208,7 +212,8 @@ export class CommonRoomPage {
    * @param characterName - Character name to verify
    */
   async verifyMentionRendered(characterName: string) {
-    const mention = this.page.locator(`mark[data-mention-id]:has-text("@${characterName}")`).first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    const mention = this.page.locator(`mark[data-mention-id]:has-text("@${characterName}")`).locator('visible=true').first();
     await waitForVisible(mention);
   }
 
@@ -251,7 +256,8 @@ export class CommonRoomPage {
    */
   async verifyMentionNotInCodeBlock(codeText: string) {
     // Find code element with the text
-    const codeElement = this.page.locator(`code:has-text("${codeText}")`).first();
+    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+    const codeElement = this.page.locator(`code:has-text("${codeText}")`).locator('visible=true').first();
     await waitForVisible(codeElement);
 
     // Verify the code element does not contain a mark element (mention)

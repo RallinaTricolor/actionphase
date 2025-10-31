@@ -169,11 +169,11 @@ test.describe('Character Mentions', () => {
       await playerCommonRoom.verifyCommentExists('this bold text');
 
       // Verify bold text is actually bold (rendered in <strong> tag)
-      const boldElement = playerPage.locator('strong').filter({ hasText: 'this bold text' }).first();
+      const boldElement = playerPage.locator('strong').filter({ hasText: 'this bold text' }).locator('visible=true').first();
       await expect(boldElement).toBeVisible();
 
       // Verify italic text is actually italic (rendered in <em> tag)
-      const italicElement = playerPage.locator('em').filter({ hasText: 'this italic' }).first();
+      const italicElement = playerPage.locator('em').filter({ hasText: 'this italic' }).locator('visible=true').first();
       await expect(italicElement).toBeVisible();
 
       // Verify mention is highlighted
@@ -253,7 +253,7 @@ test.describe('Character Mentions', () => {
     await expect(commonRoom.heading).toBeVisible({ timeout: 5000 });
 
     // Expand form if collapsed (posts may exist from previous tests)
-    const expandButton = page.locator('button:has-text("Create New GM Post")').first();
+    const expandButton = page.locator('button:has-text("Create New GM Post")').locator('visible=true').first();
     if (await expandButton.isVisible().catch(() => false)) {
       await expandButton.click();
       await page.waitForTimeout(300);
@@ -291,7 +291,7 @@ test.describe('Character Mentions', () => {
 
     // Verify the post appears with the mention
     await commonRoom.verifyPostExists('you are assigned to the north gate');
-    await expect(page.getByText('@Test Player 1 Character').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('@Test Player 1 Character').locator('visible=true').first()).toBeVisible({ timeout: 5000 });
 
     // Success! This test verifies the bug fix:
     // - Before fix: Autocomplete only showed GM's characters

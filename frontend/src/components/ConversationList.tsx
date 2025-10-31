@@ -124,6 +124,7 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
             selectedConversationId === conversation.id ? 'bg-interactive-primary-subtle border-l-4 border-interactive-primary' : ''
           } ${collapsed ? 'p-2' : 'p-4'}`}
           title={collapsed ? conversation.title || 'Untitled Conversation' : undefined}
+          data-testid="conversation-item"
         >
           {collapsed ? (
             // Collapsed view: show initial or icon with unread badge

@@ -7,6 +7,14 @@ import { renderWithProviders } from '../../test-utils/render';
 import { MessageThread } from '../MessageThread';
 import type { Character } from '../../types/characters';
 
+// Mock the auth hook
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: vi.fn(),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+import { useAuth } from '../../contexts/AuthContext';
+
 describe('MessageThread', () => {
   const mockCharacters: Character[] = [
     {
@@ -64,6 +72,20 @@ describe('MessageThread', () => {
   ];
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Set up authenticated user
+    vi.mocked(useAuth).mockReturnValue({
+      currentUser: { id: 100, username: 'player1', email: 'player1@example.com', created_at: '', updated_at: '' },
+      isAuthenticated: true,
+      isCheckingAuth: false,
+      isLoading: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      error: null,
+    } as any);
+
     // Setup default mocks
     server.use(
       http.get('/api/v1/games/:gameId/conversations/:conversationId', () => {
@@ -594,6 +616,338 @@ describe('MessageThread', () => {
         expect(screen.getByText(/send as hero character/i)).toBeInTheDocument();
         expect(screen.getByText(/send as companion character/i)).toBeInTheDocument();
         expect(screen.queryByText(/non-participant/i)).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Delete Message', () => {
+    it('shows delete button for own messages', async () => {
+      const messagesWithUserId = mockMessages.map(msg => ({
+        ...msg,
+        sender_user_id: 100, // Current user's ID
+      }));
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: messagesWithUserId });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+      );
+
+      await waitFor(() => {
+        const deleteButtons = screen.getAllByTitle(/delete message/i);
+        expect(deleteButtons.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('hides delete button for other users messages', async () => {
+      const messagesWithDifferentUser = mockMessages.map(msg => ({
+        ...msg,
+        sender_user_id: 999, // Different user
+      }));
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: messagesWithDifferentUser });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+      );
+
+      await waitFor(() => {
+        const deleteButtons = screen.queryAllByTitle(/delete message/i);
+        expect(deleteButtons.length).toBe(0);
+      });
+    });
+
+    it('hides delete button for already deleted messages', async () => {
+      const messagesWithDeleted = [
+        {
+          ...mockMessages[0],
+          sender_user_id: 100,
+          is_deleted: true,
+          deleted_at: '2024-01-01T11:00:00Z',
+        },
+      ];
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: messagesWithDeleted });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+      );
+
+      await waitFor(() => {
+        const deleteButtons = screen.queryAllByTitle(/delete message/i);
+        expect(deleteButtons.length).toBe(0);
+      });
+    });
+
+    it('shows confirmation modal when delete button is clicked', async () => {
+      const user = userEvent.setup();
+      const messagesWithUserId = mockMessages.map(msg => ({
+        ...msg,
+        sender_user_id: 100,
+      }));
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: messagesWithUserId });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByTitle(/delete message/i).length).toBeGreaterThan(0);
+      });
+
+      const deleteButton = screen.getAllByTitle(/delete message/i)[0];
+      await user.click(deleteButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete message\?/i)).toBeInTheDocument();
+        expect(screen.getByText(/this will permanently delete your message/i)).toBeInTheDocument();
+      });
+    });
+
+    it('closes modal when cancel is clicked', async () => {
+      const user = userEvent.setup();
+      const messagesWithUserId = mockMessages.map(msg => ({
+        ...msg,
+        sender_user_id: 100,
+      }));
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: messagesWithUserId });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByTitle(/delete message/i).length).toBeGreaterThan(0);
+      });
+
+      // Open modal
+      const deleteButton = screen.getAllByTitle(/delete message/i)[0];
+      await user.click(deleteButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete message\?/i)).toBeInTheDocument();
+      });
+
+      // Click cancel
+      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      await user.click(cancelButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/delete message\?/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it('deletes message when confirmed', async () => {
+      const user = userEvent.setup();
+      let deletedMessageId: number | null = null;
+
+      const messagesWithUserId = mockMessages.map(msg => ({
+        ...msg,
+        sender_user_id: 100,
+      }));
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: messagesWithUserId });
+        }),
+        http.delete('/api/v1/games/:gameId/conversations/:conversationId/messages/:messageId', ({ params }) => {
+          deletedMessageId = Number(params.messageId);
+          return HttpResponse.json({ message: 'Message deleted successfully', id: deletedMessageId });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByTitle(/delete message/i).length).toBeGreaterThan(0);
+      });
+
+      // Open modal
+      const deleteButton = screen.getAllByTitle(/delete message/i)[0];
+      await user.click(deleteButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete message\?/i)).toBeInTheDocument();
+      });
+
+      // Confirm delete
+      const confirmButton = screen.getByRole('button', { name: /^delete$/i });
+      await user.click(confirmButton);
+
+      await waitFor(() => {
+        expect(deletedMessageId).toBe(1); // First message ID
+      });
+    });
+
+    it('displays deleted messages with placeholder text', async () => {
+      const deletedMessage = {
+        id: 1,
+        conversation_id: 1,
+        sender_character_id: 1,
+        sender_character_name: 'Hero Character',
+        sender_username: 'player1',
+        sender_user_id: 100,
+        content: '[Message deleted]',
+        created_at: '2024-01-01T10:00:00Z',
+        is_deleted: true,
+        deleted_at: '2024-01-01T11:00:00Z',
+      };
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: [deletedMessage] });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('[Message deleted]')).toBeInTheDocument();
+      });
+    });
+
+    it('preserves sender name and timestamp for deleted messages', async () => {
+      const deletedMessage = {
+        id: 1,
+        conversation_id: 1,
+        sender_character_id: 1,
+        sender_character_name: 'Hero Character',
+        sender_username: 'player1',
+        sender_user_id: 100,
+        content: '[Message deleted]',
+        created_at: '2024-01-01T10:00:00Z',
+        is_deleted: true,
+        deleted_at: '2024-01-01T11:00:00Z',
+      };
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: [deletedMessage] });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Hero Character')).toBeInTheDocument();
+        // Timestamp will be formatted - just verify it exists
+        const timeElements = screen.getAllByText(/jan/i);
+        expect(timeElements.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('shows loading state while deleting', async () => {
+      const user = userEvent.setup();
+      const messagesWithUserId = mockMessages.map(msg => ({
+        ...msg,
+        sender_user_id: 100,
+      }));
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: messagesWithUserId });
+        }),
+        http.delete('/api/v1/games/:gameId/conversations/:conversationId/messages/:messageId', async () => {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          return HttpResponse.json({ message: 'Message deleted successfully' });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByTitle(/delete message/i).length).toBeGreaterThan(0);
+      });
+
+      const deleteButton = screen.getAllByTitle(/delete message/i)[0];
+      await user.click(deleteButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete message\?/i)).toBeInTheDocument();
+      });
+
+      const confirmButton = screen.getByRole('button', { name: /^delete$/i });
+      await user.click(confirmButton);
+
+      // Check for loading state on button
+      await waitFor(() => {
+        const button = screen.getByRole('button', { name: /^delete$/i });
+        expect(button).toBeDisabled();
+      });
+    });
+
+    it('reloads messages after successful deletion', async () => {
+      const user = userEvent.setup();
+      let messagesFetchCount = 0;
+
+      const messagesWithUserId = mockMessages.map(msg => ({
+        ...msg,
+        sender_user_id: 100,
+      }));
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          messagesFetchCount++;
+          return HttpResponse.json({ messages: messagesWithUserId });
+        }),
+        http.delete('/api/v1/games/:gameId/conversations/:conversationId/messages/:messageId', () => {
+          return HttpResponse.json({ message: 'Message deleted successfully' });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+      );
+
+      await waitFor(() => {
+        expect(messagesFetchCount).toBeGreaterThan(0);
+      });
+
+      const initialFetchCount = messagesFetchCount;
+
+      // Delete message
+      const deleteButton = screen.getAllByTitle(/delete message/i)[0];
+      await user.click(deleteButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/delete message\?/i)).toBeInTheDocument();
+      });
+
+      const confirmButton = screen.getByRole('button', { name: /^delete$/i });
+      await user.click(confirmButton);
+
+      await waitFor(() => {
+        expect(messagesFetchCount).toBeGreaterThan(initialFetchCount);
       });
     });
   });

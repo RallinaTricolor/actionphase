@@ -2,6 +2,11 @@
 
 Complete guide to end-to-end testing in ActionPhase with Playwright.
 
+## Quick Links
+
+- **[E2E Patterns Reference](e2e-patterns-reference.md)** ← **READ THIS for complete E2E patterns, helpers, and real examples**
+- This file: Prerequisites and rules
+
 ## The Golden Rule
 
 **E2E tests are the LAST step, NEVER the first!**

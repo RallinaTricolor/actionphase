@@ -333,7 +333,7 @@ func (q *Queries) GetAllDescendantComments(ctx context.Context, parentID pgtype.
 }
 
 const getAudienceConversationMessages = `-- name: GetAudienceConversationMessages :many
-SELECT pm.id, pm.conversation_id, pm.sender_user_id, pm.sender_character_id, pm.content, pm.created_at, pm.updated_at,
+SELECT pm.id, pm.conversation_id, pm.sender_user_id, pm.sender_character_id, pm.content, pm.created_at, pm.updated_at, pm.deleted_at, pm.is_deleted,
        u.username as sender_username,
        c.name as sender_character_name,
        c.avatar_url as sender_avatar_url
@@ -352,6 +352,8 @@ type GetAudienceConversationMessagesRow struct {
 	Content             string             `json:"content"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+	IsDeleted           pgtype.Bool        `json:"is_deleted"`
 	SenderUsername      string             `json:"sender_username"`
 	SenderCharacterName pgtype.Text        `json:"sender_character_name"`
 	SenderAvatarUrl     pgtype.Text        `json:"sender_avatar_url"`
@@ -375,6 +377,8 @@ func (q *Queries) GetAudienceConversationMessages(ctx context.Context, conversat
 			&i.Content,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.IsDeleted,
 			&i.SenderUsername,
 			&i.SenderCharacterName,
 			&i.SenderAvatarUrl,

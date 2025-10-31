@@ -18,7 +18,8 @@ export async function assertTextVisible(
   options: { timeout?: number } = {}
 ) {
   const timeout = options.timeout ?? 5000;
-  await expect(page.locator(`text=${text}`).first()).toBeVisible({ timeout });
+  // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+  await expect(page.locator(`text=${text}`).locator('visible=true').first()).toBeVisible({ timeout });
 }
 
 /**
@@ -33,7 +34,8 @@ export async function assertTextNotVisible(
   options: { timeout?: number } = {}
 ) {
   const timeout = options.timeout ?? 5000;
-  await expect(page.locator(`text=${text}`).first()).toBeHidden({ timeout });
+  // For NOT visible, we don't need to filter to visible - check if any instance is hidden
+  await expect(page.locator(`text=${text}`)).toBeHidden({ timeout });
 }
 
 /**
@@ -157,7 +159,8 @@ export async function assertModalVisible(page: Page, modalTitle?: string) {
  */
 export async function assertNotification(page: Page, text: string) {
   const notification = page.locator('[role="alert"], .toast, .notification').filter({ hasText: text });
-  await expect(notification.first()).toBeVisible({ timeout: 5000 });
+  // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+  await expect(notification.locator('visible=true').first()).toBeVisible({ timeout: 5000 });
 }
 
 /**

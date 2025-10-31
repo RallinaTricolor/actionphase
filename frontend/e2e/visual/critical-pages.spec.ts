@@ -30,7 +30,7 @@ test.describe.skip('Visual Regression - Critical Pages', () => {
       await page.waitForLoadState('networkidle');
 
       // Wait for main content to load
-      await page.locator('h1').first().waitFor({ state: 'visible', timeout: 5000 });
+      await page.locator('h1').locator('visible=true').first().waitFor({ state: 'visible', timeout: 5000 });
 
       // Take full page screenshot
       await expect(page).toHaveScreenshot('home-page-light.png', {
@@ -91,7 +91,7 @@ test.describe.skip('Visual Regression - Critical Pages', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
       // Wait for game content
@@ -130,7 +130,7 @@ test.describe.skip('Visual Regression - Critical Pages', () => {
       await page.goto('/');
       await page.waitForLoadState('networkidle');
 
-      await page.locator('h1').first().waitFor({ state: 'visible', timeout: 5000 });
+      await page.locator('h1').locator('visible=true').first().waitFor({ state: 'visible', timeout: 5000 });
 
       await expect(page).toHaveScreenshot('home-page-dark.png', {
         fullPage: true,
@@ -186,7 +186,7 @@ test.describe.skip('Visual Regression - Critical Pages', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
       await page.waitForTimeout(1000);

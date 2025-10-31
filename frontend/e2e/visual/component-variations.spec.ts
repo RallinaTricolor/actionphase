@@ -29,7 +29,7 @@ test.describe.skip('Visual Regression - Component Variations', () => {
       await page.waitForLoadState('networkidle');
 
       // Capture button area
-      const form = page.locator('form').first();
+      const form = page.locator('form').locator('visible=true').first();
       await expect(form).toHaveScreenshot('buttons-light.png', {
         maxDiffPixels: 50,
       });
@@ -42,7 +42,7 @@ test.describe.skip('Visual Regression - Component Variations', () => {
       await page.goto('/games/create');
       await page.waitForLoadState('networkidle');
 
-      const form = page.locator('form').first();
+      const form = page.locator('form').locator('visible=true').first();
       await expect(form).toHaveScreenshot('buttons-dark.png', {
         maxDiffPixels: 50,
       });
@@ -79,7 +79,7 @@ test.describe.skip('Visual Regression - Component Variations', () => {
       await page.waitForLoadState('networkidle');
 
       // Capture first game card
-      const gameCard = page.locator('[data-testid="game-card"], .game-card, [class*="game"]').first();
+      const gameCard = page.locator('[data-testid="game-card"], .game-card, [class*="game"]').locator('visible=true').first();
       const cardExists = await gameCard.isVisible().catch(() => false);
 
       if (cardExists) {
@@ -101,7 +101,7 @@ test.describe.skip('Visual Regression - Component Variations', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      const gameCard = page.locator('[data-testid="game-card"], .game-card, [class*="game"]').first();
+      const gameCard = page.locator('[data-testid="game-card"], .game-card, [class*="game"]').locator('visible=true').first();
       const cardExists = await gameCard.isVisible().catch(() => false);
 
       if (cardExists) {
@@ -204,7 +204,7 @@ test.describe.skip('Visual Regression - Component Variations', () => {
       await page.waitForLoadState('networkidle');
 
       // Navigate to recruiting game
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
       // Click Apply button to open modal
@@ -235,7 +235,7 @@ test.describe.skip('Visual Regression - Component Variations', () => {
       await page.goto('/games');
       await page.waitForLoadState('networkidle');
 
-      await page.locator(`text=${gameTitle}`).first().click();
+      await page.locator(`text=${gameTitle}`).locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
       const applyButton = page.locator('button:has-text("Apply"), button:has-text("Join")');

@@ -64,7 +64,7 @@ test.describe('Notification System', () => {
 
       // 4. Verify empty state or notifications are displayed
       // (Will show either "No notifications" or actual notifications depending on state)
-      const dropdownContent = notificationDropdown.locator('div, p, button').first();
+      const dropdownContent = notificationDropdown.locator('div, p, button').locator('visible=true').first();
       await expect(dropdownContent).toBeVisible();
 
       // 5. Close dropdown by clicking bell again
@@ -116,18 +116,18 @@ test.describe('Notification System', () => {
 
         // Find Player 1's comment and click Reply
         // Look for the reply button near Player 1's comment
-        const commentContainer = replierPage.locator('div').filter({ hasText: player1CommentText }).first();
-        const replyButton = commentContainer.getByRole('button', { name: 'Reply' }).first();
+        const commentContainer = replierPage.locator('div').filter({ hasText: player1CommentText }).locator('visible=true').first();
+        const replyButton = commentContainer.getByRole('button', { name: 'Reply' }).locator('visible=true').first();
         // Playwright's click automatically scrolls the element into view if needed
         await replyButton.click();
         await replierPage.waitForLoadState('networkidle');
 
         // Write reply
         const testReply = `Player 2 reply ${Date.now()}`;
-        const replyTextarea = commentContainer.locator('textarea').first();
+        const replyTextarea = commentContainer.locator('textarea').locator('visible=true').first();
         await replyTextarea.fill(testReply);
 
-        const replyForm = commentContainer.locator('form').first();
+        const replyForm = commentContainer.locator('form').locator('visible=true').first();
         await replyForm.evaluate((f: HTMLFormElement) => f.requestSubmit());
         await replierPage.waitForLoadState('networkidle');
 
@@ -142,7 +142,7 @@ test.describe('Notification System', () => {
         await expect(dropdown).toBeVisible();
 
         // Wait for loading to complete and notification to appear
-        const replyNotification = originalPosterPage.locator('.notification-item').filter({ hasText: 'replied' }).first();
+        const replyNotification = originalPosterPage.locator('.notification-item').filter({ hasText: 'replied' }).locator('visible=true').first();
         await expect(replyNotification).toBeVisible({ timeout: 20000 });
 
         // 6. Click notification and verify navigation
@@ -190,14 +190,14 @@ test.describe('Notification System', () => {
         const mentionerCommonRoom = new CommonRoomPage(mentionerPage);
         await mentionerCommonRoom.goto(gameId);
 
-        const postCard = mentionerPage.locator('div').filter({ hasText: postContent }).first();
-        await postCard.getByRole('button', { name: 'Add Comment' }).first().click();
+        const postCard = mentionerPage.locator('div').filter({ hasText: postContent }).locator('visible=true').first();
+        await postCard.getByRole('button', { name: 'Add Comment' }).locator('visible=true').first().click();
         await mentionerPage.waitForLoadState('networkidle');
 
         const commentTextarea = postCard.getByPlaceholder(/Write a comment/i);
         await commentTextarea.fill('Hey @Test Player 4 Character, what do you think?');
 
-        const form = postCard.locator('form').first();
+        const form = postCard.locator('form').locator('visible=true').first();
         await form.evaluate((f: HTMLFormElement) => f.requestSubmit());
         await mentionerPage.waitForLoadState('networkidle');
 
@@ -212,7 +212,7 @@ test.describe('Notification System', () => {
         await expect(dropdown).toBeVisible();
 
         // Wait for loading to complete and notification to appear
-        const mentionNotification = mentionedUserPage.locator('.notification-item').filter({ hasText: 'mentioned' }).first();
+        const mentionNotification = mentionedUserPage.locator('.notification-item').filter({ hasText: 'mentioned' }).locator('visible=true').first();
         await expect(mentionNotification).toBeVisible({ timeout: 20000 });
 
         // 6. Click and verify navigation with correct tab parameter
@@ -279,7 +279,7 @@ test.describe('Notification System', () => {
         await expect(dropdown).toBeVisible();
 
         // Wait for loading to complete and notification to appear
-        const phaseNotification = playerPage.locator('.notification-item').filter({ hasText: phaseTitle }).first();
+        const phaseNotification = playerPage.locator('.notification-item').filter({ hasText: phaseTitle }).locator('visible=true').first();
         await expect(phaseNotification).toBeVisible({ timeout: 20000 });
 
         // 6. Click and verify navigation
@@ -329,7 +329,7 @@ test.describe('Notification System', () => {
       await page.click('[data-testid="notification-bell"]');
 
       // Find first notification
-      const firstNotification = page.locator('.notification-item').first();
+      const firstNotification = page.locator('.notification-item').locator('visible=true').first();
 
       if (await firstNotification.isVisible()) {
         // Get the notification title to verify it's deleted
@@ -373,7 +373,7 @@ test.describe('Notification System', () => {
       if (count > 0) {
         // Dismiss all notifications
         for (let i = 0; i < count; i++) {
-          const firstDismiss = page.locator('[data-testid="dismiss-notification"]').first();
+          const firstDismiss = page.locator('[data-testid="dismiss-notification"]').locator('visible=true').first();
           if (await firstDismiss.isVisible()) {
             await firstDismiss.click();
             await page.waitForTimeout(300); // Wait for dismissal animation
@@ -435,7 +435,7 @@ test.describe('Notification System', () => {
         await senderPage.fill('input[placeholder*="Planning the heist"], input[placeholder*="title"]', conversationTitle);
 
         // Select Player 2's character as participant
-        await senderPage.getByLabel(/E2E Test Char 2|TestPlayer2/).first().click();
+        await senderPage.getByLabel(/E2E Test Char 2|TestPlayer2/).locator('visible=true').first().click();
 
         // Click "Create Conversation" button
         await senderPage.click('button:has-text("Create Conversation")');

@@ -33,7 +33,7 @@ test.describe.serial('Complete Phase Lifecycle', () => {
 
     // Verify current phase is "Initial Common Room"
     await expect(page.getByRole('heading', { name: 'Currently Active', level: 3 })).toBeVisible();
-    await expect(page.getByText('Initial Common Room').first()).toBeVisible();
+    await expect(page.getByText('Initial Common Room').locator('visible=true').first()).toBeVisible();
 
     // Create new action phase using POM
     const tomorrow = new Date();
@@ -47,15 +47,15 @@ test.describe.serial('Complete Phase Lifecycle', () => {
     });
 
     // Verify the new phase appears
-    await expect(page.getByText('Test Action Phase').first()).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('span').filter({ hasText: /^Phase 2$/ })).toBeVisible();
+    await expect(page.getByText('Test Action Phase').locator('visible=true').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('span').filter({ hasText: /^Phase 2$/ }).locator('visible=true').first()).toBeVisible();
 
     // Activate the new action phase using POM
     await phasePage.activatePhase('Test Action Phase');
 
     // Verify the phase is now active using POM
     const activatedPhaseCard = phasePage.getPhaseCard('Test Action Phase');
-    await expect(activatedPhaseCard.getByText('Currently Active').last()).toBeVisible({ timeout: 10000 });
+    await expect(activatedPhaseCard.getByText('Currently Active').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('players can access action submission during action phase', async ({ page }) => {
@@ -78,7 +78,7 @@ test.describe.serial('Complete Phase Lifecycle', () => {
 
     // Should see action submission form
     await expect(page.getByRole('heading', { name: 'Action Submission' })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Acting as:').first()).toBeVisible();
+    await expect(page.getByText('Acting as:').locator('visible=true').first()).toBeVisible();
     await expect(page.getByText('Lifecycle Char 1')).toBeVisible();
 
     // Verify submission form is available

@@ -72,6 +72,7 @@ export function PauseGameConfirmationDialog({
             variant="secondary"
             onClick={onClose}
             disabled={isSubmitting}
+            data-testid="pause-game-cancel-button"
           >
             Cancel
           </Button>
@@ -81,6 +82,7 @@ export function PauseGameConfirmationDialog({
             disabled={isSubmitting}
             loading={isSubmitting}
             className="bg-semantic-warning hover:bg-semantic-warning-hover text-white"
+            data-testid="pause-game-confirm-button"
           >
             {isSubmitting ? 'Pausing...' : 'Pause Game'}
           </Button>

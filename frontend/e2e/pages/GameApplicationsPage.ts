@@ -97,7 +97,8 @@ export class GameApplicationsPage {
     const usernames: string[] = [];
     for (const card of applicationCards) {
       // Find username within the card - it's typically in a heading or strong text
-      const usernameElement = card.locator('h3, h4, strong').first();
+      // Filter to visible element (viewport-agnostic for dual-DOM pattern)
+      const usernameElement = card.locator('h3, h4, strong').locator('visible=true').first();
       const username = await usernameElement.textContent();
       if (username) {
         usernames.push(username.trim());

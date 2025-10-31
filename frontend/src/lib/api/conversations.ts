@@ -41,4 +41,8 @@ export class ConversationsApi extends BaseApiClient {
   async addParticipant(gameId: number, conversationId: number, data: AddParticipantRequest) {
     return this.client.post<{ success: boolean }>(`/api/v1/games/${gameId}/conversations/${conversationId}/participants`, data);
   }
+
+  async deleteMessage(gameId: number, conversationId: number, messageId: number) {
+    return this.client.delete<{ message: string; id: number }>(`/api/v1/games/${gameId}/conversations/${conversationId}/messages/${messageId}`);
+  }
 }

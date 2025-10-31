@@ -336,6 +336,8 @@ type PrivateMessage struct {
 	Content           string             `json:"content"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
+	IsDeleted         pgtype.Bool        `json:"is_deleted"`
 }
 
 type Session struct {

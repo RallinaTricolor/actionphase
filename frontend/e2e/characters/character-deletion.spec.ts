@@ -57,9 +57,10 @@ test.describe('Character Deletion', () => {
     const characterCard = page
       .getByTestId('character-card')
       .filter({ has: page.getByTestId('character-name').filter({ hasText: characterName }) })
-      .first();
+      .locator('visible=true').first();
 
-    const deleteButton = characterCard.getByTestId('delete-character-button');
+    // The testid is on a span inside the button, so we need to find the button containing it
+    const deleteButton = characterCard.locator('button:has([data-testid="delete-character-button"])').locator('visible=true').first();
     await expect(deleteButton).toBeVisible();
 
     // 5. Click delete button
@@ -121,10 +122,10 @@ test.describe('Character Deletion', () => {
 
     // 5. Find the GM's NPC character (which now has a message)
     const npcSection = page.locator('h3:has-text("NPCs")').locator('..');
-    const gmCharacterCard = npcSection.getByTestId('character-card').first();
+    const gmCharacterCard = npcSection.getByTestId('character-card').locator('visible=true').first();
     await expect(gmCharacterCard).toBeVisible();
 
-    const deleteButton = gmCharacterCard.getByTestId('delete-character-button');
+    const deleteButton = gmCharacterCard.getByTestId('delete-character-button').locator('visible=true').first();
     await expect(deleteButton).toBeVisible();
 
     // 6. Click delete button
@@ -181,9 +182,10 @@ test.describe('Character Deletion', () => {
     const characterCard = page
       .getByTestId('character-card')
       .filter({ has: page.getByTestId('character-name').filter({ hasText: characterName }) })
-      .first();
+      .locator('visible=true').first();
 
-    const deleteButton = characterCard.getByTestId('delete-character-button');
+    // The testid is on a span inside the button, so we need to find the button containing it
+    const deleteButton = characterCard.locator('button:has([data-testid="delete-character-button"])').locator('visible=true').first();
     await deleteButton.click();
 
     // 5. Verify confirmation modal appears
@@ -213,7 +215,8 @@ test.describe('Character Deletion', () => {
     await page.waitForLoadState('networkidle');
 
     // 3. Verify delete button is NOT visible
-    const deleteButtons = page.getByTestId('delete-character-button');
+    // The testid is on a span inside the button, so look for buttons containing that span
+    const deleteButtons = page.locator('button:has([data-testid="delete-character-button"])');
     await expect(deleteButtons).toHaveCount(0);
   });
 
@@ -249,9 +252,10 @@ test.describe('Character Deletion', () => {
     const characterCard = page
       .getByTestId('character-card')
       .filter({ has: page.getByTestId('character-name').filter({ hasText: characterName }) })
-      .first();
+      .locator('visible=true').first();
 
-    const deleteButton = characterCard.getByTestId('delete-character-button');
+    // The testid is on a span inside the button, so we need to find the button containing it
+    const deleteButton = characterCard.locator('button:has([data-testid="delete-character-button"])').locator('visible=true').first();
     await expect(deleteButton).toBeVisible();
   });
 });

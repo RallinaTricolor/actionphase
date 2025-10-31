@@ -29,7 +29,7 @@ test.describe('Browser Navigation Behavior', () => {
 
     // Should still be on the same page and authenticated
     await expect(page).toHaveURL(new RegExp(`/games/${gameId}`));
-    await expect(page.getByRole('heading', { level: 1 }).or(page.getByRole('heading', { level: 2 })).first()).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 }).or(page.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
 
     // Should still be able to access authenticated features
     await page.getByRole('link', { name: 'Dashboard' }).click();
@@ -47,7 +47,7 @@ test.describe('Browser Navigation Behavior', () => {
 
     // Should load the game page successfully
     await expect(page).toHaveURL(new RegExp(`/games/${gameId}`));
-    await expect(page.getByRole('heading', { level: 1 }).or(page.getByRole('heading', { level: 2 })).first()).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 }).or(page.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
 
     // Should show game content (tabs should be present)
     const tabCount = await page.getByRole('tab').count();
@@ -68,7 +68,7 @@ test.describe('Browser Navigation Behavior', () => {
 
     // Should still be on dashboard and authenticated
     await expect(page).toHaveURL('/dashboard');
-    await expect(page.getByRole('heading', { name: 'Dashboard' }).or(page.getByRole('heading', { level: 1 })).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).or(page.getByRole('heading', { level: 1 })).locator('visible=true').first()).toBeVisible();
   });
 
   test('should handle direct URL navigation to dashboard', async ({ page }) => {
@@ -84,7 +84,7 @@ test.describe('Browser Navigation Behavior', () => {
 
     // Should load dashboard successfully
     await expect(page).toHaveURL('/dashboard');
-    await expect(page.getByRole('heading', { name: 'Dashboard' }).or(page.getByRole('heading', { level: 1 })).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).or(page.getByRole('heading', { level: 1 })).locator('visible=true').first()).toBeVisible();
   });
 
   test('should not require double-back when navigating from games list to game', async ({ page }) => {
@@ -96,7 +96,7 @@ test.describe('Browser Navigation Behavior', () => {
     await expect(page).toHaveURL('/games');
 
     // Click on a game (use first available game card)
-    const gameCard = page.locator('[data-testid^="game-card-"]').first();
+    const gameCard = page.locator('[data-testid^="game-card-"]').locator('visible=true').first();
     await gameCard.click();
     await page.waitForLoadState('networkidle');
     // Should be on game page
@@ -127,7 +127,7 @@ test.describe('Browser Navigation Behavior', () => {
     // Click a different tab (try to find History or another available tab)
     const historyTab = page.getByRole('tab', { name: 'History' });
     if (await historyTab.count() > 0) {
-      await historyTab.first().click();
+      await historyTab.locator('visible=true').first().click();
       await page.waitForLoadState('networkidle');
 
       // URL should now have different tab parameter

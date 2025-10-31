@@ -1124,3 +1124,223 @@ func TestConversationService_GetUserConversations_UnreadCounts(t *testing.T) {
 		assert.Equal(t, int64(0), conversations[1].UnreadCount)
 	})
 }
+
+func TestConversationService_DeletePrivateMessage(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	service := NewConversationService(testDB.Pool)
+	gameService := &GameService{DB: testDB.Pool}
+	charService := &CharacterService{DB: testDB.Pool}
+
+	// Setup: Create game, users, and characters
+	gm := testDB.CreateTestUser(t, "gm_delete", "gm_delete@example.com")
+	player1 := testDB.CreateTestUser(t, "player1_delete", "player1_delete@example.com")
+	player2 := testDB.CreateTestUser(t, "player2_delete", "player2_delete@example.com")
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Delete Test Game")
+
+	// Add players as participants
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
+	require.NoError(t, err)
+
+	// Create characters
+	char1, err := charService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player1.ID)),
+		Name:          "Character 1",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	char2, err := charService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player2.ID)),
+		Name:          "Character 2",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Create conversation
+	conversation, err := service.CreateConversation(context.Background(), CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Delete Message Test",
+		CreatedByUserID: int32(player1.ID),
+		ParticipantIDs:  []int32{char1.ID, char2.ID},
+	})
+	require.NoError(t, err)
+
+	// Send test messages
+	msg1, err := service.SendMessage(context.Background(), SendMessageRequest{
+		ConversationID:    conversation.ID,
+		SenderUserID:      int32(player1.ID),
+		SenderCharacterID: char1.ID,
+		Content:           "Message from Player 1",
+	})
+	require.NoError(t, err)
+
+	msg2, err := service.SendMessage(context.Background(), SendMessageRequest{
+		ConversationID:    conversation.ID,
+		SenderUserID:      int32(player2.ID),
+		SenderCharacterID: char2.ID,
+		Content:           "Message from Player 2",
+	})
+	require.NoError(t, err)
+
+	t.Run("successfully deletes own message", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Delete message as sender
+		err := service.DeletePrivateMessage(ctx, msg1.ID, int32(player1.ID))
+		require.NoError(t, err)
+
+		// Verify message is soft-deleted
+		messages, err := service.GetConversationMessages(ctx, conversation.ID, int32(player1.ID))
+		require.NoError(t, err)
+		require.Len(t, messages, 2)
+
+		// Find the deleted message
+		var deletedMsg *dbmodels.GetConversationMessagesRow
+		for i := range messages {
+			if messages[i].ID == msg1.ID {
+				deletedMsg = &messages[i]
+				break
+			}
+		}
+		require.NotNil(t, deletedMsg, "Deleted message should still be in results")
+
+		// Verify content replaced with placeholder
+		assert.Equal(t, "[Message deleted]", deletedMsg.Content)
+		assert.True(t, deletedMsg.IsDeleted.Valid && deletedMsg.IsDeleted.Bool)
+		assert.True(t, deletedMsg.DeletedAt.Valid)
+
+		// Verify sender and timestamp preserved
+		assert.Equal(t, int32(player1.ID), deletedMsg.SenderUserID)
+		assert.True(t, deletedMsg.CreatedAt.Valid)
+	})
+
+	t.Run("returns error when deleting another user's message", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Try to delete Player 2's message as Player 1
+		err := service.DeletePrivateMessage(ctx, msg2.ID, int32(player1.ID))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "forbidden")
+	})
+
+	t.Run("returns error for non-existent message", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Try to delete message that doesn't exist
+		err := service.DeletePrivateMessage(ctx, 999999, int32(player1.ID))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("idempotent - deleting already deleted message succeeds", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Send new message
+		msg3, err := service.SendMessage(ctx, SendMessageRequest{
+			ConversationID:    conversation.ID,
+			SenderUserID:      int32(player1.ID),
+			SenderCharacterID: char1.ID,
+			Content:           "Message to delete twice",
+		})
+		require.NoError(t, err)
+
+		// Delete first time
+		err = service.DeletePrivateMessage(ctx, msg3.ID, int32(player1.ID))
+		require.NoError(t, err)
+
+		// Delete second time - should succeed (idempotent)
+		err = service.DeletePrivateMessage(ctx, msg3.ID, int32(player1.ID))
+		require.NoError(t, err)
+
+		// Verify still soft-deleted
+		messages, err := service.GetConversationMessages(ctx, conversation.ID, int32(player1.ID))
+		require.NoError(t, err)
+
+		var deletedMsg *dbmodels.GetConversationMessagesRow
+		for i := range messages {
+			if messages[i].ID == msg3.ID {
+				deletedMsg = &messages[i]
+				break
+			}
+		}
+		require.NotNil(t, deletedMsg)
+		assert.Equal(t, "[Message deleted]", deletedMsg.Content)
+		assert.True(t, deletedMsg.IsDeleted.Valid && deletedMsg.IsDeleted.Bool)
+	})
+
+	t.Run("deleted messages visible to all participants", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Send and delete message from Player 1
+		msg4, err := service.SendMessage(ctx, SendMessageRequest{
+			ConversationID:    conversation.ID,
+			SenderUserID:      int32(player1.ID),
+			SenderCharacterID: char1.ID,
+			Content:           "Visible to all when deleted",
+		})
+		require.NoError(t, err)
+
+		err = service.DeletePrivateMessage(ctx, msg4.ID, int32(player1.ID))
+		require.NoError(t, err)
+
+		// Verify Player 1 sees deleted message
+		messages1, err := service.GetConversationMessages(ctx, conversation.ID, int32(player1.ID))
+		require.NoError(t, err)
+
+		// Verify Player 2 sees deleted message
+		messages2, err := service.GetConversationMessages(ctx, conversation.ID, int32(player2.ID))
+		require.NoError(t, err)
+
+		// Both should see same content
+		var msg1Content, msg2Content string
+		for i := range messages1 {
+			if messages1[i].ID == msg4.ID {
+				msg1Content = messages1[i].Content
+			}
+		}
+		for i := range messages2 {
+			if messages2[i].ID == msg4.ID {
+				msg2Content = messages2[i].Content
+			}
+		}
+
+		assert.Equal(t, "[Message deleted]", msg1Content)
+		assert.Equal(t, "[Message deleted]", msg2Content)
+		assert.Equal(t, msg1Content, msg2Content, "Both participants should see same deleted message")
+	})
+
+	t.Run("preserves message position in conversation", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Get messages before deletion
+		messagesBefore, err := service.GetConversationMessages(ctx, conversation.ID, int32(player1.ID))
+		require.NoError(t, err)
+		countBefore := len(messagesBefore)
+
+		// Send and delete a message
+		msg5, err := service.SendMessage(ctx, SendMessageRequest{
+			ConversationID:    conversation.ID,
+			SenderUserID:      int32(player1.ID),
+			SenderCharacterID: char1.ID,
+			Content:           "Position test",
+		})
+		require.NoError(t, err)
+
+		err = service.DeletePrivateMessage(ctx, msg5.ID, int32(player1.ID))
+		require.NoError(t, err)
+
+		// Get messages after deletion
+		messagesAfter, err := service.GetConversationMessages(ctx, conversation.ID, int32(player1.ID))
+		require.NoError(t, err)
+
+		// Message count should be same (soft delete preserves structure)
+		assert.Equal(t, countBefore+1, len(messagesAfter), "Deleted message should still be counted")
+	})
+}
