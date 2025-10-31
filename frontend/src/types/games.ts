@@ -84,6 +84,15 @@ export interface GameApplication {
   reviewed_by_user_id?: number;
 }
 
+// Public applicant view (no status, message, email, or review info)
+// Available to anyone when game is in recruitment state
+export interface PublicGameApplicant {
+  id: number;
+  username: string;
+  role: 'player' | 'audience';
+  applied_at: string;
+}
+
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
 
 export interface ReviewApplicationRequest {

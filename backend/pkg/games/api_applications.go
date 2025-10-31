@@ -374,6 +374,57 @@ func (h *Handler) GetMyGameApplication(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, r, response)
 }
 
+// GetPublicGameApplicants retrieves the public list of applicants for a game
+// No authentication required - available to anyone
+// Returns only username and role (no status or review information)
+func (h *Handler) GetPublicGameApplicants(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "id")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Verify game is in recruiting state
+	gameService := &db.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get game for public applicants", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Only show applicants when game is recruiting
+	if !game.State.Valid || game.State.String != core.GameStateRecruitment {
+		render.Render(w, r, core.ErrForbidden("applicant list is only visible during recruitment"))
+		return
+	}
+
+	// Get public applicants list
+	applicationService := &db.GameApplicationService{DB: h.App.Pool}
+	applicants, err := applicationService.GetPublicGameApplicants(r.Context(), int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get public game applicants", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format - only username and role, NO status
+	// Initialize as empty slice to ensure JSON encodes as [] not null
+	response := make([]map[string]interface{}, 0)
+	for _, applicant := range applicants {
+		response = append(response, map[string]interface{}{
+			"id":         applicant.ID,
+			"username":   applicant.Username,
+			"role":       applicant.Role,
+			"applied_at": applicant.AppliedAt.Time,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 // WithdrawGameApplication allows a user to withdraw their own application
 func (h *Handler) WithdrawGameApplication(w http.ResponseWriter, r *http.Request) {
 	gameIDStr := chi.URLParam(r, "id")

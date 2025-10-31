@@ -9,6 +9,7 @@ import type {
   UpdateGameStateRequest,
   ApplyToGameRequest,
   GameApplication,
+  PublicGameApplicant,
   ReviewApplicationRequest,
   GameListingFilters,
   GameListingResponse
@@ -114,6 +115,10 @@ export class GamesApi extends BaseApiClient {
 
   async withdrawGameApplication(id: number) {
     return this.client.delete(`/api/v1/games/${id}/application`);
+  }
+
+  async getPublicGameApplicants(id: number) {
+    return this.client.get<PublicGameApplicant[]>(`/api/v1/games/${id}/applicants`);
   }
 
   // Player Management endpoints (GM only)

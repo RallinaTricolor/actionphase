@@ -215,4 +215,58 @@ test.describe('Game Application Workflow', () => {
     const stillPending = await pendingAfterWithdraw.isVisible().catch(() => false);
     expect(stillPending).toBe(false);
   });
+
+  test('public applicants list is visible during recruitment', async ({ page }) => {
+    // === STEP 1: PLAYER_2 and PLAYER_3 apply to the game ===
+    await loginAs(page, 'PLAYER_2');
+    const gameId = await getFixtureGameId(page, 'E2E_GAME_APPLICATION_SUBMIT');
+    const applicationsPage = new GameApplicationsPage(page, gameId);
+    const gamePage = new GameDetailsPage(page);
+
+    // PLAYER_2 applies
+    await gamePage.goto(gameId);
+    await page.waitForLoadState('networkidle');
+
+    if (await applicationsPage.hasApplyButton()) {
+      await applicationsPage.submitApplication('I want to join!', 'player');
+      await page.waitForTimeout(1000);
+    }
+
+    // PLAYER_3 applies
+    await loginAs(page, 'PLAYER_3');
+    await gamePage.goto(gameId);
+    await page.waitForLoadState('networkidle');
+
+    if (await applicationsPage.hasApplyButton()) {
+      await applicationsPage.submitApplication('Count me in!', 'player');
+      await page.waitForTimeout(1000);
+    }
+
+    // === STEP 2: Navigate to Game Info tab to see public applicants ===
+    await gamePage.goto(gameId);
+    await page.waitForLoadState('networkidle');
+
+    // Click on Game Info tab
+    const infoTab = page.getByRole('tab', { name: 'Game Info' }).or(page.getByRole('tab', { name: 'Info' }));
+    await infoTab.click();
+    await page.waitForTimeout(500);
+
+    // === STEP 3: Verify public applicants section is visible ===
+    // Should see "Applicants" heading
+    await expect(page.locator('text=Applicants').or(page.locator('text=applicants')).first()).toBeVisible({ timeout: 5000 });
+
+    // Should see player badges/names (usernames are visible, NOT status)
+    const player2Username = getWorkerUsername('TestPlayer2');
+    const player3Username = getWorkerUsername('TestPlayer3');
+
+    // At least one of the applicants should be visible
+    const hasApplicants = await page.locator(`text=${player2Username}`).or(page.locator(`text=${player3Username}`)).first().isVisible().catch(() => false);
+    expect(hasApplicants).toBe(true);
+
+    // === STEP 4: Verify NO status badges are shown (pending/approved/rejected) ===
+    // The public list should NOT show application status
+    const statusBadge = page.locator('text=Pending Review').or(page.locator('text=Approved')).or(page.locator('text=Rejected'));
+    const hasStatus = await statusBadge.first().isVisible().catch(() => false);
+    expect(hasStatus).toBe(false); // Status should NOT be visible to non-GMs
+  });
 });
