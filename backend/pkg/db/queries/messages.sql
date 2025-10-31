@@ -43,6 +43,90 @@ LEFT JOIN characters c ON m.character_id = c.id
 WHERE m.id = $1
   AND m.is_deleted = false;
 
+-- name: GetMessageWithParentContext :many
+-- Get a message with its full parent chain for deep linking with context
+-- Returns messages in parent-to-child order (root → target)
+-- Note: Returns ALL parents up to root. Backend can limit depth if needed.
+-- $1 = message_id (target comment)
+WITH RECURSIVE parent_chain AS (
+    -- Base case: Start with the target message
+    SELECT
+        m.id,
+        m.game_id,
+        m.phase_id,
+        m.author_id,
+        m.character_id,
+        m.content,
+        m.message_type,
+        m.parent_id,
+        m.thread_depth,
+        m.visibility,
+        m.mentioned_character_ids,
+        m.is_edited,
+        m.is_deleted,
+        m.deleted_at,
+        m.deleted_by_user_id,
+        m.edited_at,
+        m.edit_count,
+        m.created_at,
+        m.thread_depth as original_depth
+    FROM messages m
+    WHERE m.id = $1
+
+    UNION ALL
+
+    -- Recursive case: Walk up the parent chain to root
+    SELECT
+        m.id,
+        m.game_id,
+        m.phase_id,
+        m.author_id,
+        m.character_id,
+        m.content,
+        m.message_type,
+        m.parent_id,
+        m.thread_depth,
+        m.visibility,
+        m.mentioned_character_ids,
+        m.is_edited,
+        m.is_deleted,
+        m.deleted_at,
+        m.deleted_by_user_id,
+        m.edited_at,
+        m.edit_count,
+        m.created_at,
+        m.thread_depth as original_depth
+    FROM messages m
+    INNER JOIN parent_chain pch ON m.id = pch.parent_id
+)
+SELECT
+    parent_chain.id,
+    parent_chain.game_id,
+    parent_chain.phase_id,
+    parent_chain.author_id,
+    parent_chain.character_id,
+    parent_chain.content,
+    parent_chain.message_type,
+    parent_chain.parent_id,
+    parent_chain.thread_depth,
+    parent_chain.visibility,
+    parent_chain.mentioned_character_ids,
+    parent_chain.is_edited,
+    parent_chain.is_deleted,
+    parent_chain.deleted_at,
+    parent_chain.deleted_by_user_id,
+    parent_chain.edited_at,
+    parent_chain.edit_count,
+    parent_chain.created_at,
+    u.username as author_username,
+    c.name as character_name,
+    c.avatar_url as character_avatar_url,
+    (SELECT COUNT(*) FROM messages WHERE parent_id = parent_chain.id) as reply_count
+FROM parent_chain
+JOIN users u ON parent_chain.author_id = u.id
+LEFT JOIN characters c ON parent_chain.character_id = c.id
+ORDER BY parent_chain.original_depth ASC;  -- Return in parent-to-child order
+
 -- name: GetGamePosts :many
 SELECT m.*,
        u.username as author_username,
