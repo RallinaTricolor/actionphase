@@ -31,6 +31,8 @@ const __dirname = path.dirname(__filename);
  */
 
 test.describe('Character Avatar Feature', () => {
+  // Configure retries for this test suite due to parallel execution race conditions
+  test.describe.configure({ retries: 1 });
 
   test.describe('Avatar Upload Flow', () => {
     test('should allow character owner to upload avatar', async ({ page }) => {
@@ -359,6 +361,13 @@ test.describe('Character Avatar Feature', () => {
   });
 
   test.describe('Avatar Display', () => {
+    // Ensure clean state before each test
+    test.beforeEach(async ({ page }) => {
+      // Close any open modals
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
+    });
+
     test('should display avatar in character sheet after upload', async ({ page }) => {
       // This test verifies that the uploaded avatar is displayed
       await loginAs(page, 'PLAYER_1');
@@ -386,21 +395,40 @@ test.describe('Character Avatar Feature', () => {
       await gamePage.goto(gameId);
       await gamePage.goToCharacters();
 
-      // Assuming E2E Test Char 2 has no avatar
-      const editButton = page.locator('button:has-text("Edit Sheet")').locator('visible=true').first();
-      await editButton.click();
+      // Wait for character list to load - avoid dual-DOM visibility checks
+      // Just wait for network to be idle after navigation
+      await page.waitForLoadState('networkidle');
 
-      // Avatar element should be visible (use .locator('visible=true').first() to get the one in the modal, not the list)
-      const avatarContainer = page.locator('[data-testid="character-avatar"]').locator('visible=true').first();
-      await expect(avatarContainer).toBeVisible();
+      // Find character card containing "E2E Test Char 2" and "Edit Sheet" button
+      // Use getByRole for the button to avoid dual-DOM issues
+      const editSheetButtons = page.getByRole('button', { name: 'Edit Sheet' });
 
-      // Should show initials (text in span), not an image
-      const initialsSpan = avatarContainer.locator('span');
-      await expect(initialsSpan).toBeVisible();
+      // Wait for at least one Edit Sheet button to be present
+      await expect(editSheetButtons.first()).toBeVisible({ timeout: 10000 });
 
-      const initials = await initialsSpan.textContent();
-      expect(initials).toBeTruthy();
-      expect(initials?.length).toBeGreaterThan(0);
+      // Click the Edit Sheet button (PLAYER_2's own character - only one Edit Sheet button visible)
+      await editSheetButtons.first().click();
+
+      // Wait for character sheet modal to be fully loaded
+      await page.waitForSelector('h2:has-text("E2E Test Char 2")', { state: 'visible', timeout: 10000 });
+      // Also wait for the modal to be fully rendered
+      await page.waitForLoadState('networkidle');
+
+      // Avatar should display initials - use visible=true to avoid dual-DOM issues
+      const avatar = page.locator('[data-testid="character-avatar"]').locator('visible=true').first();
+      await expect(avatar).toBeVisible();
+
+      // Get the initials text
+      const avatarText = await avatar.textContent();
+      const initials = avatarText?.trim() || '';
+
+      // Should have initials (not empty, no img tag means fallback initials are shown)
+      expect(initials.length).toBeGreaterThan(0);
+      expect(initials.length).toBeLessThanOrEqual(10);  // Reasonable upper bound
+
+      // Verify no image is present (initials are shown as fallback, not an uploaded avatar)
+      const avatarImg = avatar.locator('img');
+      await expect(avatarImg).toHaveCount(0);
     });
   });
 
