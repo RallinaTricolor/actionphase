@@ -352,3 +352,17 @@ func (gas *GameApplicationService) PublishApplicationStatuses(ctx context.Contex
 
 	return nil
 }
+
+// GetPublicGameApplicants retrieves the public list of applicants for a game
+// Returns only username and role - NO status or review information
+// Available to anyone (no permission check) when game is in recruiting state
+func (gas *GameApplicationService) GetPublicGameApplicants(ctx context.Context, gameID int32) ([]models.GetPublicGameApplicantsRow, error) {
+	queries := models.New(gas.DB)
+
+	applicants, err := queries.GetPublicGameApplicants(ctx, gameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get public game applicants: %w", err)
+	}
+
+	return applicants, nil
+}

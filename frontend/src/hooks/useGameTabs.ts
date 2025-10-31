@@ -64,7 +64,8 @@ export function useGameTabs({
       if (isGM) {
         tabList.push({ id: 'applications', label: 'Applications', icon: icons.applications });
       }
-      tabList.push({ id: 'participants', label: 'Participants', badge: participantCount, icon: icons.participants });
+      // Note: During recruitment, applicants are shown in the Game Info tab
+      // No "Participants" tab since there are no confirmed participants yet
       tabList.push({ id: 'info', label: 'Game Info', icon: icons.info });
     } else if (gameState === 'character_creation') {
       tabList.push({ id: 'characters', label: 'Characters', icon: icons.characters });

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Character } from '../types/characters';
 import { GameApplicationsList } from './GameApplicationsList';
+import { PublicApplicantsList } from './PublicApplicantsList';
 import { CharactersList } from './CharactersList';
 import { PhaseManagement } from './PhaseManagement';
 import { ActionSubmission } from './ActionSubmission';
@@ -160,7 +161,7 @@ export function GameTabContent({
     return (
       <>
         <h2 className="text-2xl font-bold text-content-primary mb-6">Game Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div>
             <h3 className="font-semibold text-content-primary mb-2">Genre</h3>
             <p className="text-content-secondary">{game.genre || 'Not specified'}</p>
@@ -184,6 +185,13 @@ export function GameTabContent({
             <p className="text-content-secondary">{formatDate(game.end_date)}</p>
           </div>
         </div>
+
+        {/* Show public applicants list during recruitment */}
+        {game.state === 'recruitment' && (
+          <div className="mt-6 pt-6 border-t border-border-primary">
+            <PublicApplicantsList gameId={gameId} />
+          </div>
+        )}
       </>
     );
   }

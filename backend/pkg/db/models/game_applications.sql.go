@@ -411,6 +411,55 @@ func (q *Queries) GetGameApplicationsByStatus(ctx context.Context, arg GetGameAp
 	return items, nil
 }
 
+const getPublicGameApplicants = `-- name: GetPublicGameApplicants :many
+SELECT
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.applied_at,
+    u.username
+FROM game_applications ga
+JOIN users u ON ga.user_id = u.id
+WHERE ga.game_id = $1
+ORDER BY ga.applied_at ASC
+`
+
+type GetPublicGameApplicantsRow struct {
+	ID        int32              `json:"id"`
+	GameID    int32              `json:"game_id"`
+	UserID    int32              `json:"user_id"`
+	Role      string             `json:"role"`
+	AppliedAt pgtype.Timestamptz `json:"applied_at"`
+	Username  string             `json:"username"`
+}
+
+// Public endpoint: Get list of applicants for a game (no approval/rejection status)
+// Available to anyone when game is in recruiting state
+// Returns only username and role, NOT status or review information
+func (q *Queries) GetPublicGameApplicants(ctx context.Context, gameID int32) ([]GetPublicGameApplicantsRow, error) {
+	rows, err := q.db.Query(ctx, getPublicGameApplicants, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPublicGameApplicantsRow
+	for rows.Next() {
+		var i GetPublicGameApplicantsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.UserID,
+			&i.Role,
+			&i.AppliedAt,
+			&i.Username,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserGameApplications = `-- name: GetUserGameApplications :many
 SELECT
     ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,

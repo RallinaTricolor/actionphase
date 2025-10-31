@@ -110,3 +110,15 @@ END AS status;
 UPDATE game_applications
 SET is_published = TRUE
 WHERE game_id = $1;
+
+-- name: GetPublicGameApplicants :many
+-- Public endpoint: Get list of applicants for a game (no approval/rejection status)
+-- Available to anyone when game is in recruiting state
+-- Returns only username and role, NOT status or review information
+SELECT
+    ga.id, ga.game_id, ga.user_id, ga.role, ga.applied_at,
+    u.username
+FROM game_applications ga
+JOIN users u ON ga.user_id = u.id
+WHERE ga.game_id = $1
+ORDER BY ga.applied_at ASC;
