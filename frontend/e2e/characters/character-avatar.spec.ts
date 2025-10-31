@@ -501,7 +501,14 @@ test.describe('Character Avatar Feature', () => {
 
       page.on('dialog', dialog => dialog.accept());
 
+      // Wait for DELETE response to complete
+      const deletePromise = page.waitForResponse(
+        resp => resp.url().includes('/avatar') && resp.request().method() === 'DELETE',
+        { timeout: 15000 }
+      );
+
       await page.locator('button:has-text("Remove Avatar")').click();
+      await deletePromise;
 
       // After deletion, "Current Avatar:" section disappears
       await expect(page.locator('text=Current Avatar:')).not.toBeVisible({ timeout: 10000 });
@@ -509,6 +516,9 @@ test.describe('Character Avatar Feature', () => {
       // Close modal
       await page.keyboard.press('Escape');
       await expect(page.locator('text=Upload Avatar for')).not.toBeVisible();
+
+      // Wait a moment for UI to refresh after modal closes
+      await page.waitForTimeout(1000);
 
       // Step 4: Verify avatar is gone (fallback to initials)
       // After deletion, the img should not exist and initials should be shown
