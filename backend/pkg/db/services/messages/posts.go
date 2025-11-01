@@ -6,6 +6,7 @@ import (
 
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
+	"actionphase/pkg/validation"
 )
 
 // CreatePost creates a new top-level message post
@@ -25,6 +26,11 @@ func (s *MessageService) CreatePost(ctx context.Context, req core.CreatePostRequ
 	// Validate character ownership before creating post
 	if err := s.ValidateCharacterOwnership(ctx, req.CharacterID, req.AuthorID, req.GameID); err != nil {
 		return nil, fmt.Errorf("character validation failed: %w", err)
+	}
+
+	// Validate content length
+	if err := validation.ValidatePost(req.Content); err != nil {
+		return nil, err
 	}
 
 	// Extract character mentions from content

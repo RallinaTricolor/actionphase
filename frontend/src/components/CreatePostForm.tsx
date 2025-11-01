@@ -137,9 +137,11 @@ export function CreatePostForm({ gameId: _gameId, characters, allCharacters, onS
           rows={12}
           characters={allCharacters || characters}
           showPreviewByDefault={false}
+          maxLength={50000}
+          showCharacterCount={true}
         />
         <p className="text-xs text-content-secondary mt-1">
-          {content.length} characters (longer posts will be collapsible for players)
+          Maximum 50,000 characters (longer posts will be collapsible for players)
         </p>
       </div>
 

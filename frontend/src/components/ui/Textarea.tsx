@@ -12,6 +12,7 @@ export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
   helperText?: string;
   label?: string;
   optional?: boolean;
+  showCharacterCount?: boolean;
 }
 
 /**
@@ -81,14 +82,21 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       helperText,
       label,
       optional = false,
+      showCharacterCount = false,
       className,
       id,
+      value,
+      maxLength,
       ...props
     },
     ref
   ) => {
     const textareaId = id || props.name;
     const showError = variant === 'error' || error;
+
+    // Calculate character count
+    const currentLength = typeof value === 'string' ? value.length : 0;
+    const isNearLimit = maxLength && currentLength >= maxLength * 0.9;
 
     return (
       <div className="w-full">
@@ -108,6 +116,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={ref}
           id={textareaId}
+          value={value}
+          maxLength={maxLength}
           className={textareaStyles({
             variant: showError ? 'error' : 'default',
             textareaSize,
@@ -120,6 +130,17 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         )}
         {!error && helperText && (
           <p className="mt-1 text-sm text-content-secondary">{helperText}</p>
+        )}
+        {!error && showCharacterCount && (
+          <p
+            className={`mt-1 text-sm ${
+              isNearLimit ? 'text-semantic-danger font-medium' : 'text-content-tertiary'
+            }`}
+          >
+            {maxLength
+              ? `${currentLength.toLocaleString()} / ${maxLength.toLocaleString()} characters`
+              : `${currentLength.toLocaleString()} characters`}
+          </p>
         )}
       </div>
     );

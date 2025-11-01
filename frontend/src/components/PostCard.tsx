@@ -307,6 +307,8 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                     placeholder="Write a comment..."
                     disabled={isSubmitting}
                     characters={characters}
+                    maxLength={10000}
+                    showCharacterCount={true}
                   />
                 </div>
 
