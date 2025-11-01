@@ -76,6 +76,7 @@ export function GameTabContent({
         participants={participants}
         isGM={isGM}
         currentUserId={currentUserId}
+        gmUserId={game.gm_user_id}
         gameState={game.state}
         isAnonymous={game.is_anonymous || false}
         onLeaveGame={onLeaveGame}

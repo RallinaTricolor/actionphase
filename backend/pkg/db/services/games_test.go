@@ -1221,3 +1221,272 @@ func TestGameService_CancelledGameRejectsPendingApplications(t *testing.T) {
 
 	t.Log("Successfully verified that cancelled game automatically rejects all pending applications")
 }
+
+func TestGameService_PromoteToCoGM(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Create a test game
+	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Co-GM Test Game",
+		Description: "Testing co-GM promotion",
+		GMUserID:    int32(fixtures.TestUser.ID),
+		IsPublic:    false,
+	})
+	core.AssertNoError(t, err, "Failed to create game")
+
+	// Add an audience member to promote
+	audienceMember := testDB.CreateTestUser(t, "audience@example.com", "Audience Member")
+
+	// Add audience member to game
+	participant, err := gameService.CreateAudienceApplication(context.Background(), game.ID, int32(audienceMember.ID))
+	core.AssertNoError(t, err, "Failed to add audience member")
+	core.AssertEqual(t, "audience", participant.Role, "Initial role should be audience")
+
+	// Add another audience member for testing "only one co-GM" rule
+	audienceMember2 := testDB.CreateTestUser(t, "audience2@example.com", "Audience Member 2")
+	_, err = gameService.CreateAudienceApplication(context.Background(), game.ID, int32(audienceMember2.ID))
+	core.AssertNoError(t, err, "Failed to add second audience member")
+
+	testCases := []struct {
+		name             string
+		gameID           int32
+		targetUserID     int32
+		requestingUserID int32
+		expectError      bool
+		errorContains    string
+	}{
+		{
+			name:             "successful promotion by primary GM",
+			gameID:           game.ID,
+			targetUserID:     int32(audienceMember.ID),
+			requestingUserID: int32(fixtures.TestUser.ID),
+			expectError:      false,
+		},
+		{
+			name:             "non-GM cannot promote",
+			gameID:           game.ID,
+			targetUserID:     int32(audienceMember2.ID),
+			requestingUserID: int32(audienceMember.ID), // Not the GM
+			expectError:      true,
+			errorContains:    "only the primary GM can promote",
+		},
+		{
+			name:             "cannot promote non-participant",
+			gameID:           game.ID,
+			targetUserID:     9999, // Non-existent user
+			requestingUserID: int32(fixtures.TestUser.ID),
+			expectError:      true,
+			errorContains:    "not a participant",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := gameService.PromoteToCoGM(context.Background(), tc.gameID, tc.targetUserID, tc.requestingUserID)
+
+			if tc.expectError {
+				core.AssertError(t, err, "Expected error for "+tc.name)
+				if tc.errorContains != "" {
+					core.AssertErrorContains(t, err, tc.errorContains, "Error message mismatch")
+				}
+				return
+			}
+
+			core.AssertNoError(t, err, "Failed to promote to co-GM")
+
+			// Verify the participant's role was updated
+			participants, err := gameService.GetGameParticipants(context.Background(), tc.gameID)
+			core.AssertNoError(t, err, "Failed to get participants")
+
+			// Find the promoted user
+			var found bool
+			for _, p := range participants {
+				if p.UserID == tc.targetUserID {
+					core.AssertEqual(t, "co_gm", p.Role, "Role should be co_gm after promotion")
+					found = true
+					break
+				}
+			}
+			core.AssertTrue(t, found, "Promoted user not found in participants")
+
+			t.Logf("Successfully promoted user %d to co-GM", tc.targetUserID)
+		})
+	}
+}
+
+func TestGameService_PromoteToCoGM_OnlyOneCoGMAllowed(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Create a test game
+	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Co-GM Limit Test Game",
+		Description: "Testing single co-GM limit",
+		GMUserID:    int32(fixtures.TestUser.ID),
+		IsPublic:    false,
+	})
+	core.AssertNoError(t, err, "Failed to create game")
+
+	// Add two audience members
+	audienceMember1 := testDB.CreateTestUser(t, "audience1@example.com", "Audience Member 1")
+	_, err = gameService.CreateAudienceApplication(context.Background(), game.ID, int32(audienceMember1.ID))
+	core.AssertNoError(t, err, "Failed to add audience member 1")
+
+	audienceMember2 := testDB.CreateTestUser(t, "audience2@example.com", "Audience Member 2")
+	_, err = gameService.CreateAudienceApplication(context.Background(), game.ID, int32(audienceMember2.ID))
+	core.AssertNoError(t, err, "Failed to add audience member 2")
+
+	// Promote first audience member to co-GM
+	err = gameService.PromoteToCoGM(context.Background(), game.ID, int32(audienceMember1.ID), int32(fixtures.TestUser.ID))
+	core.AssertNoError(t, err, "Failed to promote first audience member to co-GM")
+
+	// Try to promote second audience member to co-GM (should fail)
+	err = gameService.PromoteToCoGM(context.Background(), game.ID, int32(audienceMember2.ID), int32(fixtures.TestUser.ID))
+	core.AssertError(t, err, "Expected error when promoting second co-GM")
+	core.AssertErrorContains(t, err, "already has a co-GM", "Error message should mention existing co-GM")
+
+	t.Log("Successfully verified that only one co-GM is allowed per game")
+}
+
+func TestGameService_PromoteToCoGM_OnlyAudienceCanBePromoted(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Create a test game
+	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Co-GM Role Test Game",
+		Description: "Testing role restrictions",
+		GMUserID:    int32(fixtures.TestUser.ID),
+		MaxPlayers:  5,
+		IsPublic:    false,
+	})
+	core.AssertNoError(t, err, "Failed to create game")
+
+	// Add a player (not audience)
+	player := testDB.CreateTestUser(t, "player@example.com", "Test Player")
+	_, err = gameService.AddPlayerDirectly(context.Background(), game.ID, int32(player.ID))
+	core.AssertNoError(t, err, "Failed to add player")
+
+	// Try to promote player to co-GM (should fail - must be audience first)
+	err = gameService.PromoteToCoGM(context.Background(), game.ID, int32(player.ID), int32(fixtures.TestUser.ID))
+	core.AssertError(t, err, "Expected error when promoting non-audience member")
+	core.AssertErrorContains(t, err, "only promote audience members", "Error message should mention audience requirement")
+
+	t.Log("Successfully verified that only audience members can be promoted to co-GM")
+}
+
+func TestGameService_DemoteFromCoGM(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool}
+
+	// Create a test game
+	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Co-GM Demotion Test Game",
+		Description: "Testing co-GM demotion",
+		GMUserID:    int32(fixtures.TestUser.ID),
+		IsPublic:    false,
+	})
+	core.AssertNoError(t, err, "Failed to create game")
+
+	// Add an audience member and promote to co-GM
+	audienceMember := testDB.CreateTestUser(t, "cogm@example.com", "Test Co-GM")
+	_, err = gameService.CreateAudienceApplication(context.Background(), game.ID, int32(audienceMember.ID))
+	core.AssertNoError(t, err, "Failed to add audience member")
+
+	err = gameService.PromoteToCoGM(context.Background(), game.ID, int32(audienceMember.ID), int32(fixtures.TestUser.ID))
+	core.AssertNoError(t, err, "Failed to promote to co-GM")
+
+	// Add another audience member to test permission checks
+	otherUser := testDB.CreateTestUser(t, "other@example.com", "Other User")
+	_, err = gameService.CreateAudienceApplication(context.Background(), game.ID, int32(otherUser.ID))
+	core.AssertNoError(t, err, "Failed to add other user")
+
+	testCases := []struct {
+		name             string
+		gameID           int32
+		targetUserID     int32
+		requestingUserID int32
+		expectError      bool
+		errorContains    string
+	}{
+		{
+			name:             "successful demotion by primary GM",
+			gameID:           game.ID,
+			targetUserID:     int32(audienceMember.ID),
+			requestingUserID: int32(fixtures.TestUser.ID),
+			expectError:      false,
+		},
+		{
+			name:             "non-GM cannot demote",
+			gameID:           game.ID,
+			targetUserID:     int32(audienceMember.ID),
+			requestingUserID: int32(otherUser.ID), // Not the GM
+			expectError:      true,
+			errorContains:    "only the primary GM can demote",
+		},
+		{
+			name:             "cannot demote non-co-GM",
+			gameID:           game.ID,
+			targetUserID:     int32(otherUser.ID), // Audience, not co-GM
+			requestingUserID: int32(fixtures.TestUser.ID),
+			expectError:      true,
+			errorContains:    "only demote co-GMs",
+		},
+	}
+
+	// First test successful demotion
+	t.Run(testCases[0].name, func(t *testing.T) {
+		tc := testCases[0]
+		err := gameService.DemoteFromCoGM(context.Background(), tc.gameID, tc.targetUserID, tc.requestingUserID)
+		core.AssertNoError(t, err, "Failed to demote co-GM")
+
+		// Verify the participant's role was updated to audience
+		participants, err := gameService.GetGameParticipants(context.Background(), tc.gameID)
+		core.AssertNoError(t, err, "Failed to get participants")
+
+		// Find the demoted user
+		var found bool
+		for _, p := range participants {
+			if p.UserID == tc.targetUserID {
+				core.AssertEqual(t, "audience", p.Role, "Role should be audience after demotion")
+				found = true
+				break
+			}
+		}
+		core.AssertTrue(t, found, "Demoted user not found in participants")
+
+		t.Logf("Successfully demoted user %d to audience", tc.targetUserID)
+	})
+
+	// Promote again for remaining tests
+	err = gameService.PromoteToCoGM(context.Background(), game.ID, int32(audienceMember.ID), int32(fixtures.TestUser.ID))
+	core.AssertNoError(t, err, "Failed to re-promote to co-GM")
+
+	// Test error cases
+	for _, tc := range testCases[1:] {
+		t.Run(tc.name, func(t *testing.T) {
+			err := gameService.DemoteFromCoGM(context.Background(), tc.gameID, tc.targetUserID, tc.requestingUserID)
+			core.AssertError(t, err, "Expected error for "+tc.name)
+			if tc.errorContains != "" {
+				core.AssertErrorContains(t, err, tc.errorContains, "Error message mismatch")
+			}
+		})
+	}
+}

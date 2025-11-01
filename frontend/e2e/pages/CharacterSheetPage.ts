@@ -214,13 +214,12 @@ export class CharacterSheetPage {
     await this.page.getByRole('button', { name: 'Add Ability' }).click();
     await this.page.waitForTimeout(500);
 
-    // Fill in ability form
-    await this.page.fill('input[placeholder*="ability name" i]', name);
-    await this.page.fill('textarea[placeholder*="description" i], textarea[placeholder*="Describe" i]', description);
+    // Fill in ability form - use label-based selectors for reliability
+    await this.page.getByRole('textbox', { name: 'Ability Name *' }).fill(name);
+    await this.page.getByRole('textbox', { name: 'Description' }).fill(description);
 
     // Save the ability
-    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
-    const saveButton = this.page.getByRole('button', { name: /Save|Add/ }).locator('visible=true').first();
+    const saveButton = this.page.getByRole('button', { name: 'Add Ability' }).nth(1); // Second "Add Ability" button is the submit button
     await saveButton.click();
     await this.page.waitForLoadState('networkidle');
   }

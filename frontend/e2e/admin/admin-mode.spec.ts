@@ -117,43 +117,6 @@ test.describe('Admin Mode', () => {
     expect(toggleVisible).toBe(false);
   });
 
-  test.skip('admin mode state clears on logout', async ({ page }) => {
-    // NOTE: This test is skipped because admin mode state intentionally persists
-    // across logout in localStorage as a user preference.
-    // TODO: If we want admin mode to clear on logout, update AdminModeContext
-    // to clear localStorage in AuthContext logout handler.
-    await loginAs(page, 'GM');
-
-    // Navigate to admin page and enable admin mode
-    await page.goto('/admin');
-    await page.waitForLoadState('networkidle');
-
-    const adminModeToggle = page.locator('button[role="switch"][aria-label*="admin mode" i]');
-
-    // Enable admin mode
-    const currentState = await adminModeToggle.getAttribute('aria-checked');
-    if (currentState === 'false') {
-      await adminModeToggle.click();
-      await page.waitForTimeout(500);
-    }
-    await expect(adminModeToggle).toHaveAttribute('aria-checked', 'true');
-
-    // Logout
-    await logout(page);
-
-    // Login again as admin
-    await loginAs(page, 'GM');
-
-    // Navigate to admin page
-    await page.goto('/admin');
-    await page.waitForLoadState('networkidle');
-
-    // Admin mode should be OFF (localStorage cleared on logout)
-    const toggleAfterLogin = page.locator('button[role="switch"][aria-label*="admin mode" i]');
-    await expect(toggleAfterLogin).toHaveAttribute('aria-checked', 'false');
-    await expect(page.locator('text=ACTIVE').first()).not.toBeVisible();
-  });
-
   test('admin mode affects game listing visibility', async ({ page, context }) => {
     // First, create a private game (or use existing test data)
     // For this test, we'll verify that admin mode shows different games

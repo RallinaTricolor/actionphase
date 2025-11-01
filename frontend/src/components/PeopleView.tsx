@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CharactersList } from './CharactersList';
-import { RemovePlayerButton } from './RemovePlayerButton';
+import { ParticipantActionsMenu } from './ParticipantActionsMenu';
 import { AddPlayerModal } from './AddPlayerModal';
 import { InactiveCharactersList } from './InactiveCharactersList';
 import { AudienceMemberBadge } from './AudienceMemberBadge';
@@ -12,6 +12,7 @@ interface PeopleViewProps {
   participants: GameParticipant[];
   isGM: boolean;
   currentUserId: number | null;
+  gmUserId?: number;
   gameState?: string;
   isAnonymous?: boolean;
   onLeaveGame?: () => void;
@@ -29,6 +30,7 @@ export function PeopleView({
   participants,
   isGM,
   currentUserId,
+  gmUserId,
   gameState,
   isAnonymous = false,
   onLeaveGame,
@@ -137,9 +139,10 @@ export function PeopleView({
                                 )}
                               </div>
                               {isGM && !isCurrentUser && (
-                                <RemovePlayerButton
+                                <ParticipantActionsMenu
                                   gameId={gameId}
                                   participant={participant}
+                                  isPrimaryGM={currentUserId === gmUserId}
                                 />
                               )}
                             </div>

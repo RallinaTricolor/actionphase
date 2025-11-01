@@ -760,3 +760,131 @@ func (gs *GameService) CanUserViewGame(ctx context.Context, gameID, userID int32
 
 	return isParticipant, nil
 }
+
+// ============================================================================
+// Co-GM Management Methods
+// ============================================================================
+
+// PromoteToCoGM promotes an audience member to co-GM role.
+// Co-GMs have full GM permissions except editing game settings and promoting others.
+//
+// Business Rules:
+//   - Only the primary GM (game.gm_user_id) can promote users
+//   - Only audience members can be promoted to co-GM
+//   - Only one co-GM allowed per game
+//   - Target user must be an active participant
+//
+// Parameters:
+//   - ctx: Context for the database operation
+//   - gameID: ID of the game
+//   - userID: ID of the user to promote
+//   - requestingUserID: ID of the user making the request (must be primary GM)
+//
+// Returns:
+//   - error: Validation error or database error
+func (gs *GameService) PromoteToCoGM(ctx context.Context, gameID, userID, requestingUserID int32) error {
+	queries := models.New(gs.DB)
+
+	// 1. Verify requester is the primary GM
+	game, err := queries.GetGame(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("failed to get game: %w", err)
+	}
+
+	if game.GmUserID != requestingUserID {
+		return fmt.Errorf("only the primary GM can promote users to co-GM")
+	}
+
+	// 2. Verify target user is an active participant
+	participant, err := queries.GetParticipantByGameAndUser(ctx, models.GetParticipantByGameAndUserParams{
+		GameID: gameID,
+		UserID: userID,
+	})
+	if err != nil {
+		return fmt.Errorf("user is not a participant in this game: %w", err)
+	}
+
+	// 3. Verify target user is currently an audience member
+	if participant.Role != "audience" {
+		return fmt.Errorf("can only promote audience members to co-GM (current role: %s)", participant.Role)
+	}
+
+	// 4. Verify no existing co-GM in the game
+	coGMCount, err := queries.CountCoGMsInGame(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("failed to count co-GMs: %w", err)
+	}
+
+	if coGMCount > 0 {
+		return fmt.Errorf("game already has a co-GM, only one co-GM allowed per game")
+	}
+
+	// 5. Update participant role to co_gm
+	_, err = queries.UpdateParticipantRole(ctx, models.UpdateParticipantRoleParams{
+		GameID: gameID,
+		UserID: userID,
+		Role:   "co_gm",
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to update participant role: %w", err)
+	}
+
+	return nil
+}
+
+// DemoteFromCoGM demotes a co-GM back to audience role.
+//
+// Business Rules:
+//   - Only the primary GM (game.gm_user_id) can demote co-GMs
+//   - Target user must currently be a co-GM
+//   - Target user becomes audience member after demotion
+//
+// Parameters:
+//   - ctx: Context for the database operation
+//   - gameID: ID of the game
+//   - userID: ID of the co-GM to demote
+//   - requestingUserID: ID of the user making the request (must be primary GM)
+//
+// Returns:
+//   - error: Validation error or database error
+func (gs *GameService) DemoteFromCoGM(ctx context.Context, gameID, userID, requestingUserID int32) error {
+	queries := models.New(gs.DB)
+
+	// 1. Verify requester is the primary GM
+	game, err := queries.GetGame(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("failed to get game: %w", err)
+	}
+
+	if game.GmUserID != requestingUserID {
+		return fmt.Errorf("only the primary GM can demote co-GMs")
+	}
+
+	// 2. Verify target user is an active participant
+	participant, err := queries.GetParticipantByGameAndUser(ctx, models.GetParticipantByGameAndUserParams{
+		GameID: gameID,
+		UserID: userID,
+	})
+	if err != nil {
+		return fmt.Errorf("user is not a participant in this game: %w", err)
+	}
+
+	// 3. Verify target user is currently a co-GM
+	if participant.Role != "co_gm" {
+		return fmt.Errorf("can only demote co-GMs (current role: %s)", participant.Role)
+	}
+
+	// 4. Update participant role to audience
+	_, err = queries.UpdateParticipantRole(ctx, models.UpdateParticipantRoleParams{
+		GameID: gameID,
+		UserID: userID,
+		Role:   "audience",
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to update participant role: %w", err)
+	}
+
+	return nil
+}

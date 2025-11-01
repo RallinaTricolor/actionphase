@@ -231,3 +231,21 @@ SELECT EXISTS(
     SELECT 1 FROM games
     WHERE id = $1 AND gm_user_id = $2
 );
+
+-- Co-GM Management Queries
+
+-- name: UpdateParticipantRole :one
+UPDATE game_participants
+SET role = $3
+WHERE game_id = $1 AND user_id = $2 AND status = 'active'
+RETURNING *;
+
+-- name: GetParticipantByGameAndUser :one
+SELECT gp.*, u.username, u.email
+FROM game_participants gp
+JOIN users u ON gp.user_id = u.id
+WHERE gp.game_id = $1 AND gp.user_id = $2 AND gp.status = 'active';
+
+-- name: CountCoGMsInGame :one
+SELECT COUNT(*) FROM game_participants
+WHERE game_id = $1 AND role = 'co_gm' AND status = 'active';

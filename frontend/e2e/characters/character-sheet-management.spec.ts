@@ -160,10 +160,7 @@ test.describe('Character Sheet Management', () => {
     await expect(page.locator('text=A weathered ranger with keen eyes')).toBeVisible();
   });
 
-  test.skip('player cannot edit abilities, skills, inventory, or currency', async ({ page }) => {
-    // SKIPPED: Feature gap - players currently CAN edit (permission checks not implemented)
-    // TODO: Implement backend permission checks to restrict player editing
-    // TODO: Update frontend to hide edit UI for players
+  test('player cannot edit abilities, skills, inventory, or currency', async ({ page }) => {
     // Verify player CANNOT add/edit abilities, skills, items, or currency on their own character
     await loginAs(page, 'PLAYER_1');
 
@@ -214,10 +211,8 @@ test.describe('Character Sheet Management', () => {
     await expect(page.locator('button[title="Delete currency"]')).not.toBeVisible();
   });
 
-  test.skip('GM can edit abilities, skills, inventory, and currency', async ({ page }) => {
-    // SKIPPED: Form structure needs investigation - fields have different names than expected
-    // TODO: Investigate actual form field placeholders/names
-    // TODO: Update test with correct selectors
+  test('GM can edit abilities, skills, inventory, and currency', async ({ page }) => {
+    // CharacterWorkflowPage now supports both character_creation and in_progress game states
     // Verify GM CAN add/edit abilities, skills, items, and currency on any character
     await loginAs(page, 'GM');
 

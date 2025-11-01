@@ -36,6 +36,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     isLoadingParticipants,
     isGM,
     isParticipant,
+    canEditGame,
     userRole,
     userCharacters,
     refetchGameData,
@@ -176,7 +177,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
         {/* Header */}
         <div className="surface-base rounded-lg shadow-md p-8 mb-6">
           <div className="flex justify-between items-start mb-4">
-            <GameHeader game={game} />
+            <GameHeader game={game} participants={participants} />
           </div>
 
           <p className="text-content-secondary mb-6 leading-relaxed">{game.description}</p>
@@ -198,6 +199,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           <GameActions
             game={game}
             isGM={isGM}
+            canEditGame={canEditGame}
             isCheckingAuth={isCheckingAuth}
             isParticipant={isParticipant}
             userRole={userRole}

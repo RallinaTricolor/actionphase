@@ -61,7 +61,7 @@ func (h *Handler) CreatePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can create phases"))
 		return
 	}
@@ -232,7 +232,7 @@ func (h *Handler) UpdatePhaseDeadline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can update phase deadlines"))
 		return
 	}
@@ -305,7 +305,7 @@ func (h *Handler) UpdatePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can update phases"))
 		return
 	}

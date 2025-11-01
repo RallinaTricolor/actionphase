@@ -153,6 +153,7 @@ test.describe('Game Lifecycle Management', () => {
   });
 
   test('GM can delete cancelled game', async ({ page }) => {
+    // Testing game deletion and verification it no longer appears in games list
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GAME_LIFECYCLE_CANCEL');
 
@@ -183,13 +184,12 @@ test.describe('Game Lifecycle Management', () => {
     await gamePage.deleteGame();
 
     // Should redirect to games list after deletion
-    await expect(page).toHaveURL(/\/games/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/games$/, { timeout: 10000 });
 
-    // Game should no longer exist - verify by trying to navigate back
-    await page.goto(`/games/${gameId}`);
+    // Verify the SPECIFIC game ID no longer appears
+    // (Other workers may have games with the same title, so we check the specific ID)
     await page.waitForLoadState('networkidle');
-
-    // Should show error or not found (game no longer exists)
-    await expect(page.getByText('Game not found')).toBeVisible({ timeout: 10000 });
+    const deletedGameCard = page.getByTestId(`game-card-${gameId}`);
+    await expect(deletedGameCard).not.toBeAttached({ timeout: 5000 });
   });
 });
