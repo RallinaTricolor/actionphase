@@ -28,6 +28,7 @@ export const FIXTURE_GAMES = {
   E2E_PM: 'E2E Test: Private Messages',           // Alias for E2E_MESSAGES
   E2E_CHARACTER_SHEETS: 'E2E Test: Character Sheets', // For testing character sheet management
   E2E_GAME_SETTINGS: 'E2E Test: Game Settings',   // For testing game settings modifications
+  CO_GM_MANAGEMENT: 'E2E Test: Co-GM Management',  // For testing co-GM promotion/demotion
   E2E_GAME_APPLICATION_SUBMIT: 'E2E Test: Game Application - Submit', // Fresh game for testing player application submission
   E2E_GAME_APPLICATION_VIEW: 'E2E Test: Game Application - View', // Game with pending application for GM to view
   E2E_GAME_APPLICATION_APPROVE: 'E2E Test: Game Application - Approve', // Game with pending application for GM to approve
@@ -99,7 +100,7 @@ export function getWorkerUsername(baseUsername: string): string {
  * @param baseGameId - Base game ID from fixture (e.g., 200 for E2E_ACTION)
  * @returns Worker-specific game ID (e.g., 200 for worker 0, 10200 for worker 1)
  */
-function getWorkerGameId(baseGameId: number): number {
+export function getWorkerGameId(baseGameId: number): number {
   const workerIndex = getWorkerIndex();
   const gameIdOffset = workerIndex * 10000;
   return baseGameId + gameIdOffset;

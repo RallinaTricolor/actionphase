@@ -137,12 +137,21 @@ export class CharacterWorkflowPage {
    * Get list of all character names
    */
   async getCharactersList(): Promise<string[]> {
-    // Wait for characters list to be visible
-    await this.charactersList.waitFor({ state: 'visible', timeout: 5000 });
+    // Try to find within characters-list container first (character_creation state)
+    // Fall back to searching entire page (in_progress state)
+    let characterCards: Locator[];
 
-    const characterCards = await this.charactersList
-      .getByTestId('character-card')
-      .all();
+    try {
+      await this.charactersList.waitFor({ state: 'visible', timeout: 2000 });
+      characterCards = await this.charactersList
+        .getByTestId('character-card')
+        .all();
+    } catch {
+      // characters-list not found, search entire page (in_progress games)
+      characterCards = await this.page
+        .getByTestId('character-card')
+        .all();
+    }
 
     const names: string[] = [];
     for (const card of characterCards) {
@@ -216,10 +225,21 @@ export class CharacterWorkflowPage {
    * @private
    */
   private async findCharacterCard(characterName: string): Promise<Locator> {
-    // Get all character cards
-    const allCards = await this.charactersList
-      .getByTestId('character-card')
-      .all();
+    // Try to find within characters-list container first (character_creation state)
+    // Fall back to searching entire page (in_progress state)
+    let allCards: Locator[];
+
+    try {
+      await this.charactersList.waitFor({ state: 'visible', timeout: 2000 });
+      allCards = await this.charactersList
+        .getByTestId('character-card')
+        .all();
+    } catch {
+      // characters-list not found, search entire page (in_progress games)
+      allCards = await this.page
+        .getByTestId('character-card')
+        .all();
+    }
 
     // Find the card containing the character name
     for (const card of allCards) {

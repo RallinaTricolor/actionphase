@@ -50,6 +50,18 @@ export const TEST_USERS = {
     password: 'testpassword123',
     role: 'Audience' as const,
   },
+  AUDIENCE_1: {
+    username: 'TestAudience1',
+    email: 'test_audience1@example.com',
+    password: 'testpassword123',
+    role: 'Audience' as const,
+  },
+  AUDIENCE_2: {
+    username: 'TestAudience2',
+    email: 'test_audience2@example.com',
+    password: 'testpassword123',
+    role: 'Audience' as const,
+  },
 } as const;
 
 export type TestUser = typeof TEST_USERS[keyof typeof TEST_USERS];

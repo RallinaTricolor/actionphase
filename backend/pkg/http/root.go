@@ -132,6 +132,10 @@ func (h *Handler) Start() {
 			r.Delete("/{id}/participants/{userId}", gameHandler.RemovePlayer)      // GM removes player
 			r.Post("/{id}/participants/direct-add", gameHandler.AddPlayerDirectly) // GM adds player directly
 
+			// Co-GM management
+			r.Post("/{id}/participants/{userId}/promote-to-co-gm", gameHandler.PromoteToCoGM)   // GM promotes audience to co-GM
+			r.Post("/{id}/participants/{userId}/demote-from-co-gm", gameHandler.DemoteFromCoGM) // GM demotes co-GM to audience
+
 			// Game application management
 			r.Post("/{id}/apply", gameHandler.ApplyToGame)
 			r.Get("/{id}/applications", gameHandler.GetGameApplications)

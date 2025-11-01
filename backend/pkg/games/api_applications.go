@@ -141,7 +141,7 @@ func (h *Handler) GetGameApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check GM permissions (considers admin mode)
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can view game applications"))
 		return
 	}
@@ -233,7 +233,7 @@ func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Check GM permissions (considers admin mode)
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can review game applications"))
 		return
 	}

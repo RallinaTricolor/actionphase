@@ -144,6 +144,18 @@ func (q *Queries) CheckParticipantExists(ctx context.Context, arg CheckParticipa
 	return exists, err
 }
 
+const countCoGMsInGame = `-- name: CountCoGMsInGame :one
+SELECT COUNT(*) FROM game_participants
+WHERE game_id = $1 AND role = 'co_gm' AND status = 'active'
+`
+
+func (q *Queries) CountCoGMsInGame(ctx context.Context, gameID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countCoGMsInGame, gameID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAudienceApplication = `-- name: CreateAudienceApplication :one
 INSERT INTO game_participants (game_id, user_id, role, status)
 VALUES ($1, $2, 'audience', $3)
@@ -676,6 +688,49 @@ func (q *Queries) GetGamesNeedingStateUpdate(ctx context.Context) ([]Game, error
 	return items, nil
 }
 
+const getParticipantByGameAndUser = `-- name: GetParticipantByGameAndUser :one
+SELECT gp.id, gp.game_id, gp.user_id, gp.role, gp.status, gp.joined_at, gp.removed_at, gp.removed_by_user_id, u.username, u.email
+FROM game_participants gp
+JOIN users u ON gp.user_id = u.id
+WHERE gp.game_id = $1 AND gp.user_id = $2 AND gp.status = 'active'
+`
+
+type GetParticipantByGameAndUserParams struct {
+	GameID int32 `json:"game_id"`
+	UserID int32 `json:"user_id"`
+}
+
+type GetParticipantByGameAndUserRow struct {
+	ID              int32              `json:"id"`
+	GameID          int32              `json:"game_id"`
+	UserID          int32              `json:"user_id"`
+	Role            string             `json:"role"`
+	Status          pgtype.Text        `json:"status"`
+	JoinedAt        pgtype.Timestamptz `json:"joined_at"`
+	RemovedAt       pgtype.Timestamptz `json:"removed_at"`
+	RemovedByUserID pgtype.Int4        `json:"removed_by_user_id"`
+	Username        string             `json:"username"`
+	Email           string             `json:"email"`
+}
+
+func (q *Queries) GetParticipantByGameAndUser(ctx context.Context, arg GetParticipantByGameAndUserParams) (GetParticipantByGameAndUserRow, error) {
+	row := q.db.QueryRow(ctx, getParticipantByGameAndUser, arg.GameID, arg.UserID)
+	var i GetParticipantByGameAndUserRow
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.UserID,
+		&i.Role,
+		&i.Status,
+		&i.JoinedAt,
+		&i.RemovedAt,
+		&i.RemovedByUserID,
+		&i.Username,
+		&i.Email,
+	)
+	return i, err
+}
+
 const getParticipantRole = `-- name: GetParticipantRole :one
 SELECT role FROM game_participants
 WHERE game_id = $1 AND user_id = $2 AND status = 'active'
@@ -1091,6 +1146,37 @@ func (q *Queries) UpdateGameState(ctx context.Context, arg UpdateGameStateParams
 		&i.AutoAcceptAudience,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateParticipantRole = `-- name: UpdateParticipantRole :one
+
+UPDATE game_participants
+SET role = $3
+WHERE game_id = $1 AND user_id = $2 AND status = 'active'
+RETURNING id, game_id, user_id, role, status, joined_at, removed_at, removed_by_user_id
+`
+
+type UpdateParticipantRoleParams struct {
+	GameID int32  `json:"game_id"`
+	UserID int32  `json:"user_id"`
+	Role   string `json:"role"`
+}
+
+// Co-GM Management Queries
+func (q *Queries) UpdateParticipantRole(ctx context.Context, arg UpdateParticipantRoleParams) (GameParticipant, error) {
+	row := q.db.QueryRow(ctx, updateParticipantRole, arg.GameID, arg.UserID, arg.Role)
+	var i GameParticipant
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.UserID,
+		&i.Role,
+		&i.Status,
+		&i.JoinedAt,
+		&i.RemovedAt,
+		&i.RemovedByUserID,
 	)
 	return i, err
 }

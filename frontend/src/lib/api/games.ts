@@ -130,6 +130,15 @@ export class GamesApi extends BaseApiClient {
     return this.client.post<GameParticipant>(`/api/v1/games/${gameId}/participants/direct-add`, data);
   }
 
+  // Co-GM Management endpoints (GM only)
+  async promoteToCoGM(gameId: number, userId: number) {
+    return this.client.post(`/api/v1/games/${gameId}/participants/${userId}/promote-to-co-gm`);
+  }
+
+  async demoteFromCoGM(gameId: number, userId: number) {
+    return this.client.post(`/api/v1/games/${gameId}/participants/${userId}/demote-from-co-gm`);
+  }
+
   // Audience Participation endpoints
   async applyAsAudience(gameId: number, applicationText: string) {
     return this.client.post<GameParticipant>(`/api/v1/games/${gameId}/apply/audience`, {

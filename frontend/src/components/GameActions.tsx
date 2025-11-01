@@ -11,6 +11,7 @@ interface StateAction {
 interface GameActionsProps {
   game: Game;
   isGM: boolean;
+  canEditGame: boolean;
   isCheckingAuth: boolean;
   isParticipant: boolean;
   userRole: UserGameRole;
@@ -28,6 +29,7 @@ interface GameActionsProps {
 export function GameActions({
   game,
   isGM,
+  canEditGame,
   isCheckingAuth,
   isParticipant: _isParticipant,
   userRole: _userRole,
@@ -43,7 +45,7 @@ export function GameActions({
 }: GameActionsProps) {
   return (
     <div className="flex gap-4">
-      {isGM && game.state !== 'completed' && game.state !== 'cancelled' && (
+      {canEditGame && game.state !== 'completed' && game.state !== 'cancelled' && (
         <Button
           variant="outline"
           onClick={onEditGame}

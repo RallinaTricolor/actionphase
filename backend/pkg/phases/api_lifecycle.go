@@ -51,7 +51,7 @@ func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can activate phases"))
 		return
 	}
@@ -123,7 +123,7 @@ func (h *Handler) PublishAllPhaseResults(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can publish action results"))
 		return
 	}
@@ -176,7 +176,7 @@ func (h *Handler) GetUnpublishedResultsCount(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can view result counts"))
 		return
 	}

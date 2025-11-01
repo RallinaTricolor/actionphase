@@ -59,7 +59,7 @@ func (h *Handler) ApproveCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check GM permissions (considers admin mode)
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can approve characters"))
 		return
 	}
@@ -138,7 +138,7 @@ func (h *Handler) AssignNPC(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check GM permissions (considers admin mode)
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can assign NPCs"))
 		return
 	}
@@ -221,7 +221,7 @@ func (h *Handler) ReassignCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check GM permissions (considers admin mode)
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can reassign characters"))
 		return
 	}
@@ -287,7 +287,7 @@ func (h *Handler) ListInactiveCharacters(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Check GM permissions (considers admin mode)
-	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can view inactive characters"))
 		return
 	}

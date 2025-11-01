@@ -275,7 +275,7 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check GM permissions (considers admin mode)
-	if !core.IsUserGameMaster(r, user.ID, user.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, user.ID, user.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can update this game state"))
 		return
 	}
@@ -367,7 +367,7 @@ func (h *Handler) UpdateGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check GM permissions (considers admin mode)
-	if !core.IsUserGameMaster(r, user.ID, user.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, user.ID, user.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can update this game"))
 		return
 	}
@@ -451,7 +451,7 @@ func (h *Handler) DeleteGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check GM permissions (considers admin mode)
-	if !core.IsUserGameMaster(r, user.ID, user.IsAdmin, *game) {
+	if !core.IsUserGameMaster(r, user.ID, user.IsAdmin, *game, h.App.Pool) {
 		render.Render(w, r, core.ErrForbidden("only the GM can delete this game"))
 		return
 	}

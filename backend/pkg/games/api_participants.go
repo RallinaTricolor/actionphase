@@ -239,3 +239,91 @@ func (h *Handler) AddPlayerDirectly(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(participant)
 }
+
+// PromoteToCoGM promotes an audience member to co-GM role (GM only)
+func (h *Handler) PromoteToCoGM(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "id")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	userIDStr := chi.URLParam(r, "userId")
+	targetUserID, err := strconv.ParseInt(userIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid user ID")))
+		return
+	}
+
+	// Get requesting user ID from JWT token
+	userService := &db.UserService{DB: h.App.Pool}
+	requestingUserID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
+	if errResp != nil {
+		h.App.Logger.Error("Failed to authenticate user from JWT")
+		render.Render(w, r, errResp)
+		return
+	}
+
+	gameService := &db.GameService{DB: h.App.Pool}
+
+	// Call service method to promote user
+	err = gameService.PromoteToCoGM(r.Context(), int32(gameID), int32(targetUserID), requestingUserID)
+	if err != nil {
+		h.App.Logger.Error("Failed to promote to co-GM", "error", err, "game_id", gameID, "user_id", targetUserID)
+		// Return 403 for permission errors, 400 for validation errors
+		if err.Error() == "only the primary GM can promote users to co-GM" {
+			render.Render(w, r, core.ErrForbidden(err.Error()))
+			return
+		}
+		render.Render(w, r, core.ErrBadRequest(err))
+		return
+	}
+
+	h.App.Logger.Info("User promoted to co-GM", "game_id", gameID, "promoted_user_id", targetUserID, "promoted_by", requestingUserID)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DemoteFromCoGM demotes a co-GM back to audience role (GM only)
+func (h *Handler) DemoteFromCoGM(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "id")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	userIDStr := chi.URLParam(r, "userId")
+	targetUserID, err := strconv.ParseInt(userIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid user ID")))
+		return
+	}
+
+	// Get requesting user ID from JWT token
+	userService := &db.UserService{DB: h.App.Pool}
+	requestingUserID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
+	if errResp != nil {
+		h.App.Logger.Error("Failed to authenticate user from JWT")
+		render.Render(w, r, errResp)
+		return
+	}
+
+	gameService := &db.GameService{DB: h.App.Pool}
+
+	// Call service method to demote user
+	err = gameService.DemoteFromCoGM(r.Context(), int32(gameID), int32(targetUserID), requestingUserID)
+	if err != nil {
+		h.App.Logger.Error("Failed to demote from co-GM", "error", err, "game_id", gameID, "user_id", targetUserID)
+		// Return 403 for permission errors, 400 for validation errors
+		if err.Error() == "only the primary GM can demote co-GMs" {
+			render.Render(w, r, core.ErrForbidden(err.Error()))
+			return
+		}
+		render.Render(w, r, core.ErrBadRequest(err))
+		return
+	}
+
+	h.App.Logger.Info("Co-GM demoted to audience", "game_id", gameID, "demoted_user_id", targetUserID, "demoted_by", requestingUserID)
+	w.WriteHeader(http.StatusNoContent)
+}

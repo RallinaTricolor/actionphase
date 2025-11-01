@@ -66,7 +66,7 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check permissions based on character type
-	isGM := core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game)
+	isGM := core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool)
 
 	if data.CharacterType == "player_character" {
 		// GMs can create player characters for any player
@@ -214,7 +214,7 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 	authUser := core.GetAuthenticatedUser(r.Context())
 	var isGM bool
 	if authUser != nil {
-		isGM = core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game)
+		isGM = core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool)
 	}
 
 	characterService := &services.CharacterService{DB: h.App.Pool}
@@ -370,7 +370,7 @@ func (h *Handler) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Only GM can delete characters
-	isGM := core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game)
+	isGM := core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool)
 	if !isGM {
 		render.Render(w, r, core.ErrForbidden("only the GM can delete characters"))
 		return

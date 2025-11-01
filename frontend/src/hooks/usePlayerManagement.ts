@@ -4,6 +4,7 @@
  * Custom React Query hooks for GM player management operations:
  * - Remove players from games
  * - Add players directly (bypass application)
+ * - Promote/demote co-GM
  * - List and reassign inactive characters
  */
 
@@ -46,6 +47,43 @@ export function useAddPlayer(gameId: number) {
     onSuccess: () => {
       // Invalidate participants list to show new player (matches GameContext query key)
       queryClient.invalidateQueries({ queryKey: ['gameParticipants', gameId] });
+    },
+  });
+}
+
+/**
+ * Hook to promote an audience member to co-GM (Primary GM only)
+ * Co-GM gains full GM permissions except editing game settings and promoting others
+ */
+export function usePromoteToCoGM(gameId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: number) =>
+      apiClient.games.promoteToCoGM(gameId, userId),
+    onSuccess: () => {
+      // Invalidate participants list to reflect role change
+      queryClient.invalidateQueries({ queryKey: ['gameParticipants', gameId] });
+      // Invalidate game query to potentially update header display
+      queryClient.invalidateQueries({ queryKey: ['game', gameId] });
+    },
+  });
+}
+
+/**
+ * Hook to demote a co-GM back to audience role (Primary GM only)
+ */
+export function useDemoteFromCoGM(gameId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: number) =>
+      apiClient.games.demoteFromCoGM(gameId, userId),
+    onSuccess: () => {
+      // Invalidate participants list to reflect role change
+      queryClient.invalidateQueries({ queryKey: ['gameParticipants', gameId] });
+      // Invalidate game query to potentially update header display
+      queryClient.invalidateQueries({ queryKey: ['game', gameId] });
     },
   });
 }

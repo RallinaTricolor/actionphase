@@ -121,8 +121,8 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
 
   // Compute permission flags
   const isGM = useMemo(() => {
-    // User is GM if they own the game OR if admin mode is enabled
-    const isActualGM = userRole === 'gm';
+    // User is GM if they own the game, are a co-GM, OR if admin mode is enabled
+    const isActualGM = userRole === 'gm' || userRole === 'co_gm';
     const isAdminAsGM = adminModeEnabled && !!currentUser?.is_admin;
     return isActualGM || isAdminAsGM;
   }, [userRole, adminModeEnabled, currentUser?.is_admin]);
@@ -131,9 +131,12 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     return userRole !== 'none' && userRole !== 'audience';
   }, [userRole]);
 
+  // Only primary GM (not co-GM) can edit game settings
   const canEditGame = useMemo((): boolean => {
-    return isGM;
-  }, [isGM]);
+    const isPrimaryGM = userRole === 'gm';
+    const isAdminAsGM = adminModeEnabled && !!currentUser?.is_admin;
+    return isPrimaryGM || isAdminAsGM;
+  }, [userRole, adminModeEnabled, currentUser?.is_admin]);
 
   // Character ownership checker
   const isUserCharacter = useMemo(() => {

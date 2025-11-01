@@ -7,6 +7,7 @@ import { AbilitiesManager } from './AbilitiesManager';
 import { InventoryManager } from './InventoryManager';
 import CharacterAvatar from './CharacterAvatar';
 import AvatarUploadModal from './AvatarUploadModal';
+import { Modal } from './Modal';
 import { TabNavigation } from './TabNavigation';
 import type { Tab } from './TabNavigation';
 import { Button, Textarea, Badge } from './ui';
@@ -23,6 +24,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [isDeleteAvatarDialogOpen, setIsDeleteAvatarDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -51,6 +53,14 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
       setEditingField(null);
+    }
+  });
+
+  const deleteAvatarMutation = useMutation({
+    mutationFn: () => apiClient.characters.deleteCharacterAvatar(characterId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['character', characterId] });
+      setIsDeleteAvatarDialogOpen(false);
     }
   });
 
@@ -154,18 +164,33 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                   size="xl"
                 />
                 {canEdit && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => setIsAvatarModalOpen(true)}
-                    className="absolute -bottom-1 -right-1 rounded-full p-1.5 shadow-lg"
-                    title="Upload Avatar"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </Button>
+                  <>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setIsAvatarModalOpen(true)}
+                      className="absolute -bottom-1 -right-1 rounded-full p-1.5 shadow-lg"
+                      title="Upload Avatar"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </Button>
+                    {character.avatar_url && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => setIsDeleteAvatarDialogOpen(true)}
+                        className="absolute -bottom-1 -left-1 rounded-full p-1.5 shadow-lg"
+                        title="Delete Avatar"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -377,6 +402,46 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
             queryClient.refetchQueries({ queryKey: ['character', characterId] });
           }}
         />
+      )}
+
+      {/* Delete Avatar Confirmation Dialog */}
+      {character && (
+        <Modal
+          isOpen={isDeleteAvatarDialogOpen}
+          onClose={() => setIsDeleteAvatarDialogOpen(false)}
+          title="Delete Avatar"
+        >
+          <div className="space-y-4">
+            {/* Warning message */}
+            <div className="bg-semantic-error/10 border border-semantic-error rounded-lg p-4">
+              <h3 className="font-semibold text-content-primary mb-2">
+                ⚠️ Confirm Deletion
+              </h3>
+              <p className="text-content-secondary text-sm">
+                This will permanently delete the avatar for <strong>{character.name}</strong>.
+              </p>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3 justify-end pt-4">
+              <Button
+                variant="secondary"
+                onClick={() => setIsDeleteAvatarDialogOpen(false)}
+                disabled={deleteAvatarMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => deleteAvatarMutation.mutate()}
+                disabled={deleteAvatarMutation.isPending}
+                loading={deleteAvatarMutation.isPending}
+              >
+                {deleteAvatarMutation.isPending ? 'Deleting...' : 'Delete Avatar'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
