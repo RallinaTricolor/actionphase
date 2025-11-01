@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import type { PublicGameApplicant } from '../types/games';
-import { Card, Spinner, Alert, Badge } from './ui';
+import { Spinner, Alert, Badge } from './ui';
 
 interface PublicApplicantsListProps {
   gameId: number;
