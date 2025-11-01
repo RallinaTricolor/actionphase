@@ -359,6 +359,8 @@ export function ThreadedComment({
               placeholder="Edit comment..."
               disabled={updateCommentMutation.isPending}
               characters={characters}
+              maxLength={10000}
+              showCharacterCount={true}
             />
             <div className="flex gap-2 mt-2">
               <Button
@@ -547,6 +549,8 @@ export function ThreadedComment({
                     placeholder="Write a reply..."
                     disabled={isSubmitting}
                     characters={characters}
+                    maxLength={10000}
+                    showCharacterCount={true}
                   />
                 </div>
 

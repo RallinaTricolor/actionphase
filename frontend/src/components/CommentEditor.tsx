@@ -13,6 +13,8 @@ interface CommentEditorProps {
   showPreviewByDefault?: boolean;
   characters?: Character[]; // Characters available for mention autocomplete
   id?: string; // HTML id for label association
+  maxLength?: number; // Maximum character limit
+  showCharacterCount?: boolean; // Show character counter below textarea
 }
 
 /**
@@ -36,6 +38,8 @@ export function CommentEditor({
   showPreviewByDefault = false,
   characters = [],
   id,
+  maxLength,
+  showCharacterCount = false,
 }: CommentEditorProps) {
   const [showPreview, setShowPreview] = useState(showPreviewByDefault);
   const [showHelp, setShowHelp] = useState(false);
@@ -279,6 +283,8 @@ export function CommentEditor({
             rows={rows}
             textareaSize="sm"
             className="font-mono resize-y"
+            maxLength={maxLength}
+            showCharacterCount={showCharacterCount}
           />
         </div>
 

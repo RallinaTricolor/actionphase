@@ -373,6 +373,9 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                     rows={3}
                     placeholder="Type your message... (Markdown supported)"
                     disabled={sending}
+                    maxLength={50000}
+                    showCharacterCount={true}
+                    helperText="Maximum 50,000 characters"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                         handleSendMessage(e);

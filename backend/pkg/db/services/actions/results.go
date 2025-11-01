@@ -7,6 +7,7 @@ import (
 
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
+	"actionphase/pkg/validation"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -24,6 +25,11 @@ func (as *ActionSubmissionService) CreateActionResult(ctx context.Context, req c
 
 	// Convert content to string
 	contentStr := fmt.Sprintf("%v", req.Content)
+
+	// Validate content length
+	if err := validation.ValidateActionResult(contentStr); err != nil {
+		return nil, err
+	}
 
 	params := models.CreateActionResultParams{
 		GameID:      req.GameID,

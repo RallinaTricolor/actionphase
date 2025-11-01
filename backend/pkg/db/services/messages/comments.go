@@ -7,6 +7,7 @@ import (
 
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
+	"actionphase/pkg/validation"
 )
 
 // GetRecursiveCommentCount counts all descendant comments recursively
@@ -38,6 +39,11 @@ func (s *MessageService) CreateComment(ctx context.Context, req core.CreateComme
 	// Validate character ownership before creating comment
 	if err := s.ValidateCharacterOwnership(ctx, req.CharacterID, req.AuthorID, req.GameID); err != nil {
 		return nil, fmt.Errorf("character validation failed: %w", err)
+	}
+
+	// Validate content length
+	if err := validation.ValidateComment(req.Content); err != nil {
+		return nil, err
 	}
 
 	// Extract character mentions from content

@@ -56,6 +56,9 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
           onChange={(e) => setContent(e.target.value)}
           rows={4}
           placeholder="Enter the result of the player's action..."
+          maxLength={100000}
+          showCharacterCount={true}
+          helperText="Maximum 100,000 characters"
         />
       </div>
 

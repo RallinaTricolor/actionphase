@@ -8,6 +8,7 @@ import (
 
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
+	"actionphase/pkg/validation"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -60,6 +61,11 @@ func (as *ActionSubmissionService) SubmitAction(ctx context.Context, req core.Su
 
 	// Convert content to string (assuming JSON marshaling)
 	contentStr := fmt.Sprintf("%v", req.Content)
+
+	// Validate content length
+	if err := validation.ValidateActionSubmission(contentStr); err != nil {
+		return nil, err
+	}
 
 	params := models.SubmitActionParams{
 		GameID:  req.GameID,
