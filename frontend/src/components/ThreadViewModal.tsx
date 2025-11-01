@@ -117,7 +117,6 @@ export function ThreadViewModal({
               /* Render parent chain with clear visual hierarchy */
               <div>
                 {parentChain.map((msg, index) => {
-                  const isTarget = targetCommentId && msg.id === targetCommentId;
                   const isLast = index === parentChain.length - 1;
 
                   // Render parents as simple read-only comments, target as full ThreadedComment

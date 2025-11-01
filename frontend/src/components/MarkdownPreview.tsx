@@ -12,7 +12,7 @@ interface MentionedCharacter {
   name: string;
   username?: string; // Player's username (optional for backwards compatibility)
   character_type?: string; // Type of character (optional)
-  avatar_url?: string; // Character's avatar URL (optional)
+  avatar_url?: string | null; // Character's avatar URL (optional, can be null)
 }
 
 interface MarkdownPreviewProps {
