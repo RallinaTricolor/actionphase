@@ -31,13 +31,82 @@ func (q *Queries) BanUser(ctx context.Context, arg BanUserParams) error {
 	return err
 }
 
+const createEmailVerificationToken = `-- name: CreateEmailVerificationToken :one
+
+INSERT INTO email_verification_tokens (
+    user_id, email, token, expires_at
+) VALUES (
+    $1, $2, $3, $4
+)
+RETURNING id, user_id, token, email, created_at, expires_at, used_at
+`
+
+type CreateEmailVerificationTokenParams struct {
+	UserID    int32              `json:"user_id"`
+	Email     string             `json:"email"`
+	Token     string             `json:"token"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
+// Email Verification Tokens
+func (q *Queries) CreateEmailVerificationToken(ctx context.Context, arg CreateEmailVerificationTokenParams) (EmailVerificationToken, error) {
+	row := q.db.QueryRow(ctx, createEmailVerificationToken,
+		arg.UserID,
+		arg.Email,
+		arg.Token,
+		arg.ExpiresAt,
+	)
+	var i EmailVerificationToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.Email,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.UsedAt,
+	)
+	return i, err
+}
+
+const createPasswordResetToken = `-- name: CreatePasswordResetToken :one
+
+INSERT INTO password_reset_tokens (
+    user_id, token, expires_at
+) VALUES (
+    $1, $2, $3
+)
+RETURNING id, user_id, token, created_at, expires_at, used_at
+`
+
+type CreatePasswordResetTokenParams struct {
+	UserID    int32              `json:"user_id"`
+	Token     string             `json:"token"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
+// Password Reset Tokens
+func (q *Queries) CreatePasswordResetToken(ctx context.Context, arg CreatePasswordResetTokenParams) (PasswordResetToken, error) {
+	row := q.db.QueryRow(ctx, createPasswordResetToken, arg.UserID, arg.Token, arg.ExpiresAt)
+	var i PasswordResetToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.UsedAt,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     username, password, email
 ) VALUES (
              $1, $2, $3
          )
-RETURNING id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id
+RETURNING id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for
 `
 
 type CreateUserParams struct {
@@ -64,8 +133,36 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.IsBanned,
 		&i.BannedAt,
 		&i.BannedByUserID,
+		&i.EmailVerified,
+		&i.EmailChangePending,
+		&i.PasswordChangedAt,
+		&i.UsernameChangedAt,
+		&i.DeletedAt,
+		&i.DeletionScheduledFor,
 	)
 	return i, err
+}
+
+const deleteExpiredEmailVerificationTokens = `-- name: DeleteExpiredEmailVerificationTokens :exec
+DELETE FROM email_verification_tokens
+WHERE expires_at < NOW()
+  OR used_at IS NOT NULL
+`
+
+func (q *Queries) DeleteExpiredEmailVerificationTokens(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteExpiredEmailVerificationTokens)
+	return err
+}
+
+const deleteExpiredPasswordResetTokens = `-- name: DeleteExpiredPasswordResetTokens :exec
+DELETE FROM password_reset_tokens
+WHERE expires_at < NOW()
+  OR used_at IS NOT NULL
+`
+
+func (q *Queries) DeleteExpiredPasswordResetTokens(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteExpiredPasswordResetTokens)
+	return err
 }
 
 const deleteUser = `-- name: DeleteUser :exec
@@ -78,8 +175,88 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 	return err
 }
 
+const getDeletedUser = `-- name: GetDeletedUser :one
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
+WHERE id = $1
+  AND deleted_at IS NOT NULL
+LIMIT 1
+`
+
+func (q *Queries) GetDeletedUser(ctx context.Context, id int32) (User, error) {
+	row := q.db.QueryRow(ctx, getDeletedUser, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Password,
+		&i.IsAdmin,
+		&i.CreatedAt,
+		&i.DisplayName,
+		&i.Bio,
+		&i.Timezone,
+		&i.EmailNotifications,
+		&i.HighContrast,
+		&i.IsBanned,
+		&i.BannedAt,
+		&i.BannedByUserID,
+		&i.EmailVerified,
+		&i.EmailChangePending,
+		&i.PasswordChangedAt,
+		&i.UsernameChangedAt,
+		&i.DeletedAt,
+		&i.DeletionScheduledFor,
+	)
+	return i, err
+}
+
+const getEmailVerificationToken = `-- name: GetEmailVerificationToken :one
+SELECT id, user_id, token, email, created_at, expires_at, used_at FROM email_verification_tokens
+WHERE token = $1
+  AND used_at IS NULL
+  AND expires_at > NOW()
+LIMIT 1
+`
+
+func (q *Queries) GetEmailVerificationToken(ctx context.Context, token string) (EmailVerificationToken, error) {
+	row := q.db.QueryRow(ctx, getEmailVerificationToken, token)
+	var i EmailVerificationToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.Email,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.UsedAt,
+	)
+	return i, err
+}
+
+const getPasswordResetToken = `-- name: GetPasswordResetToken :one
+SELECT id, user_id, token, created_at, expires_at, used_at FROM password_reset_tokens
+WHERE token = $1
+  AND used_at IS NULL
+  AND expires_at > NOW()
+LIMIT 1
+`
+
+func (q *Queries) GetPasswordResetToken(ctx context.Context, token string) (PasswordResetToken, error) {
+	row := q.db.QueryRow(ctx, getPasswordResetToken, token)
+	var i PasswordResetToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.UsedAt,
+	)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id FROM users
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -101,12 +278,51 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.IsBanned,
 		&i.BannedAt,
 		&i.BannedByUserID,
+		&i.EmailVerified,
+		&i.EmailChangePending,
+		&i.PasswordChangedAt,
+		&i.UsernameChangedAt,
+		&i.DeletedAt,
+		&i.DeletionScheduledFor,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
+WHERE email = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Password,
+		&i.IsAdmin,
+		&i.CreatedAt,
+		&i.DisplayName,
+		&i.Bio,
+		&i.Timezone,
+		&i.EmailNotifications,
+		&i.HighContrast,
+		&i.IsBanned,
+		&i.BannedAt,
+		&i.BannedByUserID,
+		&i.EmailVerified,
+		&i.EmailChangePending,
+		&i.PasswordChangedAt,
+		&i.UsernameChangedAt,
+		&i.DeletedAt,
+		&i.DeletionScheduledFor,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id FROM users
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
 WHERE username = $1 LIMIT 1
 `
 
@@ -128,6 +344,12 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.IsBanned,
 		&i.BannedAt,
 		&i.BannedByUserID,
+		&i.EmailVerified,
+		&i.EmailChangePending,
+		&i.PasswordChangedAt,
+		&i.UsernameChangedAt,
+		&i.DeletedAt,
+		&i.DeletionScheduledFor,
 	)
 	return i, err
 }
@@ -219,7 +441,7 @@ func (q *Queries) ListBannedUsers(ctx context.Context) ([]ListBannedUsersRow, er
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id FROM users
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
 ORDER BY username
 `
 
@@ -247,6 +469,12 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.IsBanned,
 			&i.BannedAt,
 			&i.BannedByUserID,
+			&i.EmailVerified,
+			&i.EmailChangePending,
+			&i.PasswordChangedAt,
+			&i.UsernameChangedAt,
+			&i.DeletedAt,
+			&i.DeletionScheduledFor,
 		); err != nil {
 			return nil, err
 		}
@@ -256,6 +484,62 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const markEmailVerificationTokenUsed = `-- name: MarkEmailVerificationTokenUsed :exec
+UPDATE email_verification_tokens
+SET used_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) MarkEmailVerificationTokenUsed(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, markEmailVerificationTokenUsed, id)
+	return err
+}
+
+const markPasswordResetTokenUsed = `-- name: MarkPasswordResetTokenUsed :exec
+UPDATE password_reset_tokens
+SET used_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) MarkPasswordResetTokenUsed(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, markPasswordResetTokenUsed, id)
+	return err
+}
+
+const markUserEmailVerified = `-- name: MarkUserEmailVerified :exec
+UPDATE users
+SET email_verified = TRUE
+WHERE id = $1
+`
+
+func (q *Queries) MarkUserEmailVerified(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, markUserEmailVerified, id)
+	return err
+}
+
+const permanentlyDeleteUser = `-- name: PermanentlyDeleteUser :exec
+DELETE FROM users
+WHERE id = $1
+  AND deleted_at IS NOT NULL
+  AND deleted_at < NOW() - INTERVAL '30 days'
+`
+
+func (q *Queries) PermanentlyDeleteUser(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, permanentlyDeleteUser, id)
+	return err
+}
+
+const restoreDeletedUser = `-- name: RestoreDeletedUser :exec
+UPDATE users
+SET deleted_at = NULL
+WHERE id = $1
+`
+
+func (q *Queries) RestoreDeletedUser(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, restoreDeletedUser, id)
+	return err
 }
 
 const searchUsers = `-- name: SearchUsers :many
@@ -299,6 +583,35 @@ func (q *Queries) SearchUsers(ctx context.Context, dollar_1 pgtype.Text) ([]Sear
 		return nil, err
 	}
 	return items, nil
+}
+
+const setEmailChangePending = `-- name: SetEmailChangePending :exec
+UPDATE users
+SET email_change_pending = $2
+WHERE id = $1
+`
+
+type SetEmailChangePendingParams struct {
+	ID                 int32       `json:"id"`
+	EmailChangePending pgtype.Text `json:"email_change_pending"`
+}
+
+func (q *Queries) SetEmailChangePending(ctx context.Context, arg SetEmailChangePendingParams) error {
+	_, err := q.db.Exec(ctx, setEmailChangePending, arg.ID, arg.EmailChangePending)
+	return err
+}
+
+const softDeleteUser = `-- name: SoftDeleteUser :exec
+
+UPDATE users
+SET deleted_at = NOW()
+WHERE id = $1
+`
+
+// Account Deletion (Soft Delete with 30-day recovery)
+func (q *Queries) SoftDeleteUser(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, softDeleteUser, id)
+	return err
 }
 
 const unbanUser = `-- name: UnbanUser :exec
@@ -354,5 +667,59 @@ type UpdateUserAdminStatusParams struct {
 // Admin management queries
 func (q *Queries) UpdateUserAdminStatus(ctx context.Context, arg UpdateUserAdminStatusParams) error {
 	_, err := q.db.Exec(ctx, updateUserAdminStatus, arg.ID, arg.IsAdmin)
+	return err
+}
+
+const updateUserEmail = `-- name: UpdateUserEmail :exec
+UPDATE users
+SET email = $2,
+    email_verified = TRUE,
+    email_change_pending = NULL
+WHERE id = $1
+`
+
+type UpdateUserEmailParams struct {
+	ID    int32  `json:"id"`
+	Email string `json:"email"`
+}
+
+func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) error {
+	_, err := q.db.Exec(ctx, updateUserEmail, arg.ID, arg.Email)
+	return err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+
+UPDATE users
+SET password = $2,
+    password_changed_at = NOW()
+WHERE id = $1
+`
+
+type UpdateUserPasswordParams struct {
+	ID       int32  `json:"id"`
+	Password string `json:"password"`
+}
+
+// Password Management
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.Exec(ctx, updateUserPassword, arg.ID, arg.Password)
+	return err
+}
+
+const updateUserUsername = `-- name: UpdateUserUsername :exec
+UPDATE users
+SET username = $2,
+    username_changed_at = NOW()
+WHERE id = $1
+`
+
+type UpdateUserUsernameParams struct {
+	ID       int32  `json:"id"`
+	Username string `json:"username"`
+}
+
+func (q *Queries) UpdateUserUsername(ctx context.Context, arg UpdateUserUsernameParams) error {
+	_, err := q.db.Exec(ctx, updateUserUsername, arg.ID, arg.Username)
 	return err
 }

@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from './NotificationBell';
 import { AdminBanner } from './AdminBanner';
+import { EmailVerificationBanner } from './EmailVerificationBanner';
 
 interface LayoutProps {
   children: ReactNode;
@@ -249,6 +250,13 @@ export const Layout = ({ children }: LayoutProps) => {
 
       {/* Admin Mode Banner */}
       <AdminBanner />
+
+      {/* Email Verification Banner */}
+      {isAuthenticated && currentUser && !currentUser.email_verified && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          <EmailVerificationBanner />
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="py-6">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button, Input, Card, Alert } from './ui';
+import { HCaptchaWrapper } from './HCaptcha';
 import type { RegisterRequest } from '../types/auth';
 
 interface RegisterFormProps {
@@ -12,11 +13,23 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     username: '',
     email: '',
     password: '',
+    hcaptcha_token: '',
+    honeypot_value: '',
   });
   const { register, isLoading, error } = useAuth();
+  const [captchaError, setCaptchaError] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate captcha token (only required if HCAPTCHA_ENABLED is true in production)
+    if (!formData.hcaptcha_token) {
+      setCaptchaError('Please complete the CAPTCHA verification');
+      return;
+    }
+
+    setCaptchaError('');
+
     try {
       await register(formData);
       onSuccess?.();
@@ -31,6 +44,22 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleCaptchaVerify = (token: string) => {
+    setFormData(prev => ({
+      ...prev,
+      hcaptcha_token: token,
+    }));
+    setCaptchaError('');
+  };
+
+  const handleCaptchaExpire = () => {
+    setFormData(prev => ({
+      ...prev,
+      hcaptcha_token: '',
+    }));
+    setCaptchaError('CAPTCHA expired, please verify again');
   };
 
   const errorMessage = (error as any)?.response?.data?.message || 'Registration failed. Please try again.';
@@ -75,6 +104,32 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           placeholder="Choose a password"
           data-testid="register-password"
         />
+
+        {/* Honeypot field - hidden from users, catches bots */}
+        <div style={{ position: 'absolute', left: '-9999px' }}>
+          <Input
+            label="Leave this field empty"
+            id="honeypot"
+            name="honeypot_value"
+            type="text"
+            value={formData.honeypot_value}
+            onChange={handleChange}
+            tabIndex={-1}
+            autoComplete="off"
+          />
+        </div>
+
+        {/* hCaptcha widget */}
+        <HCaptchaWrapper
+          onVerify={handleCaptchaVerify}
+          onExpire={handleCaptchaExpire}
+        />
+
+        {captchaError && (
+          <Alert variant="warning">
+            {captchaError}
+          </Alert>
+        )}
 
         {error && (
           <Alert variant="danger" data-testid="error-message">

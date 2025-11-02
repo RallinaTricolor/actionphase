@@ -4,6 +4,9 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { GamesPage } from './pages/GamesPage';
 import { GameDetailsPage } from './pages/GameDetailsPage';
@@ -41,6 +44,22 @@ function AppRoutes() {
             element={
               isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
             }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              isAuthenticated ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              isAuthenticated ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />
+            }
+          />
+          <Route
+            path="/verify-email"
+            element={<VerifyEmailPage />}
           />
           <Route
             path="/dashboard"

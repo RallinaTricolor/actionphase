@@ -1,5 +1,12 @@
 import { BaseApiClient } from './client';
-import type { AuthResponse, LoginRequest, RegisterRequest } from '../../types/auth';
+import type {
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
+  ChangePasswordRequest,
+  ChangePasswordResponse,
+  SessionsListResponse
+} from '../../types/auth';
 
 type Theme = 'light' | 'dark' | 'auto';
 
@@ -56,5 +63,53 @@ export class AuthApi extends BaseApiClient {
         created_at: string;
       }>;
     }>(`/api/v1/auth/users/search?q=${encodeURIComponent(query)}`);
+  }
+
+  async changePassword(data: ChangePasswordRequest) {
+    return this.client.post<ChangePasswordResponse>('/api/v1/auth/change-password', data);
+  }
+
+  async getSessions() {
+    return this.client.get<SessionsListResponse>('/api/v1/auth/sessions');
+  }
+
+  async revokeSession(sessionId: number) {
+    return this.client.delete(`/api/v1/auth/sessions/${sessionId}`);
+  }
+
+  async changeUsername(data: { new_username: string; current_password: string }) {
+    return this.client.post<{ message: string }>('/api/v1/auth/change-username', data);
+  }
+
+  async requestEmailChange(data: { new_email: string; current_password: string }) {
+    return this.client.post<{ message: string }>('/api/v1/auth/request-email-change', data);
+  }
+
+  async deleteAccount() {
+    return this.client.delete<{ message: string }>('/api/v1/auth/delete-account');
+  }
+
+  async revokeAllSessions() {
+    return this.client.post<{ message: string }>('/api/v1/auth/revoke-all-sessions', {});
+  }
+
+  async resendVerificationEmail() {
+    return this.client.post<{ message: string }>('/api/v1/auth/resend-verification', {});
+  }
+
+  async requestPasswordReset(email: string) {
+    return this.client.post<{ message: string }>('/api/v1/auth/request-password-reset', { email });
+  }
+
+  async validateResetToken(token: string) {
+    return this.client.get<{ valid: boolean }>(`/api/v1/auth/validate-reset-token?token=${encodeURIComponent(token)}`);
+  }
+
+  async resetPassword(data: { token: string; new_password: string; confirm_password: string }) {
+    return this.client.post<{ message: string }>('/api/v1/auth/reset-password', data);
+  }
+
+  async verifyEmail(token: string) {
+    return this.client.post<{ message: string }>('/api/v1/auth/verify-email', { token });
   }
 }

@@ -3,8 +3,10 @@ package auth
 import (
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/services"
+	"fmt"
 	"github.com/go-chi/render"
 	"net/http"
+	"strings"
 )
 
 func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
@@ -19,12 +21,71 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract IP address and user agent for bot prevention
+	ipAddress := r.RemoteAddr
+	// Strip port from IP if present
+	if idx := strings.LastIndex(ipAddress, ":"); idx != -1 {
+		ipAddress = ipAddress[:idx]
+	}
+	userAgent := r.Header.Get("User-Agent")
+
+	// Perform bot prevention checks
+	botService := NewBotPreventionService(h.App.Pool)
+	checkRequest := &RegistrationCheckRequest{
+		Email:         data.User.Email,
+		Username:      data.User.Username,
+		IPAddress:     ipAddress,
+		UserAgent:     userAgent,
+		HCaptchaToken: data.HCaptchaToken,
+		HoneypotValue: data.HoneypotValue,
+	}
+
+	result, err := botService.CheckRegistrationAttempt(r.Context(), checkRequest)
+	if err != nil {
+		h.App.Logger.Error("Bot prevention check failed", "error", err, "email", data.User.Email)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !result.Allowed {
+		h.App.Logger.Warn("Registration blocked by bot prevention",
+			"reason", result.BlockedReason,
+			"email", data.User.Email,
+			"ip", ipAddress)
+
+		// Return appropriate error message based on block reason
+		var errorMsg string
+		switch result.BlockedReason {
+		case "honeypot":
+			errorMsg = "Invalid registration attempt detected"
+		case "captcha_failed":
+			errorMsg = "CAPTCHA verification failed. Please try again."
+		case "rate_limit_ip":
+			errorMsg = "Too many registration attempts from this IP address. Please try again later."
+		case "rate_limit_email":
+			errorMsg = "Too many registration attempts for this email. Please try again later."
+		case "disposable_email":
+			errorMsg = "Disposable email addresses are not allowed. Please use a permanent email address."
+		default:
+			errorMsg = "Registration not allowed at this time"
+		}
+
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf(errorMsg)))
+		return
+	}
+
 	UserService := db.UserService{DB: h.App.Pool}
 	h.App.Logger.Info("Creating user", "username", data.User.Username)
 	returnUser, err := UserService.CreateUser(data.User)
 	if err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
+	}
+
+	// Log successful registration
+	if err := botService.LogSuccessfulRegistration(r.Context(), checkRequest); err != nil {
+		h.App.Logger.Warn("Failed to log successful registration", "error", err, "username", returnUser.Username)
+		// Don't fail the registration if logging fails
 	}
 
 	h.App.Logger.Info("Creating token for new user", "username", returnUser.Username)

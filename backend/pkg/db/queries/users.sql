@@ -75,3 +75,116 @@ WHERE username ILIKE '%' || $1 || '%'
   AND is_banned = FALSE
 ORDER BY username
 LIMIT 20;
+
+-- Password Management
+
+-- name: UpdateUserPassword :exec
+UPDATE users
+SET password = $2,
+    password_changed_at = NOW()
+WHERE id = $1;
+
+-- name: GetUserByEmail :one
+SELECT * FROM users
+WHERE email = $1 LIMIT 1;
+
+-- Password Reset Tokens
+
+-- name: CreatePasswordResetToken :one
+INSERT INTO password_reset_tokens (
+    user_id, token, expires_at
+) VALUES (
+    $1, $2, $3
+)
+RETURNING *;
+
+-- name: GetPasswordResetToken :one
+SELECT * FROM password_reset_tokens
+WHERE token = $1
+  AND used_at IS NULL
+  AND expires_at > NOW()
+LIMIT 1;
+
+-- name: MarkPasswordResetTokenUsed :exec
+UPDATE password_reset_tokens
+SET used_at = NOW()
+WHERE id = $1;
+
+-- name: DeleteExpiredPasswordResetTokens :exec
+DELETE FROM password_reset_tokens
+WHERE expires_at < NOW()
+  OR used_at IS NOT NULL;
+
+-- Email Verification Tokens
+
+-- name: CreateEmailVerificationToken :one
+INSERT INTO email_verification_tokens (
+    user_id, email, token, expires_at
+) VALUES (
+    $1, $2, $3, $4
+)
+RETURNING *;
+
+-- name: GetEmailVerificationToken :one
+SELECT * FROM email_verification_tokens
+WHERE token = $1
+  AND used_at IS NULL
+  AND expires_at > NOW()
+LIMIT 1;
+
+-- name: MarkEmailVerificationTokenUsed :exec
+UPDATE email_verification_tokens
+SET used_at = NOW()
+WHERE id = $1;
+
+-- name: MarkUserEmailVerified :exec
+UPDATE users
+SET email_verified = TRUE
+WHERE id = $1;
+
+-- name: UpdateUserEmail :exec
+UPDATE users
+SET email = $2,
+    email_verified = TRUE,
+    email_change_pending = NULL
+WHERE id = $1;
+
+-- name: SetEmailChangePending :exec
+UPDATE users
+SET email_change_pending = $2
+WHERE id = $1;
+
+-- name: DeleteExpiredEmailVerificationTokens :exec
+DELETE FROM email_verification_tokens
+WHERE expires_at < NOW()
+  OR used_at IS NOT NULL;
+
+-- name: UpdateUserUsername :exec
+UPDATE users
+SET username = $2,
+    username_changed_at = NOW()
+WHERE id = $1;
+
+-- Account Deletion (Soft Delete with 30-day recovery)
+
+-- name: SoftDeleteUser :exec
+UPDATE users
+SET deleted_at = NOW()
+WHERE id = $1;
+
+-- name: RestoreDeletedUser :exec
+UPDATE users
+SET deleted_at = NULL
+WHERE id = $1;
+
+-- name: GetDeletedUser :one
+SELECT * FROM users
+WHERE id = $1
+  AND deleted_at IS NOT NULL
+LIMIT 1;
+
+-- name: PermanentlyDeleteUser :exec
+DELETE FROM users
+WHERE id = $1
+  AND deleted_at IS NOT NULL
+  AND deleted_at < NOW() - INTERVAL '30 days';

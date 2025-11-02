@@ -12,6 +12,8 @@ import (
 
 type Request struct {
 	*core.User
+	HCaptchaToken string `json:"hcaptcha_token"`
+	HoneypotValue string `json:"honeypot_value"`
 }
 
 func (r *Request) Bind(req *http.Request) error {
