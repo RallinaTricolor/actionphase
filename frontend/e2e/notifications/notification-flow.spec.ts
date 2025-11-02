@@ -444,7 +444,8 @@ test.describe('Notification System', () => {
         // Send a message in the conversation
         const testMessage = `Polling test message - ${Date.now()}`;
         await senderPage.fill('textarea[placeholder*="Type your message"]', testMessage);
-        await senderPage.click('button:has-text("Send")');
+        // Use type="submit" to target message send button specifically (avoid "Resend Email" button)
+        await senderPage.locator('button[type="submit"]:has-text("Send")').click();
         await senderPage.waitForLoadState('networkidle');
 
         // Verify message was sent

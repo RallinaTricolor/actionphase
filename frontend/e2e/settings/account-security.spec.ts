@@ -64,6 +64,9 @@ test.describe('Account Security Management', () => {
     await loginAs(page, 'PLAYER_2');
     await page.goto('/settings');
 
+    // Click on Account Information in the sidebar
+    await page.click('button:has-text("Account Information")');
+
     // Find the Change Username section
     const usernameSection = page.locator('h3:has-text("Change Username")').locator('..').locator('..');
 
@@ -116,6 +119,9 @@ test.describe('Account Security Management', () => {
     // Login as Player 4
     await loginAs(page, 'PLAYER_4');
     await page.goto('/settings');
+
+    // Click on Account Information in the sidebar
+    await page.click('button:has-text("Account Information")');
 
     // Find the Change Email section
     const emailSection = page.locator('h3:has-text("Change Email")').locator('..').locator('..');
