@@ -13,6 +13,7 @@ type User struct {
 	ID             int        `json:"id"`                                        // Unique user identifier
 	Username       string     `json:"username" validate:"required"`              // Unique username for login
 	Email          string     `json:"email" validate:"required,email"`           // User's email address
+	EmailVerified  bool       `json:"email_verified"`                            // Whether user has verified their email
 	Password       string     `json:"password" validate:"required,min=8,max=64"` // Hashed password (bcrypt)
 	IsAdmin        bool       `json:"is_admin"`                                  // Whether user has admin privileges
 	IsBanned       bool       `json:"is_banned"`                                 // Whether user is banned from platform

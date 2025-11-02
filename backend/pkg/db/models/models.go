@@ -174,6 +174,16 @@ type ConversationRead struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
+type EmailVerificationToken struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    int32              `json:"user_id"`
+	Token     string             `json:"token"`
+	Email     string             `json:"email"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	UsedAt    pgtype.Timestamptz `json:"used_at"`
+}
+
 type Game struct {
 	ID                  int32              `json:"id"`
 	Title               string             `json:"title"`
@@ -318,6 +328,15 @@ type NpcAssignment struct {
 	AssignedAt       pgtype.Timestamptz `json:"assigned_at"`
 }
 
+type PasswordResetToken struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    int32              `json:"user_id"`
+	Token     string             `json:"token"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	UsedAt    pgtype.Timestamptz `json:"used_at"`
+}
+
 type PhaseTransition struct {
 	ID          int32              `json:"id"`
 	GameID      int32              `json:"game_id"`
@@ -338,6 +357,19 @@ type PrivateMessage struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	IsDeleted         pgtype.Bool        `json:"is_deleted"`
+}
+
+type RegistrationAttempt struct {
+	ID                pgtype.UUID        `json:"id"`
+	Email             string             `json:"email"`
+	Username          string             `json:"username"`
+	IpAddress         string             `json:"ip_address"`
+	UserAgent         pgtype.Text        `json:"user_agent"`
+	HoneypotTriggered bool               `json:"honeypot_triggered"`
+	CaptchaPassed     bool               `json:"captcha_passed"`
+	BlockedReason     pgtype.Text        `json:"blocked_reason"`
+	Successful        bool               `json:"successful"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 }
 
 type Session struct {
@@ -371,20 +403,26 @@ type ThreadPost struct {
 }
 
 type User struct {
-	ID                 int32            `json:"id"`
-	Username           string           `json:"username"`
-	Email              string           `json:"email"`
-	Password           string           `json:"password"`
-	IsAdmin            pgtype.Bool      `json:"is_admin"`
-	CreatedAt          pgtype.Timestamp `json:"created_at"`
-	DisplayName        pgtype.Text      `json:"display_name"`
-	Bio                pgtype.Text      `json:"bio"`
-	Timezone           pgtype.Text      `json:"timezone"`
-	EmailNotifications pgtype.Bool      `json:"email_notifications"`
-	HighContrast       pgtype.Bool      `json:"high_contrast"`
-	IsBanned           bool             `json:"is_banned"`
-	BannedAt           pgtype.Timestamp `json:"banned_at"`
-	BannedByUserID     pgtype.Int4      `json:"banned_by_user_id"`
+	ID                   int32              `json:"id"`
+	Username             string             `json:"username"`
+	Email                string             `json:"email"`
+	Password             string             `json:"password"`
+	IsAdmin              pgtype.Bool        `json:"is_admin"`
+	CreatedAt            pgtype.Timestamp   `json:"created_at"`
+	DisplayName          pgtype.Text        `json:"display_name"`
+	Bio                  pgtype.Text        `json:"bio"`
+	Timezone             pgtype.Text        `json:"timezone"`
+	EmailNotifications   pgtype.Bool        `json:"email_notifications"`
+	HighContrast         pgtype.Bool        `json:"high_contrast"`
+	IsBanned             bool               `json:"is_banned"`
+	BannedAt             pgtype.Timestamp   `json:"banned_at"`
+	BannedByUserID       pgtype.Int4        `json:"banned_by_user_id"`
+	EmailVerified        bool               `json:"email_verified"`
+	EmailChangePending   pgtype.Text        `json:"email_change_pending"`
+	PasswordChangedAt    pgtype.Timestamptz `json:"password_changed_at"`
+	UsernameChangedAt    pgtype.Timestamptz `json:"username_changed_at"`
+	DeletedAt            pgtype.Timestamptz `json:"deleted_at"`
+	DeletionScheduledFor pgtype.Timestamptz `json:"deletion_scheduled_for"`
 }
 
 type UserCommonRoomRead struct {

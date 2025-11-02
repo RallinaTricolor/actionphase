@@ -16,7 +16,48 @@ CREATE TABLE users (
     high_contrast BOOLEAN DEFAULT FALSE,
     is_banned BOOLEAN DEFAULT FALSE NOT NULL,
     banned_at TIMESTAMP WITHOUT TIME ZONE,
-    banned_by_user_id INTEGER REFERENCES users(id)
+    banned_by_user_id INTEGER REFERENCES users(id),
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    email_change_pending TEXT,
+    password_changed_at TIMESTAMP WITH TIME ZONE,
+    username_changed_at TIMESTAMP WITH TIME ZONE,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    deletion_scheduled_for TIMESTAMP WITH TIME ZONE
+);
+
+-- Password Reset Tokens
+CREATE TABLE password_reset_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Email Verification Tokens
+CREATE TABLE email_verification_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Registration Attempts (for bot prevention tracking)
+CREATE TABLE registration_attempts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) NOT NULL,
+    username VARCHAR(255) NOT NULL,
+    ip_address VARCHAR(45) NOT NULL,
+    user_agent TEXT,
+    honeypot_triggered BOOLEAN NOT NULL DEFAULT FALSE,
+    captcha_passed BOOLEAN NOT NULL DEFAULT FALSE,
+    blocked_reason VARCHAR(100),
+    successful BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 -- Sessions table

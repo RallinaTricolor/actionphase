@@ -155,6 +155,7 @@ func (td *TestDatabase) CleanupTables(t TestingInterface, tables ...string) {
 			"characters",
 			// Top-level tables (least dependent)
 			"games",
+			"registration_attempts",
 			"sessions",
 			"users",
 		}

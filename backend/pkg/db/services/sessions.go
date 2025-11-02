@@ -36,6 +36,22 @@ func (s *SessionService) Sessions() ([]*core.Session, error) {
 	return nil, nil
 }
 
+// GetUserSessions returns all active sessions for a specific user
+func (s *SessionService) GetUserSessions(ctx context.Context, userID int32) ([]db.Session, error) {
+	q := db.New(s.DB)
+	sessions, err := q.GetSessionsByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return sessions, nil
+}
+
+// DeleteSession deletes a session by ID
+func (s *SessionService) DeleteSession(ctx context.Context, sessionID int32) error {
+	q := db.New(s.DB)
+	return q.DeleteSession(ctx, sessionID)
+}
+
 func (s *SessionService) CreateSession(us *core.Session) (*core.Session, error) {
 	ctx := context.Background()
 	q := db.New(s.DB)

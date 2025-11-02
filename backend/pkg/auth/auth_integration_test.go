@@ -15,7 +15,7 @@ import (
 func TestAuthFlow_Registration(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "sessions", "users")
+	defer testDB.CleanupTables(t, "registration_attempts", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupAuthTestRouter(app)
@@ -46,7 +46,7 @@ func TestAuthFlow_Registration(t *testing.T) {
 func TestAuthFlow_Login(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "sessions", "users")
+	defer testDB.CleanupTables(t, "registration_attempts", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupAuthTestRouter(app)
@@ -95,7 +95,7 @@ func TestAuthFlow_Login(t *testing.T) {
 func TestAuthFlow_ProtectedEndpointAccess(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "sessions", "users")
+	defer testDB.CleanupTables(t, "registration_attempts", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupAuthTestRouter(app)
@@ -137,7 +137,7 @@ func TestAuthFlow_ProtectedEndpointAccess(t *testing.T) {
 func TestAuthFlow_TokenRefresh(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "sessions", "users")
+	defer testDB.CleanupTables(t, "registration_attempts", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupAuthTestRouter(app)
@@ -192,7 +192,7 @@ func TestAuthFlow_TokenRefresh(t *testing.T) {
 func TestAuthFlow_InvalidCredentials(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "sessions", "users")
+	defer testDB.CleanupTables(t, "registration_attempts", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 
@@ -303,7 +303,7 @@ func TestAuthFlow_UnauthorizedAccess(t *testing.T) {
 func TestAuthFlow_DuplicateRegistration(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "sessions", "users")
+	defer testDB.CleanupTables(t, "registration_attempts", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 
@@ -385,7 +385,7 @@ func setupAuthTestRouter(app *core.App) *chi.Mux {
 func BenchmarkAuthFlow_Registration(b *testing.B) {
 	testDB := core.NewTestDatabase(b)
 	defer testDB.Close()
-	defer testDB.CleanupTables(b, "sessions", "users")
+	defer testDB.CleanupTables(b, "registration_attempts", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 
@@ -416,7 +416,7 @@ func BenchmarkAuthFlow_Registration(b *testing.B) {
 func BenchmarkAuthFlow_Login(b *testing.B) {
 	testDB := core.NewTestDatabase(b)
 	defer testDB.Close()
-	defer testDB.CleanupTables(b, "sessions", "users")
+	defer testDB.CleanupTables(b, "registration_attempts", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 

@@ -46,6 +46,7 @@ func (s *UserService) UserByUsername(username string) (*core.User, error) {
 		Username:       dbUser.Username,
 		Password:       dbUser.Password,
 		Email:          dbUser.Email,
+		EmailVerified:  dbUser.EmailVerified,
 		IsAdmin:        dbUser.IsAdmin.Bool,
 		IsBanned:       dbUser.IsBanned,
 		BannedAt:       bannedAt,
@@ -68,10 +69,11 @@ func (s *UserService) CreateUser(u *core.User) (*core.User, error) {
 		Email:    u.Email,
 	})
 	return &core.User{
-		ID:        int(dbUser.ID),
-		Username:  dbUser.Username,
-		Email:     dbUser.Email,
-		CreatedAt: &dbUser.CreatedAt.Time,
+		ID:            int(dbUser.ID),
+		Username:      dbUser.Username,
+		Email:         dbUser.Email,
+		EmailVerified: dbUser.EmailVerified,
+		CreatedAt:     &dbUser.CreatedAt.Time,
 	}, err
 }
 

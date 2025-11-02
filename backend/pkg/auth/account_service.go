@@ -1,0 +1,418 @@
+package auth
+
+import (
+	"actionphase/pkg/email"
+	"context"
+	"fmt"
+	"time"
+
+	db "actionphase/pkg/db/models"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// AccountService handles account management operations (email verification, username/email changes)
+type AccountService struct {
+	DB           *pgxpool.Pool
+	EmailService *email.EmailService
+}
+
+// SendVerificationEmailRequest represents a request to send a verification email
+type SendVerificationEmailRequest struct {
+	UserID int
+	Email  string
+}
+
+// VerifyEmailRequest represents a request to verify an email with a token
+type VerifyEmailRequest struct {
+	Token string `json:"token"`
+}
+
+// ChangeUsernameRequest represents a request to change username
+type ChangeUsernameRequest struct {
+	NewUsername string `json:"new_username"`
+}
+
+// ChangeEmailRequest represents a request to change email
+type ChangeEmailRequest struct {
+	NewEmail string `json:"new_email"`
+}
+
+// SendVerificationEmail sends an email verification token to the user
+func (s *AccountService) SendVerificationEmail(ctx context.Context, req *SendVerificationEmailRequest) error {
+	// Validate email format
+	if !IsValidEmail(req.Email) {
+		return &PasswordValidationError{
+			Field:  "email",
+			Reason: "invalid email format",
+		}
+	}
+
+	queries := db.New(s.DB)
+
+	// Check if user exists
+	user, err := queries.GetUser(ctx, int32(req.UserID))
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// If already verified, return success
+	if user.EmailVerified {
+		return nil
+	}
+
+	// Generate secure token
+	token, err := GenerateSecureToken(64)
+	if err != nil {
+		return fmt.Errorf("failed to generate verification token: %w", err)
+	}
+
+	// Create email verification token (expires in 24 hours)
+	expiresAt := time.Now().Add(24 * time.Hour)
+	verificationToken, err := queries.CreateEmailVerificationToken(ctx, db.CreateEmailVerificationTokenParams{
+		UserID:    int32(req.UserID),
+		Email:     req.Email,
+		Token:     token,
+		ExpiresAt: pgtype.Timestamptz{Time: expiresAt, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create verification token: %w", err)
+	}
+
+	// Send verification email
+	if s.EmailService != nil {
+		// Construct verification URL (in production, use actual domain from config)
+		verificationURL := fmt.Sprintf("http://localhost:5173/verify-email?token=%s", verificationToken.Token)
+
+		err = s.EmailService.SendEmailVerificationEmail(ctx, req.Email, verificationToken.Token, verificationURL)
+		if err != nil {
+			// Log error but don't fail the request
+			// The token is already created, user can request a new verification email
+			fmt.Printf("Failed to send verification email: %v\n", err)
+		}
+	}
+
+	return nil
+}
+
+// VerifyEmail verifies a user's email using a valid verification token
+func (s *AccountService) VerifyEmail(ctx context.Context, req *VerifyEmailRequest) error {
+	queries := db.New(s.DB)
+
+	// Get and validate token
+	verificationToken, err := queries.GetEmailVerificationToken(ctx, req.Token)
+	if err != nil {
+		return &PasswordValidationError{
+			Field:  "token",
+			Reason: "invalid or expired verification token",
+		}
+	}
+
+	// Mark user's email as verified
+	err = queries.MarkUserEmailVerified(ctx, verificationToken.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to mark email as verified: %w", err)
+	}
+
+	// Mark token as used
+	err = queries.MarkEmailVerificationTokenUsed(ctx, verificationToken.ID)
+	if err != nil {
+		// Log but don't fail - email was already verified
+		fmt.Printf("Failed to mark verification token as used: %v\n", err)
+	}
+
+	return nil
+}
+
+// ChangeUsername changes a user's username (with cooldown period check)
+func (s *AccountService) ChangeUsername(ctx context.Context, userID int, req *ChangeUsernameRequest) error {
+	// Validate username
+	if len(req.NewUsername) < 3 {
+		return &PasswordValidationError{
+			Field:  "username",
+			Reason: "username must be at least 3 characters long",
+		}
+	}
+
+	if len(req.NewUsername) > 50 {
+		return &PasswordValidationError{
+			Field:  "username",
+			Reason: "username must be at most 50 characters long",
+		}
+	}
+
+	queries := db.New(s.DB)
+
+	// Get user to check cooldown period
+	user, err := queries.GetUser(ctx, int32(userID))
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Check if username was changed recently (30-day cooldown)
+	if user.UsernameChangedAt.Valid {
+		cooldownEnd := user.UsernameChangedAt.Time.Add(30 * 24 * time.Hour)
+		if time.Now().Before(cooldownEnd) {
+			daysRemaining := int(time.Until(cooldownEnd).Hours() / 24)
+			return &PasswordValidationError{
+				Field:  "username",
+				Reason: fmt.Sprintf("username can only be changed once per 30 days (%d days remaining)", daysRemaining),
+			}
+		}
+	}
+
+	// Check if new username is already taken
+	_, err = queries.GetUserByUsername(ctx, req.NewUsername)
+	if err == nil {
+		// Username exists
+		return &PasswordValidationError{
+			Field:  "username",
+			Reason: "username is already taken",
+		}
+	}
+
+	// Update username
+	err = queries.UpdateUserUsername(ctx, db.UpdateUserUsernameParams{
+		ID:       int32(userID),
+		Username: req.NewUsername,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update username: %w", err)
+	}
+
+	return nil
+}
+
+// RequestEmailChange initiates the email change process
+func (s *AccountService) RequestEmailChange(ctx context.Context, userID int, req *ChangeEmailRequest) error {
+	// Validate email format
+	if !IsValidEmail(req.NewEmail) {
+		return &PasswordValidationError{
+			Field:  "email",
+			Reason: "invalid email format",
+		}
+	}
+
+	queries := db.New(s.DB)
+
+	// Check if email is already taken
+	_, err := queries.GetUserByEmail(ctx, req.NewEmail)
+	if err == nil {
+		// Email exists
+		return &PasswordValidationError{
+			Field:  "email",
+			Reason: "email is already in use",
+		}
+	}
+
+	// Set pending email change
+	err = queries.SetEmailChangePending(ctx, db.SetEmailChangePendingParams{
+		ID:                 int32(userID),
+		EmailChangePending: pgtype.Text{String: req.NewEmail, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set pending email change: %w", err)
+	}
+
+	// Send verification email to new address
+	verificationReq := &SendVerificationEmailRequest{
+		UserID: userID,
+		Email:  req.NewEmail,
+	}
+
+	return s.SendVerificationEmail(ctx, verificationReq)
+}
+
+// CompleteEmailChange completes the email change after verification
+func (s *AccountService) CompleteEmailChange(ctx context.Context, req *VerifyEmailRequest) error {
+	queries := db.New(s.DB)
+
+	// Get and validate token
+	verificationToken, err := queries.GetEmailVerificationToken(ctx, req.Token)
+	if err != nil {
+		return &PasswordValidationError{
+			Field:  "token",
+			Reason: "invalid or expired verification token",
+		}
+	}
+
+	// Get user to check if they have a pending email change
+	user, err := queries.GetUser(ctx, verificationToken.UserID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Verify the token email matches the pending email change
+	if !user.EmailChangePending.Valid || user.EmailChangePending.String != verificationToken.Email {
+		return &PasswordValidationError{
+			Field:  "token",
+			Reason: "no matching pending email change",
+		}
+	}
+
+	// Update email (this also clears email_change_pending and sets email_verified = true)
+	err = queries.UpdateUserEmail(ctx, db.UpdateUserEmailParams{
+		ID:    verificationToken.UserID,
+		Email: verificationToken.Email,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update email: %w", err)
+	}
+
+	// Mark token as used
+	err = queries.MarkEmailVerificationTokenUsed(ctx, verificationToken.ID)
+	if err != nil {
+		// Log but don't fail - email was already changed
+		fmt.Printf("Failed to mark verification token as used: %v\n", err)
+	}
+
+	return nil
+}
+
+// CleanupExpiredVerificationTokens removes expired email verification tokens
+func (s *AccountService) CleanupExpiredVerificationTokens(ctx context.Context) error {
+	queries := db.New(s.DB)
+	return queries.DeleteExpiredEmailVerificationTokens(ctx)
+}
+
+// ResendVerificationEmail resends a verification email for a user
+func (s *AccountService) ResendVerificationEmail(ctx context.Context, userID int) error {
+	queries := db.New(s.DB)
+
+	// Get user
+	user, err := queries.GetUser(ctx, int32(userID))
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// If already verified, return success
+	if user.EmailVerified {
+		return nil
+	}
+
+	// Determine which email to send to
+	email := user.Email
+	if user.EmailChangePending.Valid {
+		email = user.EmailChangePending.String
+	}
+
+	// Send verification email
+	return s.SendVerificationEmail(ctx, &SendVerificationEmailRequest{
+		UserID: userID,
+		Email:  email,
+	})
+}
+
+// SoftDeleteAccount marks a user account for deletion (30-day recovery window)
+func (s *AccountService) SoftDeleteAccount(ctx context.Context, userID int) error {
+	queries := db.New(s.DB)
+
+	// Check if user exists
+	_, err := queries.GetUser(ctx, int32(userID))
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Soft delete the user
+	err = queries.SoftDeleteUser(ctx, int32(userID))
+	if err != nil {
+		return fmt.Errorf("failed to delete user account: %w", err)
+	}
+
+	// Invalidate all user sessions
+	err = queries.DeleteUserSessions(ctx, int32(userID))
+	if err != nil {
+		// Log but don't fail - account is already marked as deleted
+		fmt.Printf("Failed to invalidate user sessions: %v\n", err)
+	}
+
+	return nil
+}
+
+// RestoreAccount restores a soft-deleted account
+func (s *AccountService) RestoreAccount(ctx context.Context, userID int) error {
+	queries := db.New(s.DB)
+
+	// Check if user is actually deleted
+	_, err := queries.GetDeletedUser(ctx, int32(userID))
+	if err != nil {
+		return &PasswordValidationError{
+			Field:  "account",
+			Reason: "account not found or not deleted",
+		}
+	}
+
+	// Restore the user
+	err = queries.RestoreDeletedUser(ctx, int32(userID))
+	if err != nil {
+		return fmt.Errorf("failed to restore user account: %w", err)
+	}
+
+	return nil
+}
+
+// PermanentlyDeleteOldAccounts deletes accounts that have been soft-deleted for >30 days
+func (s *AccountService) PermanentlyDeleteOldAccounts(ctx context.Context) error {
+	queries := db.New(s.DB)
+	return queries.PermanentlyDeleteUser(ctx, 0) // Uses WHERE clause to filter by date
+}
+
+// ListUserSessions returns all active sessions for a user
+func (s *AccountService) ListUserSessions(ctx context.Context, userID int) ([]db.Session, error) {
+	queries := db.New(s.DB)
+	return queries.GetSessionsByUser(ctx, int32(userID))
+}
+
+// RevokeSession revokes a specific session by ID
+func (s *AccountService) RevokeSession(ctx context.Context, userID int, sessionID int32) error {
+	queries := db.New(s.DB)
+
+	// Get session to verify it belongs to the user
+	session, err := queries.GetSession(ctx, sessionID)
+	if err != nil {
+		return &PasswordValidationError{
+			Field:  "session",
+			Reason: "session not found",
+		}
+	}
+
+	// Verify session belongs to the user
+	if session.UserID != int32(userID) {
+		return &PasswordValidationError{
+			Field:  "session",
+			Reason: "session does not belong to this user",
+		}
+	}
+
+	// Delete the session
+	err = queries.DeleteSession(ctx, sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to revoke session: %w", err)
+	}
+
+	return nil
+}
+
+// RevokeAllSessions revokes all sessions for a user (except current session)
+func (s *AccountService) RevokeAllSessions(ctx context.Context, userID int, currentSessionID int32) error {
+	queries := db.New(s.DB)
+
+	// Get all user sessions
+	sessions, err := queries.GetSessionsByUser(ctx, int32(userID))
+	if err != nil {
+		return fmt.Errorf("failed to get user sessions: %w", err)
+	}
+
+	// Delete all sessions except the current one
+	for _, session := range sessions {
+		if session.ID != currentSessionID {
+			err = queries.DeleteSession(ctx, session.ID)
+			if err != nil {
+				// Log but don't fail - continue revoking other sessions
+				fmt.Printf("Failed to revoke session %d: %v\n", session.ID, err)
+			}
+		}
+	}
+
+	return nil
+}

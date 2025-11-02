@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useErrorHandler } from '../hooks/useErrorHandler';
 import { ErrorDisplay } from './ErrorDisplay';
@@ -72,6 +73,15 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           onDismiss={clearError}
           compact
         />
+
+        <div className="flex items-center justify-end mb-4">
+          <Link
+            to="/forgot-password"
+            className="text-sm text-interactive-primary hover:text-interactive-hover"
+          >
+            Forgot password?
+          </Link>
+        </div>
 
         <Button
           type="submit"
