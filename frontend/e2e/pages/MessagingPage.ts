@@ -57,7 +57,9 @@ export class MessagingPage {
    * Get the Send button
    */
   get sendButton(): Locator {
-    return this.page.getByRole('button', { name: 'Send' });
+    // Use type="submit" to specifically target the message send button
+    // and avoid conflicts with "Resend Email" button from email verification banner
+    return this.page.locator('button[type="submit"]', { hasText: 'Send' });
   }
 
   /**
