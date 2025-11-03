@@ -33,7 +33,7 @@ const queryClient = new QueryClient({
 });
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isCheckingAuth } = useAuth();
 
   return (
     <Router>
@@ -42,19 +42,27 @@ function AppRoutes() {
           <Route
             path="/login"
             element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+              // Wait for auth check to complete before making routing decisions
+              // This prevents ERR_ABORTED during page navigation in E2E tests
+              isCheckingAuth ? null : (
+                isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+              )
             }
           />
           <Route
             path="/forgot-password"
             element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />
+              isCheckingAuth ? null : (
+                isAuthenticated ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />
+              )
             }
           />
           <Route
             path="/reset-password"
             element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />
+              isCheckingAuth ? null : (
+                isAuthenticated ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />
+              )
             }
           />
           <Route
