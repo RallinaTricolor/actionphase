@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/jwtauth/v5"
@@ -27,7 +28,7 @@ const (
 // MiddlewareUserService interface for user lookups in middleware.
 // This allows middleware to be testable with mocks.
 type MiddlewareUserService interface {
-	UserByUsername(username string) (*User, error)
+	GetUserByID(userID int) (*User, error)
 }
 
 // AuthenticatedUser holds user information extracted from JWT token.
@@ -74,16 +75,25 @@ func RequireAuthenticationMiddleware(userService MiddlewareUserService) func(htt
 			// Instead, rely on jwtauth.Verifier to have already validated the token
 			// If we reach this point, the token has been verified by the Verifier middleware
 
-			// Extract username from token claims
-			username, ok := claims["username"].(string)
-			if !ok || username == "" {
-				render.Render(w, r, ErrUnauthorized("username not found in token"))
+			// Extract user ID from token claims (sub = subject, standard JWT claim)
+			// Using immutable user_id instead of username enables username changes
+			// without invalidating existing tokens
+			subStr, ok := claims["sub"].(string)
+			if !ok || subStr == "" {
+				render.Render(w, r, ErrUnauthorized("user ID not found in token"))
+				return
+			}
+
+			// Convert sub (user ID) from string to int
+			userID, err := strconv.Atoi(subStr)
+			if err != nil {
+				render.Render(w, r, ErrUnauthorized("invalid user ID in token"))
 				return
 			}
 
 			// Look up user in database to get current information
 			// This ensures user still exists and gets current profile data
-			user, err := userService.UserByUsername(username)
+			user, err := userService.GetUserByID(userID)
 			if err != nil {
 				// Log error for debugging but don't expose internal details
 				render.Render(w, r, ErrUnauthorized("user not found"))

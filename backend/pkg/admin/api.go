@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 )
 
@@ -18,25 +17,13 @@ type Handler struct {
 	App *core.App
 }
 
-// getUserIDFromToken extracts user ID from JWT token
-func (h *Handler) getUserIDFromToken(r *http.Request) (int32, error) {
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		return 0, err
+// getUserIDFromContext extracts user ID from authenticated context
+func (h *Handler) getUserIDFromContext(r *http.Request) (int32, error) {
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		return 0, errors.New("authentication required")
 	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		return 0, errors.New("username not found in token")
-	}
-
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		return 0, err
-	}
-
-	return int32(user.ID), nil
+	return authUser.ID, nil
 }
 
 // ListAdmins returns all users with admin privileges
@@ -66,8 +53,8 @@ func (h *Handler) GrantAdminStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get requester ID from token
-	requesterID, err := h.getUserIDFromToken(r)
+	// Get requester ID from context
+	requesterID, err := h.getUserIDFromContext(r)
 	if err != nil {
 		h.App.Logger.Error("Failed to get requester from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized("invalid token"))
@@ -104,8 +91,8 @@ func (h *Handler) RevokeAdminStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get requester ID from token
-	requesterID, err := h.getUserIDFromToken(r)
+	// Get requester ID from context
+	requesterID, err := h.getUserIDFromContext(r)
 	if err != nil {
 		h.App.Logger.Error("Failed to get requester from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized("invalid token"))
@@ -142,8 +129,8 @@ func (h *Handler) BanUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get admin ID from token
-	adminID, err := h.getUserIDFromToken(r)
+	// Get admin ID from context
+	adminID, err := h.getUserIDFromContext(r)
 	if err != nil {
 		h.App.Logger.Error("Failed to get admin from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized("invalid token"))
@@ -191,8 +178,8 @@ func (h *Handler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get admin ID from token for logging
-	adminID, err := h.getUserIDFromToken(r)
+	// Get admin ID from context for logging
+	adminID, err := h.getUserIDFromContext(r)
 	if err != nil {
 		h.App.Logger.Error("Failed to get admin from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized("invalid token"))
@@ -268,8 +255,8 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get admin ID from token for logging
-	adminID, err := h.getUserIDFromToken(r)
+	// Get admin ID from context for logging
+	adminID, err := h.getUserIDFromContext(r)
 	if err != nil {
 		h.App.Logger.Error("Failed to get admin from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized("invalid token"))

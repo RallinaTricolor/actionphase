@@ -5,6 +5,19 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { RegisterForm } from '../RegisterForm';
+import React from 'react';
+
+// Mock HCaptcha to automatically call onVerify with a test token
+vi.mock('../HCaptcha', () => ({
+  HCaptchaWrapper: ({ onVerify }: { onVerify: (token: string) => void }) => {
+    // Automatically call onVerify when component mounts to simulate CAPTCHA completion
+    React.useEffect(() => {
+      onVerify('test-captcha-token');
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Empty deps to call only once on mount
+    return React.createElement('div', { 'data-testid': 'hcaptcha-mock' }, 'HCaptcha Mock');
+  },
+}));
 
 describe('RegisterForm', () => {
   describe('Rendering', () => {

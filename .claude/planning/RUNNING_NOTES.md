@@ -1,2 +1,14 @@
-- Account controls (forgot password, change username, etc.)
 - Swap login to email
+- WebSockets for notifications (sound effect!)
+- Actually set up production before Claude expires (S3 bucket, Emails, Captcha, SSL cert, DB + backups, etc.)
+- User profiles
+  - Games & characters played
+- Check notification behavior with Co-GM
+  - Co-GM NPC control
+- AWS MFA
+- Completing a game needs to disable anonymous mode
+- USER AND API DOCS
+- Demo Data improvements
+  - Game with Co-GM
+  - Complete game with rich history
+  - TestAudience needs to be an audience member in all demo games

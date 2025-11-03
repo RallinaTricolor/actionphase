@@ -9,12 +9,14 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
 	db "actionphase/pkg/db/models"
-	"github.com/go-chi/jwtauth/v5"
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,6 +24,31 @@ import (
 // RevokeSessionRequest represents a request to revoke a session
 type RevokeSessionRequest struct {
 	SessionID int32 `json:"session_id"`
+}
+
+// addAuthContextToRequest adds authenticated user to request context (simulates RequireAuthenticationMiddleware)
+func addAuthContextToRequest(t *testing.T, req *http.Request, pool *pgxpool.Pool, userID int32) *http.Request {
+	ctx := context.Background()
+	queries := db.New(pool)
+
+	// Get user from database
+	user, err := queries.GetUser(ctx, userID)
+	require.NoError(t, err)
+
+	// Create AuthenticatedUser (same as RequireAuthenticationMiddleware does)
+	authUser := &core.AuthenticatedUser{
+		ID:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+		IsAdmin:  user.IsAdmin.Bool, // Convert pgtype.Bool to bool
+	}
+
+	// Add to request context
+	reqCtx := context.WithValue(req.Context(), core.UserContextKey, authUser)
+	reqCtx = context.WithValue(reqCtx, core.UserIDContextKey, authUser.ID)
+	reqCtx = context.WithValue(reqCtx, core.UsernameContextKey, authUser.Username)
+
+	return req.WithContext(reqCtx)
 }
 
 func TestV1VerifyEmail(t *testing.T) {
@@ -190,10 +217,10 @@ func TestV1ChangeUsername(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			userID := tt.setupUser()
-			token := generateTestJWT(t, int(userID))
 
 			requestBody := ChangeUsernameRequest{
-				NewUsername: tt.newUsername,
+				NewUsername:     tt.newUsername,
+				CurrentPassword: "TestPass123!", // Required field
 			}
 
 			bodyBytes, err := json.Marshal(requestBody)
@@ -202,13 +229,8 @@ func TestV1ChangeUsername(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/auth/change-username", bytes.NewReader(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
 
-			// Add JWT token to context
-			tokenAuth := jwtauth.New("HS256", []byte("test-secret"), nil)
-			jwtToken, err := jwtauth.VerifyToken(tokenAuth, token)
-			require.NoError(t, err)
-
-			reqCtx := jwtauth.NewContext(req.Context(), jwtToken, nil)
-			req = req.WithContext(reqCtx)
+			// Add authenticated user to context (simulates RequireAuthenticationMiddleware)
+			req = addAuthContextToRequest(t, req, pool, userID)
 
 			w := httptest.NewRecorder()
 			handler.V1ChangeUsername(w, req)
@@ -295,10 +317,10 @@ func TestV1RequestEmailChange(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			userID := tt.setupUser()
-			token := generateTestJWT(t, int(userID))
 
 			requestBody := ChangeEmailRequest{
-				NewEmail: tt.newEmail,
+				NewEmail:        tt.newEmail,
+				CurrentPassword: "TestPass123!", // Required field
 			}
 
 			bodyBytes, err := json.Marshal(requestBody)
@@ -307,13 +329,8 @@ func TestV1RequestEmailChange(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/auth/request-email-change", bytes.NewReader(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
 
-			// Add JWT token to context
-			tokenAuth := jwtauth.New("HS256", []byte("test-secret"), nil)
-			jwtToken, err := jwtauth.VerifyToken(tokenAuth, token)
-			require.NoError(t, err)
-
-			reqCtx := jwtauth.NewContext(req.Context(), jwtToken, nil)
-			req = req.WithContext(reqCtx)
+			// Add authenticated user to context (simulates RequireAuthenticationMiddleware)
+			req = addAuthContextToRequest(t, req, pool, userID)
 
 			w := httptest.NewRecorder()
 			handler.V1RequestEmailChange(w, req)
@@ -435,18 +452,12 @@ func TestV1DeleteAccount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			userID := tt.setupUser()
-			token := generateTestJWT(t, int(userID))
 
 			req := httptest.NewRequest(http.MethodDelete, "/auth/account", nil)
 			req.Header.Set("Content-Type", "application/json")
 
-			// Add JWT token to context
-			tokenAuth := jwtauth.New("HS256", []byte("test-secret"), nil)
-			jwtToken, err := jwtauth.VerifyToken(tokenAuth, token)
-			require.NoError(t, err)
-
-			reqCtx := jwtauth.NewContext(req.Context(), jwtToken, nil)
-			req = req.WithContext(reqCtx)
+			// Add authenticated user to context (simulates RequireAuthenticationMiddleware)
+			req = addAuthContextToRequest(t, req, pool, userID)
 
 			w := httptest.NewRecorder()
 			handler.V1DeleteAccount(w, req)
@@ -499,17 +510,10 @@ func TestV1ListSessions(t *testing.T) {
 	require.NoError(t, err)
 	defer queries.DeleteSession(ctx, session.ID)
 
-	token := generateTestJWT(t, int(userID))
-
 	req := httptest.NewRequest(http.MethodGet, "/auth/sessions", nil)
 
-	// Add JWT token to context
-	tokenAuth := jwtauth.New("HS256", []byte("test-secret"), nil)
-	jwtToken, err := jwtauth.VerifyToken(tokenAuth, token)
-	require.NoError(t, err)
-
-	reqCtx := jwtauth.NewContext(req.Context(), jwtToken, nil)
-	req = req.WithContext(reqCtx)
+	// Add authenticated user to context (simulates RequireAuthenticationMiddleware)
+	req = addAuthContextToRequest(t, req, pool, userID)
 
 	w := httptest.NewRecorder()
 	handler.V1ListSessions(w, req)
@@ -517,10 +521,10 @@ func TestV1ListSessions(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// Decode response
-	var sessions []db.Session
-	err = json.Unmarshal(w.Body.Bytes(), &sessions)
+	var response SessionsListResponse
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
-	assert.GreaterOrEqual(t, len(sessions), 1, "Should have at least one session")
+	assert.GreaterOrEqual(t, len(response.Sessions), 1, "Should have at least one session")
 }
 
 func TestV1RevokeSession(t *testing.T) {
@@ -550,7 +554,7 @@ func TestV1RevokeSession(t *testing.T) {
 		{
 			name: "successful session revocation",
 			setupUser: func() (int32, int32) {
-				userID := createTestUser(t, pool, "revoke1@test.com", "revokeuser1", "TestPass123!")
+				userID := createTestUser(t, pool, "revoke_success@test.com", "revokeuser_success", "TestPass123!")
 				expiresAt := time.Now().Add(24 * time.Hour)
 				session, _ := queries.CreateSession(ctx, db.CreateSessionParams{
 					UserID:  userID,
@@ -567,13 +571,13 @@ func TestV1RevokeSession(t *testing.T) {
 		{
 			name: "revoke non-existent session",
 			setupUser: func() (int32, int32) {
-				userID := createTestUser(t, pool, "revoke2@test.com", "revokeuser2", "TestPass123!")
+				userID := createTestUser(t, pool, "revoke_nonexistent@test.com", "revokeuser_nonexistent", "TestPass123!")
 				return userID, 99999
 			},
 			sessionID: func(userID int32, sessionID int32) int32 {
 				return sessionID
 			},
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusNotFound, // Handler returns 404 for session not found
 			expectedError:  "session not found",
 		},
 	}
@@ -581,25 +585,19 @@ func TestV1RevokeSession(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			userID, sessionID := tt.setupUser()
-			token := generateTestJWT(t, int(userID))
 
-			requestBody := RevokeSessionRequest{
-				SessionID: tt.sessionID(userID, sessionID),
-			}
+			targetSessionID := tt.sessionID(userID, sessionID)
 
-			bodyBytes, err := json.Marshal(requestBody)
-			require.NoError(t, err)
+			// Create DELETE request with session ID in URL
+			req := httptest.NewRequest(http.MethodDelete, "/auth/sessions/"+strconv.Itoa(int(targetSessionID)), nil)
 
-			req := httptest.NewRequest(http.MethodPost, "/auth/sessions/revoke", bytes.NewReader(bodyBytes))
-			req.Header.Set("Content-Type", "application/json")
+			// Add authenticated user to context (simulates RequireAuthenticationMiddleware)
+			req = addAuthContextToRequest(t, req, pool, userID)
 
-			// Add JWT token to context
-			tokenAuth := jwtauth.New("HS256", []byte("test-secret"), nil)
-			jwtToken, err := jwtauth.VerifyToken(tokenAuth, token)
-			require.NoError(t, err)
-
-			reqCtx := jwtauth.NewContext(req.Context(), jwtToken, nil)
-			req = req.WithContext(reqCtx)
+			// Add chi URL param for session ID (simulates chi router)
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("sessionID", strconv.Itoa(int(targetSessionID)))
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 			w := httptest.NewRecorder()
 			handler.V1RevokeSession(w, req)

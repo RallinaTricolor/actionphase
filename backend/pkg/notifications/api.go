@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 
 	"actionphase/pkg/core"
@@ -69,27 +68,6 @@ func (rd *MarkAllReadResponse) Render(w http.ResponseWriter, r *http.Request) er
 	return nil
 }
 
-// Helper function to get user ID from JWT token
-func getUserIDFromToken(r *http.Request, app *core.App) (int32, string, error) {
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		return 0, "", fmt.Errorf("no valid token found")
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		return 0, "", fmt.Errorf("username not found in token")
-	}
-
-	userService := &db.UserService{DB: app.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		return 0, "", fmt.Errorf("user not found: %w", err)
-	}
-
-	return int32(user.ID), username.(string), nil
-}
-
 // Helper function to convert core.Notification to NotificationResponse
 func notificationToResponse(notif *core.Notification) *NotificationResponse {
 	return &NotificationResponse{
@@ -111,15 +89,15 @@ func notificationToResponse(notif *core.Notification) *NotificationResponse {
 // GetNotifications - GET /api/v1/notifications
 // List user's notifications (paginated)
 func (h *Handler) GetNotifications(w http.ResponseWriter, r *http.Request) {
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		render.Render(w, r, &core.ErrResponse{
-			HTTPStatusCode: http.StatusUnauthorized,
-			StatusText:     "Unauthorized",
-			ErrorText:      "Invalid or missing authentication token",
-		})
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	// Parse query parameters
 	limit := 20 // default
@@ -146,6 +124,7 @@ func (h *Handler) GetNotifications(w http.ResponseWriter, r *http.Request) {
 	unreadOnly := r.URL.Query().Get("unread") == "true"
 
 	var notifications []*core.Notification
+	var err error
 	if unreadOnly {
 		notifications, err = service.GetUnreadNotifications(r.Context(), userID, limit)
 	} else {
@@ -190,15 +169,15 @@ func (h *Handler) GetNotifications(w http.ResponseWriter, r *http.Request) {
 // GetUnreadCount - GET /api/v1/notifications/unread-count
 // Get count of unread notifications
 func (h *Handler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		render.Render(w, r, &core.ErrResponse{
-			HTTPStatusCode: http.StatusUnauthorized,
-			StatusText:     "Unauthorized",
-			ErrorText:      "Invalid or missing authentication token",
-		})
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	service := &db.NotificationService{DB: h.App.Pool}
 	count, err := service.GetUnreadCount(r.Context(), userID)
@@ -222,15 +201,15 @@ func (h *Handler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
 // GetNotification - GET /api/v1/notifications/:id
 // Get a specific notification
 func (h *Handler) GetNotification(w http.ResponseWriter, r *http.Request) {
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		render.Render(w, r, &core.ErrResponse{
-			HTTPStatusCode: http.StatusUnauthorized,
-			StatusText:     "Unauthorized",
-			ErrorText:      "Invalid or missing authentication token",
-		})
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	// Parse notification ID from URL
 	notificationIDStr := chi.URLParam(r, "id")
@@ -284,15 +263,15 @@ func (h *Handler) GetNotification(w http.ResponseWriter, r *http.Request) {
 // MarkNotificationAsRead - PUT /api/v1/notifications/:id/mark-read
 // Mark a notification as read
 func (h *Handler) MarkNotificationAsRead(w http.ResponseWriter, r *http.Request) {
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		render.Render(w, r, &core.ErrResponse{
-			HTTPStatusCode: http.StatusUnauthorized,
-			StatusText:     "Unauthorized",
-			ErrorText:      "Invalid or missing authentication token",
-		})
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	// Parse notification ID from URL
 	notificationIDStr := chi.URLParam(r, "id")
@@ -332,15 +311,15 @@ func (h *Handler) MarkNotificationAsRead(w http.ResponseWriter, r *http.Request)
 // MarkAllAsRead - PUT /api/v1/notifications/mark-all-read
 // Mark all user's notifications as read
 func (h *Handler) MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		render.Render(w, r, &core.ErrResponse{
-			HTTPStatusCode: http.StatusUnauthorized,
-			StatusText:     "Unauthorized",
-			ErrorText:      "Invalid or missing authentication token",
-		})
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	// Get count before marking all as read (for response)
 	service := &db.NotificationService{DB: h.App.Pool}
@@ -370,15 +349,15 @@ func (h *Handler) MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 // DeleteNotification - DELETE /api/v1/notifications/:id
 // Delete a notification
 func (h *Handler) DeleteNotification(w http.ResponseWriter, r *http.Request) {
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		render.Render(w, r, &core.ErrResponse{
-			HTTPStatusCode: http.StatusUnauthorized,
-			StatusText:     "Unauthorized",
-			ErrorText:      "Invalid or missing authentication token",
-		})
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	// Parse notification ID from URL
 	notificationIDStr := chi.URLParam(r, "id")

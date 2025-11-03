@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { Card, CardHeader, CardBody, Input, Button, Alert } from './ui';
 import { useToast } from '../contexts/ToastContext';
@@ -7,7 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 export function ChangeUsernameForm() {
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
+  const queryClient = useQueryClient();
   const [newUsername, setNewUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -17,12 +18,12 @@ export function ChangeUsernameForm() {
       await apiClient.auth.changeUsername(data);
     },
     onSuccess: () => {
-      showToast('Username changed successfully. Please log in again with your new username.', 'success');
+      showToast('Username changed successfully!', 'success');
       setNewUsername('');
       setCurrentPassword('');
       setError(null);
-      // Optionally redirect to login or refresh
-      window.location.reload();
+      // Invalidate current user query to refetch with new username
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
     },
     onError: (error: any) => {
       const message = error.response?.data?.error || 'Failed to change username';
@@ -52,11 +53,11 @@ export function ChangeUsernameForm() {
   };
 
   return (
-    <Card variant="default" padding="md">
+    <Card variant="default" padding="md" data-testid="change-username-form">
       <CardHeader>
         <h3 className="text-lg font-semibold text-text-heading">Change Username</h3>
-        <p className="text-sm text-text-secondary mt-1">
-          Current username: <span className="font-medium">{user?.username}</span>
+        <p className="text-sm text-text-secondary mt-1" data-testid="current-username-display">
+          Current username: <span className="font-medium">{currentUser?.username}</span>
         </p>
       </CardHeader>
       <CardBody>
@@ -75,6 +76,7 @@ export function ChangeUsernameForm() {
             onChange={(e) => setNewUsername(e.target.value)}
             placeholder="Enter new username"
             disabled={changeUsernameMutation.isPending}
+            data-testid="new-username-input"
           />
 
           <Input
@@ -85,12 +87,14 @@ export function ChangeUsernameForm() {
             onChange={(e) => setCurrentPassword(e.target.value)}
             placeholder="Confirm with your password"
             disabled={changeUsernameMutation.isPending}
+            data-testid="username-current-password-input"
           />
 
           <Button
             type="submit"
             variant="primary"
             loading={changeUsernameMutation.isPending}
+            data-testid="change-username-submit"
           >
             Change Username
           </Button>

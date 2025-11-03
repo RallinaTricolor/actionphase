@@ -550,7 +550,9 @@ func CreateTestJWTToken(username string) (string, error) {
 func CreateTestJWTTokenForUser(app *App, user *User) (string, error) {
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
 	_, tokenString, err := tokenAuth.Encode(map[string]interface{}{
+		"sub":      fmt.Sprintf("%d", user.ID), // User ID in "sub" claim (required by RequireAuthenticationMiddleware)
 		"username": user.Username,
+		"exp":      time.Now().Add(time.Hour * 24).Unix(), // 24 hour expiry
 	})
 	return tokenString, err
 }

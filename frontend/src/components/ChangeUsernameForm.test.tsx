@@ -11,7 +11,7 @@ vi.mock('../contexts/AuthContext', async (importOriginal) => {
   return {
     ...actual,
     useAuth: () => ({
-      user: { id: 1, username: 'currentuser', email: 'user@example.com' },
+      currentUser: { id: 1, username: 'currentuser', email: 'user@example.com', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       isAuthenticated: true,
       isLoading: false,
       isCheckingAuth: false,

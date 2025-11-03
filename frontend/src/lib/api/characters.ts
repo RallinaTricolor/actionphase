@@ -53,18 +53,46 @@ export class CharactersApi extends BaseApiClient {
 
   // Avatar endpoints
   async uploadCharacterAvatar(characterId: number, file: File) {
+    console.log('[Avatar Upload] Starting upload:', {
+      characterId,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+    });
+
     const formData = new FormData();
     formData.append('avatar', file);
 
-    return this.client.post<{ avatar_url: string }>(
-      `/api/v1/characters/${characterId}/avatar`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
+    console.log('[Avatar Upload] FormData created, entries:', Array.from(formData.entries()).map(([key, value]) => ({
+      key,
+      value: value instanceof File ? { name: value.name, size: value.size, type: value.type } : value
+    })));
+
+    // CRITICAL: Must explicitly delete Content-Type header for multipart/form-data
+    // The BaseApiClient sets a default 'Content-Type: application/json' header,
+    // but for FormData uploads, axios needs to set the Content-Type itself with
+    // the correct multipart boundary. We must delete the default header.
+    try {
+      const response = await this.client.post<{ avatar_url: string }>(
+        `/api/v1/characters/${characterId}/avatar`,
+        formData,
+        {
+          headers: {
+            'Content-Type': undefined, // Remove default Content-Type, let axios set it
+          },
+        }
+      );
+      console.log('[Avatar Upload] Success:', response);
+      return response;
+    } catch (error: any) {
+      console.error('[Avatar Upload] Failed:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers,
+      });
+      throw error;
+    }
   }
 
   async deleteCharacterAvatar(characterId: number) {

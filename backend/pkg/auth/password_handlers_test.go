@@ -172,7 +172,6 @@ func TestV1ChangePassword(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			userID := tt.setupUser()
-			token := tt.setupToken(userID)
 
 			bodyBytes, err := json.Marshal(tt.requestBody)
 			require.NoError(t, err)
@@ -180,13 +179,8 @@ func TestV1ChangePassword(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/auth/change-password", bytes.NewReader(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
 
-			// Add JWT token to context
-			tokenAuth := jwtauth.New("HS256", []byte("test-secret"), nil)
-			jwtToken, err := jwtauth.VerifyToken(tokenAuth, token)
-			require.NoError(t, err)
-
-			ctx := jwtauth.NewContext(req.Context(), jwtToken, nil)
-			req = req.WithContext(ctx)
+			// Add authenticated user to context (simulates RequireAuthenticationMiddleware)
+			req = addAuthContextToRequest(t, req, pool, userID)
 
 			w := httptest.NewRecorder()
 			handler.V1ChangePassword(w, req)

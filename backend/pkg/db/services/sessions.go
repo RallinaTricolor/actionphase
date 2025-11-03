@@ -77,3 +77,13 @@ func (s *SessionService) InvalidateAllUserSessions(ctx context.Context, userID i
 	q := db.New(s.DB)
 	return q.DeleteUserSessions(ctx, userID)
 }
+
+// UpdateSessionToken updates the token for an existing session
+func (s *SessionService) UpdateSessionToken(sessionID int32, token string) error {
+	ctx := context.Background()
+	q := db.New(s.DB)
+	return q.UpdateSessionToken(ctx, db.UpdateSessionTokenParams{
+		ID:   sessionID,
+		Data: token,
+	})
+}

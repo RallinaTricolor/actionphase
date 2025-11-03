@@ -195,11 +195,18 @@ with open('$temp_file', 'w') as f:
     rm "$temp_file"
 }
 
+# First, apply worker setup to create helper functions
+echo "  📄 Applying worker setup (creates helper functions)..."
+if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$SCRIPT_DIR/e2e/00_worker_setup.sql"; then
+    echo "❌ ERROR: Failed to apply worker setup"
+    exit 1
+fi
+
 # Apply all E2E fixture files in order
 for file in "$SCRIPT_DIR"/e2e/*.sql; do
     filename=$(basename "$file")
 
-    # Skip worker setup and worker-specific files that don't match this worker
+    # Skip worker setup (already applied) and worker-specific files that don't match this worker
     if [ -f "$file" ] && [ "$filename" != "00_worker_setup.sql" ]; then
         # For private message deletion, use worker-specific file (no transformation needed)
         if [[ "$filename" == 17_private_message_deletion_w*.sql ]]; then

@@ -3,6 +3,7 @@ package auth
 import (
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/services"
+	"strconv"
 	"testing"
 	"time"
 
@@ -33,10 +34,10 @@ func TestJWTHandler_CreateToken(t *testing.T) {
 		core.AssertNoError(t, err, "Token creation should succeed")
 		core.AssertTrue(t, len(token) > 0, "Token should not be empty")
 
-		// Verify token contains username
+		// Verify token contains user ID in sub claim
 		claims, err := handler.DecodeToken(token)
 		core.AssertNoError(t, err, "Token decode should succeed")
-		core.AssertEqual(t, "testuser", claims["username"], "Token should contain username")
+		core.AssertEqual(t, strconv.Itoa(user.ID), claims["sub"].(string), "Token should contain user_id in sub claim")
 	})
 
 	t.Run("creates_session", func(t *testing.T) {
@@ -49,6 +50,24 @@ func TestJWTHandler_CreateToken(t *testing.T) {
 		core.AssertNoError(t, err, "Session should exist")
 		core.AssertNotEqual(t, nil, session, "Session should not be nil")
 		core.AssertTrue(t, session.ID > 0, "Session should have valid ID")
+	})
+
+	t.Run("token_contains_session_id", func(t *testing.T) {
+		token, err := handler.CreateToken(user)
+		core.AssertNoError(t, err, "Token creation should succeed")
+
+		claims, err := handler.DecodeToken(token)
+		core.AssertNoError(t, err, "Token decode should succeed")
+
+		// Verify session_id exists in claims
+		sessionID, ok := claims["session_id"]
+		core.AssertTrue(t, ok, "Token should contain session_id claim")
+		core.AssertTrue(t, sessionID != nil, "session_id should not be nil")
+
+		// Verify it's a valid number
+		sessionIDFloat, ok := sessionID.(float64)
+		core.AssertTrue(t, ok, "session_id should be a number")
+		core.AssertTrue(t, sessionIDFloat > 0, "session_id should be positive")
 	})
 }
 
@@ -87,8 +106,8 @@ func TestJWTHandler_VerifyToken(t *testing.T) {
 	t.Run("rejects_token_with_wrong_secret", func(t *testing.T) {
 		// Create a token with a different secret
 		wrongSecretToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"username": "testuser",
-			"exp":      time.Now().Add(time.Hour).Unix(),
+			"sub": strconv.Itoa(user.ID),
+			"exp": time.Now().Add(time.Hour).Unix(),
 		})
 		tokenString, _ := wrongSecretToken.SignedString([]byte("wrong-secret"))
 
@@ -99,8 +118,8 @@ func TestJWTHandler_VerifyToken(t *testing.T) {
 	t.Run("rejects_expired_token", func(t *testing.T) {
 		// Create an expired token
 		expiredToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"username": "testuser",
-			"exp":      time.Now().Add(-time.Hour).Unix(), // Expired 1 hour ago
+			"sub": strconv.Itoa(user.ID),
+			"exp": time.Now().Add(-time.Hour).Unix(), // Expired 1 hour ago
 		})
 		tokenString, _ := expiredToken.SignedString([]byte(app.Config.JWT.Secret))
 
@@ -111,8 +130,8 @@ func TestJWTHandler_VerifyToken(t *testing.T) {
 	t.Run("rejects_token_without_session", func(t *testing.T) {
 		// Create a valid token but don't create a session for it
 		orphanToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"username": "testuser",
-			"exp":      time.Now().Add(time.Hour).Unix(),
+			"sub": strconv.Itoa(user.ID),
+			"exp": time.Now().Add(time.Hour).Unix(),
 		})
 		tokenString, _ := orphanToken.SignedString([]byte(app.Config.JWT.Secret))
 
@@ -146,7 +165,7 @@ func TestJWTHandler_DecodeToken(t *testing.T) {
 	t.Run("decodes_valid_token", func(t *testing.T) {
 		claims, err := handler.DecodeToken(validToken)
 		core.AssertNoError(t, err, "Token decode should succeed")
-		core.AssertEqual(t, "testuser", claims["username"], "Claims should contain username")
+		core.AssertEqual(t, strconv.Itoa(user.ID), claims["sub"].(string), "Claims should contain user_id in sub")
 		core.AssertNotEqual(t, nil, claims["exp"], "Claims should contain exp")
 	})
 
@@ -157,8 +176,8 @@ func TestJWTHandler_DecodeToken(t *testing.T) {
 
 	t.Run("rejects_token_with_wrong_secret", func(t *testing.T) {
 		wrongSecretToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"username": "testuser",
-			"exp":      time.Now().Add(time.Hour).Unix(),
+			"sub": strconv.Itoa(user.ID),
+			"exp": time.Now().Add(time.Hour).Unix(),
 		})
 		tokenString, _ := wrongSecretToken.SignedString([]byte("wrong-secret"))
 

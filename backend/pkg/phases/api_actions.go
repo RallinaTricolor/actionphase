@@ -29,11 +29,11 @@ func (h *Handler) SubmitAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token
-	user, err := h.getUserFromToken(r)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
@@ -41,7 +41,7 @@ func (h *Handler) SubmitAction(w http.ResponseWriter, r *http.Request) {
 	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
 
 	// Check if user can submit actions
-	canSubmit, err := phaseService.CanUserSubmitActions(r.Context(), int32(gameID), int32(user.ID))
+	canSubmit, err := phaseService.CanUserSubmitActions(r.Context(), int32(gameID), int32(authUser.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to check action submission permission", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
@@ -69,7 +69,7 @@ func (h *Handler) SubmitAction(w http.ResponseWriter, r *http.Request) {
 	// Submit action
 	req := core.SubmitActionRequest{
 		GameID:      int32(gameID),
-		UserID:      int32(user.ID),
+		UserID:      int32(authUser.ID),
 		PhaseID:     activePhase.ID,
 		CharacterID: data.CharacterID,
 		Content:     data.Content,
@@ -116,17 +116,17 @@ func (h *Handler) GetUserActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token
-	user, err := h.getUserFromToken(r)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// TODO: Migrate GetUserActions to actions package
 	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
-	actions, err := legacyActionService.GetUserActions(r.Context(), int32(gameID), int32(user.ID))
+	actions, err := legacyActionService.GetUserActions(r.Context(), int32(gameID), int32(authUser.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to get user actions", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
@@ -172,17 +172,17 @@ func (h *Handler) GetGameActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token
-	user, err := h.getUserFromToken(r)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Check permissions
 	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
-	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(user.ID))
+	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(authUser.ID))
 	if err != nil {
 		h.App.Logger.Error("Failed to check phase management permission", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))

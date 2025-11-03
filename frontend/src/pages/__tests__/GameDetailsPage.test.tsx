@@ -317,15 +317,19 @@ describe('GameDetailsPage', () => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
       })
 
+      // During recruitment, GMs see Applications and Game Info tabs
+      // No Participants tab since participants aren't confirmed yet
       await waitFor(() => {
         expect(screen.getByRole('tab', { name: /applications/i })).toBeInTheDocument()
-        expect(screen.getByRole('tab', { name: /participants/i })).toBeInTheDocument()
         expect(screen.getByRole('tab', { name: /game info/i })).toBeInTheDocument()
+        expect(screen.queryByRole('tab', { name: /participants/i })).not.toBeInTheDocument()
       }, { timeout: 3000 })
     })
 
-    it('should display participants list when clicking Participants tab', async () => {
-      setupDefaultHandlers(mockGame, mockParticipants, 999)
+    it('should display participants list when clicking Participants tab in character creation', async () => {
+      // Use character_creation state which has a Participants tab
+      const characterCreationGame = { ...mockGame, state: 'character_creation' as const }
+      setupDefaultHandlers(characterCreationGame, mockParticipants, 999)
 
       renderGameDetailsPage(1)
 

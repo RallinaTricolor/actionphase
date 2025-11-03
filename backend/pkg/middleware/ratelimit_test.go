@@ -252,7 +252,7 @@ func TestRateLimitMiddleware_ErrorResponse(t *testing.T) {
 }
 
 func TestStrictRateLimit(t *testing.T) {
-	middleware := StrictRateLimit()
+	middleware := StrictRateLimit(false) // Not dev mode
 	handler := middleware(mockHandler())
 
 	// Should allow burst of 3 requests

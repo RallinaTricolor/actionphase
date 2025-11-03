@@ -4,6 +4,8 @@ import (
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/services"
 	"fmt"
+	"strconv"
+
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"time"
@@ -24,29 +26,71 @@ func SetJWTCookie(w http.ResponseWriter, token string) {
 	})
 }
 
+// ClearJWTCookie clears the JWT cookie by setting it to expire in the past
+func ClearJWTCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		HttpOnly: true,
+		Expires:  time.Now().Add(-1 * time.Hour), // Expire in the past
+		MaxAge:   -1,                             // Tells browser to delete immediately
+		SameSite: http.SameSiteLaxMode,
+		// Uncomment below for HTTPS:
+		// Secure: true,
+		Name:  "jwt",
+		Value: "",
+		Path:  "/",
+	})
+}
+
 type JWTHandler struct {
 	App *core.App
 }
 
 func (j *JWTHandler) CreateToken(user *core.User) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
+	// First, create a temporary token to generate the session
+	tempToken := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
-			// SECURITY: Only include username, not user_id
-			// This prevents stale user_id from being used for authorization
-			// Backend always looks up current user_id by username from database
-			"username": user.Username,
-			"exp":      time.Now().Add(time.Hour * 24 * 7).Unix(),
+			// Standard JWT "sub" (subject) claim contains user ID
+			// Using immutable user_id instead of username enables username changes
+			// without invalidating existing tokens
+			"sub": strconv.Itoa(user.ID),
+			"exp": time.Now().Add(time.Hour * 24 * 7).Unix(),
 		})
+
 	// Use the secret from app configuration
 	secretKey := []byte(j.App.Config.JWT.Secret)
-	tokenString, err := token.SignedString(secretKey)
-	SessionService := db.SessionService{DB: j.App.Pool}
-	j.App.Logger.Info("Creating session for new user", "username", user.Username)
-	_, err = SessionService.CreateSession(&core.Session{User: user, Token: tokenString})
+	tempTokenString, err := tempToken.SignedString(secretKey)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to sign temporary token: %w", err)
 	}
-	return tokenString, nil
+
+	// Create session with temporary token
+	SessionService := db.SessionService{DB: j.App.Pool}
+	j.App.Logger.Info("Creating session for user", "user_id", user.ID, "username", user.Username)
+	session, err := SessionService.CreateSession(&core.Session{User: user, Token: tempTokenString})
+	if err != nil {
+		return "", fmt.Errorf("failed to create session for user %d: %w", user.ID, err)
+	}
+
+	// Create final token with session_id included
+	finalToken := jwt.NewWithClaims(jwt.SigningMethodHS256,
+		jwt.MapClaims{
+			"sub":        strconv.Itoa(user.ID),
+			"session_id": session.ID, // Include session_id in JWT claims
+			"exp":        time.Now().Add(time.Hour * 24 * 7).Unix(),
+		})
+
+	finalTokenString, err := finalToken.SignedString(secretKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign final token: %w", err)
+	}
+
+	// Update session with final token
+	err = SessionService.UpdateSessionToken(int32(session.ID), finalTokenString)
+	if err != nil {
+		return "", fmt.Errorf("failed to update session token: %w", err)
+	}
+
+	return finalTokenString, nil
 }
 
 func (j *JWTHandler) VerifyToken(tokenString string) error {

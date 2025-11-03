@@ -26,7 +26,7 @@ func TestMessageAPI_PostCreationFlow(t *testing.T) {
 	fixtures := testDB.SetupFixtures(t)
 
 	// Create auth token for GM user
-	gmToken, err := createTestAuthToken(fixtures.TestUser.Username)
+	gmToken, err := createTestAuthToken(app, fixtures.TestUser)
 	core.AssertNoError(t, err, "GM token creation should succeed")
 
 	gameID := fixtures.TestGame.ID
@@ -133,7 +133,7 @@ func TestMessageAPI_CommentCreationFlow(t *testing.T) {
 	// Create player user
 	playerUser := testDB.CreateTestUser(t, "player", "player@example.com")
 
-	playerToken, err := createTestAuthToken(playerUser.Username)
+	playerToken, err := createTestAuthToken(app, playerUser)
 	core.AssertNoError(t, err, "Player token creation should succeed")
 
 	gameID := fixtures.TestGame.ID
@@ -262,7 +262,7 @@ func TestMessageAPI_GetGamePosts(t *testing.T) {
 	router := setupMessageTestRouter(app, testDB)
 	fixtures := testDB.SetupFixtures(t)
 
-	gmToken, err := createTestAuthToken(fixtures.TestUser.Username)
+	gmToken, err := createTestAuthToken(app, fixtures.TestUser)
 	core.AssertNoError(t, err, "GM token creation should succeed")
 
 	gameID := fixtures.TestGame.ID
@@ -335,7 +335,7 @@ func TestMessageAPI_GetPostComments(t *testing.T) {
 	// Create player user
 	playerUser := testDB.CreateTestUser(t, "player", "player@example.com")
 
-	playerToken, err := createTestAuthToken(playerUser.Username)
+	playerToken, err := createTestAuthToken(app, playerUser)
 	core.AssertNoError(t, err, "Player token creation should succeed")
 
 	gameID := fixtures.TestGame.ID
@@ -420,7 +420,7 @@ func TestMessageAPI_AuthorizationChecks(t *testing.T) {
 	// Create player user
 	playerUser := testDB.CreateTestUser(t, "player", "player@example.com")
 
-	playerToken, err := createTestAuthToken(playerUser.Username)
+	playerToken, err := createTestAuthToken(app, playerUser)
 	core.AssertNoError(t, err, "Player token creation should succeed")
 
 	gameID := fixtures.TestGame.ID
@@ -469,6 +469,7 @@ func setupMessageTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/games/{gameId}", func(r chi.Router) {
 			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
 			r.Use(core.RequireAuthenticationMiddleware(userService))
 
 			messageHandler := &Handler{App: app}
@@ -497,8 +498,8 @@ func setupMessageTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 }
 
 // createTestAuthToken creates a JWT token for testing
-func createTestAuthToken(username string) (string, error) {
-	return core.CreateTestJWTToken(username)
+func createTestAuthToken(app *core.App, user *core.User) (string, error) {
+	return core.CreateTestJWTTokenForUser(app, user)
 }
 
 // TestMessageAPI_GetMessage tests the GetMessage endpoint

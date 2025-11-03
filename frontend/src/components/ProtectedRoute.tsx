@@ -7,8 +7,13 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isCheckingAuth } = useAuth();
   const location = useLocation();
+
+  // Wait for auth check to complete before redirecting
+  if (isCheckingAuth) {
+    return null; // or a loading spinner
+  }
 
   if (!isAuthenticated) {
     // Save the current location they were trying to access

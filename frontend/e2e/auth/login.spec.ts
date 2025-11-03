@@ -20,16 +20,13 @@ test.describe('User Authentication', () => {
 
   test('should successfully login and logout as GM', async ({ page }) => {
     // Login as Game Master
-    const { user, token } = await loginAs(page, 'GM');
+    await loginAs(page, 'GM');
 
     // Verify we're on the dashboard
     await assertUrl(page, '/dashboard');
 
     // Verify user is authenticated (navbar with Dashboard link is visible)
     await expect(page.locator('nav a[href="/dashboard"]').locator('visible=true').first()).toBeVisible();
-
-    // Verify token was stored
-    expect(token).toBeTruthy();
 
     // Verify user is authenticated via helper
     const authenticated = await isAuthenticated(page);
@@ -47,12 +44,11 @@ test.describe('User Authentication', () => {
 
   test('should successfully login and logout as Player', async ({ page }) => {
     // Login as Player 1
-    const { user, token } = await loginAs(page, 'PLAYER_1');
+    await loginAs(page, 'PLAYER_1');
 
     // Verify authentication
     await assertUrl(page, '/dashboard');
     await expect(page.locator('nav a[href="/dashboard"]').locator('visible=true').first()).toBeVisible();
-    expect(token).toBeTruthy();
 
     // Logout
     await logout(page);

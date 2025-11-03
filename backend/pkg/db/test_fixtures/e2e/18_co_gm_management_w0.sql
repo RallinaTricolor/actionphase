@@ -17,17 +17,12 @@ DECLARE
   audience1_id INTEGER;
   audience2_id INTEGER;
   game_id INTEGER;
-  worker_idx INTEGER;
 BEGIN
-  -- Get worker index (0 if not set)
-  worker_idx := COALESCE(current_setting('custom.worker_index', true), '0')::INTEGER;
-
-  -- Use worker-aware helper function to get user IDs from common fixtures
-
-  -- Calculate worker-specific game ID
-  game_id := worker_game_id(339, worker_idx);  gm_id := get_worker_user_id('TestGM', worker_idx);
-  audience1_id := get_worker_user_id('TestAudience1', worker_idx);
-  audience2_id := get_worker_user_id('TestAudience2', worker_idx);
+  -- Worker 0: Use base game ID and base usernames
+  game_id := 339;
+  gm_id := get_worker_user_id('TestGM', 0);
+  audience1_id := get_worker_user_id('TestAudience1', 0);
+  audience2_id := get_worker_user_id('TestAudience2', 0);
 
   -- ============================================
   -- Game: Co-GM Management Test Game
@@ -90,7 +85,7 @@ BEGIN
 
   -- Add a player participant for messaging/action testing
   INSERT INTO game_participants (game_id, user_id, role, status)
-  VALUES (game_id, get_worker_user_id('TestPlayer1', worker_idx), 'player', 'active');
+  VALUES (game_id, get_worker_user_id('TestPlayer1', 0), 'player', 'active');
 
   -- Create player character (for messaging targets)
   INSERT INTO characters (
@@ -104,7 +99,7 @@ BEGIN
   )
   VALUES (
     game_id,
-    get_worker_user_id('TestPlayer1', worker_idx),
+    get_worker_user_id('TestPlayer1', 0),
     'Test Player Character',
     'player_character',
     'approved',
@@ -144,14 +139,14 @@ BEGIN
   SELECT
     c.game_id,
     gp.id,
-    get_worker_user_id('TestPlayer1', worker_idx),
+    get_worker_user_id('TestPlayer1', 0),
     c.id,
     'Test action submission for co-GM testing',
     NOW() - INTERVAL '2 days'
   FROM characters c
   JOIN game_phases gp ON c.game_id = gp.game_id
-  WHERE c.game_id = (SELECT worker_game_id(339, worker_idx))
-    AND c.user_id = get_worker_user_id('TestPlayer1', worker_idx)
+  WHERE c.game_id = 339  -- Use literal game ID to avoid ambiguity
+    AND c.user_id = get_worker_user_id('TestPlayer1', 0)
     AND c.character_type = 'player_character'
     AND gp.phase_number = 1
   LIMIT 1;

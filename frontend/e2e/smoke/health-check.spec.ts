@@ -82,8 +82,12 @@ test.describe('Smoke: Application Health', () => {
     await page.waitForTimeout(1000);
 
     // Should not have critical asset loading errors
+    // Exclude expected 401 errors from auth checks (AuthContext checking if user is logged in)
     const criticalErrors = errors.filter(e =>
-      e.includes('404') || e.includes('Failed to load')
+      (e.includes('404') || e.includes('Failed to load')) &&
+      !e.includes('401') && // Exclude expected auth check failures
+      !e.includes('Unauthorized') &&
+      !e.includes('AuthContext')
     );
     expect(criticalErrors).toHaveLength(0);
   });

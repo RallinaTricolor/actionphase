@@ -4,6 +4,7 @@ import (
 	"actionphase/pkg/core"
 	services "actionphase/pkg/db/services"
 	"actionphase/pkg/observability"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -43,6 +44,7 @@ func TestDashboardAPI_GetUserDashboard_Integration(t *testing.T) {
 	// Create JWT token with username (not session_id)
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
 	_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{
+		"sub":      fmt.Sprintf("%d", user.ID),
 		"username": user.Username,
 		"exp":      time.Now().Add(24 * time.Hour).Unix(),
 	})
@@ -51,6 +53,7 @@ func TestDashboardAPI_GetUserDashboard_Integration(t *testing.T) {
 	userService := &services.UserService{DB: testDB.Pool}
 	r := chi.NewRouter()
 	r.Use(jwtauth.Verifier(tokenAuth))
+	r.Use(jwtauth.Authenticator(tokenAuth))
 	r.Use(core.RequireAuthenticationMiddleware(userService))
 
 	handler := &Handler{App: app}
@@ -153,6 +156,7 @@ func TestDashboardAPI_GetUserDashboard_WithUrgentGame(t *testing.T) {
 	// Create JWT token with username
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
 	_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{
+		"sub":      fmt.Sprintf("%d", user.ID),
 		"username": user.Username,
 		"exp":      time.Now().Add(24 * time.Hour).Unix(),
 	})
@@ -161,6 +165,7 @@ func TestDashboardAPI_GetUserDashboard_WithUrgentGame(t *testing.T) {
 	userService := &services.UserService{DB: testDB.Pool}
 	r := chi.NewRouter()
 	r.Use(jwtauth.Verifier(tokenAuth))
+	r.Use(jwtauth.Authenticator(tokenAuth))
 	r.Use(core.RequireAuthenticationMiddleware(userService))
 
 	handler := &Handler{App: app}
