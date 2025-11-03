@@ -49,7 +49,19 @@ func RateLimitMiddleware(config RateLimitConfig) func(http.Handler) http.Handler
 
 // StrictRateLimit creates a strict rate limiter for sensitive endpoints
 // (e.g., registration, password reset, login)
-func StrictRateLimit() func(http.Handler) http.Handler {
+// In development mode, uses relaxed limits to allow E2E testing
+func StrictRateLimit(isDevelopment bool) func(http.Handler) http.Handler {
+	// In development mode, use relaxed limits for E2E testing
+	if isDevelopment {
+		return RateLimitMiddleware(RateLimitConfig{
+			RequestsPerSecond: 10.0, // 10 requests per second (for E2E tests)
+			Burst:             20,   // Allow burst of 20
+			TTL:               1 * time.Minute,
+			IPLookups:         []string{"X-Real-IP", "X-Forwarded-For", "RemoteAddr"},
+		})
+	}
+
+	// Production: strict rate limiting
 	return RateLimitMiddleware(RateLimitConfig{
 		RequestsPerSecond: 0.1, // 1 request per 10 seconds
 		Burst:             3,   // Allow small burst of 3

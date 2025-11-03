@@ -11,6 +11,10 @@ import (
 )
 
 func TestIsUserGameMaster(t *testing.T) {
+	testDB := NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games")
+
 	// Create a test game
 	game := models.Game{
 		ID:       1,
@@ -93,7 +97,7 @@ func TestIsUserGameMaster(t *testing.T) {
 				req.Header.Set("X-Admin-Mode", tc.adminModeHeader)
 			}
 
-			result := IsUserGameMaster(req, tc.userID, tc.isAdmin, game)
+			result := IsUserGameMaster(req, tc.userID, tc.isAdmin, game, testDB.Pool)
 
 			if result != tc.expectedResult {
 				t.Errorf("%s: expected %v, got %v", tc.description, tc.expectedResult, result)
@@ -103,6 +107,10 @@ func TestIsUserGameMaster(t *testing.T) {
 }
 
 func TestIsUserGameMasterCtx(t *testing.T) {
+	testDB := NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games")
+
 	// Create a test game
 	game := models.Game{
 		ID:       1,
@@ -177,7 +185,7 @@ func TestIsUserGameMasterCtx(t *testing.T) {
 				ctx = WithAdminMode(ctx, true)
 			}
 
-			result := IsUserGameMasterCtx(ctx, tc.userID, tc.isAdmin, game)
+			result := IsUserGameMasterCtx(ctx, tc.userID, tc.isAdmin, game, testDB.Pool)
 
 			if result != tc.expectedResult {
 				t.Errorf("%s: expected %v, got %v", tc.description, tc.expectedResult, result)

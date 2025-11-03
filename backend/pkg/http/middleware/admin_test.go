@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -96,6 +97,7 @@ func TestRequireAdmin(t *testing.T) {
 				if tc.token != "" {
 					// If we're testing with a token, require authentication
 					r.Use(jwtauth.Authenticator(tokenAuth))
+					r.Use(core.RequireAuthenticationMiddleware(userService))
 				}
 				r.Use(RequireAdmin(app))
 				r.Get("/admin/test", testHandler)
@@ -128,10 +130,10 @@ func TestRequireAdmin_UserNotFound(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	// Create a JWT token with a username that doesn't exist in DB
+	// Create a JWT token with a user_id that doesn't exist in DB
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
 	_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{
-		"username": "nonexistent",
+		"sub": "99999", // Non-existent user ID
 	})
 
 	// Create test handler
@@ -140,10 +142,12 @@ func TestRequireAdmin_UserNotFound(t *testing.T) {
 	})
 
 	// Setup router with middleware
+	userService := &db.UserService{DB: testDB.Pool}
 	r := chi.NewRouter()
 	r.Group(func(r chi.Router) {
 		r.Use(jwtauth.Verifier(tokenAuth))
 		r.Use(jwtauth.Authenticator(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
 		r.Use(RequireAdmin(app))
 		r.Get("/admin/test", testHandler)
 	})
@@ -166,7 +170,7 @@ type JWTHandler struct {
 func (j *JWTHandler) CreateToken(user *core.User) (string, error) {
 	tokenAuth := jwtauth.New("HS256", []byte(j.App.Config.JWT.Secret), nil)
 	_, tokenString, err := tokenAuth.Encode(map[string]interface{}{
-		"username": user.Username,
+		"sub": strconv.Itoa(user.ID),
 	})
 	return tokenString, err
 }

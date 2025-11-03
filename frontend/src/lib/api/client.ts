@@ -8,6 +8,7 @@ const API_BASE_URL = ''; // Use proxy in development
 export class BaseApiClient {
   protected client: ReturnType<typeof axios.create>;
   protected refreshClient: ReturnType<typeof axios.create>;
+  private refreshPromise: Promise<void> | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -15,6 +16,7 @@ export class BaseApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true, // Required to send HTTP-only cookies with requests
     });
 
     // Separate client for refresh requests to avoid interceptor loops
@@ -23,10 +25,14 @@ export class BaseApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true, // Required to send HTTP-only cookies with requests
     });
 
     // Add request interceptor to include auth token and admin mode header
+    // Note: Authentication uses BOTH localStorage tokens AND HTTP-only cookies
+    // for backwards compatibility during migration
     this.client.interceptors.request.use((config) => {
+      // Add Authorization header if token exists in localStorage
       const token = localStorage.getItem('auth_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -55,26 +61,28 @@ export class BaseApiClient {
           originalRequest._retry = true;
 
           try {
-            const token = localStorage.getItem('auth_token');
-            if (!token) {
-              throw new Error('No auth token available');
+            // If a refresh is already in progress, wait for it instead of starting a new one
+            if (this.refreshPromise) {
+              await this.refreshPromise;
+              // Refresh completed, retry the original request
+              return this.client(originalRequest);
             }
 
-            // Use separate client to avoid interceptor loop
-            const response = await this.refreshClient.get('/api/v1/auth/refresh', {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
+            // Start a new refresh operation
+            this.refreshPromise = this.performTokenRefresh();
 
-            const newToken = response.data.Token; // Backend returns capital-T Token
-            localStorage.setItem('auth_token', newToken);
-            // Delete the old Authorization header so the request interceptor can set the new one
-            delete originalRequest.headers.Authorization;
-            // The request interceptor will read the updated token from localStorage
-            return this.client(originalRequest);
+            try {
+              await this.refreshPromise;
+              // Refresh successful, retry the original request
+              return this.client(originalRequest);
+            } finally {
+              // Clear the refresh promise so future requests can trigger a new refresh if needed
+              this.refreshPromise = null;
+            }
           } catch (refreshError) {
             console.error('Token refresh failed:', refreshError);
+
+            // Clear any legacy localStorage tokens
             localStorage.removeItem('auth_token');
 
             // Don't redirect if we're already on login page or public pages
@@ -90,6 +98,21 @@ export class BaseApiClient {
         return Promise.reject(error);
       }
     );
+  }
+
+  /**
+   * Performs the actual token refresh operation.
+   * This method is called by the response interceptor and ensures
+   * only one refresh happens at a time via the refreshPromise queue.
+   */
+  private async performTokenRefresh(): Promise<void> {
+    // Authentication is now cookie-based. The refresh endpoint will read
+    // the JWT from the HTTP-only cookie automatically.
+    // No need to send Authorization header - the browser handles cookies.
+    await this.refreshClient.get('/api/v1/auth/refresh');
+
+    // The backend sets a new HTTP-only JWT cookie in the response.
+    // We don't need to do anything with the token - the browser handles it.
   }
 
   // Utility methods for token management
@@ -108,7 +131,18 @@ export class BaseApiClient {
   }
 
   getAuthToken(): string | null {
-    return localStorage.getItem('auth_token');
+    // With cookie-based authentication, we can't directly access the HTTP-only cookie.
+    // Check localStorage for legacy token (for backwards compatibility during migration),
+    // but always return a sentinel value indicating cookie-based auth is in use.
+    // The actual authentication state should be verified by making an API call to /auth/me.
+    const legacyToken = localStorage.getItem('auth_token');
+    if (legacyToken) {
+      // Legacy token exists, return it for backwards compatibility
+      return legacyToken;
+    }
+    // No localStorage token, but cookies might be present
+    // Return null - callers should verify auth via API call instead
+    return null;
   }
 
   // Health check

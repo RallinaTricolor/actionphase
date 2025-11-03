@@ -47,7 +47,7 @@ func (h *Handler) UploadCharacterAvatar(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Get authenticated user
+	// Get authenticated user from JWT token
 	token, _, err := jwtauth.FromContext(ctx)
 	if err != nil {
 		render.Status(r, http.StatusUnauthorized)
@@ -55,23 +55,21 @@ func (h *Handler) UploadCharacterAvatar(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	username, ok := token.Get("username")
+	// Get user ID from 'sub' claim (token subject)
+	userIDStr, ok := token.Get("sub")
 	if !ok {
 		render.Status(r, http.StatusUnauthorized)
-		render.Render(w, r, &ErrorResponse{Error: "Username not found in token"})
+		render.Render(w, r, &ErrorResponse{Error: "User ID not found in token"})
 		return
 	}
 
-	// Look up user by username to get user ID
-	userService := &services.UserService{DB: h.App.DB}
-	user, err := userService.UserByUsername(username.(string))
+	// Convert user ID from string to int
+	userID, err := strconv.ParseInt(userIDStr.(string), 10, 32)
 	if err != nil {
 		render.Status(r, http.StatusUnauthorized)
-		render.Render(w, r, &ErrorResponse{Error: "User not found"})
+		render.Render(w, r, &ErrorResponse{Error: "Invalid user ID in token"})
 		return
 	}
-
-	userID := user.ID
 
 	// Check if user can edit this character
 	characterService := &services.CharacterService{DB: h.App.DB}
@@ -88,21 +86,46 @@ func (h *Handler) UploadCharacterAvatar(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Log incoming request details for debugging
+	h.App.Logger.Info("Avatar upload request received",
+		"character_id", characterID,
+		"user_id", userID,
+		"content_type", r.Header.Get("Content-Type"),
+		"content_length", r.ContentLength,
+	)
+
 	// Parse multipart form (10MB max)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		h.App.Logger.Error("Failed to parse multipart form",
+			"error", err,
+			"content_type", r.Header.Get("Content-Type"),
+			"content_length", r.ContentLength,
+		)
 		render.Status(r, http.StatusBadRequest)
 		render.Render(w, r, &ErrorResponse{Error: "Failed to parse multipart form"})
 		return
 	}
 
+	h.App.Logger.Info("Multipart form parsed successfully")
+
 	// Get file from form
 	file, header, err := r.FormFile("avatar")
 	if err != nil {
+		h.App.Logger.Error("Failed to get avatar file from form",
+			"error", err,
+			"form_fields", r.MultipartForm,
+		)
 		render.Status(r, http.StatusBadRequest)
 		render.Render(w, r, &ErrorResponse{Error: "Missing 'avatar' file in request"})
 		return
 	}
 	defer file.Close()
+
+	h.App.Logger.Info("Avatar file received",
+		"filename", header.Filename,
+		"size", header.Size,
+		"content_type", header.Header.Get("Content-Type"),
+	)
 
 	// Get content type from header
 	contentType := header.Header.Get("Content-Type")
@@ -154,7 +177,7 @@ func (h *Handler) DeleteCharacterAvatar(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Get authenticated user
+	// Get authenticated user from JWT token
 	token, _, err := jwtauth.FromContext(ctx)
 	if err != nil {
 		render.Status(r, http.StatusUnauthorized)
@@ -162,23 +185,21 @@ func (h *Handler) DeleteCharacterAvatar(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	username, ok := token.Get("username")
+	// Get user ID from 'sub' claim (token subject)
+	userIDStr, ok := token.Get("sub")
 	if !ok {
 		render.Status(r, http.StatusUnauthorized)
-		render.Render(w, r, &ErrorResponse{Error: "Username not found in token"})
+		render.Render(w, r, &ErrorResponse{Error: "User ID not found in token"})
 		return
 	}
 
-	// Look up user by username to get user ID
-	userService := &services.UserService{DB: h.App.DB}
-	user, err := userService.UserByUsername(username.(string))
+	// Convert user ID from string to int
+	userID, err := strconv.ParseInt(userIDStr.(string), 10, 32)
 	if err != nil {
 		render.Status(r, http.StatusUnauthorized)
-		render.Render(w, r, &ErrorResponse{Error: "User not found"})
+		render.Render(w, r, &ErrorResponse{Error: "Invalid user ID in token"})
 		return
 	}
-
-	userID := user.ID
 
 	// Check if user can edit this character
 	characterService := &services.CharacterService{DB: h.App.DB}

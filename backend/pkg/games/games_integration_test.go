@@ -160,7 +160,24 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 		core.AssertEqual(t, "in_progress", response.State, "Game state should be updated to in_progress")
 	})
 
-	// Step 6: Delete game
+	// Step 6: Cancel game (required before deletion)
+	t.Run("cancel_game", func(t *testing.T) {
+		stateData := UpdateGameStateRequest{
+			State: "cancelled",
+		}
+
+		payload, _ := json.Marshal(stateData)
+		req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(createdGameID))+"/state", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 200, w.Code, "Game state update to cancelled should succeed")
+	})
+
+	// Step 7: Delete game
 	t.Run("delete_game", func(t *testing.T) {
 		req := httptest.NewRequest("DELETE", "/api/v1/games/"+strconv.Itoa(int(createdGameID)), nil)
 		req.Header.Set("Authorization", "Bearer "+accessToken)
@@ -619,6 +636,7 @@ func setupGameTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 			// All routes require authentication
 			r.Group(func(r chi.Router) {
 				r.Use(jwtauth.Verifier(tokenAuth))
+				r.Use(jwtauth.Authenticator(tokenAuth))
 				r.Use(core.RequireAuthenticationMiddleware(userService))
 
 				// Game listing and viewing
@@ -673,6 +691,7 @@ func setupAuthTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 			r.Post("/login", authHandler.V1Login)
 			r.Group(func(r chi.Router) {
 				r.Use(jwtauth.Verifier(tokenAuth))
+				r.Use(jwtauth.Authenticator(tokenAuth))
 				r.Use(core.RequireAuthenticationMiddleware(userService))
 				r.Get("/refresh", authHandler.V1Refresh)
 			})

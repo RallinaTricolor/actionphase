@@ -30,3 +30,8 @@ WHERE data = $1;
 -- Invalidate all sessions for a user (used when banning)
 DELETE FROM sessions
 WHERE user_id = $1;
+
+-- name: UpdateSessionToken :exec
+UPDATE sessions
+SET data = $2
+WHERE id = $1;

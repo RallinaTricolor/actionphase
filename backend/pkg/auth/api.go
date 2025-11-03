@@ -40,7 +40,7 @@ func (rd *Response) Render(w http.ResponseWriter, r *http.Request) error {
 // This endpoint provides the user_id and other details from the database
 // rather than relying on potentially stale JWT token data
 func (h *Handler) V1Me(w http.ResponseWriter, r *http.Request) {
-	// Get username from JWT token
+	// Get user_id from JWT token (stored in "sub" claim)
 	token, _, err := jwtauth.FromContext(r.Context())
 	if err != nil {
 		h.App.Logger.Error("Failed to get token from context", "error", err)
@@ -48,18 +48,30 @@ func (h *Handler) V1Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username, ok := token.Get("username")
+	userIDStr, ok := token.Get("sub")
 	if !ok {
-		h.App.Logger.Error("Username not found in token")
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
+		h.App.Logger.Error("User ID not found in token")
+		render.Render(w, r, core.ErrUnauthorized("user id not found in token"))
 		return
 	}
 
+	// Convert user ID string to int
+	userID, err := fmt.Sscanf(userIDStr.(string), "%d", new(int))
+	if err != nil || userID == 0 {
+		h.App.Logger.Error("Invalid user ID in token", "user_id_str", userIDStr)
+		render.Render(w, r, core.ErrUnauthorized("invalid user id in token"))
+		return
+	}
+
+	// Parse user ID properly
+	var uid int
+	fmt.Sscanf(userIDStr.(string), "%d", &uid)
+
 	// Look up current user from database
 	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
+	user, err := userService.User(uid)
 	if err != nil {
-		h.App.Logger.Error("Failed to find user", "error", err, "username", username)
+		h.App.Logger.Error("Failed to find user", "error", err, "user_id", uid)
 		render.Render(w, r, core.ErrUnauthorized("user not found"))
 		return
 	}
@@ -96,7 +108,7 @@ func (rd *PreferencesResponse) Render(w http.ResponseWriter, r *http.Request) er
 
 // V1GetPreferences returns the current user's preferences
 func (h *Handler) V1GetPreferences(w http.ResponseWriter, r *http.Request) {
-	// Get username from JWT token
+	// Get user_id from JWT token (stored in "sub" claim)
 	token, _, err := jwtauth.FromContext(r.Context())
 	if err != nil {
 		h.App.Logger.Error("Failed to get token from context", "error", err)
@@ -104,18 +116,22 @@ func (h *Handler) V1GetPreferences(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username, ok := token.Get("username")
+	userIDStr, ok := token.Get("sub")
 	if !ok {
-		h.App.Logger.Error("Username not found in token")
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
+		h.App.Logger.Error("User ID not found in token")
+		render.Render(w, r, core.ErrUnauthorized("user id not found in token"))
 		return
 	}
 
+	// Parse user ID
+	var userID int
+	fmt.Sscanf(userIDStr.(string), "%d", &userID)
+
 	// Look up current user
 	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
+	user, err := userService.User(userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to find user", "error", err, "username", username)
+		h.App.Logger.Error("Failed to find user", "error", err, "user_id", userID)
 		render.Render(w, r, core.ErrUnauthorized("user not found"))
 		return
 	}
@@ -138,7 +154,7 @@ func (h *Handler) V1GetPreferences(w http.ResponseWriter, r *http.Request) {
 
 // V1UpdatePreferences updates the current user's preferences
 func (h *Handler) V1UpdatePreferences(w http.ResponseWriter, r *http.Request) {
-	// Get username from JWT token
+	// Get user_id from JWT token (stored in "sub" claim)
 	token, _, err := jwtauth.FromContext(r.Context())
 	if err != nil {
 		h.App.Logger.Error("Failed to get token from context", "error", err)
@@ -146,18 +162,22 @@ func (h *Handler) V1UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username, ok := token.Get("username")
+	userIDStr, ok := token.Get("sub")
 	if !ok {
-		h.App.Logger.Error("Username not found in token")
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
+		h.App.Logger.Error("User ID not found in token")
+		render.Render(w, r, core.ErrUnauthorized("user id not found in token"))
 		return
 	}
 
+	// Parse user ID
+	var userID int
+	fmt.Sscanf(userIDStr.(string), "%d", &userID)
+
 	// Look up current user
 	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
+	user, err := userService.User(userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to find user", "error", err, "username", username)
+		h.App.Logger.Error("Failed to find user", "error", err, "user_id", userID)
 		render.Render(w, r, core.ErrUnauthorized("user not found"))
 		return
 	}

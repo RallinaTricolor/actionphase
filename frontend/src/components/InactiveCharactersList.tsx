@@ -49,7 +49,7 @@ export function InactiveCharactersList({ gameId }: InactiveCharactersListProps) 
     return (
       <Card variant="default">
         <CardHeader>
-          <h3 className="text-lg font-semibold text-content-heading">Inactive Characters</h3>
+          <h3 className="text-lg font-semibold text-content-primary">Inactive Characters</h3>
         </CardHeader>
         <CardBody>
           <p className="text-sm text-content-secondary">
@@ -65,7 +65,7 @@ export function InactiveCharactersList({ gameId }: InactiveCharactersListProps) 
       <Card variant="default">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-content-heading">Inactive Characters</h3>
+            <h3 className="text-lg font-semibold text-content-primary">Inactive Characters</h3>
             <Badge variant="warning">{characters.length}</Badge>
           </div>
           <p className="text-sm text-content-secondary mt-1">

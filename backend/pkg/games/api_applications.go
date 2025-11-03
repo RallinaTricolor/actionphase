@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 )
 
@@ -34,29 +33,15 @@ func (h *Handler) ApplyToGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := int32(user.ID)
+	userID := int32(authUser.ID)
 	applicationService := &db.GameApplicationService{DB: h.App.Pool}
 
 	// Create the application
@@ -92,7 +77,7 @@ func (h *Handler) ApplyToGame(w http.ResponseWriter, r *http.Request) {
 		ID:        application.ID,
 		GameID:    application.GameID,
 		UserID:    application.UserID,
-		Username:  user.Username,
+		Username:  authUser.Username,
 		Role:      application.Role,
 		Status:    application.Status.String,
 		AppliedAt: application.AppliedAt.Time,
@@ -306,29 +291,15 @@ func (h *Handler) GetMyGameApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := int32(user.ID)
+	userID := int32(authUser.ID)
 
 	// Find user's application for this game
 	applicationService := &db.GameApplicationService{DB: h.App.Pool}
@@ -434,29 +405,15 @@ func (h *Handler) WithdrawGameApplication(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := int32(user.ID)
+	userID := int32(authUser.ID)
 
 	// Find user's application for this game
 	applicationService := &db.GameApplicationService{DB: h.App.Pool}

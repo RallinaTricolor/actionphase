@@ -2,7 +2,6 @@ package auth
 
 import (
 	"actionphase/pkg/core"
-	db "actionphase/pkg/db/services"
 	"actionphase/pkg/email"
 	"net/http"
 
@@ -29,6 +28,7 @@ func (h *Handler) V1VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	accountService := &AccountService{
 		DB:           h.App.Pool,
 		EmailService: emailService,
+		Logger:       &h.App.Logger,
 	}
 
 	// Verify email
@@ -59,22 +59,15 @@ func (h *Handler) V1VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 // V1ResendVerificationEmail resends verification email for authenticated user
 func (h *Handler) V1ResendVerificationEmail(w http.ResponseWriter, r *http.Request) {
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		h.App.Logger.Error("Failed to get token from context", "error", err)
-		render.Render(w, r, core.ErrUnauthorized("invalid token"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
-	userIDFloat, ok := token.Get("user_id")
-	if !ok {
-		h.App.Logger.Error("user_id not found in token")
-		render.Render(w, r, core.ErrUnauthorized("user_id not found in token"))
-		return
-	}
-
-	userID := int(userIDFloat.(float64))
+	userID := int(authUser.ID)
 
 	// Create account service
 	emailService, err := email.NewEmailServiceFromEnv()
@@ -87,6 +80,7 @@ func (h *Handler) V1ResendVerificationEmail(w http.ResponseWriter, r *http.Reque
 	accountService := &AccountService{
 		DB:           h.App.Pool,
 		EmailService: emailService,
+		Logger:       &h.App.Logger,
 	}
 
 	// Resend verification email
@@ -108,31 +102,15 @@ func (h *Handler) V1ResendVerificationEmail(w http.ResponseWriter, r *http.Reque
 
 // V1ChangeUsername handles username change requests for authenticated users
 func (h *Handler) V1ChangeUsername(w http.ResponseWriter, r *http.Request) {
-	// Get username from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		h.App.Logger.Error("Failed to get token from context", "error", err)
-		render.Render(w, r, core.ErrUnauthorized("invalid token"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
-	username, ok := token.Get("username")
-	if !ok {
-		h.App.Logger.Error("username not found in token")
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up current user from database
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to find user", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := user.ID
+	userID := int(authUser.ID)
 
 	// Parse request body
 	var req ChangeUsernameRequest
@@ -143,11 +121,12 @@ func (h *Handler) V1ChangeUsername(w http.ResponseWriter, r *http.Request) {
 
 	// Create account service
 	accountService := &AccountService{
-		DB: h.App.Pool,
+		DB:     h.App.Pool,
+		Logger: &h.App.Logger,
 	}
 
 	// Change username
-	err = accountService.ChangeUsername(r.Context(), userID, &req)
+	err := accountService.ChangeUsername(r.Context(), userID, &req)
 	if err != nil {
 		if pwdErr, ok := err.(*PasswordValidationError); ok {
 			render.Render(w, r, &core.ErrResponse{
@@ -174,31 +153,15 @@ func (h *Handler) V1ChangeUsername(w http.ResponseWriter, r *http.Request) {
 
 // V1RequestEmailChange handles email change requests for authenticated users
 func (h *Handler) V1RequestEmailChange(w http.ResponseWriter, r *http.Request) {
-	// Get username from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		h.App.Logger.Error("Failed to get token from context", "error", err)
-		render.Render(w, r, core.ErrUnauthorized("invalid token"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
-	username, ok := token.Get("username")
-	if !ok {
-		h.App.Logger.Error("username not found in token")
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up current user from database
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to find user", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := user.ID
+	userID := int(authUser.ID)
 
 	// Parse request body
 	var req ChangeEmailRequest
@@ -218,6 +181,7 @@ func (h *Handler) V1RequestEmailChange(w http.ResponseWriter, r *http.Request) {
 	accountService := &AccountService{
 		DB:           h.App.Pool,
 		EmailService: emailService,
+		Logger:       &h.App.Logger,
 	}
 
 	// Request email change
@@ -265,6 +229,7 @@ func (h *Handler) V1CompleteEmailChange(w http.ResponseWriter, r *http.Request) 
 	accountService := &AccountService{
 		DB:           h.App.Pool,
 		EmailService: emailService,
+		Logger:       &h.App.Logger,
 	}
 
 	// Complete email change
@@ -295,39 +260,24 @@ func (h *Handler) V1CompleteEmailChange(w http.ResponseWriter, r *http.Request) 
 
 // V1DeleteAccount soft deletes the authenticated user's account
 func (h *Handler) V1DeleteAccount(w http.ResponseWriter, r *http.Request) {
-	// Get username from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		h.App.Logger.Error("Failed to get token from context", "error", err)
-		render.Render(w, r, core.ErrUnauthorized("invalid token"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
-	username, ok := token.Get("username")
-	if !ok {
-		h.App.Logger.Error("username not found in token")
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up current user from database
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to find user", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := user.ID
+	userID := int(authUser.ID)
 
 	// Create account service
 	accountService := &AccountService{
-		DB: h.App.Pool,
+		DB:     h.App.Pool,
+		Logger: &h.App.Logger,
 	}
 
 	// Soft delete account
-	err = accountService.SoftDeleteAccount(r.Context(), userID)
+	err := accountService.SoftDeleteAccount(r.Context(), userID)
 	if err != nil {
 		h.App.Logger.Error("Failed to delete account", "error", err, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
@@ -345,31 +295,23 @@ func (h *Handler) V1DeleteAccount(w http.ResponseWriter, r *http.Request) {
 
 // V1RevokeAllSessions revokes all sessions except the current one
 func (h *Handler) V1RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
-	// Get username from JWT token
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
+		return
+	}
+
+	userID := int(authUser.ID)
+
+	// Get current token to identify current session
 	token, _, err := jwtauth.FromContext(r.Context())
 	if err != nil {
 		h.App.Logger.Error("Failed to get token from context", "error", err)
 		render.Render(w, r, core.ErrUnauthorized("invalid token"))
 		return
 	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		h.App.Logger.Error("username not found in token")
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up current user from database
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to find user", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := user.ID
 
 	// Get current session ID from token
 	sessionIDFloat, ok := token.Get("session_id")
@@ -383,7 +325,8 @@ func (h *Handler) V1RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
 
 	// Create account service
 	accountService := &AccountService{
-		DB: h.App.Pool,
+		DB:     h.App.Pool,
+		Logger: &h.App.Logger,
 	}
 
 	// Revoke all sessions except current

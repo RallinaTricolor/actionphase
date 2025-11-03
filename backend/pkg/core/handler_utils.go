@@ -24,41 +24,53 @@ func GetUserIDFromJWT(ctx context.Context, userService UserServiceInterface) (in
 		return 0, ErrUnauthorized("no valid token found")
 	}
 
-	username, ok := token.Get("username")
+	// Extract user_id from "sub" claim (immutable ID)
+	userIDStr, ok := token.Get("sub")
 	if !ok {
-		return 0, ErrUnauthorized("username not found in token")
+		return 0, ErrUnauthorized("user id not found in token")
 	}
 
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		return 0, ErrUnauthorized("user not found")
-	}
+	// Parse user ID string to int
+	var userID int
+	fmt.Sscanf(userIDStr.(string), "%d", &userID)
 
-	return int32(user.ID), nil
+	return int32(userID), nil
 }
 
-// GetUsernameFromJWT extracts the username from the JWT token in the context.
+// GetUsernameFromJWT extracts the username for the user identified by the JWT token.
 // Returns the username and nil on success, or empty string and an error response on failure.
+// Note: This function requires a database lookup since username is no longer stored in the token.
 //
 // Example Usage:
 //
-//	username, errResp := GetUsernameFromJWT(ctx)
+//	username, errResp := GetUsernameFromJWT(ctx, app.UserService)
 //	if errResp != nil {
 //	    render.Render(w, r, errResp)
 //	    return
 //	}
-func GetUsernameFromJWT(ctx context.Context) (string, render.Renderer) {
+func GetUsernameFromJWT(ctx context.Context, userService UserServiceInterface) (string, render.Renderer) {
 	token, _, err := jwtauth.FromContext(ctx)
 	if err != nil {
 		return "", ErrUnauthorized("no valid token found")
 	}
 
-	username, ok := token.Get("username")
+	// Extract user_id from "sub" claim
+	userIDStr, ok := token.Get("sub")
 	if !ok {
-		return "", ErrUnauthorized("username not found in token")
+		return "", ErrUnauthorized("user id not found in token")
 	}
 
-	return username.(string), nil
+	// Parse user ID
+	var userID int
+	fmt.Sscanf(userIDStr.(string), "%d", &userID)
+
+	// Look up user to get username
+	user, err := userService.User(userID)
+	if err != nil {
+		return "", ErrUnauthorized("user not found")
+	}
+
+	return user.Username, nil
 }
 
 // ValidateRequired checks if a required field is empty and returns an error if so.

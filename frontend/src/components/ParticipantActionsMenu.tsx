@@ -111,7 +111,7 @@ export function ParticipantActionsMenu({
         </Button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-bg-primary border border-border-primary z-10">
+          <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-bg-primary border border-border-primary z-10 surface-raised">
             <div className="py-1" role="menu">
               {canPromote && (
                 <button

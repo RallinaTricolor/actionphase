@@ -18,14 +18,82 @@ type UserService struct {
 // Ensure UserService implements the interface
 var _ core.UserServiceInterface = (*UserService)(nil)
 
+// GetUserByID retrieves a user by their ID (primary key lookup)
+func (s *UserService) GetUserByID(userID int) (*core.User, error) {
+	ctx := context.Background()
+	q := db.New(s.DB)
+	dbUser, err := q.GetUser(ctx, int32(userID))
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert ban fields
+	var bannedAt *time.Time
+	if dbUser.BannedAt.Valid {
+		bannedAt = &dbUser.BannedAt.Time
+	}
+
+	var bannedByUserID *int32
+	if dbUser.BannedByUserID.Valid {
+		bannedByUserID = &dbUser.BannedByUserID.Int32
+	}
+
+	return &core.User{
+		ID:             int(dbUser.ID),
+		Username:       dbUser.Username,
+		Password:       dbUser.Password,
+		Email:          dbUser.Email,
+		EmailVerified:  dbUser.EmailVerified,
+		IsAdmin:        dbUser.IsAdmin.Bool,
+		IsBanned:       dbUser.IsBanned,
+		BannedAt:       bannedAt,
+		BannedByUserID: bannedByUserID,
+		CreatedAt:      &dbUser.CreatedAt.Time,
+	}, nil
+}
+
+// User is deprecated, use GetUserByID instead
 func (s *UserService) User(id int) (*core.User, error) {
-	return nil, nil
+	return s.GetUserByID(id)
 }
 
 func (s *UserService) UserByUsername(username string) (*core.User, error) {
 	ctx := context.Background()
 	q := db.New(s.DB)
 	dbUser, err := q.GetUserByUsername(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert ban fields
+	var bannedAt *time.Time
+	if dbUser.BannedAt.Valid {
+		bannedAt = &dbUser.BannedAt.Time
+	}
+
+	var bannedByUserID *int32
+	if dbUser.BannedByUserID.Valid {
+		bannedByUserID = &dbUser.BannedByUserID.Int32
+	}
+
+	return &core.User{
+		ID:             int(dbUser.ID),
+		Username:       dbUser.Username,
+		Password:       dbUser.Password,
+		Email:          dbUser.Email,
+		EmailVerified:  dbUser.EmailVerified,
+		IsAdmin:        dbUser.IsAdmin.Bool,
+		IsBanned:       dbUser.IsBanned,
+		BannedAt:       bannedAt,
+		BannedByUserID: bannedByUserID,
+		CreatedAt:      &dbUser.CreatedAt.Time,
+	}, nil
+}
+
+func (s *UserService) UserByEmail(email string) (*core.User, error) {
+	ctx := context.Background()
+	q := db.New(s.DB)
+	dbUser, err := q.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}

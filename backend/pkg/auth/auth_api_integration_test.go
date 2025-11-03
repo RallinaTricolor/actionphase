@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -259,11 +260,11 @@ func TestAuthAPI_RefreshEndpoint(t *testing.T) {
 	fixtures := testDB.SetupFixtures(t)
 
 	// Create a valid JWT token for the test user
-	validToken, err := createTestAuthToken(fixtures.TestUser.Username)
+	validToken, err := createTestAuthToken(app, fixtures.TestUser)
 	core.AssertNoError(t, err, "Test token creation should succeed")
 
 	// Create an expired token
-	expiredToken, err := createExpiredTestAuthToken(fixtures.TestUser.Username)
+	expiredToken, err := createExpiredTestAuthToken(app, fixtures.TestUser)
 	core.AssertNoError(t, err, "Expired token creation should succeed")
 
 	testCases := []struct {
@@ -455,6 +456,7 @@ func setupAuthAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 			r.Post("/login", authHandler.V1Login)
 			r.Group(func(r chi.Router) {
 				r.Use(jwtauth.Verifier(tokenAuth))
+				r.Use(jwtauth.Authenticator(tokenAuth))
 				r.Use(core.RequireAuthenticationMiddleware(userService))
 				r.Get("/refresh", authHandler.V1Refresh)
 				r.Get("/me", authHandler.V1Me)
@@ -798,17 +800,17 @@ func TestAuthAPI_SearchUsers(t *testing.T) {
 }
 
 // createTestAuthToken creates a JWT token for testing purposes
-func createTestAuthToken(username string) (string, error) {
-	return core.CreateTestJWTToken(username)
+func createTestAuthToken(app *core.App, user *core.User) (string, error) {
+	return core.CreateTestJWTTokenForUser(app, user)
 }
 
 // createExpiredTestAuthToken creates an expired JWT token for testing purposes
-func createExpiredTestAuthToken(username string) (string, error) {
-	config := core.LoadTestConfig()
-	tokenAuth := jwtauth.New("HS256", []byte(config.JWTSecret), nil)
+func createExpiredTestAuthToken(app *core.App, user *core.User) (string, error) {
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
 
 	claims := map[string]interface{}{
-		"username": username,
+		"sub":      fmt.Sprintf("%d", user.ID), // User ID required
+		"username": user.Username,
 		"exp":      time.Now().Add(-time.Hour).Unix(), // expired 1 hour ago
 	}
 
@@ -890,7 +892,7 @@ func BenchmarkAuthAPI_TokenRefresh(b *testing.B) {
 	fixtures := testDB.SetupFixtures(b)
 
 	// Create a valid token
-	validToken, _ := createTestAuthToken(fixtures.TestUser.Username)
+	validToken, _ := createTestAuthToken(app, fixtures.TestUser)
 
 	b.ResetTimer()
 

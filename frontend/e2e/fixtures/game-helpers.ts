@@ -119,32 +119,31 @@ export async function getGameIdByTitle(page: Page, title: string): Promise<numbe
   const minId = workerIndex * 10000;
   const maxId = minId + 9999;
 
-  // Use page.evaluate to make fetch call with auth token from localStorage
-  // This ensures we're using the same context as the logged-in user
-  const result = await page.evaluate(async ({ titleToFind, minId, maxId }) => {
-    const token = localStorage.getItem('auth_token');
+  // Wait for network to be idle to ensure page has fully loaded and cookies are set
+  await page.waitForLoadState('networkidle');
 
+  // Use page.evaluate to run fetch in the browser context where cookies are available
+  // This ensures HTTP-only JWT cookies are automatically sent with the request
+  const games = await page.evaluate(async () => {
     const response = await fetch('/api/v1/games/public', {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      credentials: 'include',
     });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch games: ${response.status}`);
     }
 
-    const games = await response.json();
+    return response.json();
+  });
 
-    // Filter to only this worker's games (by ID range) and match title
-    const game = games.find((g: any) =>
-      g.title === titleToFind &&
-      g.id >= minId &&
-      g.id <= maxId
-    );
+  // Filter to only this worker's games (by ID range) and match title
+  const game = games.find((g: any) =>
+    g.title === title &&
+    g.id >= minId &&
+    g.id <= maxId
+  );
 
-    return game ? game.id : null;
-  }, { titleToFind: title, minId, maxId });
-
-  return result;
+  return game ? game.id : null;
 }
 
 /**

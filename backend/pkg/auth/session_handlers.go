@@ -31,27 +31,11 @@ func (rd *SessionsListResponse) Render(w http.ResponseWriter, r *http.Request) e
 
 // V1ListSessions returns all active sessions for the current user
 func (h *Handler) V1ListSessions(w http.ResponseWriter, r *http.Request) {
-	// Get username from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		h.App.Logger.Error("Failed to get token from context", "error", err)
-		render.Render(w, r, core.ErrUnauthorized("invalid token"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		h.App.Logger.Error("username not found in token")
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up current user from database
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to find user", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
@@ -60,9 +44,9 @@ func (h *Handler) V1ListSessions(w http.ResponseWriter, r *http.Request) {
 
 	// Get all sessions for the user
 	sessionService := &db.SessionService{DB: h.App.Pool}
-	sessions, err := sessionService.GetUserSessions(r.Context(), int32(user.ID))
+	sessions, err := sessionService.GetUserSessions(r.Context(), authUser.ID)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user sessions", "error", err, "user_id", user.ID)
+		h.App.Logger.Error("Failed to get user sessions", "error", err, "user_id", authUser.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -89,27 +73,11 @@ func (h *Handler) V1ListSessions(w http.ResponseWriter, r *http.Request) {
 
 // V1RevokeSession revokes a specific session
 func (h *Handler) V1RevokeSession(w http.ResponseWriter, r *http.Request) {
-	// Get username from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		h.App.Logger.Error("Failed to get token from context", "error", err)
-		render.Render(w, r, core.ErrUnauthorized("invalid token"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		h.App.Logger.Error("username not found in token")
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up current user from database
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to find user", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
@@ -123,9 +91,9 @@ func (h *Handler) V1RevokeSession(w http.ResponseWriter, r *http.Request) {
 
 	// Verify the session belongs to the user
 	sessionService := &db.SessionService{DB: h.App.Pool}
-	sessions, err := sessionService.GetUserSessions(r.Context(), int32(user.ID))
+	sessions, err := sessionService.GetUserSessions(r.Context(), authUser.ID)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user sessions", "error", err, "user_id", user.ID)
+		h.App.Logger.Error("Failed to get user sessions", "error", err, "user_id", authUser.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -152,7 +120,7 @@ func (h *Handler) V1RevokeSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.App.Logger.Info("Session revoked successfully", "user_id", user.ID, "session_id", sessionID)
+	h.App.Logger.Info("Session revoked successfully", "user_id", authUser.ID, "session_id", sessionID)
 
 	// Return success response
 	render.Status(r, http.StatusOK)

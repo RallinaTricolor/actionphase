@@ -190,7 +190,7 @@ just ci-test                  # Full CI test suite (lint + test + race)
 **API Testing with curl**:
 ```bash
 # ALWAYS use this pattern for authenticated API requests:
-curl -s -H "Authorization: Bearer $(cat /tmp/api-token.txt)" "http://localhost:3000/api/v1/endpoint" | jq '.'
+curl -s -H "Authorization: Bearer $(cat /tmp/api-token.txt)" "http://localhost:3000/api/v1/endpoint"
 
 # Login first to get token:
 ./scripts/api-test.sh login-player  # Token saved to /tmp/api-token.txt

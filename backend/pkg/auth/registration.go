@@ -21,6 +21,21 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate username format
+	if err := validateUsername(data.User.Username); err != nil {
+		if pwdErr, ok := err.(*PasswordValidationError); ok {
+			render.Render(w, r, &core.ErrResponse{
+				Err:            err,
+				HTTPStatusCode: http.StatusBadRequest,
+				StatusText:     "Validation Error",
+				ErrorText:      pwdErr.Error(),
+			})
+			return
+		}
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
 	// Extract IP address and user agent for bot prevention
 	ipAddress := r.RemoteAddr
 	// Strip port from IP if present

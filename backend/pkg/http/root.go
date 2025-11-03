@@ -81,9 +81,12 @@ func (h *Handler) Start() {
 
 		// Public routes (no authentication required)
 		// Apply strict rate limiting to sensitive endpoints
-		r.With(ratelimitmw.StrictRateLimit()).Post("/register", authHandler.V1Register)
-		r.With(ratelimitmw.StrictRateLimit()).Post("/login", authHandler.V1Login)
-		r.With(ratelimitmw.StrictRateLimit()).Post("/request-password-reset", authHandler.V1RequestPasswordReset)
+		// In development mode, rate limiting is relaxed for E2E testing
+		isDev := h.App.Config.IsDevelopment()
+		r.With(ratelimitmw.StrictRateLimit(isDev)).Post("/register", authHandler.V1Register)
+		r.With(ratelimitmw.StrictRateLimit(isDev)).Post("/login", authHandler.V1Login)
+		r.Post("/logout", authHandler.V1Logout) // Logout endpoint (clears JWT cookie)
+		r.With(ratelimitmw.StrictRateLimit(isDev)).Post("/request-password-reset", authHandler.V1RequestPasswordReset)
 		r.Post("/reset-password", authHandler.V1ResetPassword)
 		r.Get("/validate-reset-token", authHandler.V1ValidateResetToken)
 		r.Post("/verify-email", authHandler.V1VerifyEmail)                  // Verify email with token
@@ -93,21 +96,23 @@ func (h *Handler) Start() {
 		r.Group(func(r chi.Router) {
 			// Seek, verify and validate JWT tokens
 			tokenAuth := h.getTokenAuth()
+			userService := &db.UserService{DB: h.App.Pool}
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
 			r.Get("/refresh", authHandler.V1Refresh)
-			r.Get("/me", authHandler.V1Me)                                                                            // Get current user info
-			r.Get("/preferences", authHandler.V1GetPreferences)                                                       // Get user preferences
-			r.Put("/preferences", authHandler.V1UpdatePreferences)                                                    // Update user preferences
-			r.Get("/users/search", authHandler.V1SearchUsers)                                                         // Search for users
-			r.Post("/change-password", authHandler.V1ChangePassword)                                                  // Change password (authenticated users)
-			r.With(ratelimitmw.StrictRateLimit()).Post("/resend-verification", authHandler.V1ResendVerificationEmail) // Resend email verification with rate limiting
-			r.Post("/change-username", authHandler.V1ChangeUsername)                                                  // Change username
-			r.Post("/request-email-change", authHandler.V1RequestEmailChange)                                         // Request email change
-			r.Delete("/account", authHandler.V1DeleteAccount)                                                         // Soft delete account
-			r.Get("/sessions", authHandler.V1ListSessions)                                                            // List active sessions
-			r.Delete("/sessions/{sessionID}", authHandler.V1RevokeSession)                                            // Revoke specific session
-			r.Post("/revoke-all-sessions", authHandler.V1RevokeAllSessions)                                           // Revoke all sessions except current
+			r.Get("/me", authHandler.V1Me)                                                                                 // Get current user info
+			r.Get("/preferences", authHandler.V1GetPreferences)                                                            // Get user preferences
+			r.Put("/preferences", authHandler.V1UpdatePreferences)                                                         // Update user preferences
+			r.Get("/users/search", authHandler.V1SearchUsers)                                                              // Search for users
+			r.Post("/change-password", authHandler.V1ChangePassword)                                                       // Change password (authenticated users)
+			r.With(ratelimitmw.StrictRateLimit(isDev)).Post("/resend-verification", authHandler.V1ResendVerificationEmail) // Resend email verification with rate limiting
+			r.Post("/change-username", authHandler.V1ChangeUsername)                                                       // Change username
+			r.Post("/request-email-change", authHandler.V1RequestEmailChange)                                              // Request email change
+			r.Delete("/account", authHandler.V1DeleteAccount)                                                              // Soft delete account
+			r.Get("/sessions", authHandler.V1ListSessions)                                                                 // List active sessions
+			r.Delete("/sessions/{sessionID}", authHandler.V1RevokeSession)                                                 // Revoke specific session
+			r.Post("/revoke-all-sessions", authHandler.V1RevokeAllSessions)                                                // Revoke all sessions except current
 		})
 	})
 	apiV1Router.Mount("/auth", authRouter)

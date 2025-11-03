@@ -192,9 +192,13 @@ func (cs *CharacterService) CanUserEditCharacter(ctx context.Context, characterI
 	// Check if user is assigned to this NPC
 	if character.CharacterType == "npc" {
 		assignment, err := queries.GetNPCAssignment(ctx, characterID)
+		// Ignore "no rows" error - just means NPC is not assigned
 		if err == nil && assignment.AssignedUserID == userID {
 			return true, nil
 		}
+		// If there's an error other than "no rows", it's a real problem
+		// But we should still allow GM and owner permissions to work
+		// So we don't return the error here, just continue to return false
 	}
 
 	return false, nil

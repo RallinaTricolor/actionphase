@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export function ChangeEmailForm() {
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
   const [newEmail, setNewEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -57,11 +57,11 @@ export function ChangeEmailForm() {
   };
 
   return (
-    <Card variant="default" padding="md">
+    <Card variant="default" padding="md" data-testid="change-email-form">
       <CardHeader>
         <h3 className="text-lg font-semibold text-text-heading">Change Email</h3>
-        <p className="text-sm text-text-secondary mt-1">
-          Current email: <span className="font-medium">{user?.email}</span>
+        <p className="text-sm text-text-secondary mt-1" data-testid="current-email-display">
+          Current email: <span className="font-medium">{currentUser?.email}</span>
         </p>
       </CardHeader>
       <CardBody>
@@ -72,7 +72,7 @@ export function ChangeEmailForm() {
             </Alert>
           )}
 
-          <Alert variant="info">
+          <Alert variant="info" data-testid="email-verification-info">
             A verification email will be sent to your new email address. You must verify it to complete the change.
           </Alert>
 
@@ -84,6 +84,7 @@ export function ChangeEmailForm() {
             onChange={(e) => setNewEmail(e.target.value)}
             placeholder="Enter new email address"
             disabled={changeEmailMutation.isPending}
+            data-testid="new-email-input"
           />
 
           <Input
@@ -94,12 +95,14 @@ export function ChangeEmailForm() {
             onChange={(e) => setCurrentPassword(e.target.value)}
             placeholder="Confirm with your password"
             disabled={changeEmailMutation.isPending}
+            data-testid="email-current-password-input"
           />
 
           <Button
             type="submit"
             variant="primary"
             loading={changeEmailMutation.isPending}
+            data-testid="change-email-submit"
           >
             Send Verification Email
           </Button>

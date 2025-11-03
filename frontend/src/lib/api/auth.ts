@@ -31,6 +31,10 @@ export class AuthApi extends BaseApiClient {
     return this.client.post<AuthResponse>('/api/v1/auth/register', data);
   }
 
+  async logout() {
+    return this.client.post<void>('/api/v1/auth/logout', {});
+  }
+
   async refreshToken() {
     const token = localStorage.getItem('auth_token');
     return this.refreshClient.get<{ token: string }>('/api/v1/auth/refresh', {
@@ -83,10 +87,6 @@ export class AuthApi extends BaseApiClient {
 
   async requestEmailChange(data: { new_email: string; current_password: string }) {
     return this.client.post<{ message: string }>('/api/v1/auth/request-email-change', data);
-  }
-
-  async deleteAccount() {
-    return this.client.delete<{ message: string }>('/api/v1/auth/delete-account');
   }
 
   async revokeAllSessions() {

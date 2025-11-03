@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 )
 
@@ -75,29 +74,15 @@ func (h *Handler) ApplyAsAudience(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := int32(user.ID)
+	userID := int32(authUser.ID)
 	gameService := &db.GameService{DB: h.App.Pool}
 
 	// Create the audience application
@@ -121,7 +106,7 @@ func (h *Handler) ApplyAsAudience(w http.ResponseWriter, r *http.Request) {
 		ID:       participant.ID,
 		GameID:   participant.GameID,
 		UserID:   participant.UserID,
-		Username: user.Username,
+		Username: authUser.Username,
 		Role:     participant.Role,
 		Status:   participant.Status.String,
 		JoinedAt: participant.JoinedAt.Time,
@@ -187,25 +172,11 @@ func (h *Handler) UpdateAutoAcceptAudience(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user by username to get user ID
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
@@ -218,7 +189,7 @@ func (h *Handler) UpdateAutoAcceptAudience(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if game.GmUserID != int32(user.ID) {
+	if game.GmUserID != int32(authUser.ID) {
 		render.Render(w, r, core.ErrForbidden("only the GM can update this setting"))
 		return
 	}
@@ -271,33 +242,19 @@ func (h *Handler) ListAllPrivateConversations(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Check if user can view game (includes public archive access for completed games)
 	gameService := &db.GameService{DB: h.App.Pool}
-	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(user.ID))
+	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(authUser.ID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", user.ID)
+		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", authUser.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -339,33 +296,19 @@ func (h *Handler) GetAudienceConversationMessages(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Check if user can view game (includes public archive access for completed games)
 	gameService := &db.GameService{DB: h.App.Pool}
-	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(user.ID))
+	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(authUser.ID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", user.ID)
+		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", authUser.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -399,33 +342,19 @@ func (h *Handler) ListAllActionSubmissions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Get user ID from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		render.Render(w, r, core.ErrUnauthorized("no valid token found"))
-		return
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up user
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to get user by username", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Check if user can view game (includes public archive access for completed games)
 	gameService := &db.GameService{DB: h.App.Pool}
-	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(user.ID))
+	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(authUser.ID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", user.ID)
+		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", authUser.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}

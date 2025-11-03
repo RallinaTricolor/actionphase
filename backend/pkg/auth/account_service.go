@@ -4,6 +4,8 @@ import (
 	"actionphase/pkg/email"
 	"context"
 	"fmt"
+	"log/slog"
+	"regexp"
 	"time"
 
 	db "actionphase/pkg/db/models"
@@ -11,10 +13,44 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	MinUsernameLength = 3
+	MaxUsernameLength = 50
+)
+
+var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+// validateUsername validates username format and length
+func validateUsername(username string) error {
+	if len(username) < MinUsernameLength {
+		return &PasswordValidationError{
+			Field:  "username",
+			Reason: fmt.Sprintf("username must be at least %d characters long", MinUsernameLength),
+		}
+	}
+
+	if len(username) > MaxUsernameLength {
+		return &PasswordValidationError{
+			Field:  "username",
+			Reason: fmt.Sprintf("username must be at most %d characters long", MaxUsernameLength),
+		}
+	}
+
+	if !usernameRegex.MatchString(username) {
+		return &PasswordValidationError{
+			Field:  "username",
+			Reason: "username can only contain letters, numbers, underscores, and hyphens",
+		}
+	}
+
+	return nil
+}
+
 // AccountService handles account management operations (email verification, username/email changes)
 type AccountService struct {
 	DB           *pgxpool.Pool
 	EmailService *email.EmailService
+	Logger       *slog.Logger
 }
 
 // SendVerificationEmailRequest represents a request to send a verification email
@@ -30,12 +66,14 @@ type VerifyEmailRequest struct {
 
 // ChangeUsernameRequest represents a request to change username
 type ChangeUsernameRequest struct {
-	NewUsername string `json:"new_username"`
+	NewUsername     string `json:"new_username"`
+	CurrentPassword string `json:"current_password"`
 }
 
 // ChangeEmailRequest represents a request to change email
 type ChangeEmailRequest struct {
-	NewEmail string `json:"new_email"`
+	NewEmail        string `json:"new_email"`
+	CurrentPassword string `json:"current_password"`
 }
 
 // SendVerificationEmail sends an email verification token to the user
@@ -88,7 +126,9 @@ func (s *AccountService) SendVerificationEmail(ctx context.Context, req *SendVer
 		if err != nil {
 			// Log error but don't fail the request
 			// The token is already created, user can request a new verification email
-			fmt.Printf("Failed to send verification email: %v\n", err)
+			if s.Logger != nil {
+				s.Logger.Warn("Failed to send verification email", "error", err, "email", req.Email)
+			}
 		}
 	}
 
@@ -97,7 +137,14 @@ func (s *AccountService) SendVerificationEmail(ctx context.Context, req *SendVer
 
 // VerifyEmail verifies a user's email using a valid verification token
 func (s *AccountService) VerifyEmail(ctx context.Context, req *VerifyEmailRequest) error {
-	queries := db.New(s.DB)
+	// Start transaction
+	tx, err := s.DB.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	queries := db.New(tx)
 
 	// Get and validate token
 	verificationToken, err := queries.GetEmailVerificationToken(ctx, req.Token)
@@ -117,8 +164,16 @@ func (s *AccountService) VerifyEmail(ctx context.Context, req *VerifyEmailReques
 	// Mark token as used
 	err = queries.MarkEmailVerificationTokenUsed(ctx, verificationToken.ID)
 	if err != nil {
-		// Log but don't fail - email was already verified
-		fmt.Printf("Failed to mark verification token as used: %v\n", err)
+		return fmt.Errorf("failed to mark verification token as used: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit email verification transaction: %w", err)
+	}
+
+	if s.Logger != nil {
+		s.Logger.Info("Email verified successfully", "user_id", verificationToken.UserID)
 	}
 
 	return nil
@@ -126,27 +181,34 @@ func (s *AccountService) VerifyEmail(ctx context.Context, req *VerifyEmailReques
 
 // ChangeUsername changes a user's username (with cooldown period check)
 func (s *AccountService) ChangeUsername(ctx context.Context, userID int, req *ChangeUsernameRequest) error {
-	// Validate username
-	if len(req.NewUsername) < 3 {
+	// Validate current password is provided
+	if req.CurrentPassword == "" {
 		return &PasswordValidationError{
-			Field:  "username",
-			Reason: "username must be at least 3 characters long",
+			Field:  "current_password",
+			Reason: "Current password is required",
 		}
 	}
 
-	if len(req.NewUsername) > 50 {
-		return &PasswordValidationError{
-			Field:  "username",
-			Reason: "username must be at most 50 characters long",
-		}
+	// Validate username format and length
+	if err := validateUsername(req.NewUsername); err != nil {
+		return err
 	}
 
 	queries := db.New(s.DB)
 
-	// Get user to check cooldown period
+	// Get user to check cooldown period and verify password
 	user, err := queries.GetUser(ctx, int32(userID))
 	if err != nil {
 		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Verify current password
+	err = VerifyPassword(req.CurrentPassword, user.Password)
+	if err != nil {
+		return &PasswordValidationError{
+			Field:  "current_password",
+			Reason: "incorrect password",
+		}
 	}
 
 	// Check if username was changed recently (30-day cooldown)
@@ -185,6 +247,14 @@ func (s *AccountService) ChangeUsername(ctx context.Context, userID int, req *Ch
 
 // RequestEmailChange initiates the email change process
 func (s *AccountService) RequestEmailChange(ctx context.Context, userID int, req *ChangeEmailRequest) error {
+	// Validate current password is provided
+	if req.CurrentPassword == "" {
+		return &PasswordValidationError{
+			Field:  "current_password",
+			Reason: "Current password is required",
+		}
+	}
+
 	// Validate email format
 	if !IsValidEmail(req.NewEmail) {
 		return &PasswordValidationError{
@@ -195,8 +265,23 @@ func (s *AccountService) RequestEmailChange(ctx context.Context, userID int, req
 
 	queries := db.New(s.DB)
 
+	// Get user to verify password
+	user, err := queries.GetUser(ctx, int32(userID))
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Verify current password
+	err = VerifyPassword(req.CurrentPassword, user.Password)
+	if err != nil {
+		return &PasswordValidationError{
+			Field:  "current_password",
+			Reason: "incorrect password",
+		}
+	}
+
 	// Check if email is already taken
-	_, err := queries.GetUserByEmail(ctx, req.NewEmail)
+	_, err = queries.GetUserByEmail(ctx, req.NewEmail)
 	if err == nil {
 		// Email exists
 		return &PasswordValidationError{
@@ -225,7 +310,14 @@ func (s *AccountService) RequestEmailChange(ctx context.Context, userID int, req
 
 // CompleteEmailChange completes the email change after verification
 func (s *AccountService) CompleteEmailChange(ctx context.Context, req *VerifyEmailRequest) error {
-	queries := db.New(s.DB)
+	// Start transaction
+	tx, err := s.DB.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	queries := db.New(tx)
 
 	// Get and validate token
 	verificationToken, err := queries.GetEmailVerificationToken(ctx, req.Token)
@@ -262,8 +354,18 @@ func (s *AccountService) CompleteEmailChange(ctx context.Context, req *VerifyEma
 	// Mark token as used
 	err = queries.MarkEmailVerificationTokenUsed(ctx, verificationToken.ID)
 	if err != nil {
-		// Log but don't fail - email was already changed
-		fmt.Printf("Failed to mark verification token as used: %v\n", err)
+		return fmt.Errorf("failed to mark verification token as used: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit email change transaction: %w", err)
+	}
+
+	if s.Logger != nil {
+		s.Logger.Info("Email change completed successfully",
+			"user_id", verificationToken.UserID,
+			"new_email", verificationToken.Email)
 	}
 
 	return nil
@@ -323,7 +425,9 @@ func (s *AccountService) SoftDeleteAccount(ctx context.Context, userID int) erro
 	err = queries.DeleteUserSessions(ctx, int32(userID))
 	if err != nil {
 		// Log but don't fail - account is already marked as deleted
-		fmt.Printf("Failed to invalidate user sessions: %v\n", err)
+		if s.Logger != nil {
+			s.Logger.Warn("Failed to invalidate user sessions after account deletion", "error", err, "user_id", userID)
+		}
 	}
 
 	return nil
@@ -409,7 +513,9 @@ func (s *AccountService) RevokeAllSessions(ctx context.Context, userID int, curr
 			err = queries.DeleteSession(ctx, session.ID)
 			if err != nil {
 				// Log but don't fail - continue revoking other sessions
-				fmt.Printf("Failed to revoke session %d: %v\n", session.ID, err)
+				if s.Logger != nil {
+					s.Logger.Warn("Failed to revoke session", "error", err, "session_id", session.ID, "user_id", userID)
+				}
 			}
 		}
 	}

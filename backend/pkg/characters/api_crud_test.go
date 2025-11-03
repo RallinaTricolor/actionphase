@@ -24,6 +24,7 @@ func setupCharacterTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux
 	router.Route("/api/v1", func(r chi.Router) {
 		r.Route("/games/{gameId}", func(r chi.Router) {
 			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
 			r.Use(core.RequireAuthenticationMiddleware(userService))
 
 			handler := &Handler{App: app}
@@ -35,8 +36,8 @@ func setupCharacterTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux
 }
 
 // createTestAuthToken creates a JWT token for testing
-func createTestAuthToken(username string) (string, error) {
-	return core.CreateTestJWTToken(username)
+func createTestAuthToken(app *core.App, user *core.User) (string, error) {
+	return core.CreateTestJWTTokenForUser(app, user)
 }
 
 // TestCharacterAPI_GMCanCreatePlayerCharacters tests that GMs can create player characters for players
@@ -58,7 +59,7 @@ func TestCharacterAPI_GMCanCreatePlayerCharacters(t *testing.T) {
 	core.AssertNoError(t, err, "Adding player to game should succeed")
 
 	// Create GM token
-	gmToken, err := createTestAuthToken(fixtures.TestUser.Username)
+	gmToken, err := createTestAuthToken(app, fixtures.TestUser)
 	core.AssertNoError(t, err, "GM token creation should succeed")
 
 	testCases := []struct {
@@ -160,7 +161,7 @@ func TestCharacterAPI_PlayerCanOnlyCreateOwnCharacter(t *testing.T) {
 	core.AssertNoError(t, err, "Adding player2 to game should succeed")
 
 	// Create token for player1
-	player1Token, err := createTestAuthToken(player1.Username)
+	player1Token, err := createTestAuthToken(app, player1)
 	core.AssertNoError(t, err, "Player1 token creation should succeed")
 
 	testCases := []struct {

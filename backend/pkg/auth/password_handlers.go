@@ -2,42 +2,24 @@ package auth
 
 import (
 	"actionphase/pkg/core"
-	db "actionphase/pkg/db/services"
 	"actionphase/pkg/email"
 	"fmt"
 	"net/http"
 
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 )
 
 // ChangePasswordHandler handles password change requests for authenticated users
 func (h *Handler) V1ChangePassword(w http.ResponseWriter, r *http.Request) {
-	// Get username from JWT token
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		h.App.Logger.Error("Failed to get token from context", "error", err)
-		render.Render(w, r, core.ErrUnauthorized("invalid token"))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
-	username, ok := token.Get("username")
-	if !ok {
-		h.App.Logger.Error("username not found in token")
-		render.Render(w, r, core.ErrUnauthorized("username not found in token"))
-		return
-	}
-
-	// Look up current user from database
-	userService := &db.UserService{DB: h.App.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		h.App.Logger.Error("Failed to find user", "error", err, "username", username)
-		render.Render(w, r, core.ErrUnauthorized("user not found"))
-		return
-	}
-
-	userID := int(user.ID)
+	userID := int(authUser.ID)
 
 	// Parse request body
 	var req ChangePasswordRequest

@@ -31,36 +31,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const queryClient = useQueryClient();
   const [authError, setAuthError] = useState<Error | null>(null);
 
-  // Check if user is authenticated based on token
-  const { data: isAuthenticated, isLoading: isCheckingAuth } = useQuery({
-    queryKey: ['auth'],
-    queryFn: () => {
-      const hasToken = !!apiClient.getAuthToken();
-      console.log('[AuthContext] Checking authentication:', hasToken);
-      return hasToken;
-    },
-    initialData: () => !!apiClient.getAuthToken(),
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  });
-
-  // Fetch current user data when authenticated
+  // Check if user is authenticated by fetching current user data
+  // This works for both localStorage tokens AND HTTP-only cookies
   const {
     data: currentUser,
-    isLoading: isLoadingUser,
-    error: userError
+    isLoading: isCheckingAuth,
+    error: userError,
+    isError: hasAuthError,
   } = useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
-      console.log('[AuthContext] Fetching current user data');
-      const response = await apiClient.auth.getCurrentUser();
-      console.log('[AuthContext] Current user loaded:', response.data);
-      return response.data;
+      console.log('[AuthContext] Checking authentication via /auth/me');
+      try {
+        const response = await apiClient.auth.getCurrentUser();
+        console.log('[AuthContext] Authentication successful:', response.data);
+        return response.data;
+      } catch (error) {
+        console.log('[AuthContext] Not authenticated');
+        throw error;
+      }
     },
-    enabled: isAuthenticated === true,
+    retry: false,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: 1,
+    refetchOnWindowFocus: true,
   });
+
+  // Derive authentication state from currentUser query
+  const isAuthenticated = !hasAuthError && currentUser !== undefined;
 
   // Log user error if it occurs
   useEffect(() => {
@@ -83,8 +80,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (token) {
         apiClient.setAuthToken(token);
-        queryClient.setQueryData(['auth'], true);
-        // Invalidate user query to trigger immediate fetch
+        // Invalidate currentUser query to trigger authentication check
         queryClient.invalidateQueries({ queryKey: ['currentUser'] });
         setAuthError(null);
       }
@@ -108,8 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (token) {
         apiClient.setAuthToken(token);
-        queryClient.setQueryData(['auth'], true);
-        // Invalidate user query to trigger immediate fetch
+        // Invalidate currentUser query to trigger authentication check
         queryClient.invalidateQueries({ queryKey: ['currentUser'] });
         setAuthError(null);
       }
@@ -121,13 +116,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   });
 
   // Logout function
-  const logout = () => {
+  const logout = async () => {
     console.log('[AuthContext] Logging out');
-    apiClient.removeAuthToken();
-    queryClient.setQueryData(['auth'], false);
-    queryClient.setQueryData(['currentUser'], null);
-    queryClient.clear();
-    setAuthError(null);
+    try {
+      // Call backend to invalidate session/clear cookie
+      await apiClient.auth.logout();
+      console.log('[AuthContext] Backend logout successful');
+    } catch (error) {
+      // Log error but continue with frontend logout
+      console.error('[AuthContext] Backend logout failed:', error);
+    } finally {
+      // Always clear frontend state regardless of backend response
+      apiClient.removeAuthToken();
+      queryClient.setQueryData(['currentUser'], null);
+      queryClient.clear();
+      setAuthError(null);
+    }
   };
 
   // Combined loading state
@@ -137,7 +141,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     currentUser: currentUser || null,
     isAuthenticated: isAuthenticated || false,
     isLoading,
-    isCheckingAuth: isCheckingAuth || isLoadingUser,
+    isCheckingAuth: isCheckingAuth,
     login: async (data: LoginRequest) => {
       await loginMutation.mutateAsync(data);
     },

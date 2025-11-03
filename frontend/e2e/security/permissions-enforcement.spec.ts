@@ -342,14 +342,13 @@ test.describe('Permissions & Access Control', () => {
       const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
       // Try to make a direct API call to update game settings
-      const token = await page.evaluate(() => localStorage.getItem('auth_token'));
-
-      const response = await page.evaluate(async ({ gameId, token }) => {
+      // Auth cookie is automatically sent by browser
+      const response = await page.evaluate(async ({ gameId }) => {
         try {
           const res = await fetch(`/api/v1/games/${gameId}`, {
             method: 'PUT',
+            credentials: 'include', // Send auth cookies
             headers: {
-              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -361,7 +360,7 @@ test.describe('Permissions & Access Control', () => {
         } catch (error) {
           return { error: error.message };
         }
-      }, { gameId, token });
+      }, { gameId });
 
       // Should receive 403 Forbidden or 401 Unauthorized
       expect(response.status).toBeGreaterThanOrEqual(400);
@@ -372,14 +371,14 @@ test.describe('Permissions & Access Control', () => {
       await loginAs(page, 'PLAYER_2');
       const gameId = await getFixtureGameId(page, 'E2E_ACTION');
 
-      const token = await page.evaluate(() => localStorage.getItem('auth_token'));
-
-      const response = await page.evaluate(async ({ gameId, token }) => {
+      // Try to create a phase via direct API call
+      // Auth cookie is automatically sent by browser
+      const response = await page.evaluate(async ({ gameId }) => {
         try {
           const res = await fetch(`/api/v1/games/${gameId}/phases`, {
             method: 'POST',
+            credentials: 'include', // Send auth cookies
             headers: {
-              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -392,7 +391,7 @@ test.describe('Permissions & Access Control', () => {
         } catch (error) {
           return { error: error.message };
         }
-      }, { gameId, token });
+      }, { gameId });
 
       // Should receive 403 Forbidden
       expect(response.status).toBe(403);

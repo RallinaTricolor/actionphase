@@ -132,3 +132,19 @@ func (q *Queries) GetSessionsByUser(ctx context.Context, userID int32) ([]Sessio
 	}
 	return items, nil
 }
+
+const updateSessionToken = `-- name: UpdateSessionToken :exec
+UPDATE sessions
+SET data = $2
+WHERE id = $1
+`
+
+type UpdateSessionTokenParams struct {
+	ID   int32  `json:"id"`
+	Data string `json:"data"`
+}
+
+func (q *Queries) UpdateSessionToken(ctx context.Context, arg UpdateSessionTokenParams) error {
+	_, err := q.db.Exec(ctx, updateSessionToken, arg.ID, arg.Data)
+	return err
+}

@@ -179,11 +179,13 @@ func TestUserService_User(t *testing.T) {
 
 	service := &UserService{DB: testDB.Pool}
 
-	t.Run("stub implementation returns nil", func(t *testing.T) {
-		// This function is currently a stub that returns nil, nil
-		user, err := service.User(1)
+	t.Run("returns error for non-existent user", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		// Try to get a non-existent user
+		user, err := service.User(99999)
 		assert.Nil(t, user)
-		assert.Nil(t, err)
+		assert.Error(t, err) // Should return "no rows in result set" error
 	})
 }
 

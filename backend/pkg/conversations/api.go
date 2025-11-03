@@ -11,34 +11,12 @@ import (
 	db "actionphase/pkg/db/services"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
 )
 
 // Handler handles HTTP requests for conversations
 type Handler struct {
 	App *core.App
-}
-
-// Helper function to get user ID from JWT token
-func getUserIDFromToken(r *http.Request, app *core.App) (int32, string, error) {
-	token, _, err := jwtauth.FromContext(r.Context())
-	if err != nil {
-		return 0, "", fmt.Errorf("no valid token found")
-	}
-
-	username, ok := token.Get("username")
-	if !ok {
-		return 0, "", fmt.Errorf("username not found in token")
-	}
-
-	userService := &db.UserService{DB: app.Pool}
-	user, err := userService.UserByUsername(username.(string))
-	if err != nil {
-		return 0, "", fmt.Errorf("user not found: %w", err)
-	}
-
-	return int32(user.ID), username.(string), nil
 }
 
 // RegisterRoutes registers all conversation routes
@@ -69,12 +47,15 @@ func (r *CreateConversationRequest) Bind(req *http.Request) error {
 // CreateConversation creates a new conversation
 func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	gameIDStr := chi.URLParam(r, "gameId")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
@@ -122,12 +103,15 @@ func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 // GetUserConversations gets all conversations for the current user in a game
 func (h *Handler) GetUserConversations(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	gameIDStr := chi.URLParam(r, "gameId")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
@@ -158,12 +142,15 @@ func (h *Handler) GetUserConversations(w http.ResponseWriter, r *http.Request) {
 // GetConversation gets details about a specific conversation
 func (h *Handler) GetConversation(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	conversationIDStr := chi.URLParam(r, "conversationId")
 	conversationID, err := strconv.ParseInt(conversationIDStr, 10, 32)
@@ -215,12 +202,15 @@ func (h *Handler) GetConversation(w http.ResponseWriter, r *http.Request) {
 // GetConversationMessages gets all messages in a conversation
 func (h *Handler) GetConversationMessages(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	conversationIDStr := chi.URLParam(r, "conversationId")
 	conversationID, err := strconv.ParseInt(conversationIDStr, 10, 32)
@@ -261,12 +251,15 @@ func (r *SendMessageRequest) Bind(req *http.Request) error {
 // SendMessage sends a message in a conversation
 func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, username, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	conversationIDStr := chi.URLParam(r, "conversationId")
 	conversationID, err := strconv.ParseInt(conversationIDStr, 10, 32)
@@ -371,7 +364,7 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.App.Logger.Info("Message sent successfully", "message_id", message.ID, "conversation_id", conversationID, "author", username)
+	h.App.Logger.Info("Message sent successfully", "message_id", message.ID, "conversation_id", conversationID, "author", authUser.Username)
 
 	render.Status(r, http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
@@ -381,12 +374,15 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 // MarkAsRead marks all messages in a conversation as read
 func (h *Handler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	conversationIDStr := chi.URLParam(r, "conversationId")
 	conversationID, err := strconv.ParseInt(conversationIDStr, 10, 32)
@@ -420,12 +416,15 @@ func (r *AddParticipantRequest) Bind(req *http.Request) error {
 // AddParticipant adds a character to an existing conversation
 func (h *Handler) AddParticipant(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	conversationIDStr := chi.URLParam(r, "conversationId")
 	conversationID, err := strconv.ParseInt(conversationIDStr, 10, 32)
@@ -474,12 +473,15 @@ func (h *Handler) AddParticipant(w http.ResponseWriter, r *http.Request) {
 // DeleteMessage deletes a private message (soft delete)
 func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userID, _, err := getUserIDFromToken(r, h.App)
-	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
-		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
+
+	userID := int32(authUser.ID)
 
 	conversationIDStr := chi.URLParam(r, "conversationId")
 	conversationID, err := strconv.ParseInt(conversationIDStr, 10, 32)
