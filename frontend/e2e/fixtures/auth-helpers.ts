@@ -1,5 +1,6 @@
 import { Page, expect, test } from '@playwright/test';
 import { TEST_USERS, TestUser } from './test-users';
+import { LoginPage } from '../pages/LoginPage';
 
 /**
  * Authentication Helper Functions for E2E Tests
@@ -36,32 +37,26 @@ export async function loginAs(page: Page, userKey: keyof typeof TEST_USERS) {
   const workerUsername = getWorkerSpecificUsername(user.username);
   const workerEmail = workerUsername.toLowerCase().replace('test', 'test_') + '@example.com';
 
-  // Navigate to login page first
-  await page.goto('/login');
+  // Check if already logged in by checking for JWT cookie - if so, logout first
+  const isLoggedIn = await isAuthenticated(page);
+  if (isLoggedIn) {
+    await logout(page);
+    // After logout, we're already on /login page, so no need to navigate again
+  }
 
-  // Clear any existing auth state
-  await page.evaluate(() => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('refresh_token');
-  });
+  // Use LoginPage POM for login
+  const loginPage = new LoginPage(page);
 
-  // Refresh to ensure clean state
-  await page.goto('/login');
+  // Always navigate to login page to ensure clean state
+  // Even if we're already at /login (e.g., after logout), this ensures
+  // the auth state has stabilized and network is idle before attempting login
+  await loginPage.goto();
 
-  // Fill in login form with worker-specific credentials
-  await page.fill('input[name="username"]', workerUsername);
-  await page.fill('input[name="password"]', user.password);
+  await loginPage.login(workerUsername, user.password);
 
-  // Submit form
-  await page.click('button[type="submit"]');
-
-  // Wait for redirect to dashboard (successful login)
-  await page.waitForURL('/dashboard', { timeout: 10000 });
-
-  // Extract token from localStorage for API calls if needed
-  const token = await page.evaluate(() => localStorage.getItem('auth_token'));
-
-  return { user, token };
+  // Authentication is now handled via HTTP-only cookies
+  // No need to extract token from localStorage
+  return { user, token: null };
 }
 
 /**
@@ -77,15 +72,9 @@ export async function login(
   password: string,
   expectSuccess: boolean = true
 ) {
-  await page.goto('/login');
-
-  await page.fill('input[name="username"]', username);
-  await page.fill('input[name="password"]', password);
-  await page.click('button[type="submit"]');
-
-  if (expectSuccess) {
-    await page.waitForURL('/dashboard', { timeout: 10000 });
-  }
+  const loginPage = new LoginPage(page);
+  await loginPage.goto();
+  await loginPage.login(username, password, expectSuccess);
 }
 
 /**
@@ -102,41 +91,68 @@ export async function logout(page: Page) {
   // Wait a moment for the dropdown animation
   await page.waitForTimeout(200);
 
-  // Click the logout button (now visible in the dropdown)
-  await page.locator('button:has-text("Logout")').click();
+  // Use Promise.all to handle the logout click and response concurrently
+  // This ensures we catch the response even if navigation happens immediately
+  await Promise.all([
+    // Wait for the logout API call
+    page.waitForResponse(
+      response => response.url().includes('/api/v1/auth/logout') && response.status() === 200
+    ),
+    // Click the logout button (triggers the API call and navigation)
+    page.locator('button:has-text("Logout")').click()
+  ]);
 
   // Wait for redirect to login page
   await page.waitForURL('/login', { timeout: 5000 });
-}
 
-/**
- * Check if user is authenticated by verifying presence of auth UI elements
- * @param page - Playwright page object
- */
-export async function isAuthenticated(page: Page): Promise<boolean> {
-  try {
-    // Check for authenticated navbar (Dashboard or Games link)
-    await page.waitForSelector('nav a[href="/dashboard"]', { timeout: 2000, state: 'attached' });
-    return true;
-  } catch {
-    return false;
+  // The backend logout endpoint has now cleared the JWT cookie
+  // For good measure in Playwright tests, also manually clear the JWT cookie
+  // to ensure a clean state for the next login
+  const cookies = await page.context().cookies();
+  const jwtCookie = cookies.find(cookie => cookie.name === 'jwt');
+  if (jwtCookie) {
+    await page.context().clearCookies({ name: 'jwt' });
   }
 }
 
 /**
+ * Check if user is authenticated by verifying presence of JWT cookie
+ * @param page - Playwright page object
+ */
+export async function isAuthenticated(page: Page): Promise<boolean> {
+  // Check for the JWT cookie (HTTP-only cookie named 'jwt')
+  const cookies = await page.context().cookies();
+  const jwtCookie = cookies.find(cookie => cookie.name === 'jwt');
+
+  // User is authenticated if JWT cookie exists and is not expired
+  if (jwtCookie) {
+    // Check if cookie is expired (expires is in seconds since epoch)
+    const now = Date.now() / 1000; // Convert to seconds
+    if (jwtCookie.expires === -1 || jwtCookie.expires > now) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Get the current user's token from localStorage
+ * @deprecated Authentication now uses HTTP-only cookies. This function always returns null.
  * @param page - Playwright page object
  */
 export async function getAuthToken(page: Page): Promise<string | null> {
-  return await page.evaluate(() => localStorage.getItem('auth_token'));
+  // Authentication is now cookie-based, no token in localStorage
+  return null;
 }
 
 /**
  * Clear authentication state (logout without UI interaction)
+ * @deprecated Use the logout() function instead. HTTP-only cookies cannot be cleared from JavaScript.
  * @param page - Playwright page object
  */
 export async function clearAuth(page: Page) {
-  await page.evaluate(() => {
-    localStorage.removeItem('auth_token');
-  });
+  // HTTP-only cookies cannot be cleared from JavaScript
+  // Use the logout() function instead for proper logout
+  // This function is kept for backwards compatibility but does nothing
 }
