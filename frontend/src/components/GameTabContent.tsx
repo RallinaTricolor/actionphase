@@ -210,8 +210,8 @@ export function GameTabContent({
     );
   }
 
-  // Common Room Tab (In Progress - common_room phases)
-  if (activeTab === 'common-room' && game.state === 'in_progress') {
+  // Common Room Tab (In Progress & Completed - common_room phases)
+  if (activeTab === 'common-room' && (game.state === 'in_progress' || game.state === 'completed')) {
     // Show loading only on initial load (when we have no data yet)
     if (isLoadingPhase && !currentPhaseData) {
       return (
@@ -287,13 +287,13 @@ export function GameTabContent({
     );
   }
 
-  // History Tab (In Progress)
-  if (activeTab === 'history' && game.state === 'in_progress') {
+  // History Tab (In Progress & Completed)
+  if (activeTab === 'history' && (game.state === 'in_progress' || game.state === 'completed')) {
     return <HistoryView gameId={gameId} currentPhaseId={currentPhaseData?.phase?.id} isGM={isGM} />;
   }
 
-  // Private Messages Tab (In Progress)
-  if (activeTab === 'messages' && game.state === 'in_progress') {
+  // Private Messages Tab (In Progress & Completed)
+  if (activeTab === 'messages' && (game.state === 'in_progress' || game.state === 'completed')) {
     return (
       <div className="h-[600px]">
         <PrivateMessages
@@ -305,13 +305,13 @@ export function GameTabContent({
     );
   }
 
-  // Handouts Tab (In Progress)
-  if (activeTab === 'handouts' && game.state === 'in_progress') {
+  // Handouts Tab (In Progress & Completed)
+  if (activeTab === 'handouts' && (game.state === 'in_progress' || game.state === 'completed')) {
     return <HandoutsList gameId={gameId} isGM={isGM} />;
   }
 
-  // Audience Tab (In Progress - GM and audience members only)
-  if (activeTab === 'audience' && game.state === 'in_progress') {
+  // Audience Tab (In Progress & Completed)
+  if (activeTab === 'audience' && (game.state === 'in_progress' || game.state === 'completed')) {
     return <AudienceView gameId={gameId} />;
   }
 

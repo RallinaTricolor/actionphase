@@ -6,6 +6,7 @@ import { CommonRoom } from './CommonRoom';
 import { Button, Alert } from './ui';
 import { useUserActionResults, useGameActionResults } from '../hooks/useActionResults';
 import { MarkdownPreview } from './MarkdownPreview';
+import type { ActionWithDetails } from '../types/actions';
 
 interface HistoryViewProps {
   gameId: number;
@@ -15,6 +16,7 @@ interface HistoryViewProps {
 
 export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryViewProps) {
   const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'submissions' | 'results'>('submissions');
 
   const { data: phasesData, isLoading } = useQuery({
     queryKey: ['gamePhases', gameId],
@@ -32,6 +34,15 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
   const actionResults = isGM ? gmActionResults : userActionResults;
   const isLoadingResults = isGM ? isLoadingGMResults : isLoadingUserResults;
   const resultsError = isGM ? gmResultsError : userResultsError;
+
+  // Fetch action submissions for the game
+  const { data: actionSubmissionsData, isLoading: isLoadingSubmissions, error: submissionsError } = useQuery<ActionWithDetails[]>({
+    queryKey: ['gameActions', gameId],
+    queryFn: () => apiClient.phases.getGameActions(gameId).then(res => res.data),
+    enabled: !!gameId,
+  });
+
+  const actionSubmissions = actionSubmissionsData || [];
 
   // Get the selected phase details
   const selectedPhase = phases.find(p => p.id === selectedPhaseId);
@@ -77,55 +88,135 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
         ) : (
           <div className="surface-base rounded-lg shadow-md p-6">
             <h3 className="text-xl font-bold text-content-primary mb-4">
-              {selectedPhase.title || getActionPhaseLabel(selectedPhase)} - Action Results
+              {selectedPhase.title || getActionPhaseLabel(selectedPhase)}
             </h3>
-            {isLoadingResults ? (
-              <div className="p-4">
-                <p className="text-content-secondary">Loading action results...</p>
-              </div>
-            ) : resultsError ? (
-              <Alert variant="danger">Error loading action results</Alert>
-            ) : (() => {
-              // Filter results for this specific phase
-              const phaseResults = (actionResults || []).filter(r => r.phase_id === selectedPhaseId);
 
-              if (phaseResults.length === 0) {
-                return (
-                  <div className="p-4 surface-raised border border-theme-default rounded">
-                    <p className="text-content-secondary">No action results for this phase.</p>
+            {/* Tab Navigation */}
+            <div className="flex border-b border-border-primary mb-6">
+              <button
+                onClick={() => setActiveTab('submissions')}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'submissions'
+                    ? 'text-interactive-primary border-b-2 border-interactive-primary'
+                    : 'text-content-secondary hover:text-content-primary'
+                }`}
+              >
+                Submissions
+              </button>
+              <button
+                onClick={() => setActiveTab('results')}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'results'
+                    ? 'text-interactive-primary border-b-2 border-interactive-primary'
+                    : 'text-content-secondary hover:text-content-primary'
+                }`}
+              >
+                Results
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'submissions' ? (
+              // Submissions Tab
+              <>
+                {isLoadingSubmissions ? (
+                  <div className="p-4">
+                    <p className="text-content-secondary">Loading action submissions...</p>
                   </div>
-                );
-              }
+                ) : submissionsError ? (
+                  <Alert variant="danger">Error loading action submissions</Alert>
+                ) : (() => {
+                  // Filter submissions for this specific phase
+                  const phaseSubmissions = actionSubmissions.filter(s => s.phase_id === selectedPhaseId);
 
-              return (
-                <div className="space-y-4">
-                  {phaseResults.map((result) => (
-                    <div key={result.id} className="p-4 surface-raised border border-theme-default rounded shadow-sm">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          {!result.is_published && (
-                            <span className="inline-block px-2 py-1 text-xs bg-warning-subtle text-warning rounded mr-2">
-                              Draft (Unpublished)
-                            </span>
-                          )}
-                          {result.sent_at && (
-                            <span className="text-xs text-content-tertiary">
-                              {new Date(result.sent_at).toLocaleString()}
-                            </span>
+                  if (phaseSubmissions.length === 0) {
+                    return (
+                      <div className="p-4 surface-raised border border-theme-default rounded">
+                        <p className="text-content-secondary">No action submissions for this phase.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {phaseSubmissions.map((submission) => (
+                        <div key={submission.id} className="p-4 surface-raised border border-theme-default rounded shadow-sm">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <span className="font-semibold text-content-primary">{submission.character_name}</span>
+                              {submission.is_draft && (
+                                <span className="inline-block px-2 py-1 text-xs bg-warning-subtle text-warning rounded ml-2">
+                                  Draft
+                                </span>
+                              )}
+                            </div>
+                            {submission.submitted_at && (
+                              <span className="text-xs text-content-tertiary">
+                                {new Date(submission.submitted_at).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="prose dark:prose-invert max-w-none">
+                            <MarkdownPreview content={submission.content} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </>
+            ) : (
+              // Results Tab
+              <>
+                {isLoadingResults ? (
+                  <div className="p-4">
+                    <p className="text-content-secondary">Loading action results...</p>
+                  </div>
+                ) : resultsError ? (
+                  <Alert variant="danger">Error loading action results</Alert>
+                ) : (() => {
+                  // Filter results for this specific phase
+                  const phaseResults = (actionResults || []).filter(r => r.phase_id === selectedPhaseId);
+
+                  if (phaseResults.length === 0) {
+                    return (
+                      <div className="p-4 surface-raised border border-theme-default rounded">
+                        <p className="text-content-secondary">No action results for this phase.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {phaseResults.map((result) => (
+                        <div key={result.id} className="p-4 surface-raised border border-theme-default rounded shadow-sm">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              {!result.is_published && (
+                                <span className="inline-block px-2 py-1 text-xs bg-warning-subtle text-warning rounded mr-2">
+                                  Draft (Unpublished)
+                                </span>
+                              )}
+                              {result.sent_at && (
+                                <span className="text-xs text-content-tertiary">
+                                  {new Date(result.sent_at).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="prose dark:prose-invert max-w-none">
+                            <MarkdownPreview content={result.content} />
+                          </div>
+                          {result.gm_username && (
+                            <p className="text-xs text-content-tertiary mt-3">From: {result.gm_username}</p>
                           )}
                         </div>
-                      </div>
-                      <div className="prose dark:prose-invert max-w-none">
-                        <MarkdownPreview content={result.content} />
-                      </div>
-                      {result.gm_username && (
-                        <p className="text-xs text-content-tertiary mt-3">From: {result.gm_username}</p>
-                      )}
+                      ))}
                     </div>
-                  ))}
-                </div>
-              );
-            })()}
+                  );
+                })()}
+              </>
+            )}
           </div>
         )}
       </div>
