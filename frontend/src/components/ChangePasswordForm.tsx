@@ -68,7 +68,7 @@ export function ChangePasswordForm() {
       });
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || 'Failed to change password. Please try again.';
-      showToast(errorMessage, 'error');
+      showToast(errorMessage, 'danger');
     } finally {
       setIsLoading(false);
     }
