@@ -125,6 +125,15 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 		}
 	}
 
+	// When a game is completed, disable anonymous mode so players can see who played which character
+	if newState == core.GameStateCompleted {
+		if err := queries.DisableAnonymousMode(ctx, gameID); err != nil {
+			// Log the error but don't fail the state change
+			// The game is already completed at this point
+			fmt.Printf("Warning: failed to disable anonymous mode for completed game %d: %v\n", gameID, err)
+		}
+	}
+
 	return &game, nil
 }
 

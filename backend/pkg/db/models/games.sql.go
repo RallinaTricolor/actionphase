@@ -258,6 +258,17 @@ func (q *Queries) DeleteGame(ctx context.Context, id int32) error {
 	return err
 }
 
+const disableAnonymousMode = `-- name: DisableAnonymousMode :exec
+UPDATE games
+SET is_anonymous = false, updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) DisableAnonymousMode(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, disableAnonymousMode, id)
+	return err
+}
+
 const getActiveParticipants = `-- name: GetActiveParticipants :many
 SELECT gp.id, gp.game_id, gp.user_id, gp.role, gp.status, gp.joined_at, gp.removed_at, gp.removed_by_user_id, u.username, u.email
 FROM game_participants gp

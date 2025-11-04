@@ -370,6 +370,14 @@ export function CharactersList({
   );
 }
 
+// Helper to determine if user can see player names in anonymous mode
+// GMs, co-GMs, and audience can always see player names
+// Only players have names hidden from them in anonymous mode
+const canSeePlayerNames = (isAnonymous: boolean, userRole: string): boolean => {
+  if (!isAnonymous) return true;
+  return userRole === 'gm' || userRole === 'co_gm' || userRole === 'audience';
+};
+
 interface CharacterCardProps {
   character: Character;
   isOwner: boolean;
@@ -416,7 +424,7 @@ function CharacterCard({
               <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
                 <span data-testid="character-status-badge">{character.status}</span>
               </Badge>
-              {isOwner && (!isAnonymous || userRole === 'gm') && (
+              {isOwner && canSeePlayerNames(isAnonymous || false, userRole) && (
                 <Badge variant="secondary" size="sm">
                   Your Character
                 </Badge>
@@ -427,15 +435,15 @@ function CharacterCard({
 
         {/* Character Info */}
         <div className="text-sm text-content-primary space-y-1">
-          {(!isAnonymous || userRole === 'gm') && (
+          {canSeePlayerNames(isAnonymous || false, userRole) && (
             <div>
               Type: <span className="capitalize">{character.character_type.replace('_', ' ')}</span>
             </div>
           )}
-          {character.character_type === 'npc' && character.assigned_username && (!isAnonymous || userRole === 'gm') && (
+          {character.character_type === 'npc' && character.assigned_username && canSeePlayerNames(isAnonymous || false, userRole) && (
             <div>Assigned to: {character.assigned_username}</div>
           )}
-          {character.character_type === 'player_character' && character.username && (!isAnonymous || userRole === 'gm') && (
+          {character.character_type === 'player_character' && character.username && canSeePlayerNames(isAnonymous || false, userRole) && (
             <div>Player: {character.username}</div>
           )}
         </div>
@@ -498,8 +506,8 @@ function CharacterCard({
               <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
                 <span data-testid="character-status-badge">{character.status}</span>
               </Badge>
-              {/* Only show ownership badge if not anonymous or if GM */}
-              {isOwner && (!isAnonymous || userRole === 'gm') && (
+              {/* Show ownership badge if not anonymous mode OR if user can see player names (GM/co-GM/audience) */}
+              {isOwner && canSeePlayerNames(isAnonymous || false, userRole) && (
                 <Badge variant="secondary" size="sm">
                   Your Character
                 </Badge>
@@ -507,18 +515,18 @@ function CharacterCard({
             </div>
 
             <div className="text-sm text-content-primary space-y-1">
-              {/* Only show character type if not anonymous or if GM */}
-              {(!isAnonymous || userRole === 'gm') && (
+              {/* Show character type if not anonymous mode OR if user can see player names (GM/co-GM/audience) */}
+              {canSeePlayerNames(isAnonymous || false, userRole) && (
                 <div>
                   Type: <span className="capitalize">{character.character_type.replace('_', ' ')}</span>
                 </div>
               )}
               {/* For NPCs, show assignment info */}
-              {character.character_type === 'npc' && character.assigned_username && (!isAnonymous || userRole === 'gm') && (
+              {character.character_type === 'npc' && character.assigned_username && canSeePlayerNames(isAnonymous || false, userRole) && (
                 <div>Assigned to: {character.assigned_username}</div>
               )}
-              {/* For player characters, show player name if not anonymous or if GM */}
-              {character.character_type === 'player_character' && character.username && (!isAnonymous || userRole === 'gm') && (
+              {/* For player characters, show player name if not anonymous mode OR if user can see player names (GM/co-GM/audience) */}
+              {character.character_type === 'player_character' && character.username && canSeePlayerNames(isAnonymous || false, userRole) && (
                 <div>Player: {character.username}</div>
               )}
             </div>

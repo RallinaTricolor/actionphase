@@ -3,7 +3,6 @@
 - Actually set up production before Claude expires (S3 bucket, Emails, Captcha, SSL cert, DB + backups, etc.)
 - User profiles
   - Games & characters played
-- Check notification behavior with Co-GM
 - AWS MFA
 - Completing a game needs to disable anonymous mode
 - USER AND API DOCS

@@ -210,11 +210,33 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get authenticated user to check if they're the GM
+	// Get authenticated user to check role (GM, co-GM, audience, or player)
 	authUser := core.GetAuthenticatedUser(r.Context())
 	var isGM bool
+	var userRole string
 	if authUser != nil {
 		isGM = core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool)
+		if isGM {
+			userRole = "gm"
+		} else {
+			// Check if user is a participant and get their role
+			participants, err := gameService.GetGameParticipants(r.Context(), int32(gameID))
+			if err != nil {
+				h.App.Logger.Error("Failed to get game participants", "error", err, "game_id", gameID)
+				// Don't fail the request, just assume regular player
+				userRole = "player"
+			} else {
+				for _, p := range participants {
+					if p.UserID == authUser.ID {
+						userRole = p.Role
+						break
+					}
+				}
+				if userRole == "" {
+					userRole = "player" // Default for authenticated users not in participants list
+				}
+			}
+		}
 	}
 
 	characterService := &services.CharacterService{DB: h.App.Pool}
@@ -242,6 +264,16 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 		filteredCharacters = append(filteredCharacters, char)
 	}
 
+	// Helper function to determine if user can see player names in anonymous mode
+	// GMs, co-GMs, and audience can see player names even in anonymous mode
+	// Only regular players have player names hidden from them
+	canSeePlayerNames := func(isAnonymous bool, role string) bool {
+		if !isAnonymous {
+			return true
+		}
+		return role == "gm" || role == "co_gm" || role == "audience"
+	}
+
 	// Convert to response format
 	// Initialize as empty slice to ensure JSON encodes as [] not null
 	response := make([]map[string]interface{}, 0)
@@ -256,20 +288,25 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 			"updated_at":     char.UpdatedAt.Time,
 		}
 
-		if char.UserID.Valid {
-			charData["user_id"] = char.UserID.Int32
+		// Only include player information if user is allowed to see it in anonymous mode
+		if canSeePlayerNames(game.IsAnonymous, userRole) {
+			if char.UserID.Valid {
+				charData["user_id"] = char.UserID.Int32
+			}
+			if char.OwnerUsername.Valid {
+				charData["username"] = char.OwnerUsername.String
+			}
+			if char.AssignedUserID.Valid {
+				charData["assigned_user_id"] = char.AssignedUserID.Int32
+			}
+			if char.AssignedUsername.Valid {
+				charData["assigned_username"] = char.AssignedUsername.String
+			}
 		}
-		if char.OwnerUsername.Valid {
-			charData["username"] = char.OwnerUsername.String
-		}
+
+		// Avatar is always visible regardless of anonymous mode
 		if char.AvatarUrl.Valid {
 			charData["avatar_url"] = char.AvatarUrl.String
-		}
-		if char.AssignedUserID.Valid {
-			charData["assigned_user_id"] = char.AssignedUserID.Int32
-		}
-		if char.AssignedUsername.Valid {
-			charData["assigned_username"] = char.AssignedUsername.String
 		}
 
 		response = append(response, charData)
