@@ -5,3 +5,6 @@
   - Games & characters played
 - AWS MFA
 - USER AND API DOCS
+- Published results and:
+  - Player didn't get a notification
+  - History view for the phase had an error on the "Submission" tab

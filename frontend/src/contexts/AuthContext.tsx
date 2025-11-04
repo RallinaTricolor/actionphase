@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { LoginRequest, RegisterRequest, User } from '../types/auth';
@@ -16,6 +16,7 @@ interface AuthContextValue {
   login: (data: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
+  clearError: () => void;
 
   // Error state
   error: Error | null;
@@ -137,6 +138,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Combined loading state
   const isLoading = loginMutation.isPending || registerMutation.isPending;
 
+  // Function to clear auth errors - memoized to prevent infinite loops
+  const clearError = useCallback(() => {
+    setAuthError(null);
+    loginMutation.reset();
+    registerMutation.reset();
+  }, [loginMutation, registerMutation]);
+
   const value: AuthContextValue = {
     currentUser: currentUser || null,
     isAuthenticated: isAuthenticated || false,
@@ -149,6 +157,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await registerMutation.mutateAsync(data);
     },
     logout,
+    clearError,
     error: authError || loginMutation.error || registerMutation.error,
   };
 

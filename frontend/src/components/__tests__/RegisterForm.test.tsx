@@ -246,6 +246,46 @@ describe('RegisterForm', () => {
   });
 
   describe('Error Handling', () => {
+    it('does not show stale errors on initial render', () => {
+      // This test ensures that cached errors from AuthContext don't appear
+      // when the component first mounts (before any submission)
+      renderWithProviders(<RegisterForm />);
+
+      // Error message should NOT be visible on initial render
+      expect(screen.queryByTestId('error-message')).not.toBeInTheDocument();
+      expect(screen.queryByText(/registration failed/i)).not.toBeInTheDocument();
+    });
+
+    it('only shows errors after form submission', async () => {
+      const user = userEvent.setup();
+
+      server.use(
+        http.post('/api/v1/auth/register', () => {
+          return HttpResponse.json(
+            { message: 'Username already taken' },
+            { status: 400 }
+          );
+        })
+      );
+
+      renderWithProviders(<RegisterForm />);
+
+      // Error should NOT be visible before submission
+      expect(screen.queryByTestId('error-message')).not.toBeInTheDocument();
+
+      await user.type(screen.getByLabelText(/username/i), 'taken');
+      await user.type(screen.getByLabelText(/email/i), 'taken@example.com');
+      await user.type(screen.getByLabelText(/password/i), 'password123');
+
+      await user.click(screen.getByRole('button', { name: /^register$/i }));
+
+      // Error should appear AFTER submission
+      await waitFor(() => {
+        expect(screen.getByTestId('error-message')).toBeInTheDocument();
+        expect(screen.getByText(/username already taken/i)).toBeInTheDocument();
+      });
+    });
+
     it('displays error message when registration fails', async () => {
       const user = userEvent.setup();
 
