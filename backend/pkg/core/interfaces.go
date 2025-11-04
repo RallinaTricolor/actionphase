@@ -517,8 +517,8 @@ type MessageServiceInterface interface {
 	// GetPostComments retrieves direct child comments for a post or comment
 	GetPostComments(ctx context.Context, parentID int32) ([]MessageWithDetails, error)
 
-	// UpdateComment updates the content of an existing comment
-	UpdateComment(ctx context.Context, commentID int32, content string) (*models.Message, error)
+	// UpdateComment updates the content and optionally the character of an existing comment
+	UpdateComment(ctx context.Context, commentID int32, content string, newCharacterID *int32) (*models.Message, error)
 
 	// DeleteComment soft-deletes a comment (preserves thread structure)
 	// deleterID: the user performing the deletion (could be author, GM, or admin)

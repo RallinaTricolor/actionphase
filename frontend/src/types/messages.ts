@@ -41,6 +41,7 @@ export interface CreateCommentRequest {
 
 export interface UpdateCommentRequest {
   content: string;
+  character_id?: number;
 }
 
 export interface GetPostsParams {

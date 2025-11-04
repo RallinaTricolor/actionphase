@@ -29,7 +29,7 @@ interface ThreadedCommentProps {
 }
 
 export function ThreadedComment({
-  comment,
+  comment: initialComment,
   gameId,
   postId,
   characters,
@@ -44,6 +44,8 @@ export function ThreadedComment({
   readOnly = false
 }: ThreadedCommentProps) {
   const { showSuccess: _showSuccess, showError } = useToast();
+  // Use local state to track the current comment data (for immediate UI updates)
+  const [comment, setComment] = useState<Message>(initialComment);
   const [replies, setReplies] = useState<Message[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [showReplies, setShowReplies] = useState(true); // Start expanded
@@ -54,6 +56,7 @@ export function ThreadedComment({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
+  const [selectedEditCharacterId, setSelectedEditCharacterId] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isMountedRef = useRef(true);
   const hasLoadedRef = useRef(false);
@@ -65,6 +68,11 @@ export function ThreadedComment({
   const isAuthor = currentUserId === comment.author_id;
   const hasReplies = (comment.reply_count || 0) > 0;
   const isUnread = unreadCommentIDs.includes(comment.id);
+
+  // Update local comment state when prop changes (from cache invalidation)
+  useEffect(() => {
+    setComment(initialComment);
+  }, [initialComment]);
   // On mobile, show "Continue thread" button earlier (depth 3) to save space
   // On desktop, use the normal maxDepth (depth 5)
   const mobileMaxDepth = 3;
@@ -162,6 +170,7 @@ export function ThreadedComment({
 
   const handleEdit = () => {
     setEditContent(comment.content);
+    setSelectedEditCharacterId(comment.character_id);
     setIsEditing(true);
   };
 
@@ -171,18 +180,23 @@ export function ThreadedComment({
   };
 
   const handleSaveEdit = async () => {
-    if (!editContent.trim() || editContent === comment.content) {
+    if (!editContent.trim() || (editContent === comment.content && selectedEditCharacterId === comment.character_id)) {
       setIsEditing(false);
       return;
     }
 
     try {
-      await updateCommentMutation.mutateAsync({
+      const updatedComment = await updateCommentMutation.mutateAsync({
         gameId,
         postId, // Use the root post ID passed as prop
         commentId: comment.id,
-        data: { content: editContent.trim() }
+        data: {
+          content: editContent.trim(),
+          ...(selectedEditCharacterId !== comment.character_id && { character_id: selectedEditCharacterId })
+        }
       });
+      // Update local state immediately with the response from the server
+      setComment(updatedComment);
       setIsEditing(false);
     } catch (err) {
       console.error('Failed to update comment:', err);
@@ -353,6 +367,20 @@ export function ThreadedComment({
           </div>
         ) : isEditing ? (
           <div className="mb-3">
+            {controllableCharacters.length > 1 && (
+              <Select
+                value={selectedEditCharacterId || ''}
+                onChange={(e) => setSelectedEditCharacterId(Number(e.target.value))}
+                className="mb-2"
+                disabled={updateCommentMutation.isPending}
+              >
+                {controllableCharacters.map((char) => (
+                  <option key={char.id} value={char.id}>
+                    Edit as {char.name}
+                  </option>
+                ))}
+              </Select>
+            )}
             <CommentEditor
               value={editContent}
               onChange={setEditContent}
