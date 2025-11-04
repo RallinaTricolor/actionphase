@@ -9,12 +9,14 @@ DECLARE
   p2_id INTEGER;
   p3_id INTEGER;
   p4_id INTEGER;
+  audience_id INTEGER;
+  audience1_id INTEGER;
   game1_id INTEGER;
   game2_id INTEGER;
   game3_id INTEGER;
-  game4_id INTEGER;
   game5_id INTEGER;
   game6_id INTEGER;
+  game9_id INTEGER;
   char1_id INTEGER;
   char2_id INTEGER;
   npc1_id INTEGER;
@@ -26,14 +28,16 @@ BEGIN
   SELECT id INTO p2_id FROM users WHERE email = 'test_player2@example.com';
   SELECT id INTO p3_id FROM users WHERE email = 'test_player3@example.com';
   SELECT id INTO p4_id FROM users WHERE email = 'test_player4@example.com';
+  SELECT id INTO audience_id FROM users WHERE email = 'test_audience@example.com';
+  SELECT id INTO audience1_id FROM users WHERE email = 'test_audience1@example.com';
 
   -- Get game IDs
   SELECT id INTO game1_id FROM games WHERE title = 'Shadows Over Innsmouth';
   SELECT id INTO game2_id FROM games WHERE title = 'The Heist at Goldstone Bank';
   SELECT id INTO game3_id FROM games WHERE title = 'Starfall Station';
-  SELECT id INTO game4_id FROM games WHERE title = 'Court of Shadows';
   SELECT id INTO game5_id FROM games WHERE title = 'The Dragon of Mount Krag';
   SELECT id INTO game6_id FROM games WHERE title = 'Chronicles of Westmarch';
+  SELECT id INTO game9_id FROM games WHERE title = 'COMPLETED: Tales of the Arcane';
 
   -- ============================================
   -- GAME #1: Shadows Over Innsmouth
@@ -50,7 +54,8 @@ BEGIN
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
     (game1_id, gm_id, 'Captain Obed Marsh', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW()),
-    (game1_id, gm_id, 'The Fishmonger', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW());
+    (game1_id, gm_id, 'The Fishmonger', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW()),
+    (game1_id, audience1_id, 'Local Informant', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW());  -- Co-GM's NPC
 
   -- ============================================
   -- GAME #2: The Heist
@@ -98,19 +103,6 @@ BEGIN
     (game3_id, gm_id, 'The Alien Entity', 'npc', 'approved', NOW() - INTERVAL '12 days', NOW());
 
   -- ============================================
-  -- GAME #4: Court of Shadows
-  -- ============================================
-
-  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
-  VALUES
-    (game4_id, p1_id, 'Lord Ravenna', 'player_character', 'approved', NOW() - INTERVAL '19 days', NOW()),
-    (game4_id, p2_id, 'Countess Nyx', 'player_character', 'approved', NOW() - INTERVAL '19 days', NOW()),
-    (game4_id, p3_id, 'Baron Ash', 'player_character', 'approved', NOW() - INTERVAL '19 days', NOW()),
-    (game4_id, p4_id, 'Lady Morgana', 'player_character', 'approved', NOW() - INTERVAL '18 days', NOW()),
-    (game4_id, gm_id, 'Prince Valdric', 'npc', 'approved', NOW() - INTERVAL '18 days', NOW()),
-    (game4_id, gm_id, 'The Archbishop', 'npc', 'approved', NOW() - INTERVAL '18 days', NOW());
-
-  -- ============================================
   -- GAME #5: Dragon of Mount Krag
   -- ============================================
 
@@ -133,6 +125,23 @@ BEGIN
     (game6_id, p4_id, 'Bronwyn Stormcaller', 'player_character', 'approved', NOW() - INTERVAL '55 days', NOW()),
     (game6_id, gm_id, 'The Dark Lord', 'npc', 'approved', NOW() - INTERVAL '50 days', NOW()),
     (game6_id, gm_id, 'Merchant Guild Master', 'npc', 'approved', NOW() - INTERVAL '50 days', NOW());
+
+  -- ============================================
+  -- GAME #9: COMPLETED - Tales of the Arcane
+  -- ============================================
+
+  -- Player Characters
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES
+    (game9_id, p1_id, 'Lyra Nightwhisper', 'player_character', 'approved', NOW() - INTERVAL '90 days', NOW()),
+    (game9_id, p2_id, 'Theron Brightblade', 'player_character', 'approved', NOW() - INTERVAL '90 days', NOW()),
+    (game9_id, p3_id, 'Mira Stormweaver', 'player_character', 'approved', NOW() - INTERVAL '89 days', NOW());
+
+  -- GM NPCs
+  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
+  VALUES
+    (game9_id, gm_id, 'Archmagus Valdane', 'npc', 'approved', NOW() - INTERVAL '85 days', NOW()),
+    (game9_id, gm_id, 'The Shadow Council', 'npc', 'approved', NOW() - INTERVAL '85 days', NOW());
 
 END $$;
 

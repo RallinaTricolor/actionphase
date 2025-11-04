@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"actionphase/pkg/core"
+	gamesvc "actionphase/pkg/db/services"
 	actionsvc "actionphase/pkg/db/services/actions"
 	phasesvc "actionphase/pkg/db/services/phases"
 
@@ -156,7 +157,10 @@ func (h *Handler) GetUserActionResults(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// GetGameActionResults retrieves all action results for a game (GM only)
+// GetGameActionResults retrieves all action results for a game
+// - GM: Always allowed
+// - Completed games: All participants can view (public archive)
+// - In-progress games: GM only
 func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 	gameIDStr := chi.URLParam(r, "gameId")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
@@ -173,7 +177,7 @@ func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check permissions - must be GM
+	// Check permissions - must be GM OR game must be completed
 	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(authUser.ID))
 	if err != nil {
@@ -182,9 +186,22 @@ func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If not GM, check if game is completed (public archive)
 	if !canManage {
-		render.Render(w, r, core.ErrForbidden("only the GM can view all action results"))
-		return
+		// Get game to check state
+		gameService := &gamesvc.GameService{DB: h.App.Pool}
+		game, err := gameService.GetGame(r.Context(), int32(gameID))
+		if err != nil {
+			h.App.Logger.Error("Failed to get game", "error", err)
+			render.Render(w, r, core.ErrInternalError(err))
+			return
+		}
+
+		// Only completed games are publicly viewable
+		if game.State.String != "completed" {
+			render.Render(w, r, core.ErrForbidden("only the GM can view action results for non-completed games"))
+			return
+		}
 	}
 
 	// TODO: Migrate GetGameResults to actions package

@@ -10,14 +10,18 @@ DECLARE
   p1_id INTEGER;
   p2_id INTEGER;
   p3_id INTEGER;
+  audience_id INTEGER;
 
   -- Game IDs
   game1_id INTEGER;  -- Shadows Over Innsmouth (active common room)
   game5_id INTEGER;  -- The Dragon of Mount Krag (active common room)
+  game9_id INTEGER;  -- COMPLETED: Tales of the Arcane (epilogue)
 
   -- Phase IDs
   game1_phase_id INTEGER;
   game5_phase_id INTEGER;
+  game9_phase1_id INTEGER;  -- First common room
+  game9_phase9_id INTEGER;  -- Final phase (Conclusion)
 
   -- Character IDs
   game1_p1_char_id INTEGER;
@@ -30,10 +34,17 @@ DECLARE
   game5_p3_char_id INTEGER;
   game5_gm_char_id INTEGER;
 
+  game9_p1_char_id INTEGER;
+  game9_p2_char_id INTEGER;
+  game9_p3_char_id INTEGER;
+  game9_gm_char_id INTEGER;
+
   -- Message IDs for threading
   post1_id INTEGER;
   post2_id INTEGER;
   post3_id INTEGER;
+  post4_id INTEGER;
+  post5_id INTEGER;
 
 BEGIN
   -- Get user IDs
@@ -41,14 +52,20 @@ BEGIN
   SELECT id INTO p1_id FROM users WHERE email = 'test_player1@example.com';
   SELECT id INTO p2_id FROM users WHERE email = 'test_player2@example.com';
   SELECT id INTO p3_id FROM users WHERE email = 'test_player3@example.com';
+  SELECT id INTO audience_id FROM users WHERE email = 'test_audience@example.com';
 
   -- Get game IDs
   SELECT id INTO game1_id FROM games WHERE title = 'Shadows Over Innsmouth';
   SELECT id INTO game5_id FROM games WHERE title = 'The Dragon of Mount Krag';
+  SELECT id INTO game9_id FROM games WHERE title = 'COMPLETED: Tales of the Arcane';
 
   -- Get active phase IDs
   SELECT id INTO game1_phase_id FROM game_phases WHERE game_id = game1_id AND is_active = true LIMIT 1;
   SELECT id INTO game5_phase_id FROM game_phases WHERE game_id = game5_id AND is_active = true LIMIT 1;
+
+  -- Get Game #9 phase IDs
+  SELECT id INTO game9_phase1_id FROM game_phases WHERE game_id = game9_id AND phase_number = 1;
+  SELECT id INTO game9_phase9_id FROM game_phases WHERE game_id = game9_id AND phase_number = 9;
 
   -- Get character IDs for Game 1
   SELECT id INTO game1_p1_char_id FROM characters WHERE game_id = game1_id AND user_id = p1_id LIMIT 1;
@@ -61,6 +78,12 @@ BEGIN
   SELECT id INTO game5_p2_char_id FROM characters WHERE game_id = game5_id AND user_id = p2_id LIMIT 1;
   SELECT id INTO game5_p3_char_id FROM characters WHERE game_id = game5_id AND user_id = p3_id LIMIT 1;
   SELECT id INTO game5_gm_char_id FROM characters WHERE game_id = game5_id AND character_type = 'npc' LIMIT 1;
+
+  -- Get character IDs for Game 9
+  SELECT id INTO game9_p1_char_id FROM characters WHERE game_id = game9_id AND user_id = p1_id LIMIT 1;
+  SELECT id INTO game9_p2_char_id FROM characters WHERE game_id = game9_id AND user_id = p2_id LIMIT 1;
+  SELECT id INTO game9_p3_char_id FROM characters WHERE game_id = game9_id AND user_id = p3_id LIMIT 1;
+  SELECT id INTO game9_gm_char_id FROM characters WHERE game_id = game9_id AND character_type = 'npc' LIMIT 1;
 
   -- ============================================
   -- GAME #1: Shadows Over Innsmouth
@@ -212,8 +235,119 @@ BEGIN
     NOW() - INTERVAL '5 hours 15 minutes'
   );
 
-  RAISE NOTICE 'Created demo content: % posts/comments in 2 games',
-    (SELECT COUNT(*) FROM messages WHERE message_type IN ('post', 'comment') AND game_id IN (game1_id, game5_id));
+  -- ============================================
+  -- GAME #9: COMPLETED - Tales of the Arcane
+  -- Epilogue Phase - Completed Campaign History
+  -- ============================================
+
+  -- First Common Room Post (from Phase 1 - campaign start)
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, content, message_type, created_at, edited_at)
+  VALUES (
+    game9_id,
+    game9_phase1_id,
+    gm_id,
+    game9_gm_char_id,
+    E'## Welcome to Tales of the Arcane!\n\nWelcome, brave adventurers! You''ve all answered the call to investigate the Shadow Council, a mysterious organization that has been manipulating events across the realm for decades.\n\nYour characters have been brought together by a mutual contact - the enigmatic information broker known only as "The Raven." They''ve provided you with a starting lead: Archmagus Valdane, one of the Council''s most powerful members, is conducting a ritual at his fortress in the Shadowpeak Mountains.\n\nThe ritual''s purpose is unknown, but The Raven believes it threatens the entire realm.\n\n**Let''s start with introductions!** Tell us:\n1. Why did your character join this quest?\n2. What''s their connection to The Raven?\n3. What are they most afraid of discovering about the Shadow Council?',
+    'post',
+    NOW() - INTERVAL '90 days',
+    NOW() - INTERVAL '90 days'
+  ) RETURNING id INTO post4_id;
+
+  -- Player introductions from Phase 1
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, edited_at)
+  VALUES (
+    game9_id,
+    game9_phase1_id,
+    p1_id,
+    game9_p1_char_id,
+    post4_id,
+    E'**Lyra Nightwhisper** - Shadow Mage\n\nI joined because the Shadow Council enslaved my mentor, turning her into one of their bound servants. I watched them break her will and twist her magic into something dark and terrible.\n\nThe Raven found me when I was planning a suicide mission to free her. They offered me something better: allies and a real chance at revenge.\n\nWhat I''m afraid of? That my mentor is too far gone to save. That I''ll have to be the one to end her suffering.',
+    'comment',
+    NOW() - INTERVAL '89 days 23 hours',
+    NOW() - INTERVAL '89 days 23 hours'
+  );
+
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, edited_at)
+  VALUES (
+    game9_id,
+    game9_phase1_id,
+    p2_id,
+    game9_p2_char_id,
+    post4_id,
+    E'**Theron Brightblade** - Holy Paladin\n\nI took an oath to protect the innocent. The Shadow Council has hurt countless people - destroyed families, toppled kingdoms, spread darkness wherever they go. This is what I was trained for.\n\nThe Raven approached me after I failed to stop one of their plots. They showed me that brute force alone won''t defeat the Council. I need strategy, allies, and information.\n\nI''m afraid we''re not the first group to try this. I''m afraid we won''t be the last to fail.',
+    'comment',
+    NOW() - INTERVAL '89 days 22 hours',
+    NOW() - INTERVAL '89 days 22 hours'
+  );
+
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, edited_at)
+  VALUES (
+    game9_id,
+    game9_phase1_id,
+    p3_id,
+    game9_p3_char_id,
+    post4_id,
+    E'**Mira Stormweaver** - Elemental Sorcerer\n\nMy village was destroyed by a "natural disaster" - a magical storm that appeared from nowhere and razed everything to the ground. I survived because I was training in the mountains.\n\nYears later, The Raven showed me evidence that it wasn''t natural at all. It was the Shadow Council testing a new weather-control ritual. My home was their experiment.\n\nI''m afraid that if we dig too deep, we''ll find that the Council is even more powerful than we thought. That this quest is impossible.',
+    'comment',
+    NOW() - INTERVAL '89 days 21 hours',
+    NOW() - INTERVAL '89 days 21 hours'
+  );
+
+  -- GM Epilogue Post
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, content, message_type, created_at, edited_at)
+  VALUES (
+    game9_id,
+    game9_phase9_id,
+    gm_id,
+    game9_gm_char_id,
+    E'# Campaign Epilogue: Tales of the Arcane\n\n## The Aftermath\n\nAs the dust settles and Valdane''s fortress crumbles to ruins, you stand together - battered, exhausted, but victorious. The Archmagus is dead, his ritual broken, and the shadow entities he enslaved are free.\n\nBut Valdane''s final words echo in your minds: *"The Council... is more than... one mage..."*\n\n## What Happens Next\n\n**The Immediate Fallout:**\n- News of Valdane''s death spreads quickly through magical channels\n- The Shadow Council, previously shrouded in mystery, begins to fracture\n- Several rival factions emerge, each claiming to be the Council''s true successor\n- The realm enters a period of unstable peace\n\n**Your Rewards:**\n- The gratitude of countless innocents who will never know your names\n- Valdane''s research notes (which hint at even darker plots)\n- The respect and trust of each other\n- The knowledge that you made a real difference\n\n**The Unfinished Business:**\n- Lyra''s mentor was not found among Valdane''s prisoners\n- Theron learned of a Council stronghold in the northern wastes\n- Mira discovered evidence linking the Council to ancient draconic powers\n\n## Campaign Statistics\n- **Sessions Completed:** 8 phases over 3 months\n- **Major Enemies Defeated:** 1 Archmagus, 12 dark mages, 47 cultists\n- **Allies Rescued:** 18 shadow entities freed from bondage\n- **Character Growth:** Each of you evolved from scared survivors to confident heroes\n\n**Thank you for this incredible journey. The Tales of the Arcane may have ended, but your characters'' stories continue...**\n\n*Feel free to share your favorite moments, reflections, or what you think your characters do next!*',
+    'post',
+    NOW() - INTERVAL '57 days',
+    NOW() - INTERVAL '57 days'
+  ) RETURNING id INTO post5_id;
+
+  -- Player Reflections on Epilogue
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, edited_at)
+  VALUES (
+    game9_id,
+    game9_phase9_id,
+    p1_id,
+    game9_p1_char_id,
+    post5_id,
+    E'What an incredible campaign! Lyra started as someone driven purely by revenge, but she learned that freedom and hope matter more than vengeance.\n\nThat moment when the shadow dragon chose to help us instead of fleeing - that was the culmination of her entire character arc. She proved that shadow magic doesn''t have to be evil.\n\n**What''s next for Lyra:** She''ll continue searching for her mentor, but now she has allies and purpose beyond revenge. She''s also committed to helping other shadow-touched individuals who''ve been hunted or feared.\n\nFavorite moment: When I merged with the shadow dragon. That was pure cinematic gold.',
+    'comment',
+    NOW() - INTERVAL '56 days 23 hours',
+    NOW() - INTERVAL '56 days 23 hours'
+  );
+
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, edited_at)
+  VALUES (
+    game9_id,
+    game9_phase9_id,
+    p2_id,
+    game9_p2_char_id,
+    post5_id,
+    E'Theron learned that righteousness without wisdom is just recklessness. I loved how his character had to adapt - working with a shadow mage, using strategy instead of just charging in, trusting in his companions.\n\nDawnbreaker earned its name in that final battle. The image of the blade burning with holy fire as the fortress fell will stay with me forever.\n\n**What''s next:** Theron will investigate that northern stronghold, but he''ll do it smart this time. He''s learned that heroism means knowing when to ask for help.\n\nFavorite moment: "For the fallen!" - that battle cry became Theron''s signature, and it always pumped me up when writing his actions.',
+    'comment',
+    NOW() - INTERVAL '56 days 22 hours',
+    NOW() - INTERVAL '56 days 22 hours'
+  );
+
+  INSERT INTO messages (game_id, phase_id, author_id, character_id, parent_id, content, message_type, created_at, edited_at)
+  VALUES (
+    game9_id,
+    game9_phase9_id,
+    p3_id,
+    game9_p3_char_id,
+    post5_id,
+    E'Mira was all about control vs. chaos. She wanted to control the elements, control her emotions, control every situation. The campaign taught her that sometimes you have to embrace the storm instead of trying to contain it.\n\nThat scene where she channeled the corrupted ley lines despite the risk - that was her accepting that power requires sacrifice.\n\n**What''s next:** She''ll research the draconic connection. If the Shadow Council has ancient dragon allies, the realm needs to know. Plus, she''s intrigued by the possibility of learning storm magic from actual dragons.\n\nFavorite moment: Calling down the storm in the finale. The entire fortress lit up with lightning, thunder shaking the mountains - chef''s kiss. Perfect ending for a storm mage.',
+    'comment',
+    NOW() - INTERVAL '56 days 21 hours',
+    NOW() - INTERVAL '56 days 21 hours'
+  );
+
+  RAISE NOTICE 'Created demo content: % posts/comments in 3 games',
+    (SELECT COUNT(*) FROM messages WHERE message_type IN ('post', 'comment') AND game_id IN (game1_id, game5_id, game9_id));
 
 END $$;
 
