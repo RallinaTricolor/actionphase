@@ -20,15 +20,18 @@ type BotPreventionService struct {
 	DB              *pgxpool.Pool
 	HCaptchaSecret  string
 	HCaptchaEnabled bool
+	IsDevelopment   bool
 }
 
 // NewBotPreventionService creates a new bot prevention service
 func NewBotPreventionService(pool *pgxpool.Pool) *BotPreventionService {
 	hcaptchaSecret := os.Getenv("HCAPTCHA_SECRET")
+	environment := os.Getenv("ENVIRONMENT")
 	return &BotPreventionService{
 		DB:              pool,
 		HCaptchaSecret:  hcaptchaSecret,
 		HCaptchaEnabled: hcaptchaSecret != "",
+		IsDevelopment:   environment == "development",
 	}
 }
 
@@ -110,62 +113,66 @@ func (s *BotPreventionService) CheckRegistrationAttempt(ctx context.Context, req
 		result.CaptchaPassed = true // No captcha configured
 	}
 
-	// 3. Rate limiting by IP (max 5 attempts per hour)
-	oneHourAgo := time.Now().Add(-1 * time.Hour)
-	ipAttempts, err := queries.CountRecentRegistrationAttemptsByIP(ctx, db.CountRecentRegistrationAttemptsByIPParams{
-		IpAddress: req.IPAddress,
-		CreatedAt: pgtype.Timestamptz{Time: oneHourAgo, Valid: true},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to count IP attempts: %w", err)
-	}
-
-	if ipAttempts >= 5 {
-		result.Allowed = false
-		result.BlockedReason = "rate_limit_ip"
-
-		// Log the attempt
-		_, _ = queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
-			Email:             req.Email,
-			Username:          req.Username,
-			IpAddress:         req.IPAddress,
-			UserAgent:         pgtype.Text{String: req.UserAgent, Valid: req.UserAgent != ""},
-			CaptchaPassed:     result.CaptchaPassed,
-			HoneypotTriggered: false,
-			BlockedReason:     pgtype.Text{String: "rate_limit_ip", Valid: true},
-			Successful:        false,
+	// 3. Rate limiting by IP (max 5 attempts per hour) - Skip in development
+	if !s.IsDevelopment {
+		oneHourAgo := time.Now().Add(-1 * time.Hour)
+		ipAttempts, err := queries.CountRecentRegistrationAttemptsByIP(ctx, db.CountRecentRegistrationAttemptsByIPParams{
+			IpAddress: req.IPAddress,
+			CreatedAt: pgtype.Timestamptz{Time: oneHourAgo, Valid: true},
 		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to count IP attempts: %w", err)
+		}
 
-		return result, nil
+		if ipAttempts >= 5 {
+			result.Allowed = false
+			result.BlockedReason = "rate_limit_ip"
+
+			// Log the attempt
+			_, _ = queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
+				Email:             req.Email,
+				Username:          req.Username,
+				IpAddress:         req.IPAddress,
+				UserAgent:         pgtype.Text{String: req.UserAgent, Valid: req.UserAgent != ""},
+				CaptchaPassed:     result.CaptchaPassed,
+				HoneypotTriggered: false,
+				BlockedReason:     pgtype.Text{String: "rate_limit_ip", Valid: true},
+				Successful:        false,
+			})
+
+			return result, nil
+		}
 	}
 
-	// 4. Rate limiting by email (max 3 attempts per day)
-	oneDayAgo := time.Now().Add(-24 * time.Hour)
-	emailAttempts, err := queries.CountRecentRegistrationAttemptsByEmail(ctx, db.CountRecentRegistrationAttemptsByEmailParams{
-		Email:     req.Email,
-		CreatedAt: pgtype.Timestamptz{Time: oneDayAgo, Valid: true},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to count email attempts: %w", err)
-	}
-
-	if emailAttempts >= 3 {
-		result.Allowed = false
-		result.BlockedReason = "rate_limit_email"
-
-		// Log the attempt
-		_, _ = queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
-			Email:             req.Email,
-			Username:          req.Username,
-			IpAddress:         req.IPAddress,
-			UserAgent:         pgtype.Text{String: req.UserAgent, Valid: req.UserAgent != ""},
-			CaptchaPassed:     result.CaptchaPassed,
-			HoneypotTriggered: false,
-			BlockedReason:     pgtype.Text{String: "rate_limit_email", Valid: true},
-			Successful:        false,
+	// 4. Rate limiting by email (max 3 attempts per day) - Skip in development
+	if !s.IsDevelopment {
+		oneDayAgo := time.Now().Add(-24 * time.Hour)
+		emailAttempts, err := queries.CountRecentRegistrationAttemptsByEmail(ctx, db.CountRecentRegistrationAttemptsByEmailParams{
+			Email:     req.Email,
+			CreatedAt: pgtype.Timestamptz{Time: oneDayAgo, Valid: true},
 		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to count email attempts: %w", err)
+		}
 
-		return result, nil
+		if emailAttempts >= 3 {
+			result.Allowed = false
+			result.BlockedReason = "rate_limit_email"
+
+			// Log the attempt
+			_, _ = queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
+				Email:             req.Email,
+				Username:          req.Username,
+				IpAddress:         req.IPAddress,
+				UserAgent:         pgtype.Text{String: req.UserAgent, Valid: req.UserAgent != ""},
+				CaptchaPassed:     result.CaptchaPassed,
+				HoneypotTriggered: false,
+				BlockedReason:     pgtype.Text{String: "rate_limit_email", Valid: true},
+				Successful:        false,
+			})
+
+			return result, nil
+		}
 	}
 
 	// 5. Disposable email detection

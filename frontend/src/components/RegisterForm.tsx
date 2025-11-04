@@ -9,21 +9,25 @@ interface RegisterFormProps {
 }
 
 export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
+  const captchaEnabled = import.meta.env.VITE_HCAPTCHA_ENABLED === 'true';
+
   const [formData, setFormData] = useState<RegisterRequest>({
     username: '',
     email: '',
     password: '',
-    hcaptcha_token: '',
+    hcaptcha_token: captchaEnabled ? '' : 'dev-bypass-token',
     honeypot_value: '',
   });
   const { register, isLoading, error } = useAuth();
   const [captchaError, setCaptchaError] = useState<string>('');
+  const [submittedOnce, setSubmittedOnce] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmittedOnce(true);
 
-    // Validate captcha token (only required if HCAPTCHA_ENABLED is true in production)
-    if (!formData.hcaptcha_token) {
+    // Validate captcha token (only required if HCAPTCHA_ENABLED is true)
+    if (captchaEnabled && !formData.hcaptcha_token) {
       setCaptchaError('Please complete the CAPTCHA verification');
       return;
     }
@@ -119,19 +123,23 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           />
         </div>
 
-        {/* hCaptcha widget */}
-        <HCaptchaWrapper
-          onVerify={handleCaptchaVerify}
-          onExpire={handleCaptchaExpire}
-        />
+        {/* hCaptcha widget - only in production */}
+        {captchaEnabled && (
+          <>
+            <HCaptchaWrapper
+              onVerify={handleCaptchaVerify}
+              onExpire={handleCaptchaExpire}
+            />
 
-        {captchaError && (
-          <Alert variant="warning">
-            {captchaError}
-          </Alert>
+            {captchaError && (
+              <Alert variant="warning">
+                {captchaError}
+              </Alert>
+            )}
+          </>
         )}
 
-        {error && (
+        {error && submittedOnce && (
           <Alert variant="danger" data-testid="error-message">
             {errorMessage}
           </Alert>

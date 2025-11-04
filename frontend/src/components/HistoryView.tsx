@@ -4,7 +4,6 @@ import { apiClient } from '../lib/api';
 import { getActionPhaseLabel, getActionPhaseColor } from '../types/phases';
 import { CommonRoom } from './CommonRoom';
 import { Button, Alert } from './ui';
-import { useUserActionResults, useGameActionResults } from '../hooks/useActionResults';
 import { MarkdownPreview } from './MarkdownPreview';
 import type { ActionWithDetails } from '../types/phases';
 
@@ -26,23 +25,41 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
 
   const phases = phasesData || [];
 
-  // Fetch action results (use appropriate hook based on isGM)
-  const { data: userActionResults, isLoading: isLoadingUserResults, error: userResultsError } = useUserActionResults(gameId);
-  const { data: gmActionResults, isLoading: isLoadingGMResults, error: gmResultsError } = useGameActionResults(gameId);
+  // Fetch action results (use appropriate endpoint based on isGM)
+  const { data: userActionResults, isLoading: isLoadingUserResults, error: userResultsError } = useQuery({
+    queryKey: ['actionResults', 'user', gameId],
+    queryFn: () => apiClient.phases.getUserResults(gameId).then(res => res.data),
+    enabled: !!gameId && !isGM,
+  });
+
+  const { data: gmActionResults, isLoading: isLoadingGMResults, error: gmResultsError } = useQuery({
+    queryKey: ['actionResults', 'game', gameId],
+    queryFn: () => apiClient.phases.getGameResults(gameId).then(res => res.data),
+    enabled: !!gameId && isGM,
+  });
 
   // Use GM results if GM, otherwise user results
   const actionResults = isGM ? gmActionResults : userActionResults;
   const isLoadingResults = isGM ? isLoadingGMResults : isLoadingUserResults;
   const resultsError = isGM ? gmResultsError : userResultsError;
 
-  // Fetch action submissions for the game
-  const { data: actionSubmissionsData, isLoading: isLoadingSubmissions, error: submissionsError } = useQuery<ActionWithDetails[]>({
-    queryKey: ['gameActions', gameId],
-    queryFn: () => apiClient.phases.getGameActions(gameId).then(res => res.data),
-    enabled: !!gameId,
+  // Fetch action submissions for the game (use appropriate endpoint based on isGM)
+  const { data: userActionSubmissionsData, isLoading: isLoadingUserSubmissions, error: userSubmissionsError } = useQuery<ActionWithDetails[]>({
+    queryKey: ['userActions', gameId],
+    queryFn: () => apiClient.phases.getUserActions(gameId).then(res => res.data),
+    enabled: !!gameId && !isGM,
   });
 
-  const actionSubmissions = actionSubmissionsData || [];
+  const { data: gmActionSubmissionsData, isLoading: isLoadingGMSubmissions, error: gmSubmissionsError } = useQuery<ActionWithDetails[]>({
+    queryKey: ['gameActions', gameId],
+    queryFn: () => apiClient.phases.getGameActions(gameId).then(res => res.data),
+    enabled: !!gameId && isGM,
+  });
+
+  // Use GM submissions if GM, otherwise user submissions
+  const actionSubmissions = isGM ? (gmActionSubmissionsData || []) : (userActionSubmissionsData || []);
+  const isLoadingSubmissions = isGM ? isLoadingGMSubmissions : isLoadingUserSubmissions;
+  const submissionsError = isGM ? gmSubmissionsError : userSubmissionsError;
 
   // Get the selected phase details
   const selectedPhase = phases.find(p => p.id === selectedPhaseId);

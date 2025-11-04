@@ -41,6 +41,29 @@ export class ActionResultsPage {
     await phaseSelector.waitFor({ state: 'visible', timeout: 5000 });
     await phaseSelector.click();
     await this.page.waitForLoadState('networkidle');
+
+    // Click on the Results tab (phase view shows Submissions/Results tabs)
+    await this.clickResultsTab();
+  }
+
+  /**
+   * Click on the Results tab within a phase view
+   */
+  async clickResultsTab() {
+    const resultsTab = this.page.getByRole('button', { name: 'Results', exact: true });
+    await resultsTab.waitFor({ state: 'visible', timeout: 5000 });
+    await resultsTab.click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Click on the Submissions tab within a phase view
+   */
+  async clickSubmissionsTab() {
+    const submissionsTab = this.page.getByRole('button', { name: 'Submissions', exact: true });
+    await submissionsTab.waitFor({ state: 'visible', timeout: 5000 });
+    await submissionsTab.click();
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
