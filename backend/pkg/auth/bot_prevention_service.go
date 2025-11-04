@@ -26,11 +26,12 @@ type BotPreventionService struct {
 // NewBotPreventionService creates a new bot prevention service
 func NewBotPreventionService(pool *pgxpool.Pool) *BotPreventionService {
 	hcaptchaSecret := os.Getenv("HCAPTCHA_SECRET")
+	hcaptchaEnabled := os.Getenv("HCAPTCHA_ENABLED")
 	environment := os.Getenv("ENVIRONMENT")
 	return &BotPreventionService{
 		DB:              pool,
 		HCaptchaSecret:  hcaptchaSecret,
-		HCaptchaEnabled: hcaptchaSecret != "",
+		HCaptchaEnabled: hcaptchaEnabled == "true",
 		IsDevelopment:   environment == "development",
 	}
 }
