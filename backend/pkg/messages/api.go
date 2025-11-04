@@ -2,6 +2,7 @@ package messages
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -43,7 +44,8 @@ func (r *CreateCommentRequest) Bind(req *http.Request) error {
 }
 
 type UpdateCommentRequest struct {
-	Content string `json:"content" validate:"required,min=1"`
+	Content     string `json:"content" validate:"required,min=1"`
+	CharacterID *int32 `json:"character_id,omitempty"`
 }
 
 func (r *UpdateCommentRequest) Bind(req *http.Request) error {
@@ -713,8 +715,14 @@ func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the comment
-	updatedComment, err := messageService.UpdateComment(ctx, int32(commentID), data.Content)
+	updatedComment, err := messageService.UpdateComment(ctx, int32(commentID), data.Content, data.CharacterID)
 	if err != nil {
+		// Check if this is a permission error
+		if errors.Is(err, core.ErrCharacterNotControlled) {
+			h.App.Logger.Warn("User attempted to use character they don't control", "comment_id", commentID, "user_id", userID, "requested_character_id", data.CharacterID)
+			render.Render(w, r, core.ErrForbidden("You do not control this character"))
+			return
+		}
 		h.App.Logger.Error("Failed to update comment", "error", err, "comment_id", commentID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return

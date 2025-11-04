@@ -1580,7 +1580,8 @@ const updateComment = `-- name: UpdateComment :one
 
 UPDATE messages
 SET content = $2,
-    mentioned_character_ids = $3,
+    character_id = COALESCE($3, character_id),
+    mentioned_character_ids = $4,
     is_edited = true,
     edited_at = NOW(),
     edit_count = edit_count + 1
@@ -1593,6 +1594,7 @@ RETURNING id, game_id, phase_id, author_id, character_id, content, message_type,
 type UpdateCommentParams struct {
 	ID                    int32   `json:"id"`
 	Content               string  `json:"content"`
+	CharacterID           int32   `json:"character_id"`
 	MentionedCharacterIds []int32 `json:"mentioned_character_ids"`
 }
 
@@ -1600,7 +1602,12 @@ type UpdateCommentParams struct {
 // Use GetPostComments recursively on the frontend to build the tree
 // This is actually more efficient for large thread trees anyway
 func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) (Message, error) {
-	row := q.db.QueryRow(ctx, updateComment, arg.ID, arg.Content, arg.MentionedCharacterIds)
+	row := q.db.QueryRow(ctx, updateComment,
+		arg.ID,
+		arg.Content,
+		arg.CharacterID,
+		arg.MentionedCharacterIds,
+	)
 	var i Message
 	err := row.Scan(
 		&i.ID,

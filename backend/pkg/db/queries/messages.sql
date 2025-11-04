@@ -228,7 +228,8 @@ ORDER BY m.created_at DESC;
 -- name: UpdateComment :one
 UPDATE messages
 SET content = $2,
-    mentioned_character_ids = $3,
+    character_id = COALESCE($3, character_id),
+    mentioned_character_ids = $4,
     is_edited = true,
     edited_at = NOW(),
     edit_count = edit_count + 1

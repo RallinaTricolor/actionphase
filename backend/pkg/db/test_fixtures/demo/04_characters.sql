@@ -50,12 +50,12 @@ BEGIN
     (game1_id, p2_id, 'Dr. Sarah Chen', 'player_character', 'approved', NOW() - INTERVAL '6 days', NOW()),
     (game1_id, p3_id, 'Father O''Brien', 'player_character', 'approved', NOW() - INTERVAL '6 days', NOW());
 
-  -- GM NPCs
+  -- GM NPCs (user_id = NULL, controlled by GM/co-GM or via npc_assignments)
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (game1_id, gm_id, 'Captain Obed Marsh', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW()),
-    (game1_id, gm_id, 'The Fishmonger', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW()),
-    (game1_id, audience1_id, 'Local Informant', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW());  -- Co-GM's NPC
+    (game1_id, NULL, 'Captain Obed Marsh', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW()),
+    (game1_id, NULL, 'The Fishmonger', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW()),
+    (game1_id, NULL, 'Local Informant', 'npc', 'approved', NOW() - INTERVAL '5 days', NOW());
 
   -- ============================================
   -- GAME #2: The Heist
@@ -75,12 +75,12 @@ BEGIN
     (game2_id, p3_id, 'Vex (Leech)', 'player_character', 'approved', NOW() - INTERVAL '9 days', NOW()),
     (game2_id, p4_id, 'Silk (Spider)', 'player_character', 'approved', NOW() - INTERVAL '9 days', NOW());
 
-  -- GM NPCs only
+  -- GM NPCs (user_id = NULL)
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (game2_id, gm_id, 'Inspector Dalton', 'npc', 'approved', NOW() - INTERVAL '8 days', NOW()),
-    (game2_id, gm_id, 'Bones (Contact)', 'npc', 'approved', NOW() - INTERVAL '7 days', NOW()),
-    (game2_id, gm_id, 'Whistle (Lookout)', 'npc', 'approved', NOW() - INTERVAL '7 days', NOW());
+    (game2_id, NULL, 'Inspector Dalton', 'npc', 'approved', NOW() - INTERVAL '8 days', NOW()),
+    (game2_id, NULL, 'Bones (Contact)', 'npc', 'approved', NOW() - INTERVAL '7 days', NOW()),
+    (game2_id, NULL, 'Whistle (Lookout)', 'npc', 'approved', NOW() - INTERVAL '7 days', NOW());
 
   -- Character data examples
   INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, is_public, created_at, updated_at)
@@ -100,7 +100,7 @@ BEGIN
     (game3_id, p1_id, 'Commander Vasquez', 'player_character', 'approved', NOW() - INTERVAL '13 days', NOW()),
     (game3_id, p2_id, 'Engineer Patel', 'player_character', 'approved', NOW() - INTERVAL '13 days', NOW()),
     (game3_id, p3_id, 'Dr. Kim', 'player_character', 'approved', NOW() - INTERVAL '13 days', NOW()),
-    (game3_id, gm_id, 'The Alien Entity', 'npc', 'approved', NOW() - INTERVAL '12 days', NOW());
+    (game3_id, NULL, 'The Alien Entity', 'npc', 'approved', NOW() - INTERVAL '12 days', NOW());
 
   -- ============================================
   -- GAME #5: Dragon of Mount Krag
@@ -111,7 +111,7 @@ BEGIN
     (game5_id, p1_id, 'Thorin Ironforge', 'player_character', 'approved', NOW() - INTERVAL '44 days', NOW()),
     (game5_id, p2_id, 'Elara Moonshadow', 'player_character', 'approved', NOW() - INTERVAL '44 days', NOW()),
     (game5_id, p3_id, 'Grimm the Bold', 'player_character', 'approved', NOW() - INTERVAL '44 days', NOW()),
-    (game5_id, gm_id, 'Vorathax the Ancient', 'npc', 'approved', NOW() - INTERVAL '40 days', NOW());
+    (game5_id, NULL, 'Vorathax the Ancient', 'npc', 'approved', NOW() - INTERVAL '40 days', NOW());
 
   -- ============================================
   -- GAME #6: Chronicles of Westmarch
@@ -123,8 +123,8 @@ BEGIN
     (game6_id, p2_id, 'Zara the Mystic', 'player_character', 'approved', NOW() - INTERVAL '59 days', NOW()),
     (game6_id, p3_id, 'Finn Quickfingers', 'player_character', 'approved', NOW() - INTERVAL '58 days', NOW()),
     (game6_id, p4_id, 'Bronwyn Stormcaller', 'player_character', 'approved', NOW() - INTERVAL '55 days', NOW()),
-    (game6_id, gm_id, 'The Dark Lord', 'npc', 'approved', NOW() - INTERVAL '50 days', NOW()),
-    (game6_id, gm_id, 'Merchant Guild Master', 'npc', 'approved', NOW() - INTERVAL '50 days', NOW());
+    (game6_id, NULL, 'The Dark Lord', 'npc', 'approved', NOW() - INTERVAL '50 days', NOW()),
+    (game6_id, NULL, 'Merchant Guild Master', 'npc', 'approved', NOW() - INTERVAL '50 days', NOW());
 
   -- ============================================
   -- GAME #9: COMPLETED - Tales of the Arcane
@@ -137,11 +137,11 @@ BEGIN
     (game9_id, p2_id, 'Theron Brightblade', 'player_character', 'approved', NOW() - INTERVAL '90 days', NOW()),
     (game9_id, p3_id, 'Mira Stormweaver', 'player_character', 'approved', NOW() - INTERVAL '89 days', NOW());
 
-  -- GM NPCs
+  -- GM NPCs (user_id = NULL)
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES
-    (game9_id, gm_id, 'Archmagus Valdane', 'npc', 'approved', NOW() - INTERVAL '85 days', NOW()),
-    (game9_id, gm_id, 'The Shadow Council', 'npc', 'approved', NOW() - INTERVAL '85 days', NOW());
+    (game9_id, NULL, 'Archmagus Valdane', 'npc', 'approved', NOW() - INTERVAL '85 days', NOW()),
+    (game9_id, NULL, 'The Shadow Council', 'npc', 'approved', NOW() - INTERVAL '85 days', NOW());
 
 END $$;
 

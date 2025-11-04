@@ -209,8 +209,8 @@ func (s *MessageService) GetPostComments(ctx context.Context, parentID int32) ([
 	return result, nil
 }
 
-// UpdateComment updates the content of an existing comment
-func (s *MessageService) UpdateComment(ctx context.Context, commentID int32, content string) (*models.Message, error) {
+// UpdateComment updates the content and optionally the character of an existing comment
+func (s *MessageService) UpdateComment(ctx context.Context, commentID int32, content string, newCharacterID *int32) (*models.Message, error) {
 	queries := models.New(s.DB)
 
 	// Get the existing comment to compare mentions
@@ -224,6 +224,20 @@ func (s *MessageService) UpdateComment(ctx context.Context, commentID int32, con
 		return nil, fmt.Errorf("cannot edit deleted comment")
 	}
 
+	// Determine which character ID to use
+	characterIDToUse := existingComment.CharacterID
+	if newCharacterID != nil {
+		characterIDToUse = *newCharacterID
+	}
+
+	// If character is being changed, validate ownership of new character
+	if newCharacterID != nil && *newCharacterID != existingComment.CharacterID {
+		// Validate user can control the new character
+		if err := s.ValidateCharacterOwnership(ctx, *newCharacterID, existingComment.AuthorID, existingComment.GameID); err != nil {
+			return nil, core.ErrCharacterNotControlled
+		}
+	}
+
 	// Extract character mentions from new content
 	mentionedIDs, err := s.extractCharacterMentions(ctx, content, existingComment.GameID)
 	if err != nil {
@@ -233,10 +247,11 @@ func (s *MessageService) UpdateComment(ctx context.Context, commentID int32, con
 		mentionedIDs = []int32{}
 	}
 
-	// Update the comment with new content and mentions
+	// Update the comment with new content, character, and mentions
 	message, err := queries.UpdateComment(ctx, models.UpdateCommentParams{
 		ID:                    commentID,
 		Content:               content,
+		CharacterID:           characterIDToUse,
 		MentionedCharacterIds: mentionedIDs,
 	})
 	if err != nil {
@@ -256,10 +271,17 @@ func (s *MessageService) UpdateComment(ctx context.Context, commentID int32, con
 		}
 	}
 
+	// Determine which character to use for notifications (new character if changed)
+	notificationCharacterID := existingComment.CharacterID
+	if newCharacterID != nil && *newCharacterID != existingComment.CharacterID {
+		notificationCharacterID = *newCharacterID
+		slog.Info("Comment character swapped", "comment_id", commentID, "old_character_id", existingComment.CharacterID, "new_character_id", *newCharacterID)
+	}
+
 	// Trigger notifications for NEW mentions only (fire-and-forget)
 	if len(newMentions) > 0 {
 		slog.Info("Comment updated successfully", "comment_id", commentID, "user_id", existingComment.AuthorID, "edit_count", message.EditCount, "new_mentions", len(newMentions))
-		go s.notifyCharacterMentions(context.Background(), newMentions, existingComment.CharacterID, existingComment.AuthorID, existingComment.GameID, message.ID)
+		go s.notifyCharacterMentions(context.Background(), newMentions, notificationCharacterID, existingComment.AuthorID, existingComment.GameID, message.ID)
 	} else {
 		slog.Info("Comment updated successfully", "comment_id", commentID, "user_id", existingComment.AuthorID, "edit_count", message.EditCount)
 	}

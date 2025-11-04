@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import type { UpdateCommentRequest } from '../types/messages';
+import type { UpdateCommentRequest, Message } from '../types/messages';
 
 /**
  * Hook to update a comment
@@ -23,13 +23,62 @@ export function useUpdateComment() {
       const response = await apiClient.messages.updateComment(gameId, postId, commentId, data);
       return response.data;
     },
-    onSuccess: async (_updatedComment, variables) => {
-      // Invalidate post comments to reflect the edit
+    onSuccess: async (updatedComment, variables) => {
+      // Update the comment in all relevant query caches immediately
+      // This ensures the UI updates without waiting for refetch
+
+      // Update in post comments cache
+      queryClient.setQueryData<Message[]>(
+        ['postComments', variables.gameId, variables.postId],
+        (oldComments) => {
+          if (!oldComments) return oldComments;
+          return oldComments.map(comment =>
+            comment.id === updatedComment.id ? updatedComment : comment
+          );
+        }
+      );
+
+      // Update in comment replies cache (for any parent that might have this as a reply)
+      const commentRepliesQueries = queryClient.getQueriesData<Message[]>({
+        queryKey: ['commentReplies', variables.gameId]
+      });
+
+      commentRepliesQueries.forEach(([queryKey, oldReplies]) => {
+        if (oldReplies) {
+          const updated = oldReplies.map(comment =>
+            comment.id === updatedComment.id ? updatedComment : comment
+          );
+          queryClient.setQueryData(queryKey, updated);
+        }
+      });
+
+      // Update in game posts cache if this comment is nested there
+      queryClient.setQueryData<Message[]>(
+        ['gamePosts', variables.gameId],
+        (oldPosts) => {
+          if (!oldPosts) return oldPosts;
+          return oldPosts.map(post => {
+            // Check if this post has the updated comment in its replies
+            if (post.replies) {
+              const updatedReplies = post.replies.map(comment =>
+                comment.id === updatedComment.id ? updatedComment : comment
+              );
+              return { ...post, replies: updatedReplies };
+            }
+            return post;
+          });
+        }
+      );
+
+      // Invalidate queries to ensure fresh data on next access
       await queryClient.invalidateQueries({
         queryKey: ['postComments', variables.gameId, variables.postId]
       });
 
-      // Also invalidate game posts if the updated comment is cached there
+      await queryClient.invalidateQueries({
+        queryKey: ['commentReplies', variables.gameId]
+      });
+
       await queryClient.invalidateQueries({
         queryKey: ['gamePosts', variables.gameId]
       });
