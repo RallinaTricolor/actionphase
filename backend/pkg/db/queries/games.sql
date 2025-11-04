@@ -204,6 +204,11 @@ UPDATE games
 SET auto_accept_audience = $2, updated_at = NOW()
 WHERE id = $1;
 
+-- name: DisableAnonymousMode :exec
+UPDATE games
+SET is_anonymous = false, updated_at = NOW()
+WHERE id = $1;
+
 -- name: CreateAudienceApplication :one
 INSERT INTO game_participants (game_id, user_id, role, status)
 VALUES ($1, $2, 'audience', $3)

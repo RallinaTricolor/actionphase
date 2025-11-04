@@ -37,6 +37,13 @@ export function PeopleView({
   actionLoading = false
 }: PeopleViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('characters');
+
+  // Determine user's role from participants list for anonymous mode handling
+  const currentUserRole = (() => {
+    if (isGM) return 'gm';
+    const userParticipant = participants.find(p => p.user_id === currentUserId);
+    return userParticipant?.role || 'player';
+  })();
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
 
   return (
@@ -75,7 +82,7 @@ export function PeopleView({
       {activeSubTab === 'characters' && (
         <CharactersList
           gameId={gameId}
-          userRole={isGM ? 'gm' : 'player'}
+          userRole={currentUserRole}
           currentUserId={currentUserId || undefined}
           gameState={gameState}
           isAnonymous={isAnonymous}
