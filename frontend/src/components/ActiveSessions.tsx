@@ -32,7 +32,7 @@ export function ActiveSessions() {
     },
     onError: (error: any) => {
       const message = error.response?.data?.error || 'Failed to revoke session';
-      showToast(message, 'error');
+      showToast(message, 'danger');
       setRevokeSessionId(null);
     },
   });
@@ -49,7 +49,7 @@ export function ActiveSessions() {
     },
     onError: (error: any) => {
       const message = error.response?.data?.error || 'Failed to revoke all sessions';
-      showToast(message, 'error');
+      showToast(message, 'danger');
       setShowRevokeAllConfirmation(false);
     },
   });

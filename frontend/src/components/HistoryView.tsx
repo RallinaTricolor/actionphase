@@ -6,7 +6,7 @@ import { CommonRoom } from './CommonRoom';
 import { Button, Alert } from './ui';
 import { useUserActionResults, useGameActionResults } from '../hooks/useActionResults';
 import { MarkdownPreview } from './MarkdownPreview';
-import type { ActionWithDetails } from '../types/actions';
+import type { ActionWithDetails } from '../types/phases';
 
 interface HistoryViewProps {
   gameId: number;

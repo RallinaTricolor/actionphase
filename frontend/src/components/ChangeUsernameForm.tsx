@@ -28,7 +28,7 @@ export function ChangeUsernameForm() {
     onError: (error: any) => {
       const message = error.response?.data?.error || 'Failed to change username';
       setError(message);
-      showToast(message, 'error');
+      showToast(message, 'danger');
     },
   });
 

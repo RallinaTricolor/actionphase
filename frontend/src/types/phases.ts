@@ -43,6 +43,7 @@ export interface ActionSubmission {
   phase_id: number;
   character_id?: number;
   content: string;
+  is_draft?: boolean;
   submitted_at: string;
   updated_at: string;
 }
