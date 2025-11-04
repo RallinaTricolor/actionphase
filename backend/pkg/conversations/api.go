@@ -307,49 +307,11 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify the character belongs to the user (or is an NPC controlled by the user)
-	char, err := conversationService.Queries.GetCharacter(ctx, data.CharacterID)
-	if err != nil {
-		h.App.Logger.Error("Failed to get character", "error", err, "character_id", data.CharacterID)
-		render.Render(w, r, core.ErrInternalError(err))
+	// Verify the user can control this character (either owns it or can control it as NPC)
+	if !core.CanUserControlNPC(ctx, h.App.Pool, data.CharacterID, userID) {
+		h.App.Logger.Warn("User cannot control character", "character_id", data.CharacterID, "user_id", userID)
+		render.Render(w, r, core.ErrForbidden("you cannot send messages as this character"))
 		return
-	}
-
-	h.App.Logger.Info("Character ownership check", "character_id", char.ID, "character_user_id_valid", char.UserID.Valid, "character_user_id", char.UserID.Int32, "request_user_id", userID)
-
-	// Allow if: character belongs to user, OR it's an NPC (no user_id) that the user controls
-	if char.UserID.Valid && char.UserID.Int32 != userID {
-		h.App.Logger.Warn("Character belongs to different user", "character_id", char.ID, "character_user_id", char.UserID.Int32, "request_user_id", userID)
-		render.Render(w, r, core.ErrForbidden("character does not belong to user"))
-		return
-	}
-
-	// For NPCs (no user_id), verify the user is either assigned to the NPC or is the GM
-	if !char.UserID.Valid {
-		h.App.Logger.Info("NPC detected, checking assignment or GM status", "character_id", char.ID, "game_id", char.GameID, "user_id", userID)
-
-		// First check if the NPC is assigned to this user
-		assignment, err := conversationService.Queries.GetNPCAssignment(ctx, char.ID)
-		isAssigned := (err == nil && assignment.AssignedUserID == userID)
-
-		if isAssigned {
-			h.App.Logger.Info("NPC is assigned to user", "character_id", char.ID, "assigned_user_id", userID)
-		} else {
-			// Not assigned - check if user is the GM
-			h.App.Logger.Info("NPC not assigned to user, verifying GM status", "character_id", char.ID)
-			game, err := conversationService.Queries.GetGame(ctx, char.GameID)
-			if err != nil {
-				h.App.Logger.Error("Failed to get game", "error", err, "game_id", char.GameID)
-				render.Render(w, r, core.ErrInternalError(err))
-				return
-			}
-			h.App.Logger.Info("GM check", "game_gm_user_id", game.GmUserID, "request_user_id", userID)
-			if game.GmUserID != userID {
-				h.App.Logger.Warn("User is not GM for NPC and NPC not assigned to user", "character_id", char.ID, "game_gm_user_id", game.GmUserID, "request_user_id", userID)
-				render.Render(w, r, core.ErrForbidden("only the GM or assigned user can send messages as this NPC"))
-				return
-			}
-		}
 	}
 
 	message, err := conversationService.SendMessage(ctx, db.SendMessageRequest{

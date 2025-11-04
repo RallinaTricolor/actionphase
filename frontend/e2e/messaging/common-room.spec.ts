@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { CommonRoomPage } from '../pages/CommonRoomPage';
-import { getFixtureGameId } from '../fixtures/game-helpers';
+import { getFixtureGameId, getWorkerGameId } from '../fixtures/game-helpers';
+import { assertTextVisible } from '../utils/assertions';
 
 /**
  * Journey 9: Player Posts in Common Room
@@ -453,6 +454,224 @@ test.describe('Common Room Flow', () => {
       await gmContext.close();
       await player1Context.close();
       await player2Context.close();
+    }
+  });
+
+  test('GM can create posts as NPCs', async ({ page }) => {
+    // Test that GMs can select NPCs from the character dropdown and post as them
+    // Uses co-GM fixture (game 339) which has unassigned NPCs
+    await loginAs(page, 'GM');
+
+    const gameId = getWorkerGameId(339); // Co-GM management fixture with NPCs
+    const commonRoom = new CommonRoomPage(page);
+    await commonRoom.goto(gameId);
+
+    // Verify Common Room is loaded
+    await expect(commonRoom.heading).toBeVisible({ timeout: 5000 });
+
+    // Create first post as default character
+    const post1 = `GM Post 1 ${Date.now()}: Testing NPC posting.`;
+    await commonRoom.createPost(post1);
+    await commonRoom.verifyPostExists(post1);
+
+    // Create post selecting a specific NPC
+    const npcPost = `NPC Message ${Date.now()}: I have information about the quest.`;
+    await commonRoom.createPost(npcPost, 'Mysterious Stranger');
+    await commonRoom.verifyPostExists(npcPost);
+  });
+
+  test('Co-GM can create posts as NPCs', async ({ page }) => {
+    // Test that co-GMs have the same NPC posting permissions as GMs
+    // Uses co-GM fixture (game 339) where TestAudience1 is a co-GM
+    await loginAs(page, 'AUDIENCE_1');
+
+    const gameId = getWorkerGameId(339); // Co-GM management fixture
+    const commonRoom = new CommonRoomPage(page);
+    await commonRoom.goto(gameId);
+
+    // Verify Common Room is loaded
+    await expect(commonRoom.heading).toBeVisible({ timeout: 5000 });
+
+    // Create first post as default character
+    const post1 = `Co-GM Post 1 ${Date.now()}: Testing co-GM NPC posting.`;
+    await commonRoom.createPost(post1);
+    await commonRoom.verifyPostExists(post1);
+
+    // Create post selecting a specific NPC
+    const npcPost = `Co-GM NPC Post ${Date.now()}: I've been watching from the shadows.`;
+    await commonRoom.createPost(npcPost, 'Town Guard');
+    await commonRoom.verifyPostExists(npcPost);
+  });
+
+  test('Co-GM can reply to threads as NPCs', async ({ browser }) => {
+    // Test that co-GMs can comment on posts as NPCs
+    const gmContext = await browser.newContext();
+    const coGmContext = await browser.newContext();
+
+    const gmPage = await gmContext.newPage();
+    const coGmPage = await coGmContext.newPage();
+
+    try {
+      // === GM creates a post ===
+      await loginAs(gmPage, 'GM');
+
+      const gameId = getWorkerGameId(339); // Co-GM management fixture
+      const gmCommonRoom = new CommonRoomPage(gmPage);
+      await gmCommonRoom.goto(gameId);
+
+      const postContent = `GM Question ${Date.now()}: Has anyone seen unusual activity?`;
+      await gmCommonRoom.createPost(postContent);
+
+      // === Co-GM comments as NPC ===
+      await loginAs(coGmPage, 'AUDIENCE_1');
+
+      const coGmCommonRoom = new CommonRoomPage(coGmPage);
+      await coGmCommonRoom.goto(gameId);
+
+      // Verify co-GM can see the post
+      await coGmCommonRoom.verifyPostExists(postContent);
+
+      // Add comment as Mysterious Stranger NPC
+      const commentText = `Strange figures were seen near the old mill last night.`;
+      await coGmCommonRoom.addComment(postContent, commentText, { asCharacter: 'Mysterious Stranger' });
+
+      // Verify comment appears
+      await coGmCommonRoom.verifyCommentExists(commentText);
+
+      // === GM verifies they can see co-GM's NPC comment ===
+      await gmPage.reload();
+      await gmPage.waitForLoadState('networkidle');
+      await gmCommonRoom.verifyCommentExists(commentText);
+
+    } finally {
+      await gmContext.close();
+      await coGmContext.close();
+    }
+  });
+
+  test('GM can reply to co-GM comments in threads', async ({ browser }) => {
+    test.setTimeout(45000);
+    const gmContext = await browser.newContext();
+    const coGmContext = await browser.newContext();
+    const gmPage = await gmContext.newPage();
+    const coGmPage = await coGmContext.newPage();
+
+    try {
+      // === GM creates a post ===
+      await loginAs(gmPage, 'GM');
+      const gameId = await getFixtureGameId(gmPage, 'CO_GM_MANAGEMENT'); // Game #339
+      const gmCommonRoom = new CommonRoomPage(gmPage);
+      await gmCommonRoom.goto(gameId);
+
+      const postContent = `Thread ${Date.now()}: Strategic planning discussion`;
+      await gmCommonRoom.createPost(postContent);
+
+      // === Co-GM comments on the post as an NPC ===
+      await loginAs(coGmPage, 'AUDIENCE_1'); // TestAudience1 is co-GM
+      const coGmCommonRoom = new CommonRoomPage(coGmPage);
+      await coGmCommonRoom.goto(gameId);
+
+      const coGmComment = `Comment ${Date.now()}: The town guard reports suspicious activity`;
+      await coGmCommonRoom.addComment(postContent, coGmComment, { asCharacter: 'Town Guard' });
+
+      // === GM replies to the co-GM's comment ===
+      await gmPage.reload();
+      await gmPage.waitForLoadState('networkidle');
+
+      // Find the co-GM's comment and click Reply
+      const commentContainer = gmPage.locator('[data-testid="threaded-comment"]').filter({ hasText: coGmComment }).locator('visible=true').first();
+      const replyButton = commentContainer.getByRole('button', { name: 'Reply' }).locator('visible=true').first();
+      await replyButton.click();
+
+      // Write the reply
+      const gmReply = `Reply ${Date.now()}: Thank you for the report, keep me informed`;
+      const replyTextarea = commentContainer.locator('textarea').locator('visible=true').first();
+      await replyTextarea.fill(gmReply);
+
+      // Submit the reply
+      const replyForm = commentContainer.locator('form').locator('visible=true').first();
+      await replyForm.evaluate((f: HTMLFormElement) => f.requestSubmit());
+
+      // Wait for reply to be created
+      await gmPage.waitForLoadState('networkidle');
+
+      // Verify GM's reply appears
+      await assertTextVisible(gmPage, gmReply);
+
+      // === Co-GM verifies they can see GM's nested reply ===
+      await coGmPage.reload();
+      await coGmPage.waitForLoadState('networkidle');
+      await assertTextVisible(coGmPage, gmReply);
+
+    } finally {
+      await gmContext.close();
+      await coGmContext.close();
+    }
+  });
+
+  test('Co-GM can reply to comments as NPCs in threads', async ({ browser }) => {
+    test.setTimeout(45000);
+    const gmContext = await browser.newContext();
+    const coGmContext = await browser.newContext();
+    const gmPage = await gmContext.newPage();
+    const coGmPage = await coGmContext.newPage();
+
+    try {
+      // === GM creates a post ===
+      await loginAs(gmPage, 'GM');
+      const gameId = await getFixtureGameId(gmPage, 'CO_GM_MANAGEMENT'); // Game #339
+      const gmCommonRoom = new CommonRoomPage(gmPage);
+      await gmCommonRoom.goto(gameId);
+
+      const postContent = `Thread ${Date.now()}: Town meeting`;
+      await gmCommonRoom.createPost(postContent);
+
+      // === GM creates a comment ===
+      const gmComment = `Comment ${Date.now()}: Citizens are concerned about recent events`;
+      await gmCommonRoom.addComment(postContent, gmComment);
+
+      // === Co-GM replies to GM's comment as an NPC ===
+      await loginAs(coGmPage, 'AUDIENCE_1'); // TestAudience1 is co-GM
+      const coGmCommonRoom = new CommonRoomPage(coGmPage);
+      await coGmCommonRoom.goto(gameId);
+
+      // Find GM's comment and click Reply
+      const commentContainer = coGmPage.locator('[data-testid="threaded-comment"]').filter({ hasText: gmComment }).locator('visible=true').first();
+      const replyButton = commentContainer.getByRole('button', { name: 'Reply' }).locator('visible=true').first();
+      await replyButton.click();
+
+      // Wait for reply form to appear
+      await coGmPage.waitForTimeout(800); // Wait for character selector to appear
+
+      // Select NPC character for the reply
+      const characterSelect = commentContainer.locator('role=combobox').locator('visible=true').first();
+      await characterSelect.waitFor({ state: 'visible', timeout: 5000 });
+      await characterSelect.selectOption({ label: 'Reply as Mysterious Stranger' });
+      await coGmPage.waitForTimeout(500);
+
+      // Write the reply
+      const coGmReply = `Reply ${Date.now()}: I have information that may shed light on these events`;
+      const replyTextarea = commentContainer.locator('textarea').locator('visible=true').first();
+      await replyTextarea.fill(coGmReply);
+
+      // Submit the reply
+      const replyForm = commentContainer.locator('form').locator('visible=true').first();
+      await replyForm.evaluate((f: HTMLFormElement) => f.requestSubmit());
+
+      // Wait for reply to be created
+      await coGmPage.waitForLoadState('networkidle');
+
+      // Verify co-GM's NPC reply appears
+      await assertTextVisible(coGmPage, coGmReply);
+
+      // === GM verifies they can see co-GM's nested NPC reply ===
+      await gmPage.reload();
+      await gmPage.waitForLoadState('networkidle');
+      await assertTextVisible(gmPage, coGmReply);
+
+    } finally {
+      await gmContext.close();
+      await coGmContext.close();
     }
   });
 });

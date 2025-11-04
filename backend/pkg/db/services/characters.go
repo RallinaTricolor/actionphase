@@ -84,7 +84,7 @@ func (cs *CharacterService) GetUserControllableCharacters(ctx context.Context, g
 	queries := models.New(cs.DB)
 	return queries.GetUserControllableCharacters(ctx, models.GetUserControllableCharactersParams{
 		GameID: gameID,
-		UserID: pgtype.Int4{Int32: userID, Valid: true},
+		UserID: userID,
 	})
 }
 

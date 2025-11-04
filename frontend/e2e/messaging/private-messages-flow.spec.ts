@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
-import { getFixtureGameId } from '../fixtures/game-helpers';
+import { getFixtureGameId, getWorkerGameId } from '../fixtures/game-helpers';
 import { navigateToGame } from '../utils/navigation';
 import { assertTextVisible } from '../utils/assertions';
 import { waitForModal } from '../utils/waits';
 import { MessagingPage } from '../pages/MessagingPage';
+import { GameDetailsPage } from '../pages/GameDetailsPage';
 
 /**
  * Journey 5: Players Exchange Private Messages
@@ -297,6 +298,98 @@ test.describe('Private Messages Flow', () => {
 
     } finally {
       await audienceContext.close();
+      await playerContext.close();
+    }
+  });
+
+  test('Co-GM can send private messages as different NPCs', async ({ browser }) => {
+    test.setTimeout(60000); // Extended timeout for messaging flow
+
+    // This test duplicates the GM NPC messaging test but for co-GMs
+    // Co-GMs should have the same NPC control permissions as GMs
+    // Uses the co-GM management fixture which has TestAudience1 already set as co-GM
+
+    const coGmContext = await browser.newContext();
+    const playerContext = await browser.newContext();
+
+    const coGmPage = await coGmContext.newPage();
+    const playerPage = await playerContext.newPage();
+
+    try {
+      // Login as TestAudience1 who is already a co-GM in the fixture
+      await loginAs(coGmPage, 'AUDIENCE_1');
+
+      const gameId = getWorkerGameId(339); // Co-GM management fixture
+
+      const coGmMessaging = new MessagingPage(coGmPage);
+      await coGmMessaging.goto(gameId);
+
+      // Wait for page to fully load to ensure characters are available
+      await coGmPage.waitForTimeout(2000);
+
+      // Create conversation as first unassigned NPC (Mysterious Stranger)
+      const strangerConvoTitle = `Strange Encounter ${Date.now()}`;
+
+      // Debug: Check what characters are available
+      await coGmMessaging.openNewConversationForm();
+      await coGmPage.waitForTimeout(1000);
+
+      // Try to select the NPC and participant
+      await coGmMessaging.selectSendingCharacter('Mysterious Stranger');
+      await coGmMessaging.selectParticipant('Test Player Character');
+      await coGmMessaging.conversationTitleInput.fill(strangerConvoTitle);
+      await coGmMessaging.createConversationButton.click();
+      await coGmPage.waitForLoadState('networkidle');
+
+      // Co-GM (as Mysterious Stranger) sends message
+      const strangerMessage = `I've been watching you. There's something you need to know...`;
+      await coGmMessaging.sendMessage(strangerMessage);
+
+      // === Player sees conversation from Mysterious Stranger ===
+      await loginAs(playerPage, 'PLAYER_1');
+
+      const playerMessaging = new MessagingPage(playerPage);
+      await playerMessaging.goto(gameId);
+
+      await playerMessaging.verifyConversationExists(strangerConvoTitle);
+      await playerMessaging.openConversation(strangerConvoTitle);
+      await playerMessaging.verifyMessageExists(strangerMessage);
+
+      // Player replies
+      const playerReply = `Who are you? What do you want?`;
+      await playerMessaging.sendMessage(playerReply);
+
+      // === Co-GM creates DIFFERENT conversation as Town Guard (different NPC) ===
+      await coGmPage.reload();
+      await coGmPage.waitForLoadState('networkidle');
+      await coGmMessaging.navigateToMessages();
+
+      const guardConvoTitle = `Official Business ${Date.now()}`;
+      await coGmMessaging.createConversation(
+        guardConvoTitle,
+        ['Test Player Character'],
+        'Town Guard'  // Different unassigned NPC
+      );
+
+      // Co-GM (as Town Guard) sends message
+      const guardMessage = `By order of the magistrate, I need to ask you some questions.`;
+      await coGmMessaging.sendMessage(guardMessage);
+
+      // === Player sees BOTH conversations from different NPCs ===
+      await playerPage.reload();
+      await playerPage.waitForLoadState('networkidle');
+      await playerMessaging.navigateToMessages();
+
+      // Verify both conversations exist
+      await playerMessaging.verifyConversationExists(strangerConvoTitle);
+      await playerMessaging.verifyConversationExists(guardConvoTitle);
+
+      // Open the guard conversation
+      await playerMessaging.openConversation(guardConvoTitle);
+      await playerMessaging.verifyMessageExists(guardMessage);
+
+    } finally {
+      await coGmContext.close();
       await playerContext.close();
     }
   });

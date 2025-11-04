@@ -108,12 +108,13 @@ WHERE character_id = $1 AND module_type = $2;
 -- Get all characters a user can control in a game:
 -- 1. Their own player characters (where user_id matches)
 -- 2. NPCs assigned to them via npc_assignments
--- 3. If they're the GM, all NPCs (for emergency situations, GMs can control any NPC)
--- 4. When game is in_progress, pending/rejected characters are only visible to GMs
+-- 3. If they're the GM or co-GM, all NPCs (for emergency situations, GMs/co-GMs can control any NPC)
+-- 4. When game is in_progress, pending/rejected characters are only visible to GMs/co-GMs
 SELECT DISTINCT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.avatar_url, c.created_at, c.updated_at
 FROM characters c
 LEFT JOIN npc_assignments na ON c.id = na.character_id
 LEFT JOIN games g ON c.game_id = g.id
+LEFT JOIN game_participants gp ON c.game_id = gp.game_id AND gp.user_id = $2 AND gp.role = 'co_gm'
 WHERE c.game_id = $1
   AND (
     -- User's own player characters
@@ -122,15 +123,15 @@ WHERE c.game_id = $1
     -- NPCs assigned to user
     (na.assigned_user_id = $2)
     OR
-    -- If user is GM, all NPCs (GMs can control any NPC in their game)
-    (g.gm_user_id = $2 AND c.character_type = 'npc')
+    -- If user is GM or co-GM, all NPCs (GMs/co-GMs can control any NPC in their game)
+    ((g.gm_user_id = $2 OR gp.user_id IS NOT NULL) AND c.character_type = 'npc')
   )
   AND (
-    -- If game is in_progress and user is not GM, exclude pending/rejected characters
-    (g.state = 'in_progress' AND g.gm_user_id != $2 AND c.status NOT IN ('pending', 'rejected'))
+    -- If game is in_progress and user is not GM/co-GM, exclude pending/rejected characters
+    (g.state = 'in_progress' AND g.gm_user_id != $2 AND gp.user_id IS NULL AND c.status NOT IN ('pending', 'rejected'))
     OR
-    -- If user is GM, include all characters regardless of status
-    (g.gm_user_id = $2)
+    -- If user is GM or co-GM, include all characters regardless of status
+    (g.gm_user_id = $2 OR gp.user_id IS NOT NULL)
     OR
     -- If game is not in_progress, include all characters regardless of status
     (g.state != 'in_progress')
