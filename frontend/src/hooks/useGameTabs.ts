@@ -117,8 +117,9 @@ export function useGameTabs({
     } else if (gameState === 'completed' || gameState === 'cancelled') {
       // Post-game tabs - read-only archive view
       tabList.push({ id: 'history', label: 'History', icon: icons.history });
-      tabList.push({ id: 'characters', label: 'Characters', icon: icons.characters });
-      tabList.push({ id: 'participants', label: 'Participants', badge: participantCount, icon: icons.participants });
+
+      // People tab (combines Characters and Participants) - same as in-progress games
+      tabList.push({ id: 'people', label: 'People', badge: participantCount, icon: icons.people });
 
       // Handouts - available to view historical handouts
       tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });
