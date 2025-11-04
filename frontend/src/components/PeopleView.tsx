@@ -94,7 +94,7 @@ export function PeopleView({
         <>
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-content-primary">Game Participants</h2>
-            {isGM && (
+            {isGM && gameState !== 'completed' && gameState !== 'cancelled' && (
               <Button
                 variant="primary"
                 onClick={() => setShowAddPlayerModal(true)}
@@ -145,7 +145,7 @@ export function PeopleView({
                                   </Button>
                                 )}
                               </div>
-                              {isGM && !isCurrentUser && (
+                              {isGM && !isCurrentUser && gameState !== 'completed' && gameState !== 'cancelled' && (
                                 <ParticipantActionsMenu
                                   gameId={gameId}
                                   participant={participant}
@@ -163,7 +163,7 @@ export function PeopleView({
             </div>
           )}
 
-          {isGM && (
+          {isGM && gameState !== 'completed' && gameState !== 'cancelled' && (
             <div className="mt-8">
               <InactiveCharactersList gameId={gameId} />
             </div>

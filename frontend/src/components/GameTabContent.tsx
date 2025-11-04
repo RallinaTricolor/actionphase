@@ -126,7 +126,7 @@ export function GameTabContent({
                               Joined {new Date(participant.joined_at).toLocaleDateString()}
                             </div>
                           </div>
-                          {isGM && participant.user_id !== currentUserId && (
+                          {isGM && participant.user_id !== currentUserId && game.state !== 'completed' && game.state !== 'cancelled' && (
                             <RemovePlayerButton
                               gameId={gameId}
                               participant={participant}
