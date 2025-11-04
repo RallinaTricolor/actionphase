@@ -414,6 +414,31 @@ func (q *Queries) GetGameAutoAcceptAudience(ctx context.Context, id int32) (bool
 	return auto_accept_audience, err
 }
 
+const getGameCoGMs = `-- name: GetGameCoGMs :many
+SELECT user_id FROM game_participants
+WHERE game_id = $1 AND role = 'co_gm' AND status = 'active'
+`
+
+func (q *Queries) GetGameCoGMs(ctx context.Context, gameID int32) ([]int32, error) {
+	rows, err := q.db.Query(ctx, getGameCoGMs, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var user_id int32
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGameParticipantCount = `-- name: GetGameParticipantCount :one
 SELECT COUNT(*) FROM game_participants
 WHERE game_id = $1 AND role = 'player' AND status = 'active'

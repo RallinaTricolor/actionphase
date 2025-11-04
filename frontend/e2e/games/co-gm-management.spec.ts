@@ -21,8 +21,43 @@ test.describe.serial('Co-GM Management', () => {
   // Game ID 339 for worker 0, offset by 10000 per worker
   const gameId = getWorkerGameId(339);
 
+  test('Setup: Primary GM demotes existing co-GM first', async ({ page }) => {
+    // NOTE: Fixture has TestAudience1 as co-GM (for NPC messaging tests).
+    // We need to demote them first since only 1 co-GM is allowed per game.
+    await loginAs(page, 'GM');
+
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
+
+    // Navigate to People tab > Participants sub-tab
+    await page.getByRole('tab', { name: 'People' }).click();
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /Game Participants/ }).click();
+
+    // Wait for co-GM section and find TestAudience1's actions button
+    await page.waitForSelector('h3:has-text("co gm")');
+    const coGmSection = page.locator('div:has(> h3:has-text("co gm"))').first();
+    const actionsButton = coGmSection.getByRole('button', { name: 'Participant actions' }).first();
+    await actionsButton.click();
+
+    // Click "Demote from Co-GM"
+    await page.getByRole('menuitem', { name: 'Demote from Co-GM' }).click();
+
+    // Confirm in modal
+    await expect(page.getByRole('heading', { name: 'Demote from Co-GM?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Demote to Audience' }).click();
+
+    // Wait for demotion to complete
+    await page.waitForLoadState('networkidle');
+
+    // Verify modal closes and co-GM section disappears
+    await expect(page.getByRole('heading', { name: 'Demote from Co-GM?' })).not.toBeVisible();
+    await page.waitForTimeout(500);
+    await expect(page.locator('h3:has-text("co gm")')).not.toBeVisible();
+  });
+
   test('Primary GM can promote audience member to co-GM', async ({ page }) => {
-    // Login as primary GM
+    // Now that there's no co-GM, promote TestAudience2
     await loginAs(page, 'GM');
 
     const gamePage = new GameDetailsPage(page);
@@ -36,13 +71,17 @@ test.describe.serial('Co-GM Management', () => {
     // Wait for participant data to load and find the audiences heading
     await page.waitForSelector('h3:has-text("audiences")');
 
-    // Find the "Participant actions" button for the first audience member
-    // Note: .nth(1) because .nth(0) is the player, and we need the first audience member
-    const actionsButton = page.getByRole('button', { name: 'Participant actions' }).nth(1);
-    await actionsButton.click();
+    // Find TestAudience2 in the audience section
+    // Both TestAudience1 and TestAudience2 are now audience members
+    // We want TestAudience2 (the second one)
+    const audienceSection = page.locator('div:has(> h3:has-text("audiences"))').first();
+    const actionsButtons = await audienceSection.getByRole('button', { name: 'Participant actions' }).all();
+    await actionsButtons[1].click(); // Second audience member (TestAudience2)
 
-    // Click "Promote to Co-GM" option
-    await page.getByRole('menuitem', { name: 'Promote to Co-GM' }).click();
+    // Wait for menu to appear and click "Promote to Co-GM" option
+    const promoteMenuItem = page.getByRole('menuitem', { name: 'Promote to Co-GM' });
+    await promoteMenuItem.waitFor({ state: 'visible', timeout: 5000 });
+    await promoteMenuItem.click();
 
     // Confirm in modal
     await expect(page.getByRole('heading', { name: 'Promote to Co-GM?' })).toBeVisible();
@@ -53,7 +92,7 @@ test.describe.serial('Co-GM Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify modal closes and co-GM appears in Co GMs section
-    await expect(page.getByRole('heading', { name: 'Promote to Co-GM?' })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Promote to Co-GM?' })).not.toBeVisible({ timeout: 10000 });
     await expect(page.locator('h3:has-text("co gm")')).toBeVisible();
   });
 
@@ -66,12 +105,17 @@ test.describe.serial('Co-GM Management', () => {
 
     // Verify co-GM is displayed in header with badge
     await expect(page.getByText(/Co-GM:/)).toBeVisible();
-    await expect(page.getByText('Co-GM', { exact: true }).locator('visible=true')).toBeVisible(); // Badge
+
+    // Verify co-GM badge appears (look for badge specifically in the game info header)
+    const coGmBadge = page.locator('.text-xs.px-2.py-0\\.5.rounded.bg-blue-100:has-text("Co-GM")').or(
+      page.getByText('Co-GM', { exact: true })
+    );
+    await expect(coGmBadge.first()).toBeVisible({ timeout: 10000 });
   });
 
   test('Co-GM can access GM features (phase management)', async ({ page }) => {
-    // Login as the co-GM (assuming test_audience1@example.com was promoted)
-    await loginAs(page, 'AUDIENCE_1');
+    // Login as the co-GM (TestAudience2 was promoted in previous test)
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
@@ -90,8 +134,8 @@ test.describe.serial('Co-GM Management', () => {
   });
 
   test('Co-GM cannot edit game settings', async ({ page }) => {
-    // Login as the co-GM
-    await loginAs(page, 'AUDIENCE_1');
+    // Login as the co-GM (TestAudience2)
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
@@ -101,8 +145,8 @@ test.describe.serial('Co-GM Management', () => {
   });
 
   test('Co-GM cannot promote others to co-GM', async ({ page }) => {
-    // Login as the co-GM
-    await loginAs(page, 'AUDIENCE_1');
+    // Login as the co-GM (TestAudience2)
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
@@ -146,9 +190,11 @@ test.describe.serial('Co-GM Management', () => {
     const coGmHeading = await page.waitForSelector('h3:has-text("co gm")');
 
     // Find the actions button by filtering all participant action buttons
-    // The co-GM section comes after players, so we get all buttons and select the right one
+    // NOTE: There is only ONE co-GM (TestAudience1, promoted in previous test)
     const allActionButtons = await page.getByRole('button', { name: 'Participant actions' }).all();
-    // Players section has 1 button (TestPlayer1), so co-GM button is at index 1
+    // Players section has 1 button (TestPlayer1)
+    // Co-GMs section has 1 button (TestAudience1)
+    // So TestAudience1 is at index 1 (0=Player, 1=TestAudience1)
     await allActionButtons[1].click();
 
     // Click "Demote from Co-GM" option
@@ -167,12 +213,13 @@ test.describe.serial('Co-GM Management', () => {
     // Wait for the page to update and verify co-GM section is gone
     await page.waitForTimeout(500); // Brief wait for state update
     const coGMSectionAfter = page.locator('h3:has-text("co gm")');
+    // Co-GM section should disappear since we demoted the only co-GM
     await expect(coGMSectionAfter).not.toBeVisible();
   });
 
   test('Demoted co-GM loses GM permissions', async ({ page }) => {
-    // Login as the former co-GM
-    await loginAs(page, 'AUDIENCE_1');
+    // Login as the former co-GM (TestAudience2 who was promoted then demoted)
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
@@ -195,24 +242,23 @@ test.describe.serial('Co-GM Management', () => {
     // Verify co-GM is no longer displayed in header
     await expect(page.getByText(/Co-GM:/)).not.toBeVisible();
   });
-});
+  /**
+   * Co-GM Functional Tests
+   *
+   * Tests that co-GMs can actually PERFORM GM actions, not just see UI:
+   * - Create and manage phases
+   * - View player actions
+   * - Publish phases
+   * - Advance game state
+   *
+   * NOTE: TestAudience2 was demoted in the previous test, so we need to re-promote them
+   * These tests run in the same serial suite to ensure they use the same worker's promoted co-GM
+   */
 
-/**
- * Co-GM Functional Tests
- *
- * Tests that co-GMs can actually PERFORM GM actions, not just see UI:
- * - Create and manage phases
- * - View player actions
- * - Publish phases
- * - Advance game state
- *
- * NOTE: These tests re-promote a co-GM to test functionality
- */
-test.describe.serial('Co-GM Functional Abilities', () => {
-  const gameId = getWorkerGameId(339);
-
-  // Re-promote co-GM for functional tests
-  test('Setup: Re-promote co-GM for functional testing', async ({ page }) => {
+  test('Setup: Re-promote TestAudience2 to co-GM for functional testing', async ({ page }) => {
+    // TestAudience2 was demoted in the "Primary GM can demote co-GM back to audience" test
+    // We need to promote them again to test co-GM functional abilities
+    // NOTE: Both TestAudience1 and TestAudience2 are in audience, we need to click the RIGHT one
     await loginAs(page, 'GM');
 
     const gamePage = new GameDetailsPage(page);
@@ -223,31 +269,53 @@ test.describe.serial('Co-GM Functional Abilities', () => {
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /Game Participants/ }).click();
 
-    // Wait for participant data and promote first audience member
+    // Wait for audience section
     await page.waitForSelector('h3:has-text("audiences")');
-    // Note: .nth(1) because .nth(0) is the player, and we need the first audience member
-    const actionsButton = page.getByRole('button', { name: 'Participant actions' }).nth(1);
-    await actionsButton.click();
+
+    // Find TestAudience2 specifically (should be second audience member)
+    // TestAudience1 was demoted first, TestAudience2 was demoted second
+    // So TestAudience2 should be the last one in the audience list
+    const audienceSection = page.locator('div:has(> h3:has-text("audiences"))').first();
+    const actionsButtons = await audienceSection.getByRole('button', { name: 'Participant actions' }).all();
+
+    // Click the LAST audience member's actions button (TestAudience2)
+    await actionsButtons[actionsButtons.length - 1].click();
+
+    // Click "Promote to Co-GM"
     await page.getByRole('menuitem', { name: 'Promote to Co-GM' }).click();
 
-    // Confirm promotion
+    // Confirm in modal - verify we're promoting TestAudience2
+    await expect(page.getByRole('heading', { name: 'Promote to Co-GM?' })).toBeVisible();
+    await expect(page.getByText(/Promote.*TestAudience2.*to co-GM/i)).toBeVisible();
     await page.getByRole('button', { name: 'Promote to Co-GM' }).click();
+
+    // Wait for promotion to complete
     await page.waitForLoadState('networkidle');
 
-    // Verify co-GM was promoted
+    // Verify modal closes and co-GM section appears
+    await expect(page.getByRole('heading', { name: 'Promote to Co-GM?' })).not.toBeVisible({ timeout: 10000 });
     await expect(page.locator('h3:has-text("co gm")')).toBeVisible();
   });
 
   test('Co-GM can create a new phase', async ({ page }) => {
-    // Login as co-GM
-    await loginAs(page, 'AUDIENCE_1');
+    // Login as co-GM (TestAudience2 was just promoted in previous test)
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // Reload page to ensure fresh participant data (React Query cache issue)
+    // Reload page to ensure fresh participant data after promotion (React Query cache)
     await page.reload();
     await page.waitForLoadState('networkidle');
+
+    // Wait for auth state to stabilize and co-GM permissions to be reflected
+    await page.waitForTimeout(2000);
+
+    // Verify we're logged in as the correct user and they're shown as co-GM in header
+    await expect(page.getByText(/Co-GM:.*TestAudience2/)).toBeVisible({ timeout: 10000 });
+
+    // Wait for Phases tab to appear (GM-only tab, confirms co-GM permissions)
+    await expect(page.getByRole('tab', { name: 'Phases' })).toBeVisible({ timeout: 10000 });
 
     // Navigate to Phases tab
     await page.getByRole('tab', { name: 'Phases' }).click();
@@ -276,7 +344,7 @@ test.describe.serial('Co-GM Functional Abilities', () => {
 
   test('Co-GM can edit phase details', async ({ page }) => {
     // Login as co-GM
-    await loginAs(page, 'AUDIENCE_1');
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
@@ -303,13 +371,39 @@ test.describe.serial('Co-GM Functional Abilities', () => {
   });
 
   test('Co-GM can view player actions on Actions tab', async ({ page }) => {
-    // Login as co-GM
-    await loginAs(page, 'AUDIENCE_1');
+    // First, activate the action phase so the Actions tab becomes visible
+    await loginAs(page, 'GM');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // Navigate to Actions tab (GM-only)
+    // Navigate to Phases tab and activate the action phase
+    await page.getByRole('tab', { name: 'Phases' }).click();
+    await page.waitForLoadState('networkidle');
+
+    // Find "Test Phase 1" (Phase 2, the action phase) card and click its Activate button
+    // Use both "Phase 2" text and heading to uniquely identify the correct phase card
+    const phaseCard = page.locator('div').filter({ hasText: 'Phase 2' }).filter({ has: page.getByRole('heading', { name: 'Test Phase 1', exact: true }) });
+    await phaseCard.getByRole('button', { name: 'Activate', exact: true }).first().click();
+
+    // Confirm phase activation in the modal
+    await expect(page.getByRole('heading', { name: 'Activate Phase 2?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Activate Phase' }).click();
+
+    // Wait for phase activation to complete
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: 'Activate Phase 2?' })).not.toBeVisible();
+
+    // Now login as co-GM and verify Actions tab access
+    await loginAs(page, 'AUDIENCE_2');
+    await gamePage.goto(gameId);
+
+    // Reload to ensure fresh auth state
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Navigate to Actions tab (GM-only, now visible because action phase is active)
     await page.getByRole('tab', { name: 'Actions' }).click();
     await page.waitForLoadState('networkidle');
 
@@ -322,10 +416,15 @@ test.describe.serial('Co-GM Functional Abilities', () => {
 
   test('Co-GM has full access to phase management', async ({ page }) => {
     // Login as co-GM
-    await loginAs(page, 'AUDIENCE_1');
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
+
+    // Reload to ensure fresh auth state
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Navigate to Phases tab
     await page.getByRole('tab', { name: 'Phases' }).click();
@@ -347,10 +446,15 @@ test.describe.serial('Co-GM Functional Abilities', () => {
 
   test('Co-GM can create handouts', async ({ page }) => {
     // Login as co-GM
-    await loginAs(page, 'AUDIENCE_1');
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
+
+    // Reload to ensure fresh auth state
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Navigate to Handouts tab
     await page.getByRole('tab', { name: 'Handouts' }).click();
@@ -380,10 +484,15 @@ test.describe.serial('Co-GM Functional Abilities', () => {
 
   test('Co-GM can manage participants', async ({ page }) => {
     // Login as co-GM
-    await loginAs(page, 'AUDIENCE_1');
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
+
+    // Reload to ensure fresh auth state
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Navigate to People tab
     await page.getByRole('tab', { name: 'People' }).click();
@@ -404,10 +513,15 @@ test.describe.serial('Co-GM Functional Abilities', () => {
 
   test('Co-GM can create NPCs', async ({ page }) => {
     // Login as co-GM
-    await loginAs(page, 'AUDIENCE_1');
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
+
+    // Reload to ensure fresh auth state
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Navigate to People tab > Characters sub-tab
     await page.getByRole('tab', { name: 'People' }).click();
@@ -445,14 +559,19 @@ test.describe.serial('Co-GM Functional Abilities', () => {
   });
 
   test('Co-GM can send private messages as GM NPC', async ({ page }) => {
-    // Co-GM has been promoted from audience (AUDIENCE_1)
+    // Co-GM has been promoted from audience (AUDIENCE_2)
     // Fixture provides a GM NPC ("GM Test NPC") that the co-GM can use for messaging
     // Messages tab is visible because co-GM has the NPC character (isAudience && hasCharacters)
 
-    await loginAs(page, 'AUDIENCE_1');
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
+
+    // Reload to ensure fresh auth state
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Navigate to Messages tab (visible to co-GMs with characters)
     await page.getByRole('tab', { name: 'Messages' }).click();
@@ -483,10 +602,15 @@ test.describe.serial('Co-GM Functional Abilities', () => {
 
   test('Co-GM can access Audience tab', async ({ page }) => {
     // Login as co-GM
-    await loginAs(page, 'AUDIENCE_1');
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
+
+    // Reload to ensure fresh auth state
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Verify co-GM can see Audience tab (GM-only during in_progress)
     await expect(page.getByRole('tab', { name: 'Audience' })).toBeVisible();
@@ -503,17 +627,21 @@ test.describe.serial('Co-GM Functional Abilities', () => {
   });
 
   test('Co-GM can edit Action Results', async ({ page }) => {
-    // Fixture provides:
-    // - Game in action phase (phase_type = 'action')
-    // - Action submission from TestPlayer1
-    // - Actions tab is visible to co-GM because: currentPhaseType === 'action' && (isGM || isParticipant)
+    // Action phase was activated in the previous test, so Actions tab should be visible
+    // If we need to re-activate: the fixture has "Test Phase 1" as an action phase
 
-    await loginAs(page, 'AUDIENCE_1');
+    await loginAs(page, 'AUDIENCE_2');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
+    // Reload to ensure fresh auth state
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
     // Navigate to Actions tab where GMs manage action results
+    // (visible because action phase is active from previous test)
     await page.getByRole('tab', { name: 'Actions' }).click();
     await page.waitForLoadState('networkidle');
 
@@ -526,9 +654,14 @@ test.describe.serial('Co-GM Functional Abilities', () => {
   });
 
   test('Co-GM can access character management', async ({ page }) => {
-    await loginAs(page, 'AUDIENCE_1');
+    await loginAs(page, 'AUDIENCE_2');
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
+
+    // Reload to ensure fresh auth state
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Navigate to People tab > Characters
     await page.getByRole('tab', { name: 'People' }).click();

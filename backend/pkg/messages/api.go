@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/render"
 
 	"actionphase/pkg/core"
+	models "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
 	messagesvc "actionphase/pkg/db/services/messages"
 )
@@ -168,18 +169,21 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user is GM (only GM can create posts)
-	gameService := &db.GameService{DB: h.App.Pool}
-	userRole, err := gameService.GetUserRole(ctx, int32(gameID), userID)
+	// Check if user is GM or co-GM (only GM/co-GM can create posts)
+	queries := models.New(h.App.Pool)
+	game, err := queries.GetGame(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get user role", "error", err, "game_id", gameID, "user_id", userID)
+		h.App.Logger.Error("Failed to get game", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	if userRole != "gm" {
-		h.App.Logger.Warn("Non-GM user attempted to create post", "user_id", userID, "game_id", gameID)
-		render.Render(w, r, core.ErrForbidden("Only the Game Master can create posts"))
+	isPrimaryGM := game.GmUserID == userID
+	isCoGM := core.IsUserCoGM(ctx, h.App.Pool, int32(gameID), userID)
+
+	if !isPrimaryGM && !isCoGM {
+		h.App.Logger.Warn("Non-GM/co-GM user attempted to create post", "user_id", userID, "game_id", gameID)
+		render.Render(w, r, core.ErrForbidden("Only the Game Master or co-GM can create posts"))
 		return
 	}
 

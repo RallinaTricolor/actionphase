@@ -62,6 +62,13 @@ with open('$temp_file.step1', 'r') as f:
 def offset_id(id_str):
     return str(int(id_str) + offset)
 
+# 0. Replace worker_game_id_offset variable assignments in DO blocks
+# Handles: worker_game_id_offset INTEGER := 0;
+content = re.sub(
+    r'(worker_game_id_offset\s+INTEGER\s*:=\s*)0(\s*;)',
+    lambda m: m.group(1) + str(offset) + m.group(2),
+    content, flags=re.IGNORECASE)
+
 # 1. Offset game IDs in INSERT INTO games statements (handles both inline and multi-line)
 # Only match 1-3 digit game IDs (original range) to avoid double-offsetting
 content = re.sub(
@@ -208,10 +215,10 @@ for file in "$SCRIPT_DIR"/e2e/*.sql; do
 
     # Skip worker setup (already applied) and worker-specific files that don't match this worker
     if [ -f "$file" ] && [ "$filename" != "00_worker_setup.sql" ]; then
-        # For private message deletion, use worker-specific file (no transformation needed)
-        if [[ "$filename" == 17_private_message_deletion_w*.sql ]]; then
+        # For private message deletion and co-GM management, use worker-specific file (no transformation needed)
+        if [[ "$filename" == 17_private_message_deletion_w*.sql ]] || [[ "$filename" == 18_co_gm_management_w*.sql ]]; then
             # Only process if it matches our worker index
-            if [[ "$filename" == "17_private_message_deletion_w${WORKER_INDEX}.sql" ]]; then
+            if [[ "$filename" == "17_private_message_deletion_w${WORKER_INDEX}.sql" ]] || [[ "$filename" == "18_co_gm_management_w${WORKER_INDEX}.sql" ]]; then
                 echo "  📄 Processing $filename for worker $WORKER_INDEX (no transformation)..."
                 # Apply directly without transformation
                 if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$file"; then

@@ -4,7 +4,6 @@
 - User profiles
   - Games & characters played
 - Check notification behavior with Co-GM
-  - Co-GM NPC control
 - AWS MFA
 - Completing a game needs to disable anonymous mode
 - USER AND API DOCS

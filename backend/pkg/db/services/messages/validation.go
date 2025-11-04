@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"regexp"
 
+	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
 )
@@ -15,7 +16,7 @@ import (
 func (s *MessageService) ValidateCharacterOwnership(ctx context.Context, characterID, authorID, gameID int32) error {
 	queries := models.New(s.DB)
 
-	// Get the character to verify ownership
+	// Get the character to verify it belongs to the game
 	character, err := queries.GetCharacter(ctx, characterID)
 	if err != nil {
 		return fmt.Errorf("character not found: %w", err)
@@ -26,32 +27,12 @@ func (s *MessageService) ValidateCharacterOwnership(ctx context.Context, charact
 		return errors.New("character does not belong to this game")
 	}
 
-	// Check if this is a player character owned by the author
-	if character.UserID.Valid && character.UserID.Int32 == authorID {
-		return nil
+	// Use centralized NPC control check (handles player characters, NPCs, GM, co-GM, and assignments)
+	if !core.CanUserControlNPC(ctx, s.DB, characterID, authorID) {
+		return errors.New("character does not belong to this user")
 	}
 
-	// Check if this is an NPC
-	if character.CharacterType == "npc" {
-		// Check if user is assigned to this NPC
-		assignment, err := queries.GetNPCAssignment(ctx, characterID)
-		if err == nil && assignment.AssignedUserID == authorID {
-			return nil
-		}
-
-		// Check if user is the GM (GMs can post as any NPC, even assigned ones, for emergency situations)
-		game, err := queries.GetGame(ctx, gameID)
-		if err != nil {
-			return fmt.Errorf("failed to get game: %w", err)
-		}
-
-		if game.GmUserID == authorID {
-			// GM can always post as any NPC in their game
-			return nil
-		}
-	}
-
-	return errors.New("character does not belong to this user")
+	return nil
 }
 
 // notifyCharacterMentions triggers notifications for all characters mentioned in a message

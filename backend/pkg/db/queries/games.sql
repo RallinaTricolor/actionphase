@@ -249,3 +249,7 @@ WHERE gp.game_id = $1 AND gp.user_id = $2 AND gp.status = 'active';
 -- name: CountCoGMsInGame :one
 SELECT COUNT(*) FROM game_participants
 WHERE game_id = $1 AND role = 'co_gm' AND status = 'active';
+
+-- name: GetGameCoGMs :many
+SELECT user_id FROM game_participants
+WHERE game_id = $1 AND role = 'co_gm' AND status = 'active';

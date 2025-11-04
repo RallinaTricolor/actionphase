@@ -123,3 +123,61 @@ func IsUserGameMasterCtx(ctx context.Context, userID int32, isAdmin bool, game m
 
 	return false
 }
+
+// CanUserControlNPC checks if a user can control an NPC character.
+// This includes:
+// 1. The NPC is assigned to the user (via npc_assignments table)
+// 2. The user is the primary GM of the game
+// 3. The user is a co-GM of the game
+//
+// This function is used for operations like:
+// - Sending messages as an NPC
+// - Creating posts as an NPC in common room
+// - Performing actions as an NPC
+//
+// Usage Example:
+//
+//	if !core.CanUserControlNPC(ctx, db, npcCharacterID, userID) {
+//		render.Render(w, r, core.ErrForbidden("you cannot control this NPC"))
+//		return
+//	}
+func CanUserControlNPC(ctx context.Context, db *pgxpool.Pool, characterID int32, userID int32) bool {
+	queries := models.New(db)
+
+	// Get the character to check if it's an NPC and get game_id
+	char, err := queries.GetCharacter(ctx, characterID)
+	if err != nil {
+		return false
+	}
+
+	// If it's not an NPC (has a user_id), only that user can control it
+	if char.UserID.Valid {
+		return char.UserID.Int32 == userID
+	}
+
+	// It's an NPC (user_id is NULL) - check assignment, GM, or co-GM status
+
+	// Check if NPC is assigned to this user
+	assignment, err := queries.GetNPCAssignment(ctx, characterID)
+	if err == nil && assignment.AssignedUserID == userID {
+		return true
+	}
+
+	// Get the game to check GM status
+	game, err := queries.GetGame(ctx, char.GameID)
+	if err != nil {
+		return false
+	}
+
+	// Check if user is primary GM
+	if game.GmUserID == userID {
+		return true
+	}
+
+	// Check if user is co-GM
+	if IsUserCoGM(ctx, db, char.GameID, userID) {
+		return true
+	}
+
+	return false
+}

@@ -99,13 +99,45 @@ func (s *ConversationService) CreateConversation(ctx context.Context, req Create
 				participantUserID = assignment.AssignedUserID
 				slog.Info("Using NPC assignment", "character_id", charID, "assigned_user_id", participantUserID)
 			} else {
-				// NPC is not assigned - default to GM
-				slog.Info("NPC not assigned, using GM", "character_id", charID, "assignment_error", err)
+				// NPC is not assigned - add both GM and all co-GMs as participants
+				slog.Info("NPC not assigned, adding GM and co-GMs as participants", "character_id", charID, "assignment_error", err)
+
 				game, err := qtx.GetGame(ctx, req.GameID)
 				if err != nil {
 					return nil, fmt.Errorf("failed to get game: %w", err)
 				}
-				participantUserID = game.GmUserID
+
+				// Add primary GM
+				_, err = qtx.AddConversationParticipant(ctx, models.AddConversationParticipantParams{
+					ConversationID: conv.ID,
+					UserID:         game.GmUserID,
+					CharacterID:    pgtype.Int4{Int32: charID, Valid: true},
+				})
+				if err != nil {
+					return nil, fmt.Errorf("failed to add GM as participant: %w", err)
+				}
+				slog.Info("Added primary GM for unassigned NPC", "character_id", charID, "user_id", game.GmUserID)
+
+				// Add all co-GMs
+				coGMUserIDs, err := qtx.GetGameCoGMs(ctx, req.GameID)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get co-GMs: %w", err)
+				}
+
+				for _, coGMUserID := range coGMUserIDs {
+					_, err = qtx.AddConversationParticipant(ctx, models.AddConversationParticipantParams{
+						ConversationID: conv.ID,
+						UserID:         coGMUserID,
+						CharacterID:    pgtype.Int4{Int32: charID, Valid: true},
+					})
+					if err != nil {
+						return nil, fmt.Errorf("failed to add co-GM %d as participant: %w", coGMUserID, err)
+					}
+					slog.Info("Added co-GM for unassigned NPC", "character_id", charID, "user_id", coGMUserID)
+				}
+
+				// Skip the normal participant addition since we already added GM/co-GMs
+				continue
 			}
 		}
 

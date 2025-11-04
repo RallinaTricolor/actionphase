@@ -58,20 +58,52 @@ export class CommonRoomPage {
   }
 
   /**
+   * Get the character selector dropdown
+   */
+  get characterSelector(): Locator {
+    return this.page.locator('select#character');
+  }
+
+  /**
+   * Select a character to post as
+   * @param characterName - Name of the character to select
+   */
+  async selectCharacter(characterName: string) {
+    // Wait for the selector to be visible AND enabled
+    await waitForVisible(this.characterSelector);
+    await this.characterSelector.waitFor({ state: 'attached' });
+
+    // Wait for selector to be enabled (not disabled)
+    await expect(this.characterSelector).toBeEnabled({ timeout: 5000 });
+
+    // Select the character by visible text
+    await this.characterSelector.selectOption({ label: characterName });
+
+    // Wait for selection to process
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
    * Create a new GM post
    * @param content - Post content
+   * @param characterName - Optional character name to post as (for GMs/co-GMs with multiple characters)
    */
-  async createPost(content: string) {
+  async createPost(content: string, characterName?: string) {
     // Check if form is collapsed - if so, expand it first
     // Filter to visible element (viewport-agnostic for dual-DOM pattern)
     const expandButton = this.page.locator('button:has-text("Create New GM Post")').locator('visible=true').first();
     if (await expandButton.isVisible().catch(() => false)) {
       await expandButton.click();
-      // Wait for form to expand
-      await this.page.waitForTimeout(300);
+      // Wait for form to expand and textarea to be visible
+      await waitForVisible(this.postTextarea);
     }
 
-    // Wait for textarea to be visible before filling
+    // If a character name is provided, select it
+    if (characterName) {
+      await this.selectCharacter(characterName);
+    }
+
+    // Ensure textarea is ready
     await waitForVisible(this.postTextarea);
     await this.postTextarea.fill(content);
     await this.page.waitForTimeout(500); // Allow form to process input
@@ -82,6 +114,9 @@ export class CommonRoomPage {
 
     // Verify post appears
     await assertTextVisible(this.page, content);
+
+    // Wait for form to fully collapse and reset before next operation
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -105,6 +140,10 @@ export class CommonRoomPage {
     // Wait for comment textarea to be visible
     const textarea = postCard.locator('textarea[placeholder*="Write a comment"]');
     await waitForVisible(textarea);
+
+    // Give the form a moment to fully render (character selector may appear after textarea)
+    // and for React useEffect to auto-select the first character
+    await this.page.waitForTimeout(800);
   }
 
   /**
@@ -171,9 +210,26 @@ export class CommonRoomPage {
   async addComment(
     postContent: string,
     commentText: string,
-    options: { withMention?: string; useSequential?: boolean } = {}
+    options: { withMention?: string; useSequential?: boolean; asCharacter?: string } = {}
   ) {
     await this.openCommentForm(postContent);
+
+    // Select character if specified (for NPCs and multiple characters)
+    if (options.asCharacter) {
+      const postCard = this.getPostCard(postContent);
+      // The select only appears when there are multiple characters
+      // Find it within the comment form - look for a combobox role which is more specific
+      const characterSelect = postCard.locator('role=combobox').first();
+
+      // Wait for it to be visible (it appears after opening comment form)
+      await characterSelect.waitFor({ state: 'visible', timeout: 5000 });
+
+      // Select by the label text (e.g., "Reply as Mysterious Stranger")
+      await characterSelect.selectOption({ label: `Reply as ${options.asCharacter}` });
+
+      // Wait for the selection to be processed
+      await this.page.waitForTimeout(500);
+    }
 
     if (options.withMention) {
       // Type text before mention
@@ -191,6 +247,7 @@ export class CommonRoomPage {
       await this.typeInComment(postContent, commentText, options.useSequential);
     }
 
+    // Submit the comment
     await this.submitComment(postContent);
   }
 
