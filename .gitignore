@@ -163,3 +163,4 @@ backend/uploads/
 
 .claude/skills-setup
 .claude/tsc-cache
+.claude/planning
