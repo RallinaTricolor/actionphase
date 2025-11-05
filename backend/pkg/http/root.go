@@ -197,8 +197,16 @@ func (h *Handler) Start() {
 			r.Get("/{gameId}/results", phaseHandler.GetGameActionResults)
 			r.Get("/{gameId}/results/mine", phaseHandler.GetUserActionResults)
 			r.Put("/{gameId}/results/{resultId}", phaseHandler.UpdateActionResult)
+			r.Post("/{gameId}/results/{resultId}/publish", phaseHandler.PublishActionResult)
 			r.Post("/{gameId}/phases/{phaseId}/results/publish", phaseHandler.PublishAllPhaseResults)
 			r.Get("/{gameId}/phases/{phaseId}/results/unpublished-count", phaseHandler.GetUnpublishedResultsCount)
+
+			// Draft character updates for action results
+			r.Post("/{gameId}/results/{resultId}/character-updates", phaseHandler.CreateDraftCharacterUpdate)
+			r.Get("/{gameId}/results/{resultId}/character-updates", phaseHandler.GetDraftCharacterUpdates)
+			r.Get("/{gameId}/results/{resultId}/character-updates/count", phaseHandler.GetDraftUpdateCount)
+			r.Put("/{gameId}/results/{resultId}/character-updates/{draftId}", phaseHandler.UpdateDraftCharacterUpdate)
+			r.Delete("/{gameId}/results/{resultId}/character-updates/{draftId}", phaseHandler.DeleteDraftCharacterUpdate)
 
 			// Common Room messages (posts and comments)
 			messageHandler := messages.Handler{App: h.App}

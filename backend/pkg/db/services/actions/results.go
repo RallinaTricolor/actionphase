@@ -80,28 +80,64 @@ func (as *ActionSubmissionService) GetUserPhaseResults(ctx context.Context, phas
 	return results, nil
 }
 
-// PublishActionResult publishes a single action result, making it visible to the player
-func (as *ActionSubmissionService) PublishActionResult(ctx context.Context, resultID, userID int32) error {
-	queries := models.New(as.DB)
-
+// publishSingleResultWithDrafts is a helper that publishes a single result and its draft updates.
+// This is called by both PublishActionResult and PublishAllPhaseResults to ensure consistent behavior.
+// The queries parameter must be from a transaction context to ensure atomicity.
+func (as *ActionSubmissionService) publishSingleResultWithDrafts(ctx context.Context, queries *models.Queries, resultID int32) error {
+	// Step 1: Publish the action result (marks it as published)
 	_, err := queries.PublishActionResult(ctx, resultID)
 	if err != nil {
-		return fmt.Errorf("failed to publish action result: %w", err)
+		return fmt.Errorf("failed to publish action result %d: %w", resultID, err)
+	}
+
+	// Step 2: Publish any draft character updates associated with this result
+	// This copies the drafts to character_data table
+	err = queries.PublishDraftCharacterUpdates(ctx, resultID)
+	if err != nil {
+		return fmt.Errorf("failed to publish draft character updates for result %d: %w", resultID, err)
+	}
+
+	// Step 3: Delete the published drafts (cleanup)
+	err = queries.DeletePublishedDrafts(ctx, resultID)
+	if err != nil {
+		return fmt.Errorf("failed to delete published drafts for result %d: %w", resultID, err)
 	}
 
 	return nil
 }
 
-// PublishAllPhaseResults publishes all unpublished results for a phase
+// PublishActionResult publishes a single action result, making it visible to the player.
+// This includes publishing any draft character updates associated with the result.
+// All operations are performed in a transaction to ensure atomicity.
+func (as *ActionSubmissionService) PublishActionResult(ctx context.Context, resultID, userID int32) error {
+	return pgx.BeginFunc(ctx, as.DB, func(tx pgx.Tx) error {
+		queries := models.New(tx)
+		return as.publishSingleResultWithDrafts(ctx, queries, resultID)
+	})
+}
+
+// PublishAllPhaseResults publishes all unpublished results for a phase.
+// This includes publishing draft character updates for each result.
+// All operations are performed in a single transaction to ensure atomicity.
 func (as *ActionSubmissionService) PublishAllPhaseResults(ctx context.Context, phaseID int32) error {
-	queries := models.New(as.DB)
+	return pgx.BeginFunc(ctx, as.DB, func(tx pgx.Tx) error {
+		queries := models.New(tx)
 
-	err := queries.PublishAllPhaseResults(ctx, phaseID)
-	if err != nil {
-		return fmt.Errorf("failed to publish all phase results: %w", err)
-	}
+		// Get all unpublished result IDs for this phase
+		resultIDs, err := queries.GetUnpublishedResultIDs(ctx, phaseID)
+		if err != nil {
+			return fmt.Errorf("failed to get unpublished result IDs: %w", err)
+		}
 
-	return nil
+		// Publish each result and its draft character updates using shared logic
+		for _, resultID := range resultIDs {
+			if err := as.publishSingleResultWithDrafts(ctx, queries, resultID); err != nil {
+				return err // Error already has context from helper
+			}
+		}
+
+		return nil
+	})
 }
 
 // GetUnpublishedResultsCount retrieves the count of unpublished results for a phase

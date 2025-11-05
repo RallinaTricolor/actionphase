@@ -197,6 +197,20 @@ CREATE TABLE action_results (
     sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Draft character updates tied to action results
+CREATE TABLE action_result_character_updates (
+    id SERIAL PRIMARY KEY,
+    action_result_id INTEGER NOT NULL REFERENCES action_results(id) ON DELETE CASCADE,
+    character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+    module_type VARCHAR(50) NOT NULL,
+    field_name VARCHAR(100) NOT NULL,
+    field_value TEXT,
+    field_type VARCHAR(20) NOT NULL DEFAULT 'text',
+    operation VARCHAR(20) NOT NULL DEFAULT 'upsert',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Phase transitions log
 CREATE TABLE phase_transitions (
     id SERIAL PRIMARY KEY,

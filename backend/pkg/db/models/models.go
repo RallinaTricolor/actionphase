@@ -107,6 +107,19 @@ type ActionResult struct {
 	SentAt      pgtype.Timestamptz `json:"sent_at"`
 }
 
+type ActionResultCharacterUpdate struct {
+	ID             int32              `json:"id"`
+	ActionResultID int32              `json:"action_result_id"`
+	CharacterID    int32              `json:"character_id"`
+	ModuleType     string             `json:"module_type"`
+	FieldName      string             `json:"field_name"`
+	FieldValue     pgtype.Text        `json:"field_value"`
+	FieldType      string             `json:"field_type"`
+	Operation      string             `json:"operation"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type ActionSubmission struct {
 	ID          int32              `json:"id"`
 	GameID      int32              `json:"game_id"`

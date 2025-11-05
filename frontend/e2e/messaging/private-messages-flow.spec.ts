@@ -20,6 +20,8 @@ import { GameDetailsPage } from '../pages/GameDetailsPage';
  * - Uses assertion utilities for consistency
  * - Uses waitForModal and smart waits
  */
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Private Messages Flow', () => {
   test('Players can send private messages to each other', async ({ browser }) => {
     const player1Context = await browser.newContext();

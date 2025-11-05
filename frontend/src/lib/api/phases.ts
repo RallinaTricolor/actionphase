@@ -7,7 +7,10 @@ import type {
   ActionSubmission,
   ActionSubmissionRequest,
   ActionWithDetails,
-  ActionResult
+  ActionResult,
+  DraftCharacterUpdate,
+  CreateDraftCharacterUpdateRequest,
+  UpdateDraftCharacterUpdateRequest
 } from '../../types/phases';
 
 /**
@@ -75,5 +78,45 @@ export class PhasesApi extends BaseApiClient {
 
   async updateActionResult(gameId: number, resultId: number, data: { content: string }) {
     return this.client.put<ActionResult>(`/api/v1/games/${gameId}/results/${resultId}`, data);
+  }
+
+  async publishActionResult(gameId: number, resultId: number) {
+    return this.client.post<ActionResult>(`/api/v1/games/${gameId}/results/${resultId}/publish`);
+  }
+
+  // Draft character update endpoints
+  async createDraftCharacterUpdate(gameId: number, resultId: number, data: CreateDraftCharacterUpdateRequest) {
+    return this.client.post<DraftCharacterUpdate>(
+      `/api/v1/games/${gameId}/results/${resultId}/character-updates`,
+      data
+    );
+  }
+
+  async getDraftCharacterUpdates(gameId: number, resultId: number) {
+    return this.client.get<DraftCharacterUpdate[]>(
+      `/api/v1/games/${gameId}/results/${resultId}/character-updates`
+    );
+  }
+
+  async getDraftUpdateCount(gameId: number, resultId: number) {
+    return this.client.get<{ count: number }>(
+      `/api/v1/games/${gameId}/results/${resultId}/character-updates/count`
+    );
+  }
+
+  async updateDraftCharacterUpdate(
+    gameId: number,
+    resultId: number,
+    draftId: number,
+    data: UpdateDraftCharacterUpdateRequest
+  ) {
+    return this.client.put<DraftCharacterUpdate>(
+      `/api/v1/games/${gameId}/results/${resultId}/character-updates/${draftId}`,
+      data
+    );
+  }
+
+  async deleteDraftCharacterUpdate(gameId: number, resultId: number, draftId: number) {
+    return this.client.delete(`/api/v1/games/${gameId}/results/${resultId}/character-updates/${draftId}`);
   }
 }
