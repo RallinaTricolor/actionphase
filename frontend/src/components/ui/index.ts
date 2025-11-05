@@ -74,3 +74,7 @@ export type { SelectProps, SelectSize, SelectVariant } from './Select';
 // DateTimeInput
 export { DateTimeInput } from './DateTimeInput';
 export type { DateTimeInputProps, DateTimeInputSize, DateTimeInputVariant } from './DateTimeInput';
+
+// Modal
+export { Modal } from './Modal';
+export type { ModalProps } from './Modal';

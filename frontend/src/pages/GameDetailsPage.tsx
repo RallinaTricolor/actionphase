@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useGameContext } from '../contexts/GameContext';
@@ -20,6 +20,8 @@ import { PauseGameConfirmationDialog } from '../components/PauseGameConfirmation
 import { CancelGameConfirmationDialog } from '../components/CancelGameConfirmationDialog';
 import { LeaveGameConfirmationDialog } from '../components/LeaveGameConfirmationDialog';
 import { DeleteGameConfirmationDialog } from '../components/DeleteGameConfirmationDialog';
+import { DeadlineWidget } from '../components/DeadlineWidget';
+import type { CreateDeadlineRequest } from '../types/deadlines';
 
 interface GameDetailsPageProps {
   gameId: number;
@@ -107,6 +109,73 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  const queryClient = useQueryClient();
+
+  // Fetch deadlines
+  const { data: deadlines = [], isLoading: isLoadingDeadlines } = useQuery({
+    queryKey: ['deadlines', gameId],
+    queryFn: () => apiClient.deadlines.getGameDeadlines(gameId, false).then(res => res.data),
+    enabled: !!gameId,
+  });
+
+  // Create deadline mutation
+  const createDeadlineMutation = useMutation({
+    mutationFn: (data: CreateDeadlineRequest) =>
+      apiClient.deadlines.createDeadline(gameId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deadlines', gameId] });
+    },
+  });
+
+  // Update deadline mutation
+  const updateDeadlineMutation = useMutation({
+    mutationFn: ({ deadlineId, data }: { deadlineId: number; data: CreateDeadlineRequest }) =>
+      apiClient.deadlines.updateDeadline(deadlineId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deadlines', gameId] });
+    },
+  });
+
+  // Delete deadline mutation
+  const deleteDeadlineMutation = useMutation({
+    mutationFn: (deadlineId: number) =>
+      apiClient.deadlines.deleteDeadline(deadlineId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deadlines', gameId] });
+    },
+  });
+
+  // Deadline handlers
+  const handleCreateDeadline = async (data: CreateDeadlineRequest) => {
+    await createDeadlineMutation.mutateAsync(data);
+  };
+
+  const handleUpdateDeadline = async (deadlineId: number, data: CreateDeadlineRequest) => {
+    await updateDeadlineMutation.mutateAsync({ deadlineId, data });
+  };
+
+  const handleDeleteDeadline = async (deadlineId: number) => {
+    await deleteDeadlineMutation.mutateAsync(deadlineId);
+  };
+
+  const handleExtendDeadline = async (deadlineId: number, hours: number) => {
+    const deadline = deadlines.find(d => d.id === deadlineId);
+    if (!deadline?.deadline) return;
+
+    // Calculate new deadline by adding hours to current deadline
+    const currentDate = new Date(deadline.deadline);
+    const newDate = new Date(currentDate.getTime() + hours * 60 * 60 * 1000);
+
+    await updateDeadlineMutation.mutateAsync({
+      deadlineId,
+      data: {
+        title: deadline.title,
+        description: deadline.description || '',
+        deadline: newDate.toISOString(),
+      },
+    });
+  };
+
   // Delete game handler
   const handleDeleteGame = () => {
     setShowDeleteDialog(true);
@@ -186,6 +255,17 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           {game.state === 'in_progress' && currentPhaseData?.phase && (
             <CurrentPhaseCard phase={currentPhaseData.phase} />
           )}
+
+          {/* Deadline Widget - Full deadline management */}
+          <DeadlineWidget
+            deadlines={deadlines}
+            isLoading={isLoadingDeadlines}
+            isGM={isGM}
+            onCreateDeadline={handleCreateDeadline}
+            onUpdateDeadline={handleUpdateDeadline}
+            onDeleteDeadline={handleDeleteDeadline}
+            onExtendDeadline={handleExtendDeadline}
+          />
 
           {/* User Application Status - Only show during recruitment */}
           {!isGM && userApplication && game.state === 'recruitment' && (

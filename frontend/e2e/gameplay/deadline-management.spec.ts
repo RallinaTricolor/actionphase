@@ -1,0 +1,300 @@
+import { test, expect, Page } from '@playwright/test';
+import { loginAs } from '../fixtures/auth-helpers';
+import { getFixtureGameId } from '../fixtures/game-helpers';
+import { GameDetailsPage } from '../pages/GameDetailsPage';
+
+/**
+ * E2E Tests for Deadline Management
+ *
+ * Tests the complete deadline lifecycle:
+ * - GM can create deadlines
+ * - GM can edit deadlines
+ * - GM can extend deadlines
+ * - GM can delete deadlines
+ * - Players can view deadlines (read-only)
+ * - Timer color coding works correctly
+ *
+ * Uses E2E_ACTION fixture game for testing (state-modifying tests allowed)
+ */
+
+/**
+ * Helper function to set a date/time using the DateTimeInput picker
+ * The DateTimeInput component uses react-datepicker which requires clicking on
+ * calendar dates and selecting times from a dropdown, not using .fill()
+ */
+async function setDeadlineDateTime(page: Page, futureDate: Date) {
+  // Click the deadline textbox to open the date/time picker
+  await page.getByRole('textbox', { name: 'Deadline' }).click();
+
+  // Wait for the date picker dialog to appear
+  await expect(page.getByRole('dialog', { name: 'Choose Date and Time' })).toBeVisible();
+
+  // Get the month/year we need
+  const targetMonth = futureDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+  // The calendar should already be on the correct month for near-future dates
+  // Click the appropriate date cell
+  const dayOfMonth = futureDate.getDate();
+  const monthName = futureDate.toLocaleString('en-US', { month: 'long' });
+  const year = futureDate.getFullYear();
+  const ordinalDay = getOrdinalSuffix(dayOfMonth);
+
+  // Click the date (e.g., "Choose Friday, November 7th, 2025")
+  await page.getByRole('gridcell', { name: new RegExp(`Choose.*${monthName} ${ordinalDay}, ${year}`, 'i') }).click();
+
+  // Select the time from the dropdown
+  const hours = String(futureDate.getHours()).padStart(2, '0');
+  const minutes = String(futureDate.getMinutes()).padStart(2, '0');
+  const timeString = `${hours}:${minutes}`;
+
+  await page.getByRole('option', { name: timeString }).click();
+
+  // The picker should close automatically after selecting time
+  await expect(page.getByRole('dialog', { name: 'Choose Date and Time' })).not.toBeVisible();
+}
+
+/**
+ * Helper to get ordinal suffix for date (1st, 2nd, 3rd, 4th, etc.)
+ */
+function getOrdinalSuffix(day: number): string {
+  if (day > 3 && day < 21) return `${day}th`;
+  switch (day % 10) {
+    case 1: return `${day}st`;
+    case 2: return `${day}nd`;
+    case 3: return `${day}rd`;
+    default: return `${day}th`;
+  }
+}
+
+test.describe('Deadline Management', () => {
+  test.beforeEach(async ({ page }) => {
+    // Login as GM
+    await loginAs(page, 'GM');
+  });
+
+  test('GM can create a new deadline', async ({ page }) => {
+    // Get game ID for E2E_ACTION fixture
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+    const gameDetailsPage = new GameDetailsPage(page);
+    await gameDetailsPage.goto(gameId);
+
+    // Verify Deadlines widget header exists
+    await expect(page.getByText('Deadlines').first()).toBeVisible();
+
+    // Click "Add Deadline" button
+    await page.getByRole('button', { name: /Add Deadline/i }).click();
+
+    // Fill in deadline form
+    await page.getByLabel('Title').fill('Test Deadline');
+    await page.getByLabel('Description').fill('This is a test deadline for E2E');
+
+    // Set deadline to 48 hours from now (future, >24h = blue)
+    // Round to nearest 15 minutes since the time picker uses 15-minute intervals
+    const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+    futureDate.setSeconds(0);
+    futureDate.setMilliseconds(0);
+
+    await setDeadlineDateTime(page, futureDate);
+
+    // Submit form
+    await page.getByRole('button', { name: /Create Deadline/i }).click();
+
+    // Verify deadline appears in widget
+    await expect(page.getByText('Test Deadline')).toBeVisible();
+    await expect(page.getByText('This is a test deadline for E2E')).toBeVisible();
+
+    // Verify timer shows (should have timer emoji)
+    const deadlineTimer = page.locator('span:has-text("⏱️")').first();
+    await expect(deadlineTimer).toBeVisible();
+  });
+
+  test('GM can edit an existing deadline', async ({ page }) => {
+    // Get game ID
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+    const gameDetailsPage = new GameDetailsPage(page);
+    await gameDetailsPage.goto(gameId);
+
+    // Create a deadline first
+    await page.getByRole('button', { name: /Add Deadline/i }).click();
+    await page.getByLabel('Title').fill('Original Title');
+    await page.getByLabel('Description').fill('Original description');
+
+    const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+    futureDate.setSeconds(0);
+    futureDate.setMilliseconds(0);
+
+    await setDeadlineDateTime(page, futureDate);
+    await page.getByRole('button', { name: /Create Deadline/i }).click();
+
+    // Wait for deadline to appear
+    await expect(page.getByText('Original Title')).toBeVisible();
+
+    // Click edit button (pencil icon)
+    await page.getByRole('button', { name: /Edit deadline/i }).first().click();
+
+    // Update the deadline
+    await page.getByLabel('Title').fill('Updated Title');
+    await page.getByLabel('Description').fill('Updated description');
+
+    // Submit changes
+    await page.getByRole('button', { name: /Save Changes/i }).click();
+
+    // Wait for modal to close
+    await expect(page.getByRole('heading', { name: 'Edit Deadline' })).not.toBeVisible();
+
+    // Verify changes appear in the deadline list
+    await expect(page.getByText('Updated Title')).toBeVisible();
+    await expect(page.getByText('Updated description')).toBeVisible();
+    await expect(page.getByText('Original Title')).not.toBeVisible();
+  });
+
+  test('GM can extend a deadline', async ({ page }) => {
+    // Get game ID
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+    const gameDetailsPage = new GameDetailsPage(page);
+    await gameDetailsPage.goto(gameId);
+
+    // Create a deadline with a near-term date (12 hours = yellow warning)
+    await page.getByRole('button', { name: /Add Deadline/i }).click();
+    await page.getByLabel('Title').fill('Soon Deadline');
+    await page.getByLabel('Description').fill('This deadline is coming soon');
+
+    const soonDate = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
+    soonDate.setMinutes(Math.round(soonDate.getMinutes() / 15) * 15);
+    soonDate.setSeconds(0);
+    soonDate.setMilliseconds(0);
+
+    await setDeadlineDateTime(page, soonDate);
+    await page.getByRole('button', { name: /Create Deadline/i }).click();
+
+    await expect(page.getByText('Soon Deadline')).toBeVisible();
+
+    // Click extend button (clock icon)
+    await page.getByRole('button', { name: /Extend deadline/i }).first().click();
+
+    // Select 24 hours extension
+    await page.getByRole('button', { name: /24 hours/i }).click();
+
+    // Confirm extension (use exact match to avoid ambiguity with the icon button)
+    await page.getByRole('button', { name: 'Extend Deadline', exact: true }).click();
+
+    // Deadline should still be visible (just extended)
+    await expect(page.getByText('Soon Deadline')).toBeVisible();
+  });
+
+  test('GM can delete a deadline', async ({ page }) => {
+    // Get game ID
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+    const gameDetailsPage = new GameDetailsPage(page);
+    await gameDetailsPage.goto(gameId);
+
+    // Create a deadline
+    await page.getByRole('button', { name: /Add Deadline/i }).click();
+    await page.getByLabel('Title').fill('Deadline to Delete');
+    await page.getByLabel('Description').fill('This deadline will be deleted');
+
+    const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+    futureDate.setSeconds(0);
+    futureDate.setMilliseconds(0);
+
+    await setDeadlineDateTime(page, futureDate);
+    await page.getByRole('button', { name: /Create Deadline/i }).click();
+
+    await expect(page.getByText('Deadline to Delete')).toBeVisible();
+
+    // Click delete button (trash icon)
+    await page.getByRole('button', { name: /Delete deadline/i }).first().click();
+
+    // Confirm deletion in modal
+    await expect(page.getByText(/Are you sure you want to delete/i)).toBeVisible();
+    await page.getByRole('button', { name: /^Delete$/i }).last().click();
+
+    // Wait for confirmation dialog to close (indicates deletion completed)
+    await expect(page.getByText(/Are you sure you want to delete/i)).not.toBeVisible();
+  });
+
+  test('Player can view deadlines but cannot edit them', async ({ page }) => {
+    // First, as GM, create a deadline
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+    const gameDetailsPage = new GameDetailsPage(page);
+    await gameDetailsPage.goto(gameId);
+
+    await page.getByRole('button', { name: /Add Deadline/i }).click();
+    await page.getByLabel('Title').fill('Player View Test');
+    await page.getByLabel('Description').fill('Players should see this read-only');
+
+    const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+    futureDate.setSeconds(0);
+    futureDate.setMilliseconds(0);
+
+    await setDeadlineDateTime(page, futureDate);
+    await page.getByRole('button', { name: /Create Deadline/i }).click();
+
+    await expect(page.getByText('Player View Test')).toBeVisible();
+
+    // Login as player
+    await loginAs(page, 'PLAYER_4');
+
+    // Navigate to the same game
+    await gameDetailsPage.goto(gameId);
+
+    // Verify player can see the deadline
+    await expect(page.getByText('Player View Test')).toBeVisible();
+    await expect(page.getByText('Players should see this read-only')).toBeVisible();
+
+    // Verify "Add Deadline" button is NOT visible to players
+    await expect(page.getByRole('button', { name: /Add Deadline/i })).not.toBeVisible();
+
+    // Verify edit/delete buttons are NOT visible to players
+    await expect(page.getByRole('button', { name: /Edit deadline/i })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /Delete deadline/i })).not.toBeVisible();
+  });
+
+  test('Deadline widget can be expanded and collapsed', async ({ page }) => {
+    // Get game ID
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+    const gameDetailsPage = new GameDetailsPage(page);
+    await gameDetailsPage.goto(gameId);
+
+    // Create a deadline
+    await page.getByRole('button', { name: /Add Deadline/i }).click();
+    await page.getByLabel('Title').fill('Collapsible Test');
+    await page.getByLabel('Description').fill('Testing widget collapse');
+
+    const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+    futureDate.setSeconds(0);
+    futureDate.setMilliseconds(0);
+
+    await setDeadlineDateTime(page, futureDate);
+    await page.getByRole('button', { name: /Create Deadline/i }).click();
+
+    // Verify deadline is visible when expanded (default state)
+    const deadlineHeading = page.getByRole('heading', { name: 'Collapsible Test' });
+    await expect(deadlineHeading).toBeVisible();
+
+    // Click the "Deadlines" button/header to collapse
+    await page.getByRole('button', { name: /Deadlines/i }).first().click();
+
+    // Wait for collapse animation (300ms as per component CSS)
+    await page.waitForTimeout(400);
+
+    // Verify deadline list container has opacity-0 class (collapsed state)
+    const deadlineContainer = page.locator('.space-y-4.overflow-hidden').first();
+    await expect(deadlineContainer).toHaveClass(/opacity-0/);
+
+    // Click button again to expand
+    await page.getByRole('button', { name: /Deadlines/i }).first().click();
+
+    // Wait for expand animation
+    await page.waitForTimeout(400);
+
+    // Verify deadline is visible again and container has opacity-100
+    await expect(deadlineHeading).toBeVisible();
+    await expect(deadlineContainer).toHaveClass(/opacity-100/);
+  });
+});

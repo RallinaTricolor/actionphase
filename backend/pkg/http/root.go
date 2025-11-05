@@ -9,6 +9,7 @@ import (
 	"actionphase/pkg/core"
 	"actionphase/pkg/dashboard"
 	db "actionphase/pkg/db/services"
+	"actionphase/pkg/deadlines"
 	"actionphase/pkg/docs"
 	"actionphase/pkg/games"
 	"actionphase/pkg/handouts"
@@ -244,6 +245,11 @@ func (h *Handler) Start() {
 			r.Get("/{gameId}/handouts/{handoutId}/comments", handoutHandler.ListHandoutComments)
 			r.Patch("/{gameId}/handouts/{handoutId}/comments/{commentId}", handoutHandler.UpdateHandoutComment)
 			r.Delete("/{gameId}/handouts/{handoutId}/comments/{commentId}", handoutHandler.DeleteHandoutComment)
+
+			// Deadlines
+			deadlineHandler := &deadlines.Handler{App: h.App}
+			r.Post("/{gameId}/deadlines", deadlineHandler.CreateDeadline)
+			r.Get("/{gameId}/deadlines", deadlineHandler.GetGameDeadlines)
 		})
 	})
 	apiV1Router.Mount("/games", gamesRouter)
@@ -298,6 +304,27 @@ func (h *Handler) Start() {
 		})
 	})
 	apiV1Router.Mount("/phases", phasesRouter)
+
+	// Deadlines API (for deadline-specific operations)
+	deadlinesRouter := chi.NewRouter()
+	deadlinesRouter.Route("/", func(r chi.Router) {
+		deadlineHandler := deadlines.Handler{App: h.App}
+
+		// All deadline routes require authentication
+		r.Group(func(r chi.Router) {
+			tokenAuth := h.getTokenAuth()
+			userService := &db.UserService{DB: h.App.Pool}
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
+
+			// Deadline management
+			r.Get("/upcoming", deadlineHandler.GetUpcomingDeadlines) // Get upcoming deadlines across all user's games
+			r.Patch("/{deadlineId}", deadlineHandler.UpdateDeadline)
+			r.Delete("/{deadlineId}", deadlineHandler.DeleteDeadline)
+		})
+	})
+	apiV1Router.Mount("/deadlines", deadlinesRouter)
 
 	// Notifications API
 	notificationsRouter := chi.NewRouter()

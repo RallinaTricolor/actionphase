@@ -45,6 +45,7 @@ import { ConversationsApi } from './conversations';
 import { NotificationsApi } from './notifications';
 import { AdminApi } from './admin';
 import { HandoutsApi } from './handouts';
+import { DeadlinesApi } from './deadlines';
 
 class ApiClient extends BaseApiClient {
   public auth: AuthApi;
@@ -56,6 +57,7 @@ class ApiClient extends BaseApiClient {
   public notifications: NotificationsApi;
   public admin: AdminApi;
   public handouts: HandoutsApi;
+  public deadlines: DeadlinesApi;
 
   constructor() {
     super();
@@ -70,6 +72,7 @@ class ApiClient extends BaseApiClient {
     this.notifications = new NotificationsApi();
     this.admin = new AdminApi();
     this.handouts = new HandoutsApi();
+    this.deadlines = new DeadlinesApi();
   }
 }
 
