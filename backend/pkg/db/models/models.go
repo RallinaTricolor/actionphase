@@ -230,6 +230,18 @@ type GameApplication struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
+type GameDeadline struct {
+	ID              int32              `json:"id"`
+	GameID          int32              `json:"game_id"`
+	Title           string             `json:"title"`
+	Description     pgtype.Text        `json:"description"`
+	Deadline        pgtype.Timestamptz `json:"deadline"`
+	CreatedByUserID int32              `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+}
+
 type GameParticipant struct {
 	ID              int32              `json:"id"`
 	GameID          int32              `json:"game_id"`

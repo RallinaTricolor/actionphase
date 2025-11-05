@@ -1131,3 +1131,67 @@ type RegistrationAttempt struct {
 	BlockedReason     string
 	Successful        bool
 }
+
+// ==========================================
+// Game Deadlines Service Interface
+// ==========================================
+
+// DeadlineServiceInterface defines the contract for game deadline operations.
+// Allows GMs to create arbitrary deadlines separate from phase transitions.
+// These deadlines can be displayed in game views to help players track important dates.
+type DeadlineServiceInterface interface {
+	// CreateDeadline creates a new deadline for a game.
+	// Only GMs can create deadlines for their games.
+	CreateDeadline(ctx context.Context, req CreateDeadlineRequest) (*models.GameDeadline, error)
+
+	// GetDeadline retrieves a specific deadline by ID.
+	// Returns error if deadline is not found or has been soft-deleted.
+	GetDeadline(ctx context.Context, deadlineID int32) (*models.GameDeadline, error)
+
+	// GetGameDeadlines retrieves all active deadlines for a game.
+	// If includeExpired is true, returns expired deadlines as well.
+	// Results are ordered by deadline timestamp ascending (soonest first).
+	GetGameDeadlines(ctx context.Context, gameID int32, includeExpired bool) ([]models.GameDeadline, error)
+
+	// GetUpcomingDeadlines retrieves upcoming deadlines across all user's games.
+	// Used for dashboard view to show deadlines from all games the user participates in.
+	// Returns deadline with associated game information for context.
+	GetUpcomingDeadlines(ctx context.Context, userID int32, limit int32) ([]DeadlineWithGame, error)
+
+	// UpdateDeadline updates deadline details (title, description, timestamp).
+	// Only GMs can update deadlines for their games.
+	UpdateDeadline(ctx context.Context, deadlineID int32, req UpdateDeadlineRequest) (*models.GameDeadline, error)
+
+	// DeleteDeadline soft-deletes a deadline by setting deleted_at timestamp.
+	// Only GMs can delete deadlines for their games.
+	// userID is the ID of the user requesting deletion (must be GM).
+	DeleteDeadline(ctx context.Context, deadlineID int32, userID int32) error
+}
+
+// ==========================================
+// Game Deadlines Request/Response Types
+// ==========================================
+
+// CreateDeadlineRequest represents parameters for creating a deadline.
+type CreateDeadlineRequest struct {
+	GameID      int32
+	Title       string
+	Description string
+	Deadline    time.Time
+	CreatedBy   int32
+}
+
+// UpdateDeadlineRequest represents parameters for updating a deadline.
+type UpdateDeadlineRequest struct {
+	Title       string
+	Description string
+	Deadline    time.Time
+}
+
+// DeadlineWithGame includes game context for cross-game deadline views.
+// Used when displaying deadlines from multiple games (e.g., dashboard view).
+type DeadlineWithGame struct {
+	models.GameDeadline
+	GameTitle string
+	GameID    int32
+}

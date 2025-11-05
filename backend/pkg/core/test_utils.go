@@ -678,6 +678,9 @@ var CleanupPresets = map[string][]string{
 	// Conversation cleanup (private messages)
 	"conversations": {"conversation_reads", "private_messages", "conversation_participants", "conversations", "characters", "games", "sessions", "users"},
 
+	// Deadline cleanup
+	"deadlines": {"game_deadlines", "game_participants", "games", "sessions", "users"},
+
 	// Complete cleanup (all tables)
 	"all": {
 		"conversation_reads",
@@ -692,6 +695,7 @@ var CleanupPresets = map[string][]string{
 		"npc_assignments",
 		"characters",
 		"game_phases",
+		"game_deadlines",
 		"game_participants",
 		"game_applications",
 		"games",

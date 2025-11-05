@@ -1,6 +1,13 @@
 import '@testing-library/jest-dom'
 import { server } from './mocks/server'
 
+// Mock ResizeObserver for react-datepicker
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 // Establish API mocking before all tests
 beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }))
 

@@ -69,7 +69,7 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await page.getByPlaceholder('Describe this ability...').fill('You can see in darkness within 60 feet');
 
     // Add the ability
-    await page.getByRole('button', { name: '+ Add Ability' }).click();
+    await page.getByTestId('add-abilities-button').click();
 
     // Should see draft in list
     await expect(page.getByText('Dark Vision')).toBeVisible({ timeout: 5000 });
@@ -93,7 +93,7 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     const uniqueAbilityName = `Remove Test ${Date.now()}`;
     await page.getByPlaceholder('e.g., Fireball, Sneak Attack').fill(uniqueAbilityName);
     await page.getByPlaceholder('Describe this ability...').fill('Test removal');
-    await page.getByRole('button', { name: 'Add Ability', exact: true }).click();
+    await page.getByTestId('add-abilities-button').click();
     await expect(page.getByText(uniqueAbilityName)).toBeVisible({ timeout: 5000 });
 
     // Remove the draft - wait for it to appear, then find and click the associated Remove button
@@ -128,7 +128,7 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await page.getByRole('button', { name: '+ Add Ability' }).click();
     await page.getByPlaceholder('e.g., Fireball, Sneak Attack').fill('New Ability');
     await page.getByPlaceholder('Describe this ability...').fill('Description');
-    await page.getByRole('button', { name: 'Add Ability', exact: true }).click();
+    await page.getByTestId('add-abilities-button').click();
     await expect(page.locator('text=New Ability').locator('visible=true')).toBeVisible({ timeout: 5000 });
 
     // Close modal
@@ -155,7 +155,7 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await page.getByRole('button', { name: '+ Add Ability' }).click();
     await page.getByPlaceholder('e.g., Fireball, Sneak Attack').fill('Published Ability');
     await page.getByPlaceholder('Describe this ability...').fill('This will be published');
-    await page.getByRole('button', { name: 'Add Ability', exact: true }).click();
+    await page.getByTestId('add-abilities-button').click();
     await expect(page.locator('text=Published Ability').locator('visible=true')).toBeVisible({ timeout: 5000 });
     await page.getByRole('button', { name: 'Close' }).click();
 
@@ -184,7 +184,7 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await page.getByRole('button', { name: '+ Add Ability' }).click();
     await page.getByPlaceholder('e.g., Fireball, Sneak Attack').fill('Final Ability');
     await page.getByPlaceholder('Describe this ability...').fill('Final test');
-    await page.getByRole('button', { name: 'Add Ability', exact: true }).click();
+    await page.getByTestId('add-abilities-button').click();
     await expect(page.locator('text=Final Ability').locator('visible=true')).toBeVisible({ timeout: 5000 });
     await page.getByRole('button', { name: 'Close' }).click();
 

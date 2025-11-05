@@ -238,6 +238,7 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
                   variant="primary"
                   onClick={handleAdd}
                   disabled={createDraft.isPending}
+                  data-testid={`add-${moduleType}-button`}
                 >
                   {createDraft.isPending ? 'Adding...' : addButtonLabel}
                 </Button>
@@ -245,6 +246,7 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
                   variant="secondary"
                   onClick={handleCancel}
                   disabled={createDraft.isPending}
+                  data-testid={`cancel-${moduleType}-button`}
                 >
                   Cancel
                 </Button>
