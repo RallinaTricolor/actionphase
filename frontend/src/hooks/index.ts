@@ -34,3 +34,12 @@ export { useUpdateComment, useDeleteComment } from './useCommentMutations';
 
 // Recent comments hooks
 export { useRecentComments, useTotalCommentCount } from './useRecentComments';
+
+// Draft character updates hooks
+export {
+  useDraftCharacterUpdates,
+  useDraftUpdateCount,
+  useCreateDraftCharacterUpdate,
+  useUpdateDraftCharacterUpdate,
+  useDeleteDraftCharacterUpdate,
+} from './useDraftCharacterUpdates';

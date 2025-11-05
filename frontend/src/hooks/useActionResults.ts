@@ -55,3 +55,21 @@ export function useUpdateActionResult(gameId: number) {
     },
   });
 }
+
+export function usePublishActionResult(gameId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (resultId: number) => {
+      const response = await apiClient.phases.publishActionResult(gameId, resultId);
+      return response.data;
+    },
+    onSuccess: () => {
+      // Invalidate queries to refetch data
+      queryClient.invalidateQueries({ queryKey: ['actionResults', 'game', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['actionResults', 'user', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['draftCharacterUpdates'] });
+      queryClient.invalidateQueries({ queryKey: ['draftUpdateCount'] });
+    },
+  });
+}

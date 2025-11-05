@@ -314,3 +314,54 @@ func (h *Handler) UpdateActionResult(w http.ResponseWriter, r *http.Request) {
 
 	render.Render(w, r, response)
 }
+
+// PublishActionResult publishes a single action result (GM only)
+func (h *Handler) PublishActionResult(w http.ResponseWriter, r *http.Request) {
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	resultIDStr := chi.URLParam(r, "resultId")
+	resultID, err := strconv.ParseInt(resultIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid result ID")))
+		return
+	}
+
+	// Get authenticated user from context (set by middleware)
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
+		return
+	}
+
+	// Check permissions - must be GM
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(authUser.ID))
+	if err != nil {
+		h.App.Logger.Error("Failed to check phase management permission", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canManage {
+		render.Render(w, r, core.ErrForbidden("only the GM can publish action results"))
+		return
+	}
+
+	// Publish the action result
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
+	err = actionService.PublishActionResult(r.Context(), int32(resultID), int32(authUser.ID))
+	if err != nil {
+		h.App.Logger.Error("Failed to publish action result", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message":"Action result published successfully"}`))
+}

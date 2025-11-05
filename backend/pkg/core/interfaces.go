@@ -448,6 +448,28 @@ type ActionSubmissionServiceInterface interface {
 
 	// CountAllActionSubmissions counts total action submissions for pagination
 	CountAllActionSubmissions(ctx context.Context, gameID, phaseID int32) (int64, error)
+
+	// Draft Character Updates methods
+
+	// CreateDraftCharacterUpdate creates or updates a draft character sheet update for an action result
+	// Uses upsert behavior - if draft already exists for this field, it updates the value
+	CreateDraftCharacterUpdate(ctx context.Context, req CreateDraftCharacterUpdateRequest) (*models.ActionResultCharacterUpdate, error)
+
+	// GetDraftCharacterUpdates retrieves all draft updates for an action result
+	GetDraftCharacterUpdates(ctx context.Context, actionResultID int32) ([]models.ActionResultCharacterUpdate, error)
+
+	// UpdateDraftCharacterUpdate updates the field value of an existing draft
+	UpdateDraftCharacterUpdate(ctx context.Context, draftID int32, fieldValue string) (*models.ActionResultCharacterUpdate, error)
+
+	// DeleteDraftCharacterUpdate removes a draft character update
+	DeleteDraftCharacterUpdate(ctx context.Context, draftID int32) error
+
+	// PublishDraftCharacterUpdates copies all draft updates to the character_data table
+	// and then deletes the drafts. Called when an action result is published.
+	PublishDraftCharacterUpdates(ctx context.Context, actionResultID int32) error
+
+	// GetDraftUpdateCount returns the count of draft updates for an action result
+	GetDraftUpdateCount(ctx context.Context, actionResultID int32) (int64, error)
 }
 
 // MessageServiceInterface defines the contract for message and comment operations.
@@ -633,6 +655,17 @@ type ActionSubmissionStats struct {
 	SubmissionRate   float64 // Percentage of players who submitted
 	AverageWordCount int32
 	LatestSubmission *time.Time
+}
+
+// CreateDraftCharacterUpdateRequest represents the parameters needed to create a draft character update
+type CreateDraftCharacterUpdateRequest struct {
+	ActionResultID int32
+	CharacterID    int32
+	ModuleType     string // "abilities", "skills", "inventory", "currency"
+	FieldName      string
+	FieldValue     string
+	FieldType      string // "text", "number", "boolean", "json"
+	Operation      string // "upsert", "delete"
 }
 
 // PhaseTransitionInfo represents a phase transition record

@@ -101,12 +101,15 @@ test.describe('Smoke: Application Health', () => {
   });
 });
 
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Smoke: Notification System', () => {
   test(tagTest([tags.SMOKE], 'Notification bell is visible after login'), async ({ page }) => {
     const { loginAs } = await import('../fixtures/auth-helpers');
 
-    await loginAs(page, 'PLAYER_1');
-    await page.goto('/dashboard');
+    // Use PLAYER_5 to avoid conflicts with password change tests that use PLAYER_1-4
+    await loginAs(page, 'PLAYER_5');
+    // loginAs already redirects to /dashboard, no need for page.goto
     await page.waitForLoadState('networkidle');
 
     // Notification bell should be visible
@@ -117,7 +120,8 @@ test.describe('Smoke: Notification System', () => {
   test(tagTest([tags.SMOKE], 'Notification API endpoint responds'), async ({ page }) => {
     const { loginAs } = await import('../fixtures/auth-helpers');
 
-    await loginAs(page, 'PLAYER_1');
+    // Use PLAYER_5 to avoid conflicts with password change tests that use PLAYER_1-4
+    await loginAs(page, 'PLAYER_5');
 
     // Wait for unread count API call
     const responsePromise = page.waitForResponse(

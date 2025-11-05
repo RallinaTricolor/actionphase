@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { useGameActionResults, useUpdateActionResult } from '../hooks/useActionResults';
+import { useGameActionResults, useUpdateActionResult, usePublishActionResult } from '../hooks/useActionResults';
 import type { ActionResult } from '../types/phases';
-import { Button, Textarea, Badge } from './ui';
+import { Button, Textarea, Badge, Alert } from './ui';
+import { UpdateCharacterSheetModal } from './UpdateCharacterSheetModal';
+import { PublishResultConfirmationDialog } from './PublishResultConfirmationDialog';
+import { useDraftUpdateCount } from '../hooks';
 
 interface GameResultsManagerProps {
   gameId: number;
@@ -123,7 +126,12 @@ interface ResultCardProps {
 function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: ResultCardProps) {
   const [editedContent, setEditedContent] = useState(result.content);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [publishSuccess, setPublishSuccess] = useState(false);
   const updateMutation = useUpdateActionResult(gameId);
+  const publishMutation = usePublishActionResult(gameId);
+  const { data: draftCount } = useDraftUpdateCount(gameId, result.id);
 
   // Determine if content should be collapsible (long unpublished results)
   const isCollapsible = !result.is_published && result.content.length > 200;
@@ -149,6 +157,19 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
   const handleCancel = () => {
     setEditedContent(result.content);
     onCancelEdit();
+  };
+
+  const handlePublish = async () => {
+    try {
+      await publishMutation.mutateAsync(result.id);
+      setPublishSuccess(true);
+      setIsPublishDialogOpen(false);
+
+      // Hide success message after 5 seconds
+      setTimeout(() => setPublishSuccess(false), 5000);
+    } catch (error) {
+      console.error('Failed to publish result:', error);
+    }
   };
 
   return (
@@ -184,13 +205,33 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
             </div>
           </div>
           {!result.is_published && !isEditing && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onStartEdit}
-            >
-              Edit
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsModalOpen(true)}
+              >
+                Update Character Sheet
+                {draftCount !== undefined && draftCount > 0 && (
+                  <Badge variant="warning" className="ml-2">{draftCount}</Badge>
+                )}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={onStartEdit}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsPublishDialogOpen(true)}
+                disabled={publishMutation.isPending}
+              >
+                {publishMutation.isPending ? 'Publishing...' : 'Publish Result'}
+              </Button>
+            </div>
           )}
         </div>
 
@@ -255,6 +296,39 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
             )}
           </>
         )}
+
+        {/* Success Notification */}
+        {publishSuccess && (
+          <Alert
+            variant="success"
+            title="Result Published Successfully!"
+            dismissible
+            onDismiss={() => setPublishSuccess(false)}
+            className="mt-3"
+          >
+            The action result{draftCount !== undefined && draftCount > 0 ? ` and ${draftCount} character sheet update${draftCount !== 1 ? 's' : ''}` : ''} has been published and is now visible to the player.
+          </Alert>
+        )}
+
+        {/* Update Character Sheet Modal */}
+        <UpdateCharacterSheetModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          gameId={gameId}
+          actionResultId={result.id}
+          characterId={result.user_id} // Using user_id as character_id for now
+          characterName={result.username || `User #${result.user_id}`}
+        />
+
+        {/* Publish Confirmation Dialog */}
+        <PublishResultConfirmationDialog
+          isOpen={isPublishDialogOpen}
+          onConfirm={handlePublish}
+          onCancel={() => setIsPublishDialogOpen(false)}
+          gameId={gameId}
+          actionResultId={result.id}
+          isPublishing={publishMutation.isPending}
+        />
       </div>
     </div>
   );

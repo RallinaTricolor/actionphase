@@ -170,6 +170,11 @@ SELECT COUNT(*) as count
 FROM action_results
 WHERE phase_id = $1 AND is_published = false;
 
+-- name: GetUnpublishedResultIDs :many
+SELECT id
+FROM action_results
+WHERE phase_id = $1 AND is_published = false;
+
 -- name: UpdateActionResult :one
 UPDATE action_results
 SET content = $2

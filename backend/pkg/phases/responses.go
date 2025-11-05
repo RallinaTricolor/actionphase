@@ -110,3 +110,21 @@ type ActionResultWithDetailsResponse struct {
 func (rd *ActionResultWithDetailsResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
+
+// DraftCharacterUpdateResponse represents a draft character update
+type DraftCharacterUpdateResponse struct {
+	ID             int32     `json:"id"`
+	ActionResultID int32     `json:"action_result_id"`
+	CharacterID    int32     `json:"character_id"`
+	ModuleType     string    `json:"module_type"`
+	FieldName      string    `json:"field_name"`
+	FieldValue     string    `json:"field_value"`
+	FieldType      string    `json:"field_type"`
+	Operation      string    `json:"operation"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+func (rd *DraftCharacterUpdateResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}

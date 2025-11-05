@@ -824,6 +824,32 @@ func (q *Queries) GetSubmissionStatsForPhase(ctx context.Context, dollar_1 int32
 	return i, err
 }
 
+const getUnpublishedResultIDs = `-- name: GetUnpublishedResultIDs :many
+SELECT id
+FROM action_results
+WHERE phase_id = $1 AND is_published = false
+`
+
+func (q *Queries) GetUnpublishedResultIDs(ctx context.Context, phaseID int32) ([]int32, error) {
+	rows, err := q.db.Query(ctx, getUnpublishedResultIDs, phaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var id int32
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUnpublishedResultsCount = `-- name: GetUnpublishedResultsCount :one
 SELECT COUNT(*) as count
 FROM action_results

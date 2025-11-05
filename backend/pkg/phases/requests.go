@@ -60,3 +60,17 @@ type CreateActionResultRequest struct {
 func (r *CreateActionResultRequest) Bind(req *http.Request) error {
 	return nil
 }
+
+// CreateDraftCharacterUpdateRequest represents the request to create a draft character update
+type CreateDraftCharacterUpdateRequest struct {
+	CharacterID int32  `json:"character_id" validate:"required"`
+	ModuleType  string `json:"module_type" validate:"required"`
+	FieldName   string `json:"field_name" validate:"required"`
+	FieldValue  string `json:"field_value" validate:"required"`
+	FieldType   string `json:"field_type" validate:"required"`
+	Operation   string `json:"operation" validate:"required"`
+}
+
+func (r *CreateDraftCharacterUpdateRequest) Bind(req *http.Request) error {
+	return nil
+}

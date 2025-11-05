@@ -638,7 +638,7 @@ func TestMessageService_CommentCRUD(t *testing.T) {
 		require.NoError(t, err)
 
 		// Update comment
-		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated comment")
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated comment", nil)
 
 		require.NoError(t, err)
 		assert.Equal(t, "Updated comment", updated.Content)
@@ -1498,7 +1498,7 @@ func TestMessageService_CommentEditDeleteTracking(t *testing.T) {
 		assert.False(t, comment.EditedAt.Valid)
 
 		// Update comment once
-		updated1, err := service.UpdateComment(context.Background(), comment.ID, "First edit")
+		updated1, err := service.UpdateComment(context.Background(), comment.ID, "First edit", nil)
 		require.NoError(t, err)
 		assert.Equal(t, "First edit", updated1.Content)
 		assert.Equal(t, int32(1), updated1.EditCount)
@@ -1506,7 +1506,7 @@ func TestMessageService_CommentEditDeleteTracking(t *testing.T) {
 		firstEditTime := updated1.EditedAt
 
 		// Update comment again
-		updated2, err := service.UpdateComment(context.Background(), comment.ID, "Second edit")
+		updated2, err := service.UpdateComment(context.Background(), comment.ID, "Second edit", nil)
 		require.NoError(t, err)
 		assert.Equal(t, "Second edit", updated2.Content)
 		assert.Equal(t, int32(2), updated2.EditCount)
@@ -1614,7 +1614,7 @@ func TestMessageService_CommentEditDeleteTracking(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to edit deleted comment - should fail
-		_, err = service.UpdateComment(context.Background(), comment.ID, "Trying to edit deleted")
+		_, err = service.UpdateComment(context.Background(), comment.ID, "Trying to edit deleted", nil)
 		assert.Error(t, err)
 
 		// Try to delete again - should fail
@@ -1687,7 +1687,7 @@ func TestMessageService_UpdateCommentWithMentions(t *testing.T) {
 		assert.Empty(t, comment.MentionedCharacterIds)
 
 		// Update comment to add a mention
-		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated comment with @Aragorn mention")
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated comment with @Aragorn mention", nil)
 		require.NoError(t, err)
 		assert.Len(t, updated.MentionedCharacterIds, 1)
 		assert.Contains(t, updated.MentionedCharacterIds, aragorn.ID)
@@ -1707,7 +1707,7 @@ func TestMessageService_UpdateCommentWithMentions(t *testing.T) {
 		require.NoError(t, err)
 
 		// Update comment to add multiple mentions
-		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated with @Aragorn and @Gandalf")
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated with @Aragorn and @Gandalf", nil)
 		require.NoError(t, err)
 		assert.Len(t, updated.MentionedCharacterIds, 2)
 		assert.Contains(t, updated.MentionedCharacterIds, aragorn.ID)
@@ -1728,7 +1728,7 @@ func TestMessageService_UpdateCommentWithMentions(t *testing.T) {
 		assert.Len(t, comment.MentionedCharacterIds, 1)
 
 		// Update comment to remove mention
-		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated without mentions")
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated without mentions", nil)
 		require.NoError(t, err)
 		assert.Empty(t, updated.MentionedCharacterIds)
 	})
@@ -1747,7 +1747,7 @@ func TestMessageService_UpdateCommentWithMentions(t *testing.T) {
 		assert.Len(t, comment.MentionedCharacterIds, 1)
 
 		// Update comment but keep same mention
-		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated comment still mentions @Aragorn")
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated comment still mentions @Aragorn", nil)
 		require.NoError(t, err)
 		assert.Len(t, updated.MentionedCharacterIds, 1)
 		assert.Contains(t, updated.MentionedCharacterIds, aragorn.ID)
@@ -1768,7 +1768,7 @@ func TestMessageService_UpdateCommentWithMentions(t *testing.T) {
 		assert.Contains(t, comment.MentionedCharacterIds, aragorn.ID)
 
 		// Update comment to replace Aragorn with Gandalf
-		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated to mention @Gandalf instead")
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated to mention @Gandalf instead", nil)
 		require.NoError(t, err)
 		assert.Len(t, updated.MentionedCharacterIds, 1)
 		assert.Contains(t, updated.MentionedCharacterIds, gandalf.ID)
@@ -1789,7 +1789,7 @@ func TestMessageService_UpdateCommentWithMentions(t *testing.T) {
 		assert.Len(t, comment.MentionedCharacterIds, 1)
 
 		// Update comment to add Gandalf mention while keeping Aragorn
-		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated with @Aragorn and @Gandalf")
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Updated with @Aragorn and @Gandalf", nil)
 		require.NoError(t, err)
 		assert.Len(t, updated.MentionedCharacterIds, 2)
 		assert.Contains(t, updated.MentionedCharacterIds, aragorn.ID)
@@ -1809,7 +1809,7 @@ func TestMessageService_UpdateCommentWithMentions(t *testing.T) {
 		require.NoError(t, err)
 
 		// Update with non-existent character mention (should not fail, just not add mention)
-		updated, err := service.UpdateComment(context.Background(), comment.ID, "Mentioning @NonExistentCharacter")
+		updated, err := service.UpdateComment(context.Background(), comment.ID, "Mentioning @NonExistentCharacter", nil)
 		require.NoError(t, err)
 		assert.NotNil(t, updated)
 		assert.Empty(t, updated.MentionedCharacterIds)

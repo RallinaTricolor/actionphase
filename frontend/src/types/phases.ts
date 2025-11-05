@@ -75,6 +75,32 @@ export interface ActionResult {
   username?: string;
 }
 
+export interface DraftCharacterUpdate {
+  id: number;
+  action_result_id: number;
+  character_id: number;
+  module_type: 'abilities' | 'skills' | 'inventory' | 'currency';
+  field_name: string;
+  field_value: string;
+  field_type: 'text' | 'number' | 'boolean' | 'json';
+  operation: 'upsert' | 'delete';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateDraftCharacterUpdateRequest {
+  character_id: number;
+  module_type: 'abilities' | 'skills' | 'inventory' | 'currency';
+  field_name: string;
+  field_value: string;
+  field_type: 'text' | 'number' | 'boolean' | 'json';
+  operation: 'upsert' | 'delete';
+}
+
+export interface UpdateDraftCharacterUpdateRequest {
+  field_value: string;
+}
+
 // Phase display helpers
 export const PHASE_TYPE_LABELS: Record<GamePhase['phase_type'], string> = {
   common_room: 'Common Room',
