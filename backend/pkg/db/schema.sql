@@ -11,6 +11,7 @@ CREATE TABLE users (
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     display_name VARCHAR(255),
     bio TEXT,
+    avatar_url VARCHAR(500),
     timezone VARCHAR(50) DEFAULT 'UTC',
     email_notifications BOOLEAN DEFAULT TRUE,
     high_contrast BOOLEAN DEFAULT FALSE,

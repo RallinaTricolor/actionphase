@@ -19,6 +19,7 @@ import (
 	"actionphase/pkg/notifications"
 	"actionphase/pkg/phases"
 	"actionphase/pkg/polls"
+	"actionphase/pkg/users"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -397,6 +398,33 @@ func (h *Handler) Start() {
 		})
 	})
 	apiV1Router.Mount("/dashboard", dashboardRouter)
+
+	// Users API - User profiles and avatars
+	usersRouter := chi.NewRouter()
+	usersRouter.Route("/", func(r chi.Router) {
+		userHandler := users.Handler{App: h.App}
+
+		// All user profile routes require authentication
+		r.Group(func(r chi.Router) {
+			tokenAuth := h.getTokenAuth()
+			userService := &db.UserService{DB: h.App.Pool}
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
+
+			// Profile viewing (public - any authenticated user can view any profile)
+			r.Get("/{id}/profile", userHandler.GetUserProfile)
+			r.Get("/username/{username}/profile", userHandler.GetUserProfileByUsername)
+
+			// Profile editing (own profile only)
+			r.Patch("/me/profile", userHandler.UpdateUserProfile)
+
+			// Avatar management (own profile only)
+			r.Post("/me/avatar", userHandler.UploadUserAvatar)
+			r.Delete("/me/avatar", userHandler.DeleteUserAvatar)
+		})
+	})
+	apiV1Router.Mount("/users", usersRouter)
 
 	// Admin API - All routes require authentication AND admin privileges
 	adminRouter := chi.NewRouter()

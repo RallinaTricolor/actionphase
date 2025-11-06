@@ -106,7 +106,7 @@ INSERT INTO users (
 ) VALUES (
              $1, $2, $3
          )
-RETURNING id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for
+RETURNING id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for
 `
 
 type CreateUserParams struct {
@@ -127,6 +127,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.DisplayName,
 		&i.Bio,
+		&i.AvatarUrl,
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
@@ -176,7 +177,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const getDeletedUser = `-- name: GetDeletedUser :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
 WHERE id = $1
   AND deleted_at IS NOT NULL
 LIMIT 1
@@ -194,6 +195,7 @@ func (q *Queries) GetDeletedUser(ctx context.Context, id int32) (User, error) {
 		&i.CreatedAt,
 		&i.DisplayName,
 		&i.Bio,
+		&i.AvatarUrl,
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
@@ -256,7 +258,7 @@ func (q *Queries) GetPasswordResetToken(ctx context.Context, token string) (Pass
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -272,6 +274,7 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.CreatedAt,
 		&i.DisplayName,
 		&i.Bio,
+		&i.AvatarUrl,
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
@@ -289,7 +292,7 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
 WHERE email = $1 LIMIT 1
 `
 
@@ -305,6 +308,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.CreatedAt,
 		&i.DisplayName,
 		&i.Bio,
+		&i.AvatarUrl,
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
@@ -322,7 +326,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
 WHERE username = $1 LIMIT 1
 `
 
@@ -338,6 +342,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.CreatedAt,
 		&i.DisplayName,
 		&i.Bio,
+		&i.AvatarUrl,
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
@@ -441,7 +446,7 @@ func (q *Queries) ListBannedUsers(ctx context.Context) ([]ListBannedUsersRow, er
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
+SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
 ORDER BY username
 `
 
@@ -463,6 +468,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.CreatedAt,
 			&i.DisplayName,
 			&i.Bio,
+			&i.AvatarUrl,
 			&i.Timezone,
 			&i.EmailNotifications,
 			&i.HighContrast,

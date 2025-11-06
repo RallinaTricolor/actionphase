@@ -15,6 +15,8 @@ type User struct {
 	Email          string     `json:"email" validate:"required,email"`           // User's email address
 	EmailVerified  bool       `json:"email_verified"`                            // Whether user has verified their email
 	Password       string     `json:"password" validate:"required,min=8,max=64"` // Hashed password (bcrypt)
+	Bio            *string    `json:"bio,omitempty"`                             // User's bio/about text
+	AvatarURL      *string    `json:"avatar_url,omitempty"`                      // URL to user's avatar image
 	IsAdmin        bool       `json:"is_admin"`                                  // Whether user has admin privileges
 	IsBanned       bool       `json:"is_banned"`                                 // Whether user is banned from platform
 	BannedAt       *time.Time `json:"banned_at,omitempty"`                       // When user was banned

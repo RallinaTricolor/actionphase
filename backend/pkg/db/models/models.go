@@ -472,6 +472,7 @@ type User struct {
 	CreatedAt            pgtype.Timestamp   `json:"created_at"`
 	DisplayName          pgtype.Text        `json:"display_name"`
 	Bio                  pgtype.Text        `json:"bio"`
+	AvatarUrl            pgtype.Text        `json:"avatar_url"`
 	Timezone             pgtype.Text        `json:"timezone"`
 	EmailNotifications   pgtype.Bool        `json:"email_notifications"`
 	HighContrast         pgtype.Bool        `json:"high_contrast"`

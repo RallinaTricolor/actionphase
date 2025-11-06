@@ -38,12 +38,26 @@ func (s *UserService) GetUserByID(userID int) (*core.User, error) {
 		bannedByUserID = &dbUser.BannedByUserID.Int32
 	}
 
+	// Convert bio
+	var bio *string
+	if dbUser.Bio.Valid {
+		bio = &dbUser.Bio.String
+	}
+
+	// Convert avatar URL
+	var avatarURL *string
+	if dbUser.AvatarUrl.Valid {
+		avatarURL = &dbUser.AvatarUrl.String
+	}
+
 	return &core.User{
 		ID:             int(dbUser.ID),
 		Username:       dbUser.Username,
 		Password:       dbUser.Password,
 		Email:          dbUser.Email,
 		EmailVerified:  dbUser.EmailVerified,
+		Bio:            bio,
+		AvatarURL:      avatarURL,
 		IsAdmin:        dbUser.IsAdmin.Bool,
 		IsBanned:       dbUser.IsBanned,
 		BannedAt:       bannedAt,
@@ -76,12 +90,26 @@ func (s *UserService) UserByUsername(username string) (*core.User, error) {
 		bannedByUserID = &dbUser.BannedByUserID.Int32
 	}
 
+	// Convert bio
+	var bio *string
+	if dbUser.Bio.Valid {
+		bio = &dbUser.Bio.String
+	}
+
+	// Convert avatar URL
+	var avatarURL *string
+	if dbUser.AvatarUrl.Valid {
+		avatarURL = &dbUser.AvatarUrl.String
+	}
+
 	return &core.User{
 		ID:             int(dbUser.ID),
 		Username:       dbUser.Username,
 		Password:       dbUser.Password,
 		Email:          dbUser.Email,
 		EmailVerified:  dbUser.EmailVerified,
+		Bio:            bio,
+		AvatarURL:      avatarURL,
 		IsAdmin:        dbUser.IsAdmin.Bool,
 		IsBanned:       dbUser.IsBanned,
 		BannedAt:       bannedAt,
@@ -109,12 +137,26 @@ func (s *UserService) UserByEmail(email string) (*core.User, error) {
 		bannedByUserID = &dbUser.BannedByUserID.Int32
 	}
 
+	// Convert bio
+	var bio *string
+	if dbUser.Bio.Valid {
+		bio = &dbUser.Bio.String
+	}
+
+	// Convert avatar URL
+	var avatarURL *string
+	if dbUser.AvatarUrl.Valid {
+		avatarURL = &dbUser.AvatarUrl.String
+	}
+
 	return &core.User{
 		ID:             int(dbUser.ID),
 		Username:       dbUser.Username,
 		Password:       dbUser.Password,
 		Email:          dbUser.Email,
 		EmailVerified:  dbUser.EmailVerified,
+		Bio:            bio,
+		AvatarURL:      avatarURL,
 		IsAdmin:        dbUser.IsAdmin.Bool,
 		IsBanned:       dbUser.IsBanned,
 		BannedAt:       bannedAt,

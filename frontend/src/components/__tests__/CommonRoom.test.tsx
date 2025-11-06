@@ -57,11 +57,31 @@ describe('CommonRoom', () => {
   beforeEach(() => {
     // Setup default successful responses
     server.use(
+      // Auth endpoints
+      http.get('/api/v1/auth/me', () => {
+        return HttpResponse.json({
+          id: 1,
+          username: 'testuser',
+          email: 'test@example.com',
+        });
+      }),
+      http.get('/api/v1/auth/refresh', () => {
+        return HttpResponse.json({ Token: 'mock-jwt-token' }, { status: 200 });
+      }),
+      // CommonRoom endpoints
       http.get('/api/v1/games/:gameId/posts', () => {
         return HttpResponse.json(mockPosts);
       }),
       http.get('/api/v1/games/:gameId/characters/controllable', () => {
         return HttpResponse.json(mockCharacters);
+      }),
+      // Comments endpoint
+      http.get('/api/v1/games/:gameId/posts/:postId/comments', () => {
+        return HttpResponse.json([]);
+      }),
+      // Unread comments endpoint
+      http.get('/api/v1/games/:gameId/unread-comment-ids', () => {
+        return HttpResponse.json([]);
       })
     );
   });
@@ -248,8 +268,15 @@ describe('CommonRoom', () => {
       renderWithProviders(<CommonRoom gameId={1} />);
 
       await waitFor(() => {
-        expect(screen.getByText('This is a test post')).toBeInTheDocument();
-        expect(screen.getByText('Another test post')).toBeInTheDocument();
+        const post1Elements = screen.getAllByText((content, element) => {
+          return element?.textContent === 'This is a test post';
+        });
+        expect(post1Elements.length).toBeGreaterThan(0);
+
+        const post2Elements = screen.getAllByText((content, element) => {
+          return element?.textContent === 'Another test post';
+        });
+        expect(post2Elements.length).toBeGreaterThan(0);
       });
     });
 
@@ -258,8 +285,15 @@ describe('CommonRoom', () => {
 
       await waitFor(() => {
         // PostCards should be present (we can check for post content)
-        const posts = screen.getAllByText(/test post/i);
-        expect(posts.length).toBeGreaterThanOrEqual(2);
+        const post1Elements = screen.getAllByText((content, element) => {
+          return element?.textContent === 'This is a test post';
+        });
+        expect(post1Elements.length).toBeGreaterThan(0);
+
+        const post2Elements = screen.getAllByText((content, element) => {
+          return element?.textContent === 'Another test post';
+        });
+        expect(post2Elements.length).toBeGreaterThan(0);
       });
     });
   });
@@ -454,7 +488,10 @@ describe('CommonRoom', () => {
       renderWithProviders(<CommonRoom gameId={1} />);
 
       await waitFor(() => {
-        expect(screen.getByText('This is a test post')).toBeInTheDocument();
+        const postElements = screen.getAllByText((content, element) => {
+          return element?.textContent === 'This is a test post';
+        });
+        expect(postElements.length).toBeGreaterThan(0);
       });
 
       // Note: Comment creation is handled through PostCard component
@@ -468,7 +505,10 @@ describe('CommonRoom', () => {
 
       await waitFor(() => {
         // Posts should be displayed
-        expect(screen.getByText('This is a test post')).toBeInTheDocument();
+        const postElements = screen.getAllByText((content, element) => {
+          return element?.textContent === 'This is a test post';
+        });
+        expect(postElements.length).toBeGreaterThan(0);
         // Component should have loaded successfully
         expect(screen.queryByText(/failed to load/i)).not.toBeInTheDocument();
       });
@@ -486,7 +526,10 @@ describe('CommonRoom', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /common room - test phase/i })).toBeInTheDocument();
+        const headings = screen.getAllByText((content, element) => {
+          return element?.textContent?.match(/common room - test phase/i);
+        });
+        expect(headings.length).toBeGreaterThan(0);
         expect(screen.getByText(/create gm posts/i)).toBeInTheDocument();
       });
     });

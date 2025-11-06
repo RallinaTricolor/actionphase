@@ -32,6 +32,10 @@
  *   apiClient.polls.createPoll(gameId, data);
  *   apiClient.polls.submitVote(pollId, data);
  *
+ *   // Users
+ *   apiClient.users.getUserProfile(userId);
+ *   apiClient.users.updateUserProfile(data);
+ *
  *   // Utility methods
  *   apiClient.setAuthToken(token);
  *   apiClient.getAuthToken();
@@ -51,6 +55,7 @@ import { AdminApi } from './admin';
 import { HandoutsApi } from './handouts';
 import { DeadlinesApi } from './deadlines';
 import { PollsApi } from './polls';
+import { UsersApi } from './users';
 
 class ApiClient extends BaseApiClient {
   public auth: AuthApi;
@@ -64,6 +69,7 @@ class ApiClient extends BaseApiClient {
   public handouts: HandoutsApi;
   public deadlines: DeadlinesApi;
   public polls: PollsApi;
+  public users: UsersApi;
 
   constructor() {
     super();
@@ -80,6 +86,7 @@ class ApiClient extends BaseApiClient {
     this.handouts = new HandoutsApi();
     this.deadlines = new DeadlinesApi();
     this.polls = new PollsApi();
+    this.users = new UsersApi();
   }
 }
 

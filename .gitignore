@@ -156,6 +156,7 @@ node_modules/
 
 backend/actionphase
 backend/uploads/
+backend/pkg/users/test_uploads/
 
 # Terraform
 **/.terraform/
