@@ -97,7 +97,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
 
   // Fetch polls to calculate unvoted count for badge
   const { polls } = usePolls(gameId, false);
-  const unvotedPollsCount = polls.filter(poll => !poll.has_voted).length;
+  const unvotedPollsCount = polls.filter(poll => !poll.user_has_voted).length;
 
   // Custom hooks for tab management
   const { tabs, activeTab, setActiveTab } = useGameTabs({

@@ -58,13 +58,8 @@ export function useUpdateComment() {
         (oldPosts) => {
           if (!oldPosts) return oldPosts;
           return oldPosts.map(post => {
-            // Check if this post has the updated comment in its replies
-            if (post.replies) {
-              const updatedReplies = post.replies.map(comment =>
-                comment.id === updatedComment.id ? updatedComment : comment
-              );
-              return { ...post, replies: updatedReplies };
-            }
+            // Note: Message type doesn't have a replies field
+            // Comments are fetched separately, so we just return the post as-is
             return post;
           });
         }

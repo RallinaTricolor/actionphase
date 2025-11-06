@@ -22,4 +22,20 @@ export default defineConfig({
   optimizeDeps: {
     include: ['axios'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks - separate large dependencies
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-query': ['@tanstack/react-query'],
+          'vendor-ui': ['@headlessui/react', '@heroicons/react', 'lucide-react'],
+          'vendor-markdown': ['react-markdown', 'remark-gfm', 'rehype-raw', 'rehype-sanitize', 'react-syntax-highlighter'],
+          'vendor-utils': ['axios', 'date-fns', 'clsx', 'tailwind-merge'],
+        },
+      },
+    },
+    // Increase chunk size warning limit since we're now splitting intentionally
+    chunkSizeWarningLimit: 1000,
+  },
 })

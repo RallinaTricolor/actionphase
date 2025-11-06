@@ -9,7 +9,7 @@ interface GameHistoryCardProps {
 /**
  * Get badge variant based on game state
  */
-function getStateBadgeVariant(state: string): 'success' | 'warning' | 'danger' | 'default' {
+function getStateBadgeVariant(state: string): 'success' | 'warning' | 'danger' | 'neutral' {
   switch (state) {
     case 'in_progress':
       return 'success';
@@ -17,12 +17,12 @@ function getStateBadgeVariant(state: string): 'success' | 'warning' | 'danger' |
     case 'character_creation':
       return 'warning';
     case 'completed':
-      return 'default';
+      return 'neutral';
     case 'cancelled':
     case 'paused':
       return 'danger';
     default:
-      return 'default';
+      return 'neutral';
   }
 }
 

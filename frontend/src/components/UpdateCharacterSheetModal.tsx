@@ -28,7 +28,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('abilities');
 
-  const { data: drafts, isLoading } = useDraftCharacterUpdates(gameId, actionResultId);
+  const { data: drafts } = useDraftCharacterUpdates(gameId, actionResultId);
   const deleteDraft = useDeleteDraftCharacterUpdate(gameId, actionResultId);
 
   const draftCount = drafts?.length || 0;

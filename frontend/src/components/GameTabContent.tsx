@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import type { Character } from '../types/characters';
 import { GameApplicationsList } from './GameApplicationsList';
 import { PublicApplicantsList } from './PublicApplicantsList';
@@ -9,7 +9,6 @@ import { ActionsList } from './ActionsList';
 import { ActionResultsList } from './ActionResultsList';
 import { GameResultsManager } from './GameResultsManager';
 import { CommonRoom } from './CommonRoom';
-import { PollsTab } from './PollsTab';
 import { PrivateMessages } from './PrivateMessages';
 import { HistoryView } from './HistoryView';
 import { RemovePlayerButton } from './RemovePlayerButton';
@@ -23,6 +22,9 @@ import { DeadlinesTabContent } from './DeadlinesTabContent';
 import { Button } from './ui';
 import type { GameWithDetails, GameParticipant } from '../types/games';
 import type { GamePhase } from '../types/phases';
+
+// Lazy load PollsTab to match CommonRoom's lazy loading and prevent duplicate chunks
+const PollsTab = lazy(() => import('./PollsTab').then(m => ({ default: m.PollsTab })));
 
 interface GameTabContentProps {
   activeTab: string;
@@ -266,11 +268,13 @@ export function GameTabContent({
     // Render Polls if phase is common_room type
     if (currentPhaseData?.phase?.phase_type === 'common_room') {
       return (
-        <PollsTab
-          gameId={gameId}
-          isGM={isGM}
-          isCurrentPhase={true}
-        />
+        <Suspense fallback={<div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-interactive-primary"></div></div>}>
+          <PollsTab
+            gameId={gameId}
+            isGM={isGM}
+            isCurrentPhase={true}
+          />
+        </Suspense>
       );
     }
 

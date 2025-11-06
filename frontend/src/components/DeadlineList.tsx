@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { TrashIcon, PencilIcon, ClockIcon } from '@heroicons/react/24/outline';
-import { Card, CardHeader, CardBody, Button, Modal } from './ui';
+import { Card, CardBody, Button, Modal } from './ui';
 import { DeadlineTimer } from './DeadlineTimer';
 import type { Deadline } from '../types/deadlines';
 

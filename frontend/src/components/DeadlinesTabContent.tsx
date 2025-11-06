@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, CardHeader, CardBody, Alert } from './ui';
+import { Button, Card, CardHeader, Alert } from './ui';
 import { CreateDeadlineModal } from './CreateDeadlineModal';
 import { EditDeadlineModal } from './EditDeadlineModal';
 import { DeadlineList } from './DeadlineList';
