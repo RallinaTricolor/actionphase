@@ -30,9 +30,23 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 	pool, err := pgxpool.New(ctx, connString)
 	require.NoError(t, err, "Failed to connect to test database")
 
-	// Clean up registration_attempts table for test isolation
-	_, err = pool.Exec(ctx, "DELETE FROM registration_attempts")
-	require.NoError(t, err, "Failed to clean up registration_attempts table")
+	// Clean up tables for test isolation (in correct order due to foreign keys)
+	tables := []string{
+		"sessions",
+		"email_verification_tokens",
+		"email_change_tokens",
+		"password_reset_tokens",
+		"registration_attempts",
+		"users",
+	}
+
+	for _, table := range tables {
+		_, err = pool.Exec(ctx, fmt.Sprintf("DELETE FROM %s", table))
+		if err != nil {
+			// Some tables might not exist in all test scenarios, log but continue
+			t.Logf("Warning: Failed to clean up %s table: %v", table, err)
+		}
+	}
 
 	return pool
 }

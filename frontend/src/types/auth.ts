@@ -4,6 +4,8 @@ export interface User {
   email: string;
   email_verified?: boolean;
   password?: string;
+  bio?: string | null;
+  avatar_url?: string | null;
   is_admin?: boolean;
   is_banned?: boolean;
   createdAt?: string;

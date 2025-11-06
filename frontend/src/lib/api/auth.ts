@@ -5,7 +5,8 @@ import type {
   RegisterRequest,
   ChangePasswordRequest,
   ChangePasswordResponse,
-  SessionsListResponse
+  SessionsListResponse,
+  User
 } from '../../types/auth';
 
 type Theme = 'light' | 'dark' | 'auto';
@@ -45,7 +46,7 @@ export class AuthApi extends BaseApiClient {
   }
 
   async getCurrentUser() {
-    return this.client.get<{ id: number; username: string; email: string }>('/api/v1/auth/me');
+    return this.client.get<User>('/api/v1/auth/me');
   }
 
   async getPreferences() {

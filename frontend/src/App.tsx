@@ -14,6 +14,7 @@ import { ThreadViewPage } from './pages/ThreadViewPage';
 import NotificationsPage from './pages/NotificationsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AdminPage } from './pages/AdminPage';
+import { UserProfilePage } from './pages/UserProfilePage';
 import ThemeTestPage from './pages/ThemeTestPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicArchiveRoute } from './components/PublicArchiveRoute';
@@ -135,6 +136,14 @@ function AppRoutes() {
               <PublicArchiveRoute>
                 <GameDetailsPageWrapper />
               </PublicArchiveRoute>
+            }
+          />
+          <Route
+            path="/users/:username"
+            element={
+              <ProtectedRoute>
+                <UserProfilePage />
+              </ProtectedRoute>
             }
           />
           <Route path="/" element={<HomePage />} />

@@ -1330,3 +1330,86 @@ type VoterInfo struct {
 	CharacterID   *int32
 	CharacterName *string
 }
+
+// ==============================================================================
+// User Profile System
+// ==============================================================================
+
+// UserProfile represents a user's public profile information.
+type UserProfile struct {
+	ID          int32     `json:"id"`
+	Username    string    `json:"username"`
+	Email       string    `json:"email"`
+	DisplayName *string   `json:"display_name"`
+	Bio         *string   `json:"bio"`
+	AvatarURL   *string   `json:"avatar_url"`
+	CreatedAt   time.Time `json:"created_at"`
+	Timezone    string    `json:"timezone"`
+	IsAdmin     bool      `json:"is_admin"`
+}
+
+// UserGame represents a game the user has participated in.
+type UserGame struct {
+	GameID      int32               `json:"game_id"`
+	Title       string              `json:"title"`
+	State       string              `json:"state"`
+	IsAnonymous bool                `json:"is_anonymous"`
+	UserRole    string              `json:"user_role"` // "player", "co_gm", "audience"
+	GMUsername  string              `json:"gm_username"`
+	CreatedAt   time.Time           `json:"created_at"`
+	UpdatedAt   time.Time           `json:"updated_at"`
+	Characters  []UserGameCharacter `json:"characters"` // Empty for anonymous games
+}
+
+// UserGameCharacter represents a character the user played in a game.
+type UserGameCharacter struct {
+	ID            int32   `json:"id"`
+	Name          string  `json:"name"`
+	AvatarURL     *string `json:"avatar_url"`
+	CharacterType string  `json:"character_type"`
+}
+
+// UserGameHistoryMetadata provides pagination context for user game history.
+type UserGameHistoryMetadata struct {
+	Page            int  `json:"page"`              // Current page number (1-indexed)
+	PageSize        int  `json:"page_size"`         // Number of items per page
+	TotalPages      int  `json:"total_pages"`       // Total number of pages
+	TotalCount      int  `json:"total_count"`       // Total count of all games
+	HasNextPage     bool `json:"has_next_page"`     // Whether there's a next page
+	HasPreviousPage bool `json:"has_previous_page"` // Whether there's a previous page
+}
+
+// UserProfileResponse is the complete response for a user profile.
+type UserProfileResponse struct {
+	User     UserProfile             `json:"user"`
+	Games    []UserGame              `json:"games"`
+	Metadata UserGameHistoryMetadata `json:"metadata"`
+}
+
+// UserProfileServiceInterface defines the contract for user profile operations.
+type UserProfileServiceInterface interface {
+	// GetUserProfile retrieves a user's profile and game history with pagination.
+	GetUserProfile(ctx context.Context, userID int32, page, pageSize int) (*UserProfileResponse, error)
+
+	// GetUserGames retrieves all games a user has participated in with pagination.
+	// Applies privacy filtering for anonymous games.
+	GetUserGames(ctx context.Context, userID int32, limit, offset int) ([]UserGame, error)
+
+	// UpdateUserProfile updates a user's display name and/or bio.
+	// Nil values are ignored.
+	UpdateUserProfile(ctx context.Context, userID int32, displayName *string, bio *string) error
+}
+
+// UserAvatarServiceInterface defines the contract for user avatar operations.
+type UserAvatarServiceInterface interface {
+	// UploadUserAvatar uploads an avatar image for a user.
+	// Returns the public URL of the uploaded avatar.
+	UploadUserAvatar(ctx context.Context, userID int32, file io.Reader, filename string, contentType string) (string, error)
+
+	// DeleteUserAvatar removes a user's avatar.
+	DeleteUserAvatar(ctx context.Context, userID int32) error
+
+	// GetUserAvatarURL retrieves the avatar URL for a user.
+	// Returns nil if the user has no avatar.
+	GetUserAvatarURL(ctx context.Context, userID int32) (*string, error)
+}
