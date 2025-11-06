@@ -1,4 +1,5 @@
-import { useState, ReactNode } from 'react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Button, Input, Textarea, Select, Badge, Card, CardBody, Alert } from '../ui';
 import { useCreateDraftCharacterUpdate } from '../../hooks';
 import type { DraftCharacterUpdate } from '../../types/phases';

@@ -1,21 +1,8 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
-import { HomePage } from './pages/HomePage';
-import { LoginPage } from './pages/LoginPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { VerifyEmailPage } from './pages/VerifyEmailPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { GamesPage } from './pages/GamesPage';
-import { GameDetailsPage } from './pages/GameDetailsPage';
-import { ThreadViewPage } from './pages/ThreadViewPage';
-import NotificationsPage from './pages/NotificationsPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { AdminPage } from './pages/AdminPage';
-import { UserProfilePage } from './pages/UserProfilePage';
-import ThemeTestPage from './pages/ThemeTestPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicArchiveRoute } from './components/PublicArchiveRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -23,6 +10,22 @@ import { AdminModeProvider } from './contexts/AdminModeContext';
 import { GameProvider } from './contexts/GameContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
+
+// Lazy load all page components for better code splitting
+const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const GamesPage = lazy(() => import('./pages/GamesPage').then(m => ({ default: m.GamesPage })));
+const GameDetailsPage = lazy(() => import('./pages/GameDetailsPage').then(m => ({ default: m.GameDetailsPage })));
+const ThreadViewPage = lazy(() => import('./pages/ThreadViewPage').then(m => ({ default: m.ThreadViewPage })));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
+const ThemeTestPage = lazy(() => import('./pages/ThemeTestPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,13 +36,23 @@ const queryClient = new QueryClient({
   },
 });
 
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="min-h-screen surface-page flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-interactive-primary"></div>
+    </div>
+  );
+}
+
 function AppRoutes() {
   const { isAuthenticated, isCheckingAuth } = useAuth();
 
   return (
     <Router>
       <Layout>
-        <Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
           <Route
             path="/login"
             element={
@@ -154,6 +167,7 @@ function AppRoutes() {
             }
           />
         </Routes>
+        </Suspense>
       </Layout>
     </Router>
   );

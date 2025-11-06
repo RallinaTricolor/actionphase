@@ -34,7 +34,7 @@ export const PublishResultConfirmationDialog: React.FC<PublishResultConfirmation
             <ul className="list-disc list-inside space-y-1 mt-2">
               {drafts?.map(draft => (
                 <li key={draft.id} className="text-sm">
-                  <Badge variant="info" className="mr-1">
+                  <Badge variant="primary" className="mr-1">
                     {draft.module_type}
                   </Badge>
                   <span className="font-medium">{draft.field_name}</span>

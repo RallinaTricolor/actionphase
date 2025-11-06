@@ -257,7 +257,7 @@ export function DeadlineWidget({
                                     disabled={deletingId === deadline.id}
                                     icon={<PencilIcon className="h-3 w-3" />}
                                     aria-label="Edit deadline"
-                                  />
+                                  >{''}</Button>
                                   <Button
                                     variant="secondary"
                                     size="sm"
@@ -265,7 +265,7 @@ export function DeadlineWidget({
                                     disabled={deletingId === deadline.id}
                                     icon={<ClockIcon className="h-3 w-3" />}
                                     aria-label="Extend deadline"
-                                  />
+                                  >{''}</Button>
                                   <Button
                                     variant="danger"
                                     size="sm"
@@ -274,7 +274,7 @@ export function DeadlineWidget({
                                     disabled={deletingId === deadline.id}
                                     icon={<TrashIcon className="h-3 w-3" />}
                                     aria-label="Delete deadline"
-                                  />
+                                  >{''}</Button>
                                 </div>
                               )}
                             </div>
@@ -327,7 +327,7 @@ export function DeadlineWidget({
                                     disabled={deletingId === deadline.id}
                                     icon={<TrashIcon className="h-3 w-3" />}
                                     aria-label="Delete deadline"
-                                  />
+                                  >{''}</Button>
                                 </div>
                               )}
                             </div>

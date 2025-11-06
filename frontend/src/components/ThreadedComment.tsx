@@ -192,7 +192,9 @@ export function ThreadedComment({
         commentId: comment.id,
         data: {
           content: editContent.trim(),
-          ...(selectedEditCharacterId !== comment.character_id && { character_id: selectedEditCharacterId })
+          ...(selectedEditCharacterId !== comment.character_id && {
+            character_id: selectedEditCharacterId ?? undefined
+          })
         }
       });
       // Update local state immediately with the response from the server
