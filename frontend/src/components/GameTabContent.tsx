@@ -9,6 +9,7 @@ import { ActionsList } from './ActionsList';
 import { ActionResultsList } from './ActionResultsList';
 import { GameResultsManager } from './GameResultsManager';
 import { CommonRoom } from './CommonRoom';
+import { PollsTab } from './PollsTab';
 import { PrivateMessages } from './PrivateMessages';
 import { HistoryView } from './HistoryView';
 import { RemovePlayerButton } from './RemovePlayerButton';
@@ -243,6 +244,41 @@ export function GameTabContent({
       <div className="text-center py-12">
         <p className="text-content-secondary">
           Common Room is only available during Discussion phases.
+        </p>
+        <p className="text-content-tertiary mt-2">
+          Current phase: {currentPhaseData?.phase?.phase_type}
+        </p>
+      </div>
+    );
+  }
+
+  // Polls Tab (In Progress - common_room phases)
+  if (activeTab === 'polls' && game.state === 'in_progress') {
+    // Show loading only on initial load (when we have no data yet)
+    if (isLoadingPhase && !currentPhaseData) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-interactive-primary"></div>
+        </div>
+      );
+    }
+
+    // Render Polls if phase is common_room type
+    if (currentPhaseData?.phase?.phase_type === 'common_room') {
+      return (
+        <PollsTab
+          gameId={gameId}
+          isGM={isGM}
+          isCurrentPhase={true}
+        />
+      );
+    }
+
+    // Phase exists but is not common_room type
+    return (
+      <div className="text-center py-12">
+        <p className="text-content-secondary">
+          Polls are only available during Discussion phases.
         </p>
         <p className="text-content-tertiary mt-2">
           Current phase: {currentPhaseData?.phase?.phase_type}

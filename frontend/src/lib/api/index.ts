@@ -28,6 +28,10 @@
  *   // Notifications
  *   apiClient.notifications.getNotifications();
  *
+ *   // Polls
+ *   apiClient.polls.createPoll(gameId, data);
+ *   apiClient.polls.submitVote(pollId, data);
+ *
  *   // Utility methods
  *   apiClient.setAuthToken(token);
  *   apiClient.getAuthToken();
@@ -46,6 +50,7 @@ import { NotificationsApi } from './notifications';
 import { AdminApi } from './admin';
 import { HandoutsApi } from './handouts';
 import { DeadlinesApi } from './deadlines';
+import { PollsApi } from './polls';
 
 class ApiClient extends BaseApiClient {
   public auth: AuthApi;
@@ -58,6 +63,7 @@ class ApiClient extends BaseApiClient {
   public admin: AdminApi;
   public handouts: HandoutsApi;
   public deadlines: DeadlinesApi;
+  public polls: PollsApi;
 
   constructor() {
     super();
@@ -73,6 +79,7 @@ class ApiClient extends BaseApiClient {
     this.admin = new AdminApi();
     this.handouts = new HandoutsApi();
     this.deadlines = new DeadlinesApi();
+    this.polls = new PollsApi();
   }
 }
 

@@ -681,6 +681,9 @@ var CleanupPresets = map[string][]string{
 	// Deadline cleanup
 	"deadlines": {"game_deadlines", "game_participants", "games", "sessions", "users"},
 
+	// Poll cleanup
+	"polls": {"poll_votes", "poll_options", "common_room_polls", "games", "sessions", "users"},
+
 	// Complete cleanup (all tables)
 	"all": {
 		"conversation_reads",

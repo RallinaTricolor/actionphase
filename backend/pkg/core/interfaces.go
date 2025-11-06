@@ -1195,3 +1195,138 @@ type DeadlineWithGame struct {
 	GameTitle string
 	GameID    int32
 }
+
+// ==========================================
+// Common Room Polling System
+// ==========================================
+
+// PollServiceInterface defines the contract for poll management operations.
+// Enables GMs to create polls for player consensus-building in the common room.
+type PollServiceInterface interface {
+	// CreatePollWithOptions creates a new poll with its options in a transaction.
+	// Only GMs can create polls for their games.
+	// Returns the created poll along with its options.
+	CreatePollWithOptions(ctx context.Context, req CreatePollRequest) (*PollWithOptions, error)
+
+	// GetPoll retrieves a specific poll by ID.
+	// Returns error if poll is not found or has been soft-deleted.
+	GetPoll(ctx context.Context, pollID int32) (*models.CommonRoomPoll, error)
+
+	// GetPollWithOptions retrieves a poll with all its options.
+	GetPollWithOptions(ctx context.Context, pollID int32) (*PollWithOptions, error)
+
+	// ListPollsByPhase retrieves all active polls for a specific game phase.
+	// Results are ordered by creation time descending (newest first).
+	ListPollsByPhase(ctx context.Context, gameID int32, phaseID int32) ([]models.CommonRoomPoll, error)
+
+	// ListPollsByGame retrieves all active polls for a game.
+	// If includeExpired is true, returns expired polls as well.
+	// Results are ordered by deadline ascending (soonest first).
+	ListPollsByGame(ctx context.Context, gameID int32, includeExpired bool) ([]models.CommonRoomPoll, error)
+
+	// SubmitVote submits or updates a user's vote for a poll.
+	// Enforces one vote per user per poll (with or without character context).
+	SubmitVote(ctx context.Context, req SubmitVoteRequest) (*models.PollVote, error)
+
+	// GetVote retrieves a user's vote for a poll.
+	// Returns nil if user hasn't voted yet.
+	GetVote(ctx context.Context, pollID int32, userID int32, characterID *int32) (*models.PollVote, error)
+
+	// GetPollResults retrieves aggregated results for a poll.
+	// Returns vote counts per option and respects show_individual_votes setting.
+	GetPollResults(ctx context.Context, pollID int32) (*PollResults, error)
+
+	// UpdatePoll updates poll details (question, description, deadline, settings).
+	// Only GMs can update polls for their games.
+	// Cannot update after votes have been cast (enforced at handler level).
+	UpdatePoll(ctx context.Context, pollID int32, req UpdatePollRequest) (*models.CommonRoomPoll, error)
+
+	// DeletePoll soft-deletes a poll by setting is_deleted flag.
+	// Only GMs can delete polls for their games.
+	DeletePoll(ctx context.Context, pollID int32) error
+
+	// HasUserVoted checks if a user has already voted in a poll.
+	// Useful for validation before rendering vote UI.
+	HasUserVoted(ctx context.Context, pollID int32, userID int32, characterID *int32) (bool, error)
+}
+
+// ==========================================
+// Polling System Request/Response Types
+// ==========================================
+
+// CreatePollRequest represents parameters for creating a poll with options.
+type CreatePollRequest struct {
+	GameID               int32
+	PhaseID              *int32 // Optional - poll can be phase-specific or game-wide
+	CreatedByUserID      int32  // GM creating the poll
+	CreatedByCharacterID *int32 // Optional - GM can create as a character
+	Question             string
+	Description          *string // Optional
+	Deadline             time.Time
+	VoteAsType           string // "player" or "character"
+	ShowIndividualVotes  bool
+	AllowOtherOption     bool
+	Options              []PollOptionInput // List of poll options
+}
+
+// PollOptionInput represents a single poll option during creation.
+type PollOptionInput struct {
+	Text         string
+	DisplayOrder int32
+}
+
+// UpdatePollRequest represents parameters for updating a poll.
+type UpdatePollRequest struct {
+	Question            string
+	Description         *string
+	Deadline            time.Time
+	ShowIndividualVotes bool
+	AllowOtherOption    bool
+}
+
+// SubmitVoteRequest represents parameters for submitting a vote.
+type SubmitVoteRequest struct {
+	PollID           int32
+	UserID           int32
+	CharacterID      *int32  // Only if vote_as_type is "character"
+	SelectedOptionID *int32  // Mutually exclusive with OtherResponse
+	OtherResponse    *string // Mutually exclusive with SelectedOptionID
+}
+
+// PollWithOptions includes poll and its options together.
+type PollWithOptions struct {
+	Poll    models.CommonRoomPoll
+	Options []models.PollOption
+}
+
+// PollResults contains aggregated voting results.
+type PollResults struct {
+	Poll                models.CommonRoomPoll
+	OptionResults       []OptionResult
+	OtherResponses      []OtherResponse
+	TotalVotes          int32
+	ShowIndividualVotes bool
+}
+
+// OptionResult represents vote count for a specific option.
+type OptionResult struct {
+	Option    models.PollOption
+	VoteCount int32
+	Voters    []VoterInfo // Only populated if show_individual_votes is true
+}
+
+// OtherResponse represents a custom "other" response.
+type OtherResponse struct {
+	VoteID        int32
+	OtherText     string
+	Username      string
+	CharacterName *string // If voted as character
+}
+
+// VoterInfo represents a user who voted (for individual vote display).
+type VoterInfo struct {
+	UserID        int32
+	Username      string
+	CharacterID   *int32
+	CharacterName *string
+}

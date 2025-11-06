@@ -138,6 +138,10 @@ func (ts *TestSuite) DeadlineService() *DeadlineService {
 	return ts.serviceFactory.DeadlineService()
 }
 
+func (ts *TestSuite) PollService() *PollService {
+	return ts.serviceFactory.PollService()
+}
+
 // TransitionGameTo is a convenience helper for transitioning game states
 func (ts *TestSuite) TransitionGameTo(game models.Game, newState string) *models.Game {
 	gameService := ts.GameService()
@@ -205,4 +209,9 @@ func (sf *ServiceFactory) HandoutService() *HandoutService {
 // DeadlineService creates a new DeadlineService
 func (sf *ServiceFactory) DeadlineService() *DeadlineService {
 	return &DeadlineService{DB: sf.pool}
+}
+
+// PollService creates a new PollService
+func (sf *ServiceFactory) PollService() *PollService {
+	return &PollService{DB: sf.pool}
 }
