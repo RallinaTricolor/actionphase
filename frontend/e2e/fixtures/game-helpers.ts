@@ -46,6 +46,7 @@ export const FIXTURE_GAMES = {
   COMMON_ROOM_NOTIFICATIONS: 'E2E Common Room - Notifications', // Game #166 - for notification-flow.spec.ts
   COMMON_ROOM_MISC: 'E2E Common Room - Misc',             // Game #167 - for misc tests
   CHARACTER_AVATARS: 'E2E Character Avatars',             // Game #168 - for character-avatar.spec.ts
+  COMMON_ROOM_POLLS: 'E2E Common Room - Polls',           // Game #169 - for polls-flow.spec.ts
 
   // Isolated games for common-room.spec.ts individual tests (605-610)
   COMMON_ROOM_CREATE_POST: 'E2E Common Room - Create Post',       // Game #605 - "GM can create a post"

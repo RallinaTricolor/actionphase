@@ -18,6 +18,7 @@ import (
 	ratelimitmw "actionphase/pkg/middleware"
 	"actionphase/pkg/notifications"
 	"actionphase/pkg/phases"
+	"actionphase/pkg/polls"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -250,6 +251,11 @@ func (h *Handler) Start() {
 			deadlineHandler := &deadlines.Handler{App: h.App}
 			r.Post("/{gameId}/deadlines", deadlineHandler.CreateDeadline)
 			r.Get("/{gameId}/deadlines", deadlineHandler.GetGameDeadlines)
+
+			// Polls
+			pollHandler := &polls.Handler{App: h.App}
+			r.Post("/{gameId}/polls", pollHandler.CreatePoll)
+			r.Get("/{gameId}/polls", pollHandler.ListGamePolls)
 		})
 	})
 	apiV1Router.Mount("/games", gamesRouter)
@@ -325,6 +331,29 @@ func (h *Handler) Start() {
 		})
 	})
 	apiV1Router.Mount("/deadlines", deadlinesRouter)
+
+	// Polls API (for poll-specific operations)
+	pollsRouter := chi.NewRouter()
+	pollsRouter.Route("/", func(r chi.Router) {
+		pollHandler := polls.Handler{App: h.App}
+
+		// All poll routes require authentication
+		r.Group(func(r chi.Router) {
+			tokenAuth := h.getTokenAuth()
+			userService := &db.UserService{DB: h.App.Pool}
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
+
+			// Poll management
+			r.Get("/{pollId}", pollHandler.GetPoll)
+			r.Get("/{pollId}/results", pollHandler.GetPollResults)
+			r.Post("/{pollId}/vote", pollHandler.SubmitVote)
+			r.Put("/{pollId}", pollHandler.UpdatePoll)
+			r.Delete("/{pollId}", pollHandler.DeletePoll)
+		})
+	})
+	apiV1Router.Mount("/polls", pollsRouter)
 
 	// Notifications API
 	notificationsRouter := chi.NewRouter()

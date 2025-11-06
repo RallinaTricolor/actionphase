@@ -158,6 +158,23 @@ type CharacterDatum struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type CommonRoomPoll struct {
+	ID                   int32              `json:"id"`
+	GameID               int32              `json:"game_id"`
+	PhaseID              pgtype.Int4        `json:"phase_id"`
+	CreatedByUserID      int32              `json:"created_by_user_id"`
+	CreatedByCharacterID pgtype.Int4        `json:"created_by_character_id"`
+	Question             string             `json:"question"`
+	Description          pgtype.Text        `json:"description"`
+	Deadline             pgtype.Timestamptz `json:"deadline"`
+	VoteAsType           string             `json:"vote_as_type"`
+	ShowIndividualVotes  pgtype.Bool        `json:"show_individual_votes"`
+	AllowOtherOption     pgtype.Bool        `json:"allow_other_option"`
+	IsDeleted            pgtype.Bool        `json:"is_deleted"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Conversation struct {
 	ID               int32              `json:"id"`
 	GameID           int32              `json:"game_id"`
@@ -370,6 +387,25 @@ type PhaseTransition struct {
 	InitiatedBy int32              `json:"initiated_by"`
 	Reason      pgtype.Text        `json:"reason"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type PollOption struct {
+	ID           int32              `json:"id"`
+	PollID       int32              `json:"poll_id"`
+	OptionText   string             `json:"option_text"`
+	DisplayOrder int32              `json:"display_order"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type PollVote struct {
+	ID               int32              `json:"id"`
+	PollID           int32              `json:"poll_id"`
+	UserID           int32              `json:"user_id"`
+	CharacterID      pgtype.Int4        `json:"character_id"`
+	SelectedOptionID pgtype.Int4        `json:"selected_option_id"`
+	OtherResponse    pgtype.Text        `json:"other_response"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PrivateMessage struct {

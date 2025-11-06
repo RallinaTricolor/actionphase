@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +14,10 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { RecentResultsSection } from './RecentResultsSection';
 import { usePreviousPhaseResults } from '../hooks/usePreviousPhaseResults';
 import { getRootPostId } from '../utils/commentUtils';
+import { usePolls } from '../hooks';
+
+// Lazy load PollsTab component
+const PollsTab = lazy(() => import('./PollsTab').then(m => ({ default: m.PollsTab })));
 
 interface CommonRoomProps {
   gameId: number;
@@ -33,7 +37,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
   // URL search params for deep linking to comments and sub-tab navigation
   const [searchParams, setSearchParams] = useSearchParams();
   const commentIdParam = searchParams.get('comment');
-  const viewParam = searchParams.get('view') as 'posts' | 'newComments' | null;
+  const viewParam = searchParams.get('view') as 'posts' | 'newComments' | 'polls' | null;
 
   const [posts, setPosts] = useState<Message[]>([]);
   const [controllableCharacters, setControllableCharacters] = useState<Character[]>([]);
@@ -48,8 +52,12 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     targetCommentId: number;
   } | null>(null);
   // Initialize activeTab from URL parameter, default to 'posts'
-  const [activeTab, setActiveTab] = useState<'posts' | 'newComments'>(viewParam || 'posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'newComments' | 'polls'>(viewParam || 'posts');
   const navigate = useNavigate();
+
+  // Fetch polls to calculate unvoted count for badge
+  const { polls, isLoading: pollsLoading } = usePolls(gameId, false);
+  const unvotedPollsCount = polls.filter(poll => !poll.user_has_voted).length;
 
   // Fetch previous phase results (if applicable)
   const previousPhaseResults = usePreviousPhaseResults(gameId, currentPhase, isGM);
@@ -60,7 +68,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
 
   // Sync activeTab state with URL parameter
   useEffect(() => {
-    const currentView = searchParams.get('view') as 'posts' | 'newComments' | null;
+    const currentView = searchParams.get('view') as 'posts' | 'newComments' | 'polls' | null;
     if (currentView && currentView !== activeTab) {
       setActiveTab(currentView);
     } else if (!currentView && activeTab !== 'posts') {
@@ -277,6 +285,24 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
           >
             New Comments
           </button>
+          <button
+            onClick={() => {
+              const newParams = new URLSearchParams(searchParams);
+              newParams.set('view', 'polls');
+              setSearchParams(newParams, { replace: false });
+            }}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'polls'
+                ? 'border-accent-primary text-accent-primary'
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-secondary'
+            }`}
+          >
+            Polls {unvotedPollsCount > 0 && !pollsLoading && (
+              <span className="ml-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-accent-primary text-white">
+                {unvotedPollsCount}
+              </span>
+            )}
+          </button>
         </nav>
       </div>
 
@@ -342,9 +368,14 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
             </div>
           )}
         </>
-      ) : (
+      ) : activeTab === 'newComments' ? (
         /* New Comments View */
         <NewCommentsView gameId={gameId} />
+      ) : (
+        /* Polls Tab */
+        <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="lg" label="Loading polls..." /></div>}>
+          <PollsTab gameId={gameId} isGM={isGM} isCurrentPhase={isCurrentPhase} />
+        </Suspense>
       )}
 
       {/* Thread View Modal for deep-linked comments */}

@@ -1,0 +1,482 @@
+package db
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"actionphase/pkg/core"
+	db "actionphase/pkg/db/models"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// PollService implements the PollServiceInterface
+type PollService struct {
+	DB *pgxpool.Pool
+}
+
+// Compile-time verification that PollService implements PollServiceInterface
+var _ core.PollServiceInterface = (*PollService)(nil)
+
+// NewPollService creates a new poll service
+func NewPollService(dbPool *pgxpool.Pool) *PollService {
+	return &PollService{DB: dbPool}
+}
+
+// CreatePollWithOptions creates a new poll with its options in a transaction
+func (s *PollService) CreatePollWithOptions(ctx context.Context, req core.CreatePollRequest) (*core.PollWithOptions, error) {
+	// Start a transaction
+	tx, err := s.DB.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx) // Rollback if we don't commit
+
+	queries := db.New(tx)
+
+	// Convert deadline to pgtype.Timestamptz
+	deadline := pgtype.Timestamptz{}
+	if err := deadline.Scan(req.Deadline); err != nil {
+		return nil, fmt.Errorf("invalid deadline timestamp: %w", err)
+	}
+
+	// Convert optional fields
+	phaseID := pgtype.Int4{}
+	if req.PhaseID != nil {
+		phaseID.Int32 = *req.PhaseID
+		phaseID.Valid = true
+	}
+
+	createdByCharacterID := pgtype.Int4{}
+	if req.CreatedByCharacterID != nil {
+		createdByCharacterID.Int32 = *req.CreatedByCharacterID
+		createdByCharacterID.Valid = true
+	}
+
+	description := pgtype.Text{}
+	if req.Description != nil {
+		description.String = *req.Description
+		description.Valid = true
+	}
+
+	showIndividualVotes := pgtype.Bool{Bool: req.ShowIndividualVotes, Valid: true}
+	allowOtherOption := pgtype.Bool{Bool: req.AllowOtherOption, Valid: true}
+
+	// Create the poll
+	pollParams := db.CreatePollParams{
+		GameID:               req.GameID,
+		PhaseID:              phaseID,
+		CreatedByUserID:      req.CreatedByUserID,
+		CreatedByCharacterID: createdByCharacterID,
+		Question:             req.Question,
+		Description:          description,
+		Deadline:             deadline,
+		VoteAsType:           req.VoteAsType,
+		ShowIndividualVotes:  showIndividualVotes,
+		AllowOtherOption:     allowOtherOption,
+	}
+
+	poll, err := queries.CreatePoll(ctx, pollParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create poll: %w", err)
+	}
+
+	// Create poll options
+	options := make([]db.PollOption, 0, len(req.Options))
+	for _, opt := range req.Options {
+		optionParams := db.CreatePollOptionParams{
+			PollID:       poll.ID,
+			OptionText:   opt.Text,
+			DisplayOrder: opt.DisplayOrder,
+		}
+		option, err := queries.CreatePollOption(ctx, optionParams)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create poll option: %w", err)
+		}
+		options = append(options, option)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return &core.PollWithOptions{
+		Poll:    poll,
+		Options: options,
+	}, nil
+}
+
+// GetPoll retrieves a specific poll by ID
+func (s *PollService) GetPoll(ctx context.Context, pollID int32) (*db.CommonRoomPoll, error) {
+	queries := db.New(s.DB)
+
+	poll, err := queries.GetPoll(ctx, pollID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("poll not found: %d", pollID)
+		}
+		return nil, fmt.Errorf("failed to get poll: %w", err)
+	}
+
+	return &poll, nil
+}
+
+// GetPollWithOptions retrieves a poll with all its options
+func (s *PollService) GetPollWithOptions(ctx context.Context, pollID int32) (*core.PollWithOptions, error) {
+	queries := db.New(s.DB)
+
+	// Get poll
+	poll, err := queries.GetPoll(ctx, pollID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("poll not found: %d", pollID)
+		}
+		return nil, fmt.Errorf("failed to get poll: %w", err)
+	}
+
+	// Get options
+	options, err := queries.GetPollOptions(ctx, pollID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get poll options: %w", err)
+	}
+
+	if options == nil {
+		options = []db.PollOption{}
+	}
+
+	return &core.PollWithOptions{
+		Poll:    poll,
+		Options: options,
+	}, nil
+}
+
+// ListPollsByPhase retrieves all active polls for a specific game phase
+func (s *PollService) ListPollsByPhase(ctx context.Context, gameID int32, phaseID int32) ([]db.CommonRoomPoll, error) {
+	queries := db.New(s.DB)
+
+	params := db.ListPollsByPhaseParams{
+		GameID:  gameID,
+		PhaseID: pgtype.Int4{Int32: phaseID, Valid: true},
+	}
+
+	polls, err := queries.ListPollsByPhase(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list polls by phase: %w", err)
+	}
+
+	if polls == nil {
+		return []db.CommonRoomPoll{}, nil
+	}
+
+	return polls, nil
+}
+
+// ListPollsByGame retrieves all active polls for a game
+func (s *PollService) ListPollsByGame(ctx context.Context, gameID int32, includeExpired bool) ([]db.CommonRoomPoll, error) {
+	queries := db.New(s.DB)
+
+	params := db.ListPollsByGameParams{
+		GameID:  gameID,
+		Column2: includeExpired,
+	}
+
+	polls, err := queries.ListPollsByGame(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list polls by game: %w", err)
+	}
+
+	if polls == nil {
+		return []db.CommonRoomPoll{}, nil
+	}
+
+	return polls, nil
+}
+
+// SubmitVote submits or updates a user's vote for a poll
+func (s *PollService) SubmitVote(ctx context.Context, req core.SubmitVoteRequest) (*db.PollVote, error) {
+	queries := db.New(s.DB)
+
+	// Convert optional fields
+	characterID := pgtype.Int4{}
+	if req.CharacterID != nil {
+		characterID.Int32 = *req.CharacterID
+		characterID.Valid = true
+	}
+
+	selectedOptionID := pgtype.Int4{}
+	if req.SelectedOptionID != nil {
+		selectedOptionID.Int32 = *req.SelectedOptionID
+		selectedOptionID.Valid = true
+	}
+
+	otherResponse := pgtype.Text{}
+	if req.OtherResponse != nil {
+		otherResponse.String = *req.OtherResponse
+		otherResponse.Valid = true
+	}
+
+	// Check if user has already voted
+	existingVoteParams := db.GetVoteByPollAndUserParams{
+		PollID:      req.PollID,
+		UserID:      req.UserID,
+		CharacterID: characterID,
+	}
+
+	existingVote, err := queries.GetVoteByPollAndUser(ctx, existingVoteParams)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("failed to check existing vote: %w", err)
+	}
+
+	// If vote exists, update it
+	if err == nil {
+		updateParams := db.UpdateVoteParams{
+			ID:               existingVote.ID,
+			SelectedOptionID: selectedOptionID,
+			OtherResponse:    otherResponse,
+		}
+		vote, err := queries.UpdateVote(ctx, updateParams)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update vote: %w", err)
+		}
+		return &vote, nil
+	}
+
+	// Otherwise, create new vote
+	voteParams := db.SubmitVoteParams{
+		PollID:           req.PollID,
+		UserID:           req.UserID,
+		CharacterID:      characterID,
+		SelectedOptionID: selectedOptionID,
+		OtherResponse:    otherResponse,
+	}
+
+	vote, err := queries.SubmitVote(ctx, voteParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to submit vote: %w", err)
+	}
+
+	return &vote, nil
+}
+
+// GetVote retrieves a user's vote for a poll
+func (s *PollService) GetVote(ctx context.Context, pollID int32, userID int32, characterID *int32) (*db.PollVote, error) {
+	queries := db.New(s.DB)
+
+	charID := pgtype.Int4{}
+	if characterID != nil {
+		charID.Int32 = *characterID
+		charID.Valid = true
+	}
+
+	params := db.GetVoteByPollAndUserParams{
+		PollID:      pollID,
+		UserID:      userID,
+		CharacterID: charID,
+	}
+
+	vote, err := queries.GetVoteByPollAndUser(ctx, params)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil // User hasn't voted
+		}
+		return nil, fmt.Errorf("failed to get vote: %w", err)
+	}
+
+	return &vote, nil
+}
+
+// GetPollResults retrieves aggregated results for a poll
+func (s *PollService) GetPollResults(ctx context.Context, pollID int32) (*core.PollResults, error) {
+	queries := db.New(s.DB)
+
+	// Get the poll
+	poll, err := queries.GetPoll(ctx, pollID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("poll not found: %d", pollID)
+		}
+		return nil, fmt.Errorf("failed to get poll: %w", err)
+	}
+
+	// Get vote summary
+	summary, err := queries.GetPollResultsSummary(ctx, pollID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get poll results summary: %w", err)
+	}
+
+	// Build option results
+	optionResults := make([]core.OptionResult, 0, len(summary))
+	totalVotes := int32(0)
+
+	for _, row := range summary {
+		optResult := core.OptionResult{
+			Option: db.PollOption{
+				ID:           row.OptionID,
+				OptionText:   row.OptionText,
+				DisplayOrder: row.DisplayOrder,
+			},
+			VoteCount: int32(row.VoteCount),
+			Voters:    []core.VoterInfo{},
+		}
+		totalVotes += int32(row.VoteCount)
+		optionResults = append(optionResults, optResult)
+	}
+
+	// Get "other" responses count
+	otherCount, err := queries.GetOtherVoteCount(ctx, pollID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get other vote count: %w", err)
+	}
+	totalVotes += int32(otherCount)
+
+	// Get detailed votes if show_individual_votes is true
+	showIndividualVotes := poll.ShowIndividualVotes.Bool
+	if showIndividualVotes {
+		votes, err := queries.GetPollVotesWithDetails(ctx, pollID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get detailed votes: %w", err)
+		}
+
+		// Map votes to their options
+		for _, vote := range votes {
+			if vote.SelectedOptionID.Valid {
+				// Find the option result and add voter info
+				for i := range optionResults {
+					if optionResults[i].Option.ID == vote.SelectedOptionID.Int32 {
+						voterInfo := core.VoterInfo{
+							UserID:   vote.UserID,
+							Username: vote.Username,
+						}
+						if vote.CharacterID.Valid {
+							charID := vote.CharacterID.Int32
+							voterInfo.CharacterID = &charID
+						}
+						if vote.CharacterName.Valid {
+							charName := vote.CharacterName.String
+							voterInfo.CharacterName = &charName
+						}
+						optionResults[i].Voters = append(optionResults[i].Voters, voterInfo)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	// Get "other" responses with details
+	otherResponses := []core.OtherResponse{}
+	if poll.AllowOtherOption.Bool {
+		others, err := queries.GetOtherResponses(ctx, pollID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get other responses: %w", err)
+		}
+
+		for _, other := range others {
+			otherResp := core.OtherResponse{
+				VoteID:    other.ID,
+				OtherText: other.OtherResponse.String,
+				Username:  other.Username,
+			}
+			if other.CharacterName.Valid {
+				charName := other.CharacterName.String
+				otherResp.CharacterName = &charName
+			}
+			otherResponses = append(otherResponses, otherResp)
+		}
+	}
+
+	return &core.PollResults{
+		Poll:                poll,
+		OptionResults:       optionResults,
+		OtherResponses:      otherResponses,
+		TotalVotes:          totalVotes,
+		ShowIndividualVotes: showIndividualVotes,
+	}, nil
+}
+
+// UpdatePoll updates poll details
+func (s *PollService) UpdatePoll(ctx context.Context, pollID int32, req core.UpdatePollRequest) (*db.CommonRoomPoll, error) {
+	queries := db.New(s.DB)
+
+	// Convert deadline to pgtype.Timestamptz
+	deadline := pgtype.Timestamptz{}
+	if err := deadline.Scan(req.Deadline); err != nil {
+		return nil, fmt.Errorf("invalid deadline timestamp: %w", err)
+	}
+
+	description := pgtype.Text{}
+	if req.Description != nil {
+		description.String = *req.Description
+		description.Valid = true
+	}
+
+	showIndividualVotes := pgtype.Bool{Bool: req.ShowIndividualVotes, Valid: true}
+	allowOtherOption := pgtype.Bool{Bool: req.AllowOtherOption, Valid: true}
+
+	params := db.UpdatePollParams{
+		ID:                  pollID,
+		Question:            req.Question,
+		Description:         description,
+		Deadline:            deadline,
+		ShowIndividualVotes: showIndividualVotes,
+		AllowOtherOption:    allowOtherOption,
+	}
+
+	poll, err := queries.UpdatePoll(ctx, params)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("poll not found: %d", pollID)
+		}
+		return nil, fmt.Errorf("failed to update poll: %w", err)
+	}
+
+	return &poll, nil
+}
+
+// DeletePoll soft-deletes a poll by setting is_deleted flag
+func (s *PollService) DeletePoll(ctx context.Context, pollID int32) error {
+	queries := db.New(s.DB)
+
+	// First verify the poll exists
+	_, err := queries.GetPoll(ctx, pollID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("poll not found: %d", pollID)
+		}
+		return fmt.Errorf("failed to verify poll: %w", err)
+	}
+
+	// Perform soft delete
+	if err := queries.SoftDeletePoll(ctx, pollID); err != nil {
+		return fmt.Errorf("failed to delete poll: %w", err)
+	}
+
+	return nil
+}
+
+// HasUserVoted checks if a user has already voted in a poll
+func (s *PollService) HasUserVoted(ctx context.Context, pollID int32, userID int32, characterID *int32) (bool, error) {
+	queries := db.New(s.DB)
+
+	charID := pgtype.Int4{Int32: 0, Valid: false}
+	if characterID != nil {
+		charID = pgtype.Int4{Int32: *characterID, Valid: true}
+	}
+
+	params := db.HasUserVotedParams{
+		PollID:      pollID,
+		UserID:      userID,
+		CharacterID: charID,
+	}
+
+	hasVoted, err := queries.HasUserVoted(ctx, params)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if user voted: %w", err)
+	}
+
+	return hasVoted, nil
+}

@@ -47,6 +47,8 @@ export default function NotificationItem({ notification, onNavigate }: Notificat
         return '📣';
       case 'phase_created':
         return '🎯';
+      case 'poll_created':
+        return '📊';
       case 'application_approved':
         return '✅';
       case 'application_rejected':
