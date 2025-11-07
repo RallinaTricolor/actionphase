@@ -15,7 +15,7 @@ ActionPhase provides a RESTful API for managing play-by-post RPG games with a cy
 ## Base URL
 
 - **Development**: `http://localhost:3000/api/v1`
-- **Production**: `https://api.actionphase.com/api/v1`
+- **Production**: `https://api.action-phase.com/api/v1`
 
 ## Interactive Documentation
 

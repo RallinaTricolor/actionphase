@@ -245,7 +245,7 @@ func NewEmailServiceFromEnv() (*EmailService, error) {
 
 	// Set default values
 	if config.FromEmail == "" {
-		config.FromEmail = "noreply@actionphase.com"
+		config.FromEmail = "noreply@action-phase.com"
 	}
 	if config.FromName == "" {
 		config.FromName = "ActionPhase"
