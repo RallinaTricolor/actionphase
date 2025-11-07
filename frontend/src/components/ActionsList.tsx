@@ -320,7 +320,7 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
 
       {isExpanded && (
         <div className="px-4 py-4 surface-raised border-t border-theme-default">
-          <div className="prose prose-sm max-w-none">
+          <div className="prose max-w-prose">
             <div className="surface-base p-4 rounded border border-theme-default whitespace-pre-wrap text-content-primary">
               {action.content}
             </div>

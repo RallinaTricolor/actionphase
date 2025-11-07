@@ -412,7 +412,7 @@ export function ThreadedComment({
             </div>
           </div>
         ) : (
-          <div className="text-sm text-content-primary mb-2">
+          <div className="mb-2">
             <MarkdownPreview
               content={comment.content}
               mentionedCharacters={comment.mentioned_character_ids?.flatMap(id => {

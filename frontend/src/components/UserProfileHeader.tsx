@@ -90,7 +90,7 @@ export function UserProfileHeader({ profile }: UserProfileHeaderProps) {
                 About
               </h2>
               {profile.bio ? (
-                <div className="prose prose-sm max-w-none text-content-primary">
+                <div>
                   <MarkdownPreview content={profile.bio} />
                 </div>
               ) : (

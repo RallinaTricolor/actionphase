@@ -271,7 +271,7 @@ function ActionSubmissionCard({ gameId, submission }: { gameId: number; submissi
           {/* Action Submission */}
           <div className="mb-6">
             <h4 className="text-sm font-semibold text-content-primary mb-2">Action Submitted:</h4>
-            <div className="prose-sm bg-bg-secondary p-3 rounded-lg border border-border-primary">
+            <div className="bg-bg-secondary p-3 rounded-lg border border-border-primary">
               <MarkdownPreview content={submission.content} />
             </div>
           </div>
@@ -285,7 +285,7 @@ function ActionSubmissionCard({ gameId, submission }: { gameId: number; submissi
                   <Spinner size="sm" />
                 </div>
               ) : actionResult ? (
-                <div className="prose-sm bg-bg-tertiary p-3 rounded-lg border border-border-primary">
+                <div className="bg-bg-tertiary p-3 rounded-lg border border-border-primary">
                   <MarkdownPreview content={actionResult.result_text} />
                 </div>
               ) : (

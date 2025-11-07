@@ -326,7 +326,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                         {message.content}
                       </div>
                     ) : (
-                      <div className="surface-raised rounded-lg p-3 prose dark:prose-invert prose-sm max-w-none">
+                      <div className="surface-raised rounded-lg p-3 prose dark:prose-invert max-w-prose">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
                           rehypePlugins={[rehypeSanitize]}

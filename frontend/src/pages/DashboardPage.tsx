@@ -93,7 +93,7 @@ export function DashboardPage() {
                   <h2 className="text-2xl font-bold text-content-primary mb-4">
                     My Games as Player
                   </h2>
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {dashboard.player_games.map((game) => (
                       <DashboardGameCard key={game.game_id} game={game} />
                     ))}
@@ -107,7 +107,7 @@ export function DashboardPage() {
                   <h2 className="text-2xl font-bold text-content-primary mb-4">
                     Games I'm Running
                   </h2>
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {dashboard.gm_games.map((game) => (
                       <DashboardGameCard key={game.game_id} game={game} />
                     ))}
@@ -121,7 +121,7 @@ export function DashboardPage() {
                   <h2 className="text-2xl font-bold text-content-primary mb-4">
                     Other Games
                   </h2>
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {dashboard.mixed_role_games.map((game) => (
                       <DashboardGameCard key={game.game_id} game={game} />
                     ))}

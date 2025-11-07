@@ -82,7 +82,7 @@ export function ParentCommentPreview({
       {isDeleted ? (
         <div className="text-sm text-text-muted italic">[deleted]</div>
       ) : isExpanded ? (
-        <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
+        <div>
           <MarkdownPreview
             content={content || ''}
             mentionedCharacters={mentionedCharacters?.map(char => ({
