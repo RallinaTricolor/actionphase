@@ -109,14 +109,8 @@ sleep 5
 echo -e "${BLUE}Obtaining SSL certificate from Let's Encrypt...${NC}"
 
 if [ "$RENEW_CERT" = true ]; then
-    # Renew existing certificate
-    docker-compose -f docker-compose.yml -f docker-compose.prod.yml run --rm certbot \
-        certbot renew \
-        --webroot \
-        --webroot-path /var/www/certbot
-else
-    # Get new certificate
-    docker-compose -f docker-compose.yml -f docker-compose.prod.yml run --rm certbot \
+    # Force renewal of existing certificate
+    docker-compose -f docker-compose.yml -f docker-compose.prod.yml run --rm --entrypoint "" certbot \
         certbot certonly \
         --webroot \
         --webroot-path /var/www/certbot \
@@ -124,6 +118,20 @@ else
         --agree-tos \
         --no-eff-email \
         --force-renewal \
+        --non-interactive \
+        -d "$DOMAIN" \
+        -d "www.$DOMAIN"
+else
+    # Get new certificate
+    docker-compose -f docker-compose.yml -f docker-compose.prod.yml run --rm --entrypoint "" certbot \
+        certbot certonly \
+        --webroot \
+        --webroot-path /var/www/certbot \
+        --email "$EMAIL" \
+        --agree-tos \
+        --no-eff-email \
+        --force-renewal \
+        --non-interactive \
         -d "$DOMAIN" \
         -d "www.$DOMAIN"
 fi
@@ -205,9 +213,25 @@ echo -e "${BLUE}Setting up automatic renewal...${NC}"
 # Create renewal script
 cat > ./scripts/renew-ssl.sh << 'EOF'
 #!/bin/bash
+# Automatic SSL certificate renewal script
+# This runs twice daily via cron to check for expiring certificates
+
+set -e
+
 cd /opt/actionphase
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml run --rm certbot certbot renew --quiet
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml restart nginx
+
+# Try to renew certificates (only renews if within 30 days of expiry)
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml run --rm --entrypoint "" certbot \
+    certbot renew \
+    --webroot \
+    --webroot-path /var/www/certbot \
+    --quiet \
+    --non-interactive
+
+# Only restart nginx if renewal was successful
+if [ $? -eq 0 ]; then
+    docker-compose -f docker-compose.yml -f docker-compose.prod.yml restart nginx
+fi
 EOF
 
 chmod +x ./scripts/renew-ssl.sh
