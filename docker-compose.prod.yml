@@ -101,7 +101,9 @@ services:
     volumes:
       - letsencrypt:/etc/letsencrypt
       - certbot-webroot:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    # No default entrypoint - use docker-compose run for manual operations
+    # Automatic renewal is handled by cron job (see scripts/setup-ssl.sh)
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $${!}; done;'"
     networks:
       - actionphase-network
 
