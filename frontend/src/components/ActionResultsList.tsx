@@ -49,7 +49,7 @@ export const ActionResultsList: React.FC<ActionResultsListProps> = ({ gameId }) 
               </span>
             )}
           </div>
-          <div className="prose dark:prose-invert max-w-none">
+          <div>
             <MarkdownPreview content={result.content} />
           </div>
           {result.gm_username && (

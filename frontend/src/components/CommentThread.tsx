@@ -165,7 +165,7 @@ export function CommentThread({
       {comments.length === 0 && !isCommenting ? (
         <p className="text-sm text-content-secondary italic py-2">No comments yet. Be the first to reply!</p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {comments.map((comment) => {
             const isAuthor = currentUserId === comment.author_id;
             return (
@@ -182,7 +182,7 @@ export function CommentThread({
                     <Badge variant="primary">You</Badge>
                   )}
                 </div>
-                <p className="text-sm text-content-primary whitespace-pre-wrap">{comment.content}</p>
+                <p className="text-base text-content-primary whitespace-pre-wrap max-w-prose">{comment.content}</p>
               </div>
             );
           })}

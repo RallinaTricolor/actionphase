@@ -10,6 +10,8 @@ import { AdminModeProvider } from './contexts/AdminModeContext';
 import { GameProvider } from './contexts/GameContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { ReadingModeProvider, useReadingMode } from './contexts/ReadingModeContext';
+import { ReadingModeOverlay } from './components/ReadingModeOverlay';
 
 // Lazy load all page components for better code splitting
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
@@ -51,6 +53,7 @@ function AppRoutes() {
   return (
     <Router>
       <Layout>
+        <ReadingModeOverlay />
         <Suspense fallback={<PageLoader />}>
           <Routes>
           <Route
@@ -196,9 +199,11 @@ function App() {
         <AuthProvider>
           <AdminModeProvider>
             <ThemeProvider>
-              <ToastProvider>
-                <AppRoutes />
-              </ToastProvider>
+              <ReadingModeProvider>
+                <ToastProvider>
+                  <AppRoutes />
+                </ToastProvider>
+              </ReadingModeProvider>
             </ThemeProvider>
           </AdminModeProvider>
         </AuthProvider>

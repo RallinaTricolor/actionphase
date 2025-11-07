@@ -19,6 +19,11 @@ interface MarkdownPreviewProps {
   content: string;
   mentionedCharacters?: MentionedCharacter[];
   className?: string;
+  /**
+   * Allow full width for code blocks or constrain to optimal line length (65ch) for prose.
+   * Default: false (constrained for optimal readability)
+   */
+  fullWidth?: boolean;
 }
 
 /**
@@ -45,6 +50,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   content,
   mentionedCharacters = [],
   className = '',
+  fullWidth = false,
 }) => {
   // State for tracking hovered mention
   const [hoveredMentionId, setHoveredMentionId] = useState<number | null>(null);
@@ -151,7 +157,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   }, [content, mentionedCharacters]);
 
   return (
-    <div className={`markdown-preview prose dark:prose-invert max-w-none text-content-primary dark:text-white ${className}`}>
+    <div className={`markdown-preview prose dark:prose-invert ${fullWidth ? 'max-w-none' : 'max-w-prose'} text-content-primary dark:text-white ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw as any, [rehypeSanitize as any, sanitizeSchema]]}

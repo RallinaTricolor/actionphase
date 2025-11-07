@@ -66,7 +66,7 @@ export function CommentWithParentCard({
         </div>
 
         {/* Comment content */}
-        <div className="prose prose-sm max-w-none">
+        <div>
           {comment.is_deleted ? (
             <p className="text-text-muted italic">[deleted]</p>
           ) : (

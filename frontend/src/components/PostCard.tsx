@@ -11,6 +11,9 @@ import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
 import { useMarkPostAsRead, usePostUnreadCommentIDs } from '../hooks/useReadTracking';
 import { Button, Select } from './ui';
+import { ReadingModeToggle } from './ReadingModeToggle';
+import { useReadingMode } from '../contexts/ReadingModeContext';
+import { getRootPostId } from '../utils/commentUtils';
 
 interface PostCardProps {
   post: Message;
@@ -172,6 +175,77 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   // Determine if post content is long (more than 500 characters)
   const isLongContent = post.content.length > 500;
 
+  // Get reading mode context
+  const { openThreadModal } = useReadingMode();
+
+  // Handler for "Continue thread" button in reading mode
+  const handleOpenThreadInReadingMode = (comment: Message) => {
+    // Open thread in modal overlay instead of navigating away
+    const threadContent = (
+      <ThreadedComment
+        comment={comment}
+        gameId={gameId}
+        postId={getRootPostId(comment)}
+        characters={characters}
+        controllableCharacters={[]} // No interactions in modal
+        onCreateReply={async () => {}}
+        onCommentDeleted={() => {}}
+        currentUserId={currentUserId}
+        depth={0}
+        maxDepth={5}
+        unreadCommentIDs={[]}
+        onOpenThread={handleOpenThreadInReadingMode} // Allow nested thread viewing
+        readOnly={true}
+      />
+    );
+    openThreadModal(threadContent);
+  };
+
+  // Build full reading mode content: post + all threaded comments as React components
+  const fullReadingContent = (
+    <>
+      {/* Post Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-4">{post.character_name}</h1>
+        <div className="prose dark:prose-invert max-w-none">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeSanitize]}
+          >
+            {post.content}
+          </ReactMarkdown>
+        </div>
+      </div>
+
+      {/* Comments Section */}
+      {topLevelComments.length > 0 && (
+        <div className="border-t border-border-primary pt-8">
+          <h2 className="text-2xl font-bold mb-6">Comments ({post.comment_count || 0})</h2>
+          <div className="space-y-6">
+            {topLevelComments.map((comment) => (
+              <ThreadedComment
+                key={comment.id}
+                comment={comment}
+                gameId={gameId}
+                postId={post.id}
+                characters={characters}
+                controllableCharacters={[]} // No interactions in reading mode
+                onCreateReply={async () => {}} // No interactions in reading mode
+                onCommentDeleted={() => {}} // No interactions in reading mode
+                currentUserId={currentUserId}
+                depth={0}
+                maxDepth={5} // Same as normal view - "Continue thread" button will appear for deep threads
+                unreadCommentIDs={[]}
+                onOpenThread={handleOpenThreadInReadingMode} // Navigate to thread view
+                readOnly={true} // Disable all interactions
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div ref={postRef} id={`comment-${post.id}`} data-testid={dataTestId || "post-card"} className="mb-8">
       {/* Post Card - Contains both post and comments */}
@@ -207,14 +281,21 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
             </div>
           </div>
 
-          {/* Toggle Button for Long Content */}
-          {isLongContent && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsPostCollapsed(!isPostCollapsed)}
-              className="mt-2 text-interactive-primary hover:text-interactive-primary-hover"
-            >
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 mt-2">
+            {/* Reading Mode Toggle */}
+            {!readOnly && (
+              <ReadingModeToggle showLabel={false} content={fullReadingContent} />
+            )}
+
+            {/* Toggle Button for Long Content */}
+            {isLongContent && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsPostCollapsed(!isPostCollapsed)}
+                className="text-interactive-primary hover:text-interactive-primary-hover"
+              >
               {isPostCollapsed ? (
                 <>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,14 +311,15 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                   Collapse Post
                 </>
               )}
-            </Button>
-          )}
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Post Content - Collapsible for long content */}
         {(!isLongContent || !isPostCollapsed) && (
           <div className="p-6 surface-base">
-            <div className="prose dark:prose-invert prose-sm max-w-none">
+            <div className="prose dark:prose-invert max-w-prose">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeSanitize]}
@@ -347,7 +429,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
           ) : topLevelComments.length === 0 ? (
             <p className="text-sm text-content-secondary italic text-center py-4">No comments yet. Be the first to reply!</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {topLevelComments.map((comment) => (
                 <ThreadedComment
                   key={comment.id}

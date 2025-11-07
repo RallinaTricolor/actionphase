@@ -499,7 +499,7 @@ function MessageViewer({
                               )}
 
                               {/* Message content */}
-                              <div className="prose prose-sm max-w-none text-content-primary">
+                              <div>
                                 <MarkdownPreview content={message.content} />
                               </div>
                             </div>
