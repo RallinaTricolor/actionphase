@@ -8,7 +8,6 @@ interface EnhancedGameCardProps {
   game: EnrichedGameListItem;
   onClick?: () => void;
   onApplyClick?: () => void;
-  isJoining?: boolean;
   showApplyButton?: boolean;
   'data-testid'?: string;
 }
@@ -17,7 +16,6 @@ export function EnhancedGameCard({
   game,
   onClick,
   onApplyClick,
-  isJoining = false,
   showApplyButton = false,
   'data-testid': dataTestId
 }: EnhancedGameCardProps) {
@@ -165,8 +163,8 @@ export function EnhancedGameCard({
         <div className="p-4 border-t border-theme-default">
           <Button
             variant="primary"
-            loading={isJoining}
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               onApplyClick();
             }}

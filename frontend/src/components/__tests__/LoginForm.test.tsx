@@ -16,7 +16,7 @@ describe('LoginForm', () => {
     renderWithProviders(<LoginForm />)
 
     expect(screen.getByRole('heading', { name: 'Login' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Username')).toBeInTheDocument()
+    expect(screen.getByLabelText('Username or Email')).toBeInTheDocument()
     expect(screen.getByLabelText('Password')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument()
   })
@@ -24,7 +24,7 @@ describe('LoginForm', () => {
   it('handles form input changes', async () => {
     renderWithProviders(<LoginForm />)
 
-    const usernameInput = screen.getByLabelText('Username')
+    const usernameInput = screen.getByLabelText('Username or Email')
     const passwordInput = screen.getByLabelText('Password')
 
     fireEvent.change(usernameInput, { target: { value: 'testuser' } })
@@ -62,7 +62,7 @@ describe('LoginForm', () => {
 
     renderWithProviders(<LoginForm onSuccess={mockOnSuccess} />)
 
-    const usernameInput = screen.getByLabelText('Username')
+    const usernameInput = screen.getByLabelText('Username or Email')
     const passwordInput = screen.getByLabelText('Password')
     const submitButton = screen.getByRole('button', { name: 'Login' })
 
@@ -79,7 +79,7 @@ describe('LoginForm', () => {
     renderWithProviders(<LoginForm />)
 
     const submitButton = screen.getByRole('button', { name: 'Login' })
-    const usernameInput = screen.getByLabelText('Username')
+    const usernameInput = screen.getByLabelText('Username or Email')
 
     // Form should have required attribute
     expect(usernameInput).toBeRequired()
@@ -100,7 +100,7 @@ describe('LoginForm', () => {
 
     renderWithProviders(<LoginForm />)
 
-    const usernameInput = screen.getByLabelText('Username')
+    const usernameInput = screen.getByLabelText('Username or Email')
     const passwordInput = screen.getByLabelText('Password')
     const submitButton = screen.getByRole('button', { name: 'Login' })
 
@@ -116,7 +116,7 @@ describe('LoginForm', () => {
   it('works without onSuccess callback', async () => {
     renderWithProviders(<LoginForm />)
 
-    const usernameInput = screen.getByLabelText('Username')
+    const usernameInput = screen.getByLabelText('Username or Email')
     const passwordInput = screen.getByLabelText('Password')
     const submitButton = screen.getByRole('button', { name: 'Login' })
 
@@ -133,12 +133,12 @@ describe('LoginForm', () => {
   it('has proper accessibility attributes', () => {
     renderWithProviders(<LoginForm />)
 
-    const usernameInput = screen.getByLabelText('Username')
+    const usernameInput = screen.getByLabelText('Username or Email')
     const passwordInput = screen.getByLabelText('Password')
 
     expect(usernameInput).toHaveAttribute('type', 'text')
     expect(usernameInput).toHaveAttribute('required')
-    expect(usernameInput).toHaveAttribute('placeholder', 'Enter your username')
+    expect(usernameInput).toHaveAttribute('placeholder', 'Enter your username or email')
 
     expect(passwordInput).toHaveAttribute('type', 'password')
     expect(passwordInput).toHaveAttribute('required')

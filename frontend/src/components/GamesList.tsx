@@ -8,8 +8,7 @@ interface GamesListProps {
   loading: boolean;
   error: string | null;
   onGameClick?: (game: EnrichedGameListItem) => void;
-  onApplyToGame?: (gameId: number, role?: 'player' | 'audience') => void;
-  isJoining?: boolean;
+  onApplyToGame?: (game: EnrichedGameListItem) => void;
 }
 
 export const GamesList = ({
@@ -18,7 +17,6 @@ export const GamesList = ({
   error,
   onGameClick,
   onApplyToGame,
-  isJoining = false
 }: GamesListProps) => {
   const { currentUser, isCheckingAuth } = useAuth();
 
@@ -68,8 +66,7 @@ export const GamesList = ({
             key={game.id}
             game={game}
             onClick={onGameClick ? () => onGameClick(game) : undefined}
-            onApplyClick={onApplyToGame ? () => onApplyToGame(game.id, 'player') : undefined}
-            isJoining={isJoining}
+            onApplyClick={onApplyToGame ? () => onApplyToGame(game) : undefined}
             showApplyButton={shouldShowApplyButton(game)}
             data-testid={`game-card-${game.id}`}
           />

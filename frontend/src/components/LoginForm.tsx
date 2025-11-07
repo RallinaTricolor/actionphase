@@ -44,14 +44,14 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
       <form onSubmit={handleSubmit} className="space-y-4" data-testid="login-form">
         <Input
-          label="Username"
+          label="Username or Email"
           id="username"
           name="username"
           type="text"
           required
           value={formData.username}
           onChange={handleChange}
-          placeholder="Enter your username"
+          placeholder="Enter your username or email"
           data-testid="login-username"
         />
 

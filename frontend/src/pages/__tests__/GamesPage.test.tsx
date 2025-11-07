@@ -40,15 +40,13 @@ vi.mock('../../components/GamesList', () => ({
     loading,
     error,
     onApplyToGame,
-    isJoining
   }: any) => (
     <div data-testid="games-list">
       <div>Games Count: {games?.length || 0}</div>
       <div>Loading: {String(loading)}</div>
       <div>Error: {error || 'none'}</div>
-      <div>Is Joining: {String(isJoining)}</div>
       {onApplyToGame && (
-        <button onClick={() => onApplyToGame(456)}>Apply to Game</button>
+        <button onClick={() => onApplyToGame({ id: 456, title: 'Test Game' })}>Apply to Game</button>
       )}
     </div>
   ),
@@ -70,6 +68,19 @@ vi.mock('../../components/Modal', () => ({
         <h2>{title}</h2>
         <button onClick={onClose}>Close Modal</button>
         {children}
+      </div>
+    ) : null
+  ),
+}))
+
+vi.mock('../../components/ApplyToGameModal', () => ({
+  ApplyToGameModal: ({ gameId, gameTitle, isOpen, onClose, onApplicationSubmitted }: any) => (
+    isOpen ? (
+      <div data-testid="apply-modal">
+        <h2>Apply to {gameTitle}</h2>
+        <div>Game ID: {gameId}</div>
+        <button onClick={onClose}>Close Apply Modal</button>
+        <button onClick={onApplicationSubmitted}>Submit Application</button>
       </div>
     ) : null
   ),
@@ -156,217 +167,38 @@ describe('GamesPage', () => {
     expect(screen.queryByTestId('modal')).not.toBeInTheDocument()
   })
 
-  it('applies to game successfully', async () => {
-    vi.mocked(apiClient.games.applyToGame).mockResolvedValue({ success: true } as any)
-
+  it('opens apply modal when clicking apply to game', () => {
     renderWithProviders(<GamesPage />)
 
-    await act(async () => {
-      fireEvent.click(screen.getByText('Apply to Game'))
-    })
+    expect(screen.queryByTestId('apply-modal')).not.toBeInTheDocument()
 
-    await waitFor(() => {
-      expect(apiClient.games.applyToGame).toHaveBeenCalledWith(456, {
-        role: 'player',
-        message: undefined
-      })
-    })
+    fireEvent.click(screen.getByText('Apply to Game'))
 
-    // Component uses toast system instead of window.alert
+    expect(screen.getByTestId('apply-modal')).toBeInTheDocument()
+    expect(screen.getByText('Apply to Test Game')).toBeInTheDocument()
+    expect(screen.getByText('Game ID: 456')).toBeInTheDocument()
+  })
+
+  it('closes apply modal', () => {
+    renderWithProviders(<GamesPage />)
+
+    // Open modal
+    fireEvent.click(screen.getByText('Apply to Game'))
+    expect(screen.getByTestId('apply-modal')).toBeInTheDocument()
+
+    // Close modal
+    fireEvent.click(screen.getByText('Close Apply Modal'))
+    expect(screen.queryByTestId('apply-modal')).not.toBeInTheDocument()
+  })
+
+  it('handles successful application submission', () => {
+    renderWithProviders(<GamesPage />)
+
+    // Open modal and submit application
+    fireEvent.click(screen.getByText('Apply to Game'))
+    fireEvent.click(screen.getByText('Submit Application'))
+
+    // Should reload page after successful submission
     expect(window.location.reload).toHaveBeenCalled()
-  })
-
-  it('prevents multiple simultaneous applications', async () => {
-    vi.mocked(apiClient.games.applyToGame).mockImplementation(() =>
-      new Promise(resolve => setTimeout(resolve, 100))
-    )
-
-    renderWithProviders(<GamesPage />)
-
-    const applyButton = screen.getByText('Apply to Game')
-
-    // First click initiates the application
-    await act(async () => {
-      fireEvent.click(applyButton)
-    })
-
-    // Second click should be ignored because isJoining is true
-    await act(async () => {
-      fireEvent.click(applyButton)
-    })
-
-    // Wait for the first call to complete
-    await waitFor(() => {
-      expect(apiClient.games.applyToGame).toHaveBeenCalledTimes(1)
-    }, { timeout: 200 })
-  })
-
-  it('handles invalid authentication token', async () => {
-    vi.mocked(apiClient.getAuthToken).mockReturnValue('')
-
-    renderWithProviders(<GamesPage />)
-
-    fireEvent.click(screen.getByText('Apply to Game'))
-
-    expect(apiClient.removeAuthToken).toHaveBeenCalled()
-    expect(global.confirm).toHaveBeenCalledWith(
-      'You need to log in to apply to a game. Would you like to go to the login page?'
-    )
-    expect(window.location.href).toBe('/login')
-  })
-
-  it('handles various invalid token formats', async () => {
-    const invalidTokens = ['null', 'undefined', '   ', null]
-
-    for (const token of invalidTokens) {
-      vi.clearAllMocks()
-      vi.mocked(apiClient.getAuthToken).mockReturnValue(token as any)
-
-      renderWithProviders(<GamesPage />)
-      fireEvent.click(screen.getAllByText('Apply to Game')[0])
-
-      expect(apiClient.removeAuthToken).toHaveBeenCalled()
-
-      // Cleanup before next iteration
-      cleanup()
-    }
-  })
-
-  it('handles 401 authentication error', async () => {
-    const authError = {
-      response: { status: 401 }
-    }
-    vi.mocked(apiClient.games.applyToGame).mockRejectedValue(authError)
-
-    renderWithProviders(<GamesPage />)
-
-    fireEvent.click(screen.getByText('Apply to Game'))
-
-    await waitFor(() => {
-      expect(apiClient.games.applyToGame).toHaveBeenCalled()
-    })
-
-    expect(apiClient.removeAuthToken).toHaveBeenCalled()
-    expect(global.confirm).toHaveBeenCalledWith(
-      expect.stringContaining('Your session has expired or is invalid')
-    )
-  })
-
-  it('handles API error with error message', async () => {
-    const apiError = {
-      response: {
-        status: 400,
-        data: { error: 'Game is full' }
-      }
-    }
-    vi.mocked(apiClient.games.applyToGame).mockRejectedValue(apiError)
-
-    renderWithProviders(<GamesPage />)
-
-    fireEvent.click(screen.getByText('Apply to Game'))
-
-    await waitFor(() => {
-      expect(apiClient.games.applyToGame).toHaveBeenCalled()
-    })
-
-    // Component uses toast system instead of window.alert
-  })
-
-  it('handles generic error with message', async () => {
-    const genericError = new Error('Network error')
-    vi.mocked(apiClient.games.applyToGame).mockRejectedValue(genericError)
-
-    renderWithProviders(<GamesPage />)
-
-    fireEvent.click(screen.getByText('Apply to Game'))
-
-    await waitFor(() => {
-      expect(apiClient.games.applyToGame).toHaveBeenCalled()
-    })
-
-    // Component uses toast system instead of window.alert
-  })
-
-  it('handles unknown error', async () => {
-    vi.mocked(apiClient.games.applyToGame).mockRejectedValue({})
-
-    renderWithProviders(<GamesPage />)
-
-    fireEvent.click(screen.getByText('Apply to Game'))
-
-    await waitFor(() => {
-      expect(apiClient.games.applyToGame).toHaveBeenCalled()
-    })
-
-    // Component uses toast system instead of window.alert
-  })
-
-  it('shows joining state during application', async () => {
-    vi.mocked(apiClient.games.applyToGame).mockImplementation(() =>
-      new Promise(resolve => setTimeout(resolve, 100))
-    )
-
-    renderWithProviders(<GamesPage />)
-
-    fireEvent.click(screen.getByText('Apply to Game'))
-
-    // Should show joining state immediately
-    expect(screen.getByText('Is Joining: true')).toBeInTheDocument()
-
-    await waitFor(() => {
-      expect(apiClient.games.applyToGame).toHaveBeenCalled()
-    })
-
-    // Should reset joining state after completion
-    await waitFor(() => {
-      expect(screen.getByText('Is Joining: false')).toBeInTheDocument()
-    })
-  })
-
-  it('handles user declining login redirect', () => {
-    vi.mocked(global.confirm).mockReturnValue(false)
-    vi.mocked(apiClient.getAuthToken).mockReturnValue('')
-
-    renderWithProviders(<GamesPage />)
-
-    fireEvent.click(screen.getByText('Apply to Game'))
-
-    expect(apiClient.removeAuthToken).toHaveBeenCalled()
-    expect(global.confirm).toHaveBeenCalled()
-    expect(window.location.href).toBe('') // Should not redirect
-  })
-
-  it('handles user declining auth error redirect', async () => {
-    vi.mocked(global.confirm).mockReturnValue(false)
-    const authError = { response: { status: 401 } }
-    vi.mocked(apiClient.games.applyToGame).mockRejectedValue(authError)
-
-    renderWithProviders(<GamesPage />)
-
-    fireEvent.click(screen.getByText('Apply to Game'))
-
-    await waitFor(() => {
-      expect(apiClient.games.applyToGame).toHaveBeenCalled()
-    })
-
-    expect(window.location.href).toBe('') // Should not redirect
-  })
-
-  it('logs debug information during application', () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-    vi.mocked(apiClient.getAuthToken).mockReturnValue('test-token-12345')
-
-    renderWithProviders(<GamesPage />)
-
-    fireEvent.click(screen.getByText('Apply to Game'))
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Apply to game - isAuthenticated:', true, 'token exists:', true
-    )
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Token preview:', 'test-token-12345...'
-    )
-
-    consoleSpy.mockRestore()
   })
 })

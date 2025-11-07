@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GamesList } from '../components/GamesList';
 import { CreateGameForm } from '../components/CreateGameForm';
+import { ApplyToGameModal } from '../components/ApplyToGameModal';
 import { Modal } from '../components/Modal';
 import { FilterBar } from '../components/FilterBar';
 import { Pagination } from '../components/Pagination';
@@ -10,12 +11,14 @@ import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useGameListing } from '../hooks/useGameListing';
 import { useToast } from '../contexts/ToastContext';
+import type { EnrichedGameListItem } from '../types/games';
 
 export const GamesPage = () => {
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<EnrichedGameListItem | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const { isAuthenticated } = useAuth();
 
@@ -55,63 +58,17 @@ export const GamesPage = () => {
     navigate(`/games/${gameId}`);
   };
 
-  const handleApplyToGame = async (gameId: number, role: 'player' | 'audience' = 'player', message?: string) => {
-    if (isJoining) return;
+  const handleOpenApplyModal = (game: EnrichedGameListItem) => {
+    setSelectedGame(game);
+    setShowApplyModal(true);
+  };
 
-    // Debug logging
-    const token = apiClient.getAuthToken();
-    console.log('Apply to game - isAuthenticated:', isAuthenticated, 'token exists:', !!token);
-    console.log('Token type:', typeof token, 'Token length:', token?.length);
-    console.log('Token preview:', token ? token.substring(0, 50) + '...' : 'null');
-    console.log('Raw localStorage auth_token:', localStorage.getItem('auth_token'));
+  const handleApplicationSubmitted = () => {
+    // Show success message
+    showSuccess('Successfully applied to game!');
 
-    // Always check authentication state at runtime
-    if (!token || token.trim() === '' || token === 'undefined' || token === 'null') {
-      console.log('Invalid token detected, clearing localStorage');
-      apiClient.removeAuthToken();
-      if (confirm('You need to log in to apply to a game. Would you like to go to the login page?')) {
-        window.location.href = '/login';
-      }
-      return;
-    }
-
-    try {
-      setIsJoining(true);
-      await apiClient.games.applyToGame(gameId, { role, message });
-
-      // Show success message
-      showSuccess(`Successfully applied to game as ${role}!`);
-
-      // TODO: Refresh the games list or navigate to game details
-      window.location.reload(); // Simple refresh for now
-
-    } catch (error: any) {
-      console.error('Failed to join game:', error);
-
-      // Show user-friendly error message
-      let errorMessage = 'Failed to join game. Please try again.';
-
-      if (error?.response?.status === 401) {
-        errorMessage = 'Your session has expired or is invalid. Please log in again.';
-        console.log('Authentication failed - clearing token and redirecting to login');
-
-        // Clear the invalid token
-        apiClient.removeAuthToken();
-
-        if (confirm(`${errorMessage} Would you like to go to the login page?`)) {
-          window.location.href = '/login';
-        }
-        return;
-      } else if (error?.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-
-      showError(`Failed to join game: ${errorMessage}`);
-    } finally {
-      setIsJoining(false);
-    }
+    // Refetch games list to update application status
+    window.location.reload(); // Simple refresh for now
   };
 
   return (
@@ -168,8 +125,7 @@ export const GamesPage = () => {
           games={games}
           loading={isLoading}
           error={isError ? (error?.message ?? null) : null}
-          onApplyToGame={handleApplyToGame}
-          isJoining={isJoining}
+          onApplyToGame={handleOpenApplyModal}
         />
       </div>
 
@@ -200,6 +156,17 @@ export const GamesPage = () => {
           onCancel={() => setShowCreateModal(false)}
         />
       </Modal>
+
+      {/* Apply to Game Modal */}
+      {selectedGame && (
+        <ApplyToGameModal
+          gameId={selectedGame.id}
+          gameTitle={selectedGame.title}
+          isOpen={showApplyModal}
+          onClose={() => setShowApplyModal(false)}
+          onApplicationSubmitted={handleApplicationSubmitted}
+        />
+      )}
     </div>
   );
 };

@@ -182,8 +182,8 @@ describe('GamesList', () => {
       const applyButton = screen.getByText('Apply to Join')
       fireEvent.click(applyButton)
 
-      // Should call onApplyToGame with game ID and role
-      expect(mockOnApplyToGame).toHaveBeenCalledWith(2, 'player')
+      // Should call onApplyToGame with the game object
+      expect(mockOnApplyToGame).toHaveBeenCalledWith(otherGame)
     })
 
     it('Apply button should not appear when onApplyToGame is not provided', () => {
@@ -212,40 +212,6 @@ describe('GamesList', () => {
 
       // Should NOT see apply button when callback not provided
       expect(screen.queryByText('Apply to Join')).not.toBeInTheDocument()
-    })
-
-    it('Apply button should be disabled when isJoining is true', () => {
-      // Setup: Regular player is logged in
-      vi.mocked(useAuth).mockReturnValue({
-        currentUser: regularUser,
-        isAuthenticated: true,
-        isCheckingAuth: false,
-        isLoading: false,
-        login: vi.fn(),
-        register: vi.fn(),
-        logout: vi.fn(),
-        error: null,
-      } as any)
-
-      renderWithProviders(
-        <GamesList
-          games={[otherGame]}
-          loading={false}
-          error={null}
-          onApplyToGame={mockOnApplyToGame}
-          isJoining={true}
-        />
-      )
-
-      expect(screen.getByText('Other GMs Game')).toBeInTheDocument()
-
-      // Should show "Applying..." when isJoining is true
-      expect(screen.getByText('Applying...')).toBeInTheDocument()
-      expect(screen.queryByText('Apply to Join')).not.toBeInTheDocument()
-
-      // Button should be disabled
-      const applyButton = screen.getByText('Applying...')
-      expect(applyButton).toBeDisabled()
     })
 
     it('Apply button should not appear on non-recruiting games', () => {
