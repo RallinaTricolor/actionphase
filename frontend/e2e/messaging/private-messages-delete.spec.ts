@@ -149,6 +149,10 @@ test.describe('Private Message Deletion', () => {
 
       await player1Page.getByRole('button', { name: 'Delete', exact: true }).locator('visible=true').first().click();
 
+      // Wait for deletion to complete
+      await player1Page.waitForLoadState('networkidle');
+      await player1Page.waitForTimeout(1000);
+
       // Verify deletion for Player 1
       const deletedMessage = player1Page.locator('[data-testid="message"]')
         .filter({ hasText: '[Message deleted]' })
@@ -174,11 +178,15 @@ test.describe('Private Message Deletion', () => {
         await expect(conversation2).toBeVisible({ timeout: 10000 });
         await conversation2.click();
 
+        // Wait for messages to load
+        await player2Page.waitForLoadState('networkidle');
+        await player2Page.waitForTimeout(1000);
+
         // Player 2 should also see "[Message deleted]"
         const deletedMessage2 = player2Page.locator('[data-testid="message"]')
           .filter({ hasText: '[Message deleted]' })
           .locator('visible=true').first();
-        await expect(deletedMessage2).toBeVisible();
+        await expect(deletedMessage2).toBeVisible({ timeout: 10000 });
       } finally {
         await player2Context.close();
       }
