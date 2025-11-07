@@ -76,7 +76,7 @@ systemctl start fail2ban
 # Configure automatic security updates
 echo "Configuring automatic security updates..."
 echo 'Unattended-Upgrade::Automatic-Reboot "false";' >> /etc/apt/apt.conf.d/50unattended-upgrades
-dpkg-reconfigure --priority=low unattended-upgrades
+DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true dpkg-reconfigure --priority=low unattended-upgrades
 
 # Create application directory
 echo "Creating application directory..."
