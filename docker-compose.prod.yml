@@ -78,6 +78,8 @@ services:
       - certbot-webroot:/var/www/certbot:ro
       # SSL certificates
       - ./ssl/dhparam.pem:/etc/nginx/ssl/dhparam.pem:ro
+      - ./ssl/default.crt:/etc/nginx/ssl/default.crt:ro
+      - ./ssl/default.key:/etc/nginx/ssl/default.key:ro
     depends_on:
       - frontend
       - backend

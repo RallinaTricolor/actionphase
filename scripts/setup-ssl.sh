@@ -79,6 +79,18 @@ else
     echo -e "${GREEN}✓ DH parameters already exist${NC}"
 fi
 
+# Generate self-signed certificate for default server (fallback)
+if [ ! -f ./ssl/default.crt ]; then
+    echo -e "${BLUE}Generating self-signed fallback certificate...${NC}"
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout ./ssl/default.key \
+        -out ./ssl/default.crt \
+        -subj "/C=US/ST=State/L=City/O=Organization/CN=default"
+    echo -e "${GREEN}✓ Self-signed fallback certificate generated${NC}"
+else
+    echo -e "${GREEN}✓ Self-signed fallback certificate already exists${NC}"
+fi
+
 # Ensure nginx is running with HTTP-only config for Let's Encrypt validation
 echo -e "${BLUE}Preparing nginx for certificate validation...${NC}"
 
