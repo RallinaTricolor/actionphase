@@ -10,7 +10,7 @@ import { AdminModeProvider } from './contexts/AdminModeContext';
 import { GameProvider } from './contexts/GameContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
-import { ReadingModeProvider, useReadingMode } from './contexts/ReadingModeContext';
+import { ReadingModeProvider } from './contexts/ReadingModeContext';
 import { ReadingModeOverlay } from './components/ReadingModeOverlay';
 
 // Lazy load all page components for better code splitting

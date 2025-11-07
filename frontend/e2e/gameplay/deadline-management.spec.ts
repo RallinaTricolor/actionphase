@@ -104,9 +104,8 @@ test.describe('Deadline Management', () => {
     await expect(page.getByText('Test Deadline')).toBeVisible();
     await expect(page.getByText('This is a test deadline for E2E')).toBeVisible();
 
-    // Verify timer shows (should have timer emoji)
-    const deadlineTimer = page.locator('span:has-text("⏱️")').first();
-    await expect(deadlineTimer).toBeVisible();
+    // Verify countdown timer is displayed (should show something like "2d 0h" for 48 hours)
+    await expect(page.getByText(/\d+d \d+h/)).toBeVisible();
   });
 
   test('GM can edit an existing deadline', async ({ page }) => {
@@ -131,7 +130,11 @@ test.describe('Deadline Management', () => {
     // Wait for deadline to appear
     await expect(page.getByText('Original Title')).toBeVisible();
 
-    // Click edit button (pencil icon)
+    // Hover over the deadline card to reveal action buttons
+    const deadlineCard = page.locator('[class*="rounded-lg border-2"]').filter({ hasText: 'Original Title' }).first();
+    await deadlineCard.hover();
+
+    // Click edit button (pencil icon) - visible on hover
     await page.getByRole('button', { name: /Edit deadline/i }).first().click();
 
     // Update the deadline
@@ -145,8 +148,8 @@ test.describe('Deadline Management', () => {
     await expect(page.getByRole('heading', { name: 'Edit Deadline' })).not.toBeVisible();
 
     // Verify changes appear in the deadline list
+    // NOTE: DeadlineCard only shows title/countdown/date, not description
     await expect(page.getByText('Updated Title')).toBeVisible();
-    await expect(page.getByText('Updated description')).toBeVisible();
     await expect(page.getByText('Original Title')).not.toBeVisible();
   });
 
@@ -171,7 +174,11 @@ test.describe('Deadline Management', () => {
 
     await expect(page.getByText('Soon Deadline')).toBeVisible();
 
-    // Click extend button (clock icon)
+    // Hover over the deadline card to reveal action buttons
+    const deadlineCard = page.locator('[class*="rounded-lg border-2"]').filter({ hasText: 'Soon Deadline' }).first();
+    await deadlineCard.hover();
+
+    // Click extend button (clock icon) - visible on hover
     await page.getByRole('button', { name: /Extend deadline/i }).first().click();
 
     // Select 24 hours extension
@@ -205,7 +212,11 @@ test.describe('Deadline Management', () => {
 
     await expect(page.getByText('Deadline to Delete')).toBeVisible();
 
-    // Click delete button (trash icon)
+    // Hover over the deadline card to reveal action buttons
+    const deadlineCard = page.locator('[class*="rounded-lg border-2"]').filter({ hasText: 'Deadline to Delete' }).first();
+    await deadlineCard.hover();
+
+    // Click delete button (trash icon) - visible on hover
     await page.getByRole('button', { name: /Delete deadline/i }).first().click();
 
     // Confirm deletion in modal
@@ -242,59 +253,75 @@ test.describe('Deadline Management', () => {
     // Navigate to the same game
     await gameDetailsPage.goto(gameId);
 
-    // Verify player can see the deadline
+    // Verify player can see the deadline title
+    // NOTE: DeadlineCard only shows title/countdown/date, not description
     await expect(page.getByText('Player View Test')).toBeVisible();
-    await expect(page.getByText('Players should see this read-only')).toBeVisible();
 
     // Verify "Add Deadline" button is NOT visible to players
     await expect(page.getByRole('button', { name: /Add Deadline/i })).not.toBeVisible();
 
-    // Verify edit/delete buttons are NOT visible to players
+    // Hover over deadline card to confirm buttons don't appear for players
+    const deadlineCard = page.locator('[class*="rounded-lg border-2"]').filter({ hasText: 'Player View Test' }).first();
+    await deadlineCard.hover();
+
+    // Wait a moment to ensure hover state is applied
+    await page.waitForTimeout(300);
+
+    // Verify edit/delete buttons are NOT visible to players (even on hover)
     await expect(page.getByRole('button', { name: /Edit deadline/i })).not.toBeVisible();
     await expect(page.getByRole('button', { name: /Delete deadline/i })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /Extend deadline/i })).not.toBeVisible();
   });
 
-  test('Deadline widget can be expanded and collapsed', async ({ page }) => {
+  test('Deadline widget shows View All for multiple deadlines', async ({ page }) => {
     // Get game ID
     const gameId = await getFixtureGameId(page, 'E2E_ACTION');
     const gameDetailsPage = new GameDetailsPage(page);
     await gameDetailsPage.goto(gameId);
 
-    // Create a deadline
-    await page.getByRole('button', { name: /Add Deadline/i }).click();
-    await page.getByLabel('Title').fill('Collapsible Test');
-    await page.getByLabel('Description').fill('Testing widget collapse');
+    // Create 4 deadlines (more than the 3 shown by default)
+    for (let i = 1; i <= 4; i++) {
+      await page.getByRole('button', { name: /Add Deadline/i }).click();
+      await page.getByLabel('Title').fill(`Deadline ${i}`);
+      await page.getByLabel('Description').fill(`Testing multiple deadlines ${i}`);
 
-    const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
-    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
-    futureDate.setSeconds(0);
-    futureDate.setMilliseconds(0);
+      const futureDate = new Date(Date.now() + (24 * i) * 60 * 60 * 1000);
+      futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+      futureDate.setSeconds(0);
+      futureDate.setMilliseconds(0);
 
-    await setDeadlineDateTime(page, futureDate);
-    await page.getByRole('button', { name: /Create Deadline/i }).click();
+      await setDeadlineDateTime(page, futureDate);
+      await page.getByRole('button', { name: /Create Deadline/i }).click();
 
-    // Verify deadline is visible when expanded (default state)
-    const deadlineHeading = page.getByRole('heading', { name: 'Collapsible Test' });
-    await expect(deadlineHeading).toBeVisible();
+      // Wait for modal to close
+      await expect(page.getByRole('heading', { name: 'Create Deadline' })).not.toBeVisible();
 
-    // Click the "Deadlines" button/header to collapse
-    await page.getByRole('button', { name: /Deadlines/i }).first().click();
+      // Wait for deadline to be created and visible (if it should be)
+      // NOTE: 4th deadline will be hidden since widget only shows 3 initially
+      if (i <= 3) {
+        await expect(page.getByText(`Deadline ${i}`)).toBeVisible({ timeout: 10000 });
+      } else {
+        // For 4th deadline, just wait a bit to ensure it's created in backend
+        await page.waitForTimeout(1000);
+      }
+    }
 
-    // Wait for collapse animation (300ms as per component CSS)
-    await page.waitForTimeout(400);
+    // Should see first 3 deadlines
+    await expect(page.getByText('Deadline 1')).toBeVisible();
+    await expect(page.getByText('Deadline 2')).toBeVisible();
+    await expect(page.getByText('Deadline 3')).toBeVisible();
 
-    // Verify deadline list container has opacity-0 class (collapsed state)
-    const deadlineContainer = page.locator('.space-y-4.overflow-hidden').first();
-    await expect(deadlineContainer).toHaveClass(/opacity-0/);
+    // Should see "View All" button since we have more than 3
+    const viewAllButton = page.getByRole('button', { name: /View All/i });
+    await expect(viewAllButton).toBeVisible();
 
-    // Click button again to expand
-    await page.getByRole('button', { name: /Deadlines/i }).first().click();
+    // Click View All to show all deadlines
+    await viewAllButton.click();
 
-    // Wait for expand animation
-    await page.waitForTimeout(400);
+    // Should now see 4th deadline
+    await expect(page.getByText('Deadline 4')).toBeVisible();
 
-    // Verify deadline is visible again and container has opacity-100
-    await expect(deadlineHeading).toBeVisible();
-    await expect(deadlineContainer).toHaveClass(/opacity-100/);
+    // Button should now say "Show Less"
+    await expect(page.getByRole('button', { name: /Show Less/i })).toBeVisible();
   });
 });

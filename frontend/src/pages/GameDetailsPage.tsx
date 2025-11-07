@@ -8,9 +8,7 @@ import { useGameStateManagement } from '../hooks/useGameStateManagement';
 import { useGameTabs } from '../hooks/useGameTabs';
 import { usePolls } from '../hooks';
 import { GameHeader } from '../components/GameHeader';
-import { CurrentPhaseCard } from '../components/CurrentPhaseCard';
 import { GameApplicationStatus } from '../components/GameApplicationStatus';
-import { GameInfoGrid } from '../components/GameInfoGrid';
 import { GameActions } from '../components/GameActions';
 import { TabNavigation } from '../components/TabNavigation';
 import { GameTabContent } from '../components/GameTabContent';
@@ -21,7 +19,7 @@ import { PauseGameConfirmationDialog } from '../components/PauseGameConfirmation
 import { CancelGameConfirmationDialog } from '../components/CancelGameConfirmationDialog';
 import { LeaveGameConfirmationDialog } from '../components/LeaveGameConfirmationDialog';
 import { DeleteGameConfirmationDialog } from '../components/DeleteGameConfirmationDialog';
-import { DeadlineWidget } from '../components/DeadlineWidget';
+import { DeadlineStrip } from '../components/DeadlineStrip';
 import type { CreateDeadlineRequest } from '../types/deadlines';
 
 interface GameDetailsPageProps {
@@ -114,6 +112,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   const actionLoading = appActionLoading || stateActionLoading;
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -249,21 +248,74 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           </div>
         )}
 
-        {/* Header */}
-        <div className="surface-base rounded-lg shadow-md p-8 mb-6">
-          <div className="flex justify-between items-start mb-4">
-            <GameHeader game={game} participants={participants} />
-          </div>
+        {/* Header - Compact Layout */}
+        <div className="surface-base rounded-lg shadow-md p-6 mb-6">
+          {/* Compact Header with integrated action menu */}
+          <GameHeader
+            game={game}
+            participants={participants}
+            playerCount={`${game.current_players || 0}/${game.max_players || '∞'}`}
+            actionMenu={
+              <GameActions
+                game={game}
+                isGM={isGM}
+                canEditGame={canEditGame}
+                isCheckingAuth={isCheckingAuth}
+                isParticipant={isParticipant}
+                userRole={userRole}
+                userApplication={userApplication}
+                actionLoading={actionLoading}
+                stateActions={stateActions}
+                onEditGame={() => setShowEditModal(true)}
+                onStateChange={handleStateChange}
+                onApplyToGame={() => setShowApplyModal(true)}
+                onWithdrawApplication={handleWithdrawApplication}
+                onLeaveGame={handleLeaveGame}
+                onDeleteGame={handleDeleteGame}
+              />
+            }
+          />
 
-          <p className="text-content-secondary mb-6 leading-relaxed">{game.description}</p>
-
-          {/* Current Phase Summary - Only show when game is in progress */}
-          {game.state === 'in_progress' && currentPhaseData?.phase && (
-            <CurrentPhaseCard phase={currentPhaseData.phase} />
+          {/* Description - Truncated with expand */}
+          {game.description && (
+            <div className="mt-3 mb-4">
+              <p className={`text-content-secondary leading-relaxed ${!isDescriptionExpanded && game.description.length > 200 ? 'line-clamp-1' : ''}`}>
+                {game.description}
+              </p>
+              {game.description.length > 200 && (
+                <button
+                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  className="text-sm text-interactive-primary hover:text-interactive-primary-hover font-medium mt-1 transition-colors inline-flex items-center gap-1"
+                >
+                  {isDescriptionExpanded ? (
+                    <>
+                      <span>Show Less</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    </>
+                  ) : (
+                    <>
+                      <span>Show More</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           )}
 
-          {/* Deadline Widget - Full deadline management */}
-          <DeadlineWidget
+          {/* User Application Status - Only show during recruitment */}
+          {!isGM && userApplication && game.state === 'recruitment' && (
+            <div className="mb-4">
+              <GameApplicationStatus application={userApplication} />
+            </div>
+          )}
+
+          {/* Deadline Strip - Horizontal layout with cards */}
+          <DeadlineStrip
             deadlines={deadlines}
             isLoading={isLoadingDeadlines}
             isGM={isGM}
@@ -271,33 +323,6 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
             onUpdateDeadline={handleUpdateDeadline}
             onDeleteDeadline={handleDeleteDeadline}
             onExtendDeadline={handleExtendDeadline}
-          />
-
-          {/* User Application Status - Only show during recruitment */}
-          {!isGM && userApplication && game.state === 'recruitment' && (
-            <GameApplicationStatus application={userApplication} />
-          )}
-
-          {/* Game Info Grid */}
-          <GameInfoGrid game={game} />
-
-          {/* Action Buttons */}
-          <GameActions
-            game={game}
-            isGM={isGM}
-            canEditGame={canEditGame}
-            isCheckingAuth={isCheckingAuth}
-            isParticipant={isParticipant}
-            userRole={userRole}
-            userApplication={userApplication}
-            actionLoading={actionLoading}
-            stateActions={stateActions}
-            onEditGame={() => setShowEditModal(true)}
-            onStateChange={handleStateChange}
-            onApplyToGame={() => setShowApplyModal(true)}
-            onWithdrawApplication={handleWithdrawApplication}
-            onLeaveGame={handleLeaveGame}
-            onDeleteGame={handleDeleteGame}
           />
         </div>
 

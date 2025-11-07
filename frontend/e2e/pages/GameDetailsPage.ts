@@ -64,6 +64,24 @@ export class GameDetailsPage {
   }
 
   /**
+   * Open the game actions kebab menu
+   */
+  async openGameActionsMenu() {
+    await this.page.getByLabel('Game actions').click();
+    // Wait for menu to be visible
+    await this.page.waitForTimeout(100);
+  }
+
+  /**
+   * Click a menu item from the game actions dropdown
+   */
+  async clickMenuButton(text: string) {
+    await this.openGameActionsMenu();
+    await this.page.getByRole('button', { name: text }).click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
    * Apply to join the game
    */
   async applyToJoin() {
@@ -91,24 +109,21 @@ export class GameDetailsPage {
    * Start game recruitment (GM only)
    */
   async startRecruitment() {
-    await this.clickButton('Start Recruitment');
-    await this.page.waitForLoadState('networkidle');
+    await this.clickMenuButton('Start Recruitment');
   }
 
   /**
    * Start the game (GM only)
    */
   async startGame() {
-    await this.clickButton('Start Game');
-    await this.page.waitForLoadState('networkidle');
+    await this.clickMenuButton('Start Game');
   }
 
   /**
    * End the game (GM only)
    */
   async endGame() {
-    await this.clickButton('End Game');
-    await this.page.waitForLoadState('networkidle');
+    await this.clickMenuButton('End Game');
   }
 
   /**
@@ -116,11 +131,8 @@ export class GameDetailsPage {
    * Handles confirmation modal
    */
   async pauseGame() {
-    // Click initial pause button
-    await this.clickButton('Pause Game');
-
-    // Wait for confirmation modal
-    await this.page.waitForLoadState('networkidle');
+    // Click pause button from kebab menu
+    await this.clickMenuButton('Pause Game');
 
     // Wait for modal to stabilize (animations complete)
     await this.page.waitForTimeout(500);
@@ -135,8 +147,7 @@ export class GameDetailsPage {
    * Resume the game (GM only)
    */
   async resumeGame() {
-    await this.clickButton('Resume Game');
-    await this.page.waitForLoadState('networkidle');
+    await this.clickMenuButton('Resume Game');
   }
 
   /**
@@ -144,11 +155,8 @@ export class GameDetailsPage {
    * Handles confirmation modal with text input
    */
   async completeGame() {
-    // Click initial complete button
-    await this.clickButton('Complete Game');
-
-    // Wait for confirmation modal
-    await this.page.waitForLoadState('networkidle');
+    // Click complete button from kebab menu
+    await this.clickMenuButton('Complete Game');
 
     // Wait for modal to stabilize
     await this.page.waitForTimeout(500);
@@ -168,11 +176,8 @@ export class GameDetailsPage {
    * Handles confirmation modal
    */
   async cancelGame() {
-    // Click initial cancel button
-    await this.clickButton('Cancel Game');
-
-    // Wait for confirmation modal
-    await this.page.waitForLoadState('networkidle');
+    // Click cancel button from kebab menu
+    await this.clickMenuButton('Cancel Game');
 
     // Wait for modal to stabilize
     await this.page.waitForTimeout(500);
@@ -189,11 +194,8 @@ export class GameDetailsPage {
    * Only available for cancelled games
    */
   async deleteGame() {
-    // Click initial delete button
-    await this.clickButton('Delete Game');
-
-    // Wait for confirmation modal
-    await this.page.waitForLoadState('networkidle');
+    // Click delete button from kebab menu
+    await this.clickMenuButton('Delete Game');
 
     // Wait for modal to stabilize
     await this.page.waitForTimeout(500);

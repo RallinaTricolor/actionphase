@@ -3,6 +3,7 @@ import { apiClient } from '../lib/api';
 import { Button, Alert } from './ui';
 import { GameFormFields, type GameFormData } from './GameFormFields';
 import type { CreateGameRequest } from '../types/games';
+import { convertToISO8601 } from '../lib/utils/dates';
 
 interface CreateGameFormProps {
   onSuccess?: (gameId: number) => void;
@@ -38,14 +39,14 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
         throw new Error('Game description is required');
       }
 
-      // Prepare data for API (convert empty strings to undefined for optional dates)
+      // Prepare data for API (convert dates to ISO 8601 format)
       const gameData: CreateGameRequest = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         genre: formData.genre?.trim() || undefined,
-        start_date: formData.start_date || undefined,
-        end_date: formData.end_date || undefined,
-        recruitment_deadline: formData.recruitment_deadline || undefined,
+        start_date: convertToISO8601(formData.start_date) || undefined,
+        end_date: convertToISO8601(formData.end_date) || undefined,
+        recruitment_deadline: convertToISO8601(formData.recruitment_deadline) || undefined,
         max_players: formData.max_players === '' ? undefined : Number(formData.max_players),
         is_anonymous: formData.is_anonymous,
       };

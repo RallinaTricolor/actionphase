@@ -72,11 +72,14 @@ test.describe('Concurrent Editing', () => {
       const playerGameTitle = await playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).locator('visible=true').first().textContent();
       expect(playerGameTitle).toBeTruthy();
 
-      // GM should have "Edit Game" button
+      // GM should have game actions menu
+      const gameActionsMenu = gmPage.getByLabel('Game actions');
+      await expect(gameActionsMenu).toBeVisible({ timeout: 5000 });
+
+      // GM opens menu and clicks "Edit Game"
+      await gameActionsMenu.click();
       const editButton = gmPage.getByRole('button', { name: 'Edit Game' });
       await expect(editButton).toBeVisible({ timeout: 5000 });
-
-      // GM clicks "Edit Game" button
       await editButton.click();
       await gmPage.waitForLoadState('networkidle');
 
@@ -117,13 +120,13 @@ test.describe('Concurrent Editing', () => {
       await expect(gmPage.getByRole('heading', { level: 1 }).or(gmPage.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
       await expect(playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
 
-      // GM should see edit/management buttons
-      const gmEditButton = await gmPage.getByRole('button', { name: 'Edit Game' }).count();
-      expect(gmEditButton).toBeGreaterThan(0);
+      // GM should see game actions menu
+      const gmActionsMenu = await gmPage.getByLabel('Game actions').count();
+      expect(gmActionsMenu).toBeGreaterThan(0);
 
-      // Player should NOT see GM management buttons
-      const playerEditButton = await playerPage.getByRole('button', { name: 'Edit Game' }).count();
-      expect(playerEditButton).toBe(0);
+      // Player should NOT see game actions menu
+      const playerActionsMenu = await playerPage.getByLabel('Game actions').count();
+      expect(playerActionsMenu).toBe(0);
 
     } finally {
       await gmContext.close();

@@ -6,7 +6,7 @@ import { waitForModal } from '../utils/waits';
  *
  * Handles the Edit Game modal workflow including:
  * - Opening/closing the edit modal
- * - Updating game fields (title, description, genre, max_players)
+ * - Updating game fields (title, description, genre, max_players, dates)
  * - Toggling settings (is_anonymous)
  * - Saving/canceling changes
  */
@@ -21,6 +21,9 @@ export class GameSettingsPage {
    * Open the Edit Game modal
    */
   async openEditModal() {
+    // First open the game actions kebab menu
+    await this.page.getByLabel('Game actions').click();
+    // Then click "Edit Game" from the dropdown
     await this.page.getByRole('button', { name: 'Edit Game' }).click();
     await waitForModal(this.page, 'Edit Game');
   }
@@ -51,6 +54,96 @@ export class GameSettingsPage {
    */
   async updateMaxPlayers(maxPlayers: number) {
     await this.page.fill('#max_players', maxPlayers.toString());
+  }
+
+  /**
+   * Set a date/time using the DateTimeInput (react-datepicker)
+   * @param fieldId - ID of the field ('recruitment_deadline', 'start_date', 'end_date')
+   * @param dateTimeString - datetime-local format string (YYYY-MM-DDTHH:mm)
+   */
+  private async setDateTimeField(fieldId: string, dateTimeString: string) {
+    const futureDate = new Date(dateTimeString);
+
+    // Round to nearest 15 minutes (datepicker uses 15-minute intervals)
+    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+    futureDate.setSeconds(0);
+    futureDate.setMilliseconds(0);
+
+    // Click the input to open the date picker
+    await this.page.locator(`#${fieldId}`).click();
+
+    // Wait for the date picker dialog to appear
+    await this.page.waitForSelector('[role="dialog"]', { state: 'visible', timeout: 5000 });
+    await this.page.waitForTimeout(300); // Give picker time to fully render
+
+    // Get the date components
+    const dayOfMonth = futureDate.getDate();
+    const monthName = futureDate.toLocaleString('en-US', { month: 'long' });
+    const year = futureDate.getFullYear();
+    const ordinalDay = this.getOrdinalSuffix(dayOfMonth);
+
+    // Try to find the date - if not found, navigate months
+    const datePattern = new RegExp(`Choose.*${monthName} ${ordinalDay}, ${year}`, 'i');
+    let dateCell = this.page.getByRole('gridcell', { name: datePattern });
+
+    // Check if date is visible, if not, navigate to correct month
+    let attempts = 0;
+    while (!(await dateCell.isVisible().catch(() => false)) && attempts < 12) {
+      // Click next month button
+      await this.page.getByRole('button', { name: /Next Month/i }).click();
+      await this.page.waitForTimeout(200);
+      attempts++;
+    }
+
+    // Click the date
+    await dateCell.click();
+
+    // Select the time from the dropdown
+    const hours = String(futureDate.getHours()).padStart(2, '0');
+    const minutes = String(futureDate.getMinutes()).padStart(2, '0');
+    const timeString = `${hours}:${minutes}`;
+
+    await this.page.getByRole('option', { name: timeString }).click();
+
+    // Wait for picker to close
+    await this.page.waitForSelector('[role="dialog"]', { state: 'hidden', timeout: 2000 });
+  }
+
+  /**
+   * Helper to get ordinal suffix for date (1st, 2nd, 3rd, 4th, etc.)
+   */
+  private getOrdinalSuffix(day: number): string {
+    if (day > 3 && day < 21) return `${day}th`;
+    switch (day % 10) {
+      case 1: return `${day}st`;
+      case 2: return `${day}nd`;
+      case 3: return `${day}rd`;
+      default: return `${day}th`;
+    }
+  }
+
+  /**
+   * Update start date
+   * @param date - Date string in YYYY-MM-DDTHH:mm format (datetime-local)
+   */
+  async updateStartDate(date: string) {
+    await this.setDateTimeField('start_date', date);
+  }
+
+  /**
+   * Update end date
+   * @param date - Date string in YYYY-MM-DDTHH:mm format (datetime-local)
+   */
+  async updateEndDate(date: string) {
+    await this.setDateTimeField('end_date', date);
+  }
+
+  /**
+   * Update recruitment deadline
+   * @param date - Date string in YYYY-MM-DDTHH:mm format (datetime-local)
+   */
+  async updateRecruitmentDeadline(date: string) {
+    await this.setDateTimeField('recruitment_deadline', date);
   }
 
   /**
@@ -113,5 +206,26 @@ export class GameSettingsPage {
    */
   async getMaxPlayers(): Promise<string> {
     return await this.page.locator('#max_players').inputValue();
+  }
+
+  /**
+   * Get current start date value from form
+   */
+  async getStartDate(): Promise<string> {
+    return await this.page.locator('#start_date').inputValue();
+  }
+
+  /**
+   * Get current end date value from form
+   */
+  async getEndDate(): Promise<string> {
+    return await this.page.locator('#end_date').inputValue();
+  }
+
+  /**
+   * Get current recruitment deadline value from form
+   */
+  async getRecruitmentDeadline(): Promise<string> {
+    return await this.page.locator('#recruitment_deadline').inputValue();
   }
 }
