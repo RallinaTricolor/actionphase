@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { LoginForm } from '../components/LoginForm';
 import { RegisterForm } from '../components/RegisterForm';
 import { BackendStatus } from '../components/BackendStatus';
 import { TestConnection } from '../components/TestConnection';
 
 export const LoginPage = () => {
-  const [showRegister, setShowRegister] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const showRegister = searchParams.get('mode') === 'register';
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -36,7 +36,7 @@ export const LoginPage = () => {
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => setShowRegister(!showRegister)}
+            onClick={() => setSearchParams(showRegister ? {} : { mode: 'register' })}
             className="text-interactive-primary hover:opacity-80 font-medium transition-opacity"
           >
             {showRegister
