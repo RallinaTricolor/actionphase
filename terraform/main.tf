@@ -185,23 +185,28 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
   bucket = aws_s3_bucket.backups.id
 
   rule {
-    id     = "transition-to-ia"
-    status = "Enabled"
-
-    transition {
-      days          = 7
-      storage_class = "STANDARD_IA"
-    }
-  }
-
-  rule {
     id     = "delete-old-backups"
     status = "Enabled"
 
     expiration {
-      days = 30
+      days = 30  # Delete after 30 days (no IA transition needed)
     }
   }
+
+  # Note: Transition to STANDARD_IA removed because objects are deleted at 30 days
+  # If you want to keep backups longer and save on storage costs, uncomment below:
+  #
+  # rule {
+  #   id     = "transition-to-ia"
+  #   status = "Enabled"
+  #
+  #   transition {
+  #     days          = 30
+  #     storage_class = "STANDARD_IA"
+  #   }
+  # }
+  #
+  # And change expiration above to 90+ days to benefit from IA pricing
 }
 
 # EC2 instance
