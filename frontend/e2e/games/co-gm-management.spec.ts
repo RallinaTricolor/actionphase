@@ -103,14 +103,11 @@ test.describe.serial('Co-GM Management', () => {
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // Verify co-GM is displayed in header with badge
+    // Verify co-GM is displayed in header metadata line
     await expect(page.getByText(/Co-GM:/)).toBeVisible();
 
-    // Verify co-GM badge appears (look for badge specifically in the game info header)
-    const coGmBadge = page.locator('.text-xs.px-2.py-0\\.5.rounded.bg-blue-100:has-text("Co-GM")').or(
-      page.getByText('Co-GM', { exact: true })
-    );
-    await expect(coGmBadge.first()).toBeVisible({ timeout: 10000 });
+    // Verify the full co-GM text (includes username)
+    await expect(page.getByText(/Co-GM: TestAudience2/)).toBeVisible();
   });
 
   test('Co-GM can access GM features (phase management)', async ({ page }) => {

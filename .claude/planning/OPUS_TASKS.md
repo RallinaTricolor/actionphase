@@ -4,9 +4,6 @@
   - Antipatterns?
 - Test coverage and useful tests
   - Are we mostly happy path testing?
-- Usability / accessibility improvements
-  - Lots of reading! Optimize for reading lots of text
-  - Minimize / reduce size of game info at top of page?
 - User registration security (prevent bots, email verification, captcha)
 - Logging, monitoring, application traces
   - Log rotation, access outside the container

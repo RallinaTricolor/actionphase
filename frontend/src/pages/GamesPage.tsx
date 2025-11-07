@@ -7,20 +7,17 @@ import { Modal } from '../components/Modal';
 import { FilterBar } from '../components/FilterBar';
 import { Pagination } from '../components/Pagination';
 import { Input } from '../components/ui';
-import { apiClient } from '../lib/api';
-import { useAuth } from '../contexts/AuthContext';
 import { useGameListing } from '../hooks/useGameListing';
 import { useToast } from '../contexts/ToastContext';
 import type { EnrichedGameListItem } from '../types/games';
 
 export const GamesPage = () => {
   const navigate = useNavigate();
-  const { showSuccess, showError } = useToast();
+  const { showSuccess } = useToast();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [selectedGame, setSelectedGame] = useState<EnrichedGameListItem | null>(null);
   const [searchInput, setSearchInput] = useState('');
-  const { isAuthenticated } = useAuth();
 
   // Use the new game listing hook with URL-synced filters
   const {

@@ -392,6 +392,52 @@ describe('ApiClient - Games', () => {
 
         await expect(apiClient.createGame(invalidData)).rejects.toEqual(validationError)
       })
+
+      it('should send dates in ISO 8601 format (regression test)', async () => {
+        // This test prevents regression of the bug where dates were sent in
+        // "November 10, 2025 12:00 AM" format instead of ISO 8601 format
+        const createData: CreateGameRequest = {
+          title: 'Date Format Test Game',
+          description: 'Testing proper date formatting',
+          genre: 'Testing',
+          max_players: 4,
+          start_date: '2025-11-10T00:00:00Z', // ISO 8601 format
+          end_date: '2025-11-20T00:00:00Z',   // ISO 8601 format
+          recruitment_deadline: '2025-11-05T23:59:00Z', // ISO 8601 format
+        }
+
+        const mockCreatedGame: Game = {
+          id: 1001,
+          ...createData,
+          gm_user_id: 1,
+          state: 'setup',
+          is_public: true,
+          current_phase_id: null,
+          created_at: '2025-08-07T18:30:00Z',
+          updated_at: '2025-08-07T18:30:00Z',
+        }
+
+        const expectedResponse: AxiosResponse<Game> = {
+          data: mockCreatedGame,
+          status: 201,
+          statusText: 'Created',
+          headers: {},
+          config: {} as any,
+        }
+
+        mockPost.mockResolvedValue(expectedResponse)
+
+        await apiClient.createGame(createData)
+
+        // Verify the API was called with properly formatted ISO 8601 dates
+        expect(mockPost).toHaveBeenCalledWith('/api/v1/games', createData)
+        const callData = mockPost.mock.calls[0][1] as CreateGameRequest
+
+        // Verify dates are in ISO 8601 format (YYYY-MM-DDTHH:mm:ssZ)
+        expect(callData.start_date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/)
+        expect(callData.end_date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/)
+        expect(callData.recruitment_deadline).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/)
+      })
     })
 
     describe('updateGame', () => {
@@ -451,6 +497,54 @@ describe('ApiClient - Games', () => {
         mockPut.mockRejectedValue(permissionError)
 
         await expect(apiClient.updateGame(gameId, updateData)).rejects.toEqual(permissionError)
+      })
+
+      it('should send dates in ISO 8601 format when updating (regression test)', async () => {
+        // This test prevents regression of the bug where dates were sent in
+        // "November 10, 2025 12:00 AM" format instead of ISO 8601 format
+        const gameId = 1002
+        const updateData: UpdateGameRequest = {
+          title: 'Updated Game',
+          description: 'Updated description',
+          genre: 'Updated Genre',
+          max_players: 6,
+          start_date: '2025-12-01T18:00:00Z', // ISO 8601 format
+          end_date: '2025-12-31T23:59:00Z',   // ISO 8601 format
+          recruitment_deadline: '2025-11-25T23:59:00Z', // ISO 8601 format
+          is_public: true,
+          is_anonymous: false,
+        }
+
+        const mockUpdatedGame: Game = {
+          id: gameId,
+          ...updateData,
+          gm_user_id: 1,
+          state: 'setup',
+          current_phase_id: null,
+          created_at: '2025-08-07T18:30:00Z',
+          updated_at: '2025-08-07T20:00:00Z',
+        }
+
+        const expectedResponse: AxiosResponse<Game> = {
+          data: mockUpdatedGame,
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        }
+
+        mockPut.mockResolvedValue(expectedResponse)
+
+        await apiClient.updateGame(gameId, updateData)
+
+        // Verify the API was called with properly formatted ISO 8601 dates
+        expect(mockPut).toHaveBeenCalledWith(`/api/v1/games/${gameId}`, updateData)
+        const callData = mockPut.mock.calls[0][1] as UpdateGameRequest
+
+        // Verify dates are in ISO 8601 format (YYYY-MM-DDTHH:mm:ssZ)
+        expect(callData.start_date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/)
+        expect(callData.end_date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/)
+        expect(callData.recruitment_deadline).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/)
       })
     })
 

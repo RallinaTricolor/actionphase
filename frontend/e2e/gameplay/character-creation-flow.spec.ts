@@ -49,9 +49,9 @@ test.describe('Character Creation Flow', () => {
         maxPlayers: 4
       });
 
-      // Start recruitment
-      await gmPage.getByRole('button', { name: 'Start Recruitment' }).click();
-      await gmPage.waitForLoadState('networkidle');
+      // Start recruitment using POM
+      const gmGameDetailsPage = new GameDetailsPage(gmPage);
+      await gmGameDetailsPage.startRecruitment();
 
       // === Player Application ===
       // Login as player and apply to the game using POM
@@ -78,8 +78,10 @@ test.describe('Character Creation Flow', () => {
       // Wait for approval to process
       await gmPage.waitForTimeout(1000);
 
-      // GM transitions game to character_creation state
-      await gmPage.getByRole('button', { name: 'Close Recruitment' }).click();
+      // GM transitions game to character_creation state using POM (handles kebab menu)
+      await gmGameDetailsPage.goto(parseInt(gameId!));
+      const gmGameDetailsPage2 = new GameDetailsPage(gmPage);
+      await gmGameDetailsPage2.clickMenuButton('Close Recruitment');
       await gmPage.waitForLoadState('networkidle');
 
       // === Player Creates Character ===

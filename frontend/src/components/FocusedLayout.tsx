@@ -5,7 +5,6 @@ import type { ReadingModeTheme } from '../contexts/ReadingModeContext';
 interface FocusedLayoutProps {
   children: React.ReactNode;
   className?: string;
-  postId?: number; // Optional post ID to check if this specific post is in reading mode
 }
 
 const themeClasses: Record<ReadingModeTheme, string> = {
@@ -39,13 +38,11 @@ const fontSizeClasses = {
  *   <MarkdownPreview content={post.content} />
  * </FocusedLayout>
  */
-export function FocusedLayout({ children, className = '', postId }: FocusedLayoutProps) {
-  const { isActive, isPostInReadingMode, theme, fontSize } = useReadingMode();
+export function FocusedLayout({ children, className = '' }: FocusedLayoutProps) {
+  const { isActive, theme, fontSize } = useReadingMode();
 
-  // Check if reading mode is active for this specific post
-  const shouldShowFocusedLayout = postId ? isPostInReadingMode(postId) : isActive;
-
-  if (!shouldShowFocusedLayout) {
+  // Show focused layout when reading mode is active
+  if (!isActive) {
     return <>{children}</>;
   }
 

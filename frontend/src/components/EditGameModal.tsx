@@ -4,6 +4,7 @@ import { apiClient } from '../lib/api';
 import { Button, Alert } from './ui';
 import { Modal } from './Modal';
 import { GameFormFields, type GameFormData } from './GameFormFields';
+import { convertToISO8601, formatDateTimeLocal } from '../lib/utils/dates';
 
 interface EditGameModalProps {
   game: GameWithDetails;
@@ -45,17 +46,6 @@ export function EditGameModal({ game, isOpen, onClose, onGameUpdated }: EditGame
     }
   }, [isOpen, game]);
 
-  const formatDateTimeLocal = (dateString: string) => {
-    const date = new Date(dateString);
-    // Format as YYYY-MM-DDTHH:mm for datetime-local input
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
-
   const handleChange = (field: keyof GameFormData, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -82,9 +72,9 @@ export function EditGameModal({ game, isOpen, onClose, onGameUpdated }: EditGame
         description: formData.description.trim(),
         genre: formData.genre.trim() || undefined,
         max_players: formData.max_players === '' ? undefined : Number(formData.max_players),
-        recruitment_deadline: formData.recruitment_deadline || undefined,
-        start_date: formData.start_date || undefined,
-        end_date: formData.end_date || undefined,
+        recruitment_deadline: convertToISO8601(formData.recruitment_deadline) || undefined,
+        start_date: convertToISO8601(formData.start_date) || undefined,
+        end_date: convertToISO8601(formData.end_date) || undefined,
         is_public: true, // Default to true for now
         is_anonymous: formData.is_anonymous,
         auto_accept_audience: formData.auto_accept_audience,

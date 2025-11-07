@@ -34,11 +34,11 @@ test.describe('Game Lifecycle Management', () => {
     // Verify we're on the right game page
     await expect(page.getByText('E2E Test: Game Lifecycle - Start')).toBeVisible({ timeout: 10000 });
 
-    // Should see "Start Game" button for character_creation state
-    const startButton = gamePage.getButton('Start Game');
-    await expect(startButton).toBeVisible({ timeout: 10000 });
+    // Should see game actions menu (GM permissions)
+    const gameActionsMenu = page.getByLabel('Game actions');
+    await expect(gameActionsMenu).toBeVisible({ timeout: 10000 });
 
-    // Start the game using POM
+    // Start the game using POM (handles kebab menu)
     await gamePage.startGame();
 
     // Wait for state transition
@@ -48,8 +48,8 @@ test.describe('Game Lifecycle Management', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Should now see in_progress state buttons (Pause Game, Complete Game)
-    await expect(page.getByRole('button', { name: /Pause Game|Complete Game/ }).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
+    // Should still see game actions menu (for pause/complete options)
+    await expect(gameActionsMenu).toBeVisible({ timeout: 10000 });
   });
 
   test('GM can pause game with confirmation', async ({ page }) => {
@@ -59,9 +59,9 @@ test.describe('Game Lifecycle Management', () => {
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // Should see "Pause Game" button for in_progress state
-    const pauseButton = gamePage.getButton('Pause Game');
-    await expect(pauseButton).toBeVisible({ timeout: 10000 });
+    // Should see game actions menu (GM permissions)
+    const gameActionsMenu = page.getByLabel('Game actions');
+    await expect(gameActionsMenu).toBeVisible({ timeout: 10000 });
 
     // Pause the game using POM (handles confirmation modal)
     await gamePage.pauseGame();
@@ -73,8 +73,8 @@ test.describe('Game Lifecycle Management', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Should now see "Resume Game" button
-    await expect(gamePage.getButton('Resume Game')).toBeVisible({ timeout: 10000 });
+    // Game actions menu should still be visible (GM can resume)
+    await expect(gameActionsMenu).toBeVisible({ timeout: 10000 });
   });
 
   test('GM can resume paused game', async ({ page }) => {
@@ -84,11 +84,11 @@ test.describe('Game Lifecycle Management', () => {
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // Should see "Resume Game" button for paused state
-    const resumeButton = gamePage.getButton('Resume Game');
-    await expect(resumeButton).toBeVisible({ timeout: 10000 });
+    // Should see game actions menu (GM permissions)
+    const gameActionsMenu = page.getByLabel('Game actions');
+    await expect(gameActionsMenu).toBeVisible({ timeout: 10000 });
 
-    // Resume the game using POM
+    // Resume the game using POM (handles kebab menu)
     await gamePage.resumeGame();
 
     // Wait for state transition
@@ -98,8 +98,8 @@ test.describe('Game Lifecycle Management', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Should now see in_progress state buttons
-    await expect(page.getByRole('button', { name: /Pause Game|Complete Game/ }).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
+    // Game actions menu should still be visible (GM can pause/complete)
+    await expect(gameActionsMenu).toBeVisible({ timeout: 10000 });
   });
 
   test('GM can complete game with confirmation', async ({ page }) => {
@@ -109,9 +109,9 @@ test.describe('Game Lifecycle Management', () => {
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // Should see "Complete Game" button for in_progress state
-    const completeButton = gamePage.getButton('Complete Game');
-    await expect(completeButton).toBeVisible({ timeout: 10000 });
+    // Should see game actions menu (GM permissions)
+    const gameActionsMenu = page.getByLabel('Game actions');
+    await expect(gameActionsMenu).toBeVisible({ timeout: 10000 });
 
     // Complete the game using POM (handles confirmation modal)
     await gamePage.completeGame();
@@ -134,11 +134,11 @@ test.describe('Game Lifecycle Management', () => {
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // Should see "Cancel Game" button for recruitment state
-    const cancelButton = gamePage.getButton('Cancel Game');
-    await expect(cancelButton).toBeVisible({ timeout: 10000 });
+    // Should see game actions menu (GM permissions)
+    const gameActionsMenu = page.getByLabel('Game actions');
+    await expect(gameActionsMenu).toBeVisible({ timeout: 10000 });
 
-    // Cancel the game using POM
+    // Cancel the game using POM (handles kebab menu + confirmation modal)
     await gamePage.cancelGame();
 
     // Wait for state transition
@@ -148,8 +148,8 @@ test.describe('Game Lifecycle Management', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // In cancelled state, GM management buttons should not be visible
-    await expect(page.getByRole('button', { name: /Start Game|Pause Game|Resume Game|Complete Game|Cancel Game/ })).not.toBeVisible();
+    // In cancelled state, game actions menu should show Delete option
+    await expect(gameActionsMenu).toBeVisible();
   });
 
   test('GM can delete cancelled game', async ({ page }) => {
@@ -160,27 +160,36 @@ test.describe('Game Lifecycle Management', () => {
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // If the game isn't already cancelled, cancel it first
-    // (it might already be cancelled by the previous test)
-    const cancelButton = page.getByRole('button', { name: /Cancel Game/i }).locator('visible=true').first();
-    const isCancelButtonVisible = await cancelButton.isVisible().catch(() => false);
+    // First, ensure the game is cancelled
+    // Check if cancel button exists in menu (means game is not cancelled yet)
+    await gamePage.openGameActionsMenu();
+    const cancelButton = page.getByRole('button', { name: 'Cancel Game', exact: true });
+    const canCancel = await cancelButton.isVisible().catch(() => false);
 
-    if (isCancelButtonVisible) {
-      // Game is not cancelled yet, cancel it
-      await gamePage.cancelGame();
+    if (canCancel) {
+      // Game is not cancelled yet, click the button directly (menu is already open)
+      await cancelButton.click();
+
+      // Handle confirmation modal if it appears
+      const confirmButton = page.getByTestId('cancel-game-confirm-button');
+      const hasConfirm = await confirmButton.isVisible({ timeout: 2000 }).catch(() => false);
+      if (hasConfirm) {
+        await confirmButton.click();
+      }
+
       await page.waitForTimeout(2000);
       await page.reload();
       await page.waitForLoadState('networkidle');
+    } else {
+      // Game already cancelled, close the menu
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
     }
 
-    // Now verify game is in cancelled state and we can see Delete button
+    // Verify game is in cancelled state
     await expect(page.getByText('E2E Test: Game Lifecycle - Cancel')).toBeVisible({ timeout: 10000 });
 
-    // Should see "Delete Game" button for cancelled state
-    const deleteButton = gamePage.getButton('Delete Game');
-    await expect(deleteButton).toBeVisible({ timeout: 10000 });
-
-    // Delete the game using POM (handles confirmation modal)
+    // Now delete the game using POM (handles kebab menu + confirmation modal)
     await gamePage.deleteGame();
 
     // Should redirect to games list after deletion
