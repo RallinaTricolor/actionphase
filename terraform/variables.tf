@@ -31,7 +31,7 @@ variable "s3_backup_bucket" {
 variable "github_repo" {
   description = "GitHub repository URL for ActionPhase"
   type        = string
-  default     = "https://github.com/yourusername/actionphase.git"
+  default     = "https://github.com/jhouser/actionphase.git"
 }
 
 variable "domain" {
