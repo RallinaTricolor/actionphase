@@ -164,4 +164,7 @@ backend/pkg/users/test_uploads/
 
 .claude/skills-setup
 .claude/tsc-cache
-.claude/planning
+
+# Ignore working/completed plans, but keep templates and documentation
+.claude/planning/active/
+.claude/planning/completed/

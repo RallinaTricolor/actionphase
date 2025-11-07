@@ -1,0 +1,140 @@
+# Production override for Docker Compose
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  # PostgreSQL Database - Production Config
+  db:
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backups:/backups  # Mount for backup scripts
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Backend API - Production Config
+  backend:
+    environment:
+      ENVIRONMENT: production
+      LOG_LEVEL: info
+      # CORS for production domain
+      CORS_ORIGINS: "https://${DOMAIN:-actionphase.com},http://localhost"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    # Mount for file uploads if needed
+    volumes:
+      - ./uploads:/app/uploads
+
+  # Frontend - Production Config
+  frontend:
+    environment:
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx Reverse Proxy with SSL
+  nginx:
+    image: nginx:alpine
+    container_name: actionphase-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot:ro
+      # SSL certificates
+      - ./ssl/dhparam.pem:/etc/nginx/ssl/dhparam.pem:ro
+    depends_on:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - actionphase-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Certbot for SSL Certificate Management
+  certbot:
+    image: certbot/certbot
+    container_name: actionphase-certbot
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - actionphase-network
+
+  # Backup Service (runs cron jobs)
+  backup:
+    image: alpine:latest
+    container_name: actionphase-backup
+    restart: unless-stopped
+    volumes:
+      - ./backups:/backups
+      - ./scripts:/scripts:ro
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BACKUP_BUCKET:-actionphase-backups}
+      POSTGRES_HOST: db
+      POSTGRES_DB: actionphase
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+    entrypoint: |
+      sh -c '
+        apk add --no-cache postgresql16-client aws-cli bash tzdata
+        ln -sf /usr/share/zoneinfo/UTC /etc/localtime
+        echo "0 2 * * * /scripts/backup-to-s3.sh >> /var/log/backup.log 2>&1" | crontab -
+        crond -f -d 8
+      '
+    depends_on:
+      - db
+    networks:
+      - actionphase-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  letsencrypt:
+    driver: local
+  certbot-webroot:
+    driver: local
