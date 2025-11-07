@@ -149,7 +149,8 @@ func (h *Handler) Start() {
 			r.Get("/{id}/participants", gameHandler.GetGameParticipants)
 
 			// Game management
-			r.Post("/", gameHandler.CreateGame)
+			// Create game requires email verification
+			r.With(core.RequireEmailVerificationMiddleware(h.App.Pool)).Post("/", gameHandler.CreateGame)
 			r.Put("/{id}", gameHandler.UpdateGame)
 			r.Delete("/{id}", gameHandler.DeleteGame)
 			r.Put("/{id}/state", gameHandler.UpdateGameState)
@@ -164,7 +165,8 @@ func (h *Handler) Start() {
 			r.Post("/{id}/participants/{userId}/demote-from-co-gm", gameHandler.DemoteFromCoGM) // GM demotes co-GM to audience
 
 			// Game application management
-			r.Post("/{id}/apply", gameHandler.ApplyToGame)
+			// Apply to game requires email verification
+			r.With(core.RequireEmailVerificationMiddleware(h.App.Pool)).Post("/{id}/apply", gameHandler.ApplyToGame)
 			r.Get("/{id}/applications", gameHandler.GetGameApplications)
 			r.Get("/{id}/application/mine", gameHandler.GetMyGameApplication)
 			r.Put("/{id}/applications/{applicationId}/review", gameHandler.ReviewGameApplication)
@@ -181,7 +183,8 @@ func (h *Handler) Start() {
 
 			// Character management within games
 			characterHandler := characters.Handler{App: h.App}
-			r.Post("/{gameId}/characters", characterHandler.CreateCharacter)
+			// Create character requires email verification
+			r.With(core.RequireEmailVerificationMiddleware(h.App.Pool)).Post("/{gameId}/characters", characterHandler.CreateCharacter)
 			r.Get("/{gameId}/characters", characterHandler.GetGameCharacters)
 			r.Get("/{gameId}/characters/controllable", characterHandler.GetUserControllableCharacters)
 			r.Get("/{gameId}/characters/inactive", characterHandler.ListInactiveCharacters) // GM views inactive characters
@@ -213,9 +216,11 @@ func (h *Handler) Start() {
 
 			// Common Room messages (posts and comments)
 			messageHandler := messages.Handler{App: h.App}
-			r.Post("/{gameId}/posts", messageHandler.CreatePost)
+			// Create post requires email verification
+			r.With(core.RequireEmailVerificationMiddleware(h.App.Pool)).Post("/{gameId}/posts", messageHandler.CreatePost)
 			r.Get("/{gameId}/posts", messageHandler.GetGamePosts)
-			r.Post("/{gameId}/posts/{postId}/comments", messageHandler.CreateComment)
+			// Create comment requires email verification
+			r.With(core.RequireEmailVerificationMiddleware(h.App.Pool)).Post("/{gameId}/posts/{postId}/comments", messageHandler.CreateComment)
 			r.Get("/{gameId}/posts/{postId}/comments", messageHandler.GetPostComments)
 			r.Patch("/{gameId}/posts/{postId}/comments/{commentId}", messageHandler.UpdateComment)  // Edit comment
 			r.Delete("/{gameId}/posts/{postId}/comments/{commentId}", messageHandler.DeleteComment) // Delete comment
