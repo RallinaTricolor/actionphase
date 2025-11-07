@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"net/http"
+	"os"
 
 	db "actionphase/pkg/db/models"
 	"github.com/go-chi/jwtauth/v5"
@@ -12,6 +13,10 @@ import (
 
 // RequireEmailVerificationMiddleware is middleware that requires the user to have a verified email
 // This should be used on routes that require email verification (e.g., creating games, posting content)
+//
+// The middleware respects the REQUIRE_EMAIL_VERIFICATION environment variable:
+// - "true" (default for production): Email verification is enforced
+// - "false" (default for development): Email verification is not enforced
 //
 // Recommended routes to protect (apply this middleware to):
 // - POST /api/v1/games - Create game
@@ -30,8 +35,20 @@ import (
 //	    r.Post("/", gameHandler.CreateGame)
 //	})
 func RequireEmailVerificationMiddleware(pool *pgxpool.Pool) func(http.Handler) http.Handler {
+	// Check if email verification is required (default to true for production safety)
+	requireVerification := os.Getenv("REQUIRE_EMAIL_VERIFICATION")
+	if requireVerification == "" {
+		requireVerification = "true" // Default to requiring verification
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// If email verification is not required, skip the check
+			if requireVerification == "false" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			// Get user ID from JWT token
 			token, _, err := jwtauth.FromContext(r.Context())
 			if err != nil {
