@@ -26,6 +26,24 @@ func IsUserCoGM(ctx context.Context, db *pgxpool.Pool, gameID int32, userID int3
 	return participant.Role == "co_gm"
 }
 
+// IsUserAudience checks if a user is an audience member for a specific game.
+// This function queries the database to check if the user has the 'audience' role
+// for the given game.
+func IsUserAudience(ctx context.Context, db *pgxpool.Pool, gameID int32, userID int32) bool {
+	queries := models.New(db)
+
+	participant, err := queries.GetParticipantByGameAndUser(ctx, models.GetParticipantByGameAndUserParams{
+		GameID: gameID,
+		UserID: userID,
+	})
+
+	if err != nil {
+		return false
+	}
+
+	return participant.Role == "audience"
+}
+
 // IsUserGameMaster checks if a user has Game Master permissions for a game.
 // This function considers GM ownership, co-GM status, and admin mode.
 //
