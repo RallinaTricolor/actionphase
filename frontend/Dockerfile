@@ -12,6 +12,15 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Accept build arguments for Vite environment variables
+# These are baked into the frontend bundle at build time
+ARG VITE_HCAPTCHA_SITE_KEY
+ARG VITE_HCAPTCHA_ENABLED=true
+
+# Set environment variables for build (Vite reads VITE_* env vars)
+ENV VITE_HCAPTCHA_SITE_KEY=$VITE_HCAPTCHA_SITE_KEY
+ENV VITE_HCAPTCHA_ENABLED=$VITE_HCAPTCHA_ENABLED
+
 # Build the application
 RUN npm run build
 
