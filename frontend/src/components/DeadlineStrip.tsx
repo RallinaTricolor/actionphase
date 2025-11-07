@@ -10,6 +10,7 @@ export interface DeadlineStripProps {
   deadlines: Deadline[];
   isLoading?: boolean;
   isGM?: boolean;
+  gameState?: string; // Hide deadlines for completed/cancelled games
   onCreateDeadline: (data: { title: string; description: string; deadline: string }) => Promise<void>;
   onUpdateDeadline: (deadlineId: number, data: { title: string; description: string; deadline: string }) => Promise<void>;
   onDeleteDeadline: (deadlineId: number) => Promise<void>;
@@ -43,6 +44,7 @@ export function DeadlineStrip({
   deadlines,
   isLoading = false,
   isGM = false,
+  gameState,
   onCreateDeadline,
   onUpdateDeadline,
   onDeleteDeadline,
@@ -144,6 +146,11 @@ export function DeadlineStrip({
 
   // Don't show strip if no deadlines and user is not GM
   if (!isLoading && deadlines.length === 0 && !isGM) {
+    return null;
+  }
+
+  // Hide deadlines section for completed/cancelled games (read-only)
+  if (gameState === 'completed' || gameState === 'cancelled') {
     return null;
   }
 
