@@ -154,39 +154,15 @@ test.describe('Game Lifecycle Management', () => {
 
   test('GM can delete cancelled game', async ({ page }) => {
     // Testing game deletion and verification it no longer appears in games list
+    // NOTE: This test expects the game to already be cancelled by the previous test
+    // because the test suite runs in serial mode
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GAME_LIFECYCLE_CANCEL');
 
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // First, ensure the game is cancelled
-    // Check if cancel button exists in menu (means game is not cancelled yet)
-    await gamePage.openGameActionsMenu();
-    const cancelButton = page.getByRole('button', { name: 'Cancel Game', exact: true });
-    const canCancel = await cancelButton.isVisible().catch(() => false);
-
-    if (canCancel) {
-      // Game is not cancelled yet, click the button directly (menu is already open)
-      await cancelButton.click();
-
-      // Handle confirmation modal if it appears
-      const confirmButton = page.getByTestId('cancel-game-confirm-button');
-      const hasConfirm = await confirmButton.isVisible({ timeout: 2000 }).catch(() => false);
-      if (hasConfirm) {
-        await confirmButton.click();
-      }
-
-      await page.waitForTimeout(2000);
-      await page.reload();
-      await page.waitForLoadState('networkidle');
-    } else {
-      // Game already cancelled, close the menu
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
-    }
-
-    // Verify game is in cancelled state
+    // Verify game title
     await expect(page.getByText('E2E Test: Game Lifecycle - Cancel')).toBeVisible({ timeout: 10000 });
 
     // Now delete the game using POM (handles kebab menu + confirmation modal)

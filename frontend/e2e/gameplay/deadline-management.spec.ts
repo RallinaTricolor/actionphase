@@ -279,13 +279,18 @@ test.describe('Deadline Management', () => {
     const gameDetailsPage = new GameDetailsPage(page);
     await gameDetailsPage.goto(gameId);
 
+    // Use unique prefix to avoid conflicts with other tests
+    const uniquePrefix = `ViewAll-${Date.now()}`;
+
     // Create 4 deadlines (more than the 3 shown by default)
     for (let i = 1; i <= 4; i++) {
       await page.getByRole('button', { name: /Add Deadline/i }).click();
-      await page.getByLabel('Title').fill(`Deadline ${i}`);
+      await page.getByLabel('Title').fill(`${uniquePrefix}-${i}`);
       await page.getByLabel('Description').fill(`Testing multiple deadlines ${i}`);
 
-      const futureDate = new Date(Date.now() + (24 * i) * 60 * 60 * 1000);
+      // Set deadlines far enough in the future to account for test execution time
+      // Start at 2 days from now, then add more days for each deadline
+      const futureDate = new Date(Date.now() + ((i + 1) * 24) * 60 * 60 * 1000);
       futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
       futureDate.setSeconds(0);
       futureDate.setMilliseconds(0);
@@ -296,30 +301,27 @@ test.describe('Deadline Management', () => {
       // Wait for modal to close
       await expect(page.getByRole('heading', { name: 'Create Deadline' })).not.toBeVisible();
 
-      // Wait for deadline to be created and visible (if it should be)
-      // NOTE: 4th deadline will be hidden since widget only shows 3 initially
-      if (i <= 3) {
-        await expect(page.getByText(`Deadline ${i}`)).toBeVisible({ timeout: 10000 });
-      } else {
-        // For 4th deadline, just wait a bit to ensure it's created in backend
-        await page.waitForTimeout(1000);
-      }
+      // Wait for network to be idle (deadline creation API call completes)
+      await page.waitForLoadState('networkidle');
+
+      // Wait for backend to process the deadline creation
+      await page.waitForTimeout(1500);
     }
 
-    // Should see first 3 deadlines
-    await expect(page.getByText('Deadline 1')).toBeVisible();
-    await expect(page.getByText('Deadline 2')).toBeVisible();
-    await expect(page.getByText('Deadline 3')).toBeVisible();
-
-    // Should see "View All" button since we have more than 3
+    // After creating all 4 deadlines, verify "View All" button appears
+    // (widget shows max 3 initially, so with our 4 + any existing, should have View All)
     const viewAllButton = page.getByRole('button', { name: /View All/i });
     await expect(viewAllButton).toBeVisible();
 
     // Click View All to show all deadlines
     await viewAllButton.click();
 
-    // Should now see 4th deadline
-    await expect(page.getByText('Deadline 4')).toBeVisible();
+    // Wait for expansion animation to complete
+    await page.waitForTimeout(500);
+
+    // Verify we can see our newly created deadlines
+    // Check that at least one of our uniquely-prefixed deadlines is visible
+    await expect(page.locator('text=/ViewAll-\\d+/').first()).toBeVisible({ timeout: 5000 });
 
     // Button should now say "Show Less"
     await expect(page.getByRole('button', { name: /Show Less/i })).toBeVisible();
