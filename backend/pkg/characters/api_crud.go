@@ -170,6 +170,31 @@ func (h *Handler) GetCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get game to check state for filtering
+	gameService := &services.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), character.GameID)
+	if err != nil {
+		h.App.Logger.Error("Failed to get game", "error", err, "game_id", character.GameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Check if user is GM - pending/rejected characters should only be visible to GMs
+	authUser := core.GetAuthenticatedUser(r.Context())
+	var isGM bool
+	if authUser != nil {
+		isGM = core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool)
+	}
+
+	// Filter pending/rejected characters for non-GMs in in_progress games
+	// This prevents information disclosure about characters that haven't been approved
+	if game.State.String == "in_progress" && !isGM {
+		if character.Status.String == "pending" || character.Status.String == "rejected" {
+			render.Render(w, r, core.ErrNotFound("character not found"))
+			return
+		}
+	}
+
 	// Convert to response format
 	response := &CharacterResponse{
 		ID:            character.ID,

@@ -177,7 +177,7 @@ func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check permissions - must be GM OR game must be completed
+	// Check permissions - must be GM, audience, OR game must be completed
 	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(authUser.ID))
 	if err != nil {
@@ -186,22 +186,22 @@ func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If not GM, check if game is completed (public archive)
-	if !canManage {
-		// Get game to check state
-		gameService := &gamesvc.GameService{DB: h.App.Pool}
-		game, err := gameService.GetGame(r.Context(), int32(gameID))
-		if err != nil {
-			h.App.Logger.Error("Failed to get game", "error", err)
-			render.Render(w, r, core.ErrInternalError(err))
-			return
-		}
+	// Get game to check state and participant role
+	gameService := &gamesvc.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get game", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
 
-		// Only completed games are publicly viewable
-		if game.State.String != "completed" {
-			render.Render(w, r, core.ErrForbidden("only the GM can view action results for non-completed games"))
-			return
-		}
+	// Check if user is audience member
+	isAudience := core.IsUserAudience(r.Context(), h.App.Pool, int32(gameID), int32(authUser.ID))
+
+	// Allow access if: GM, audience, or game is completed (public archive)
+	if !canManage && !isAudience && game.State.String != "completed" {
+		render.Render(w, r, core.ErrForbidden("only the GM, audience, or participants of completed games can view all action results"))
+		return
 	}
 
 	// TODO: Migrate GetGameResults to actions package
@@ -214,6 +214,7 @@ func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert to response format
+	// GMs, audience, and completed game viewers all see published and unpublished results
 	var response []ActionResultWithDetailsResponse
 	for _, result := range results {
 		resultResp := ActionResultWithDetailsResponse{

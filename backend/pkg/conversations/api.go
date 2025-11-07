@@ -161,18 +161,15 @@ func (h *Handler) GetConversation(w http.ResponseWriter, r *http.Request) {
 
 	conversationService := db.NewConversationService(h.App.Pool)
 
-	// Verify user is a participant
-	isParticipant, err := conversationService.Queries.IsUserInConversation(ctx, models.IsUserInConversationParams{
-		ConversationID: int32(conversationID),
-		UserID:         userID,
-	})
+	// Verify user has valid access (checks current character ownership, not just participant records)
+	canAccess, err := conversationService.CanUserAccessConversation(ctx, int32(conversationID), userID, authUser.IsAdmin)
 	if err != nil {
-		h.App.Logger.Error("Failed to check participation", "error", err, "conversation_id", conversationID, "user_id", userID)
+		h.App.Logger.Error("Failed to check conversation access", "error", err, "conversation_id", conversationID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
-	if !isParticipant {
-		render.Render(w, r, core.ErrForbidden("not a participant in this conversation"))
+	if !canAccess {
+		render.Render(w, r, core.ErrForbidden("you don't have access to this conversation"))
 		return
 	}
 
@@ -220,6 +217,19 @@ func (h *Handler) GetConversationMessages(w http.ResponseWriter, r *http.Request
 	}
 
 	conversationService := db.NewConversationService(h.App.Pool)
+
+	// Verify user has valid access (checks current character ownership, not just participant records)
+	canAccess, err := conversationService.CanUserAccessConversation(ctx, int32(conversationID), userID, authUser.IsAdmin)
+	if err != nil {
+		h.App.Logger.Error("Failed to check conversation access", "error", err, "conversation_id", conversationID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+	if !canAccess {
+		render.Render(w, r, core.ErrForbidden("you don't have access to this conversation"))
+		return
+	}
+
 	messages, err := conversationService.GetConversationMessages(ctx, int32(conversationID), userID)
 	if err != nil {
 		h.App.Logger.Error("Failed to get conversation messages", "error", err, "conversation_id", conversationID, "user_id", userID)
@@ -397,18 +407,15 @@ func (h *Handler) AddParticipant(w http.ResponseWriter, r *http.Request) {
 
 	conversationService := db.NewConversationService(h.App.Pool)
 
-	// Verify user is a participant
-	isParticipant, err := conversationService.Queries.IsUserInConversation(ctx, models.IsUserInConversationParams{
-		ConversationID: int32(conversationID),
-		UserID:         userID,
-	})
+	// Verify user has valid access (checks current character ownership, not just participant records)
+	canAccess, err := conversationService.CanUserAccessConversation(ctx, int32(conversationID), userID, authUser.IsAdmin)
 	if err != nil {
-		h.App.Logger.Error("Failed to check participation", "error", err, "conversation_id", conversationID, "user_id", userID)
+		h.App.Logger.Error("Failed to check conversation access", "error", err, "conversation_id", conversationID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
-	if !isParticipant {
-		render.Render(w, r, core.ErrForbidden("not a participant in this conversation"))
+	if !canAccess {
+		render.Render(w, r, core.ErrForbidden("you don't have access to this conversation"))
 		return
 	}
 

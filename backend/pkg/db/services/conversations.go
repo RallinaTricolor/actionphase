@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -527,4 +528,62 @@ func (s *ConversationService) DeletePrivateMessage(ctx context.Context, messageI
 	}
 
 	return nil
+}
+
+// CanUserAccessConversation checks if a user has valid access to a conversation.
+// This re-validates access by checking current character ownership, not just participant records.
+//
+// Access is granted if any of these conditions are true:
+// 1. User is the GM of the game
+// 2. User is an audience member for the game
+// 3. User currently controls at least one character in the conversation
+//
+// This prevents the security issue where a user retains access after their character is reassigned.
+func (s *ConversationService) CanUserAccessConversation(ctx context.Context, conversationID int32, userID int32, isAdmin bool) (bool, error) {
+	// Get conversation to find the game
+	conv, err := s.Queries.GetConversation(ctx, conversationID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get conversation: %w", err)
+	}
+
+	// Get game to check GM and audience status
+	game, err := s.Queries.GetGame(ctx, conv.GameID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get game: %w", err)
+	}
+
+	// Check if user is GM (includes primary GM, co-GM, and admin mode)
+	// Note: We can't check admin mode here since we don't have the HTTP request
+	// The handler should check this separately or pass admin mode as a parameter
+	if game.GmUserID == userID {
+		return true, nil
+	}
+
+	// Check if user is co-GM
+	if core.IsUserCoGM(ctx, s.DB, conv.GameID, userID) {
+		return true, nil
+	}
+
+	// Check if user is audience member
+	if core.IsUserAudience(ctx, s.DB, conv.GameID, userID) {
+		return true, nil
+	}
+
+	// Check if user currently controls any character in the conversation
+	participants, err := s.GetConversationParticipants(ctx, conversationID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get participants: %w", err)
+	}
+
+	for _, participant := range participants {
+		if participant.CharacterID.Valid {
+			// Check if user currently controls this character
+			if core.CanUserControlNPC(ctx, s.DB, participant.CharacterID.Int32, userID) {
+				return true, nil
+			}
+		}
+	}
+
+	// User doesn't have valid access
+	return false, nil
 }
