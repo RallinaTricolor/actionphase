@@ -3,4 +3,3 @@
 - USER AND API DOCS
 - Published results and:
   - Player didn't get a notification
-- Game Detail header layout

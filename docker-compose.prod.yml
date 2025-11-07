@@ -22,7 +22,8 @@ services:
   # Backend API - Production Config
   backend:
     # Remove external port mapping - nginx will proxy to internal port 3000
-    ports: []
+    # Note: Empty array doesn't override - we rely on 'expose' in base file
+    ports: !reset []
     environment:
       ENVIRONMENT: production
       LOG_LEVEL: info
@@ -46,7 +47,8 @@ services:
   # Frontend - Production Config
   frontend:
     # Remove external port mapping - nginx will proxy to internal port 80
-    ports: []
+    # Note: Empty array doesn't override - we rely on 'expose' in base file
+    ports: !reset []
     environment:
       NODE_ENV: production
     deploy:

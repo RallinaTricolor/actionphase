@@ -5,6 +5,7 @@ repos:
     rev: v2.3.0
     hooks:
       - id: check-yaml
+        exclude: ^docker-compose.*\.yml$  # Docker Compose uses custom YAML tags (!reset)
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: https://github.com/syntaqx/git-hooks

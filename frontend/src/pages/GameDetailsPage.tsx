@@ -319,6 +319,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
             deadlines={deadlines}
             isLoading={isLoadingDeadlines}
             isGM={isGM}
+            gameState={game.state}
             onCreateDeadline={handleCreateDeadline}
             onUpdateDeadline={handleUpdateDeadline}
             onDeleteDeadline={handleDeleteDeadline}
