@@ -56,7 +56,8 @@ mkdir -p ./ssl
 mkdir -p ./nginx/conf.d
 
 # Check if certificate already exists
-if [ -d "/etc/letsencrypt/live/$DOMAIN" ] || docker exec actionphase-certbot test -d "/etc/letsencrypt/live/$DOMAIN" 2>/dev/null; then
+# Use temporary container to check the volume
+if docker run --rm -v actionphase_letsencrypt:/etc/letsencrypt:ro alpine test -d "/etc/letsencrypt/live/$DOMAIN" 2>/dev/null; then
     echo -e "${YELLOW}Certificate already exists for $DOMAIN${NC}"
     read -p "Do you want to renew it? (y/n): " -n 1 -r
     echo
@@ -152,7 +153,8 @@ else
 fi
 
 # Check if certificate was created successfully
-if docker exec actionphase-certbot test -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" 2>/dev/null || [ -f "./letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+# Use temporary container to check the volume (certbot container was removed with --rm)
+if docker run --rm -v actionphase_letsencrypt:/etc/letsencrypt:ro alpine test -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" 2>/dev/null; then
     echo -e "${GREEN}✓ SSL certificate obtained successfully!${NC}"
 else
     echo -e "${RED}❌ Failed to obtain SSL certificate${NC}"
@@ -293,7 +295,7 @@ echo "  https://$DOMAIN"
 echo "  https://www.ssllabs.com/ssltest/analyze.html?d=$DOMAIN"
 echo ""
 echo -e "${BLUE}Certificate Information:${NC}"
-docker exec actionphase-certbot certbot certificates 2>/dev/null || true
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml run --rm --entrypoint "" certbot certbot certificates 2>/dev/null || true
 echo ""
 
 exit 0
