@@ -18,7 +18,7 @@
 - ✓ Port 3000 is correct
 - ✓ Endpoints match actual implementation
 - ✓ Authentication flow is correct
-- Minor: Production URL is hypothetical (api.actionphase.com)
+- Minor: Production URL is hypothetical (api.action-phase.com)
 
 ### ⚠️ TESTING_GUIDE.md
 **Status**: Partially Outdated

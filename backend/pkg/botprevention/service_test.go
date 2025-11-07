@@ -25,7 +25,7 @@ func TestBotPreventionService_IsDisposableEmail(t *testing.T) {
 		},
 		{
 			name:     "legitimate email - custom domain",
-			email:    "player@actionphase.com",
+			email:    "player@action-phase.com",
 			expected: false,
 		},
 		{

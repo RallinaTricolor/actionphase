@@ -226,7 +226,7 @@ func TestNewEmailServiceFromEnv(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, service)
 	assert.Equal(t, ProviderMailHog, service.config.Provider)
-	assert.Equal(t, "noreply@actionphase.com", service.config.FromEmail)
+	assert.Equal(t, "noreply@action-phase.com", service.config.FromEmail)
 	assert.Equal(t, "ActionPhase", service.config.FromName)
 	assert.Equal(t, "localhost", service.config.SMTPHost)
 

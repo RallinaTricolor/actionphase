@@ -37,7 +37,7 @@ variable "github_repo" {
 variable "domain" {
   description = "Domain name for the application"
   type        = string
-  default     = "actionphase.com"
+  default     = "action-phase.com"
 }
 
 variable "admin_email" {
