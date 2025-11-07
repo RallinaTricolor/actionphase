@@ -68,6 +68,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Pass hCaptcha configuration to frontend build
+        # For production, set HCAPTCHA_SITE_KEY in .env file
+        VITE_HCAPTCHA_SITE_KEY: ${HCAPTCHA_SITE_KEY:-}
+        VITE_HCAPTCHA_ENABLED: ${HCAPTCHA_ENABLED:-false}
     container_name: actionphase-frontend
     restart: unless-stopped
     ports:

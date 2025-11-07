@@ -1,6 +1,5 @@
 - Notification sound effect
 - Actually set up production before Claude expires (S3 bucket, Emails, Captcha, SSL cert, DB + backups, etc.)
-- AWS MFA
 - USER AND API DOCS
 - Published results and:
   - Player didn't get a notification
