@@ -98,7 +98,6 @@ type MockGameService struct {
 	CreateGameFunc            func(ctx context.Context, req CreateGameRequest) (*models.Game, error)
 	GetGameFunc               func(ctx context.Context, gameID int32) (*models.Game, error)
 	GetGamesByUserFunc        func(ctx context.Context, userID int32) ([]models.GetGamesByUserRow, error)
-	GetAllGamesFunc           func(ctx context.Context) ([]models.GetAllGamesRow, error)
 	UpdateGameStateFunc       func(ctx context.Context, gameID int32, newState string) (*models.Game, error)
 	UpdateGameFunc            func(ctx context.Context, req UpdateGameRequest) (*models.Game, error)
 	DeleteGameFunc            func(ctx context.Context, gameID int32) error
@@ -130,13 +129,6 @@ func (m *MockGameService) GetGame(ctx context.Context, gameID int32) (*models.Ga
 func (m *MockGameService) GetGamesByUser(ctx context.Context, userID int32) ([]models.GetGamesByUserRow, error) {
 	if m.GetGamesByUserFunc != nil {
 		return m.GetGamesByUserFunc(ctx, userID)
-	}
-	return nil, nil
-}
-
-func (m *MockGameService) GetAllGames(ctx context.Context) ([]models.GetAllGamesRow, error) {
-	if m.GetAllGamesFunc != nil {
-		return m.GetAllGamesFunc(ctx)
 	}
 	return nil, nil
 }

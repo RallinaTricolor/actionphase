@@ -228,9 +228,9 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 	_, err = gameService.UpdateGameState(context.Background(), createdGame.ID, "recruitment")
 	core.AssertNoError(t, err, "Game state update should succeed")
 
-	// Test get all games (authenticated)
+	// Test get all games (authenticated) - using GetFilteredGames endpoint
 	t.Run("get_all_games", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/games/public", nil)
+		req := httptest.NewRequest("GET", "/api/v1/games", nil)
 		req.Header.Set("Authorization", "Bearer "+accessToken)
 		w := httptest.NewRecorder()
 
@@ -238,15 +238,19 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 
 		core.AssertEqual(t, 200, w.Code, "Get all games should succeed")
 
-		var response []map[string]interface{}
+		var response map[string]interface{}
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		core.AssertNoError(t, err, "Response should be valid JSON")
 
-		core.AssertTrue(t, len(response) >= 1, "Should return at least one game")
+		// GetFilteredGames returns {games: [...], metadata: {...}}
+		games, ok := response["games"].([]interface{})
+		core.AssertTrue(t, ok, "Response should have games array")
+		core.AssertTrue(t, len(games) >= 1, "Should return at least one game")
 
 		// Find our test game in the response
 		found := false
-		for _, game := range response {
+		for _, g := range games {
+			game := g.(map[string]interface{})
 			if int32(game["id"].(float64)) == createdGame.ID {
 				core.AssertEqual(t, "Public Test Game", game["title"].(string), "Game title should match")
 				found = true
@@ -641,7 +645,6 @@ func setupGameTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 
 				// Game listing and viewing
 				r.Get("/", gameHandler.GetFilteredGames) // Main game listing endpoint with filters
-				r.Get("/public", gameHandler.GetAllGames)
 				r.Get("/recruiting", gameHandler.GetRecruitingGames)
 				r.Get("/{id}", gameHandler.GetGame)
 				r.Get("/{id}/details", gameHandler.GetGameWithDetails)

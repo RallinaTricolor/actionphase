@@ -154,58 +154,6 @@ func (h *Handler) GetGame(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, r, response)
 }
 
-// GetAllGames retrieves all games
-func (h *Handler) GetAllGames(w http.ResponseWriter, r *http.Request) {
-	gameService := &db.GameService{DB: h.App.Pool}
-	games, err := gameService.GetAllGames(r.Context())
-	if err != nil {
-		h.App.Logger.Error("Failed to get all games", "error", err)
-		render.Render(w, r, core.ErrInternalError(err))
-		return
-	}
-
-	h.App.Logger.Info("GetAllGames returned", "count", len(games))
-
-	// Convert to response format
-	var response []map[string]interface{}
-	for _, game := range games {
-		gameData := map[string]interface{}{
-			"id":          game.ID,
-			"title":       game.Title,
-			"description": game.Description,
-			"gm_user_id":  game.GmUserID,
-			"gm_username": game.GmUsername,
-			"state":       game.State,
-			"created_at":  game.CreatedAt.Time,
-			"updated_at":  game.UpdatedAt.Time,
-		}
-
-		if game.Genre.Valid {
-			gameData["genre"] = game.Genre.String
-		}
-		if game.StartDate.Valid {
-			gameData["start_date"] = game.StartDate.Time
-		}
-		if game.EndDate.Valid {
-			gameData["end_date"] = game.EndDate.Time
-		}
-		if game.RecruitmentDeadline.Valid {
-			gameData["recruitment_deadline"] = game.RecruitmentDeadline.Time
-		}
-		if game.MaxPlayers.Valid {
-			gameData["max_players"] = game.MaxPlayers.Int32
-		}
-		if game.IsPublic.Valid {
-			gameData["is_public"] = game.IsPublic.Bool
-		}
-
-		response = append(response, gameData)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}
-
 // GetAllGamesDebug performs a direct SQL query for debugging
 func (h *Handler) GetAllGamesDebug(w http.ResponseWriter, r *http.Request) {
 	// Direct SQL query to bypass SQLC

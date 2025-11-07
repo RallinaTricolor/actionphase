@@ -12,13 +12,6 @@ SELECT * FROM games WHERE id = $1;
 -- name: GetGamesByGM :many
 SELECT * FROM games WHERE gm_user_id = $1 ORDER BY created_at DESC;
 
--- name: GetAllGames :many
-SELECT games.*, COALESCE(users.username, 'Unknown') as gm_username
-FROM games
-LEFT JOIN users ON games.gm_user_id = users.id
-WHERE games.is_public = true
-ORDER BY games.id DESC;
-
 -- name: GetGamesByUser :many
 SELECT g.*, gp.role as user_role, u.username as gm_username
 FROM games g

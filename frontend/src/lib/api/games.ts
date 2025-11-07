@@ -167,11 +167,11 @@ export class GamesApi extends BaseApiClient {
       ? `/api/v1/games/${gameId}/private-messages/all?${queryString}`
       : `/api/v1/games/${gameId}/private-messages/all`;
 
-    return this.client.get<{ conversations: any[]; total: number }>(url);
+    return this.client.get<{ conversations: import('../types/conversations').AudienceConversationListItem[]; total: number }>(url);
   }
 
   async getAudienceConversationMessages(gameId: number, conversationId: string) {
-    return this.client.get<{ messages: any[] }>(`/api/v1/games/${gameId}/private-messages/conversations/${conversationId}`);
+    return this.client.get<{ messages: import('../types/conversations').AudienceConversationMessage[] }>(`/api/v1/games/${gameId}/private-messages/conversations/${conversationId}`);
   }
 
   async listAllActionSubmissions(gameId: number, options?: { limit?: number; offset?: number; phaseId?: number }) {

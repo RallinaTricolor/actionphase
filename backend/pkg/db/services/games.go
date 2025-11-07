@@ -93,11 +93,6 @@ func (gs *GameService) GetGamesByUser(ctx context.Context, userID int32) ([]mode
 	return queries.GetGamesByUser(ctx, userID)
 }
 
-func (gs *GameService) GetAllGames(ctx context.Context) ([]models.GetAllGamesRow, error) {
-	queries := models.New(gs.DB)
-	return queries.GetAllGames(ctx)
-}
-
 func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newState string) (*models.Game, error) {
 	queries := models.New(gs.DB)
 

@@ -453,7 +453,7 @@ ORDER BY posts.created_at DESC;
 
 -- name: ListAllPrivateConversations :many
 -- List all private message conversations in a game (for audience/GM)
--- Returns all conversations with metadata and participant information
+-- Returns all conversations with metadata, participant information, and last message preview
 WITH conversation_messages AS (
   SELECT
     c.id as conversation_id,
@@ -476,6 +476,22 @@ participants_agg AS (
   JOIN users u ON cp.user_id = u.id
   LEFT JOIN characters ch ON cp.character_id = ch.id
   GROUP BY cp.conversation_id
+),
+last_messages AS (
+  -- Get the most recent message for each conversation with sender info
+  SELECT DISTINCT ON (pm.conversation_id)
+    pm.conversation_id,
+    LEFT(pm.content, 150) as last_message_content,
+    COALESCE(c.name, u.username) as last_sender_name,
+    u.username as last_sender_username,
+    c.avatar_url as last_sender_avatar_url
+  FROM private_messages pm
+  JOIN users u ON pm.sender_user_id = u.id
+  LEFT JOIN characters c ON pm.sender_character_id = c.id
+  WHERE pm.conversation_id IN (
+    SELECT id FROM conversations WHERE game_id = $1
+  )
+  ORDER BY pm.conversation_id, pm.created_at DESC
 )
 SELECT
   cm.conversation_id,
@@ -485,9 +501,14 @@ SELECT
   cm.message_count,
   cm.latest_message_at as last_message_at,
   pa.participant_names,
-  pa.participant_usernames
+  pa.participant_usernames,
+  lm.last_message_content,
+  lm.last_sender_name,
+  lm.last_sender_username,
+  lm.last_sender_avatar_url
 FROM conversation_messages cm
 LEFT JOIN participants_agg pa ON cm.conversation_id = pa.conversation_id
+LEFT JOIN last_messages lm ON cm.conversation_id = lm.conversation_id
 ORDER BY cm.latest_message_at DESC NULLS LAST;
 
 -- name: GetAudienceConversationMessages :many

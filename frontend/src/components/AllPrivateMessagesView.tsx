@@ -6,6 +6,10 @@ import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
 import { MarkdownPreview } from './MarkdownPreview';
 import CharacterAvatar from './CharacterAvatar';
+import { AudienceConversationCard } from './audience/AudienceConversationCard';
+import { AudienceConversationHeader } from './audience/AudienceConversationHeader';
+import type { AudienceConversationListItem } from '../types/conversations';
+import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 
 interface AllPrivateMessagesViewProps {
   gameId: number;
@@ -112,10 +116,15 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
 
   // If a conversation is selected, show the message viewer
   if (selectedConversationId) {
+    const selectedConversation = allConversations.find(
+      (conv: AudienceConversationListItem) => String(conv.conversation_id) === selectedConversationId
+    );
+
     return (
       <MessageViewer
         gameId={gameId}
         conversationId={selectedConversationId}
+        conversation={selectedConversation}
         messages={messages}
         isLoading={messagesLoading}
         error={messagesError}
@@ -217,13 +226,13 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
           )}
         </div>
       ) : (
-        <div className="border border-border-primary rounded-lg overflow-hidden divide-y divide-border-primary">
-          {filteredConversations.map((conversation: any) => (
-            <ConversationCard
+        <div className="space-y-3">
+          {filteredConversations.map((conversation: AudienceConversationListItem) => (
+            <AudienceConversationCard
               key={conversation.conversation_id}
               conversation={conversation}
-              isSelected={selectedConversationId === conversation.conversation_id}
-              onSelect={() => setSelectedConversationId(conversation.conversation_id)}
+              isSelected={selectedConversationId === String(conversation.conversation_id)}
+              onClick={() => setSelectedConversationId(String(conversation.conversation_id))}
             />
           ))}
 
@@ -246,124 +255,13 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
 }
 
 /**
- * Individual conversation card component - designed to match ConversationList style
- */
-function ConversationCard({
-  conversation,
-  isSelected,
-  onSelect,
-}: {
-  conversation: any;
-  isSelected: boolean;
-  onSelect: () => void;
-}) {
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
-  };
-
-  // Handle both array format (new) and individual fields format (old)
-  const participantNames = conversation.participant_names || [
-    conversation.from_character_name,
-    conversation.to_character_name
-  ].filter(Boolean);
-
-  const participantUsernames = conversation.participant_usernames || [
-    conversation.from_username,
-    conversation.to_username
-  ].filter(Boolean);
-
-  return (
-    <button
-      onClick={onSelect}
-      className={`
-        w-full text-left p-3 md:p-4 transition-colors cursor-pointer
-        ${isSelected ? 'bg-interactive-primary-subtle border-l-4 border-interactive-primary' : 'hover:bg-bg-tertiary'}
-      `}
-    >
-      {/* Mobile: Vertical Stack Layout */}
-      <div className="md:hidden space-y-2">
-        {/* Participants */}
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-base text-content-primary truncate">
-            {participantNames.join(' • ')}
-          </h3>
-          <Badge variant="neutral" size="sm" className="flex-shrink-0">
-            {conversation.message_count}
-          </Badge>
-        </div>
-
-        {/* Subject (if present) */}
-        {conversation.subject && (
-          <p className="text-sm text-content-primary italic truncate">
-            "{conversation.subject}"
-          </p>
-        )}
-
-        {/* Usernames + Timestamp */}
-        <div className="flex items-center justify-between text-xs">
-          <p className="text-content-secondary truncate">
-            {participantUsernames.join(' • ')}
-          </p>
-          <span className="flex-shrink-0 text-content-tertiary ml-2">
-            {formatDate(conversation.last_message_at || conversation.created_at)}
-          </span>
-        </div>
-      </div>
-
-      {/* Desktop: Horizontal Layout (Original) */}
-      <div className="hidden md:flex items-start justify-between gap-4">
-        {/* Main content */}
-        <div className="flex-1 min-w-0">
-          {/* Participants and message count */}
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-content-primary truncate">
-              {participantNames.join(' • ')}
-            </h3>
-            <Badge variant="neutral" size="sm" className="flex-shrink-0">
-              {conversation.message_count}
-            </Badge>
-          </div>
-
-          {/* Subject (if present) */}
-          {conversation.subject && (
-            <p className="text-sm text-content-primary italic truncate mb-1">
-              "{conversation.subject}"
-            </p>
-          )}
-
-          {/* Usernames */}
-          <p className="text-xs text-content-secondary truncate">
-            {participantUsernames.join(' • ')}
-          </p>
-        </div>
-
-        {/* Timestamp */}
-        <div className="flex-shrink-0 text-xs text-content-tertiary">
-          {formatDate(conversation.last_message_at || conversation.created_at)}
-        </div>
-      </div>
-    </button>
-  );
-}
-
-/**
  * Message viewer component - displays messages for a selected conversation
+ * Features: Date dividers, message grouping, rich header
  */
 function MessageViewer({
   gameId: _gameId,
   conversationId: _conversationId,
+  conversation,
   messages,
   isLoading,
   error,
@@ -371,96 +269,251 @@ function MessageViewer({
 }: {
   gameId: number;
   conversationId: string;
+  conversation?: AudienceConversationListItem;
   messages: any[] | undefined;
   isLoading: boolean;
   error: Error | null;
   onBack: () => void;
 }) {
-  const formatTimestamp = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
+  // Format date for dividers
+  const formatDateDivider = (date: Date): string => {
+    if (isToday(date)) return 'Today';
+    if (isYesterday(date)) return 'Yesterday';
+    return format(date, 'MMMM d, yyyy');
   };
 
-  return (
-    <div className="space-y-4">
-      {/* Header with back button */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          ← Back to conversations
-        </Button>
-        <Badge variant="primary" size="sm">
-          Read-Only
-        </Badge>
+  // Format timestamp for message
+  const formatTimestamp = (dateString: string) => {
+    const date = new Date(dateString);
+    return format(date, 'h:mm a');
+  };
+
+  // Group messages by date and consecutive sender
+  const groupedMessages = useMemo(() => {
+    if (!messages || messages.length === 0) return [];
+
+    const groups: Array<{
+      date: Date;
+      messageGroups: Array<{
+        senderId: number | undefined;
+        senderName: string;
+        senderUsername: string;
+        senderAvatar: string | null;
+        messages: any[];
+      }>;
+    }> = [];
+
+    let currentDate: Date | null = null;
+    let currentSenderId: number | undefined = undefined;
+    let currentMessageGroup: any[] = [];
+    let currentSenderName = '';
+    let currentSenderUsername = '';
+    let currentSenderAvatar: string | null = null;
+
+    messages.forEach((message, index) => {
+      const messageDate = new Date(message.created_at);
+      const isNewDate = !currentDate || !isSameDay(currentDate, messageDate);
+      const isNewSender = message.sender_user_id !== currentSenderId;
+
+      // Start new date group
+      if (isNewDate) {
+        // Save previous message group if exists
+        if (currentMessageGroup.length > 0) {
+          const lastGroup = groups[groups.length - 1];
+          if (lastGroup) {
+            lastGroup.messageGroups.push({
+              senderId: currentSenderId,
+              senderName: currentSenderName,
+              senderUsername: currentSenderUsername,
+              senderAvatar: currentSenderAvatar,
+              messages: currentMessageGroup,
+            });
+          }
+        }
+
+        currentDate = messageDate;
+        groups.push({
+          date: messageDate,
+          messageGroups: [],
+        });
+        currentMessageGroup = [message];
+        currentSenderId = message.sender_user_id;
+        currentSenderName = message.sender_character_name || 'Unknown Character';
+        currentSenderUsername = message.sender_username;
+        currentSenderAvatar = message.sender_avatar_url;
+      }
+      // Start new sender group within same date
+      else if (isNewSender) {
+        // Save previous message group
+        if (currentMessageGroup.length > 0) {
+          groups[groups.length - 1].messageGroups.push({
+            senderId: currentSenderId,
+            senderName: currentSenderName,
+            senderUsername: currentSenderUsername,
+            senderAvatar: currentSenderAvatar,
+            messages: currentMessageGroup,
+          });
+        }
+
+        currentMessageGroup = [message];
+        currentSenderId = message.sender_user_id;
+        currentSenderName = message.sender_character_name || 'Unknown Character';
+        currentSenderUsername = message.sender_username;
+        currentSenderAvatar = message.sender_avatar_url;
+      }
+      // Same sender, same date - add to current group
+      else {
+        currentMessageGroup.push(message);
+      }
+
+      // Handle last message
+      if (index === messages.length - 1 && currentMessageGroup.length > 0) {
+        groups[groups.length - 1].messageGroups.push({
+          senderId: currentSenderId,
+          senderName: currentSenderName,
+          senderUsername: currentSenderUsername,
+          senderAvatar: currentSenderAvatar,
+          messages: currentMessageGroup,
+        });
+      }
+    });
+
+    return groups;
+  }, [messages]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Spinner size="lg" />
       </div>
+    );
+  }
 
-      {/* Loading state */}
-      {isLoading && (
-        <div className="flex justify-center items-center py-12">
-          <Spinner size="lg" />
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            ← Back to conversations
+          </Button>
         </div>
-      )}
-
-      {/* Error state */}
-      {error && (
         <Alert variant="danger">
           Failed to load messages: {error.message}
         </Alert>
-      )}
+      </div>
+    );
+  }
+
+  // No conversation selected (shouldn't happen but handle gracefully)
+  if (!conversation) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            ← Back to conversations
+          </Button>
+        </div>
+        <Alert variant="warning">
+          Conversation not found
+        </Alert>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-0">
+      {/* Conversation Header */}
+      <AudienceConversationHeader
+        conversation={conversation}
+        messageCount={messages?.length || 0}
+        onBack={onBack}
+      />
 
       {/* Messages */}
-      {!isLoading && !error && messages && (
-        <div className="border border-border-primary rounded-lg bg-bg-primary">
-          {messages.length === 0 ? (
-            <div className="text-center py-12 text-content-secondary">
-              <p className="text-lg mb-2">No messages yet</p>
-              <p className="text-sm">This conversation has no messages</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border-primary">
-              {messages.map((message: any) => (
-                <div key={message.id} className="p-4">
-                  {/* Message header */}
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div className="flex items-center gap-3">
-                      {/* Avatar */}
-                      <CharacterAvatar
-                        avatarUrl={message.sender_avatar_url}
-                        characterName={message.sender_character_name || message.sender_username}
-                        size="md"
-                      />
-                      {/* Sender info */}
-                      <div>
-                        <div className="font-semibold text-content-primary">
-                          {message.sender_character_name || 'Unknown Character'}
+      <div className="p-4">
+        {!messages || messages.length === 0 ? (
+          <div className="text-center py-12 text-content-secondary">
+            <p className="text-lg mb-2">No messages yet</p>
+            <p className="text-sm">This conversation has no messages</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {groupedMessages.map((dateGroup, dateIndex) => (
+              <div key={dateIndex}>
+                {/* Date Divider */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 h-px bg-border-primary"></div>
+                  <div className="text-xs font-semibold text-content-secondary uppercase tracking-wide">
+                    {formatDateDivider(dateGroup.date)}
+                  </div>
+                  <div className="flex-1 h-px bg-border-primary"></div>
+                </div>
+
+                {/* Message Groups for this date */}
+                <div className="space-y-4">
+                  {dateGroup.messageGroups.map((messageGroup, groupIndex) => (
+                    <div key={groupIndex} className="flex gap-3">
+                      {/* Avatar (shown once per group) */}
+                      <div className="flex-shrink-0">
+                        <CharacterAvatar
+                          avatarUrl={messageGroup.senderAvatar}
+                          characterName={messageGroup.senderName}
+                          size="md"
+                        />
+                      </div>
+
+                      {/* Message group */}
+                      <div className="flex-1 min-w-0">
+                        {/* Sender info (shown once per group) */}
+                        <div className="flex items-baseline gap-2 mb-2">
+                          <span className="font-semibold text-content-primary">
+                            {messageGroup.senderName}
+                          </span>
+                          <span className="text-xs text-content-secondary">
+                            {messageGroup.senderUsername}
+                          </span>
+                          <span className="text-xs text-content-tertiary">
+                            {formatTimestamp(messageGroup.messages[0].created_at)}
+                          </span>
                         </div>
-                        <div className="text-xs text-content-secondary">
-                          {message.sender_username}
+
+                        {/* Messages from this sender */}
+                        <div className="space-y-2">
+                          {messageGroup.messages.map((message: any, msgIndex: number) => (
+                            <div key={message.id}>
+                              {/* Show timestamp for subsequent messages if more than 5 minutes apart */}
+                              {msgIndex > 0 && (
+                                (() => {
+                                  const prevTime = new Date(messageGroup.messages[msgIndex - 1].created_at).getTime();
+                                  const currTime = new Date(message.created_at).getTime();
+                                  const minutesDiff = (currTime - prevTime) / (1000 * 60);
+
+                                  return minutesDiff > 5 ? (
+                                    <div className="text-[10px] text-content-tertiary opacity-60 mt-1 mb-0.5 pl-0.5">
+                                      {formatTimestamp(message.created_at)}
+                                    </div>
+                                  ) : null;
+                                })()
+                              )}
+
+                              {/* Message content */}
+                              <div className="prose prose-sm max-w-none text-content-primary">
+                                <MarkdownPreview content={message.content} />
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>
-                    {/* Timestamp */}
-                    <div className="text-xs text-content-tertiary whitespace-nowrap">
-                      {formatTimestamp(message.created_at)}
-                    </div>
-                  </div>
-
-                  {/* Message content */}
-                  <div className="prose prose-sm max-w-none">
-                    <MarkdownPreview content={message.content} />
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
