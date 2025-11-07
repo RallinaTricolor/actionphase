@@ -78,32 +78,43 @@ else
     echo -e "${GREEN}✓ DH parameters already exist${NC}"
 fi
 
-# Create temporary nginx configuration for Let's Encrypt challenge
-echo -e "${BLUE}Creating temporary nginx configuration...${NC}"
-cat > ./nginx/conf.d/letsencrypt.conf << EOF
-server {
-    listen 80;
-    server_name $DOMAIN www.$DOMAIN;
+# Ensure nginx is running with HTTP-only config for Let's Encrypt validation
+echo -e "${BLUE}Preparing nginx for certificate validation...${NC}"
 
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
+# Check if nginx is running
+if ! docker ps | grep -q actionphase-nginx; then
+    echo -e "${YELLOW}Nginx not running. Starting with HTTP-only configuration...${NC}"
 
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
-EOF
+    # Stop any existing nginx container
+    docker rm -f actionphase-nginx 2>/dev/null || true
 
-# Start nginx if not running
-echo -e "${BLUE}Starting nginx for certificate validation...${NC}"
-if docker-compose -f docker-compose.yml -f docker-compose.prod.yml ps | grep -q nginx; then
-    docker-compose -f docker-compose.yml -f docker-compose.prod.yml restart nginx
+    # Create Docker volumes if they don't exist
+    docker volume create actionphase_certbot-webroot 2>/dev/null || true
+    docker volume create actionphase_letsencrypt 2>/dev/null || true
+
+    # Start nginx with HTTP-only config
+    docker run -d \
+        --name actionphase-nginx \
+        --network actionphase_actionphase-network \
+        -p 80:80 \
+        -v "$(pwd)/nginx/nginx.http-only.conf:/etc/nginx/nginx.conf:ro" \
+        -v "$(pwd)/nginx/conf.d:/etc/nginx/conf.d:ro" \
+        -v actionphase_certbot-webroot:/var/www/certbot:rw \
+        -v actionphase_letsencrypt:/etc/letsencrypt:rw \
+        --restart unless-stopped \
+        nginx:alpine
+
+    sleep 5
 else
-    docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d nginx
+    echo -e "${GREEN}✓ Nginx is already running${NC}"
 fi
 
-sleep 5
+# Verify nginx is responding on port 80
+if ! curl -f -s http://localhost/health > /dev/null 2>&1; then
+    echo -e "${YELLOW}⚠️  Warning: Nginx health check failed${NC}"
+    echo "Checking nginx logs:"
+    docker logs --tail 20 actionphase-nginx
+fi
 
 # Get SSL certificate
 echo -e "${BLUE}Obtaining SSL certificate from Let's Encrypt...${NC}"
@@ -192,11 +203,28 @@ server {
 }
 EOF
 
-# Restart nginx with new configuration
-echo -e "${BLUE}Restarting nginx with SSL configuration...${NC}"
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml restart nginx
+# Switch nginx to full SSL configuration
+echo -e "${BLUE}Switching to full SSL nginx configuration...${NC}"
 
-sleep 5
+# Stop the HTTP-only nginx container
+docker stop actionphase-nginx 2>/dev/null || true
+docker rm actionphase-nginx 2>/dev/null || true
+
+# Start nginx with full SSL configuration using docker-compose
+echo -e "${BLUE}Starting nginx with SSL support...${NC}"
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d nginx
+
+sleep 10
+
+# Check if nginx started successfully
+if docker ps | grep -q actionphase-nginx; then
+    echo -e "${GREEN}✓ Nginx started with SSL configuration${NC}"
+else
+    echo -e "${RED}❌ Failed to start nginx with SSL configuration${NC}"
+    echo "Checking logs:"
+    docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail 30 nginx
+    exit 1
+fi
 
 # Test HTTPS
 echo -e "${BLUE}Testing HTTPS connection...${NC}"
