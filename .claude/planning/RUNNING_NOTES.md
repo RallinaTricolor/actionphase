@@ -3,6 +3,3 @@
 - USER AND API DOCS
 - Published results and:
   - Player didn't get a notification
-- Audience view of private messages is pretty basic
-- Email verification access control -- does it actually work?
-- Make all demo data users have verified emails

@@ -116,7 +116,6 @@ func (m *MockSessionRepository) GetSessionsByUser(ctx context.Context, userID in
 type MockGameRepository struct {
 	CreateGameFn         func(ctx context.Context, params db.CreateGameParams) (db.Game, error)
 	GetGameFn            func(ctx context.Context, id int32) (db.Game, error)
-	GetAllGamesFn        func(ctx context.Context) ([]db.GetAllGamesRow, error)
 	GetGamesByUserFn     func(ctx context.Context, userID int32) ([]db.GetGamesByUserRow, error)
 	GetGamesByGMFn       func(ctx context.Context, gmUserID int32) ([]db.Game, error)
 	GetRecruitingGamesFn func(ctx context.Context) ([]db.GetRecruitingGamesRow, error)
@@ -138,13 +137,6 @@ func (m *MockGameRepository) GetGame(ctx context.Context, id int32) (db.Game, er
 		return m.GetGameFn(ctx, id)
 	}
 	return db.Game{}, nil
-}
-
-func (m *MockGameRepository) GetAllGames(ctx context.Context) ([]db.GetAllGamesRow, error) {
-	if m.GetAllGamesFn != nil {
-		return m.GetAllGamesFn(ctx)
-	}
-	return []db.GetAllGamesRow{}, nil
 }
 
 func (m *MockGameRepository) GetGamesByUser(ctx context.Context, userID int32) ([]db.GetGamesByUserRow, error) {

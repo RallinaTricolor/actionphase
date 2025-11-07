@@ -512,39 +512,8 @@ func TestGameService_GetGamesByUser(t *testing.T) {
 	_ = game2
 }
 
-func TestGameService_GetAllGames(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
-	defer testDB.CleanupTables(t, "games", "sessions", "users")
-
-	gameService := &GameService{DB: testDB.Pool}
-
-	// Create test users
-	gm1 := testDB.CreateTestUser(t, "gm1", "gm1@example.com")
-	gm2 := testDB.CreateTestUser(t, "gm2", "gm2@example.com")
-
-	// Create several games
-	game1 := testDB.CreateTestGame(t, int32(gm1.ID), "Public Game 1")
-	game2 := testDB.CreateTestGame(t, int32(gm1.ID), "Public Game 2")
-	game3 := testDB.CreateTestGame(t, int32(gm2.ID), "Public Game 3")
-
-	t.Run("returns all games in the system", func(t *testing.T) {
-		games, err := gameService.GetAllGames(context.Background())
-
-		core.AssertNoError(t, err, "Failed to get all games")
-		core.AssertTrue(t, len(games) >= 3, "Should have at least 3 games")
-
-		// Verify our games are in the list
-		gameIDs := make(map[int32]bool)
-		for _, g := range games {
-			gameIDs[g.ID] = true
-		}
-
-		core.AssertTrue(t, gameIDs[game1.ID], "Game 1 should be in the list")
-		core.AssertTrue(t, gameIDs[game2.ID], "Game 2 should be in the list")
-		core.AssertTrue(t, gameIDs[game3.ID], "Game 3 should be in the list")
-	})
-}
+// TestGameService_GetAllGames removed - GetAllGames method no longer exists.
+// Use GetFilteredGames with empty filters instead.
 
 func TestGameService_GetRecruitingGames(t *testing.T) {
 	testDB := core.NewTestDatabase(t)

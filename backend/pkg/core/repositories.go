@@ -32,7 +32,6 @@ type SessionRepository interface {
 type GameRepository interface {
 	CreateGame(ctx context.Context, params db.CreateGameParams) (db.Game, error)
 	GetGame(ctx context.Context, id int32) (db.Game, error)
-	GetAllGames(ctx context.Context) ([]db.GetAllGamesRow, error)
 	GetGamesByUser(ctx context.Context, userID int32) ([]db.GetGamesByUserRow, error)
 	GetGamesByGM(ctx context.Context, gmUserID int32) ([]db.Game, error)
 	GetRecruitingGames(ctx context.Context) ([]db.GetRecruitingGamesRow, error)

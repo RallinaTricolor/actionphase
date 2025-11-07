@@ -142,7 +142,6 @@ func (h *Handler) Start() {
 			r.Use(core.RequireAuthenticationMiddleware(userService))
 
 			// Game listing and viewing
-			r.Get("/public", gameHandler.GetAllGames)
 			r.Get("/recruiting", gameHandler.GetRecruitingGames)
 			r.Get("/{id}", gameHandler.GetGame)
 			r.Get("/{id}/details", gameHandler.GetGameWithDetails)

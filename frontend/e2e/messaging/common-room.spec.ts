@@ -680,7 +680,7 @@ test.describe('Common Room Flow', () => {
     // This validates the cache update fix for comment character swaps
     await loginAs(page, 'GM');
 
-    const gameId = getWorkerGameId(339); // Co-GM management fixture with NPCs
+    const gameId = await getFixtureGameId(page, 'CO_GM_MANAGEMENT'); // Co-GM management fixture with NPCs
     const commonRoom = new CommonRoomPage(page);
     await commonRoom.goto(gameId);
 

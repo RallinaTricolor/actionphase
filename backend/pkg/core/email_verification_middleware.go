@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -49,20 +50,26 @@ func RequireEmailVerificationMiddleware(pool *pgxpool.Pool) func(http.Handler) h
 				return
 			}
 
-			// Get user ID from JWT token
+			// Get user ID from JWT token (stored in "sub" claim)
 			token, _, err := jwtauth.FromContext(r.Context())
 			if err != nil {
 				render.Render(w, r, ErrUnauthorized("invalid token"))
 				return
 			}
 
-			userIDFloat, ok := token.Get("user_id")
+			userIDStr, ok := token.Get("sub")
 			if !ok {
-				render.Render(w, r, ErrUnauthorized("user_id not found in token"))
+				render.Render(w, r, ErrUnauthorized("user id not found in token"))
 				return
 			}
 
-			userID := int32(userIDFloat.(float64))
+			// Parse user ID string to int32
+			var userID int32
+			_, err = fmt.Sscanf(userIDStr.(string), "%d", &userID)
+			if err != nil || userID == 0 {
+				render.Render(w, r, ErrUnauthorized("invalid user id in token"))
+				return
+			}
 
 			// Get user from database to check email verification status
 			queries := db.New(pool)

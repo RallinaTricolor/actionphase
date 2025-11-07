@@ -88,20 +88,24 @@ SELECT c.*,
        COALESCE(lm.last_message, '') as last_message,
        lm.last_message_at,
        COALESCE(
-           (SELECT STRING_AGG(chars.name, ', ' ORDER BY chars.name)
-            FROM conversation_participants cps
-            LEFT JOIN characters chars ON cps.character_id = chars.id
-            LEFT JOIN games g ON c.game_id = g.id
-            WHERE cps.conversation_id = c.id
-              AND chars.id IS NOT NULL
-              AND (
-                  -- GM sees all participants
-                  g.gm_user_id = $1
-                  -- Non-GM sees only other people's characters
-                  OR (chars.user_id IS NOT NULL AND chars.user_id != $1)
-                  -- Non-GM sees NPCs (characters without user_id)
-                  OR chars.user_id IS NULL
-              )),
+           (SELECT STRING_AGG(name, ', ')
+            FROM (
+                SELECT DISTINCT chars.name
+                FROM conversation_participants cps
+                LEFT JOIN characters chars ON cps.character_id = chars.id
+                LEFT JOIN games g ON c.game_id = g.id
+                WHERE cps.conversation_id = c.id
+                  AND chars.id IS NOT NULL
+                  AND (
+                      -- GM sees all participants
+                      g.gm_user_id = $1
+                      -- Non-GM sees only other people's characters
+                      OR (chars.user_id IS NOT NULL AND chars.user_id != $1)
+                      -- Non-GM sees NPCs (characters without user_id)
+                      OR chars.user_id IS NULL
+                  )
+                ORDER BY chars.name
+            ) unique_participants),
            ''
        )::text as participant_names,
        COALESCE(

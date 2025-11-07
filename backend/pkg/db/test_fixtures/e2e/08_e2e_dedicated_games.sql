@@ -18,6 +18,7 @@ DECLARE
   p2_id INTEGER;
   p3_id INTEGER;
   p4_id INTEGER;
+  audience_id INTEGER;
   -- Hardcoded game IDs for worker offset support
   game_complete_id INT := 350;
   game_cancel_id INT := 351;
@@ -40,6 +41,7 @@ BEGIN
   SELECT id INTO p2_id FROM users WHERE email = 'test_player2@example.com';
   SELECT id INTO p3_id FROM users WHERE email = 'test_player3@example.com';
   SELECT id INTO p4_id FROM users WHERE email = 'test_player4@example.com';
+  SELECT id INTO audience_id FROM users WHERE email = 'test_audience@example.com';
 
   -- ============================================
   -- GAME #350: For Completion Testing
@@ -257,13 +259,14 @@ BEGIN
     NOW()
   );
 
-  -- Add participants
+  -- Add participants (including audience for private message viewing tests)
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
   VALUES
     (game_messages_id, p1_id, 'player', 'active', NOW() - INTERVAL '7 days'),
     (game_messages_id, p2_id, 'player', 'active', NOW() - INTERVAL '7 days'),
     (game_messages_id, p3_id, 'player', 'active', NOW() - INTERVAL '7 days'),
-    (game_messages_id, p4_id, 'player', 'active', NOW() - INTERVAL '7 days');
+    (game_messages_id, p4_id, 'player', 'active', NOW() - INTERVAL '7 days'),
+    (game_messages_id, audience_id, 'audience', 'active', NOW() - INTERVAL '7 days');
 
   -- Add characters for messaging
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)

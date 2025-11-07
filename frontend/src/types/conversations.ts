@@ -77,3 +77,34 @@ export interface ConversationReadInfo {
   unread_count: number;
   first_unread_message_id?: number;
 }
+
+// Audience viewing types (read-only conversation access for audience members)
+export interface AudienceConversationListItem {
+  conversation_id: number;
+  subject?: string | null;
+  conversation_type: string;
+  created_at: string;
+  message_count: number;
+  last_message_at?: string | null;
+  participant_names: string[];
+  participant_usernames: string[];
+  last_message_content?: string | null;
+  last_sender_name?: string | null;
+  last_sender_username?: string | null;
+  last_sender_avatar_url?: string | null;
+}
+
+export interface AudienceConversationMessage {
+  id: number;
+  conversation_id: number;
+  sender_user_id?: number;
+  sender_character_id?: number;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+  is_deleted: boolean;
+  sender_username: string;
+  sender_character_name?: string | null;
+  sender_avatar_url?: string | null;
+}

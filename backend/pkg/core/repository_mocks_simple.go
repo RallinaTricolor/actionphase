@@ -129,22 +129,6 @@ func (m *SimpleMockGameRepository) GetGame(ctx context.Context, id int32) (db.Ga
 	return db.Game{}, errors.New("game not found")
 }
 
-func (m *SimpleMockGameRepository) GetAllGames(ctx context.Context) ([]db.GetAllGamesRow, error) {
-	rows := make([]db.GetAllGamesRow, 0, len(m.games))
-	for _, game := range m.games {
-		rows = append(rows, db.GetAllGamesRow{
-			ID:          game.ID,
-			Title:       game.Title,
-			Description: game.Description,
-			GmUserID:    game.GmUserID,
-			State:       game.State,
-			CreatedAt:   game.CreatedAt,
-			UpdatedAt:   game.UpdatedAt,
-		})
-	}
-	return rows, nil
-}
-
 func (m *SimpleMockGameRepository) UpdateGameState(ctx context.Context, params db.UpdateGameStateParams) (db.Game, error) {
 	if game, exists := m.games[params.ID]; exists {
 		game.State = params.State

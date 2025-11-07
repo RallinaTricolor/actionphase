@@ -125,8 +125,9 @@ export async function getGameIdByTitle(page: Page, title: string): Promise<numbe
 
   // Use page.evaluate to run fetch in the browser context where cookies are available
   // This ensures HTTP-only JWT cookies are automatically sent with the request
-  const games = await page.evaluate(async () => {
-    const response = await fetch('/api/v1/games/public', {
+  // Use search parameter to filter for the specific game title (API searches title and description)
+  const responseData = await page.evaluate(async (searchTitle) => {
+    const response = await fetch(`/api/v1/games?page_size=100&search=${encodeURIComponent(searchTitle)}`, {
       credentials: 'include',
     });
 
@@ -135,7 +136,10 @@ export async function getGameIdByTitle(page: Page, title: string): Promise<numbe
     }
 
     return response.json();
-  });
+  }, title);
+
+  // Extract games array from response (endpoint returns { games: [...], metadata: {...} })
+  const games = responseData.games || [];
 
   // Filter to only this worker's games (by ID range) and match title
   const game = games.find((g: any) =>

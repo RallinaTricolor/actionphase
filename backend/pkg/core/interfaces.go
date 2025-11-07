@@ -139,9 +139,6 @@ type GameServiceInterface interface {
 	// GetGamesByUser retrieves all games associated with a user
 	GetGamesByUser(ctx context.Context, userID int32) ([]models.GetGamesByUserRow, error)
 
-	// GetAllGames retrieves all games in the system
-	GetAllGames(ctx context.Context) ([]models.GetAllGamesRow, error)
-
 	// UpdateGameState updates the state of a game (setup, recruitment, in_progress, etc.)
 	UpdateGameState(ctx context.Context, gameID int32, newState string) (*models.Game, error)
 
