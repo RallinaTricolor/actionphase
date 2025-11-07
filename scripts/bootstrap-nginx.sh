@@ -32,14 +32,15 @@ docker rm -f actionphase-nginx 2>/dev/null || true
 mkdir -p ./nginx/conf.d
 mkdir -p ./ssl
 
-# Create Docker network if it doesn't exist
-docker network create actionphase_actionphase-network 2>/dev/null || true
+# Ensure docker-compose network exists with proper labels
+echo -e "${BLUE}Creating Docker network and volumes...${NC}"
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --no-start db
 
 # Create Docker volumes if they don't exist
 docker volume create actionphase_certbot-webroot 2>/dev/null || true
 docker volume create actionphase_letsencrypt 2>/dev/null || true
 
-# Start nginx with HTTP-only config
+# Start nginx with HTTP-only config (standalone container for bootstrap)
 echo -e "${BLUE}Starting nginx with HTTP-only configuration...${NC}"
 
 docker run -d \
