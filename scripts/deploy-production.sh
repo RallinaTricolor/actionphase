@@ -126,8 +126,12 @@ if grep -q "nginx:" docker-compose.prod.yml 2>/dev/null; then
     health_check "nginx"
 fi
 
-# Update supporting services
+# Update supporting services (certbot, backup, etc.)
 echo -e "${BLUE}📦 Updating supporting services...${NC}"
+docker-compose ${COMPOSE_FILES} up -d certbot backup
+
+# Ensure all services are running
+echo -e "${BLUE}🔄 Ensuring all services are running...${NC}"
 docker-compose ${COMPOSE_FILES} up -d
 
 # Clean up old images
@@ -149,6 +153,12 @@ echo "=============================="
 SERVICES=("db" "backend" "frontend")
 if grep -q "nginx:" docker-compose.prod.yml 2>/dev/null; then
     SERVICES+=("nginx")
+fi
+if grep -q "certbot:" docker-compose.prod.yml 2>/dev/null; then
+    SERVICES+=("certbot")
+fi
+if grep -q "backup:" docker-compose.prod.yml 2>/dev/null; then
+    SERVICES+=("backup")
 fi
 
 ALL_HEALTHY=true
