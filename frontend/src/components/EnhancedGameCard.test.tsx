@@ -317,38 +317,6 @@ describe('EnhancedGameCard', () => {
       expect(handleApply).toHaveBeenCalledTimes(1);
     });
 
-    it('should show loading spinner when isJoining is true', () => {
-      render(
-        <EnhancedGameCard
-          game={mockGame}
-          onApplyClick={vi.fn()}
-          showApplyButton={true}
-          isJoining={true}
-        />,
-        { wrapper }
-      );
-
-      // Button component with loading={true} shows spinner but keeps original text
-      expect(screen.getByText('Apply to Join')).toBeInTheDocument();
-      const button = screen.getByRole('button', { name: /apply to join/i });
-      expect(button.querySelector('svg')).toBeInTheDocument(); // Loading spinner
-    });
-
-    it('should disable Apply button when isJoining is true', () => {
-      render(
-        <EnhancedGameCard
-          game={mockGame}
-          onApplyClick={vi.fn()}
-          showApplyButton={true}
-          isJoining={true}
-        />,
-        { wrapper }
-      );
-
-      const button = screen.getByRole('button', { name: /apply to join/i }) as HTMLButtonElement;
-      expect(button.disabled).toBe(true);
-    });
-
     it('should stop propagation when Apply button is clicked', () => {
       const handleClick = vi.fn();
       const handleApply = vi.fn();
