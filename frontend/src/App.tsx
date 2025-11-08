@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -12,6 +12,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ReadingModeProvider } from './contexts/ReadingModeContext';
 import { ReadingModeOverlay } from './components/ReadingModeOverlay';
+import { logger } from '@/services/LoggingService';
 
 // Lazy load all page components for better code splitting
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
@@ -193,6 +194,15 @@ function GameDetailsPageWrapper() {
 }
 
 function App() {
+  useEffect(() => {
+    // Log application initialization
+    logger.info('ActionPhase application initialized', {
+      environment: import.meta.env.MODE,
+      baseUrl: import.meta.env.VITE_API_BASE_URL || 'proxy',
+      version: import.meta.env.VITE_APP_VERSION || 'development',
+    });
+  }, []);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { Button } from './ui';
+import { logger } from '@/services/LoggingService';
 
 interface PauseGameConfirmationDialogProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ export function PauseGameConfirmationDialog({
       onClose();
     } catch (error) {
       // Error handling is done by the parent component
-      console.error('Failed to pause game:', error);
+      logger.error('Failed to pause game', { error, gameTitle });
     } finally {
       setIsSubmitting(false);
     }

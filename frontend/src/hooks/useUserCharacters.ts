@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
+import { logger } from '@/services/LoggingService';
 
 export interface UserCharactersResult {
   // User's controllable characters
@@ -33,9 +34,9 @@ export function useUserCharacters(gameId: number): UserCharactersResult {
   } = useQuery({
     queryKey: ['userControllableCharacters', gameId],
     queryFn: async () => {
-      console.log('[useUserCharacters] Fetching controllable characters for gameId:', gameId);
+      logger.debug('Fetching controllable characters', { gameId });
       const response = await apiClient.characters.getUserControllableCharacters(gameId);
-      console.log('[useUserCharacters] Characters loaded:', response.data);
+      logger.debug('Characters loaded', { gameId, count: response.data?.length || 0 });
       return response.data || [];
     },
     enabled: !!gameId,

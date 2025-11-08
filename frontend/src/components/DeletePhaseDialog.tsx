@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal } from './Modal';
 import { Button } from './ui';
 import type { GamePhase } from '../types/phases';
+import { logger } from '@/services/LoggingService';
 
 interface DeletePhaseDialogProps {
   isOpen: boolean;
@@ -37,7 +38,7 @@ export function DeletePhaseDialog({
       // Extract error message from API response
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete phase';
       setError(errorMessage);
-      console.error('Failed to delete phase:', err);
+      logger.error('Failed to delete phase', { error: err, phaseId: phase.id, phaseNumber: phase.phase_number, phaseTitle: phase.title });
     } finally {
       setIsSubmitting(false);
     }

@@ -7,6 +7,7 @@ import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 import type { ConversationListItem } from '../types/conversations';
 import { Button } from './ui';
+import { logger } from '@/services/LoggingService';
 
 interface PrivateMessagesProps {
   gameId: number;
@@ -28,7 +29,7 @@ export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMess
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  console.log('[PrivateMessages] State:', { selectedConversationId, charactersCount: characters.length, gameId });
+  logger.debug('PrivateMessages component state', { selectedConversationId, charactersCount: characters.length, gameId });
 
   // Load conversations for read tracking info
   useEffect(() => {
@@ -47,7 +48,7 @@ export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMess
       });
       setConversations(Array.from(conversationMap.values()));
     } catch (err) {
-      console.error('Failed to load conversations:', err);
+      logger.error('Failed to load conversations', { error: err, gameId });
     }
   };
 
@@ -62,13 +63,13 @@ export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMess
   }, []);
 
   const handleConversationCreated = (conversationId: number) => {
-    console.log('[PrivateMessages] Conversation created:', conversationId);
+    logger.debug('Conversation created', { conversationId, gameId });
     setRefreshKey(prev => prev + 1);
     setSelectedConversationId(conversationId);
   };
 
   const handleSelectConversation = (conversationId: number) => {
-    console.log('[PrivateMessages] Conversation selected:', conversationId);
+    logger.debug('Conversation selected', { conversationId, gameId });
     setSelectedConversationId(conversationId);
   };
 

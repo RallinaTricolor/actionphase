@@ -14,6 +14,7 @@ import { Button, Select } from './ui';
 import { ReadingModeToggle } from './ReadingModeToggle';
 import { useReadingMode } from '../contexts/ReadingModeContext';
 import { getRootPostId } from '../utils/commentUtils';
+import { logger } from '@/services/LoggingService';
 
 interface PostCardProps {
   post: Message;
@@ -80,7 +81,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
           }
         } catch (err) {
           if (isMounted) {
-            console.error('Failed to load comments:', err);
+            logger.error('Failed to load comments', { error: err, gameId, postId: post.id });
           }
         } finally {
           if (isMounted) setLoadingComments(false);
@@ -122,7 +123,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       const response = await apiClient.messages.getPostComments(gameId, post.id);
       setTopLevelComments(response.data);
     } catch (err) {
-      console.error('Failed to load comments:', err);
+      logger.error('Failed to reload comments', { error: err, gameId, postId: post.id });
     } finally {
       setLoadingComments(false);
     }
@@ -149,7 +150,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       setShowComments(true);
       await loadComments();
     } catch (err) {
-      console.error('Failed to submit comment:', err);
+      logger.error('Failed to submit comment', { error: err, gameId, postId: post.id, characterId: selectedCharacterId });
     } finally {
       setIsSubmitting(false);
     }

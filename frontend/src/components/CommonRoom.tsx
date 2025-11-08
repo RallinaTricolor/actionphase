@@ -15,6 +15,7 @@ import { RecentResultsSection } from './RecentResultsSection';
 import { usePreviousPhaseResults } from '../hooks/usePreviousPhaseResults';
 import { getRootPostId } from '../utils/commentUtils';
 import { usePolls } from '../hooks';
+import { logger } from '@/services/LoggingService';
 
 // Lazy load PollsTab component
 const PollsTab = lazy(() => import('./PollsTab').then(m => ({ default: m.PollsTab })));
@@ -111,7 +112,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       } else {
         // Comment not found in DOM - likely nested deep (beyond depth 5)
         // Fetch the comment and open it in ThreadViewModal
-        console.log(`[CommonRoom] Comment ${commentIdParam} not found in DOM, fetching and opening modal...`);
+        logger.debug('Comment not found in DOM, fetching and opening modal', { commentId: commentIdParam, gameId });
 
         const fetchAndShowComment = async () => {
           try {
@@ -143,7 +144,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
             newParams.delete('comment');
             setSearchParams(newParams, { replace: true });
           } catch (err) {
-            console.error(`[CommonRoom] Failed to fetch comment ${commentIdParam}:`, err);
+            logger.error('Failed to fetch comment for modal', { error: err, commentId: commentIdParam, gameId });
             // If fetch fails, navigate to ThreadViewPage as fallback
             navigate(`/games/${gameId}/common-room/thread/${commentIdParam}`);
           }
@@ -172,7 +173,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       setControllableCharacters(controllableCharsResponse.data);
       setAllCharacters(allCharsResponse.data);
     } catch (err) {
-      console.error('Failed to load Common Room data:', err);
+      logger.error('Failed to load Common Room data', { error: err, gameId, phaseId });
       setError('Failed to load Common Room. Please try again.');
     } finally {
       setLoading(false);
@@ -190,7 +191,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       // Reload posts to show the new one
       await loadData();
     } catch (err) {
-      console.error('Failed to create post:', err);
+      logger.error('Failed to create post', { error: err, gameId, characterId, phaseId });
       throw new Error('Failed to create post. Please try again.');
     } finally {
       setIsCreatingPost(false);
@@ -206,7 +207,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       // Don't reload all posts - let the individual PostCard/ThreadedComment handle the update
       // This prevents jarring full-page reloads when commenting deep in a thread
     } catch (err) {
-      console.error('Failed to create comment:', err);
+      logger.error('Failed to create comment', { error: err, gameId, postId, characterId });
       throw new Error('Failed to create comment. Please try again.');
     }
   };

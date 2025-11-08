@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { usePolls } from '../hooks';
 import { Button, Input, Textarea, Card, CardBody, Alert, Checkbox } from './ui';
 import type { CreatePollRequest } from '../types/polls';
+import { logger } from '@/services/LoggingService';
 
 interface CreatePollFormProps {
   gameId: number;
@@ -76,7 +77,7 @@ export function CreatePollForm({ gameId, onSuccess, onCancel }: CreatePollFormPr
       await createPollMutation.mutateAsync(request);
       onSuccess();
     } catch (err) {
-      console.error('Failed to create poll:', err);
+      logger.error('Failed to create poll', { error: err, gameId, question, voteAsType });
       setError(err instanceof Error ? err.message : 'Failed to create poll');
     }
   };

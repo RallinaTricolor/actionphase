@@ -7,6 +7,7 @@ import { renderWithProviders } from '../../test-utils/render';
 import { ThreadedComment } from '../ThreadedComment';
 import type { Message } from '../../types/messages';
 import type { Character } from '../../types/characters';
+import { logger } from '@/services/LoggingService';
 
 describe('ThreadedComment', () => {
   const mockGameId = 1;
@@ -1196,7 +1197,7 @@ describe('ThreadedComment', () => {
 
   describe('Error Handling', () => {
     it('handles error when loading replies fails', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
       server.use(
         http.get('/api/v1/games/:gameId/posts/:postId/comments', () => {
@@ -1216,15 +1217,15 @@ describe('ThreadedComment', () => {
       );
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(loggerErrorSpy).toHaveBeenCalled();
       });
 
-      consoleErrorSpy.mockRestore();
+      loggerErrorSpy.mockRestore();
     });
 
     it('handles error when creating reply fails', async () => {
       const user = userEvent.setup();
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
       mockOnCreateReply.mockRejectedValueOnce(new Error('Failed to create reply'));
 
       renderWithProviders(
@@ -1247,13 +1248,13 @@ describe('ThreadedComment', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(loggerErrorSpy).toHaveBeenCalled();
       });
 
       // Form should remain open with content preserved
       expect(screen.getByPlaceholderText(/write a reply/i)).toHaveValue('Test reply');
 
-      consoleErrorSpy.mockRestore();
+      loggerErrorSpy.mockRestore();
     });
   });
 

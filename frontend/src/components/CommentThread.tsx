@@ -3,6 +3,7 @@ import { apiClient } from '../lib/api';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { Button, Select, Textarea, Alert, Badge } from './ui';
+import { logger } from '@/services/LoggingService';
 
 interface CommentThreadProps {
   postId: number;
@@ -46,7 +47,7 @@ export function CommentThread({
       const response = await apiClient.messages.getPostComments(gameId, postId);
       setComments(response.data);
     } catch (err) {
-      console.error('Failed to load comments:', err);
+      logger.error('Failed to load comments', { error: err, gameId, postId });
       setError('Failed to load comments');
     } finally {
       setLoading(false);
@@ -67,7 +68,7 @@ export function CommentThread({
       // Reload comments to show the new one
       await loadComments();
     } catch (err) {
-      console.error('Failed to create comment:', err);
+      logger.error('Failed to create comment', { error: err, gameId, postId, characterId: selectedCharacterId });
       setError('Failed to post comment');
     } finally {
       setIsSubmitting(false);

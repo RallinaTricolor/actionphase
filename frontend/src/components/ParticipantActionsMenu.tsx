@@ -15,6 +15,7 @@ import { Button, Alert } from './ui';
 import { Modal } from './Modal';
 import { usePromoteToCoGM, useDemoteFromCoGM, useRemovePlayer } from '../hooks/usePlayerManagement';
 import type { GameParticipant } from '../types/games';
+import { logger } from '@/services/LoggingService';
 
 interface ParticipantActionsMenuProps {
   gameId: number;
@@ -63,7 +64,7 @@ export function ParticipantActionsMenu({
       setIsOpen(false);
       onSuccess?.();
     } catch (error) {
-      console.error('Failed to promote to co-GM:', error);
+      logger.error('Failed to promote to co-GM', { error, gameId, userId: participant.user_id, username: participant.username });
     }
   };
 
@@ -74,7 +75,7 @@ export function ParticipantActionsMenu({
       setIsOpen(false);
       onSuccess?.();
     } catch (error) {
-      console.error('Failed to demote from co-GM:', error);
+      logger.error('Failed to demote from co-GM', { error, gameId, userId: participant.user_id, username: participant.username });
     }
   };
 
@@ -85,7 +86,7 @@ export function ParticipantActionsMenu({
       setIsOpen(false);
       onSuccess?.();
     } catch (error) {
-      console.error('Failed to remove player:', error);
+      logger.error('Failed to remove player', { error, gameId, userId: participant.user_id, username: participant.username });
     }
   };
 

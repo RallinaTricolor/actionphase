@@ -3,6 +3,7 @@ import { useSubmitVote } from '../hooks';
 import { useUserCharacters } from '../hooks';
 import { Button, Alert, Input, Select } from './ui';
 import type { PollWithOptions, SubmitVoteRequest } from '../types/polls';
+import { logger } from '@/services/LoggingService';
 
 interface PollVotingFormProps {
   poll: PollWithOptions;
@@ -58,7 +59,7 @@ export function PollVotingForm({ poll, onSuccess, onCancel }: PollVotingFormProp
       await submitVoteMutation.mutateAsync(voteData);
       onSuccess();
     } catch (err) {
-      console.error('Failed to submit vote:', err);
+      logger.error('Failed to submit vote', { error: err, pollId: poll.id, gameId: poll.game_id, characterId: selectedCharacterId });
       setError(err instanceof Error ? err.message : 'Failed to submit vote');
     }
   };

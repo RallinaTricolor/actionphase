@@ -5,6 +5,7 @@ import type { GameWithDetails, GameParticipant } from '../types/games';
 import type { Character } from '../types/characters';
 import { useAuth } from './AuthContext';
 import { useAdminMode } from './AdminModeContext';
+import { logger } from '@/services/LoggingService';
 
 export type UserGameRole = 'gm' | 'player' | 'co_gm' | 'audience' | 'none';
 
@@ -55,9 +56,9 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
   } = useQuery({
     queryKey: ['gameDetails', gameId],
     queryFn: async () => {
-      console.log('[GameContext] Fetching game details for gameId:', gameId);
+      logger.debug('Fetching game details', { gameId });
       const response = await apiClient.games.getGameWithDetails(gameId);
-      console.log('[GameContext] Game details loaded:', response.data);
+      logger.debug('Game details loaded', { gameId, gameTitle: response.data.title, state: response.data.state });
       return response.data;
     },
     enabled: !!gameId,
@@ -72,9 +73,9 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
   } = useQuery({
     queryKey: ['gameParticipants', gameId],
     queryFn: async () => {
-      console.log('[GameContext] Fetching participants for gameId:', gameId);
+      logger.debug('Fetching game participants', { gameId });
       const response = await apiClient.games.getGameParticipants(gameId);
-      console.log('[GameContext] Participants loaded:', response.data);
+      logger.debug('Participants loaded', { gameId, participantCount: response.data?.length || 0 });
       return response.data || [];
     },
     enabled: !!gameId,
@@ -89,9 +90,9 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
   } = useQuery({
     queryKey: ['userControllableCharacters', gameId],
     queryFn: async () => {
-      console.log('[GameContext] Fetching controllable characters for gameId:', gameId);
+      logger.debug('Fetching controllable characters', { gameId, currentUserId });
       const response = await apiClient.characters.getUserControllableCharacters(gameId);
-      console.log('[GameContext] User characters loaded:', response.data);
+      logger.debug('User characters loaded', { gameId, characterCount: response.data?.length || 0 });
       return response.data || [];
     },
     enabled: !!gameId && !!currentUserId,
@@ -104,20 +105,20 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
 
     // Check if user is GM
     if (game.gm_user_id === currentUserId) {
-      console.log('[GameContext] User is GM');
+      logger.debug('User is GM', { gameId, currentUserId });
       return 'gm';
     }
 
     // Check participant role
     const participant = participants?.find(p => p.user_id === currentUserId);
     if (participant) {
-      console.log('[GameContext] User is participant with role:', participant.role);
+      logger.debug('User is participant', { gameId, currentUserId, role: participant.role });
       return participant.role as UserGameRole;
     }
 
-    console.log('[GameContext] User has no role in this game');
+    logger.debug('User has no role in game', { gameId, currentUserId });
     return 'none';
-  }, [currentUserId, game, participants]);
+  }, [currentUserId, game, participants, gameId]);
 
   // Compute permission flags
   const isGM = useMemo(() => {
@@ -146,7 +147,7 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
 
   // Refresh all game data
   const refetchGameData = async () => {
-    console.log('[GameContext] Refetching all game data');
+    logger.debug('Refetching all game data', { gameId });
     await Promise.all([
       refetchGame(),
       refetchParticipants(),
@@ -170,7 +171,7 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     refetchGameData,
   };
 
-  console.log('[GameContext] Context state:', {
+  logger.debug('GameContext state updated', {
     gameId,
     hasGame: !!game,
     gameState: game?.state,

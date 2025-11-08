@@ -8,6 +8,7 @@ import { AssignNPCModal } from './AssignNPCModal';
 import { Modal } from './Modal';
 import { Card, Button, Badge, Spinner, type BadgeVariant } from './ui';
 import CharacterAvatar from './CharacterAvatar';
+import { logger } from '@/services/LoggingService';
 
 interface CharactersListProps {
   gameId: number;
@@ -63,7 +64,7 @@ export function CharactersList({
     },
     onError: (error: any) => {
       // Error will be displayed in the confirmation modal
-      console.error('Failed to delete character:', error);
+      logger.error('Failed to delete character', { error, gameId, characterId: characterToDelete?.id, characterName: characterToDelete?.name });
     }
   });
 

@@ -10,6 +10,7 @@ import { Button, Input } from './ui';
 import { Modal } from './Modal';
 import { useAddPlayer } from '../hooks/usePlayerManagement';
 import { apiClient } from '../lib/api';
+import { logger } from '@/services/LoggingService';
 
 interface AddPlayerModalProps {
   gameId: number;
@@ -49,7 +50,7 @@ export function AddPlayerModal({ gameId, isOpen, onClose, onSuccess }: AddPlayer
         setSearchResults(response.data.users);
         setShowDropdown(true);
       } catch (error) {
-        console.error('Failed to search users:', error);
+        logger.error('Failed to search users', { error, searchQuery });
         setSearchResults([]);
       } finally {
         setIsSearching(false);
@@ -91,7 +92,7 @@ export function AddPlayerModal({ gameId, isOpen, onClose, onSuccess }: AddPlayer
       onClose();
       onSuccess?.();
     } catch (error) {
-      console.error('Failed to add player:', error);
+      logger.error('Failed to add player', { error, gameId, userId: selectedUser.id, username: selectedUser.username });
     }
   };
 

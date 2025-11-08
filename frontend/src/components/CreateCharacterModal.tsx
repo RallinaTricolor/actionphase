@@ -5,6 +5,7 @@ import type { CreateCharacterRequest } from '../types/characters';
 import type { GameParticipant } from '../types/games';
 import { Modal } from './Modal';
 import { Input, Button, Alert, Select } from './ui';
+import { logger } from '@/services/LoggingService';
 
 interface CreateCharacterModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ export function CreateCharacterModal({
       setFormData({ name: '', character_type: 'player_character' });
     },
     onError: (error) => {
-      console.error('Failed to create character:', error);
+      logger.error('Failed to create character', { error, gameId, characterName: formData.name, characterType: formData.character_type });
     }
   });
 

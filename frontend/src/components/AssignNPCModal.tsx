@@ -11,6 +11,7 @@ import { useAssignNPC } from '../hooks/useCharacters';
 import { useGameParticipants } from '../hooks/usePlayerManagement';
 import { useAuth } from '../contexts/AuthContext';
 import type { Character } from '../types/characters';
+import { logger } from '@/services/LoggingService';
 
 interface AssignNPCModalProps {
   character: Character;
@@ -55,7 +56,7 @@ export function AssignNPCModal({
       onClose();
       onSuccess?.();
     } catch (error) {
-      console.error('Failed to assign NPC:', error);
+      logger.error('Failed to assign NPC', { error, gameId, characterId: character.id, characterName: character.name, targetUserId });
     }
   };
 

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Button, Input, Textarea, Select, Badge, Card, CardBody, Alert } from '../ui';
 import { useCreateDraftCharacterUpdate } from '../../hooks';
 import type { DraftCharacterUpdate } from '../../types/phases';
+import { logger } from '@/services/LoggingService';
 
 type ModuleType = 'abilities' | 'skills' | 'inventory' | 'currency';
 type FieldType = 'text' | 'number' | 'json';
@@ -116,7 +117,7 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
       setIsAdding(false);
       setError(null);
     } catch (err) {
-      console.error(`Failed to add ${moduleType.slice(0, -1)}:`, err);
+      logger.error(`Failed to add ${moduleType.slice(0, -1)}`, { error: err, gameId, actionResultId, characterId, moduleType, fieldName: formData.fieldName });
       setError(`Failed to add ${moduleType.slice(0, -1)}. Please try again.`);
     }
   };

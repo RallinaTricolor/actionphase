@@ -4,6 +4,7 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
 import { useHandoutComments } from '../hooks/useHandoutComments';
 import type { Handout } from '../types/handouts';
+import { logger } from '@/services/LoggingService';
 
 interface HandoutViewProps {
   gameId: number;
@@ -33,7 +34,7 @@ export function HandoutView({ gameId, handout, isGM, onClose, onEdit }: HandoutV
       await createCommentMutation.mutateAsync({ content: newNoteContent });
       setNewNoteContent(''); // Clear the form on success
     } catch (error) {
-      console.error('Failed to create GM note:', error);
+      logger.error('Failed to create GM note', { error, gameId, handoutId: handout.id, handoutTitle: handout.title });
     } finally {
       setIsSubmitting(false);
     }

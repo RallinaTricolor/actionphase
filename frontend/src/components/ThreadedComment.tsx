@@ -11,6 +11,7 @@ import { useAdminMode } from '../hooks/useAdminMode';
 import { useUpdateComment, useDeleteComment } from '../hooks/useCommentMutations';
 import { useGamePermissions } from '../hooks/useGamePermissions';
 import { ConfirmModal } from './ConfirmModal';
+import { logger } from '@/services/LoggingService';
 
 interface ThreadedCommentProps {
   comment: Message;
@@ -108,7 +109,7 @@ export function ThreadedComment({
         hasLoadedRef.current = true; // Only mark as loaded after successful state update
       }
     } catch (err) {
-      console.error('Failed to load replies:', err);
+      logger.error('Failed to load replies', { error: err, commentId: comment.id, gameId, postId });
     } finally {
       if (isMountedRef.current) {
         setLoadingReplies(false);
@@ -160,7 +161,7 @@ export function ThreadedComment({
         }, 2000);
       }
     } catch (err) {
-      console.error('Failed to copy link:', err);
+      logger.error('Failed to copy link', { error: err, commentId: comment.id });
       // Fallback: show toast with link if both methods fail
       if (isMountedRef.current) {
         showError(`Failed to copy. Link: ${url}`);
@@ -201,7 +202,7 @@ export function ThreadedComment({
       setComment(updatedComment);
       setIsEditing(false);
     } catch (err) {
-      console.error('Failed to update comment:', err);
+      logger.error('Failed to update comment', { error: err, commentId: comment.id, gameId, postId });
       showError('Failed to update comment. Please try again.');
     }
   };
@@ -223,7 +224,7 @@ export function ThreadedComment({
       // Notify parent to reload its replies
       onCommentDeleted?.();
     } catch (err) {
-      console.error('Failed to delete comment:', err);
+      logger.error('Failed to delete comment', { error: err, commentId: comment.id, gameId, postId });
       showError('Failed to delete comment. Please try again.');
     } finally {
       setIsDeleting(false);
@@ -244,19 +245,19 @@ export function ThreadedComment({
 
     try {
       setIsSubmitting(true);
-      console.log('[ThreadedComment] Creating reply to comment:', comment.id);
+      logger.debug('Creating reply to comment', { commentId: comment.id, gameId, postId, characterId: selectedCharacterId });
       await onCreateReply(comment.id, selectedCharacterId, replyContent.trim());
-      console.log('[ThreadedComment] Reply created successfully');
+      logger.debug('Reply created successfully', { commentId: comment.id, gameId, postId });
       setReplyContent('');
       setIsReplying(false);
       // Ensure replies are shown and reload to display the new one
       setShowReplies(true);
-      console.log('[ThreadedComment] Loading replies...');
+      logger.debug('Loading replies after reply creation', { commentId: comment.id, gameId, postId });
       hasLoadedRef.current = false; // Reset so we can reload with new reply
       await loadReplies();
-      console.log('[ThreadedComment] Replies loaded (state may be stale in log)');
+      logger.debug('Replies loaded after reply creation', { commentId: comment.id, gameId, postId });
     } catch (err) {
-      console.error('Failed to submit reply:', err);
+      logger.error('Failed to submit reply', { error: err, commentId: comment.id, gameId, postId });
     } finally {
       setIsSubmitting(false);
     }

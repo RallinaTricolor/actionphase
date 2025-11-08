@@ -10,6 +10,7 @@ import { Button } from './ui';
 import { Modal } from './Modal';
 import { useRemovePlayer } from '../hooks/usePlayerManagement';
 import type { GameParticipant } from '../types/games';
+import { logger } from '@/services/LoggingService';
 
 interface RemovePlayerButtonProps {
   gameId: number;
@@ -27,7 +28,7 @@ export function RemovePlayerButton({ gameId, participant, onSuccess }: RemovePla
       setShowConfirm(false);
       onSuccess?.();
     } catch (error) {
-      console.error('Failed to remove player:', error);
+      logger.error('Failed to remove player', { error, gameId, userId: participant.user_id, username: participant.username });
     }
   };
 

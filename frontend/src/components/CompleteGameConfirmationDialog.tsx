@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { Button, Input } from './ui';
+import { logger } from '@/services/LoggingService';
 
 interface CompleteGameConfirmationDialogProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export function CompleteGameConfirmationDialog({
       onClose();
     } catch (error) {
       // Error handling is done by the parent component
-      console.error('Failed to complete game:', error);
+      logger.error('Failed to complete game', { error, gameTitle });
     } finally {
       setIsSubmitting(false);
       setConfirmText(''); // Reset on close

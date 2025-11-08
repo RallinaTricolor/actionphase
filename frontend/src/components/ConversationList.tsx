@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import type { ConversationListItem } from '../types/conversations';
 import { Button } from './ui';
+import { logger } from '@/services/LoggingService';
 
 interface ConversationListProps {
   gameId: number;
@@ -24,7 +25,7 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
       setLoading(true);
       setError(null);
       const response = await apiClient.conversations.getUserConversations(gameId);
-      console.log('[ConversationList] Loaded conversations:', response.data.conversations);
+      logger.debug('Loaded conversations', { gameId, count: response.data.conversations?.length || 0 });
 
       // Deduplicate conversations by ID (user may own multiple characters in same conversation)
       const conversationMap = new Map<number, ConversationListItem>();
@@ -35,14 +36,15 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
       });
       const uniqueConversations = Array.from(conversationMap.values());
 
-      console.log('[ConversationList] Deduplicated:', {
+      logger.debug('Deduplicated conversations', {
+        gameId,
         original: response.data.conversations?.length || 0,
         unique: uniqueConversations.length
       });
 
       setConversations(uniqueConversations);
     } catch (err) {
-      console.error('Failed to load conversations:', err);
+      logger.error('Failed to load conversations', { error: err, gameId });
       setError('Failed to load conversations');
     } finally {
       setLoading(false);
@@ -117,7 +119,7 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
           key={conversation.id}
           variant="ghost"
           onClick={() => {
-            console.log('[ConversationList] Clicked conversation:', conversation);
+            logger.debug('Conversation clicked', { conversationId: conversation.id, gameId, title: conversation.title });
             onSelectConversation(conversation.id);
           }}
           className={`w-full justify-start text-left hover:bg-surface-raised transition-colors rounded-none border-l-4 ${

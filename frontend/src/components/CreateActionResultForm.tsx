@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useCreateActionResult } from '../hooks/useActionResults';
 import { useToast } from '../contexts/ToastContext';
 import { Button, Textarea, Checkbox, Alert } from './ui';
+import { logger } from '@/services/LoggingService';
 
 interface CreateActionResultFormProps {
   gameId: number;
@@ -40,7 +41,7 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
       setIsPublished(false);
       onSuccess?.();
     } catch (error) {
-      console.error('Failed to create action result:', error);
+      logger.error('Failed to create action result', { error, gameId, userId, userName, isPublished });
     }
   };
 

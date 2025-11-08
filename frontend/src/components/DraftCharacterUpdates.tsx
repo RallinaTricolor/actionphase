@@ -7,6 +7,7 @@ import {
 } from '../hooks';
 import { Card, CardHeader, CardBody, Button, Input, Select, Badge, Alert, Spinner } from './ui';
 import type { CreateDraftCharacterUpdateRequest, DraftCharacterUpdate } from '../types/phases';
+import { logger } from '@/services/LoggingService';
 
 interface DraftCharacterUpdatesProps {
   gameId: number;
@@ -72,7 +73,7 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
       });
       setIsAddingNew(false);
     } catch (err) {
-      console.error('Failed to create draft:', err);
+      logger.error('Failed to create draft character update', { error: err, gameId, resultId, characterId });
     }
   };
 
@@ -87,7 +88,7 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
       setEditingDraftId(null);
       setEditValue('');
     } catch (err) {
-      console.error('Failed to update draft:', err);
+      logger.error('Failed to update draft character update', { error: err, gameId, resultId, draftId });
     }
   };
 
@@ -103,7 +104,7 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
     try {
       await deleteDraft.mutateAsync(draftId);
     } catch (err) {
-      console.error('Failed to delete draft:', err);
+      logger.error('Failed to delete draft character update', { error: err, gameId, resultId, draftId });
     }
   };
 

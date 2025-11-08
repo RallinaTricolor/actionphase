@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { logger } from '@/services/LoggingService';
 
 export type ReadingModeTheme = 'default' | 'sepia' | 'dark';
 export type ReadingModeFontSize = 'normal' | 'large' | 'xlarge';
@@ -59,7 +60,7 @@ export function ReadingModeProvider({ children }: { children: React.ReactNode })
         };
       }
     } catch (error) {
-      console.error('Failed to load reading mode preferences:', error);
+      logger.error('Failed to load reading mode preferences', { error });
     }
 
     return {
@@ -82,7 +83,7 @@ export function ReadingModeProvider({ children }: { children: React.ReactNode })
         fontSize: state.fontSize,
       }));
     } catch (error) {
-      console.error('Failed to save reading mode preferences:', error);
+      logger.error('Failed to save reading mode preferences', { error });
     }
   }, [state.theme, state.fontSize]);
 

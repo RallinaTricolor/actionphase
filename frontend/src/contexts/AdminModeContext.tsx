@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { logger } from '@/services/LoggingService';
 
 export interface UseAdminModeReturn {
   isAdmin: boolean;
@@ -35,10 +36,10 @@ export function AdminModeProvider({ children }: AdminModeProviderProps) {
       const stored = localStorage.getItem(ADMIN_MODE_STORAGE_KEY);
       if (stored === 'true' && !adminModeEnabled) {
         setAdminModeEnabled(true);
-        console.log('[AdminModeContext] Restored admin mode from localStorage');
+        logger.debug('Restored admin mode from localStorage');
       }
     }
-  }, [isAdmin]);
+  }, [isAdmin, adminModeEnabled]);
 
   // Clear admin mode when user logs out or is no longer admin
   useEffect(() => {
@@ -51,7 +52,7 @@ export function AdminModeProvider({ children }: AdminModeProviderProps) {
   // Toggle admin mode and persist to localStorage
   const toggleAdminMode = useCallback(() => {
     if (!isAdmin) {
-      console.warn('[AdminModeContext] Cannot toggle admin mode: user is not an admin');
+      logger.warn('Cannot toggle admin mode: user is not an admin');
       return;
     }
 
@@ -62,7 +63,7 @@ export function AdminModeProvider({ children }: AdminModeProviderProps) {
       } else {
         localStorage.removeItem(ADMIN_MODE_STORAGE_KEY);
       }
-      console.log('[AdminModeContext] Admin mode toggled:', newValue);
+      logger.info('Admin mode toggled', { enabled: newValue });
       return newValue;
     });
   }, [isAdmin]);
