@@ -12,7 +12,7 @@ DB_NAME=${POSTGRES_DB:-actionphase}
 DB_USER=${POSTGRES_USER:-postgres}
 DB_PASSWORD=${POSTGRES_PASSWORD:-example}
 S3_BUCKET=${S3_BUCKET:-actionphase-backups}
-BACKUP_DIR=${BACKUP_DIR:-/backups}
+BACKUP_DIR=${BACKUP_DIR:-./backups}
 LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
 
 # Ensure backup directory exists
