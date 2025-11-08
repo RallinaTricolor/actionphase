@@ -7,6 +7,7 @@ import { Spinner } from './ui/Spinner';
 import { Alert } from './ui/Alert';
 import { MarkdownPreview } from './MarkdownPreview';
 import { apiClient } from '../lib/api';
+import { logger } from '@/services/LoggingService';
 
 interface AllActionSubmissionsViewProps {
   gameId: number;
@@ -209,7 +210,7 @@ function ActionSubmissionCard({ gameId, submission }: { gameId: number; submissi
           setActionResult(result);
         })
         .catch((err: Error) => {
-          console.error('Failed to load action result:', err);
+          logger.error('Failed to load action result', { error: err, gameId, submissionId: submission.id, actionResultId: submission.action_result_id });
         })
         .finally(() => {
           setLoadingResult(false);

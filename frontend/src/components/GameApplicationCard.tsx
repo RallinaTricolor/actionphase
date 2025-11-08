@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { GameApplication, GameState } from '../types/games';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from '../types/games';
 import { Button } from './ui';
+import { logger } from '@/services/LoggingService';
 
 interface GameApplicationCardProps {
   application: GameApplication;
@@ -37,7 +38,7 @@ export const GameApplicationCard = ({
       setActionLoading(true);
       await onApprove(application.id);
     } catch (error) {
-      console.error('Failed to approve application:', error);
+      logger.error('Failed to approve application', { error, applicationId: application.id, userId: application.user_id, username: application.username });
     } finally {
       setActionLoading(false);
     }
@@ -54,7 +55,7 @@ export const GameApplicationCard = ({
       setActionLoading(true);
       await onReject(application.id);
     } catch (error) {
-      console.error('Failed to reject application:', error);
+      logger.error('Failed to reject application', { error, applicationId: application.id, userId: application.user_id, username: application.username });
     } finally {
       setActionLoading(false);
     }

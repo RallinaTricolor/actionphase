@@ -11,6 +11,7 @@ import {
   ERROR_MESSAGES,
   STATUS_CODE_TO_ERROR_TYPE
 } from '../types/errors';
+import { logger } from '@/services/LoggingService';
 
 /**
  * Creates a standardized AppError from various error sources
@@ -207,6 +208,7 @@ export function getRecoveryActions(error: AppError): string[] {
 
 /**
  * Logs an error with appropriate level and context
+ * Uses LoggingService for structured logging with correlation ID tracking
  */
 export function logError(error: AppError, additionalContext?: Record<string, unknown>): void {
   const logData = {
@@ -223,16 +225,16 @@ export function logError(error: AppError, additionalContext?: Record<string, unk
   switch (severity) {
     case ErrorSeverity.CRITICAL:
     case ErrorSeverity.HIGH:
-      console.error('[ERROR]', logData);
+      logger.error('Application error', logData);
       break;
     case ErrorSeverity.MEDIUM:
-      console.warn('[WARN]', logData);
+      logger.warn('Application warning', logData);
       break;
     case ErrorSeverity.LOW:
-      console.info('[INFO]', logData);
+      logger.info('Application info', logData);
       break;
     default:
-      console.log('[LOG]', logData);
+      logger.debug('Application debug', logData);
   }
 }
 

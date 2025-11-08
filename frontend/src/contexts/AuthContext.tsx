@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { LoginRequest, RegisterRequest, User } from '../types/auth';
+import { logger } from '@/services/LoggingService';
 
 interface AuthContextValue {
   // User data
@@ -44,13 +45,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   } = useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
-      console.log('[AuthContext] Checking authentication via /auth/me');
+      logger.debug('Checking authentication via /auth/me');
       try {
         const response = await apiClient.auth.getCurrentUser();
-        console.log('[AuthContext] Authentication successful:', response.data);
+        logger.debug('Authentication successful', { userId: response.data.id, username: response.data.username });
         return response.data;
       } catch (error) {
-        console.log('[AuthContext] Not authenticated');
+        logger.debug('Not authenticated');
         throw error;
       }
     },
@@ -65,7 +66,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Log user error if it occurs
   useEffect(() => {
     if (userError) {
-      console.error('[AuthContext] Failed to load user data:', userError);
+      logger.error('Failed to load user data', { error: userError });
       setAuthError(userError as Error);
     }
   }, [userError]);
@@ -73,13 +74,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (data: LoginRequest) => {
-      console.log('[AuthContext] Attempting login');
+      logger.debug('Attempting login', { username: data.username });
       const response = await apiClient.auth.login(data);
       return response;
     },
     onSuccess: (response) => {
       const token = response.data.Token || response.data.token;
-      console.log('[AuthContext] Login successful, token received:', !!token);
+      logger.info('Login successful', { hasToken: !!token });
 
       if (token) {
         apiClient.setAuthToken(token);
@@ -89,7 +90,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     },
     onError: (error: Error) => {
-      console.error('[AuthContext] Login failed:', error);
+      logger.error('Login failed', { error });
       setAuthError(error);
     },
   });
@@ -97,13 +98,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterRequest) => {
-      console.log('[AuthContext] Attempting registration');
+      logger.debug('Attempting registration', { username: data.username, email: data.email });
       const response = await apiClient.auth.register(data);
       return response;
     },
     onSuccess: (response) => {
       const token = response.data.Token || response.data.token;
-      console.log('[AuthContext] Registration successful, token received:', !!token);
+      logger.info('Registration successful', { hasToken: !!token });
 
       if (token) {
         apiClient.setAuthToken(token);
@@ -113,21 +114,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     },
     onError: (error: Error) => {
-      console.error('[AuthContext] Registration failed:', error);
+      logger.error('Registration failed', { error });
       setAuthError(error);
     },
   });
 
   // Logout function
   const logout = async () => {
-    console.log('[AuthContext] Logging out');
+    logger.info('User logging out');
     try {
       // Call backend to invalidate session/clear cookie
       await apiClient.auth.logout();
-      console.log('[AuthContext] Backend logout successful');
+      logger.debug('Backend logout successful');
     } catch (error) {
       // Log error but continue with frontend logout
-      console.error('[AuthContext] Backend logout failed:', error);
+      logger.error('Backend logout failed', { error });
     } finally {
       // Always clear frontend state regardless of backend response
       apiClient.removeAuthToken();
@@ -163,7 +164,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     error: authError || loginMutation.error || registerMutation.error,
   };
 
-  console.log('[AuthContext] Context state:', {
+  logger.debug('AuthContext state updated', {
     isAuthenticated: value.isAuthenticated,
     hasUser: !!value.currentUser,
     userId: value.currentUser?.id,

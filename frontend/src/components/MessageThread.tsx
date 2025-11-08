@@ -10,6 +10,7 @@ import { Button, Select, Textarea, Alert } from './ui';
 import CharacterAvatar from './CharacterAvatar';
 import type { PrivateMessage, ConversationWithDetails, ConversationListItem } from '../types/conversations';
 import type { Character } from '../types/characters';
+import { logger } from '@/services/LoggingService';
 
 interface MessageThreadProps {
   gameId: number;
@@ -67,20 +68,21 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
   // Scroll to first unread message or bottom
   useEffect(() => {
     if (messages.length > 0 && !hasScrolledToUnread) {
-      console.log('[MessageThread] Scroll effect triggered:', {
+      logger.debug('MessageThread scroll effect triggered', {
         messagesCount: messages.length,
         hasConversationInfo: !!conversationInfo,
         unreadCount: conversationInfo?.unread_count,
         lastReadAt: conversationInfo?.last_read_at,
+        conversationId,
       });
 
       // If there are unread messages and we have read tracking info, scroll to first unread
       if (conversationInfo && conversationInfo.unread_count > 0 && conversationInfo.last_read_at) {
-        console.log('[MessageThread] Scrolling to first unread, unread_count:', conversationInfo.unread_count);
+        logger.debug('Scrolling to first unread message', { conversationId, unreadCount: conversationInfo.unread_count });
         scrollToFirstUnread();
       } else {
         // Otherwise scroll to bottom (no unreads, or no tracking info yet)
-        console.log('[MessageThread] Scrolling to bottom (no unreads or no tracking info)');
+        logger.debug('Scrolling to bottom (no unreads or no tracking info)', { conversationId });
         // Use setTimeout to ensure DOM is fully rendered
         setTimeout(() => scrollToBottom(), 50);
       }
@@ -99,31 +101,31 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
   const markAsRead = async () => {
     try {
       await apiClient.conversations.markConversationAsRead(gameId, conversationId);
-      console.log('[MessageThread] Marked conversation as read:', conversationId);
+      logger.debug('Marked conversation as read', { conversationId, gameId });
       // Notify parent to refresh conversation list
       if (onMarkedAsRead) {
         onMarkedAsRead();
       }
     } catch (err) {
-      console.error('Failed to mark conversation as read:', err);
+      logger.error('Failed to mark conversation as read', { error: err, conversationId, gameId });
       // Don't show error to user - this is a background operation
     }
   };
 
   const scrollToBottom = () => {
-    console.log('[MessageThread] scrollToBottom called, ref exists:', !!messagesEndRef.current);
+    logger.debug('scrollToBottom called', { conversationId, refExists: !!messagesEndRef.current });
     if (typeof messagesEndRef.current?.scrollIntoView === 'function') {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      console.log('[MessageThread] Scrolled to bottom');
+      logger.debug('Scrolled to bottom', { conversationId });
     } else {
-      console.warn('[MessageThread] messagesEndRef not available for scrolling');
+      logger.warn('messagesEndRef not available for scrolling', { conversationId });
     }
   };
 
   const scrollToFirstUnread = () => {
     if (typeof firstUnreadRef.current?.scrollIntoView === 'function') {
       firstUnreadRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      console.log('[MessageThread] Scrolled to first unread message');
+      logger.debug('Scrolled to first unread message', { conversationId });
     } else {
       // Fallback to bottom if ref not set
       scrollToBottom();
@@ -133,7 +135,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
   // Find the first unread message based on last_read_at timestamp
   const getFirstUnreadIndex = () => {
     if (!conversationInfo || !conversationInfo.last_read_at) {
-      console.log('[MessageThread] No conversation info or last_read_at:', { conversationInfo });
+      logger.debug('No conversation info or last_read_at', { conversationId, hasInfo: !!conversationInfo });
       return -1; // No read tracking info
     }
 
@@ -143,7 +145,8 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       return msgTime > lastReadTime;
     });
 
-    console.log('[MessageThread] getFirstUnreadIndex:', {
+    logger.debug('getFirstUnreadIndex calculated', {
+      conversationId,
       lastReadTime: new Date(lastReadTime).toISOString(),
       firstUnreadIndex,
       messagesCount: messages.length,
@@ -160,7 +163,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       const response = await apiClient.conversations.getConversation(gameId, conversationId);
       setConversation(response.data);
     } catch (err) {
-      console.error('Failed to load conversation:', err);
+      logger.error('Failed to load conversation', { error: err, gameId, conversationId });
       setError('Failed to load conversation');
     } finally {
       setLoadingConversation(false);
@@ -179,7 +182,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
 
       // DON'T mark as read here - we'll do it after scrolling in the effect
     } catch (err) {
-      console.error('Failed to load messages:', err);
+      logger.error('Failed to load messages', { error: err, gameId, conversationId });
       setError('Failed to load messages');
     } finally {
       setLoadingMessages(false);
@@ -203,7 +206,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       // Scroll to bottom after sending (use setTimeout to ensure messages are rendered)
       setTimeout(() => scrollToBottom(), 100);
     } catch (err) {
-      console.error('Failed to send message:', err);
+      logger.error('Failed to send message', { error: err, gameId, conversationId, characterId: selectedCharacterId });
       showError('Failed to send message. Please try again.');
     } finally {
       setSending(false);
@@ -221,7 +224,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       await loadMessages();
       setDeleteMessageId(null);
     } catch (err) {
-      console.error('Failed to delete message:', err);
+      logger.error('Failed to delete message', { error: err, gameId, conversationId, messageId: deleteMessageId });
       showError('Failed to delete message. Please try again.');
     } finally {
       setDeleting(false);

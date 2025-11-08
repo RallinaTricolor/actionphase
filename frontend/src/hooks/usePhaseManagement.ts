@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import type { CreatePhaseRequest, UpdatePhaseRequest, UpdateDeadlineRequest } from '../types/phases';
+import { logger } from '@/services/LoggingService';
 
 /**
  * Custom hook for managing game phases
@@ -52,7 +53,7 @@ export function usePhaseManagement(gameId: number) {
       ]);
     },
     onError: (error) => {
-      console.error('Failed to activate phase:', error);
+      logger.error('Failed to activate phase', { error, gameId });
       showError(error instanceof Error ? error.message : 'Failed to activate phase');
     }
   });
@@ -85,7 +86,7 @@ export function usePhaseManagement(gameId: number) {
       queryClient.invalidateQueries({ queryKey: ['currentPhase', gameId] });
     },
     onError: (error) => {
-      console.error('Failed to delete phase:', error);
+      logger.error('Failed to delete phase', { error, gameId });
       // Error is shown in the DeletePhaseDialog component
       throw error;
     }

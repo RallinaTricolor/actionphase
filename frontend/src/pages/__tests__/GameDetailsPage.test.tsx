@@ -120,6 +120,18 @@ describe('GameDetailsPage', () => {
       // Inactive characters endpoint
       http.get('http://localhost:3000/api/v1/games/:id/characters/inactive', () => {
         return HttpResponse.json([])
+      }),
+      // User controllable characters endpoint (needed by GameContext)
+      http.get('http://localhost:3000/api/v1/games/:id/characters/controllable', () => {
+        return HttpResponse.json([])
+      }),
+      // Deadlines endpoint (needed by GameDetailsPage)
+      http.get('http://localhost:3000/api/v1/games/:id/deadlines', () => {
+        return HttpResponse.json([])
+      }),
+      // Polls endpoint (needed by usePolls hook)
+      http.get('http://localhost:3000/api/v1/games/:id/polls', () => {
+        return HttpResponse.json([])
       })
     )
   }
@@ -255,10 +267,18 @@ describe('GameDetailsPage', () => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
       })
 
-      // Then wait for Edit Game button to appear (after user loads)
+      // Wait for the game actions menu button to appear
+      const menuButton = await waitFor(() => {
+        return screen.getByTestId('game-actions-menu')
+      }, { timeout: 3000 })
+
+      // Click the menu to open it
+      fireEvent.click(menuButton)
+
+      // Then wait for Edit Game button to appear in the menu
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /edit game/i })).toBeInTheDocument()
-      }, { timeout: 3000 })
+      })
     })
 
     it('should show state transition buttons for GM during recruitment', async () => {
@@ -270,10 +290,18 @@ describe('GameDetailsPage', () => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
       })
 
+      // Wait for the game actions menu button and click it
+      const menuButton = await waitFor(() => {
+        return screen.getByTestId('game-actions-menu')
+      }, { timeout: 3000 })
+
+      fireEvent.click(menuButton)
+
+      // Then check for state transition buttons in the opened menu
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /close recruitment/i })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: /cancel game/i })).toBeInTheDocument()
-      }, { timeout: 3000 })
+      })
     })
 
     it('should not show Apply to Join button for GM', async () => {
@@ -285,10 +313,12 @@ describe('GameDetailsPage', () => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
       })
 
+      // Wait for the game actions menu button to appear (confirms GM has access)
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /edit game/i })).toBeInTheDocument()
+        expect(screen.getByTestId('game-actions-menu')).toBeInTheDocument()
       }, { timeout: 3000 })
 
+      // Ensure Apply to Join button is not visible
       expect(screen.queryByRole('button', { name: /apply to join/i })).not.toBeInTheDocument()
     })
   })
@@ -377,11 +407,10 @@ describe('GameDetailsPage', () => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
       })
 
+      // Wait for the Submit Action tab to appear (indicates phase data has loaded)
+      // The presence of this tab confirms the game is in an action phase
       await waitFor(() => {
-        expect(screen.getByText(/current phase: phase 1: planning/i)).toBeInTheDocument()
-        // Check for phase type badge specifically - it's in a span with specific classes
-        const phaseBadge = document.querySelector('.bg-semantic-info-subtle.text-content-primary')
-        expect(phaseBadge).toHaveTextContent('Action')
+        expect(screen.getByRole('tab', { name: /submit action/i })).toBeInTheDocument()
       }, { timeout: 3000 })
     })
   })
@@ -397,9 +426,16 @@ describe('GameDetailsPage', () => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
       })
 
+      // Click the menu to see state buttons
+      const menuButton = await waitFor(() => {
+        return screen.getByTestId('game-actions-menu')
+      }, { timeout: 3000 })
+
+      fireEvent.click(menuButton)
+
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /start recruitment/i })).toBeInTheDocument()
-      }, { timeout: 3000 })
+      })
     })
 
     it('should show Start Game button for character_creation state', async () => {
@@ -412,9 +448,16 @@ describe('GameDetailsPage', () => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
       })
 
+      // Click the menu to see state buttons
+      const menuButton = await waitFor(() => {
+        return screen.getByTestId('game-actions-menu')
+      }, { timeout: 3000 })
+
+      fireEvent.click(menuButton)
+
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /start game/i })).toBeInTheDocument()
-      }, { timeout: 3000 })
+      })
     })
 
     it('should show Pause and Complete buttons for in_progress state', async () => {
@@ -427,10 +470,17 @@ describe('GameDetailsPage', () => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
       })
 
+      // Click the menu to see state buttons
+      const menuButton = await waitFor(() => {
+        return screen.getByTestId('game-actions-menu')
+      }, { timeout: 3000 })
+
+      fireEvent.click(menuButton)
+
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /pause game/i })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: /complete game/i })).toBeInTheDocument()
-      }, { timeout: 3000 })
+      })
     })
   })
 })

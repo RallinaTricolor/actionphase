@@ -5,6 +5,7 @@ import { EditDeadlineModal } from './EditDeadlineModal';
 import { DeadlineList } from './DeadlineList';
 import { useDeadlines } from '../hooks/useDeadlines';
 import type { Deadline } from '../types/deadlines';
+import { logger } from '@/services/LoggingService';
 
 export interface DeadlinesTabContentProps {
   gameId: number;
@@ -44,7 +45,7 @@ export function DeadlinesTabContent({ gameId, isGM }: DeadlinesTabContentProps) 
       setShowCreateModal(false);
     } catch (error) {
       // Error is handled by the mutation
-      console.error('Failed to create deadline:', error);
+      logger.error('Failed to create deadline', { error, gameId, title: data.title });
     }
   };
 
@@ -60,7 +61,7 @@ export function DeadlinesTabContent({ gameId, isGM }: DeadlinesTabContentProps) 
       setSelectedDeadline(null);
     } catch (error) {
       // Error is handled by the mutation
-      console.error('Failed to update deadline:', error);
+      logger.error('Failed to update deadline', { error, gameId, deadlineId, title: data.title });
     }
   };
 
@@ -69,7 +70,7 @@ export function DeadlinesTabContent({ gameId, isGM }: DeadlinesTabContentProps) 
       await deleteDeadlineMutation.mutateAsync(deadlineId);
     } catch (error) {
       // Error is handled by the mutation
-      console.error('Failed to delete deadline:', error);
+      logger.error('Failed to delete deadline', { error, gameId, deadlineId });
     }
   };
 
@@ -92,7 +93,7 @@ export function DeadlinesTabContent({ gameId, isGM }: DeadlinesTabContentProps) 
       });
     } catch (error) {
       // Error is handled by the mutation
-      console.error('Failed to extend deadline:', error);
+      logger.error('Failed to extend deadline', { error, gameId, deadlineId, hours });
     }
   };
 

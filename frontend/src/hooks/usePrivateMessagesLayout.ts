@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '@/services/LoggingService';
 
 interface LayoutState {
   sidebarCollapsed: boolean;
@@ -23,7 +24,7 @@ export function usePrivateMessagesLayout() {
         setSidebarCollapsed(parsed.sidebarCollapsed || false);
         setSidebarWidth(parsed.sidebarWidth || DEFAULT_WIDTH);
       } catch (e) {
-        console.error('Failed to parse saved layout:', e);
+        logger.error('Failed to parse saved layout', { error: e });
       }
     }
   }, []);

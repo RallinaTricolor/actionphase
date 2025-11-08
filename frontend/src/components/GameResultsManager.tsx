@@ -5,6 +5,7 @@ import { Button, Textarea, Badge, Alert } from './ui';
 import { UpdateCharacterSheetModal } from './UpdateCharacterSheetModal';
 import { PublishResultConfirmationDialog } from './PublishResultConfirmationDialog';
 import { useDraftUpdateCount } from '../hooks';
+import { logger } from '@/services/LoggingService';
 
 interface GameResultsManagerProps {
   gameId: number;
@@ -150,7 +151,7 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
       });
       onCancelEdit();
     } catch (error) {
-      console.error('Failed to update result:', error);
+      logger.error('Failed to update result', { error, resultId: result.id, gameId });
     }
   };
 
@@ -168,7 +169,7 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
       // Hide success message after 5 seconds
       setTimeout(() => setPublishSuccess(false), 5000);
     } catch (error) {
-      console.error('Failed to publish result:', error);
+      logger.error('Failed to publish result', { error, resultId: result.id, gameId });
     }
   };
 

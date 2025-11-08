@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logger, setCorrelationId } from '@/services/LoggingService';
 
 // Simple API client without complex typing
 const api = axios.create({
@@ -8,14 +9,76 @@ const api = axios.create({
   },
 });
 
-// Add request interceptor to include auth token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Add request interceptor to include auth token and log requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Log API requests in development
+    logger.debug('API Request', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      baseURL: config.baseURL,
+    });
+
+    return config;
+  },
+  (error) => {
+    logger.error('API Request Error', { error });
+    return Promise.reject(error);
   }
-  return config;
-});
+);
+
+// Add response interceptor to extract correlation IDs and log responses
+api.interceptors.response.use(
+  (response) => {
+    // Extract correlation ID from response headers
+    const correlationId =
+      response.headers['x-correlation-id'] ||
+      response.headers['x-request-id'] ||
+      null;
+
+    if (correlationId) {
+      setCorrelationId(correlationId);
+    }
+
+    // Log successful API responses in development
+    logger.debug('API Response', {
+      method: response.config.method?.toUpperCase(),
+      url: response.config.url,
+      status: response.status,
+      correlationId,
+    });
+
+    return response;
+  },
+  (error) => {
+    // Extract correlation ID from error response if available
+    const correlationId =
+      error.response?.headers?.['x-correlation-id'] ||
+      error.response?.headers?.['x-request-id'] ||
+      null;
+
+    if (correlationId) {
+      setCorrelationId(correlationId);
+    }
+
+    // Log API errors
+    logger.error('API Error', {
+      method: error.config?.method?.toUpperCase(),
+      url: error.config?.url,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      errorMessage: error.message,
+      correlationId,
+    });
+
+    return Promise.reject(error);
+  }
+);
 
 // Simple API functions
 export const simpleApi = {

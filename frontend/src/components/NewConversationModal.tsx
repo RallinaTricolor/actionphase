@@ -3,6 +3,7 @@ import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 import { Button, Input, Select, Checkbox, Alert } from './ui';
 import { Modal } from './Modal';
+import { logger } from '@/services/LoggingService';
 
 interface NewConversationModalProps {
   gameId: number;
@@ -22,11 +23,12 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
   const [error, setError] = useState<string | null>(null);
 
   // Debug logging
-  console.log('[NewConversationModal] Received characters prop:', characters);
-  console.log('[NewConversationModal] allCharacters state:', allCharacters);
-  console.log('[NewConversationModal] availableParticipants:', allCharacters.filter(
-    char => !characters.some(c => c.id === char.id)
-  ));
+  logger.debug('NewConversationModal state', {
+    gameId,
+    receivedCharactersCount: characters.length,
+    allCharactersCount: allCharacters.length,
+    availableParticipantsCount: allCharacters.filter(char => !characters.some(c => c.id === char.id)).length,
+  });
 
   useEffect(() => {
     loadAllCharacters();
@@ -45,7 +47,7 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
       const response = await apiClient.characters.getGameCharacters(gameId);
       setAllCharacters(response.data);
     } catch (err) {
-      console.error('Failed to load characters:', err);
+      logger.error('Failed to load characters', { error: err, gameId });
       setError('Failed to load characters');
     } finally {
       setLoadingCharacters(false);
@@ -93,7 +95,7 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
       onConversationCreated(response.data.id);
       onClose();
     } catch (err) {
-      console.error('Failed to create conversation:', err);
+      logger.error('Failed to create conversation', { error: err, gameId, title, participantCount: selectedParticipants.size + 1 });
       setError(err instanceof Error ? err.message : 'Failed to create conversation');
     } finally {
       setCreating(false);

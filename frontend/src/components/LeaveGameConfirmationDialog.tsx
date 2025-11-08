@@ -1,5 +1,6 @@
 import { Modal } from './Modal';
 import { Button } from './ui';
+import { logger } from '@/services/LoggingService';
 
 interface LeaveGameConfirmationDialogProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export function LeaveGameConfirmationDialog({
       onClose();
     } catch (error) {
       // Error handling is done by the parent component
-      console.error('Failed to leave game:', error);
+      logger.error('Failed to leave game', { error, gameTitle });
     }
   };
 

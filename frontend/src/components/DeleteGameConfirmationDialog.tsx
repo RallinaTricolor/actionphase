@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
 import { Button } from './ui';
+import { logger } from '@/services/LoggingService';
 
 interface DeleteGameConfirmationDialogProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export function DeleteGameConfirmationDialog({
       onClose();
     } catch (error) {
       // Error handling is done by the parent component
-      console.error('Failed to delete game:', error);
+      logger.error('Failed to delete game', { error, gameTitle });
     } finally {
       setIsSubmitting(false);
     }

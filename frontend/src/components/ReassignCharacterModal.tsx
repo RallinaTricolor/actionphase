@@ -11,6 +11,7 @@ import { Modal } from './Modal';
 import { useReassignCharacter, useGameParticipants } from '../hooks/usePlayerManagement';
 import { useAuth } from '../contexts/AuthContext';
 import type { Character } from '../types/characters';
+import { logger } from '@/services/LoggingService';
 
 interface ReassignCharacterModalProps {
   character: Character;
@@ -54,7 +55,7 @@ export function ReassignCharacterModal({
       onClose();
       onSuccess?.();
     } catch (error) {
-      console.error('Failed to reassign character:', error);
+      logger.error('Failed to reassign character', { error, gameId, characterId: character.id, characterName: character.name, targetUserId });
     }
   };
 
