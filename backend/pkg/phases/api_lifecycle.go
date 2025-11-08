@@ -17,6 +17,9 @@ import (
 
 // ActivatePhase activates a phase (GM only)
 func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_activate_phase")()
+
 	phaseIDStr := chi.URLParam(r, "id")
 	phaseID, err := strconv.ParseInt(phaseIDStr, 10, 32)
 	if err != nil {
@@ -25,9 +28,9 @@ func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get authenticated user
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user found")
+		h.App.ObsLogger.Error(ctx, "No authenticated user found")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -35,18 +38,18 @@ func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
 	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 
 	// Get phase to check game ID
-	phase, err := phaseService.GetPhase(r.Context(), int32(phaseID))
+	phase, err := phaseService.GetPhase(ctx, int32(phaseID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get phase", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get phase", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
 	// Get game and check GM permissions (considers admin mode)
-	gameService := &db.GameService{DB: h.App.Pool}
-	game, err := gameService.GetGame(r.Context(), phase.GameID)
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, phase.GameID)
 	if err != nil {
-		h.App.Logger.Error("Failed to get game", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -57,17 +60,17 @@ func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Activate phase
-	err = phaseService.ActivatePhase(r.Context(), int32(phaseID), authUser.ID)
+	err = phaseService.ActivatePhase(ctx, int32(phaseID), authUser.ID)
 	if err != nil {
-		h.App.Logger.Error("Failed to activate phase", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to activate phase", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
 	// Get the updated phase after activation
-	activePhase, err := phaseService.GetPhase(r.Context(), int32(phaseID))
+	activePhase, err := phaseService.GetPhase(ctx, int32(phaseID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get activated phase", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get activated phase", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -92,6 +95,9 @@ func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
 
 // PublishAllPhaseResults publishes all unpublished results for a phase (GM only)
 func (h *Handler) PublishAllPhaseResults(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_publish_all_phase_results")()
+
 	gameIDStr := chi.URLParam(r, "gameId")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -107,18 +113,18 @@ func (h *Handler) PublishAllPhaseResults(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Get authenticated user
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user found")
+		h.App.ObsLogger.Error(ctx, "No authenticated user found")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Get game and check GM permissions (considers admin mode)
-	gameService := &db.GameService{DB: h.App.Pool}
-	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -130,9 +136,9 @@ func (h *Handler) PublishAllPhaseResults(w http.ResponseWriter, r *http.Request)
 
 	// Publish all unpublished results for the phase
 	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
-	err = actionService.PublishAllPhaseResults(r.Context(), int32(phaseID))
+	err = actionService.PublishAllPhaseResults(ctx, int32(phaseID))
 	if err != nil {
-		h.App.Logger.Error("Failed to publish all phase results", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to publish all phase results", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -145,6 +151,9 @@ func (h *Handler) PublishAllPhaseResults(w http.ResponseWriter, r *http.Request)
 
 // GetUnpublishedResultsCount retrieves the count of unpublished results for a phase (GM only)
 func (h *Handler) GetUnpublishedResultsCount(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_unpublished_results_count")()
+
 	gameIDStr := chi.URLParam(r, "gameId")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -160,18 +169,18 @@ func (h *Handler) GetUnpublishedResultsCount(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Get authenticated user
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user found")
+		h.App.ObsLogger.Error(ctx, "No authenticated user found")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Get game and check GM permissions (considers admin mode)
-	gameService := &db.GameService{DB: h.App.Pool}
-	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -183,9 +192,9 @@ func (h *Handler) GetUnpublishedResultsCount(w http.ResponseWriter, r *http.Requ
 
 	// Get count of unpublished results
 	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
-	count, err := actionService.GetUnpublishedResultsCount(r.Context(), int32(phaseID))
+	count, err := actionService.GetUnpublishedResultsCount(ctx, int32(phaseID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get unpublished results count", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get unpublished results count", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}

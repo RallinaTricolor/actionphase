@@ -14,6 +14,9 @@ import (
 
 // ApplyToGame allows a user to apply to join a game as a player or audience
 func (h *Handler) ApplyToGame(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_apply_to_game")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -34,9 +37,9 @@ func (h *Handler) ApplyToGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -45,14 +48,14 @@ func (h *Handler) ApplyToGame(w http.ResponseWriter, r *http.Request) {
 	applicationService := &db.GameApplicationService{DB: h.App.Pool}
 
 	// Create the application
-	application, err := applicationService.CreateGameApplication(r.Context(), core.CreateGameApplicationRequest{
+	application, err := applicationService.CreateGameApplication(ctx, core.CreateGameApplicationRequest{
 		GameID:  int32(gameID),
 		UserID:  userID,
 		Role:    data.Role,
 		Message: data.Message,
 	})
 	if err != nil {
-		h.App.Logger.Error("Failed to create game application", "error", err, "game_id", gameID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to create game application", "error", err, "game_id", gameID, "user_id", userID)
 
 		// Check for specific error types to provide better responses
 		if fmt.Sprintf("%v", err) == "user already has a pending application for this game" {
@@ -101,6 +104,9 @@ func (h *Handler) ApplyToGame(w http.ResponseWriter, r *http.Request) {
 
 // GetGameApplications retrieves all applications for a game (GM only)
 func (h *Handler) GetGameApplications(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_game_applications")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -109,18 +115,18 @@ func (h *Handler) GetGameApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get authenticated user
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user found")
+		h.App.ObsLogger.Error(ctx, "No authenticated user found")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Verify user is GM of this game
-	gameService := &db.GameService{DB: h.App.Pool}
-	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game for permission check", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game for permission check", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -133,9 +139,9 @@ func (h *Handler) GetGameApplications(w http.ResponseWriter, r *http.Request) {
 
 	// Get applications for the game
 	applicationService := &db.GameApplicationService{DB: h.App.Pool}
-	applications, err := applicationService.GetGameApplications(r.Context(), int32(gameID))
+	applications, err := applicationService.GetGameApplications(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game applications", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game applications", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -174,6 +180,9 @@ func (h *Handler) GetGameApplications(w http.ResponseWriter, r *http.Request) {
 
 // ReviewGameApplication approves or rejects a game application (GM only)
 func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_review_game_application")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -201,18 +210,18 @@ func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Get authenticated user
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user found")
+		h.App.ObsLogger.Error(ctx, "No authenticated user found")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Verify user is GM of this game
-	gameService := &db.GameService{DB: h.App.Pool}
-	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game for permission check", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game for permission check", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -225,9 +234,9 @@ func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) 
 
 	// Verify application belongs to this game
 	applicationService := &db.GameApplicationService{DB: h.App.Pool}
-	application, err := applicationService.GetGameApplication(r.Context(), int32(applicationID))
+	application, err := applicationService.GetGameApplication(ctx, int32(applicationID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game application", "error", err, "application_id", applicationID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game application", "error", err, "application_id", applicationID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -239,21 +248,21 @@ func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) 
 
 	// Perform the action
 	if data.Action == "approve" {
-		err = applicationService.ApproveGameApplication(r.Context(), int32(applicationID), authUser.ID)
+		err = applicationService.ApproveGameApplication(ctx, int32(applicationID), authUser.ID)
 	} else {
-		err = applicationService.RejectGameApplication(r.Context(), int32(applicationID), authUser.ID)
+		err = applicationService.RejectGameApplication(ctx, int32(applicationID), authUser.ID)
 	}
 
 	if err != nil {
-		h.App.Logger.Error("Failed to review game application", "error", err, "application_id", applicationID, "action", data.Action)
+		h.App.ObsLogger.Error(ctx, "Failed to review game application", "error", err, "application_id", applicationID, "action", data.Action)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
 	// Return updated application
-	updatedApplication, err := applicationService.GetGameApplication(r.Context(), int32(applicationID))
+	updatedApplication, err := applicationService.GetGameApplication(ctx, int32(applicationID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get updated application", "error", err, "application_id", applicationID)
+		h.App.ObsLogger.Error(ctx, "Failed to get updated application", "error", err, "application_id", applicationID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -284,6 +293,9 @@ func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) 
 
 // GetMyGameApplication retrieves the current user's application for a game
 func (h *Handler) GetMyGameApplication(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_my_game_application")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -292,9 +304,9 @@ func (h *Handler) GetMyGameApplication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -303,7 +315,7 @@ func (h *Handler) GetMyGameApplication(w http.ResponseWriter, r *http.Request) {
 
 	// Find user's application for this game
 	applicationService := &db.GameApplicationService{DB: h.App.Pool}
-	application, err := applicationService.GetGameApplicationByUserAndGame(r.Context(), int32(gameID), userID)
+	application, err := applicationService.GetGameApplicationByUserAndGame(ctx, int32(gameID), userID)
 	if err != nil {
 		// User has no application - return 404
 		render.Render(w, r, core.ErrNotFound("no application found for this game"))
@@ -349,6 +361,9 @@ func (h *Handler) GetMyGameApplication(w http.ResponseWriter, r *http.Request) {
 // No authentication required - available to anyone
 // Returns only username and role (no status or review information)
 func (h *Handler) GetPublicGameApplicants(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_public_game_applicants")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -357,10 +372,10 @@ func (h *Handler) GetPublicGameApplicants(w http.ResponseWriter, r *http.Request
 	}
 
 	// Verify game is in recruiting state
-	gameService := &db.GameService{DB: h.App.Pool}
-	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game for public applicants", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game for public applicants", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -373,9 +388,9 @@ func (h *Handler) GetPublicGameApplicants(w http.ResponseWriter, r *http.Request
 
 	// Get public applicants list
 	applicationService := &db.GameApplicationService{DB: h.App.Pool}
-	applicants, err := applicationService.GetPublicGameApplicants(r.Context(), int32(gameID))
+	applicants, err := applicationService.GetPublicGameApplicants(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get public game applicants", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get public game applicants", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -398,6 +413,9 @@ func (h *Handler) GetPublicGameApplicants(w http.ResponseWriter, r *http.Request
 
 // WithdrawGameApplication allows a user to withdraw their own application
 func (h *Handler) WithdrawGameApplication(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_withdraw_game_application")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -406,9 +424,9 @@ func (h *Handler) WithdrawGameApplication(w http.ResponseWriter, r *http.Request
 	}
 
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -417,9 +435,9 @@ func (h *Handler) WithdrawGameApplication(w http.ResponseWriter, r *http.Request
 
 	// Find user's application for this game
 	applicationService := &db.GameApplicationService{DB: h.App.Pool}
-	application, err := applicationService.GetGameApplicationByUserAndGame(r.Context(), int32(gameID), userID)
+	application, err := applicationService.GetGameApplicationByUserAndGame(ctx, int32(gameID), userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user's application", "error", err, "game_id", gameID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to get user's application", "error", err, "game_id", gameID, "user_id", userID)
 		render.Render(w, r, core.ErrNotFound("no application found for this game"))
 		return
 	}
@@ -432,9 +450,9 @@ func (h *Handler) WithdrawGameApplication(w http.ResponseWriter, r *http.Request
 
 	// Delete the application instead of marking as withdrawn
 	// This allows users to reapply if they change their mind
-	err = applicationService.DeleteGameApplication(r.Context(), application.ID, userID)
+	err = applicationService.DeleteGameApplication(ctx, application.ID, userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to delete application", "error", err, "application_id", application.ID)
+		h.App.ObsLogger.Error(ctx, "Failed to delete application", "error", err, "application_id", application.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}

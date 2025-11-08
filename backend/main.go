@@ -28,7 +28,8 @@ func main() {
 	// Load configuration from environment with validation
 	config, err := core.LoadConfig()
 	if err != nil {
-		fmt.Printf("Configuration error: %v\n", err)
+		// Log to stderr before observability is available
+		fmt.Fprintf(os.Stderr, "FATAL: Configuration error: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -265,15 +266,13 @@ func loadDotEnvFile() {
 			if _, err := os.Stat(absPath); err == nil {
 				// .env file exists, try to load it
 				if err := godotenv.Load(absPath); err == nil {
-					fmt.Printf("✓ Loaded environment from: %s\n", absPath)
+					// Successfully loaded .env file
 					return
-				} else {
-					fmt.Printf("⚠ Found .env file but couldn't load it: %s (%v)\n", absPath, err)
 				}
+				// Failed to load .env file, continue searching
 			}
 		}
 	}
 
 	// No .env file found - this is okay for production or when using system env vars
-	fmt.Println("ℹ No .env file found - using system environment variables")
 }

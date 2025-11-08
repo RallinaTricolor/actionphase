@@ -2,9 +2,9 @@ package auth
 
 import (
 	"actionphase/pkg/email"
+	"actionphase/pkg/observability"
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"regexp"
 	"time"
@@ -51,7 +51,7 @@ func validateUsername(username string) error {
 type AccountService struct {
 	DB           *pgxpool.Pool
 	EmailService *email.EmailService
-	Logger       *slog.Logger
+	Logger       *observability.Logger
 }
 
 // SendVerificationEmailRequest represents a request to send a verification email
@@ -132,7 +132,7 @@ func (s *AccountService) SendVerificationEmail(ctx context.Context, req *SendVer
 			// Log error but don't fail the request
 			// The token is already created, user can request a new verification email
 			if s.Logger != nil {
-				s.Logger.Warn("Failed to send verification email", "error", err, "email", req.Email)
+				s.Logger.Warn(ctx, "Failed to send verification email", "error", err, "email", req.Email)
 			}
 		}
 	}
@@ -178,7 +178,7 @@ func (s *AccountService) VerifyEmail(ctx context.Context, req *VerifyEmailReques
 	}
 
 	if s.Logger != nil {
-		s.Logger.Info("Email verified successfully", "user_id", verificationToken.UserID)
+		s.Logger.Info(ctx, "Email verified successfully", "user_id", verificationToken.UserID)
 	}
 
 	return nil
@@ -368,7 +368,7 @@ func (s *AccountService) CompleteEmailChange(ctx context.Context, req *VerifyEma
 	}
 
 	if s.Logger != nil {
-		s.Logger.Info("Email change completed successfully",
+		s.Logger.Info(ctx, "Email change completed successfully",
 			"user_id", verificationToken.UserID,
 			"new_email", verificationToken.Email)
 	}
@@ -431,7 +431,7 @@ func (s *AccountService) SoftDeleteAccount(ctx context.Context, userID int) erro
 	if err != nil {
 		// Log but don't fail - account is already marked as deleted
 		if s.Logger != nil {
-			s.Logger.Warn("Failed to invalidate user sessions after account deletion", "error", err, "user_id", userID)
+			s.Logger.Warn(ctx, "Failed to invalidate user sessions after account deletion", "error", err, "user_id", userID)
 		}
 	}
 
@@ -519,7 +519,7 @@ func (s *AccountService) RevokeAllSessions(ctx context.Context, userID int, curr
 			if err != nil {
 				// Log but don't fail - continue revoking other sessions
 				if s.Logger != nil {
-					s.Logger.Warn("Failed to revoke session", "error", err, "session_id", session.ID, "user_id", userID)
+					s.Logger.Warn(ctx, "Failed to revoke session", "error", err, "session_id", session.ID, "user_id", userID)
 				}
 			}
 		}

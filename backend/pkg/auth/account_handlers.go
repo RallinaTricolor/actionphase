@@ -11,9 +11,13 @@ import (
 
 // V1VerifyEmail handles email verification with token
 func (h *Handler) V1VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_verify_email")()
+
 	// Parse request body
 	var req VerifyEmailRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
+		h.App.ObsLogger.Warn(ctx, "Invalid verify email request", "error", err)
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
@@ -21,18 +25,18 @@ func (h *Handler) V1VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	// Create account service
 	emailService, err := email.NewEmailServiceFromEnv()
 	if err != nil {
-		h.App.Logger.Error("Failed to create email service", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to create email service", "error", err)
 		emailService = nil
 	}
 
 	accountService := &AccountService{
 		DB:           h.App.Pool,
 		EmailService: emailService,
-		Logger:       &h.App.Logger,
+		Logger:       h.App.ObsLogger,
 	}
 
 	// Verify email
-	err = accountService.VerifyEmail(r.Context(), &req)
+	err = accountService.VerifyEmail(ctx, &req)
 	if err != nil {
 		if pwdErr, ok := err.(*PasswordValidationError); ok {
 			render.Render(w, r, &core.ErrResponse{
@@ -43,12 +47,12 @@ func (h *Handler) V1VerifyEmail(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		h.App.Logger.Error("Failed to verify email", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to verify email", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("Email verified successfully")
+	h.App.ObsLogger.Info(ctx, "Email verified successfully")
 
 	// Return success response
 	render.Status(r, http.StatusOK)
@@ -59,10 +63,13 @@ func (h *Handler) V1VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 // V1ResendVerificationEmail resends verification email for authenticated user
 func (h *Handler) V1ResendVerificationEmail(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_resend_verification_email")()
+
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -72,7 +79,7 @@ func (h *Handler) V1ResendVerificationEmail(w http.ResponseWriter, r *http.Reque
 	// Create account service
 	emailService, err := email.NewEmailServiceFromEnv()
 	if err != nil {
-		h.App.Logger.Error("Failed to create email service", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to create email service", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -80,18 +87,18 @@ func (h *Handler) V1ResendVerificationEmail(w http.ResponseWriter, r *http.Reque
 	accountService := &AccountService{
 		DB:           h.App.Pool,
 		EmailService: emailService,
-		Logger:       &h.App.Logger,
+		Logger:       h.App.ObsLogger,
 	}
 
 	// Resend verification email
-	err = accountService.ResendVerificationEmail(r.Context(), userID)
+	err = accountService.ResendVerificationEmail(ctx, userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to resend verification email", "error", err, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to resend verification email", "error", err, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("Verification email resent", "user_id", userID)
+	h.App.ObsLogger.Info(ctx, "Verification email resent", "user_id", userID)
 
 	// Return success response
 	render.Status(r, http.StatusOK)
@@ -102,10 +109,13 @@ func (h *Handler) V1ResendVerificationEmail(w http.ResponseWriter, r *http.Reque
 
 // V1ChangeUsername handles username change requests for authenticated users
 func (h *Handler) V1ChangeUsername(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_change_username")()
+
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -122,11 +132,11 @@ func (h *Handler) V1ChangeUsername(w http.ResponseWriter, r *http.Request) {
 	// Create account service
 	accountService := &AccountService{
 		DB:     h.App.Pool,
-		Logger: &h.App.Logger,
+		Logger: h.App.ObsLogger,
 	}
 
 	// Change username
-	err := accountService.ChangeUsername(r.Context(), userID, &req)
+	err := accountService.ChangeUsername(ctx, userID, &req)
 	if err != nil {
 		if pwdErr, ok := err.(*PasswordValidationError); ok {
 			render.Render(w, r, &core.ErrResponse{
@@ -137,12 +147,12 @@ func (h *Handler) V1ChangeUsername(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		h.App.Logger.Error("Failed to change username", "error", err, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to change username", "error", err, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("Username changed successfully", "user_id", userID, "new_username", req.NewUsername)
+	h.App.ObsLogger.Info(ctx, "Username changed successfully", "user_id", userID, "new_username", req.NewUsername)
 
 	// Return success response
 	render.Status(r, http.StatusOK)
@@ -153,10 +163,13 @@ func (h *Handler) V1ChangeUsername(w http.ResponseWriter, r *http.Request) {
 
 // V1RequestEmailChange handles email change requests for authenticated users
 func (h *Handler) V1RequestEmailChange(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_request_email_change")()
+
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -173,7 +186,7 @@ func (h *Handler) V1RequestEmailChange(w http.ResponseWriter, r *http.Request) {
 	// Create account service
 	emailService, err := email.NewEmailServiceFromEnv()
 	if err != nil {
-		h.App.Logger.Error("Failed to create email service", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to create email service", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -181,11 +194,11 @@ func (h *Handler) V1RequestEmailChange(w http.ResponseWriter, r *http.Request) {
 	accountService := &AccountService{
 		DB:           h.App.Pool,
 		EmailService: emailService,
-		Logger:       &h.App.Logger,
+		Logger:       h.App.ObsLogger,
 	}
 
 	// Request email change
-	err = accountService.RequestEmailChange(r.Context(), userID, &req)
+	err = accountService.RequestEmailChange(ctx, userID, &req)
 	if err != nil {
 		if pwdErr, ok := err.(*PasswordValidationError); ok {
 			render.Render(w, r, &core.ErrResponse{
@@ -196,12 +209,12 @@ func (h *Handler) V1RequestEmailChange(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		h.App.Logger.Error("Failed to request email change", "error", err, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to request email change", "error", err, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("Email change requested", "user_id", userID, "new_email", req.NewEmail)
+	h.App.ObsLogger.Info(ctx, "Email change requested", "user_id", userID, "new_email", req.NewEmail)
 
 	// Return success response
 	render.Status(r, http.StatusOK)
@@ -212,9 +225,13 @@ func (h *Handler) V1RequestEmailChange(w http.ResponseWriter, r *http.Request) {
 
 // V1CompleteEmailChange completes the email change after verification
 func (h *Handler) V1CompleteEmailChange(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_complete_email_change")()
+
 	// Parse request body
 	var req VerifyEmailRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
+		h.App.ObsLogger.Warn(ctx, "Invalid complete email change request", "error", err)
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
@@ -222,18 +239,18 @@ func (h *Handler) V1CompleteEmailChange(w http.ResponseWriter, r *http.Request) 
 	// Create account service
 	emailService, err := email.NewEmailServiceFromEnv()
 	if err != nil {
-		h.App.Logger.Error("Failed to create email service", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to create email service", "error", err)
 		emailService = nil
 	}
 
 	accountService := &AccountService{
 		DB:           h.App.Pool,
 		EmailService: emailService,
-		Logger:       &h.App.Logger,
+		Logger:       h.App.ObsLogger,
 	}
 
 	// Complete email change
-	err = accountService.CompleteEmailChange(r.Context(), &req)
+	err = accountService.CompleteEmailChange(ctx, &req)
 	if err != nil {
 		if pwdErr, ok := err.(*PasswordValidationError); ok {
 			render.Render(w, r, &core.ErrResponse{
@@ -244,12 +261,12 @@ func (h *Handler) V1CompleteEmailChange(w http.ResponseWriter, r *http.Request) 
 			})
 			return
 		}
-		h.App.Logger.Error("Failed to complete email change", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to complete email change", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("Email change completed successfully")
+	h.App.ObsLogger.Info(ctx, "Email change completed successfully")
 
 	// Return success response
 	render.Status(r, http.StatusOK)
@@ -260,10 +277,13 @@ func (h *Handler) V1CompleteEmailChange(w http.ResponseWriter, r *http.Request) 
 
 // V1DeleteAccount soft deletes the authenticated user's account
 func (h *Handler) V1DeleteAccount(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_account")()
+
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -273,18 +293,18 @@ func (h *Handler) V1DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	// Create account service
 	accountService := &AccountService{
 		DB:     h.App.Pool,
-		Logger: &h.App.Logger,
+		Logger: h.App.ObsLogger,
 	}
 
 	// Soft delete account
-	err := accountService.SoftDeleteAccount(r.Context(), userID)
+	err := accountService.SoftDeleteAccount(ctx, userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to delete account", "error", err, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to delete account", "error", err, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("Account deleted successfully", "user_id", userID)
+	h.App.ObsLogger.Info(ctx, "Account deleted successfully", "user_id", userID)
 
 	// Return success response
 	render.Status(r, http.StatusOK)
@@ -295,10 +315,13 @@ func (h *Handler) V1DeleteAccount(w http.ResponseWriter, r *http.Request) {
 
 // V1RevokeAllSessions revokes all sessions except the current one
 func (h *Handler) V1RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_revoke_all_sessions")()
+
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -306,9 +329,9 @@ func (h *Handler) V1RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
 	userID := int(authUser.ID)
 
 	// Get current token to identify current session
-	token, _, err := jwtauth.FromContext(r.Context())
+	token, _, err := jwtauth.FromContext(ctx)
 	if err != nil {
-		h.App.Logger.Error("Failed to get token from context", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get token from context", "error", err)
 		render.Render(w, r, core.ErrUnauthorized("invalid token"))
 		return
 	}
@@ -316,7 +339,7 @@ func (h *Handler) V1RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
 	// Get current session ID from token
 	sessionIDFloat, ok := token.Get("session_id")
 	if !ok {
-		h.App.Logger.Error("session_id not found in token")
+		h.App.ObsLogger.Error(ctx, "session_id not found in token")
 		render.Render(w, r, core.ErrUnauthorized("session_id not found in token"))
 		return
 	}
@@ -326,18 +349,18 @@ func (h *Handler) V1RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
 	// Create account service
 	accountService := &AccountService{
 		DB:     h.App.Pool,
-		Logger: &h.App.Logger,
+		Logger: h.App.ObsLogger,
 	}
 
 	// Revoke all sessions except current
-	err = accountService.RevokeAllSessions(r.Context(), userID, currentSessionID)
+	err = accountService.RevokeAllSessions(ctx, userID, currentSessionID)
 	if err != nil {
-		h.App.Logger.Error("Failed to revoke all sessions", "error", err, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to revoke all sessions", "error", err, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("All sessions revoked except current", "user_id", userID)
+	h.App.ObsLogger.Info(ctx, "All sessions revoked except current", "user_id", userID)
 
 	// Return success response
 	render.Status(r, http.StatusOK)

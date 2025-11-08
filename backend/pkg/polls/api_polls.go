@@ -141,7 +141,7 @@ func strPtr(s string) *string {
 
 // verifyUserIsGM checks if a user is the GM of a game
 func (h *Handler) verifyUserIsGM(ctx context.Context, gameID int32, userID int32) error {
-	gameService := &dbservices.GameService{DB: h.App.Pool}
+	gameService := &dbservices.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, gameID)
 	if err != nil {
 		return fmt.Errorf("failed to get game: %w", err)
@@ -156,7 +156,7 @@ func (h *Handler) verifyUserIsGM(ctx context.Context, gameID int32, userID int32
 
 // verifyUserInGame checks if a user is a participant in a game (GM or player)
 func (h *Handler) verifyUserInGame(ctx context.Context, gameID int32, userID int32) error {
-	gameService := &dbservices.GameService{DB: h.App.Pool}
+	gameService := &dbservices.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, gameID)
 	if err != nil {
 		return fmt.Errorf("failed to get game: %w", err)
@@ -188,6 +188,8 @@ func (h *Handler) verifyUserInGame(ctx context.Context, gameID int32, userID int
 // CreatePoll handles POST /games/{gameId}/polls
 func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_create_poll")()
+
 	defer h.App.ObsLogger.LogOperation(ctx, "CreatePoll")()
 
 	// Extract game ID from URL
@@ -255,7 +257,7 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send notification to all game participants
-	gameService := &dbservices.GameService{DB: h.App.Pool}
+	gameService := &dbservices.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	participants, err := gameService.GetGameParticipants(ctx, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game participants for notification")
@@ -303,6 +305,8 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 // ListGamePolls handles GET /games/{gameId}/polls
 func (h *Handler) ListGamePolls(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_game_polls")()
+
 	defer h.App.ObsLogger.LogOperation(ctx, "ListGamePolls")()
 
 	// Extract game ID from URL
@@ -348,6 +352,8 @@ func (h *Handler) ListGamePolls(w http.ResponseWriter, r *http.Request) {
 // GetPoll handles GET /polls/{pollId}
 func (h *Handler) GetPoll(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_poll")()
+
 	defer h.App.ObsLogger.LogOperation(ctx, "GetPoll")()
 
 	// Extract poll ID from URL
@@ -405,7 +411,7 @@ func (h *Handler) GetPoll(w http.ResponseWriter, r *http.Request) {
 // GetPollResults handles GET /polls/{pollId}/results
 func (h *Handler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	defer h.App.ObsLogger.LogOperation(ctx, "GetPollResults")()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_poll_results")()
 
 	// Extract poll ID from URL
 	pollIDStr := chi.URLParam(r, "pollId")
@@ -495,6 +501,8 @@ func (h *Handler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 // SubmitVote handles POST /polls/{pollId}/vote
 func (h *Handler) SubmitVote(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_submit_vote")()
+
 	defer h.App.ObsLogger.LogOperation(ctx, "SubmitVote")()
 
 	// Extract poll ID from URL
@@ -596,6 +604,8 @@ func (h *Handler) SubmitVote(w http.ResponseWriter, r *http.Request) {
 // UpdatePoll handles PUT /polls/{pollId}
 func (h *Handler) UpdatePoll(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_update_poll")()
+
 	defer h.App.ObsLogger.LogOperation(ctx, "UpdatePoll")()
 
 	// Extract poll ID from URL
@@ -662,6 +672,8 @@ func (h *Handler) UpdatePoll(w http.ResponseWriter, r *http.Request) {
 // DeletePoll handles DELETE /polls/{pollId}
 func (h *Handler) DeletePoll(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_poll")()
+
 	defer h.App.ObsLogger.LogOperation(ctx, "DeletePoll")()
 
 	// Extract poll ID from URL

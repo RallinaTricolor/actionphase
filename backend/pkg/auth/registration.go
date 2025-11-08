@@ -10,6 +10,9 @@ import (
 )
 
 func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_register")()
+
 	data := &Request{}
 	if err := render.Bind(r, data); err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(err))
@@ -55,15 +58,15 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 		HoneypotValue: data.HoneypotValue,
 	}
 
-	result, err := botService.CheckRegistrationAttempt(r.Context(), checkRequest)
+	result, err := botService.CheckRegistrationAttempt(ctx, checkRequest)
 	if err != nil {
-		h.App.Logger.Error("Bot prevention check failed", "error", err, "email", data.User.Email)
+		h.App.ObsLogger.Error(ctx, "Bot prevention check failed", "error", err, "email", data.User.Email)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
 	if !result.Allowed {
-		h.App.Logger.Warn("Registration blocked by bot prevention",
+		h.App.ObsLogger.Warn(ctx, "Registration blocked by bot prevention",
 			"reason", result.BlockedReason,
 			"email", data.User.Email,
 			"ip", ipAddress)
@@ -90,7 +93,7 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	UserService := db.UserService{DB: h.App.Pool}
-	h.App.Logger.Info("Creating user", "username", data.User.Username)
+	h.App.ObsLogger.Info(ctx, "Creating user", "username", data.User.Username)
 	returnUser, err := UserService.CreateUser(data.User)
 	if err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(err))
@@ -98,12 +101,12 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log successful registration
-	if err := botService.LogSuccessfulRegistration(r.Context(), checkRequest); err != nil {
-		h.App.Logger.Warn("Failed to log successful registration", "error", err, "username", returnUser.Username)
+	if err := botService.LogSuccessfulRegistration(ctx, checkRequest); err != nil {
+		h.App.ObsLogger.Warn(ctx, "Failed to log successful registration", "error", err, "username", returnUser.Username)
 		// Don't fail the registration if logging fails
 	}
 
-	h.App.Logger.Info("Creating token for new user", "username", returnUser.Username)
+	h.App.ObsLogger.Info(ctx, "Creating token for new user", "username", returnUser.Username)
 	jwt := JWTHandler{App: h.App}
 	token, err := jwt.CreateToken(returnUser)
 	if err != nil {

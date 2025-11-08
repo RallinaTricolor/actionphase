@@ -15,6 +15,7 @@ import (
 // CreateHandout creates a new handout for a game
 func (h *Handler) CreateHandout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_create_handout")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_create_handout")()
 
@@ -45,7 +46,7 @@ func (h *Handler) CreateHandout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user is GM of the game
-	gameService := &db.GameService{DB: h.App.Pool}
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
@@ -87,6 +88,7 @@ func (h *Handler) CreateHandout(w http.ResponseWriter, r *http.Request) {
 // GetHandout retrieves a specific handout
 func (h *Handler) GetHandout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_handout")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_handout")()
 
@@ -133,6 +135,7 @@ func (h *Handler) GetHandout(w http.ResponseWriter, r *http.Request) {
 // ListHandouts lists all handouts for a game
 func (h *Handler) ListHandouts(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_handouts")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_list_handouts")()
 
@@ -155,7 +158,7 @@ func (h *Handler) ListHandouts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user is GM
-	gameService := &db.GameService{DB: h.App.Pool}
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
@@ -194,6 +197,7 @@ func (h *Handler) ListHandouts(w http.ResponseWriter, r *http.Request) {
 // UpdateHandout updates a handout
 func (h *Handler) UpdateHandout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_update_handout")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_update_handout")()
 
@@ -233,7 +237,7 @@ func (h *Handler) UpdateHandout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user is GM of the game
-	gameService := &db.GameService{DB: h.App.Pool}
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, existingHandout.GameID)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
@@ -273,6 +277,7 @@ func (h *Handler) UpdateHandout(w http.ResponseWriter, r *http.Request) {
 // DeleteHandout deletes a handout
 func (h *Handler) DeleteHandout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_handout")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_handout")()
 
@@ -304,7 +309,7 @@ func (h *Handler) DeleteHandout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user is GM of the game
-	gameService := &db.GameService{DB: h.App.Pool}
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, existingHandout.GameID)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
@@ -334,6 +339,7 @@ func (h *Handler) DeleteHandout(w http.ResponseWriter, r *http.Request) {
 // PublishHandout publishes a draft handout
 func (h *Handler) PublishHandout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_publish_handout")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_publish_handout")()
 
@@ -365,7 +371,7 @@ func (h *Handler) PublishHandout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user is GM of the game
-	gameService := &db.GameService{DB: h.App.Pool}
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, existingHandout.GameID)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
@@ -454,6 +460,7 @@ func stringPtr(s string) *string {
 // UnpublishHandout unpublishes a published handout
 func (h *Handler) UnpublishHandout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_unpublish_handout")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_unpublish_handout")()
 
@@ -485,7 +492,7 @@ func (h *Handler) UnpublishHandout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user is GM of the game
-	gameService := &db.GameService{DB: h.App.Pool}
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, existingHandout.GameID)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")

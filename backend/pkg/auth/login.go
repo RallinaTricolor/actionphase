@@ -10,8 +10,12 @@ import (
 )
 
 func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_login")()
+
 	data := &Request{}
 	if err := render.Bind(r, data); err != nil {
+		h.App.ObsLogger.Warn(ctx, "Invalid login request", "error", err)
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
@@ -29,7 +33,7 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if usernameOrEmail == "" {
-		h.App.Logger.Info("Login attempt with no username or email provided")
+		h.App.ObsLogger.Info(ctx, "Login attempt with no username or email provided")
 		render.Render(w, r, core.ErrUnauthorized("Invalid username or password"))
 		return
 	}
@@ -42,7 +46,7 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		h.App.Logger.Info("Login attempt for non-existent user",
+		h.App.ObsLogger.Info(ctx, "Login attempt for non-existent user",
 			"username", data.User.Username,
 			"email", data.User.Email)
 		render.Render(w, r, core.ErrUnauthorized("Invalid username or password"))
@@ -51,7 +55,7 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 
 	// Check if user is banned
 	if user.IsBanned {
-		h.App.Logger.Warn("Login attempt by banned user",
+		h.App.ObsLogger.Warn(ctx, "Login attempt by banned user",
 			"username", user.Username,
 			"user_id", user.ID,
 			"banned_at", user.BannedAt)
@@ -60,14 +64,15 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !user.CheckPasswordHash(data.User.Password) {
-		h.App.Logger.Error("Invalid password", "username", user.Username)
+		h.App.ObsLogger.Error(ctx, "Invalid password", "username", user.Username)
 		render.Render(w, r, core.ErrInvalidRequest(LoginError{"invalid username or password"}))
 		return
 	}
-	h.App.Logger.Info("Creating token for user", "username", user.Username)
+	h.App.ObsLogger.Info(ctx, "User logged in successfully", "username", user.Username, "user_id", user.ID)
 	jwtHandler := JWTHandler{App: h.App}
 	token, err := jwtHandler.CreateToken(user)
 	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to create JWT token", "error", err, "user_id", user.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -91,10 +96,13 @@ func NewLoginResponse(token string) *Response {
 
 // V1Logout handles user logout by clearing the JWT cookie
 func (h *Handler) V1Logout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_logout")()
+
 	// Clear the JWT cookie by setting it to expire in the past
 	ClearJWTCookie(w)
 
-	h.App.Logger.Info("User logged out successfully")
+	h.App.ObsLogger.Info(ctx, "User logged out successfully")
 
 	// Return 200 OK with no body
 	w.WriteHeader(http.StatusOK)

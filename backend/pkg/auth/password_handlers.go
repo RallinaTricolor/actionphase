@@ -39,6 +39,7 @@ func (h *Handler) V1ChangePassword(w http.ResponseWriter, r *http.Request) {
 	passwordService := &PasswordService{
 		DB:           h.App.Pool,
 		EmailService: emailService,
+		Logger:       h.App.ObsLogger,
 	}
 
 	// Change password
@@ -91,6 +92,7 @@ func (h *Handler) V1RequestPasswordReset(w http.ResponseWriter, r *http.Request)
 	passwordService := &PasswordService{
 		DB:           h.App.Pool,
 		EmailService: emailService,
+		Logger:       h.App.ObsLogger,
 	}
 
 	// Request password reset
@@ -138,6 +140,7 @@ func (h *Handler) V1ResetPassword(w http.ResponseWriter, r *http.Request) {
 	passwordService := &PasswordService{
 		DB:           h.App.Pool,
 		EmailService: emailService,
+		Logger:       h.App.ObsLogger,
 	}
 
 	// Reset password

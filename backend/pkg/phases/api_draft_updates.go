@@ -36,7 +36,7 @@ func (h *Handler) validateGMAccessAndResult(w http.ResponseWriter, r *http.Reque
 	// Get authenticated user from context
 	authUser := core.GetAuthenticatedUser(r.Context())
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(r.Context(), "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return 0, 0, nil, fmt.Errorf("no authenticated user")
 	}
@@ -45,7 +45,7 @@ func (h *Handler) validateGMAccessAndResult(w http.ResponseWriter, r *http.Reque
 	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
 	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(authUser.ID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check phase management permission", "error", err)
+		h.App.ObsLogger.Error(r.Context(), "Failed to check phase management permission", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return 0, 0, nil, err
 	}
@@ -59,7 +59,7 @@ func (h *Handler) validateGMAccessAndResult(w http.ResponseWriter, r *http.Reque
 	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
 	result, err := actionService.GetActionResult(r.Context(), int32(resultID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get action result", "error", err)
+		h.App.ObsLogger.Error(r.Context(), "Failed to get action result", "error", err)
 		render.Render(w, r, core.ErrNotFound("action result not found"))
 		return 0, 0, nil, err
 	}
@@ -74,6 +74,9 @@ func (h *Handler) validateGMAccessAndResult(w http.ResponseWriter, r *http.Reque
 
 // CreateDraftCharacterUpdate creates a draft character sheet update for an action result (GM only)
 func (h *Handler) CreateDraftCharacterUpdate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_create_draft_character_update")()
+
 	// Validate GM access and get validated parameters
 	gameID, resultID, actionService, err := h.validateGMAccessAndResult(w, r)
 	if err != nil {
@@ -88,9 +91,9 @@ func (h *Handler) CreateDraftCharacterUpdate(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Get result to access user_id for character lookup
-	result, err := actionService.GetActionResult(r.Context(), resultID)
+	result, err := actionService.GetActionResult(ctx, resultID)
 	if err != nil {
-		h.App.Logger.Error("Failed to get action result", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get action result", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -100,9 +103,9 @@ func (h *Handler) CreateDraftCharacterUpdate(w http.ResponseWriter, r *http.Requ
 	// SECURITY: We must validate that the character belongs to the correct user/game
 	var characterID int32
 	query := `SELECT id FROM characters WHERE user_id = $1 AND game_id = $2 LIMIT 1`
-	err = h.App.Pool.QueryRow(r.Context(), query, result.UserID, gameID).Scan(&characterID)
+	err = h.App.Pool.QueryRow(ctx, query, result.UserID, gameID).Scan(&characterID)
 	if err != nil {
-		h.App.Logger.Error("Failed to get character ID for user in game", "error", err, "user_id", result.UserID, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get character ID for user in game", "error", err, "user_id", result.UserID, "game_id", gameID)
 		render.Render(w, r, core.ErrNotFound("character not found for this user in this game"))
 		return
 	}
@@ -118,9 +121,9 @@ func (h *Handler) CreateDraftCharacterUpdate(w http.ResponseWriter, r *http.Requ
 		Operation:      data.Operation,
 	}
 
-	draft, err := actionService.CreateDraftCharacterUpdate(r.Context(), req)
+	draft, err := actionService.CreateDraftCharacterUpdate(ctx, req)
 	if err != nil {
-		h.App.Logger.Error("Failed to create draft character update", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to create draft character update", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -145,6 +148,9 @@ func (h *Handler) CreateDraftCharacterUpdate(w http.ResponseWriter, r *http.Requ
 
 // GetDraftCharacterUpdates retrieves all draft updates for an action result (GM only)
 func (h *Handler) GetDraftCharacterUpdates(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_draft_character_updates")()
+
 	// Validate GM access and get validated parameters
 	_, resultID, actionService, err := h.validateGMAccessAndResult(w, r)
 	if err != nil {
@@ -152,9 +158,9 @@ func (h *Handler) GetDraftCharacterUpdates(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Get all draft updates for the action result
-	drafts, err := actionService.GetDraftCharacterUpdates(r.Context(), resultID)
+	drafts, err := actionService.GetDraftCharacterUpdates(ctx, resultID)
 	if err != nil {
-		h.App.Logger.Error("Failed to get draft character updates", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get draft character updates", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -183,6 +189,9 @@ func (h *Handler) GetDraftCharacterUpdates(w http.ResponseWriter, r *http.Reques
 
 // UpdateDraftCharacterUpdate updates the field value of an existing draft (GM only)
 func (h *Handler) UpdateDraftCharacterUpdate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_update_draft_character_update")()
+
 	// Validate GM access and get validated parameters
 	_, _, actionService, err := h.validateGMAccessAndResult(w, r)
 	if err != nil {
@@ -207,9 +216,9 @@ func (h *Handler) UpdateDraftCharacterUpdate(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Update the draft
-	draft, err := actionService.UpdateDraftCharacterUpdate(r.Context(), int32(draftID), data.FieldValue)
+	draft, err := actionService.UpdateDraftCharacterUpdate(ctx, int32(draftID), data.FieldValue)
 	if err != nil {
-		h.App.Logger.Error("Failed to update draft character update", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to update draft character update", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -233,6 +242,9 @@ func (h *Handler) UpdateDraftCharacterUpdate(w http.ResponseWriter, r *http.Requ
 
 // DeleteDraftCharacterUpdate deletes a draft character update (GM only)
 func (h *Handler) DeleteDraftCharacterUpdate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_draft_character_update")()
+
 	// Validate GM access and get validated parameters
 	_, _, actionService, err := h.validateGMAccessAndResult(w, r)
 	if err != nil {
@@ -247,9 +259,9 @@ func (h *Handler) DeleteDraftCharacterUpdate(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Delete the draft
-	err = actionService.DeleteDraftCharacterUpdate(r.Context(), int32(draftID))
+	err = actionService.DeleteDraftCharacterUpdate(ctx, int32(draftID))
 	if err != nil {
-		h.App.Logger.Error("Failed to delete draft character update", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to delete draft character update", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -259,6 +271,9 @@ func (h *Handler) DeleteDraftCharacterUpdate(w http.ResponseWriter, r *http.Requ
 
 // GetDraftUpdateCount retrieves the count of draft updates for an action result (GM only)
 func (h *Handler) GetDraftUpdateCount(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_draft_update_count")()
+
 	// Validate GM access and get validated parameters
 	_, resultID, actionService, err := h.validateGMAccessAndResult(w, r)
 	if err != nil {
@@ -266,9 +281,9 @@ func (h *Handler) GetDraftUpdateCount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get the count
-	count, err := actionService.GetDraftUpdateCount(r.Context(), resultID)
+	count, err := actionService.GetDraftUpdateCount(ctx, resultID)
 	if err != nil {
-		h.App.Logger.Error("Failed to get draft update count", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get draft update count", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
