@@ -113,13 +113,22 @@ else
 
     # Build and deploy
     echo -e "\${BLUE}🔨 Building Docker images...\${NC}"
+
+    # Determine compose files to use
+    COMPOSE_CMD="docker-compose -f docker-compose.yml"
     if [ -f docker-compose.prod.yml ]; then
-        docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
-        docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-    else
-        docker-compose build
-        docker-compose up -d
+        COMPOSE_CMD="\${COMPOSE_CMD} -f docker-compose.prod.yml"
     fi
+    if [ -f docker-compose.logging.yml ]; then
+        COMPOSE_CMD="\${COMPOSE_CMD} -f docker-compose.logging.yml"
+        echo -e "\${GREEN}✓ Log persistence enabled\${NC}"
+        # Ensure log directories exist
+        mkdir -p logs/{backend,frontend,nginx,postgres,backup}
+    fi
+
+    # Build and start services
+    \${COMPOSE_CMD} build
+    \${COMPOSE_CMD} up -d
 
     # Wait for services
     echo -e "\${BLUE}⏳ Waiting for services to be healthy...\${NC}"
@@ -171,8 +180,9 @@ echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
 echo "  1. Check application at: https://your-domain.com"
-echo "  2. Monitor logs: ssh ${SERVER} 'cd ${PROJECT_DIR} && docker-compose logs -f'"
-echo "  3. Check metrics: ssh ${SERVER} 'docker stats'"
+echo "  2. Monitor container logs: ssh ${SERVER} 'cd ${PROJECT_DIR} && docker-compose logs -f'"
+echo "  3. View persisted logs: ssh ${SERVER} 'tail -f ${PROJECT_DIR}/logs/backend/app.log'"
+echo "  4. Check metrics: ssh ${SERVER} 'docker stats'"
 echo ""
 
 # Open browser if on macOS

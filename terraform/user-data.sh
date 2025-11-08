@@ -116,6 +116,7 @@ fi
 # Create required directories
 echo "Creating required directories..."
 mkdir -p /opt/actionphase/{backups,scripts,nginx,ssl}
+mkdir -p /opt/actionphase/logs/{backend,frontend,nginx,postgres,backup}
 chown -R ubuntu:ubuntu /opt/actionphase
 
 # Create systemd service for Docker Compose (optional)
@@ -143,14 +144,23 @@ EOF
 echo "Generating DH parameters for SSL (this may take a few minutes)..."
 openssl dhparam -out /opt/actionphase/ssl/dhparam.pem 2048
 
-# Create cron job for backups
-echo "Setting up backup cron job..."
-cat > /etc/cron.d/actionphase-backup << 'EOF'
+# Create cron jobs for backups and monitoring
+echo "Setting up backup and monitoring cron jobs..."
+cat > /etc/cron.d/actionphase << 'EOF'
 # Daily database backup at 2 AM UTC
 0 2 * * * ubuntu cd /opt/actionphase && ./scripts/backup-to-s3.sh >> /opt/actionphase/backups/backup.log 2>&1
 
 # Weekly AMI snapshot at 3 AM UTC on Sundays
 0 3 * * 0 root /usr/local/bin/aws ec2 create-image --instance-id $(ec2-metadata --instance-id | cut -d " " -f 2) --name "actionphase-ami-$(date +\%Y\%m\%d)" --no-reboot >> /var/log/ami-snapshot.log 2>&1
+
+# Daily disk space monitoring at 6 AM UTC
+0 6 * * * ubuntu cd /opt/actionphase && ./scripts/check-disk.sh --threshold 70 >> /opt/actionphase/logs/disk-monitor.log 2>&1
+
+# Weekly SSL certificate check at 7 AM UTC on Mondays
+0 7 * * 1 ubuntu cd /opt/actionphase && ./scripts/check-ssl.sh >> /opt/actionphase/logs/ssl-monitor.log 2>&1
+
+# Clean old Docker resources weekly at 4 AM UTC on Sundays
+0 4 * * 0 ubuntu docker system prune -f >> /var/log/docker-cleanup.log 2>&1
 EOF
 
 # Install ec2-metadata tool
@@ -161,9 +171,26 @@ chmod +x /usr/local/bin/ec2-metadata
 # Set up log rotation
 echo "Configuring log rotation..."
 cat > /etc/logrotate.d/actionphase << 'EOF'
-/opt/actionphase/logs/*.log {
+# Application logs
+/opt/actionphase/logs/**/*.log {
     daily
-    rotate 7
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 ubuntu ubuntu
+    sharedscripts
+    postrotate
+        # Signal nginx to reopen log files
+        docker kill --signal=USR1 actionphase-nginx 2>/dev/null || true
+    endscript
+}
+
+# Backup logs
+/opt/actionphase/backups/*.log {
+    weekly
+    rotate 4
     compress
     delaycompress
     missingok
