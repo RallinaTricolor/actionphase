@@ -18,6 +18,7 @@ import (
 // CreateDeadline creates a new deadline for a game
 func (h *Handler) CreateDeadline(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_create_deadline")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_create_deadline")()
 
@@ -81,6 +82,7 @@ func (h *Handler) CreateDeadline(w http.ResponseWriter, r *http.Request) {
 // GetGameDeadlines retrieves all deadlines for a game
 func (h *Handler) GetGameDeadlines(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_game_deadlines")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_game_deadlines")()
 
@@ -106,7 +108,7 @@ func (h *Handler) GetGameDeadlines(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify user has access to this game (either GM or participant)
-	gameService := &db.GameService{DB: h.App.Pool}
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
@@ -156,6 +158,7 @@ func (h *Handler) GetGameDeadlines(w http.ResponseWriter, r *http.Request) {
 // UpdateDeadline updates a deadline
 func (h *Handler) UpdateDeadline(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_update_deadline")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_update_deadline")()
 
@@ -224,6 +227,7 @@ func (h *Handler) UpdateDeadline(w http.ResponseWriter, r *http.Request) {
 // DeleteDeadline deletes a deadline
 func (h *Handler) DeleteDeadline(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_deadline")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_deadline")()
 
@@ -277,6 +281,7 @@ func (h *Handler) DeleteDeadline(w http.ResponseWriter, r *http.Request) {
 // GetUpcomingDeadlines retrieves upcoming deadlines across all user's games
 func (h *Handler) GetUpcomingDeadlines(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_upcoming_deadlines")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_upcoming_deadlines")()
 
@@ -369,7 +374,7 @@ func toDeadlineWithGameResponse(d *core.DeadlineWithGame) *DeadlineWithGameRespo
 // Helper function to verify user is GM of a game
 // Returns the game if verification succeeds, or an error response if it fails
 func (h *Handler) verifyUserIsGM(ctx context.Context, gameID int32, userID int32) (*models.Game, render.Renderer) {
-	gameService := &db.GameService{DB: h.App.Pool}
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, gameID)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")

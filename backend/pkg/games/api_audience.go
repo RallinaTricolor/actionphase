@@ -61,6 +61,9 @@ func (a *UpdateAutoAcceptAudienceRequest) Bind(r *http.Request) error {
 // ApplyAsAudience allows a user to apply to join a game as an audience member
 // POST /api/v1/games/:id/apply/audience
 func (h *Handler) ApplyAsAudience(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_apply_as_audience")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -75,20 +78,20 @@ func (h *Handler) ApplyAsAudience(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	userID := int32(authUser.ID)
-	gameService := &db.GameService{DB: h.App.Pool}
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Create the audience application
-	participant, err := gameService.CreateAudienceApplication(r.Context(), int32(gameID), userID)
+	participant, err := gameService.CreateAudienceApplication(ctx, int32(gameID), userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to create audience application", "error", err, "game_id", gameID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to create audience application", "error", err, "game_id", gameID, "user_id", userID)
 
 		// Check for specific error types to provide better responses
 		errStr := fmt.Sprintf("%v", err)
@@ -119,6 +122,9 @@ func (h *Handler) ApplyAsAudience(w http.ResponseWriter, r *http.Request) {
 // ListAudienceMembers lists all audience members in a game
 // GET /api/v1/games/:id/audience
 func (h *Handler) ListAudienceMembers(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_audience_members")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -126,12 +132,12 @@ func (h *Handler) ListAudienceMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gameService := &db.GameService{DB: h.App.Pool}
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Get audience members
-	members, err := gameService.ListAudienceMembers(r.Context(), int32(gameID))
+	members, err := gameService.ListAudienceMembers(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to list audience members", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to list audience members", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -159,6 +165,9 @@ func (h *Handler) ListAudienceMembers(w http.ResponseWriter, r *http.Request) {
 // UpdateAutoAcceptAudience updates the auto-accept audience setting for a game
 // PUT /api/v1/games/:id/settings/auto-accept-audience
 func (h *Handler) UpdateAutoAcceptAudience(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_update_auto_accept_audience")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -173,18 +182,18 @@ func (h *Handler) UpdateAutoAcceptAudience(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Check if user is GM
-	gameService := &db.GameService{DB: h.App.Pool}
-	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrNotFound("game not found"))
 		return
 	}
@@ -195,9 +204,9 @@ func (h *Handler) UpdateAutoAcceptAudience(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Update the setting
-	err = gameService.UpdateGameAutoAcceptAudience(r.Context(), int32(gameID), data.AutoAcceptAudience)
+	err = gameService.UpdateGameAutoAcceptAudience(ctx, int32(gameID), data.AutoAcceptAudience)
 	if err != nil {
-		h.App.Logger.Error("Failed to update auto-accept audience setting", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to update auto-accept audience setting", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -210,6 +219,9 @@ func (h *Handler) UpdateAutoAcceptAudience(w http.ResponseWriter, r *http.Reques
 // ListAudienceNPCs lists all audience-controlled NPCs in a game
 // GET /api/v1/games/:id/characters/audience-npcs
 func (h *Handler) ListAudienceNPCs(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_audience_npcs")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -220,9 +232,9 @@ func (h *Handler) ListAudienceNPCs(w http.ResponseWriter, r *http.Request) {
 	characterService := &db.CharacterService{DB: h.App.Pool}
 
 	// Get audience NPCs
-	npcs, err := characterService.ListAudienceNPCs(r.Context(), int32(gameID))
+	npcs, err := characterService.ListAudienceNPCs(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to list audience NPCs", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to list audience NPCs", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -235,6 +247,9 @@ func (h *Handler) ListAudienceNPCs(w http.ResponseWriter, r *http.Request) {
 // ListAllPrivateConversations lists all private conversations for GM/audience
 // GET /api/v1/games/:id/private-messages/all
 func (h *Handler) ListAllPrivateConversations(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_all_private_conversations")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -243,18 +258,18 @@ func (h *Handler) ListAllPrivateConversations(w http.ResponseWriter, r *http.Req
 	}
 
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Check if user can view game (includes public archive access for completed games)
-	gameService := &db.GameService{DB: h.App.Pool}
-	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(authUser.ID))
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	canView, err := gameService.CanUserViewGame(ctx, int32(gameID), int32(authUser.ID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", authUser.ID)
+		h.App.ObsLogger.Error(ctx, "Failed to check game view access", "error", err, "game_id", gameID, "user_id", authUser.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -266,9 +281,9 @@ func (h *Handler) ListAllPrivateConversations(w http.ResponseWriter, r *http.Req
 
 	// Get all private conversations
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
-	conversations, err := messageService.ListAllPrivateConversations(r.Context(), int32(gameID))
+	conversations, err := messageService.ListAllPrivateConversations(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to list private conversations", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to list private conversations", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -282,6 +297,9 @@ func (h *Handler) ListAllPrivateConversations(w http.ResponseWriter, r *http.Req
 // GetAudienceConversationMessages gets messages for a specific conversation (GM/audience only)
 // GET /api/v1/games/:id/private-messages/conversations/:conversationId
 func (h *Handler) GetAudienceConversationMessages(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_audience_conversation_messages")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -297,18 +315,18 @@ func (h *Handler) GetAudienceConversationMessages(w http.ResponseWriter, r *http
 	}
 
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Check if user can view game (includes public archive access for completed games)
-	gameService := &db.GameService{DB: h.App.Pool}
-	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(authUser.ID))
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	canView, err := gameService.CanUserViewGame(ctx, int32(gameID), int32(authUser.ID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", authUser.ID)
+		h.App.ObsLogger.Error(ctx, "Failed to check game view access", "error", err, "game_id", gameID, "user_id", authUser.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -320,9 +338,9 @@ func (h *Handler) GetAudienceConversationMessages(w http.ResponseWriter, r *http
 
 	// Get conversation messages
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
-	messages, err := messageService.GetAudienceConversationMessages(r.Context(), int32(conversationID))
+	messages, err := messageService.GetAudienceConversationMessages(ctx, int32(conversationID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get conversation messages", "error", err, "conversation_id", conversationID)
+		h.App.ObsLogger.Error(ctx, "Failed to get conversation messages", "error", err, "conversation_id", conversationID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -335,6 +353,9 @@ func (h *Handler) GetAudienceConversationMessages(w http.ResponseWriter, r *http
 // ListAllActionSubmissions lists all action submissions for GM/audience
 // GET /api/v1/games/:id/action-submissions/all
 func (h *Handler) ListAllActionSubmissions(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_all_action_submissions")()
+
 	gameIDStr := chi.URLParam(r, "id")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -343,18 +364,18 @@ func (h *Handler) ListAllActionSubmissions(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Check if user can view game (includes public archive access for completed games)
-	gameService := &db.GameService{DB: h.App.Pool}
-	canView, err := gameService.CanUserViewGame(r.Context(), int32(gameID), int32(authUser.ID))
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	canView, err := gameService.CanUserViewGame(ctx, int32(gameID), int32(authUser.ID))
 	if err != nil {
-		h.App.Logger.Error("Failed to check game view access", "error", err, "game_id", gameID, "user_id", authUser.ID)
+		h.App.ObsLogger.Error(ctx, "Failed to check game view access", "error", err, "game_id", gameID, "user_id", authUser.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -394,17 +415,17 @@ func (h *Handler) ListAllActionSubmissions(w http.ResponseWriter, r *http.Reques
 
 	// Get action submissions
 	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
-	submissions, err := actionService.ListAllActionSubmissions(r.Context(), int32(gameID), phaseID, limit, offset)
+	submissions, err := actionService.ListAllActionSubmissions(ctx, int32(gameID), phaseID, limit, offset)
 	if err != nil {
-		h.App.Logger.Error("Failed to list action submissions", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to list action submissions", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
 	// Get total count
-	total, err := actionService.CountAllActionSubmissions(r.Context(), int32(gameID), phaseID)
+	total, err := actionService.CountAllActionSubmissions(ctx, int32(gameID), phaseID)
 	if err != nil {
-		h.App.Logger.Error("Failed to count action submissions", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to count action submissions", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}

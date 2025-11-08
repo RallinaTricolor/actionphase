@@ -10,6 +10,7 @@ import (
 
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
+	"actionphase/pkg/observability"
 )
 
 // GameService provides database operations for game management.
@@ -17,7 +18,8 @@ import (
 // database interactions including CRUD operations, state management,
 // and participant management.
 type GameService struct {
-	DB *pgxpool.Pool
+	DB     *pgxpool.Pool
+	Logger *observability.Logger
 }
 
 // Ensure GameService implements the interface at compile time
@@ -116,7 +118,11 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 		if err := appService.BulkRejectApplications(ctx, gameID, game.GmUserID); err != nil {
 			// Log the error but don't fail the state change
 			// The game is already cancelled at this point
-			fmt.Printf("Warning: failed to reject pending applications for cancelled game %d: %v\n", gameID, err)
+			if gs.Logger != nil {
+				gs.Logger.Warn(ctx, "Failed to reject pending applications for cancelled game",
+					"error", err,
+					"game_id", gameID)
+			}
 		}
 	}
 
@@ -125,7 +131,11 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 		if err := queries.DisableAnonymousMode(ctx, gameID); err != nil {
 			// Log the error but don't fail the state change
 			// The game is already completed at this point
-			fmt.Printf("Warning: failed to disable anonymous mode for completed game %d: %v\n", gameID, err)
+			if gs.Logger != nil {
+				gs.Logger.Warn(ctx, "Failed to disable anonymous mode for completed game",
+					"error", err,
+					"game_id", gameID)
+			}
 		}
 	}
 

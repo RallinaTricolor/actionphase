@@ -2,6 +2,7 @@ package auth
 
 import (
 	"actionphase/pkg/email"
+	"actionphase/pkg/observability"
 	"context"
 	"fmt"
 	"os"
@@ -16,6 +17,7 @@ import (
 type PasswordService struct {
 	DB           *pgxpool.Pool
 	EmailService *email.EmailService
+	Logger       *observability.Logger
 }
 
 // ChangePasswordRequest represents a request to change password for an authenticated user
@@ -138,7 +140,11 @@ func (s *PasswordService) RequestPasswordReset(ctx context.Context, req *Request
 		if err != nil {
 			// Log error but don't fail the request
 			// The token is already created, user can try again
-			fmt.Printf("Failed to send password reset email: %v\n", err)
+			if s.Logger != nil {
+				s.Logger.Warn(ctx, "Failed to send password reset email",
+					"error", err,
+					"email", user.Email)
+			}
 		}
 	}
 
@@ -193,7 +199,12 @@ func (s *PasswordService) ResetPassword(ctx context.Context, req *ResetPasswordR
 	err = queries.MarkPasswordResetTokenUsed(ctx, resetToken.ID)
 	if err != nil {
 		// Log but don't fail - password was already changed
-		fmt.Printf("Failed to mark reset token as used: %v\n", err)
+		if s.Logger != nil {
+			s.Logger.Warn(ctx, "Failed to mark reset token as used",
+				"error", err,
+				"token_id", resetToken.ID,
+				"user_id", user.ID)
+		}
 	}
 
 	// Send confirmation email

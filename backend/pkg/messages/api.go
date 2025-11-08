@@ -94,7 +94,6 @@ func getUserIDFromToken(r *http.Request, app *core.App) (int32, error) {
 
 // Helper function to convert MessageWithDetails to MessageResponse
 func messageWithDetailsToResponse(msg *core.MessageWithDetails) *MessageResponse {
-	fmt.Printf("API messageWithDetailsToResponse: msg.ID=%d, msg.MentionedCharacterIds=%v\n", msg.ID, msg.MentionedCharacterIds)
 	response := &MessageResponse{
 		ID:                    msg.ID,
 		GameID:                msg.GameID,
@@ -111,7 +110,6 @@ func messageWithDetailsToResponse(msg *core.MessageWithDetails) *MessageResponse
 		CreatedAt:             msg.CreatedAt.Time,
 		EditCount:             msg.EditCount,
 	}
-	fmt.Printf("API messageWithDetailsToResponse: response.ID=%d, response.MentionedCharacterIds=%v\n", response.ID, response.MentionedCharacterIds)
 
 	if msg.PhaseID.Valid {
 		phaseID := msg.PhaseID.Int32
@@ -151,6 +149,8 @@ func messageWithDetailsToResponse(msg *core.MessageWithDetails) *MessageResponse
 // CreatePost creates a new post in the common room
 func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_create_post")()
+
 	gameIDStr := chi.URLParam(r, "gameId")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -166,7 +166,7 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := getUserIDFromToken(r, h.App)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
@@ -175,7 +175,7 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	queries := models.New(h.App.Pool)
 	game, err := queries.GetGame(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -184,7 +184,7 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	isCoGM := core.IsUserCoGM(ctx, h.App.Pool, int32(gameID), userID)
 
 	if !isPrimaryGM && !isCoGM {
-		h.App.Logger.Warn("Non-GM/co-GM user attempted to create post", "user_id", userID, "game_id", gameID)
+		h.App.ObsLogger.Warn(ctx, "Non-GM/co-GM user attempted to create post", "user_id", userID, "game_id", gameID)
 		render.Render(w, r, core.ErrForbidden("Only the Game Master or co-GM can create posts"))
 		return
 	}
@@ -201,7 +201,7 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		h.App.Logger.Error("Failed to create post", "error", err, "game_id", gameID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to create post", "error", err, "game_id", gameID, "user_id", userID)
 		// Check if error is due to archived game
 		if core.IsArchivedGameError(err) {
 			render.Render(w, r, core.ErrGameArchived())
@@ -211,12 +211,12 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.App.Logger.Info("Post created successfully", "post_id", post.ID, "game_id", gameID, "author_id", userID)
+	h.App.ObsLogger.Info(ctx, "Post created successfully", "post_id", post.ID, "game_id", gameID, "author_id", userID)
 
 	// Fetch full post details to return with metadata
 	postDetails, err := messageService.GetPost(ctx, post.ID)
 	if err != nil {
-		h.App.Logger.Error("Failed to fetch post details", "error", err, "post_id", post.ID)
+		h.App.ObsLogger.Error(ctx, "Failed to fetch post details", "error", err, "post_id", post.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -229,6 +229,8 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 // GetGamePosts retrieves all posts for a game
 func (h *Handler) GetGamePosts(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_game_posts")()
+
 	gameIDStr := chi.URLParam(r, "gameId")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -268,7 +270,7 @@ func (h *Handler) GetGamePosts(w http.ResponseWriter, r *http.Request) {
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 	posts, err := messageService.GetGamePosts(ctx, int32(gameID), phaseID, limit, offset)
 	if err != nil {
-		h.App.Logger.Error("Failed to get game posts", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game posts", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -310,6 +312,8 @@ func (h *Handler) GetGamePosts(w http.ResponseWriter, r *http.Request) {
 // CreateComment creates a comment on a post or another comment
 func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_create_comment")()
+
 	gameIDStr := chi.URLParam(r, "gameId")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -332,7 +336,7 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := getUserIDFromToken(r, h.App)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
@@ -350,7 +354,7 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		h.App.Logger.Error("Failed to create comment", "error", err, "game_id", gameID, "post_id", postID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to create comment", "error", err, "game_id", gameID, "post_id", postID, "user_id", userID)
 		// Check if error is due to archived game
 		if core.IsArchivedGameError(err) {
 			render.Render(w, r, core.ErrGameArchived())
@@ -360,12 +364,12 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.App.Logger.Info("Comment created successfully", "comment_id", comment.ID, "post_id", postID, "author_id", userID)
+	h.App.ObsLogger.Info(ctx, "Comment created successfully", "comment_id", comment.ID, "post_id", postID, "author_id", userID)
 
 	// Fetch full comment details
 	commentDetails, err := messageService.GetComment(ctx, comment.ID)
 	if err != nil {
-		h.App.Logger.Error("Failed to fetch comment details", "error", err, "comment_id", comment.ID)
+		h.App.ObsLogger.Error(ctx, "Failed to fetch comment details", "error", err, "comment_id", comment.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -378,6 +382,8 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 // GetMessage retrieves a single message by ID (for deep linking)
 func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_message")()
+
 	gameIDStr := chi.URLParam(r, "gameId")
 	_, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -395,7 +401,7 @@ func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 	message, err := messageService.GetMessage(ctx, int32(messageID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get message", "error", err, "message_id", messageID)
+		h.App.ObsLogger.Error(ctx, "Failed to get message", "error", err, "message_id", messageID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -407,6 +413,8 @@ func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
 // GetPostComments retrieves direct comments for a post
 func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_post_comments")()
+
 	gameIDStr := chi.URLParam(r, "gameId")
 	_, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -424,7 +432,7 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 	comments, err := messageService.GetPostComments(ctx, int32(postID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get post comments", "error", err, "post_id", postID)
+		h.App.ObsLogger.Error(ctx, "Failed to get post comments", "error", err, "post_id", postID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -472,6 +480,7 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 // POST /api/v1/games/:gameId/posts/:postId/mark-read
 func (h *Handler) MarkPostRead(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_mark_post_read")()
 
 	// Parse game ID
 	gameIDStr := chi.URLParam(r, "gameId")
@@ -492,7 +501,7 @@ func (h *Handler) MarkPostRead(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from JWT
 	userID, err := getUserIDFromToken(r, h.App)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
@@ -510,7 +519,7 @@ func (h *Handler) MarkPostRead(w http.ResponseWriter, r *http.Request) {
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 	readMarker, err := messageService.MarkPostAsRead(ctx, userID, int32(gameID), int32(postID), requestBody.LastReadCommentID)
 	if err != nil {
-		h.App.Logger.Error("Failed to mark post as read", "error", err, "game_id", gameID, "post_id", postID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to mark post as read", "error", err, "game_id", gameID, "post_id", postID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -533,6 +542,7 @@ func (h *Handler) MarkPostRead(w http.ResponseWriter, r *http.Request) {
 // GET /api/v1/games/:gameId/read-markers
 func (h *Handler) GetGameReadMarkers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_game_read_markers")()
 
 	// Parse game ID
 	gameIDStr := chi.URLParam(r, "gameId")
@@ -545,7 +555,7 @@ func (h *Handler) GetGameReadMarkers(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from JWT
 	userID, err := getUserIDFromToken(r, h.App)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
@@ -554,7 +564,7 @@ func (h *Handler) GetGameReadMarkers(w http.ResponseWriter, r *http.Request) {
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 	readMarkers, err := messageService.GetUserReadMarkersForGame(ctx, userID, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get read markers", "error", err, "game_id", gameID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to get read markers", "error", err, "game_id", gameID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -582,6 +592,7 @@ func (h *Handler) GetGameReadMarkers(w http.ResponseWriter, r *http.Request) {
 // GET /api/v1/games/:gameId/posts-unread-info
 func (h *Handler) GetPostsUnreadInfo(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_posts_unread_info")()
 
 	// Parse game ID
 	gameIDStr := chi.URLParam(r, "gameId")
@@ -595,7 +606,7 @@ func (h *Handler) GetPostsUnreadInfo(w http.ResponseWriter, r *http.Request) {
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 	postsInfo, err := messageService.GetPostsWithUnreadInfo(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get posts unread info", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get posts unread info", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -624,6 +635,7 @@ func (h *Handler) GetPostsUnreadInfo(w http.ResponseWriter, r *http.Request) {
 // GET /api/v1/games/:gameId/unread-comment-ids
 func (h *Handler) GetUnreadCommentIDs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_unread_comment_ids")()
 
 	// Parse game ID
 	gameIDStr := chi.URLParam(r, "gameId")
@@ -636,7 +648,7 @@ func (h *Handler) GetUnreadCommentIDs(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from JWT
 	userID, err := getUserIDFromToken(r, h.App)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
@@ -645,7 +657,7 @@ func (h *Handler) GetUnreadCommentIDs(w http.ResponseWriter, r *http.Request) {
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 	unreadComments, err := messageService.GetUnreadCommentIDsForPosts(ctx, userID, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get unread comment IDs", "error", err, "game_id", gameID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to get unread comment IDs", "error", err, "game_id", gameID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -667,6 +679,7 @@ func (h *Handler) GetUnreadCommentIDs(w http.ResponseWriter, r *http.Request) {
 // PATCH /api/v1/games/:gameId/posts/:postId/comments/:commentId
 func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_update_comment")()
 
 	// Parse IDs
 	gameIDStr := chi.URLParam(r, "gameId")
@@ -693,7 +706,7 @@ func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from token
 	userID, err := getUserIDFromToken(r, h.App)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
@@ -703,13 +716,13 @@ func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	// Check if user can edit this comment (must be author)
 	canEdit, err := messageService.CanUserEditComment(ctx, int32(commentID), userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to check edit permission", "error", err, "comment_id", commentID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to check edit permission", "error", err, "comment_id", commentID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
 	if !canEdit {
-		h.App.Logger.Warn("User attempted to edit comment without permission", "comment_id", commentID, "user_id", userID)
+		h.App.ObsLogger.Warn(ctx, "User attempted to edit comment without permission", "comment_id", commentID, "user_id", userID)
 		render.Render(w, r, core.ErrForbidden("You can only edit your own comments"))
 		return
 	}
@@ -719,21 +732,21 @@ func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Check if this is a permission error
 		if errors.Is(err, core.ErrCharacterNotControlled) {
-			h.App.Logger.Warn("User attempted to use character they don't control", "comment_id", commentID, "user_id", userID, "requested_character_id", data.CharacterID)
+			h.App.ObsLogger.Warn(ctx, "User attempted to use character they don't control", "comment_id", commentID, "user_id", userID, "requested_character_id", data.CharacterID)
 			render.Render(w, r, core.ErrForbidden("You do not control this character"))
 			return
 		}
-		h.App.Logger.Error("Failed to update comment", "error", err, "comment_id", commentID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to update comment", "error", err, "comment_id", commentID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("Comment updated successfully", "comment_id", commentID, "user_id", userID, "edit_count", updatedComment.EditCount)
+	h.App.ObsLogger.Info(ctx, "Comment updated successfully", "comment_id", commentID, "user_id", userID, "edit_count", updatedComment.EditCount)
 
 	// Fetch full comment details to return
 	commentDetails, err := messageService.GetComment(ctx, updatedComment.ID)
 	if err != nil {
-		h.App.Logger.Error("Failed to fetch updated comment details", "error", err, "comment_id", updatedComment.ID)
+		h.App.ObsLogger.Error(ctx, "Failed to fetch updated comment details", "error", err, "comment_id", updatedComment.ID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -746,6 +759,7 @@ func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 // DELETE /api/v1/games/:gameId/posts/:postId/comments/:commentId
 func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_comment")()
 
 	// Parse IDs
 	gameIDStr := chi.URLParam(r, "gameId")
@@ -765,7 +779,7 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from token
 	userID, err := getUserIDFromToken(r, h.App)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
@@ -778,7 +792,7 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	userService := &db.UserService{DB: h.App.Pool}
 	user, err := userService.User(int(userID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get user", "error", err, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to get user", "error", err, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -791,13 +805,13 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	// Check if user can delete this comment
 	canDelete, err := messageService.CanUserDeleteComment(ctx, int32(commentID), userID, isAdmin)
 	if err != nil {
-		h.App.Logger.Error("Failed to check delete permission", "error", err, "comment_id", commentID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to check delete permission", "error", err, "comment_id", commentID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
 	if !canDelete {
-		h.App.Logger.Warn("User attempted to delete comment without permission",
+		h.App.ObsLogger.Warn(ctx, "User attempted to delete comment without permission",
 			"comment_id", commentID,
 			"user_id", userID,
 			"is_admin", isAdmin)
@@ -808,12 +822,12 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	// Delete the comment
 	err = messageService.DeleteComment(ctx, int32(commentID), userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to delete comment", "error", err, "comment_id", commentID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to delete comment", "error", err, "comment_id", commentID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("Comment deleted successfully",
+	h.App.ObsLogger.Info(ctx, "Comment deleted successfully",
 		"comment_id", commentID,
 		"game_id", gameID,
 		"deleted_by_user_id", userID,
@@ -831,6 +845,7 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 // GET /api/v1/games/:gameId/comments/recent
 func (h *Handler) ListRecentCommentsWithParents(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_recent_comments_with_parents")()
 
 	// Parse game ID
 	gameIDStr := chi.URLParam(r, "gameId")
@@ -874,7 +889,7 @@ func (h *Handler) ListRecentCommentsWithParents(w http.ResponseWriter, r *http.R
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
 	comments, err := messageService.ListRecentCommentsWithParents(ctx, int32(gameID), int32(limit), int32(offset))
 	if err != nil {
-		h.App.Logger.Error("Failed to list recent comments", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to list recent comments", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -882,12 +897,12 @@ func (h *Handler) ListRecentCommentsWithParents(w http.ResponseWriter, r *http.R
 	// Get total comment count for pagination metadata
 	totalCount, err := messageService.GetTotalCommentCount(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get total comment count", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get total comment count", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	h.App.Logger.Info("Listed recent comments with parents",
+	h.App.ObsLogger.Info(ctx, "Listed recent comments with parents",
 		"game_id", gameID,
 		"limit", limit,
 		"offset", offset,

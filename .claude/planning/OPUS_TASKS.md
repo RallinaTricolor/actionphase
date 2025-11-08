@@ -4,6 +4,3 @@
   - Antipatterns?
 - Test coverage and useful tests
   - Are we mostly happy path testing?
-- Logging, monitoring, application traces
-  - Log rotation, access outside the container
-  - Application traces(?)

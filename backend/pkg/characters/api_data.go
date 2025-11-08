@@ -15,6 +15,9 @@ import (
 
 // SetCharacterData sets character data field
 func (h *Handler) SetCharacterData(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_set_character_data")()
+
 	characterIDStr := chi.URLParam(r, "id")
 	characterID, err := strconv.ParseInt(characterIDStr, 10, 32)
 	if err != nil {
@@ -31,16 +34,16 @@ func (h *Handler) SetCharacterData(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from token
 	userID, err := h.getUserIDFromToken(r)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
 
 	// Verify user can edit this character
 	characterService := &services.CharacterService{DB: h.App.Pool}
-	canEdit, err := characterService.CanUserEditCharacter(r.Context(), int32(characterID), userID)
+	canEdit, err := characterService.CanUserEditCharacter(ctx, int32(characterID), userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to check character edit permission", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to check character edit permission", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -57,16 +60,16 @@ func (h *Handler) SetCharacterData(w http.ResponseWriter, r *http.Request) {
 	if isStatField {
 		// Verify user is the GM of this character's game
 		queries := models.New(h.App.Pool)
-		character, err := queries.GetCharacter(r.Context(), int32(characterID))
+		character, err := queries.GetCharacter(ctx, int32(characterID))
 		if err != nil {
-			h.App.Logger.Error("Failed to get character for GM check", "error", err)
+			h.App.ObsLogger.Error(ctx, "Failed to get character for GM check", "error", err)
 			render.Render(w, r, core.ErrInternalError(err))
 			return
 		}
 
-		game, err := queries.GetGame(r.Context(), character.GameID)
+		game, err := queries.GetGame(ctx, character.GameID)
 		if err != nil {
-			h.App.Logger.Error("Failed to get game for GM check", "error", err)
+			h.App.ObsLogger.Error(ctx, "Failed to get game for GM check", "error", err)
 			render.Render(w, r, core.ErrInternalError(err))
 			return
 		}
@@ -78,7 +81,7 @@ func (h *Handler) SetCharacterData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set character data
-	err = characterService.SetCharacterData(r.Context(), services.CharacterDataRequest{
+	err = characterService.SetCharacterData(ctx, services.CharacterDataRequest{
 		CharacterID: int32(characterID),
 		ModuleType:  data.ModuleType,
 		FieldName:   data.FieldName,
@@ -88,7 +91,7 @@ func (h *Handler) SetCharacterData(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		h.App.Logger.Error("Failed to set character data", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to set character data", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -98,6 +101,9 @@ func (h *Handler) SetCharacterData(w http.ResponseWriter, r *http.Request) {
 
 // GetCharacterData retrieves character data
 func (h *Handler) GetCharacterData(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_character_data")()
+
 	characterIDStr := chi.URLParam(r, "id")
 	characterID, err := strconv.ParseInt(characterIDStr, 10, 32)
 	if err != nil {
@@ -117,21 +123,21 @@ func (h *Handler) GetCharacterData(w http.ResponseWriter, r *http.Request) {
 	// Check if user can view private data
 	var characterData []models.CharacterDatum
 	if userID != nil {
-		canEdit, err := characterService.CanUserEditCharacter(r.Context(), int32(characterID), *userID)
+		canEdit, err := characterService.CanUserEditCharacter(ctx, int32(characterID), *userID)
 		if err == nil && canEdit {
 			// User can edit, so they can see all data
-			data, err := characterService.GetCharacterData(r.Context(), int32(characterID))
+			data, err := characterService.GetCharacterData(ctx, int32(characterID))
 			if err != nil {
-				h.App.Logger.Error("Failed to get character data", "error", err)
+				h.App.ObsLogger.Error(ctx, "Failed to get character data", "error", err)
 				render.Render(w, r, core.ErrInternalError(err))
 				return
 			}
 			characterData = data
 		} else {
 			// User cannot edit, only show public data
-			data, err := characterService.GetPublicCharacterData(r.Context(), int32(characterID))
+			data, err := characterService.GetPublicCharacterData(ctx, int32(characterID))
 			if err != nil {
-				h.App.Logger.Error("Failed to get public character data", "error", err)
+				h.App.ObsLogger.Error(ctx, "Failed to get public character data", "error", err)
 				render.Render(w, r, core.ErrInternalError(err))
 				return
 			}
@@ -139,9 +145,9 @@ func (h *Handler) GetCharacterData(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// No user token, only show public data
-		data, err := characterService.GetPublicCharacterData(r.Context(), int32(characterID))
+		data, err := characterService.GetPublicCharacterData(ctx, int32(characterID))
 		if err != nil {
-			h.App.Logger.Error("Failed to get public character data", "error", err)
+			h.App.ObsLogger.Error(ctx, "Failed to get public character data", "error", err)
 			render.Render(w, r, core.ErrInternalError(err))
 			return
 		}

@@ -89,10 +89,15 @@ func notificationToResponse(notif *core.Notification) *NotificationResponse {
 // GetNotifications - GET /api/v1/notifications
 // List user's notifications (paginated)
 func (h *Handler) GetNotifications(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_notification")()
+
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_notifications")()
+
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -126,9 +131,9 @@ func (h *Handler) GetNotifications(w http.ResponseWriter, r *http.Request) {
 	var notifications []*core.Notification
 	var err error
 	if unreadOnly {
-		notifications, err = service.GetUnreadNotifications(r.Context(), userID, limit)
+		notifications, err = service.GetUnreadNotifications(ctx, userID, limit)
 	} else {
-		notifications, err = service.GetUserNotifications(r.Context(), userID, limit, offset)
+		notifications, err = service.GetUserNotifications(ctx, userID, limit, offset)
 	}
 
 	if err != nil {
@@ -141,7 +146,7 @@ func (h *Handler) GetNotifications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get total count for pagination
-	totalCount, err := service.GetUnreadCount(r.Context(), userID)
+	totalCount, err := service.GetUnreadCount(ctx, userID)
 	if err != nil {
 		// Don't fail the request if we can't get the count, just log it
 		totalCount = 0
@@ -169,10 +174,13 @@ func (h *Handler) GetNotifications(w http.ResponseWriter, r *http.Request) {
 // GetUnreadCount - GET /api/v1/notifications/unread-count
 // Get count of unread notifications
 func (h *Handler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_unread_count")()
+
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -180,7 +188,7 @@ func (h *Handler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
 	userID := int32(authUser.ID)
 
 	service := &db.NotificationService{DB: h.App.Pool}
-	count, err := service.GetUnreadCount(r.Context(), userID)
+	count, err := service.GetUnreadCount(ctx, userID)
 	if err != nil {
 		render.Render(w, r, &core.ErrResponse{
 			HTTPStatusCode: http.StatusInternalServerError,
@@ -201,10 +209,13 @@ func (h *Handler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
 // GetNotification - GET /api/v1/notifications/:id
 // Get a specific notification
 func (h *Handler) GetNotification(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_notification")()
+
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -227,7 +238,7 @@ func (h *Handler) GetNotification(w http.ResponseWriter, r *http.Request) {
 
 	// Get all user's notifications to check ownership
 	// (This is a simple approach; for production, you might want a dedicated GetNotificationByID method)
-	notifications, err := service.GetUserNotifications(r.Context(), userID, 1000, 0)
+	notifications, err := service.GetUserNotifications(ctx, userID, 1000, 0)
 	if err != nil {
 		render.Render(w, r, &core.ErrResponse{
 			HTTPStatusCode: http.StatusInternalServerError,
@@ -263,10 +274,13 @@ func (h *Handler) GetNotification(w http.ResponseWriter, r *http.Request) {
 // MarkNotificationAsRead - PUT /api/v1/notifications/:id/mark-read
 // Mark a notification as read
 func (h *Handler) MarkNotificationAsRead(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_mark_notification_as_read")()
+
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -286,7 +300,7 @@ func (h *Handler) MarkNotificationAsRead(w http.ResponseWriter, r *http.Request)
 	}
 
 	service := &db.NotificationService{DB: h.App.Pool}
-	err = service.MarkAsRead(r.Context(), int32(notificationID), userID)
+	err = service.MarkAsRead(ctx, int32(notificationID), userID)
 	if err != nil {
 		render.Render(w, r, &core.ErrResponse{
 			HTTPStatusCode: http.StatusInternalServerError,
@@ -311,10 +325,13 @@ func (h *Handler) MarkNotificationAsRead(w http.ResponseWriter, r *http.Request)
 // MarkAllAsRead - PUT /api/v1/notifications/mark-all-read
 // Mark all user's notifications as read
 func (h *Handler) MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_mark_all_as_read")()
+
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -323,12 +340,12 @@ func (h *Handler) MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 
 	// Get count before marking all as read (for response)
 	service := &db.NotificationService{DB: h.App.Pool}
-	unreadCount, err := service.GetUnreadCount(r.Context(), userID)
+	unreadCount, err := service.GetUnreadCount(ctx, userID)
 	if err != nil {
 		unreadCount = 0 // Don't fail if we can't get count
 	}
 
-	err = service.MarkAllAsRead(r.Context(), userID)
+	err = service.MarkAllAsRead(ctx, userID)
 	if err != nil {
 		render.Render(w, r, &core.ErrResponse{
 			HTTPStatusCode: http.StatusInternalServerError,
@@ -349,10 +366,13 @@ func (h *Handler) MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 // DeleteNotification - DELETE /api/v1/notifications/:id
 // Delete a notification
 func (h *Handler) DeleteNotification(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_notification")()
+
 	// Get authenticated user from context (set by middleware)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user in context")
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
@@ -372,7 +392,7 @@ func (h *Handler) DeleteNotification(w http.ResponseWriter, r *http.Request) {
 	}
 
 	service := &db.NotificationService{DB: h.App.Pool}
-	err = service.DeleteNotification(r.Context(), int32(notificationID), userID)
+	err = service.DeleteNotification(ctx, int32(notificationID), userID)
 	if err != nil {
 		render.Render(w, r, &core.ErrResponse{
 			HTTPStatusCode: http.StatusInternalServerError,

@@ -51,6 +51,8 @@ type UploadAvatarResponse struct {
 // This is a public endpoint (anyone authenticated can view any profile).
 func (h *Handler) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_user_profile")()
+
 	defer h.App.ObsLogger.LogOperation(ctx, "GetUserProfile")()
 
 	// Extract user ID from URL
@@ -103,7 +105,7 @@ func (h *Handler) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 // This is a public endpoint (anyone authenticated can view any profile).
 func (h *Handler) GetUserProfileByUsername(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	defer h.App.ObsLogger.LogOperation(ctx, "GetUserProfileByUsername")()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_user_profile_by_username")()
 
 	// Extract username from URL
 	username := chi.URLParam(r, "username")
@@ -162,6 +164,8 @@ func (h *Handler) GetUserProfileByUsername(w http.ResponseWriter, r *http.Reques
 // Only the user can update their own profile.
 func (h *Handler) UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_update_user_profile")()
+
 	defer h.App.ObsLogger.LogOperation(ctx, "UpdateUserProfile")()
 
 	// Authenticate user
@@ -205,6 +209,8 @@ func (h *Handler) UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 // Uploads an avatar image for the authenticated user.
 func (h *Handler) UploadUserAvatar(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_upload_user_avatar")()
+
 	defer h.App.ObsLogger.LogOperation(ctx, "UploadUserAvatar")()
 
 	// Authenticate user
@@ -278,6 +284,8 @@ func (h *Handler) UploadUserAvatar(w http.ResponseWriter, r *http.Request) {
 // Deletes the authenticated user's avatar.
 func (h *Handler) DeleteUserAvatar(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_user_avatar")()
+
 	defer h.App.ObsLogger.LogOperation(ctx, "DeleteUserAvatar")()
 
 	// Authenticate user

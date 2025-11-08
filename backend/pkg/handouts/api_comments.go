@@ -14,6 +14,7 @@ import (
 // CreateHandoutComment creates a new comment on a handout
 func (h *Handler) CreateHandoutComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_create_handout_comment")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_create_handout_comment")()
 
@@ -53,7 +54,7 @@ func (h *Handler) CreateHandoutComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user is GM of the game (only GMs can comment on handouts)
-	gameService := &db.GameService{DB: h.App.Pool}
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, handout.GameID)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
@@ -98,6 +99,7 @@ func (h *Handler) CreateHandoutComment(w http.ResponseWriter, r *http.Request) {
 // ListHandoutComments lists all comments for a handout
 func (h *Handler) ListHandoutComments(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_handout_comments")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_list_handout_comments")()
 
@@ -162,6 +164,7 @@ func (h *Handler) ListHandoutComments(w http.ResponseWriter, r *http.Request) {
 // UpdateHandoutComment updates a comment's content
 func (h *Handler) UpdateHandoutComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_update_handout_comment")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_update_handout_comment")()
 
@@ -222,6 +225,7 @@ func (h *Handler) UpdateHandoutComment(w http.ResponseWriter, r *http.Request) {
 // DeleteHandoutComment soft-deletes a comment
 func (h *Handler) DeleteHandoutComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_handout_comment")()
 
 	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_handout_comment")()
 

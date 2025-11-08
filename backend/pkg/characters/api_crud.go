@@ -15,6 +15,9 @@ import (
 
 // CreateCharacter creates a new character for a game
 func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_create_character")()
+
 	gameIDStr := chi.URLParam(r, "gameId")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -49,18 +52,18 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get authenticated user
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user found")
+		h.App.ObsLogger.Error(ctx, "No authenticated user found")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Verify user can create characters for this game
-	gameService := &services.GameService{DB: h.App.Pool}
-	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	gameService := &services.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -72,9 +75,9 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 		// GMs can create player characters for any player
 		// Regular players can only create characters for themselves
 		if !isGM {
-			participants, err := gameService.GetGameParticipants(r.Context(), int32(gameID))
+			participants, err := gameService.GetGameParticipants(ctx, int32(gameID))
 			if err != nil {
-				h.App.Logger.Error("Failed to get game participants", "error", err)
+				h.App.ObsLogger.Error(ctx, "Failed to get game participants", "error", err)
 				render.Render(w, r, core.ErrInternalError(err))
 				return
 			}
@@ -121,7 +124,7 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 	// For NPCs, UserID can be nil (GM-controlled) or assigned later
 
-	character, err := characterService.CreateCharacter(r.Context(), services.CreateCharacterRequest{
+	character, err := characterService.CreateCharacter(ctx, services.CreateCharacterRequest{
 		GameID:        int32(gameID),
 		UserID:        reqUserID,
 		Name:          data.Name,
@@ -129,7 +132,7 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		h.App.Logger.Error("Failed to create character", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to create character", "error", err)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -155,6 +158,9 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 
 // GetCharacter retrieves character details
 func (h *Handler) GetCharacter(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_character")()
+
 	characterIDStr := chi.URLParam(r, "id")
 	characterID, err := strconv.ParseInt(characterIDStr, 10, 32)
 	if err != nil {
@@ -163,24 +169,24 @@ func (h *Handler) GetCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	characterService := &services.CharacterService{DB: h.App.Pool}
-	character, err := characterService.GetCharacter(r.Context(), int32(characterID))
+	character, err := characterService.GetCharacter(ctx, int32(characterID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get character", "error", err, "character_id", characterID)
+		h.App.ObsLogger.Error(ctx, "Failed to get character", "error", err, "character_id", characterID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
 	// Get game to check state for filtering
-	gameService := &services.GameService{DB: h.App.Pool}
-	game, err := gameService.GetGame(r.Context(), character.GameID)
+	gameService := &services.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, character.GameID)
 	if err != nil {
-		h.App.Logger.Error("Failed to get game", "error", err, "game_id", character.GameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", character.GameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
 	// Check if user is GM - pending/rejected characters should only be visible to GMs
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	var isGM bool
 	if authUser != nil {
 		isGM = core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool)
@@ -219,6 +225,9 @@ func (h *Handler) GetCharacter(w http.ResponseWriter, r *http.Request) {
 
 // GetGameCharacters retrieves all characters for a game
 func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_game_characters")()
+
 	gameIDStr := chi.URLParam(r, "gameId")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -227,16 +236,16 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get game to check state for filtering
-	gameService := &services.GameService{DB: h.App.Pool}
-	game, err := gameService.GetGame(r.Context(), int32(gameID))
+	gameService := &services.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
 	// Get authenticated user to check role (GM, co-GM, audience, or player)
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	var isGM bool
 	var userRole string
 	if authUser != nil {
@@ -245,9 +254,9 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 			userRole = "gm"
 		} else {
 			// Check if user is a participant and get their role
-			participants, err := gameService.GetGameParticipants(r.Context(), int32(gameID))
+			participants, err := gameService.GetGameParticipants(ctx, int32(gameID))
 			if err != nil {
-				h.App.Logger.Error("Failed to get game participants", "error", err, "game_id", gameID)
+				h.App.ObsLogger.Error(ctx, "Failed to get game participants", "error", err, "game_id", gameID)
 				// Don't fail the request, just assume regular player
 				userRole = "player"
 			} else {
@@ -265,9 +274,9 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	characterService := &services.CharacterService{DB: h.App.Pool}
-	characters, err := characterService.GetCharactersByGame(r.Context(), int32(gameID))
+	characters, err := characterService.GetCharactersByGame(ctx, int32(gameID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get game characters", "error", err, "game_id", gameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game characters", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -343,6 +352,9 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 
 // GetUserControllableCharacters retrieves all characters the current user can control in a game
 func (h *Handler) GetUserControllableCharacters(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_user_controllable_characters")()
+
 	gameIDStr := chi.URLParam(r, "gameId")
 	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
@@ -353,15 +365,15 @@ func (h *Handler) GetUserControllableCharacters(w http.ResponseWriter, r *http.R
 	// Get user ID from token
 	userID, err := h.getUserIDFromToken(r)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user from token", "error", err)
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
 		render.Render(w, r, core.ErrUnauthorized(err.Error()))
 		return
 	}
 
 	characterService := &services.CharacterService{DB: h.App.Pool}
-	characters, err := characterService.GetUserControllableCharacters(r.Context(), int32(gameID), userID)
+	characters, err := characterService.GetUserControllableCharacters(ctx, int32(gameID), userID)
 	if err != nil {
-		h.App.Logger.Error("Failed to get user controllable characters", "error", err, "game_id", gameID, "user_id", userID)
+		h.App.ObsLogger.Error(ctx, "Failed to get user controllable characters", "error", err, "game_id", gameID, "user_id", userID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -398,6 +410,9 @@ func (h *Handler) GetUserControllableCharacters(w http.ResponseWriter, r *http.R
 
 // DeleteCharacter deletes a character (GM only, character must have no activity)
 func (h *Handler) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_character")()
+
 	characterIDStr := chi.URLParam(r, "id")
 	characterID, err := strconv.ParseInt(characterIDStr, 10, 32)
 	if err != nil {
@@ -406,27 +421,27 @@ func (h *Handler) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get authenticated user
-	authUser := core.GetAuthenticatedUser(r.Context())
+	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
-		h.App.Logger.Error("No authenticated user found")
+		h.App.ObsLogger.Error(ctx, "No authenticated user found")
 		render.Render(w, r, core.ErrUnauthorized("authentication required"))
 		return
 	}
 
 	// Get character to check game ownership
 	characterService := &services.CharacterService{DB: h.App.Pool}
-	character, err := characterService.GetCharacter(r.Context(), int32(characterID))
+	character, err := characterService.GetCharacter(ctx, int32(characterID))
 	if err != nil {
-		h.App.Logger.Error("Failed to get character", "error", err, "character_id", characterID)
+		h.App.ObsLogger.Error(ctx, "Failed to get character", "error", err, "character_id", characterID)
 		render.Render(w, r, core.ErrNotFound("character not found"))
 		return
 	}
 
 	// Get game to check GM permissions
-	gameService := &services.GameService{DB: h.App.Pool}
-	game, err := gameService.GetGame(r.Context(), character.GameID)
+	gameService := &services.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, character.GameID)
 	if err != nil {
-		h.App.Logger.Error("Failed to get game", "error", err, "game_id", character.GameID)
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", character.GameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
@@ -439,9 +454,9 @@ func (h *Handler) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Attempt to delete character
-	err = characterService.DeleteCharacter(r.Context(), int32(characterID))
+	err = characterService.DeleteCharacter(ctx, int32(characterID))
 	if err != nil {
-		h.App.Logger.Error("Failed to delete character", "error", err, "character_id", characterID)
+		h.App.ObsLogger.Error(ctx, "Failed to delete character", "error", err, "character_id", characterID)
 		// Check if error is about activity - return 400 Bad Request
 		if err.Error() == "cannot delete character with existing messages" ||
 			err.Error() == "cannot delete character with existing action submissions" {
