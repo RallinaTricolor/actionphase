@@ -65,6 +65,21 @@ func (q *Queries) CanUserSubmitToPhase(ctx context.Context, arg CanUserSubmitToP
 	return can_submit, err
 }
 
+const countActionResultsByPhase = `-- name: CountActionResultsByPhase :one
+SELECT COUNT(*)
+FROM action_results
+WHERE phase_id = $1
+`
+
+// Count action results for a specific phase
+// Used to check if phase can be deleted
+func (q *Queries) CountActionResultsByPhase(ctx context.Context, phaseID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countActionResultsByPhase, phaseID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countActionSubmissionsByCharacter = `-- name: CountActionSubmissionsByCharacter :one
 SELECT COUNT(*)
 FROM action_submissions
@@ -75,6 +90,23 @@ WHERE character_id = $1
 // Used to check if character can be deleted
 func (q *Queries) CountActionSubmissionsByCharacter(ctx context.Context, characterID pgtype.Int4) (int64, error) {
 	row := q.db.QueryRow(ctx, countActionSubmissionsByCharacter, characterID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countActionSubmissionsByPhase = `-- name: CountActionSubmissionsByPhase :one
+
+SELECT COUNT(*)
+FROM action_submissions
+WHERE phase_id = $1
+`
+
+// Delete validation queries
+// Count action submissions for a specific phase
+// Used to check if phase can be deleted
+func (q *Queries) CountActionSubmissionsByPhase(ctx context.Context, phaseID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countActionSubmissionsByPhase, phaseID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -95,6 +127,51 @@ type CountAllActionSubmissionsParams struct {
 // Count total action submissions for a game/phase (for pagination)
 func (q *Queries) CountAllActionSubmissions(ctx context.Context, arg CountAllActionSubmissionsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countAllActionSubmissions, arg.GameID, arg.PhaseID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countMessagesByPhase = `-- name: CountMessagesByPhase :one
+SELECT COUNT(*)
+FROM messages
+WHERE phase_id = $1
+`
+
+// Count messages for a specific phase
+// Used to check if phase can be deleted
+func (q *Queries) CountMessagesByPhase(ctx context.Context, phaseID pgtype.Int4) (int64, error) {
+	row := q.db.QueryRow(ctx, countMessagesByPhase, phaseID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countPollsByPhase = `-- name: CountPollsByPhase :one
+SELECT COUNT(*)
+FROM common_room_polls
+WHERE phase_id = $1
+`
+
+// Count polls for a specific phase
+// Used to check if phase can be deleted
+func (q *Queries) CountPollsByPhase(ctx context.Context, phaseID pgtype.Int4) (int64, error) {
+	row := q.db.QueryRow(ctx, countPollsByPhase, phaseID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countThreadsByPhase = `-- name: CountThreadsByPhase :one
+SELECT COUNT(*)
+FROM threads
+WHERE phase_id = $1
+`
+
+// Count common room threads for a specific phase
+// Used to check if phase can be deleted
+func (q *Queries) CountThreadsByPhase(ctx context.Context, phaseID pgtype.Int4) (int64, error) {
+	row := q.db.QueryRow(ctx, countThreadsByPhase, phaseID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

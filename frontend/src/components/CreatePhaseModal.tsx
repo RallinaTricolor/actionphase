@@ -68,6 +68,9 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
                 }))}
                 placeholder="Describe what happens in this phase..."
                 rows={3}
+                maxLength={500}
+                showCharacterCount
+                helperText="Brief description of what happens in this phase (500 char max)"
               />
             </div>
 

@@ -312,6 +312,7 @@ func (h *Handler) Start() {
 			r.Post("/{id}/activate", phaseHandler.ActivatePhase)
 			r.Put("/{id}/deadline", phaseHandler.UpdatePhaseDeadline)
 			r.Put("/{id}", phaseHandler.UpdatePhase)
+			r.Delete("/{id}", phaseHandler.DeletePhase)
 		})
 	})
 	apiV1Router.Mount("/phases", phasesRouter)

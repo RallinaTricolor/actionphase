@@ -348,3 +348,55 @@ func (h *Handler) UpdatePhase(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:   response.CreatedAt,
 	})
 }
+
+// DeletePhase deletes a phase if it has no associated content (GM only)
+func (h *Handler) DeletePhase(w http.ResponseWriter, r *http.Request) {
+	phaseIDStr := chi.URLParam(r, "id")
+	phaseID, err := strconv.ParseInt(phaseIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid phase ID")))
+		return
+	}
+
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
+		return
+	}
+
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+
+	// Get phase to check game ID
+	phase, err := phaseService.GetPhase(r.Context(), int32(phaseID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get phase", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Get game and check GM permissions (considers admin mode)
+	gameService := &db.GameService{DB: h.App.Pool}
+	game, err := gameService.GetGame(r.Context(), phase.GameID)
+	if err != nil {
+		h.App.Logger.Error("Failed to get game", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
+		render.Render(w, r, core.ErrForbidden("only the GM can delete phases"))
+		return
+	}
+
+	// Delete phase (validation happens in service layer)
+	if err := phaseService.DeletePhase(r.Context(), int32(phaseID)); err != nil {
+		h.App.Logger.Error("Failed to delete phase", "error", err)
+		render.Render(w, r, core.ErrBadRequest(err))
+		return
+	}
+
+	// Return 204 No Content on success
+	w.WriteHeader(http.StatusNoContent)
+}

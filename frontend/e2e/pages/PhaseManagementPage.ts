@@ -120,9 +120,9 @@ export class PhaseManagementPage {
    * @param title - Phase title
    */
   getPhaseCard(title: string): Locator {
-    // Find the border/rounded div that contains both the title and action buttons
-    // This avoids matching the "Currently Active" summary box
-    return this.page.locator('.border.rounded-lg').filter({ hasText: title });
+    // Use data-testid for more specific matching
+    // Filter to the specific phase card that contains the title
+    return this.page.locator('[data-testid="phase-card"]').filter({ hasText: title });
   }
 
   /**
@@ -273,5 +273,55 @@ export class PhaseManagementPage {
   async publishAllResults() {
     await this.page.click('button:has-text("Publish All Results")');
     await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Delete a phase
+   * @param phaseTitle - Title of the phase to delete
+   * @param confirm - Whether to confirm the deletion (default: true)
+   */
+  async deletePhase(phaseTitle: string, confirm = true) {
+    const phaseCard = this.getPhaseCard(phaseTitle);
+
+    // Click delete button (use .first() since there's mobile + desktop versions)
+    const deleteButton = phaseCard.getByRole('button', { name: /delete/i }).first();
+    await deleteButton.scrollIntoViewIfNeeded();
+    await deleteButton.click();
+
+    // Wait for delete dialog buttons to appear (more reliable than heading)
+    await expect(this.page.getByTestId('delete-phase-confirm-button')).toBeVisible({ timeout: 5000 });
+
+    if (confirm) {
+      // Click confirm button
+      await this.page.getByTestId('delete-phase-confirm-button').click();
+
+      // Wait for network to settle (delete API call)
+      await this.page.waitForLoadState('networkidle');
+
+      // Wait for phase card to disappear
+      await expect(phaseCard).not.toBeVisible({ timeout: 5000 });
+    } else {
+      // Click cancel button
+      await this.page.getByTestId('delete-phase-cancel-button').click();
+
+      // Verify phase card still exists
+      await expect(phaseCard).toBeVisible();
+    }
+  }
+
+  /**
+   * Open delete phase dialog
+   * @param phaseTitle - Title of the phase
+   */
+  async openDeleteDialog(phaseTitle: string) {
+    const phaseCard = this.getPhaseCard(phaseTitle);
+
+    // Click delete button (use .first() since there's mobile + desktop versions)
+    const deleteButton = phaseCard.getByRole('button', { name: /delete/i }).first();
+    await deleteButton.scrollIntoViewIfNeeded();
+    await deleteButton.click();
+
+    // Wait for delete dialog buttons to appear (more reliable than heading)
+    await expect(this.page.getByTestId('delete-phase-confirm-button')).toBeVisible({ timeout: 5000 });
   }
 }

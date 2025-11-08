@@ -77,6 +77,20 @@ export function usePhaseManagement(gameId: number) {
     }
   });
 
+  // Mutation for deleting a phase
+  const deletePhaseMutation = useMutation({
+    mutationFn: (phaseId: number) => apiClient.phases.deletePhase(phaseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gamePhases', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['currentPhase', gameId] });
+    },
+    onError: (error) => {
+      console.error('Failed to delete phase:', error);
+      // Error is shown in the DeletePhaseDialog component
+      throw error;
+    }
+  });
+
   const currentPhase = currentPhaseData?.phase || phases.find(p => p.is_active);
 
   return {
@@ -87,5 +101,6 @@ export function usePhaseManagement(gameId: number) {
     activatePhaseMutation,
     updateDeadlineMutation,
     updatePhaseMutation,
+    deletePhaseMutation,
   };
 }

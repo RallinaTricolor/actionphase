@@ -43,6 +43,10 @@ export class PhasesApi extends BaseApiClient {
     return this.client.put<GamePhase>(`/api/v1/phases/${phaseId}`, data);
   }
 
+  async deletePhase(phaseId: number) {
+    return this.client.delete(`/api/v1/phases/${phaseId}`);
+  }
+
   // Action endpoints
   async submitAction(gameId: number, data: ActionSubmissionRequest) {
     return this.client.post<ActionSubmission>(`/api/v1/games/${gameId}/actions`, data);

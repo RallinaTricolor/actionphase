@@ -83,3 +83,53 @@ func TestPhaseService_PermissionChecks(t *testing.T) {
 		assert.False(t, canSubmit)
 	})
 }
+
+func TestPhaseService_CanDeletePhase(t *testing.T) {
+	suite := db.NewTestSuite(t).
+		WithCleanup("phases").
+		Setup()
+	defer suite.Cleanup()
+
+	phaseService := &PhaseService{DB: suite.Pool()}
+	factory := suite.Factory()
+
+	user := factory.NewUser().Create()
+	game := factory.NewGame().WithGM(user.ID).Create()
+
+	t.Run("allows deletion when phase has no content", func(t *testing.T) {
+		phase := factory.NewPhase().InGame(game).CommonRoom().Create()
+
+		err := phaseService.CanDeletePhase(context.Background(), phase.ID)
+		assert.NoError(t, err, "should allow deletion of empty phase")
+	})
+
+	t.Run("blocks deletion when phase has action submissions", func(t *testing.T) {
+		phase := factory.NewPhase().InGame(game).ActionPhase().Create()
+		player := factory.NewUser().Create()
+
+		// Create action submission
+		factory.NewActionSubmission().
+			InGame(game).
+			ByUser(player).
+			InPhase(phase).
+			Create()
+
+		err := phaseService.CanDeletePhase(context.Background(), phase.ID)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "action submission(s) exist")
+	})
+
+	t.Run("returns descriptive error with count", func(t *testing.T) {
+		phase := factory.NewPhase().InGame(game).ActionPhase().Create()
+		player1 := factory.NewUser().Create()
+		player2 := factory.NewUser().Create()
+
+		// Create multiple action submissions
+		factory.NewActionSubmission().InGame(game).InPhase(phase).ByUser(player1).Create()
+		factory.NewActionSubmission().InGame(game).InPhase(phase).ByUser(player2).Create()
+
+		err := phaseService.CanDeletePhase(context.Background(), phase.ID)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "2 action submission(s)")
+	})
+}
