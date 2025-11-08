@@ -35,7 +35,8 @@ apt-get install -y \
     software-properties-common \
     ca-certificates \
     gnupg \
-    lsb-release
+    lsb-release \
+    postgresql-client
 
 # Install Docker
 echo "Installing Docker..."
