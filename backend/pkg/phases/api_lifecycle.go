@@ -35,7 +35,7 @@ func (h *Handler) ActivatePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Get phase to check game ID
 	phase, err := phaseService.GetPhase(ctx, int32(phaseID))

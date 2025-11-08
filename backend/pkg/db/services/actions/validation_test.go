@@ -15,8 +15,9 @@ func TestActionSubmissionService_CanUserSubmitAction(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	user := testDB.CreateTestUser(t, "testuser", "test@example.com")

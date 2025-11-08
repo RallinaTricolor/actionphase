@@ -17,7 +17,7 @@ import (
 // setupApplicationsTestRouter creates a minimal router for testing application endpoints
 func setupApplicationsTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	r := chi.NewRouter()
 
@@ -67,7 +67,7 @@ func TestGetPublicGameApplicants_Success(t *testing.T) {
 	fixtures := testDB.SetupFixtures(t)
 
 	// Create test users
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	player1, err := userService.CreateUser(&core.User{
 		Username: "testplayer1",
 		Password: "testpass123",
@@ -82,7 +82,7 @@ func TestGetPublicGameApplicants_Success(t *testing.T) {
 	})
 	core.AssertNoError(t, err, "Player 2 creation should succeed")
 
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	applicationService := &db.GameApplicationService{DB: testDB.Pool}
 
 	// Create a game in recruitment state
@@ -178,7 +178,7 @@ func TestGetPublicGameApplicants_ForbiddenWhenNotRecruiting(t *testing.T) {
 	router := setupApplicationsTestRouter(app, testDB)
 	fixtures := testDB.SetupFixtures(t)
 
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	tests := []struct {
 		name      string
@@ -249,7 +249,7 @@ func TestGetPublicGameApplicants_EmptyList(t *testing.T) {
 	router := setupApplicationsTestRouter(app, testDB)
 	fixtures := testDB.SetupFixtures(t)
 
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a game in recruitment state
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
@@ -290,7 +290,7 @@ func TestGetPublicGameApplicants_NoStatusExposed(t *testing.T) {
 	router := setupApplicationsTestRouter(app, testDB)
 	fixtures := testDB.SetupFixtures(t)
 
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	applicationService := &db.GameApplicationService{DB: testDB.Pool}
 
 	// Create a game in recruitment state
@@ -382,7 +382,7 @@ func TestGetPublicGameApplicants_OrderedByAppliedAt(t *testing.T) {
 	router := setupApplicationsTestRouter(app, testDB)
 	fixtures := testDB.SetupFixtures(t)
 
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	applicationService := &db.GameApplicationService{DB: testDB.Pool}
 
 	// Create a game in recruitment state

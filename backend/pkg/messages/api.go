@@ -84,7 +84,7 @@ func (rd *MessageResponse) Render(w http.ResponseWriter, r *http.Request) error 
 
 // Helper function to get user ID from JWT token
 func getUserIDFromToken(r *http.Request, app *core.App) (int32, error) {
-	userService := &db.UserService{DB: app.Pool}
+	userService := &db.UserService{DB: app.Pool, Logger: app.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
 	if errResp != nil {
 		return 0, fmt.Errorf("authentication failed")
@@ -189,7 +189,7 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	post, err := messageService.CreatePost(ctx, core.CreatePostRequest{
 		GameID:      int32(gameID),
@@ -267,7 +267,7 @@ func (h *Handler) GetGamePosts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	posts, err := messageService.GetGamePosts(ctx, int32(gameID), phaseID, limit, offset)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get game posts", "error", err, "game_id", gameID)
@@ -341,7 +341,7 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	comment, err := messageService.CreateComment(ctx, core.CreateCommentRequest{
 		GameID:      int32(gameID),
@@ -398,7 +398,7 @@ func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	message, err := messageService.GetMessage(ctx, int32(messageID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get message", "error", err, "message_id", messageID)
@@ -429,7 +429,7 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	comments, err := messageService.GetPostComments(ctx, int32(postID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get post comments", "error", err, "post_id", postID)
@@ -516,7 +516,7 @@ func (h *Handler) MarkPostRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Mark as read
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	readMarker, err := messageService.MarkPostAsRead(ctx, userID, int32(gameID), int32(postID), requestBody.LastReadCommentID)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to mark post as read", "error", err, "game_id", gameID, "post_id", postID, "user_id", userID)
@@ -561,7 +561,7 @@ func (h *Handler) GetGameReadMarkers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get read markers
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	readMarkers, err := messageService.GetUserReadMarkersForGame(ctx, userID, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get read markers", "error", err, "game_id", gameID, "user_id", userID)
@@ -603,7 +603,7 @@ func (h *Handler) GetPostsUnreadInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get posts unread info
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	postsInfo, err := messageService.GetPostsWithUnreadInfo(ctx, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get posts unread info", "error", err, "game_id", gameID)
@@ -654,7 +654,7 @@ func (h *Handler) GetUnreadCommentIDs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get unread comment IDs
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	unreadComments, err := messageService.GetUnreadCommentIDsForPosts(ctx, userID, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get unread comment IDs", "error", err, "game_id", gameID, "user_id", userID)
@@ -711,7 +711,7 @@ func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Check if user can edit this comment (must be author)
 	canEdit, err := messageService.CanUserEditComment(ctx, int32(commentID), userID)
@@ -789,7 +789,7 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	isAdminMode := adminModeHeader == "true"
 
 	// Get user service to check if user is admin
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	user, err := userService.User(int(userID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get user", "error", err, "user_id", userID)
@@ -800,7 +800,7 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	// Admin mode only works for actual admins
 	isAdmin := isAdminMode && user.IsAdmin
 
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Check if user can delete this comment
 	canDelete, err := messageService.CanUserDeleteComment(ctx, int32(commentID), userID, isAdmin)
@@ -886,7 +886,7 @@ func (h *Handler) ListRecentCommentsWithParents(w http.ResponseWriter, r *http.R
 
 	// Get comments with parents from service
 	// Note: No permission check required - comments are publicly viewable like posts
-	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	comments, err := messageService.ListRecentCommentsWithParents(ctx, int32(gameID), int32(limit), int32(offset))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to list recent comments", "error", err, "game_id", gameID)

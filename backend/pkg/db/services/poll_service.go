@@ -7,6 +7,7 @@ import (
 
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/models"
+	"actionphase/pkg/observability"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -15,22 +16,32 @@ import (
 
 // PollService implements the PollServiceInterface
 type PollService struct {
-	DB *pgxpool.Pool
+	DB     *pgxpool.Pool
+	Logger *observability.Logger
 }
 
 // Compile-time verification that PollService implements PollServiceInterface
 var _ core.PollServiceInterface = (*PollService)(nil)
 
 // NewPollService creates a new poll service
-func NewPollService(dbPool *pgxpool.Pool) *PollService {
-	return &PollService{DB: dbPool}
+func NewPollService(dbPool *pgxpool.Pool, logger *observability.Logger) *PollService {
+	return &PollService{DB: dbPool, Logger: logger}
 }
 
 // CreatePollWithOptions creates a new poll with its options in a transaction
 func (s *PollService) CreatePollWithOptions(ctx context.Context, req core.CreatePollRequest) (*core.PollWithOptions, error) {
+	s.Logger.Info(ctx, "Creating poll with options",
+		"game_id", req.GameID,
+		"created_by_user_id", req.CreatedByUserID,
+		"option_count", len(req.Options),
+	)
+
 	// Start a transaction
 	tx, err := s.DB.Begin(ctx)
 	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to begin poll creation transaction",
+			"game_id", req.GameID,
+		)
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx) // Rollback if we don't commit
@@ -81,6 +92,10 @@ func (s *PollService) CreatePollWithOptions(ctx context.Context, req core.Create
 
 	poll, err := queries.CreatePoll(ctx, pollParams)
 	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to create poll",
+			"game_id", req.GameID,
+			"created_by_user_id", req.CreatedByUserID,
+		)
 		return nil, fmt.Errorf("failed to create poll: %w", err)
 	}
 
@@ -94,6 +109,10 @@ func (s *PollService) CreatePollWithOptions(ctx context.Context, req core.Create
 		}
 		option, err := queries.CreatePollOption(ctx, optionParams)
 		if err != nil {
+			s.Logger.LogError(ctx, err, "Failed to create poll option",
+				"poll_id", poll.ID,
+				"option_text", opt.Text,
+			)
 			return nil, fmt.Errorf("failed to create poll option: %w", err)
 		}
 		options = append(options, option)
@@ -101,8 +120,17 @@ func (s *PollService) CreatePollWithOptions(ctx context.Context, req core.Create
 
 	// Commit the transaction
 	if err := tx.Commit(ctx); err != nil {
+		s.Logger.LogError(ctx, err, "Failed to commit poll creation transaction",
+			"poll_id", poll.ID,
+		)
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	s.Logger.Info(ctx, "Poll created successfully",
+		"poll_id", poll.ID,
+		"game_id", req.GameID,
+		"option_count", len(options),
+	)
 
 	return &core.PollWithOptions{
 		Poll:    poll,
@@ -198,6 +226,12 @@ func (s *PollService) ListPollsByGame(ctx context.Context, gameID int32, include
 
 // SubmitVote submits or updates a user's vote for a poll
 func (s *PollService) SubmitVote(ctx context.Context, req core.SubmitVoteRequest) (*db.PollVote, error) {
+	s.Logger.Info(ctx, "Submitting vote",
+		"poll_id", req.PollID,
+		"user_id", req.UserID,
+		"character_id", req.CharacterID,
+	)
+
 	queries := db.New(s.DB)
 
 	// Convert optional fields
@@ -228,11 +262,21 @@ func (s *PollService) SubmitVote(ctx context.Context, req core.SubmitVoteRequest
 
 	existingVote, err := queries.GetVoteByPollAndUser(ctx, existingVoteParams)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		s.Logger.LogError(ctx, err, "Failed to check existing vote",
+			"poll_id", req.PollID,
+			"user_id", req.UserID,
+		)
 		return nil, fmt.Errorf("failed to check existing vote: %w", err)
 	}
 
 	// If vote exists, update it
 	if err == nil {
+		s.Logger.Info(ctx, "Updating existing vote",
+			"vote_id", existingVote.ID,
+			"poll_id", req.PollID,
+			"user_id", req.UserID,
+		)
+
 		updateParams := db.UpdateVoteParams{
 			ID:               existingVote.ID,
 			SelectedOptionID: selectedOptionID,
@@ -240,8 +284,18 @@ func (s *PollService) SubmitVote(ctx context.Context, req core.SubmitVoteRequest
 		}
 		vote, err := queries.UpdateVote(ctx, updateParams)
 		if err != nil {
+			s.Logger.LogError(ctx, err, "Failed to update vote",
+				"vote_id", existingVote.ID,
+				"poll_id", req.PollID,
+			)
 			return nil, fmt.Errorf("failed to update vote: %w", err)
 		}
+
+		s.Logger.Info(ctx, "Vote updated successfully",
+			"vote_id", vote.ID,
+			"poll_id", req.PollID,
+		)
+
 		return &vote, nil
 	}
 
@@ -256,8 +310,18 @@ func (s *PollService) SubmitVote(ctx context.Context, req core.SubmitVoteRequest
 
 	vote, err := queries.SubmitVote(ctx, voteParams)
 	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to submit new vote",
+			"poll_id", req.PollID,
+			"user_id", req.UserID,
+		)
 		return nil, fmt.Errorf("failed to submit vote: %w", err)
 	}
+
+	s.Logger.Info(ctx, "Vote submitted successfully",
+		"vote_id", vote.ID,
+		"poll_id", req.PollID,
+		"user_id", req.UserID,
+	)
 
 	return &vote, nil
 }
@@ -439,21 +503,38 @@ func (s *PollService) UpdatePoll(ctx context.Context, pollID int32, req core.Upd
 
 // DeletePoll soft-deletes a poll by setting is_deleted flag
 func (s *PollService) DeletePoll(ctx context.Context, pollID int32) error {
+	s.Logger.Info(ctx, "Deleting poll",
+		"poll_id", pollID,
+	)
+
 	queries := db.New(s.DB)
 
 	// First verify the poll exists
 	_, err := queries.GetPoll(ctx, pollID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			s.Logger.Warn(ctx, "Attempted to delete non-existent poll",
+				"poll_id", pollID,
+			)
 			return fmt.Errorf("poll not found: %d", pollID)
 		}
+		s.Logger.LogError(ctx, err, "Failed to verify poll exists",
+			"poll_id", pollID,
+		)
 		return fmt.Errorf("failed to verify poll: %w", err)
 	}
 
 	// Perform soft delete
 	if err := queries.SoftDeletePoll(ctx, pollID); err != nil {
+		s.Logger.LogError(ctx, err, "Failed to soft delete poll",
+			"poll_id", pollID,
+		)
 		return fmt.Errorf("failed to delete poll: %w", err)
 	}
+
+	s.Logger.Info(ctx, "Poll deleted successfully",
+		"poll_id", pollID,
+	)
 
 	return nil
 }

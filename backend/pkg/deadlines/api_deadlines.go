@@ -40,7 +40,7 @@ func (h *Handler) CreateDeadline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -56,7 +56,7 @@ func (h *Handler) CreateDeadline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create deadline
-	deadlineService := &db.DeadlineService{DB: h.App.Pool}
+	deadlineService := &db.DeadlineService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	req := core.CreateDeadlineRequest{
 		GameID:      int32(gameID),
 		Title:       data.Title,
@@ -99,7 +99,7 @@ func (h *Handler) GetGameDeadlines(w http.ResponseWriter, r *http.Request) {
 	includeExpired := r.URL.Query().Get("includeExpired") == "true"
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -138,7 +138,7 @@ func (h *Handler) GetGameDeadlines(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get deadlines
-	deadlineService := &db.DeadlineService{DB: h.App.Pool}
+	deadlineService := &db.DeadlineService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	deadlines, err := deadlineService.GetGameDeadlines(ctx, int32(gameID), includeExpired)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game deadlines")
@@ -180,7 +180,7 @@ func (h *Handler) UpdateDeadline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -189,7 +189,7 @@ func (h *Handler) UpdateDeadline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get existing deadline to check ownership
-	deadlineService := &db.DeadlineService{DB: h.App.Pool}
+	deadlineService := &db.DeadlineService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	existingDeadline, err := deadlineService.GetDeadline(ctx, int32(deadlineID))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get deadline")
@@ -241,7 +241,7 @@ func (h *Handler) DeleteDeadline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -250,7 +250,7 @@ func (h *Handler) DeleteDeadline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get existing deadline to check ownership
-	deadlineService := &db.DeadlineService{DB: h.App.Pool}
+	deadlineService := &db.DeadlineService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	existingDeadline, err := deadlineService.GetDeadline(ctx, int32(deadlineID))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get deadline")
@@ -286,7 +286,7 @@ func (h *Handler) GetUpcomingDeadlines(w http.ResponseWriter, r *http.Request) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_upcoming_deadlines")()
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -305,7 +305,7 @@ func (h *Handler) GetUpcomingDeadlines(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get upcoming deadlines
-	deadlineService := &db.DeadlineService{DB: h.App.Pool}
+	deadlineService := &db.DeadlineService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	deadlines, err := deadlineService.GetUpcomingDeadlines(ctx, userID, int32(limit))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get upcoming deadlines")

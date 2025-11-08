@@ -55,7 +55,7 @@ func (h *Handler) CreatePhase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get game and check GM permissions (considers admin mode)
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
@@ -123,7 +123,7 @@ func (h *Handler) GetCurrentPhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	phase, err := phaseService.GetActivePhase(ctx, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get active phase", "error", err, "game_id", gameID)
@@ -168,7 +168,7 @@ func (h *Handler) GetGamePhases(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	phases, err := phaseService.GetGamePhases(ctx, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get game phases", "error", err, "game_id", gameID)
@@ -225,7 +225,7 @@ func (h *Handler) UpdatePhaseDeadline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Get phase to check game ID
 	phase, err := phaseService.GetPhase(ctx, int32(phaseID))
@@ -301,7 +301,7 @@ func (h *Handler) UpdatePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Get phase to check game ID
 	phase, err := phaseService.GetPhase(ctx, int32(phaseID))
@@ -384,7 +384,7 @@ func (h *Handler) DeletePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Get phase to check game ID
 	phase, err := phaseService.GetPhase(ctx, int32(phaseID))

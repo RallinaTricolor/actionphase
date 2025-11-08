@@ -13,7 +13,8 @@ func TestUserService_CreateUser(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &UserService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("creates user successfully", func(t *testing.T) {
 		defer testDB.CleanupTables(t, "users")
@@ -114,7 +115,8 @@ func TestUserService_UserByUsername(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &UserService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("retrieves user by username", func(t *testing.T) {
 		defer testDB.CleanupTables(t, "users")
@@ -177,7 +179,8 @@ func TestUserService_User(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &UserService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("returns error for non-existent user", func(t *testing.T) {
 		defer testDB.CleanupTables(t, "users")
@@ -193,7 +196,8 @@ func TestUserService_Users(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &UserService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("stub implementation returns nil", func(t *testing.T) {
 		// This function is currently a stub that returns nil, nil
@@ -207,7 +211,8 @@ func TestUserService_DeleteUser(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &UserService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("stub implementation returns nil", func(t *testing.T) {
 		// This function is currently a stub that returns nil
@@ -220,7 +225,8 @@ func TestUserService_IntegrationWorkflow(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &UserService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("complete user lifecycle", func(t *testing.T) {
 		defer testDB.CleanupTables(t, "users")
@@ -278,7 +284,8 @@ func TestUserService_SetAdminStatus(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &UserService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("grants admin status successfully", func(t *testing.T) {
 		defer testDB.CleanupTables(t, "users")
@@ -380,7 +387,8 @@ func TestUserService_ListAdmins(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &UserService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("lists all admin users", func(t *testing.T) {
 		defer testDB.CleanupTables(t, "users")
@@ -454,7 +462,8 @@ func TestUserService_BanUser(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &UserService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("bans user successfully", func(t *testing.T) {
 		defer testDB.CleanupTables(t, "users")
@@ -521,7 +530,8 @@ func TestUserService_UnbanUser(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &UserService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("unbans user successfully", func(t *testing.T) {
 		defer testDB.CleanupTables(t, "users")
@@ -574,7 +584,8 @@ func TestUserService_CheckUserBanned(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &UserService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("returns false for non-banned user", func(t *testing.T) {
 		defer testDB.CleanupTables(t, "users")

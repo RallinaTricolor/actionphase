@@ -92,7 +92,7 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	UserService := db.UserService{DB: h.App.Pool}
+	UserService := db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	h.App.ObsLogger.Info(ctx, "Creating user", "username", data.User.Username)
 	returnUser, err := UserService.CreateUser(data.User)
 	if err != nil {

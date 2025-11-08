@@ -10,12 +10,13 @@ import (
 
 func TestCharacterService_CreateCharacter(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	testCases := []struct {
 		name        string
@@ -113,12 +114,13 @@ func TestCharacterService_CreateCharacter(t *testing.T) {
 
 func TestCharacterService_GetCharacter(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test character
 	character, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
@@ -165,12 +167,13 @@ func TestCharacterService_GetCharacter(t *testing.T) {
 
 func TestCharacterService_GetCharactersByGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test characters
 	_, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
@@ -205,12 +208,13 @@ func TestCharacterService_GetCharactersByGame(t *testing.T) {
 
 func TestCharacterService_ApproveRejectCharacter(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test character
 	character, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
@@ -253,12 +257,13 @@ func TestCharacterService_ApproveRejectCharacter(t *testing.T) {
 
 func TestCharacterService_AssignNPCToUser(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create additional user for assignment
 	assignedUser := testDB.CreateTestUser(t, "assigneduser", "assigned@example.com")
@@ -334,12 +339,13 @@ func TestCharacterService_AssignNPCToUser(t *testing.T) {
 
 func TestCharacterService_CharacterData(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test character
 	character, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
@@ -431,12 +437,13 @@ func TestCharacterService_CharacterData(t *testing.T) {
 
 func TestCharacterService_CanUserEditCharacter(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create additional users
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -524,12 +531,13 @@ func TestCharacterService_CanUserEditCharacter(t *testing.T) {
 
 func TestCharacterService_GetPlayerCharacters(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
@@ -590,12 +598,13 @@ func TestCharacterService_GetPlayerCharacters(t *testing.T) {
 
 func TestCharacterService_GetNPCs(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create player characters (should not be included)
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -653,12 +662,13 @@ func TestCharacterService_GetNPCs(t *testing.T) {
 
 func TestCharacterService_GetUserControllableCharacters(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -740,12 +750,13 @@ func TestCharacterService_GetUserControllableCharacters(t *testing.T) {
 
 func TestCharacterService_AssignNPCToUser_AudienceNPC(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create user for assignment
 	assignedUser := testDB.CreateTestUser(t, "assigneduser", "assigned@example.com")
@@ -773,12 +784,13 @@ func TestCharacterService_AssignNPCToUser_AudienceNPC(t *testing.T) {
 
 func TestCharacterService_DeleteCharacter(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "messages", "action_submissions", "character_data", "npc_assignments", "characters", "game_phases", "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	characterService := &CharacterService{DB: testDB.Pool}
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	queries := models.New(testDB.Pool)
 
 	t.Run("successfully delete character with no activity", func(t *testing.T) {

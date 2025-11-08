@@ -15,12 +15,24 @@ import (
 
 // TransitionToNextPhase creates and activates a new phase, deactivating the current one if it exists
 func (ps *PhaseService) TransitionToNextPhase(ctx context.Context, gameID, userID int32, req core.TransitionPhaseRequest) (*models.GamePhase, error) {
+	defer ps.Logger.LogOperation(ctx, "transition_to_next_phase",
+		"game_id", gameID,
+		"phase_type", req.PhaseType,
+		"initiated_by_user_id", userID,
+	)()
+
 	// Start transaction for atomic phase transition
+	ps.Logger.Debug(ctx, "Starting phase transition transaction", "game_id", gameID)
 	tx, err := ps.DB.Begin(ctx)
 	if err != nil {
+		ps.Logger.LogError(ctx, err, "Failed to begin phase transition transaction", "game_id", gameID)
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			ps.Logger.Debug(ctx, "Transaction already committed (rollback ignored)", "game_id", gameID)
+		}
+	}()
 
 	txQueries := models.New(tx)
 
@@ -29,11 +41,27 @@ func (ps *PhaseService) TransitionToNextPhase(ctx context.Context, gameID, userI
 	var currentPhaseID *int32
 	if err == nil {
 		currentPhaseID = &currentPhase.ID
+		ps.Logger.Info(ctx, "Deactivating current phase",
+			"game_id", gameID,
+			"phase_id", currentPhase.ID,
+			"phase_number", currentPhase.PhaseNumber,
+			"phase_type", currentPhase.PhaseType,
+		)
 		// Deactivate current phase
 		_, err = txQueries.DeactivatePhase(ctx, currentPhase.ID)
 		if err != nil {
+			ps.Logger.LogError(ctx, err, "Failed to deactivate current phase",
+				"game_id", gameID,
+				"phase_id", currentPhase.ID,
+			)
 			return nil, fmt.Errorf("failed to deactivate current phase: %w", err)
 		}
+		ps.Logger.Info(ctx, "Current phase deactivated",
+			"game_id", gameID,
+			"phase_id", currentPhase.ID,
+		)
+	} else {
+		ps.Logger.Info(ctx, "No active phase to deactivate", "game_id", gameID)
 	}
 
 	// Get next phase number
@@ -90,14 +118,33 @@ func (ps *PhaseService) TransitionToNextPhase(ctx context.Context, gameID, userI
 		params.Deadline = pgtype.Timestamptz{Time: *createReq.Deadline, Valid: true}
 	}
 
+	ps.Logger.Info(ctx, "Creating new phase",
+		"game_id", gameID,
+		"phase_number", phaseNumber,
+		"phase_type", req.PhaseType,
+		"title", req.Title,
+	)
 	newPhase, err := txQueries.CreateGamePhase(ctx, params)
 	if err != nil {
+		ps.Logger.LogError(ctx, err, "Failed to create new phase",
+			"game_id", gameID,
+			"phase_type", req.PhaseType,
+		)
 		return nil, fmt.Errorf("failed to create new phase: %w", err)
 	}
 
+	ps.Logger.Info(ctx, "Activating new phase",
+		"game_id", gameID,
+		"phase_id", newPhase.ID,
+		"phase_number", newPhase.PhaseNumber,
+	)
 	// Activate the new phase
 	activePhase, err := txQueries.ActivatePhase(ctx, newPhase.ID)
 	if err != nil {
+		ps.Logger.LogError(ctx, err, "Failed to activate new phase",
+			"game_id", gameID,
+			"phase_id", newPhase.ID,
+		)
 		return nil, fmt.Errorf("failed to activate new phase: %w", err)
 	}
 
@@ -114,12 +161,26 @@ func (ps *PhaseService) TransitionToNextPhase(ctx context.Context, gameID, userI
 
 	_, err = txQueries.CreatePhaseTransition(ctx, transitionParams)
 	if err != nil {
+		ps.Logger.LogError(ctx, err, "Failed to log phase transition record", "game_id", gameID)
 		return nil, fmt.Errorf("failed to log phase transition: %w", err)
 	}
 
+	ps.Logger.Debug(ctx, "Committing phase transition transaction", "game_id", gameID)
 	if err := tx.Commit(ctx); err != nil {
+		ps.Logger.LogError(ctx, err, "Failed to commit phase transition transaction",
+			"game_id", gameID,
+			"new_phase_id", newPhase.ID,
+		)
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	ps.Logger.Info(ctx, "Phase transition completed successfully",
+		"game_id", gameID,
+		"new_phase_id", activePhase.ID,
+		"phase_number", activePhase.PhaseNumber,
+		"phase_type", activePhase.PhaseType,
+		"title", activePhase.Title,
+	)
 
 	return &activePhase, nil
 }
@@ -137,15 +198,32 @@ func (ps *PhaseService) activatePhaseInternal(ctx context.Context, phaseID int32
 	// Get the phase to find the game ID
 	phase, err := queries.GetPhase(ctx, phaseID)
 	if err != nil {
+		ps.Logger.LogError(ctx, err, "Failed to get phase for activation", "phase_id", phaseID)
 		return nil, fmt.Errorf("failed to get phase: %w", err)
 	}
+
+	ps.Logger.Debug(ctx, "Starting phase activation transaction",
+		"phase_id", phaseID,
+		"game_id", phase.GameID,
+	)
 
 	// Start transaction to ensure atomicity
 	tx, err := ps.DB.Begin(ctx)
 	if err != nil {
+		ps.Logger.LogError(ctx, err, "Failed to begin phase activation transaction",
+			"phase_id", phaseID,
+			"game_id", phase.GameID,
+		)
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			ps.Logger.Debug(ctx, "Transaction already committed (rollback ignored)",
+				"phase_id", phaseID,
+				"game_id", phase.GameID,
+			)
+		}
+	}()
 
 	txQueries := models.New(tx)
 
@@ -158,12 +236,31 @@ func (ps *PhaseService) activatePhaseInternal(ctx context.Context, phaseID int32
 	// Activate the new phase
 	activePhase, err := txQueries.ActivatePhase(ctx, phaseID)
 	if err != nil {
+		ps.Logger.LogError(ctx, err, "Failed to activate phase",
+			"phase_id", phaseID,
+			"game_id", phase.GameID,
+		)
 		return nil, fmt.Errorf("failed to activate phase: %w", err)
 	}
 
+	ps.Logger.Debug(ctx, "Committing phase activation transaction",
+		"phase_id", phaseID,
+		"game_id", phase.GameID,
+	)
 	if err := tx.Commit(ctx); err != nil {
+		ps.Logger.LogError(ctx, err, "Failed to commit phase activation transaction",
+			"phase_id", phaseID,
+			"game_id", phase.GameID,
+		)
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	ps.Logger.Info(ctx, "Phase activated successfully",
+		"phase_id", activePhase.ID,
+		"game_id", phase.GameID,
+		"phase_number", activePhase.PhaseNumber,
+		"phase_type", activePhase.PhaseType,
+	)
 
 	// Trigger notifications for phase activation (fire-and-forget)
 	go ps.notifyPhaseActivated(context.Background(), phase.GameID, activePhase.ID, activePhase.Title, 0)
@@ -200,7 +297,7 @@ func (ps *PhaseService) deactivatePhaseInternal(ctx context.Context, phaseID int
 
 // notifyPhaseActivated sends notifications to game participants when a phase is activated
 func (ps *PhaseService) notifyPhaseActivated(ctx context.Context, gameID, phaseID int32, phaseTitle string, excludeUserID int32) {
-	notificationService := &db.NotificationService{DB: ps.DB}
+	notificationService := &db.NotificationService{DB: ps.DB, Logger: ps.Logger}
 
 	// Notify all participants except the GM who activated the phase
 	err := notificationService.NotifyPhaseCreated(

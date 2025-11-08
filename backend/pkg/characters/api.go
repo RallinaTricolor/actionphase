@@ -14,7 +14,7 @@ type Handler struct {
 
 // getUserIDFromToken extracts user ID from JWT token
 func (h *Handler) getUserIDFromToken(r *http.Request) (int32, error) {
-	userService := &services.UserService{DB: h.App.Pool}
+	userService := &services.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(r.Context(), userService)
 	if errResp != nil {
 		return 0, fmt.Errorf("authentication failed")

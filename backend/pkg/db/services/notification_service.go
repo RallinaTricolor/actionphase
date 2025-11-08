@@ -7,6 +7,7 @@ import (
 
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
+	"actionphase/pkg/observability"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,7 +15,8 @@ import (
 
 // NotificationService implements core.NotificationServiceInterface.
 type NotificationService struct {
-	DB *pgxpool.Pool
+	DB     *pgxpool.Pool
+	Logger *observability.Logger
 }
 
 // Compile-time verification that NotificationService implements the interface
@@ -120,8 +122,19 @@ func convertUnreadRowToCore(row models.GetUnreadNotificationsRow) *core.Notifica
 
 // CreateNotification creates a new notification for a user.
 func (s *NotificationService) CreateNotification(ctx context.Context, req *core.CreateNotificationRequest) (*core.Notification, error) {
+	s.Logger.Info(ctx, "Creating notification",
+		"user_id", req.UserID,
+		"type", req.Type,
+		"game_id", req.GameID,
+	)
+
 	// Validate the request
 	if err := req.Validate(); err != nil {
+		s.Logger.Warn(ctx, "Invalid notification request",
+			"user_id", req.UserID,
+			"type", req.Type,
+			"error", err,
+		)
 		return nil, fmt.Errorf("invalid notification request: %w", err)
 	}
 
@@ -140,8 +153,19 @@ func (s *NotificationService) CreateNotification(ctx context.Context, req *core.
 
 	dbNotif, err := queries.CreateNotification(ctx, params)
 	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to create notification",
+			"user_id", req.UserID,
+			"type", req.Type,
+			"game_id", req.GameID,
+		)
 		return nil, fmt.Errorf("failed to create notification: %w", err)
 	}
+
+	s.Logger.Info(ctx, "Notification created successfully",
+		"notification_id", dbNotif.ID,
+		"user_id", req.UserID,
+		"type", req.Type,
+	)
 
 	return convertDbNotificationToCore(dbNotif), nil
 }
@@ -152,7 +176,14 @@ func (s *NotificationService) CreateBulkNotifications(ctx context.Context, userI
 		return nil
 	}
 
+	s.Logger.Info(ctx, "Creating bulk notifications",
+		"user_count", len(userIDs),
+		"type", req.Type,
+		"game_id", req.GameID,
+	)
+
 	// Create notifications for each user
+	successCount := 0
 	for _, userID := range userIDs {
 		bulkReq := &core.CreateNotificationRequest{
 			UserID:      userID,
@@ -166,8 +197,16 @@ func (s *NotificationService) CreateBulkNotifications(ctx context.Context, userI
 		}
 
 		// Fire-and-forget: ignore errors to not block main operation
-		_, _ = s.CreateNotification(ctx, bulkReq)
+		if _, err := s.CreateNotification(ctx, bulkReq); err == nil {
+			successCount++
+		}
 	}
+
+	s.Logger.Info(ctx, "Bulk notification creation completed",
+		"total_users", len(userIDs),
+		"successful", successCount,
+		"type", req.Type,
+	)
 
 	return nil
 }
@@ -229,6 +268,11 @@ func (s *NotificationService) GetUnreadNotifications(ctx context.Context, userID
 
 // MarkAsRead marks a single notification as read.
 func (s *NotificationService) MarkAsRead(ctx context.Context, notificationID, userID int32) error {
+	s.Logger.Info(ctx, "Marking notification as read",
+		"notification_id", notificationID,
+		"user_id", userID,
+	)
+
 	queries := models.New(s.DB)
 
 	_, err := queries.MarkNotificationRead(ctx, models.MarkNotificationReadParams{
@@ -236,6 +280,10 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, notificationID, us
 		UserID: userID,
 	})
 	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to mark notification as read",
+			"notification_id", notificationID,
+			"user_id", userID,
+		)
 		return fmt.Errorf("failed to mark notification as read: %w", err)
 	}
 
@@ -244,18 +292,34 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, notificationID, us
 
 // MarkAllAsRead marks all notifications as read for a user.
 func (s *NotificationService) MarkAllAsRead(ctx context.Context, userID int32) error {
+	s.Logger.Info(ctx, "Marking all notifications as read",
+		"user_id", userID,
+	)
+
 	queries := models.New(s.DB)
 
 	err := queries.MarkAllNotificationsRead(ctx, userID)
 	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to mark all notifications as read",
+			"user_id", userID,
+		)
 		return fmt.Errorf("failed to mark all notifications as read: %w", err)
 	}
+
+	s.Logger.Info(ctx, "All notifications marked as read",
+		"user_id", userID,
+	)
 
 	return nil
 }
 
 // DeleteNotification deletes a notification (only if it belongs to the user).
 func (s *NotificationService) DeleteNotification(ctx context.Context, notificationID, userID int32) error {
+	s.Logger.Info(ctx, "Deleting notification",
+		"notification_id", notificationID,
+		"user_id", userID,
+	)
+
 	queries := models.New(s.DB)
 
 	err := queries.DeleteNotification(ctx, models.DeleteNotificationParams{
@@ -263,6 +327,10 @@ func (s *NotificationService) DeleteNotification(ctx context.Context, notificati
 		UserID: userID,
 	})
 	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to delete notification",
+			"notification_id", notificationID,
+			"user_id", userID,
+		)
 		return fmt.Errorf("failed to delete notification: %w", err)
 	}
 
@@ -271,12 +339,17 @@ func (s *NotificationService) DeleteNotification(ctx context.Context, notificati
 
 // DeleteOldReadNotifications deletes read notifications older than 30 days.
 func (s *NotificationService) DeleteOldReadNotifications(ctx context.Context) error {
+	s.Logger.Info(ctx, "Deleting old read notifications (30+ days)")
+
 	queries := models.New(s.DB)
 
 	err := queries.DeleteOldNotifications(ctx)
 	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to delete old notifications")
 		return fmt.Errorf("failed to delete old notifications: %w", err)
 	}
+
+	s.Logger.Info(ctx, "Old notifications cleanup completed")
 
 	return nil
 }

@@ -15,7 +15,8 @@ func TestSessionService_SessionByToken(t *testing.T) {
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
 
-	sessionService := &SessionService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	sessionService := &SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a test session
 	testSession := &core.Session{
@@ -36,7 +37,8 @@ func TestSessionService_SessionByToken_NotFound(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	sessionService := &SessionService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	sessionService := &SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Test retrieving non-existent session
 	_, err := sessionService.SessionByToken("non-existent-token")
@@ -49,7 +51,8 @@ func TestSessionService_CreateSession(t *testing.T) {
 	defer testDB.CleanupTables(t, "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	sessionService := &SessionService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	sessionService := &SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	testCases := []struct {
 		name        string
@@ -95,7 +98,8 @@ func TestSessionService_DeleteSessionByToken(t *testing.T) {
 	defer testDB.CleanupTables(t, "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	sessionService := &SessionService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	sessionService := &SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a session to delete
 	testSession := &core.Session{
@@ -119,7 +123,8 @@ func TestSessionService_DeleteSessionByToken_NotFound(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	sessionService := &SessionService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	sessionService := &SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Try to delete non-existent session
 	err := sessionService.DeleteSessionByToken("non-existent-token")
@@ -135,7 +140,8 @@ func TestSessionService_Session_ById(t *testing.T) {
 	defer testDB.CleanupTables(t, "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	sessionService := &SessionService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	sessionService := &SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a session
 	testSession := &core.Session{
@@ -163,7 +169,8 @@ func TestSessionService_Sessions(t *testing.T) {
 	defer testDB.CleanupTables(t, "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	sessionService := &SessionService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	sessionService := &SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create multiple sessions
 	session1 := &core.Session{
@@ -199,7 +206,8 @@ func BenchmarkSessionService_CreateSession(b *testing.B) {
 	defer testDB.CleanupTables(b, "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(b)
-	sessionService := &SessionService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	sessionService := &SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	b.ResetTimer()
 
@@ -222,7 +230,8 @@ func BenchmarkSessionService_SessionByToken(b *testing.B) {
 	defer testDB.CleanupTables(b, "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(b)
-	sessionService := &SessionService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	sessionService := &SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a session for benchmarking
 	testSession := &core.Session{

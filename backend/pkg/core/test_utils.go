@@ -47,7 +47,7 @@ func NewTestDatabase(t TestingInterface) *TestDatabase {
 
 	connectionString := os.Getenv("TEST_DATABASE_URL")
 	if connectionString == "" {
-		connectionString = "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable"
+		connectionString = "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable"
 	}
 
 	// Validate connection string format

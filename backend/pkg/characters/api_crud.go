@@ -110,7 +110,7 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create character
-	characterService := &services.CharacterService{DB: h.App.Pool}
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	var reqUserID *int32
 	if data.CharacterType == "player_character" {
@@ -168,7 +168,7 @@ func (h *Handler) GetCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	characterService := &services.CharacterService{DB: h.App.Pool}
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	character, err := characterService.GetCharacter(ctx, int32(characterID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get character", "error", err, "character_id", characterID)
@@ -273,7 +273,7 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	characterService := &services.CharacterService{DB: h.App.Pool}
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	characters, err := characterService.GetCharactersByGame(ctx, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get game characters", "error", err, "game_id", gameID)
@@ -370,7 +370,7 @@ func (h *Handler) GetUserControllableCharacters(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	characterService := &services.CharacterService{DB: h.App.Pool}
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	characters, err := characterService.GetUserControllableCharacters(ctx, int32(gameID), userID)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get user controllable characters", "error", err, "game_id", gameID, "user_id", userID)
@@ -429,7 +429,7 @@ func (h *Handler) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get character to check game ownership
-	characterService := &services.CharacterService{DB: h.App.Pool}
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	character, err := characterService.GetCharacter(ctx, int32(characterID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get character", "error", err, "character_id", characterID)

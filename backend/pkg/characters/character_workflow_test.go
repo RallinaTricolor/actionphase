@@ -10,6 +10,7 @@ import (
 
 func TestCharacterWorkflow_CompleteApprovalFlow(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "game_participants", "games", "sessions", "users")
 
@@ -17,7 +18,7 @@ func TestCharacterWorkflow_CompleteApprovalFlow(t *testing.T) {
 	gmUser := testDB.CreateTestUser(t, "gm", "gm@example.com")
 	playerUser := testDB.CreateTestUser(t, "player", "player@example.com")
 
-	gameService := &services.GameService{DB: testDB.Pool}
+	gameService := &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Workflow Test Game",
 		Description: "Testing character approval workflow",
@@ -30,7 +31,7 @@ func TestCharacterWorkflow_CompleteApprovalFlow(t *testing.T) {
 	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(playerUser.ID), "player")
 	core.AssertNoError(t, err, "Failed to add player participant")
 
-	characterService := &services.CharacterService{DB: testDB.Pool}
+	characterService := &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("complete character approval workflow", func(t *testing.T) {
 		// Step 1: Player creates character
@@ -111,6 +112,7 @@ func TestCharacterWorkflow_CompleteApprovalFlow(t *testing.T) {
 
 func TestCharacterWorkflow_NPCAssignmentFlow(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "game_participants", "games", "sessions", "users")
 
@@ -119,7 +121,7 @@ func TestCharacterWorkflow_NPCAssignmentFlow(t *testing.T) {
 	audienceUser1 := testDB.CreateTestUser(t, "audience1", "audience1@example.com")
 	audienceUser2 := testDB.CreateTestUser(t, "audience2", "audience2@example.com")
 
-	gameService := &services.GameService{DB: testDB.Pool}
+	gameService := &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "NPC Assignment Test Game",
 		Description: "Testing NPC assignment workflow",
@@ -135,7 +137,7 @@ func TestCharacterWorkflow_NPCAssignmentFlow(t *testing.T) {
 	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(audienceUser2.ID), "audience")
 	core.AssertNoError(t, err, "Failed to add audience participant 2")
 
-	characterService := &services.CharacterService{DB: testDB.Pool}
+	characterService := &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	t.Run("complete NPC assignment workflow", func(t *testing.T) {
 		// Step 1: GM creates audience NPC
@@ -193,6 +195,7 @@ func TestCharacterWorkflow_NPCAssignmentFlow(t *testing.T) {
 
 func TestCharacterWorkflow_PermissionMatrix(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "game_participants", "games", "sessions", "users")
 
@@ -202,7 +205,7 @@ func TestCharacterWorkflow_PermissionMatrix(t *testing.T) {
 	audienceUser := testDB.CreateTestUser(t, "audience", "audience@example.com")
 	outsideUser := testDB.CreateTestUser(t, "outside", "outside@example.com")
 
-	gameService := &services.GameService{DB: testDB.Pool}
+	gameService := &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Permission Matrix Test Game",
 		Description: "Testing all permission combinations",
@@ -218,7 +221,7 @@ func TestCharacterWorkflow_PermissionMatrix(t *testing.T) {
 	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(audienceUser.ID), "audience")
 	core.AssertNoError(t, err, "Failed to add audience participant")
 
-	characterService := &services.CharacterService{DB: testDB.Pool}
+	characterService := &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create different types of characters
 	playerCharacter, err := characterService.CreateCharacter(context.Background(), services.CreateCharacterRequest{

@@ -15,7 +15,8 @@ func TestNotificationService_CreateNotification(t *testing.T) {
 	defer testDB.Close()
 
 	ctx := context.Background()
-	service := &NotificationService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test user
 	user := testDB.CreateTestUser(t, "testuser", "test@example.com")
@@ -87,7 +88,8 @@ func TestNotificationService_GetUnreadCount(t *testing.T) {
 	defer testDB.Close()
 
 	ctx := context.Background()
-	service := &NotificationService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test user
 	user := testDB.CreateTestUser(t, "testuser", "test@example.com")
@@ -128,7 +130,8 @@ func TestNotificationService_MarkAsRead(t *testing.T) {
 	defer testDB.Close()
 
 	ctx := context.Background()
-	service := &NotificationService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test user
 	user := testDB.CreateTestUser(t, "testuser", "test@example.com")
@@ -159,7 +162,8 @@ func TestNotificationService_MarkAllAsRead(t *testing.T) {
 	defer testDB.Close()
 
 	ctx := context.Background()
-	service := &NotificationService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test user
 	user := testDB.CreateTestUser(t, "testuser", "test@example.com")
@@ -194,7 +198,8 @@ func TestNotificationService_GetUserNotifications_Pagination(t *testing.T) {
 	defer testDB.Close()
 
 	ctx := context.Background()
-	service := &NotificationService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test user
 	user := testDB.CreateTestUser(t, "testuser", "test@example.com")
@@ -234,7 +239,8 @@ func TestNotificationService_DeleteNotification(t *testing.T) {
 	defer testDB.Close()
 
 	ctx := context.Background()
-	service := &NotificationService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	user1 := testDB.CreateTestUser(t, "user1", "user1@example.com")
@@ -281,7 +287,8 @@ func TestNotificationService_NotifyPhaseCreated(t *testing.T) {
 	defer testDB.Close()
 
 	ctx := context.Background()
-	service := &NotificationService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users (GM + 2 players)
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")

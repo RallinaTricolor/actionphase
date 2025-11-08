@@ -22,7 +22,7 @@ func TestRequireAdmin(t *testing.T) {
 	defer testDB.CleanupTables(t, "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	adminUser := &core.User{
@@ -142,7 +142,7 @@ func TestRequireAdmin_UserNotFound(t *testing.T) {
 	})
 
 	// Setup router with middleware
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	r := chi.NewRouter()
 	r.Group(func(r chi.Router) {
 		r.Use(jwtauth.Verifier(tokenAuth))

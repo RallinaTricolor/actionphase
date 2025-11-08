@@ -14,11 +14,12 @@ import (
 
 func TestConversationService_CreateConversation(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := NewConversationService(testDB.Pool)
-	gameService := &GameService{DB: testDB.Pool}
-	charService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup: Create game, users, and characters
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -114,11 +115,12 @@ func TestConversationService_CreateConversation(t *testing.T) {
 
 func TestConversationService_SendMessage(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := NewConversationService(testDB.Pool)
-	gameService := &GameService{DB: testDB.Pool}
-	charService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -209,11 +211,12 @@ func TestConversationService_SendMessage(t *testing.T) {
 
 func TestConversationService_GetConversationMessages(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := NewConversationService(testDB.Pool)
-	gameService := &GameService{DB: testDB.Pool}
-	charService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -286,11 +289,12 @@ func TestConversationService_GetConversationMessages(t *testing.T) {
 
 func TestConversationService_GetUserConversations(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := NewConversationService(testDB.Pool)
-	gameService := &GameService{DB: testDB.Pool}
-	charService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -358,11 +362,12 @@ func TestConversationService_GetUserConversations(t *testing.T) {
 
 func TestConversationService_MarkAsRead(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := NewConversationService(testDB.Pool)
-	gameService := &GameService{DB: testDB.Pool}
-	charService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -427,11 +432,12 @@ func TestConversationService_MarkAsRead(t *testing.T) {
 
 func TestConversationService_UnreadCount(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := NewConversationService(testDB.Pool)
-	gameService := &GameService{DB: testDB.Pool}
-	charService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -499,11 +505,12 @@ func TestConversationService_UnreadCount(t *testing.T) {
 
 func TestConversationService_AddParticipant(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := NewConversationService(testDB.Pool)
-	gameService := &GameService{DB: testDB.Pool}
-	charService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -603,11 +610,12 @@ func TestConversationService_AddParticipant(t *testing.T) {
 
 func TestConversationService_GetOrCreateConversation(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := NewConversationService(testDB.Pool)
-	gameService := &GameService{DB: testDB.Pool}
-	charService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -680,11 +688,12 @@ func TestConversationService_GetOrCreateConversation(t *testing.T) {
 
 func TestConversationService_CreateConversationWithNPC(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := NewConversationService(testDB.Pool)
-	gameService := &GameService{DB: testDB.Pool}
-	charService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -735,11 +744,12 @@ func TestConversationService_CreateConversationWithNPC(t *testing.T) {
 
 func TestConversationService_EdgeCases(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := NewConversationService(testDB.Pool)
-	gameService := &GameService{DB: testDB.Pool}
-	charService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -1127,11 +1137,12 @@ func TestConversationService_GetUserConversations_UnreadCounts(t *testing.T) {
 
 func TestConversationService_DeletePrivateMessage(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := NewConversationService(testDB.Pool)
-	gameService := &GameService{DB: testDB.Pool}
-	charService := &CharacterService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup: Create game, users, and characters
 	gm := testDB.CreateTestUser(t, "gm_delete", "gm_delete@example.com")

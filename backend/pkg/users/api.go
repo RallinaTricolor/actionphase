@@ -65,7 +65,7 @@ func (h *Handler) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Authenticate request user (viewer must be authenticated)
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	_, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -116,7 +116,7 @@ func (h *Handler) GetUserProfileByUsername(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Authenticate request user (viewer must be authenticated)
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	_, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -169,7 +169,7 @@ func (h *Handler) UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 	defer h.App.ObsLogger.LogOperation(ctx, "UpdateUserProfile")()
 
 	// Authenticate user
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -214,7 +214,7 @@ func (h *Handler) UploadUserAvatar(w http.ResponseWriter, r *http.Request) {
 	defer h.App.ObsLogger.LogOperation(ctx, "UploadUserAvatar")()
 
 	// Authenticate user
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -289,7 +289,7 @@ func (h *Handler) DeleteUserAvatar(w http.ResponseWriter, r *http.Request) {
 	defer h.App.ObsLogger.LogOperation(ctx, "DeleteUserAvatar")()
 
 	// Authenticate user
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")

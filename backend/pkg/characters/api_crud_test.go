@@ -17,7 +17,7 @@ import (
 // setupCharacterTestRouter creates a test router with auth middleware
 func setupCharacterTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	router := chi.NewRouter()
 
@@ -54,7 +54,7 @@ func TestCharacterAPI_GMCanCreatePlayerCharacters(t *testing.T) {
 	playerUser := testDB.CreateTestUser(t, "testplayer", "testplayer@example.com")
 
 	// Add player to game
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	_, err := gameService.AddGameParticipant(context.Background(), fixtures.TestGame.ID, int32(playerUser.ID), "player")
 	core.AssertNoError(t, err, "Adding player to game should succeed")
 
@@ -154,7 +154,7 @@ func TestCharacterAPI_PlayerCanOnlyCreateOwnCharacter(t *testing.T) {
 	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
 
 	// Add both players to game
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	_, err := gameService.AddGameParticipant(context.Background(), fixtures.TestGame.ID, int32(player1.ID), "player")
 	core.AssertNoError(t, err, "Adding player1 to game should succeed")
 	_, err = gameService.AddGameParticipant(context.Background(), fixtures.TestGame.ID, int32(player2.ID), "player")

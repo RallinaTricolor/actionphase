@@ -45,7 +45,7 @@ func (h *Handler) ApproveCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify user is GM of this game
-	characterService := &services.CharacterService{DB: h.App.Pool}
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	character, err := characterService.GetCharacter(ctx, int32(characterID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get character", "error", err)
@@ -127,7 +127,7 @@ func (h *Handler) AssignNPC(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify user is GM
-	characterService := &services.CharacterService{DB: h.App.Pool}
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	character, err := characterService.GetCharacter(ctx, int32(characterID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get character", "error", err)
@@ -212,7 +212,7 @@ func (h *Handler) ReassignCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get character and verify it exists
-	characterService := &services.CharacterService{DB: h.App.Pool}
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	character, err := characterService.GetCharacter(ctx, int32(characterID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get character", "error", err)
@@ -305,7 +305,7 @@ func (h *Handler) ListInactiveCharacters(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Get inactive characters
-	characterService := &services.CharacterService{DB: h.App.Pool}
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	characters, err := characterService.ListInactiveCharacters(ctx, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to list inactive characters", "error", err)

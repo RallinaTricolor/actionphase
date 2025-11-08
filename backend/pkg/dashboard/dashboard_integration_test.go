@@ -50,7 +50,7 @@ func TestDashboardAPI_GetUserDashboard_Integration(t *testing.T) {
 	})
 
 	// Setup router with dashboard handler and authentication middleware
-	userService := &services.UserService{DB: testDB.Pool}
+	userService := &services.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	r := chi.NewRouter()
 	r.Use(jwtauth.Verifier(tokenAuth))
 	r.Use(jwtauth.Authenticator(tokenAuth))
@@ -162,7 +162,7 @@ func TestDashboardAPI_GetUserDashboard_WithUrgentGame(t *testing.T) {
 	})
 
 	// Setup router with authentication middleware
-	userService := &services.UserService{DB: testDB.Pool}
+	userService := &services.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	r := chi.NewRouter()
 	r.Use(jwtauth.Verifier(tokenAuth))
 	r.Use(jwtauth.Authenticator(tokenAuth))

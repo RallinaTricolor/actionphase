@@ -3,7 +3,6 @@ package messages
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
@@ -51,7 +50,10 @@ func (s *MessageService) CreateComment(ctx context.Context, req core.CreateComme
 	if err != nil {
 		// Log error but don't fail the comment creation
 		// Mention extraction is a non-critical feature
-		slog.Error("Failed to extract mentions", "error", err, "content", req.Content)
+		s.Logger.LogError(ctx, err, "Failed to extract mentions during comment creation",
+			"game_id", req.GameID,
+			"character_id", req.CharacterID,
+		)
 		mentionedIDs = []int32{}
 	}
 
@@ -175,7 +177,6 @@ func (s *MessageService) GetPostComments(ctx context.Context, parentID int32) ([
 
 	result := make([]core.MessageWithDetails, len(comments))
 	for i, comment := range comments {
-		slog.Info("GetPostComments conversion", "comment_id", comment.ID, "mentioned_ids", comment.MentionedCharacterIds)
 		var avatarURL *string
 		if comment.CharacterAvatarUrl.Valid {
 			avatarURL = &comment.CharacterAvatarUrl.String
@@ -203,7 +204,6 @@ func (s *MessageService) GetPostComments(ctx context.Context, parentID int32) ([
 			CharacterAvatarUrl: avatarURL,
 			ReplyCount:         comment.ReplyCount,
 		}
-		slog.Info("GetPostComments result", "comment_id", result[i].ID, "mentioned_ids", result[i].MentionedCharacterIds)
 	}
 
 	return result, nil
@@ -243,7 +243,10 @@ func (s *MessageService) UpdateComment(ctx context.Context, commentID int32, con
 	if err != nil {
 		// Log error but don't fail the update
 		// Mention extraction is a non-critical feature
-		slog.Error("Failed to extract mentions during comment update", "error", err, "comment_id", commentID)
+		s.Logger.LogError(ctx, err, "Failed to extract mentions during comment update",
+			"comment_id", commentID,
+			"game_id", existingComment.GameID,
+		)
 		mentionedIDs = []int32{}
 	}
 
@@ -275,15 +278,31 @@ func (s *MessageService) UpdateComment(ctx context.Context, commentID int32, con
 	notificationCharacterID := existingComment.CharacterID
 	if newCharacterID != nil && *newCharacterID != existingComment.CharacterID {
 		notificationCharacterID = *newCharacterID
-		slog.Info("Comment character swapped", "comment_id", commentID, "old_character_id", existingComment.CharacterID, "new_character_id", *newCharacterID)
+		s.Logger.Info(ctx, "Comment character swapped",
+			"comment_id", commentID,
+			"old_character_id", existingComment.CharacterID,
+			"new_character_id", *newCharacterID,
+			"game_id", existingComment.GameID,
+		)
 	}
 
 	// Trigger notifications for NEW mentions only (fire-and-forget)
 	if len(newMentions) > 0 {
-		slog.Info("Comment updated successfully", "comment_id", commentID, "user_id", existingComment.AuthorID, "edit_count", message.EditCount, "new_mentions", len(newMentions))
+		s.Logger.Info(ctx, "Comment updated successfully",
+			"comment_id", commentID,
+			"user_id", existingComment.AuthorID,
+			"edit_count", message.EditCount,
+			"new_mentions", len(newMentions),
+			"game_id", existingComment.GameID,
+		)
 		go s.notifyCharacterMentions(context.Background(), newMentions, notificationCharacterID, existingComment.AuthorID, existingComment.GameID, message.ID)
 	} else {
-		slog.Info("Comment updated successfully", "comment_id", commentID, "user_id", existingComment.AuthorID, "edit_count", message.EditCount)
+		s.Logger.Info(ctx, "Comment updated successfully",
+			"comment_id", commentID,
+			"user_id", existingComment.AuthorID,
+			"edit_count", message.EditCount,
+			"game_id", existingComment.GameID,
+		)
 	}
 
 	return &message, nil
@@ -434,11 +453,12 @@ func (s *MessageService) ListRecentCommentsWithParents(ctx context.Context, game
 		}
 	}
 
-	slog.InfoContext(ctx, "Listed recent comments with parents",
+	s.Logger.Info(ctx, "Listed recent comments with parents",
 		"game_id", gameID,
 		"limit", limit,
 		"offset", offset,
-		"count", len(comments))
+		"count", len(comments),
+	)
 
 	return comments, nil
 }

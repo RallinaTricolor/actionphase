@@ -4,11 +4,14 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"actionphase/pkg/observability"
 )
 
 // ActionSubmissionService implements the ActionSubmissionServiceInterface for action submission management.
 type ActionSubmissionService struct {
-	DB *pgxpool.Pool
+	DB     *pgxpool.Pool
+	Logger *observability.Logger
 }
 
 // Compile-time verification that ActionSubmissionService implements ActionSubmissionServiceInterface

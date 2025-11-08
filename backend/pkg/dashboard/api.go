@@ -23,7 +23,7 @@ func (h *Handler) GetUserDashboard(w http.ResponseWriter, r *http.Request) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_user_dashboard")()
 
 	// Get user ID from JWT token
-	userService := &services.UserService{DB: h.App.Pool}
+	userService := &services.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")

@@ -16,9 +16,11 @@ func TestMessageService_MarkPostAsRead(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup test data
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -129,9 +131,11 @@ func TestMessageService_GetUserReadMarker(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup test data
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -184,9 +188,11 @@ func TestMessageService_GetUserReadMarkersForGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup test data
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -277,9 +283,11 @@ func TestMessageService_GetPostsWithUnreadInfo(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup test data
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -461,9 +469,11 @@ func TestMessageService_GetUnreadCommentIDsForPosts(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup test data
 	player := testDB.CreateTestUser(t, "player", "player@example.com")

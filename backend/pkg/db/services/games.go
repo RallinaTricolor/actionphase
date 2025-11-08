@@ -54,6 +54,14 @@ type GameWithDetails struct {
 //   - MaxPlayers defaults to 6 if not specified
 //   - Game starts in "setup" state
 func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameRequest) (*models.Game, error) {
+	gs.Logger.Info(ctx, "Creating new game",
+		"title", req.Title,
+		"gm_user_id", req.GMUserID,
+		"genre", req.Genre,
+		"is_public", req.IsPublic,
+		"is_anonymous", req.IsAnonymous,
+	)
+
 	queries := models.New(gs.DB)
 
 	var startDate, endDate, recruitmentDeadline pgtype.Timestamptz
@@ -81,7 +89,22 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 		IsAnonymous:         req.IsAnonymous,
 	})
 
-	return &game, err
+	if err != nil {
+		gs.Logger.LogError(ctx, err, "Failed to create game",
+			"title", req.Title,
+			"gm_user_id", req.GMUserID,
+		)
+		return nil, err
+	}
+
+	gs.Logger.Info(ctx, "Game created successfully",
+		"game_id", game.ID,
+		"title", game.Title,
+		"gm_user_id", game.GmUserID,
+		"state", game.State,
+	)
+
+	return &game, nil
 }
 
 func (gs *GameService) GetGame(ctx context.Context, gameID int32) (*models.Game, error) {
@@ -98,8 +121,28 @@ func (gs *GameService) GetGamesByUser(ctx context.Context, userID int32) ([]mode
 func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newState string) (*models.Game, error) {
 	queries := models.New(gs.DB)
 
+	// Get current game state for logging
+	currentGame, err := queries.GetGame(ctx, gameID)
+	if err != nil {
+		gs.Logger.LogError(ctx, err, "Failed to get game for state transition",
+			"game_id", gameID,
+		)
+		return nil, err
+	}
+
+	gs.Logger.Info(ctx, "Game state transition requested",
+		"game_id", gameID,
+		"from_state", currentGame.State,
+		"to_state", newState,
+	)
+
 	// Validate state transition
 	if !isValidGameState(newState) {
+		gs.Logger.Warn(ctx, "Invalid game state transition",
+			"game_id", gameID,
+			"from_state", currentGame.State,
+			"invalid_state", newState,
+		)
 		return nil, fmt.Errorf("invalid game state: %s", newState)
 	}
 
@@ -108,8 +151,20 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 		State: pgtype.Text{String: newState, Valid: true},
 	})
 	if err != nil {
+		gs.Logger.LogError(ctx, err, "Failed to update game state",
+			"game_id", gameID,
+			"from_state", currentGame.State,
+			"to_state", newState,
+		)
 		return nil, err
 	}
+
+	gs.Logger.Info(ctx, "Game state transition completed",
+		"game_id", gameID,
+		"from_state", currentGame.State,
+		"to_state", game.State,
+		"title", game.Title,
+	)
 
 	// When a game is cancelled, automatically reject all pending applications
 	if newState == core.GameStateCancelled {
@@ -285,29 +340,59 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 // DeleteGame - Delete a cancelled game (GM-only)
 // Only games in 'cancelled' state can be deleted, and only by the GM
 func (gs *GameService) DeleteGame(ctx context.Context, gameID, userID int32) error {
+	gs.Logger.Info(ctx, "Game deletion requested",
+		"game_id", gameID,
+		"user_id", userID,
+	)
+
 	queries := models.New(gs.DB)
 
 	// Fetch the game to verify it exists, check state, and verify GM
 	game, err := queries.GetGame(ctx, gameID)
 	if err != nil {
+		gs.Logger.LogError(ctx, err, "Game not found for deletion",
+			"game_id", gameID,
+			"user_id", userID,
+		)
 		return fmt.Errorf("game not found")
 	}
 
 	// Verify the user is the GM
 	if game.GmUserID != userID {
+		gs.Logger.Warn(ctx, "Unauthorized game deletion attempt",
+			"game_id", gameID,
+			"user_id", userID,
+			"gm_user_id", game.GmUserID,
+		)
 		return fmt.Errorf("only the game master can delete this game")
 	}
 
 	// Verify the game is in cancelled state
 	if game.State.String != core.GameStateCancelled {
+		gs.Logger.Warn(ctx, "Cannot delete game: not in cancelled state",
+			"game_id", gameID,
+			"current_state", game.State.String,
+			"required_state", core.GameStateCancelled,
+		)
 		return fmt.Errorf("only cancelled games can be deleted (current state: %s)", game.State.String)
 	}
 
 	// Delete the game (SQL query enforces cancelled state as well)
 	err = queries.DeleteGame(ctx, gameID)
 	if err != nil {
+		gs.Logger.LogError(ctx, err, "Failed to delete game",
+			"game_id", gameID,
+			"title", game.Title,
+		)
 		return fmt.Errorf("failed to delete game: %w", err)
 	}
+
+	gs.Logger.Info(ctx, "Game deleted successfully",
+		"game_id", gameID,
+		"title", game.Title,
+		"gm_user_id", game.GmUserID,
+		"reason", "cancelled",
+	)
 
 	return nil
 }
@@ -336,15 +421,28 @@ func (gs *GameService) CanUserJoinGame(ctx context.Context, gameID, userID int32
 
 // AddGameParticipant - Add a user as a participant to a game
 func (gs *GameService) AddGameParticipant(ctx context.Context, gameID, userID int32, role string) (*models.GameParticipant, error) {
+	gs.Logger.Info(ctx, "Adding participant to game",
+		"game_id", gameID,
+		"user_id", userID,
+		"role", role,
+	)
+
 	queries := models.New(gs.DB)
 
 	// Validate game is not completed/cancelled (archived games are read-only)
 	game, err := queries.GetGame(ctx, gameID)
 	if err != nil {
+		gs.Logger.LogError(ctx, err, "Failed to get game for participant addition",
+			"game_id", gameID,
+		)
 		return nil, fmt.Errorf("failed to get game: %w", err)
 	}
 
 	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
+		gs.Logger.Warn(ctx, "Cannot add participant to completed/cancelled game",
+			"game_id", gameID,
+			"game_state", game.State.String,
+		)
 		return nil, err
 	}
 
@@ -353,7 +451,24 @@ func (gs *GameService) AddGameParticipant(ctx context.Context, gameID, userID in
 		UserID: userID,
 		Role:   role,
 	})
-	return &participant, err
+
+	if err != nil {
+		gs.Logger.LogError(ctx, err, "Failed to add participant to game",
+			"game_id", gameID,
+			"user_id", userID,
+			"role", role,
+		)
+		return nil, err
+	}
+
+	gs.Logger.Info(ctx, "Participant added to game successfully",
+		"game_id", gameID,
+		"user_id", userID,
+		"role", participant.Role,
+		"participant_id", participant.ID,
+	)
+
+	return &participant, nil
 }
 
 // RemoveGameParticipant - Remove a user from game participants
@@ -609,40 +724,91 @@ func interfaceToStringPtr(i interface{}) *string {
 
 // RemovePlayer removes a player from the game and deactivates their characters
 func (gs *GameService) RemovePlayer(ctx context.Context, gameID, userID, gmUserID int32) error {
+	gs.Logger.Info(ctx, "Removing player from game",
+		"game_id", gameID,
+		"user_id", userID,
+		"removed_by_user_id", gmUserID,
+	)
+
 	queries := models.New(gs.DB)
 
 	// Start a transaction
+	gs.Logger.Debug(ctx, "Starting player removal transaction",
+		"game_id", gameID,
+		"user_id", userID,
+	)
 	tx, err := gs.DB.Begin(ctx)
 	if err != nil {
+		gs.Logger.LogError(ctx, err, "Failed to begin player removal transaction",
+			"game_id", gameID,
+			"user_id", userID,
+		)
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			gs.Logger.Debug(ctx, "Transaction already committed (rollback ignored)",
+				"game_id", gameID,
+				"user_id", userID,
+			)
+		}
+	}()
 
 	txQueries := queries.WithTx(tx)
 
 	// Remove the participant (soft delete)
+	gs.Logger.Debug(ctx, "Removing participant from game",
+		"game_id", gameID,
+		"user_id", userID,
+	)
 	err = txQueries.RemoveParticipant(ctx, models.RemoveParticipantParams{
 		GameID:          gameID,
 		UserID:          userID,
 		RemovedByUserID: pgtype.Int4{Int32: gmUserID, Valid: true},
 	})
 	if err != nil {
+		gs.Logger.LogError(ctx, err, "Failed to remove participant",
+			"game_id", gameID,
+			"user_id", userID,
+		)
 		return fmt.Errorf("failed to remove participant: %w", err)
 	}
 
 	// Deactivate the player's characters
+	gs.Logger.Debug(ctx, "Deactivating player characters",
+		"game_id", gameID,
+		"user_id", userID,
+	)
 	err = txQueries.DeactivatePlayerCharacters(ctx, models.DeactivatePlayerCharactersParams{
 		GameID: gameID,
 		UserID: pgtype.Int4{Int32: userID, Valid: true},
 	})
 	if err != nil {
+		gs.Logger.LogError(ctx, err, "Failed to deactivate player characters",
+			"game_id", gameID,
+			"user_id", userID,
+		)
 		return fmt.Errorf("failed to deactivate characters: %w", err)
 	}
 
 	// Commit the transaction
+	gs.Logger.Debug(ctx, "Committing player removal transaction",
+		"game_id", gameID,
+		"user_id", userID,
+	)
 	if err = tx.Commit(ctx); err != nil {
+		gs.Logger.LogError(ctx, err, "Failed to commit player removal transaction",
+			"game_id", gameID,
+			"user_id", userID,
+		)
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	gs.Logger.Info(ctx, "Player removed successfully",
+		"game_id", gameID,
+		"user_id", userID,
+		"removed_by_user_id", gmUserID,
+	)
 
 	return nil
 }

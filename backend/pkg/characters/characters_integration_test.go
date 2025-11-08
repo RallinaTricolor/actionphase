@@ -29,7 +29,7 @@ func TestCharacterAPI_CompleteCharacterLifecycle(t *testing.T) {
 	playerUser := testDB.CreateTestUser(t, "player", "player@example.com")
 
 	// Create test game
-	gameService := &services.GameService{DB: testDB.Pool}
+	gameService := &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Character Test Game",
 		Description: "Testing character functionality",
@@ -50,7 +50,7 @@ func TestCharacterAPI_CompleteCharacterLifecycle(t *testing.T) {
 
 	// Setup router with character routes and JWT middleware
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &services.UserService{DB: testDB.Pool}
+	userService := &services.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
@@ -215,7 +215,7 @@ func TestCharacterAPI_NPCManagement(t *testing.T) {
 	audienceUser := testDB.CreateTestUser(t, "audience", "audience@example.com")
 
 	// Create test game
-	gameService := &services.GameService{DB: testDB.Pool}
+	gameService := &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "NPC Test Game",
 		Description: "Testing NPC functionality",
@@ -234,7 +234,7 @@ func TestCharacterAPI_NPCManagement(t *testing.T) {
 
 	// Setup router with JWT middleware
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &services.UserService{DB: testDB.Pool}
+	userService := &services.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
@@ -327,7 +327,7 @@ func TestCharacterAPI_Authorization(t *testing.T) {
 	otherUser := testDB.CreateTestUser(t, "other", "other@example.com")
 
 	// Create test game
-	gameService := &services.GameService{DB: testDB.Pool}
+	gameService := &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Authorization Test Game",
 		Description: "Testing character authorization",
@@ -341,7 +341,7 @@ func TestCharacterAPI_Authorization(t *testing.T) {
 	core.AssertNoError(t, err, "Failed to add player participant")
 
 	// Create character
-	characterService := &services.CharacterService{DB: testDB.Pool}
+	characterService := &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	character, err := characterService.CreateCharacter(context.Background(), services.CreateCharacterRequest{
 		GameID:        game.ID,
 		UserID:        core.Int32Ptr(int32(playerUser.ID)),
@@ -360,7 +360,7 @@ func TestCharacterAPI_Authorization(t *testing.T) {
 
 	// Setup router with JWT middleware
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &services.UserService{DB: testDB.Pool}
+	userService := &services.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
@@ -570,7 +570,7 @@ func TestCharacterAPI_ErrorHandling(t *testing.T) {
 	gmUser := testDB.CreateTestUser(t, "gm", "gm@example.com")
 	playerUser := testDB.CreateTestUser(t, "player", "player@example.com")
 
-	gameService := &services.GameService{DB: testDB.Pool}
+	gameService := &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Error Test Game",
 		Description: "Testing error handling",
@@ -591,7 +591,7 @@ func TestCharacterAPI_ErrorHandling(t *testing.T) {
 
 	// Setup router with JWT middleware
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &services.UserService{DB: testDB.Pool}
+	userService := &services.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
@@ -710,7 +710,7 @@ func TestCharacterAPI_UnauthenticatedAccess(t *testing.T) {
 	// Setup router with JWT middleware
 	r := chi.NewRouter()
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &services.UserService{DB: testDB.Pool}
+	userService := &services.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	handler := Handler{App: app}
 	r.Route("/api/v1/characters/{id}", func(r chi.Router) {
@@ -763,7 +763,7 @@ func TestCharacterAPI_ControllableAndInactive(t *testing.T) {
 	inactivePlayerUser := testDB.CreateTestUser(t, "inactive_player", "inactive@example.com")
 
 	// Create test game
-	gameService := &services.GameService{DB: testDB.Pool}
+	gameService := &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Character Management Test",
 		Description: "Testing controllable and inactive characters",
@@ -790,7 +790,7 @@ func TestCharacterAPI_ControllableAndInactive(t *testing.T) {
 
 	// Setup router
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &services.UserService{DB: testDB.Pool}
+	userService := &services.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	r := chi.NewRouter()
 	handler := Handler{App: app}
 
@@ -810,7 +810,7 @@ func TestCharacterAPI_ControllableAndInactive(t *testing.T) {
 	})
 
 	// Create characters for testing
-	characterService := &services.CharacterService{DB: testDB.Pool}
+	characterService := &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Player's own character (approved)
 	playerCharID := int32(playerUser.ID)

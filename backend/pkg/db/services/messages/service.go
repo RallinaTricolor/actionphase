@@ -4,6 +4,7 @@ import (
 	"time"
 
 	models "actionphase/pkg/db/models"
+	"actionphase/pkg/observability"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -15,7 +16,8 @@ import (
 // MessageService handles message and comment operations for the Common Room and private messaging.
 // All messages must be sent as characters and are associated with a game.
 type MessageService struct {
-	DB *pgxpool.Pool
+	DB     *pgxpool.Pool
+	Logger *observability.Logger
 }
 
 // Helper function to convert *int32 to pgtype.Int4

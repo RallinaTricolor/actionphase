@@ -111,6 +111,10 @@ migration action="" name="":
 migrate:
   migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable" up
 
+# Apply migrations to test database
+migrate_test:
+  migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" up
+
 # ═══════════════════════════════════════════════════════════════════════════
 # TEST DATA COMMANDS
 # ═══════════════════════════════════════════════════════════════════════════
@@ -344,8 +348,8 @@ start service="backend":
 # Helper function to clean test database
 _clean_test_db:
   #!/usr/bin/env bash
-  echo "🧹 Cleaning actionphase database for integration tests..."
-  PGPASSWORD=example psql -h localhost -p 5432 -U postgres -d actionphase -q -c "
+  echo "🧹 Cleaning actionphase_test database for integration tests..."
+  PGPASSWORD=example psql -h localhost -p 5432 -U postgres -d actionphase_test -q -c "
   DO \$\$
   DECLARE
       r RECORD;
@@ -355,13 +359,13 @@ _clean_test_db:
       END LOOP;
   END \$\$;
   " 2>&1 | grep -v "NOTICE" || true
-  echo "✅ Database cleaned"
+  echo "✅ Test database cleaned"
 
 # Run all backend tests (default: everything with database)
 test:
   @echo "🧪 Running all backend tests (integration + mocks)..."
   @just _clean_test_db
-  cd backend && SKIP_DB_TESTS=false go test -p=1 ./...
+  cd backend && TEST_DATABASE_URL="postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" SKIP_DB_TESTS=false go test -p=1 ./...
 
 # Run fast mock tests only (no database required)
 test-mocks:
@@ -372,13 +376,13 @@ test-mocks:
 test-integration:
   @echo "🗄️  Running database integration tests..."
   @just _clean_test_db
-  cd backend && SKIP_DB_TESTS=false go test -p=1 ./pkg/db/services/...
+  cd backend && TEST_DATABASE_URL="postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" SKIP_DB_TESTS=false go test -p=1 ./pkg/db/services/...
 
 # Run tests with coverage report
 test-coverage:
   @echo "📊 Running all tests with coverage..."
   @just _clean_test_db
-  cd backend && SKIP_DB_TESTS=false go test -p=1 -coverprofile=coverage.out ./...
+  cd backend && TEST_DATABASE_URL="postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" SKIP_DB_TESTS=false go test -p=1 -coverprofile=coverage.out ./...
   @echo ""
   @echo "Coverage report generated: backend/coverage.out"
   @cd backend && go tool cover -func=coverage.out | tail -1
@@ -387,7 +391,7 @@ test-coverage:
 test-race:
   @echo "🔍 Running tests with race detector..."
   @just _clean_test_db
-  cd backend && SKIP_DB_TESTS=false go test -p=1 -race ./...
+  cd backend && TEST_DATABASE_URL="postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" SKIP_DB_TESTS=false go test -p=1 -race ./...
 
 # Clean test cache
 test-clean:
@@ -398,7 +402,7 @@ test-clean:
 test-run pattern:
   @echo "🎯 Running tests matching: {{pattern}}"
   @just _clean_test_db
-  cd backend && SKIP_DB_TESTS=false go test -p=1 -v -run {{pattern}} ./...
+  cd backend && TEST_DATABASE_URL="postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" SKIP_DB_TESTS=false go test -p=1 -v -run {{pattern}} ./...
 
 # ═══════════════════════════════════════════════════════════════════════════
 # FRONTEND TESTING

@@ -16,10 +16,11 @@ func TestActionSubmissionService_CreateDraftCharacterUpdate(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -194,10 +195,12 @@ func TestActionSubmissionService_GetDraftCharacterUpdates(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -286,10 +289,12 @@ func TestActionSubmissionService_UpdateDraftCharacterUpdate(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -352,10 +357,12 @@ func TestActionSubmissionService_DeleteDraftCharacterUpdate(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -420,10 +427,12 @@ func TestActionSubmissionService_GetDraftUpdateCount(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -491,10 +500,12 @@ func TestActionSubmissionService_PublishDraftCharacterUpdates(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -579,10 +590,12 @@ func TestActionSubmissionService_PublishActionResult_WithDrafts(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -666,10 +679,12 @@ func TestActionSubmissionService_PublishAllPhaseResults_WithDrafts(t *testing.T)
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")

@@ -10,12 +10,13 @@ import (
 
 func TestGameService_CreateGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "games", "sessions", "users")
 
 	// Setup test fixtures
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	testCases := []struct {
 		name        string
@@ -72,11 +73,12 @@ func TestGameService_CreateGame(t *testing.T) {
 
 func TestGameService_UpdateGameState(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a test game first
 	req := core.CreateGameRequest{
@@ -131,11 +133,12 @@ func TestGameService_UpdateGameState(t *testing.T) {
 
 func TestGameService_LeaveGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a player
 	player := testDB.CreateTestUser(t, "player2", "player2@example.com")
@@ -204,11 +207,12 @@ func TestGameService_LeaveGame(t *testing.T) {
 
 func TestGameService_GetUserRole(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a player
 	player := testDB.CreateTestUser(t, "player3", "player3@example.com")
@@ -263,11 +267,12 @@ func TestGameService_GetUserRole(t *testing.T) {
 
 func TestGameService_UpdateGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a game to update
 	game := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Original Title")
@@ -293,11 +298,12 @@ func TestGameService_UpdateGame(t *testing.T) {
 
 func TestGameService_DeleteGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a cancelled game that the GM owns
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
@@ -395,11 +401,12 @@ func TestGameService_DeleteGame(t *testing.T) {
 // Benchmark tests for performance monitoring
 func BenchmarkGameService_CreateGame(b *testing.B) {
 	testDB := core.NewTestDatabase(b)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(b, "games", "users")
 
 	fixtures := testDB.SetupFixtures(b)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	b.ResetTimer()
 
@@ -420,11 +427,12 @@ func BenchmarkGameService_CreateGame(b *testing.B) {
 
 func BenchmarkGameService_GetGame(b *testing.B) {
 	testDB := core.NewTestDatabase(b)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(b, "games", "users")
 
 	fixtures := testDB.SetupFixtures(b)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a game for benchmarking
 	game := testDB.CreateTestGame(b, int32(fixtures.TestUser.ID), "Benchmark Lookup Game")
@@ -441,10 +449,11 @@ func BenchmarkGameService_GetGame(b *testing.B) {
 
 func TestGameService_GetGamesByUser(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
 
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -517,10 +526,11 @@ func TestGameService_GetGamesByUser(t *testing.T) {
 
 func TestGameService_GetRecruitingGames(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "games", "sessions", "users")
 
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test user
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -569,10 +579,11 @@ func TestGameService_GetRecruitingGames(t *testing.T) {
 
 func TestGameService_GetGameWithDetails(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
 
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -606,10 +617,11 @@ func TestGameService_GetGameWithDetails(t *testing.T) {
 
 func TestGameService_CanUserJoinGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
 
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -641,10 +653,11 @@ func TestGameService_CanUserJoinGame(t *testing.T) {
 
 func TestGameService_RemoveGameParticipant(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
 
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -689,11 +702,12 @@ func timePtr(t time.Time) *time.Time {
 
 func TestGameService_GetFilteredGames(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_participants", "game_applications", "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	ctx := context.Background()
 
 	// Create test users
@@ -929,11 +943,12 @@ func TestGameService_GetFilteredGames(t *testing.T) {
 
 func TestGameService_AudienceParticipation(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "games", "game_participants", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	ctx := context.Background()
 
 	// Create a test game
@@ -1032,9 +1047,10 @@ func TestGameService_AudienceParticipation(t *testing.T) {
 // TestGameService_CanUserViewGame tests the public archive access for completed games
 func TestGameService_CanUserViewGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	ctx := context.Background()
 
 	// Create test users
@@ -1124,11 +1140,12 @@ func TestGameService_CanUserViewGame(t *testing.T) {
 // When a game is cancelled, all pending applications should be automatically rejected
 func TestGameService_CancelledGameRejectsPendingApplications(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	appService := &GameApplicationService{DB: testDB.Pool}
 
 	// Create test users who will apply to the game
@@ -1193,11 +1210,12 @@ func TestGameService_CancelledGameRejectsPendingApplications(t *testing.T) {
 
 func TestGameService_PromoteToCoGM(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a test game
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
@@ -1290,11 +1308,12 @@ func TestGameService_PromoteToCoGM(t *testing.T) {
 
 func TestGameService_PromoteToCoGM_OnlyOneCoGMAllowed(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a test game
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
@@ -1328,11 +1347,12 @@ func TestGameService_PromoteToCoGM_OnlyOneCoGMAllowed(t *testing.T) {
 
 func TestGameService_PromoteToCoGM_OnlyAudienceCanBePromoted(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a test game
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
@@ -1359,11 +1379,12 @@ func TestGameService_PromoteToCoGM_OnlyAudienceCanBePromoted(t *testing.T) {
 
 func TestGameService_DemoteFromCoGM(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
 
 	fixtures := testDB.SetupFixtures(t)
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create a test game
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{

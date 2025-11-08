@@ -99,7 +99,7 @@ func (h *Handler) Start() {
 		r.Group(func(r chi.Router) {
 			// Seek, verify and validate JWT tokens
 			tokenAuth := h.getTokenAuth()
-			userService := &db.UserService{DB: h.App.Pool}
+			userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 			r.Use(core.RequireAuthenticationMiddleware(userService))
@@ -124,7 +124,7 @@ func (h *Handler) Start() {
 	gamesRouter := chi.NewRouter()
 	gamesRouter.Route("/", func(r chi.Router) {
 		gameHandler := games.Handler{App: h.App}
-		userService := &db.UserService{DB: h.App.Pool}
+		userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 		// Public routes (authentication optional - will enrich if present)
 		tokenAuth := h.getTokenAuth()
@@ -270,7 +270,7 @@ func (h *Handler) Start() {
 	charactersRouter.Route("/", func(r chi.Router) {
 		characterHandler := characters.Handler{App: h.App}
 		avatarHandler := avatars.Handler{App: h.App}
-		userService := &db.UserService{DB: h.App.Pool}
+		userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 		// All character routes require authentication
 		r.Group(func(r chi.Router) {
@@ -303,7 +303,7 @@ func (h *Handler) Start() {
 		// All phase routes require authentication
 		r.Group(func(r chi.Router) {
 			tokenAuth := h.getTokenAuth()
-			userService := &db.UserService{DB: h.App.Pool}
+			userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 			r.Use(core.RequireAuthenticationMiddleware(userService))
@@ -325,7 +325,7 @@ func (h *Handler) Start() {
 		// All deadline routes require authentication
 		r.Group(func(r chi.Router) {
 			tokenAuth := h.getTokenAuth()
-			userService := &db.UserService{DB: h.App.Pool}
+			userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 			r.Use(core.RequireAuthenticationMiddleware(userService))
@@ -346,7 +346,7 @@ func (h *Handler) Start() {
 		// All poll routes require authentication
 		r.Group(func(r chi.Router) {
 			tokenAuth := h.getTokenAuth()
-			userService := &db.UserService{DB: h.App.Pool}
+			userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 			r.Use(core.RequireAuthenticationMiddleware(userService))
@@ -369,7 +369,7 @@ func (h *Handler) Start() {
 		// All notification routes require authentication
 		r.Group(func(r chi.Router) {
 			tokenAuth := h.getTokenAuth()
-			userService := &db.UserService{DB: h.App.Pool}
+			userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 			r.Use(core.RequireAuthenticationMiddleware(userService))
@@ -393,7 +393,7 @@ func (h *Handler) Start() {
 		// Dashboard route requires authentication
 		r.Group(func(r chi.Router) {
 			tokenAuth := h.getTokenAuth()
-			userService := &db.UserService{DB: h.App.Pool}
+			userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 			r.Use(core.RequireAuthenticationMiddleware(userService))
@@ -412,7 +412,7 @@ func (h *Handler) Start() {
 		// All user profile routes require authentication
 		r.Group(func(r chi.Router) {
 			tokenAuth := h.getTokenAuth()
-			userService := &db.UserService{DB: h.App.Pool}
+			userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator(tokenAuth))
 			r.Use(core.RequireAuthenticationMiddleware(userService))

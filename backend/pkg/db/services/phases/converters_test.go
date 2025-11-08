@@ -15,7 +15,8 @@ func TestPhaseService_ConvertPhaseToResponse(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	phaseService := &PhaseService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	phaseService := &PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	user := testDB.CreateTestUser(t, "testuser", "test@example.com")

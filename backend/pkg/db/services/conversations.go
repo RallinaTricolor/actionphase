@@ -8,6 +8,7 @@ import (
 
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
+	"actionphase/pkg/observability"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -395,7 +396,8 @@ func (s *ConversationService) AddParticipant(ctx context.Context, conversationID
 // notifyPrivateMessage triggers notifications for all conversation participants except the sender
 // This runs in a goroutine and should not fail the parent operation
 func (s *ConversationService) notifyPrivateMessage(ctx context.Context, conversationID, senderUserID, senderCharacterID int32, messageID int32) {
-	notificationService := &NotificationService{DB: s.DB}
+	logger := observability.NewLogger("conversations", "info")
+	notificationService := &NotificationService{DB: s.DB, Logger: logger}
 
 	// Get conversation details to find game_id
 	conv, err := s.Queries.GetConversation(ctx, conversationID)

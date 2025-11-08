@@ -63,7 +63,7 @@ func TestGetFilteredGames_PaginationCustomValues(t *testing.T) {
 	accessToken, err := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
 	core.AssertNoError(t, err, "Test token creation should succeed")
 
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create multiple games for pagination testing
 	for i := 1; i <= 25; i++ {
@@ -241,7 +241,7 @@ func TestGetFilteredGames_PaginationMetadata(t *testing.T) {
 
 	// Create exactly 23 games for precise metadata testing
 	// Note: SetupFixtures already creates 1 game, so total will be 24
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	for i := 1; i <= 23; i++ {
 		_, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 			Title:       "Pagination Test Game " + string(rune(i)),
