@@ -69,7 +69,7 @@ func NewS3Storage(bucket, region, publicURL, endpoint string) (*S3Storage, error
 // Upload saves a file to S3.
 //
 // Security notes:
-//   - Files are uploaded with public-read ACL
+//   - Files are publicly accessible via bucket policy (not ACL)
 //   - Content-Type is set based on provided contentType parameter
 //   - Overwrites existing objects at the same key
 func (s *S3Storage) Upload(ctx context.Context, path string, file io.Reader, contentType string) (string, error) {
@@ -81,12 +81,12 @@ func (s *S3Storage) Upload(ctx context.Context, path string, file io.Reader, con
 	}
 
 	// Upload to S3
+	// Note: ACL removed - public access is controlled by bucket policy
 	_, err := s.client.PutObjectWithContext(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
 		Key:         aws.String(path),
 		Body:        bytes.NewReader(buf.Bytes()),
 		ContentType: aws.String(contentType),
-		ACL:         aws.String("public-read"),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to upload to S3: %w", err)
