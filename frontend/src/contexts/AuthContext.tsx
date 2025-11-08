@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useLocation } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 import type { LoginRequest, RegisterRequest, User } from '../types/auth';
 
@@ -31,16 +30,12 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const queryClient = useQueryClient();
-  const location = useLocation();
   const [authError, setAuthError] = useState<Error | null>(null);
-
-  // Public routes that don't require authentication checks
-  const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/verify-email'];
-  const isPublicRoute = publicRoutes.some(route => location.pathname.startsWith(route)) || location.pathname === '/';
 
   // Check if user is authenticated by fetching current user data
   // This works for both localStorage tokens AND HTTP-only cookies
-  // Only run on protected routes to avoid unnecessary API calls on public pages
+  // Note: This query runs on all pages (including public ones) which causes 401 errors
+  // in the console for unauthenticated users. This is expected and normal behavior.
   const {
     data: currentUser,
     isLoading: isCheckingAuth,
@@ -59,7 +54,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw error;
       }
     },
-    enabled: !isPublicRoute, // Skip auth check on public routes
     retry: false,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     refetchOnWindowFocus: true,
