@@ -30,27 +30,14 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
-      # Database connection
+      # Override specific values that need Docker-specific configuration
       DATABASE_URL: "postgres://postgres:example@db:5432/actionphase?sslmode=disable"
-
-      # JWT configuration
-      JWT_SECRET: "${JWT_SECRET:-your-super-secret-jwt-signing-key-change-this-in-production}"
-      JWT_ACCESS_TOKEN_EXPIRY: "15m"
-      JWT_REFRESH_TOKEN_EXPIRY: "168h"
-
-      # Server configuration
       PORT: 3000
       HOST: 0.0.0.0
-      ENVIRONMENT: "${ENVIRONMENT:-production}"
-      LOG_LEVEL: "${LOG_LEVEL:-info}"
-
-      # Run migrations on startup
       RUN_MIGRATIONS: "true"
-
-      # CORS configuration - allow frontend
-      CORS_ENABLED: "true"
-      CORS_ORIGINS: "http://localhost,http://localhost:80,http://${HOST_IP:-localhost}"
     depends_on:
       db:
         condition: service_healthy
@@ -69,10 +56,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Pass hCaptcha configuration to frontend build
-        # For production, set HCAPTCHA_SITE_KEY in .env file
-        VITE_HCAPTCHA_SITE_KEY: ${HCAPTCHA_SITE_KEY:-}
-        VITE_HCAPTCHA_ENABLED: ${HCAPTCHA_ENABLED:-false}
+        # Pass VITE_ prefixed variables from .env to frontend build
+        VITE_HCAPTCHA_SITE_KEY: ${VITE_HCAPTCHA_SITE_KEY:-}
+        VITE_HCAPTCHA_ENABLED: ${VITE_HCAPTCHA_ENABLED:-false}
     container_name: actionphase-frontend
     restart: unless-stopped
     ports:
