@@ -18,6 +18,16 @@ output "s3_backup_bucket" {
   value       = aws_s3_bucket.backups.id
 }
 
+output "s3_avatars_bucket" {
+  description = "Name of the S3 avatars bucket"
+  value       = aws_s3_bucket.avatars.id
+}
+
+output "s3_avatars_bucket_url" {
+  description = "Public URL for the S3 avatars bucket"
+  value       = "https://${aws_s3_bucket.avatars.bucket}.s3.${var.aws_region}.amazonaws.com"
+}
+
 output "ssh_command" {
   description = "SSH command to connect to the instance"
   value       = "ssh ubuntu@${aws_eip.actionphase.public_ip}"

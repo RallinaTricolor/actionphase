@@ -116,14 +116,15 @@ resource "aws_iam_role" "actionphase_ec2" {
   })
 }
 
-# IAM policy for S3 backup access
-resource "aws_iam_role_policy" "actionphase_s3_backup" {
-  name = "actionphase-s3-backup-policy"
+# IAM policy for S3 access (backups and avatars)
+resource "aws_iam_role_policy" "actionphase_s3_access" {
+  name = "actionphase-s3-access-policy"
   role = aws_iam_role.actionphase_ec2.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      # Backup bucket access
       {
         Effect = "Allow"
         Action = [
@@ -140,6 +141,24 @@ resource "aws_iam_role_policy" "actionphase_s3_backup" {
           "s3:DeleteObject"
         ]
         Resource = "${aws_s3_bucket.backups.arn}/*"
+      },
+      # Avatar bucket access
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ]
+        Resource = aws_s3_bucket.avatars.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "${aws_s3_bucket.avatars.arn}/*"
       }
     ]
   })
@@ -189,7 +208,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
     status = "Enabled"
 
     expiration {
-      days = 30  # Delete after 30 days (no IA transition needed)
+      days = 30 # Delete after 30 days (no IA transition needed)
     }
   }
 
@@ -207,6 +226,84 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
   # }
   #
   # And change expiration above to 90+ days to benefit from IA pricing
+}
+
+# ==============================================================================
+# S3 BUCKET FOR AVATAR UPLOADS
+# ==============================================================================
+
+# S3 bucket for avatar uploads (user and character avatars)
+resource "aws_s3_bucket" "avatars" {
+  bucket = var.s3_avatars_bucket
+
+  tags = {
+    Name = "ActionPhase Avatars"
+  }
+}
+
+# Enable public access for avatars bucket
+# This allows users to view avatars without authentication
+resource "aws_s3_bucket_public_access_block" "avatars" {
+  bucket = aws_s3_bucket.avatars.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+# Bucket policy to allow public read access to all objects
+resource "aws_s3_bucket_policy" "avatars" {
+  bucket = aws_s3_bucket.avatars.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.avatars.arn}/*"
+      }
+    ]
+  })
+
+  depends_on = [aws_s3_bucket_public_access_block.avatars]
+}
+
+# CORS configuration for avatars bucket
+# Allows browser uploads from the frontend
+resource "aws_s3_bucket_cors_configuration" "avatars" {
+  bucket = aws_s3_bucket.avatars.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "PUT", "POST", "DELETE"]
+    allowed_origins = ["*"] # In production, restrict to your domain
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
+# Server-side encryption for avatars
+resource "aws_s3_bucket_server_side_encryption_configuration" "avatars" {
+  bucket = aws_s3_bucket.avatars.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Versioning disabled for avatars (not needed, saves storage costs)
+resource "aws_s3_bucket_versioning" "avatars" {
+  bucket = aws_s3_bucket.avatars.id
+
+  versioning_configuration {
+    status = "Disabled"
+  }
 }
 
 # EC2 instance
@@ -229,9 +326,9 @@ resource "aws_instance" "actionphase" {
 
   # User data script for initial setup
   user_data = templatefile("${path.module}/user-data.sh", {
-    github_repo   = var.github_repo
-    domain        = var.domain
-    admin_email   = var.admin_email
+    github_repo = var.github_repo
+    domain      = var.domain
+    admin_email = var.admin_email
   })
 
   # Enable EC2 instance auto-recovery
