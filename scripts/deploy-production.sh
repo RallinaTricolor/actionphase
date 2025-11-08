@@ -16,7 +16,8 @@ NC='\033[0m' # No Color
 # Configuration
 PROJECT_DIR=${PROJECT_DIR:-/opt/actionphase}
 BACKUP_DIR=${BACKUP_DIR:-./backups}
-COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"
+LOG_DIR=${LOG_DIR:-./logs}
+COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.logging.yml"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 echo -e "${BLUE}========================================${NC}"
@@ -53,8 +54,35 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Create backup directory if it doesn't exist
+# Check if docker-compose.logging.yml exists
+if [ ! -f docker-compose.logging.yml ]; then
+    echo -e "${YELLOW}⚠️  Warning: docker-compose.logging.yml not found${NC}"
+    echo "Log persistence is disabled. Logs will be lost when containers are removed."
+    echo "To enable log persistence, create docker-compose.logging.yml"
+    echo "See: docs/operations/LOGGING_STRATEGY.md"
+    echo ""
+    # Fall back to production-only compose files
+    COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"
+    read -p "Continue without log persistence? (y/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Deployment cancelled"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✓ Log persistence enabled via docker-compose.logging.yml${NC}"
+fi
+
+# Create required directories if they don't exist
+echo -e "${BLUE}📁 Ensuring required directories exist...${NC}"
 mkdir -p "${BACKUP_DIR}"
+mkdir -p "${LOG_DIR}"/{backend,frontend,nginx,postgres,backup}
+
+# Set proper permissions
+if [ -d "${LOG_DIR}" ]; then
+    chmod -R 755 "${LOG_DIR}"
+    echo -e "${GREEN}✓ Log directories created/verified${NC}"
+fi
 
 # Backup database before deployment
 echo -e "${BLUE}💾 Creating pre-deployment database backup...${NC}"
@@ -184,6 +212,29 @@ echo -e "${BLUE}📈 Resource Usage:${NC}"
 echo "=============================="
 docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" | grep actionphase || true
 
+# Show log disk usage (if logs directory exists)
+if [ -d "${LOG_DIR}" ]; then
+    echo ""
+    echo -e "${BLUE}📊 Log Disk Usage:${NC}"
+    echo "=============================="
+    du -sh "${LOG_DIR}" 2>/dev/null || echo "  Logs directory: 0B"
+    if [ -d "${LOG_DIR}/backend" ]; then
+        du -sh "${LOG_DIR}"/* 2>/dev/null | sed 's/^/  /' || true
+    fi
+
+    # Check for large log files
+    LARGE_LOGS=$(find "${LOG_DIR}" -type f -size +100M 2>/dev/null)
+    if [ -n "$LARGE_LOGS" ]; then
+        echo ""
+        echo -e "${YELLOW}⚠️  Large log files found (>100MB):${NC}"
+        echo "$LARGE_LOGS" | while read -r logfile; do
+            SIZE=$(du -sh "$logfile" | cut -f1)
+            echo "    $(basename "$logfile"): $SIZE"
+        done
+        echo "  Consider rotating logs: logrotate -f /etc/logrotate.d/actionphase"
+    fi
+fi
+
 # Show deployment info
 echo ""
 echo -e "${GREEN}========================================${NC}"
@@ -195,10 +246,17 @@ echo "Git commit: $(git rev-parse --short HEAD)"
 echo "Branch: ${CURRENT_BRANCH}"
 echo ""
 echo -e "${BLUE}Useful commands:${NC}"
-echo "  View logs:        docker-compose ${COMPOSE_FILES} logs -f"
-echo "  View backend:     docker-compose logs -f backend"
+echo "  Container logs:   docker-compose ${COMPOSE_FILES} logs -f"
+echo "  Backend logs:     docker-compose logs -f backend"
+echo "  Persisted logs:   tail -f ${LOG_DIR}/backend/app.log"
+echo "  Nginx access:     tail -f ${LOG_DIR}/nginx/access.log"
+echo "  Search errors:    grep '\"level\":\"error\"' ${LOG_DIR}/backend/app.log | jq ."
 echo "  Restart service:  docker-compose restart [service]"
 echo "  Stop all:         docker-compose down"
+echo ""
+echo -e "${BLUE}Log locations:${NC}"
+echo "  Application:      ${LOG_DIR}/"
+echo "  Container logs:   /var/lib/docker/containers/"
 echo ""
 
 # Final health check

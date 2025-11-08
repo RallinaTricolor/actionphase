@@ -1,0 +1,67 @@
+# Docker Compose Logging Override
+# Persists container logs to host volumes for long-term retention
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.logging.yml up -d
+
+services:
+  # PostgreSQL - Persist query logs
+  db:
+    volumes:
+      - ./logs/postgres:/var/log/postgresql
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+        labels: "service=postgres,environment=production"
+
+  # Backend API - Dual logging (Docker + application logs)
+  backend:
+    volumes:
+      # Application writes structured JSON logs here
+      - ./logs/backend:/var/log/actionphase
+    environment:
+      # Configure backend to write logs to file
+      LOG_FILE: /var/log/actionphase/app.log
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+        labels: "service=backend,environment=production"
+        # Store correlation IDs for debugging
+        tag: "{{.Name}}/{{.ID}}"
+
+  # Frontend - Nginx access and error logs
+  frontend:
+    volumes:
+      # Nginx writes access.log and error.log here
+      - ./logs/frontend:/var/log/nginx
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "service=frontend,environment=production"
+
+  # Nginx Reverse Proxy
+  nginx:
+    volumes:
+      # Access logs (includes all HTTP requests)
+      - ./logs/nginx:/var/log/nginx
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+        labels: "service=nginx,environment=production"
+
+  # Backup service logs
+  backup:
+    volumes:
+      - ./logs/backup:/var/log
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=backup,environment=production"
