@@ -28,6 +28,12 @@ variable "s3_backup_bucket" {
   default     = "actionphase-backups"
 }
 
+variable "s3_avatars_bucket" {
+  description = "S3 bucket name for avatar uploads"
+  type        = string
+  default     = "actionphase-avatars"
+}
+
 variable "github_repo" {
   description = "GitHub repository URL for ActionPhase"
   type        = string
