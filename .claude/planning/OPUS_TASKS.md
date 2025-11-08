@@ -4,7 +4,6 @@
   - Antipatterns?
 - Test coverage and useful tests
   - Are we mostly happy path testing?
-- User registration security (prevent bots, email verification, captcha)
 - Logging, monitoring, application traces
   - Log rotation, access outside the container
   - Application traces(?)

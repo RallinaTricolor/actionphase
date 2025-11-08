@@ -421,9 +421,11 @@ function CharacterCard({
               {character.name}
             </h4>
             <div className="flex flex-wrap gap-1.5">
-              <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
-                <span data-testid="character-status-badge">{character.status}</span>
-              </Badge>
+              {character.status !== 'approved' && (
+                <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
+                  <span data-testid="character-status-badge">{character.status}</span>
+                </Badge>
+              )}
               {isOwner && canSeePlayerNames(isAnonymous || false, userRole) && (
                 <Badge variant="secondary" size="sm">
                   Your Character
@@ -476,7 +478,7 @@ function CharacterCard({
               size="sm"
               onClick={() => onApprove(character.id, 'approved')}
             >
-              <span data-testid="approve-character-button">Approve</span>
+              <span data-testid="approve-character-button">Publish</span>
             </Button>
           )}
 
@@ -503,9 +505,11 @@ function CharacterCard({
           <div className="flex-grow">
             <div className="flex items-center space-x-2 mb-1">
               <h4 className="font-medium text-content-primary" data-testid="character-name">{character.name}</h4>
-              <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
-                <span data-testid="character-status-badge">{character.status}</span>
-              </Badge>
+              {character.status !== 'approved' && (
+                <Badge variant={getStatusBadgeVariant(character.status)} size="sm">
+                  <span data-testid="character-status-badge">{character.status}</span>
+                </Badge>
+              )}
               {/* Show ownership badge if not anonymous mode OR if user can see player names (GM/co-GM/audience) */}
               {isOwner && canSeePlayerNames(isAnonymous || false, userRole) && (
                 <Badge variant="secondary" size="sm">
@@ -563,7 +567,7 @@ function CharacterCard({
               size="sm"
               onClick={() => onApprove(character.id, 'approved')}
             >
-              <span data-testid="approve-character-button">Approve</span>
+              <span data-testid="approve-character-button">Publish</span>
             </Button>
           )}
 

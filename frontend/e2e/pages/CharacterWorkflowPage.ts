@@ -120,14 +120,26 @@ export class CharacterWorkflowPage {
    *
    * @param characterName - Character name to check
    * @returns 'pending' | 'approved' | 'rejected' | 'active' | 'dead' | null
+   *
+   * Note: Approved characters don't display a status badge, so if no badge is found
+   * we assume the character is approved (since that's the only hidden status).
    */
   async getCharacterStatus(characterName: string): Promise<string | null> {
     try {
       const card = await this.findCharacterCard(characterName);
       // Get only visible status badge - works for both mobile and desktop viewports
       const statusBadge = card.getByTestId('character-status-badge').locator('visible=true').first();
-      const statusText = await statusBadge.textContent();
-      return statusText?.trim().toLowerCase() || null;
+
+      // Check if status badge exists
+      try {
+        await statusBadge.waitFor({ state: 'visible', timeout: 1000 });
+        const statusText = await statusBadge.textContent();
+        return statusText?.trim().toLowerCase() || null;
+      } catch {
+        // No status badge found - this means the character is approved
+        // (approved is the only status we hide the badge for)
+        return 'approved';
+      }
     } catch {
       return null;
     }

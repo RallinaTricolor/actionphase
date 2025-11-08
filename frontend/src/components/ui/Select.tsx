@@ -24,6 +24,8 @@ const selectStyles = tv({
     'w-full rounded-lg border transition-colors',
     // Background and text colors using semantic tokens
     'surface-base text-content-primary',
+    // Cursor
+    'cursor-pointer',
     // Focus states
     'focus:outline-none focus:ring-2 focus:ring-interactive-primary',
     // Disabled state

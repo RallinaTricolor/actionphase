@@ -22,6 +22,8 @@ const buttonStyles = tv({
   base: [
     // Base styles
     'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors',
+    // Cursor
+    'cursor-pointer',
     // Focus states - using semantic tokens
     'focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2',
     // Disabled state
