@@ -27,6 +27,7 @@ export function PhaseManagement({ gameId, className = '' }: PhaseManagementProps
     activatePhaseMutation,
     updateDeadlineMutation,
     updatePhaseMutation,
+    deletePhaseMutation,
   } = usePhaseManagement(gameId);
 
   if (isLoading) {
@@ -102,6 +103,9 @@ export function PhaseManagement({ gameId, className = '' }: PhaseManagementProps
                 onSelect={() => setSelectedPhaseId(phase.id)}
                 onActivate={() => activatePhaseMutation.mutate(phase.id)}
                 onEdit={() => setEditingPhase(phase)}
+                onDelete={async () => {
+                  await deletePhaseMutation.mutateAsync(phase.id);
+                }}
                 onEditDeadline={() => setIsEditingDeadline(phase.id)}
                 onUpdateDeadline={(deadline) =>
                   updateDeadlineMutation.mutate({

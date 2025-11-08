@@ -158,3 +158,20 @@ func (ps *PhaseService) UpdatePhase(ctx context.Context, req core.UpdatePhaseReq
 
 	return &phase, nil
 }
+
+// DeletePhase deletes a phase if it has no associated content
+func (ps *PhaseService) DeletePhase(ctx context.Context, phaseID int32) error {
+	// Validate phase can be deleted (no associated content)
+	if err := ps.CanDeletePhase(ctx, phaseID); err != nil {
+		return err
+	}
+
+	queries := models.New(ps.DB)
+
+	// Delete the phase
+	if err := queries.DeletePhase(ctx, phaseID); err != nil {
+		return fmt.Errorf("failed to delete phase: %w", err)
+	}
+
+	return nil
+}

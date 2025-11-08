@@ -97,4 +97,62 @@ test.describe('Phase Management Flow', () => {
     await expect(page.getByRole('heading', { name: 'Discussion Phase', level: 4 })).toBeVisible(); // Phase 1
     await expect(page.getByRole('heading', { name: 'Action Phase', level: 4 })).toBeVisible(); // Phase 2 (active)
   });
+
+  test('GM can delete a phase with no content', async ({ page }) => {
+    // Login as GM
+    await loginAs(page, 'GM');
+
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+
+    const phasePage = new PhaseManagementPage(page);
+    await phasePage.goto(gameId);
+
+    // Create a phase to delete (it will have no content)
+    const phaseName = `Delete Test ${Date.now()}`;
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + 2);
+
+    await phasePage.createPhase({
+      type: 'common_room',
+      title: phaseName,
+      description: 'Phase to be deleted',
+      deadline,
+    });
+
+    // Verify phase exists
+    await phasePage.verifyPhaseExists(phaseName);
+
+    // Verify warning message appears in dialog
+    await phasePage.openDeleteDialog(phaseName);
+    await expect(page.getByText(/This phase can only be deleted if it has no associated content/)).toBeVisible();
+
+    // Confirm deletion
+    await page.getByTestId('delete-phase-confirm-button').click();
+
+    // Verify phase is removed
+    const phaseCard = phasePage.getPhaseCard(phaseName);
+    await expect(phaseCard).not.toBeVisible({ timeout: 5000 });
+  });
+
+  test('GM can cancel phase deletion', async ({ page }) => {
+    // Login as GM
+    await loginAs(page, 'GM');
+
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+
+    const phasePage = new PhaseManagementPage(page);
+    await phasePage.goto(gameId);
+
+    // Try to delete Phase 1 (Discussion Phase) which is NOT active
+    const phaseCard = phasePage.getPhaseCard('Discussion Phase');
+
+    // Verify delete button exists (phase is not active)
+    await expect(phaseCard.getByRole('button', { name: /delete/i }).first()).toBeVisible();
+
+    // Use POM method to cancel deletion (opens dialog, verifies, and cancels)
+    await phasePage.deletePhase('Discussion Phase', false);
+
+    // Verify warning message appeared (after cancel, modal is gone, so check before)
+    // Phase should still exist (verified in POM method)
+  });
 });

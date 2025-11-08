@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SimpleCountdown } from './CountdownTimer';
 import { PhaseActivationDialog } from './PhaseActivationDialog';
+import { DeletePhaseDialog } from './DeletePhaseDialog';
 import { usePhaseActivation } from '../hooks/usePhaseActivation';
 import { Button, DateTimeInput } from './ui';
 import {
@@ -20,6 +21,7 @@ interface PhaseCardProps {
   onSelect: () => void;
   onActivate: () => void;
   onEdit: () => void;
+  onDelete: () => Promise<void>;
   onEditDeadline: () => void;
   onUpdateDeadline: (deadline: string) => void;
   onCancelEditDeadline: () => void;
@@ -37,6 +39,7 @@ export function PhaseCard({
   onSelect,
   onActivate,
   onEdit,
+  onDelete,
   onEditDeadline: _onEditDeadline,
   onUpdateDeadline,
   onCancelEditDeadline,
@@ -45,6 +48,7 @@ export function PhaseCard({
 }: PhaseCardProps) {
   const [deadlineInput, setDeadlineInput] = useState('');
   const [showActivateConfirm, setShowActivateConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Use the activation hook for unpublished results logic
   const { unpublishedCount, publishAllMutation } = usePhaseActivation(
@@ -77,23 +81,39 @@ export function PhaseCard({
     >
       {/* Mobile: Vertical Stack Layout */}
       <div className="md:hidden space-y-3">
-        {/* Header: Badge + Edit button */}
+        {/* Header: Badge + Edit/Delete buttons */}
         <div className="flex items-center justify-between">
           <span className={`px-2.5 py-1 text-xs rounded-full font-medium border whitespace-nowrap ${phaseColorClass}`}>
             Phase {phase.phase_number}
           </span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            className="p-1.5 text-content-tertiary hover:text-content-primary transition-colors"
-            title="Edit phase details"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="p-1.5 text-content-tertiary hover:text-content-primary transition-colors"
+              title="Edit phase details"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            {!isActive && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDeleteConfirm(true);
+                }}
+                className="p-1.5 text-semantic-danger hover:text-semantic-danger-hover transition-colors"
+                title="Delete phase"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Title + Type Badge */}
@@ -193,6 +213,21 @@ export function PhaseCard({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
           </button>
+
+          {!isActive && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteConfirm(true);
+              }}
+              className="p-1 text-semantic-danger hover:text-semantic-danger-hover transition-colors"
+              title="Delete phase"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -246,6 +281,16 @@ export function PhaseCard({
           publishAllMutation={publishAllMutation}
           onActivate={onActivate}
           onClose={() => setShowActivateConfirm(false)}
+        />
+      )}
+
+      {/* Phase Deletion Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <DeletePhaseDialog
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={onDelete}
+          phase={phase}
         />
       )}
     </div>

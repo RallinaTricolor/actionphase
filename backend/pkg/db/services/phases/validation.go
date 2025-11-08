@@ -57,3 +57,55 @@ func (ps *PhaseService) CanUserSubmitActions(ctx context.Context, gameID, userID
 
 	return false, nil
 }
+
+// CanDeletePhase checks if a phase can be deleted (no associated content exists)
+func (ps *PhaseService) CanDeletePhase(ctx context.Context, phaseID int32) error {
+	queries := models.New(ps.DB)
+
+	// Check for action submissions
+	submissionsCount, err := queries.CountActionSubmissionsByPhase(ctx, phaseID)
+	if err != nil {
+		return fmt.Errorf("failed to count action submissions: %w", err)
+	}
+	if submissionsCount > 0 {
+		return fmt.Errorf("cannot delete phase: %d action submission(s) exist for this phase", submissionsCount)
+	}
+
+	// Check for action results
+	resultsCount, err := queries.CountActionResultsByPhase(ctx, phaseID)
+	if err != nil {
+		return fmt.Errorf("failed to count action results: %w", err)
+	}
+	if resultsCount > 0 {
+		return fmt.Errorf("cannot delete phase: %d action result(s) exist for this phase", resultsCount)
+	}
+
+	// Check for polls
+	pollsCount, err := queries.CountPollsByPhase(ctx, pgtype.Int4{Int32: phaseID, Valid: true})
+	if err != nil {
+		return fmt.Errorf("failed to count polls: %w", err)
+	}
+	if pollsCount > 0 {
+		return fmt.Errorf("cannot delete phase: %d poll(s) exist for this phase", pollsCount)
+	}
+
+	// Check for threads
+	threadsCount, err := queries.CountThreadsByPhase(ctx, pgtype.Int4{Int32: phaseID, Valid: true})
+	if err != nil {
+		return fmt.Errorf("failed to count threads: %w", err)
+	}
+	if threadsCount > 0 {
+		return fmt.Errorf("cannot delete phase: %d thread(s) exist for this phase", threadsCount)
+	}
+
+	// Check for messages
+	messagesCount, err := queries.CountMessagesByPhase(ctx, pgtype.Int4{Int32: phaseID, Valid: true})
+	if err != nil {
+		return fmt.Errorf("failed to count messages: %w", err)
+	}
+	if messagesCount > 0 {
+		return fmt.Errorf("cannot delete phase: %d message(s) exist for this phase", messagesCount)
+	}
+
+	return nil
+}

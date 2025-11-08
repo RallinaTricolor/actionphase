@@ -220,3 +220,71 @@ func TestPhaseService_UpdatePhase(t *testing.T) {
 		assert.True(t, updatedPhase.EndTime.Valid)
 	})
 }
+
+func TestPhaseService_DeletePhase(t *testing.T) {
+	suite := db.NewTestSuite(t).
+		WithCleanup("phases").
+		Setup()
+	defer suite.Cleanup()
+
+	phaseService := &PhaseService{DB: suite.Pool()}
+	factory := suite.Factory()
+
+	user := factory.NewUser().Create()
+	game := factory.NewGame().WithGM(user.ID).Create()
+
+	t.Run("deletes phase successfully when no content exists", func(t *testing.T) {
+		phase := factory.NewPhase().InGame(game).CommonRoom().Create()
+
+		err := phaseService.DeletePhase(context.Background(), phase.ID)
+		require.NoError(t, err)
+
+		// Verify phase was deleted
+		_, err = phaseService.GetPhase(context.Background(), phase.ID)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "phase not found")
+	})
+
+	t.Run("fails when validation fails due to associated content", func(t *testing.T) {
+		phase := factory.NewPhase().InGame(game).ActionPhase().Create()
+		player := factory.NewUser().Create()
+
+		// Create action submission to block deletion
+		factory.NewActionSubmission().
+			InGame(game).
+			InPhase(phase).
+			ByUser(player).
+			Create()
+
+		err := phaseService.DeletePhase(context.Background(), phase.ID)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "action submission(s) exist")
+
+		// Verify phase was NOT deleted
+		existingPhase, err := phaseService.GetPhase(context.Background(), phase.ID)
+		require.NoError(t, err)
+		assert.Equal(t, phase.ID, existingPhase.ID)
+	})
+
+	t.Run("cascades deletion correctly", func(t *testing.T) {
+		// Create multiple phases and ensure only the target is deleted
+		phase1 := factory.NewPhase().InGame(game).CommonRoom().WithTitle("Phase 1").Create()
+		phase2 := factory.NewPhase().InGame(game).CommonRoom().WithTitle("Phase 2").Create()
+		phase3 := factory.NewPhase().InGame(game).CommonRoom().WithTitle("Phase 3").Create()
+
+		// Delete middle phase
+		err := phaseService.DeletePhase(context.Background(), phase2.ID)
+		require.NoError(t, err)
+
+		// Verify phase1 and phase3 still exist
+		_, err = phaseService.GetPhase(context.Background(), phase1.ID)
+		require.NoError(t, err)
+
+		_, err = phaseService.GetPhase(context.Background(), phase3.ID)
+		require.NoError(t, err)
+
+		// Verify phase2 is deleted
+		_, err = phaseService.GetPhase(context.Background(), phase2.ID)
+		require.Error(t, err)
+	})
+}

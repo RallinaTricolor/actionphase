@@ -262,3 +262,40 @@ WHERE acts.game_id = sqlc.arg(game_id)
 SELECT COUNT(*)
 FROM action_submissions
 WHERE character_id = $1;
+
+-- Delete validation queries
+
+-- name: CountActionSubmissionsByPhase :one
+-- Count action submissions for a specific phase
+-- Used to check if phase can be deleted
+SELECT COUNT(*)
+FROM action_submissions
+WHERE phase_id = $1;
+
+-- name: CountActionResultsByPhase :one
+-- Count action results for a specific phase
+-- Used to check if phase can be deleted
+SELECT COUNT(*)
+FROM action_results
+WHERE phase_id = $1;
+
+-- name: CountPollsByPhase :one
+-- Count polls for a specific phase
+-- Used to check if phase can be deleted
+SELECT COUNT(*)
+FROM common_room_polls
+WHERE phase_id = $1;
+
+-- name: CountThreadsByPhase :one
+-- Count common room threads for a specific phase
+-- Used to check if phase can be deleted
+SELECT COUNT(*)
+FROM threads
+WHERE phase_id = $1;
+
+-- name: CountMessagesByPhase :one
+-- Count messages for a specific phase
+-- Used to check if phase can be deleted
+SELECT COUNT(*)
+FROM messages
+WHERE phase_id = $1;
