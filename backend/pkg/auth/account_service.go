@@ -119,8 +119,12 @@ func (s *AccountService) SendVerificationEmail(ctx context.Context, req *SendVer
 
 	// Send verification email
 	if s.EmailService != nil {
-		// Construct verification URL (in production, use actual domain from config)
-		verificationURL := fmt.Sprintf("http://localhost:5173/verify-email?token=%s", verificationToken.Token)
+		// Construct verification URL using FRONTEND_URL from environment
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			frontendURL = "http://localhost:5173" // Default for development
+		}
+		verificationURL := fmt.Sprintf("%s/verify-email?token=%s", frontendURL, verificationToken.Token)
 
 		err = s.EmailService.SendEmailVerificationEmail(ctx, req.Email, verificationToken.Token, verificationURL)
 		if err != nil {
