@@ -7,7 +7,7 @@
 set -e
 
 # Configuration (can be overridden by environment variables)
-DB_HOST=${POSTGRES_HOST:-db}
+DB_HOST=${POSTGRES_HOST:-localhost}
 DB_NAME=${POSTGRES_DB:-actionphase}
 DB_USER=${POSTGRES_USER:-postgres}
 DB_PASSWORD=${POSTGRES_PASSWORD:-example}
