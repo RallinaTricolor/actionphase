@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { Card, CardHeader, CardBody, Alert, Spinner, Button } from '../components/ui';
 
 export function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const token = searchParams.get('token');
 
   const [isValidating, setIsValidating] = useState(true);
@@ -24,6 +26,8 @@ export function VerifyEmailPage() {
       try {
         await apiClient.auth.verifyEmail(token);
         setSuccess(true);
+        // Invalidate currentUser query to refetch updated user data with email_verified = true
+        queryClient.invalidateQueries({ queryKey: ['currentUser'] });
         // Redirect to dashboard after 3 seconds
         setTimeout(() => {
           navigate('/dashboard');
@@ -36,7 +40,7 @@ export function VerifyEmailPage() {
     };
 
     verifyEmail();
-  }, [token, navigate]);
+  }, [token, navigate, queryClient]);
 
   // Loading state while verifying
   if (isValidating) {
