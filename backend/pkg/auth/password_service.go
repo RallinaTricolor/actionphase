@@ -126,8 +126,12 @@ func (s *PasswordService) RequestPasswordReset(ctx context.Context, req *Request
 
 	// Send password reset email
 	if s.EmailService != nil {
-		// Construct reset URL (in production, use actual domain from config)
-		resetURL := fmt.Sprintf("http://localhost:5173/reset-password?token=%s", resetToken.Token)
+		// Construct reset URL using FRONTEND_URL from environment
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			frontendURL = "http://localhost:5173" // Default for development
+		}
+		resetURL := fmt.Sprintf("%s/reset-password?token=%s", frontendURL, resetToken.Token)
 
 		err = s.EmailService.SendPasswordResetEmail(ctx, user.Email, resetToken.Token, resetURL)
 		if err != nil {
