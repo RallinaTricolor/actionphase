@@ -3,6 +3,7 @@ package db
 import (
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
+	"actionphase/pkg/observability"
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -168,27 +169,32 @@ func (ts *TestSuite) AddParticipant(game models.Game, user models.User, role str
 
 // ServiceFactory provides easy creation of service instances with database connection
 type ServiceFactory struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	logger *observability.Logger
 }
 
 // NewServiceFactory creates a new service factory
 func NewServiceFactory(pool *pgxpool.Pool) *ServiceFactory {
-	return &ServiceFactory{pool: pool}
+	obsLogger := observability.NewLogger("test", "error")
+	return &ServiceFactory{
+		pool:   pool,
+		logger: obsLogger,
+	}
 }
 
 // UserService creates a new UserService
 func (sf *ServiceFactory) UserService() *UserService {
-	return &UserService{DB: sf.pool}
+	return &UserService{DB: sf.pool, Logger: sf.logger}
 }
 
 // SessionService creates a new SessionService
 func (sf *ServiceFactory) SessionService() *SessionService {
-	return &SessionService{DB: sf.pool}
+	return &SessionService{DB: sf.pool, Logger: sf.logger}
 }
 
 // GameService creates a new GameService
 func (sf *ServiceFactory) GameService() *GameService {
-	return &GameService{DB: sf.pool}
+	return &GameService{DB: sf.pool, Logger: sf.logger}
 }
 
 // GameApplicationService creates a new GameApplicationService
@@ -198,7 +204,7 @@ func (sf *ServiceFactory) GameApplicationService() *GameApplicationService {
 
 // CharacterService creates a new CharacterService
 func (sf *ServiceFactory) CharacterService() *CharacterService {
-	return &CharacterService{DB: sf.pool}
+	return &CharacterService{DB: sf.pool, Logger: sf.logger}
 }
 
 // HandoutService creates a new HandoutService
@@ -208,10 +214,15 @@ func (sf *ServiceFactory) HandoutService() *HandoutService {
 
 // DeadlineService creates a new DeadlineService
 func (sf *ServiceFactory) DeadlineService() *DeadlineService {
-	return &DeadlineService{DB: sf.pool}
+	return &DeadlineService{DB: sf.pool, Logger: sf.logger}
 }
 
 // PollService creates a new PollService
 func (sf *ServiceFactory) PollService() *PollService {
-	return &PollService{DB: sf.pool}
+	return &PollService{DB: sf.pool, Logger: sf.logger}
+}
+
+// NotificationService creates a new NotificationService
+func (sf *ServiceFactory) NotificationService() *NotificationService {
+	return &NotificationService{DB: sf.pool, Logger: sf.logger}
 }

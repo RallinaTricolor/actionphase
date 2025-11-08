@@ -168,7 +168,7 @@ func (h *Handler) verifyUserInGame(ctx context.Context, gameID int32, userID int
 	}
 
 	// Check if user has any characters in the game
-	characterService := &dbservices.CharacterService{DB: h.App.Pool}
+	characterService := &dbservices.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	characters, err := characterService.GetCharactersByGame(ctx, gameID)
 	if err != nil {
 		return fmt.Errorf("failed to list characters: %w", err)
@@ -210,7 +210,7 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Authenticate user
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -248,7 +248,7 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create poll
-	pollService := &dbservices.PollService{DB: h.App.Pool}
+	pollService := &dbservices.PollService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	pollWithOptions, err := pollService.CreatePollWithOptions(ctx, serviceReq)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to create poll")
@@ -272,7 +272,7 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(userIDs) > 0 {
-			notificationService := &dbservices.NotificationService{DB: h.App.Pool}
+			notificationService := &dbservices.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 			gameIDInt32 := int32(gameID)
 			linkURL := fmt.Sprintf("/games/%d?tab=polls", gameID)
 
@@ -319,7 +319,7 @@ func (h *Handler) ListGamePolls(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Authenticate user
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -338,7 +338,7 @@ func (h *Handler) ListGamePolls(w http.ResponseWriter, r *http.Request) {
 	includeExpired := r.URL.Query().Get("include_expired") == "true"
 
 	// List polls
-	pollService := &dbservices.PollService{DB: h.App.Pool}
+	pollService := &dbservices.PollService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	polls, err := pollService.ListPollsByGame(ctx, int32(gameID), includeExpired)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to list polls")
@@ -366,7 +366,7 @@ func (h *Handler) GetPoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Authenticate user
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -375,7 +375,7 @@ func (h *Handler) GetPoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get poll with options
-	pollService := &dbservices.PollService{DB: h.App.Pool}
+	pollService := &dbservices.PollService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	pollWithOptions, err := pollService.GetPollWithOptions(ctx, int32(pollID))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get poll")
@@ -423,7 +423,7 @@ func (h *Handler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Authenticate user
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -432,7 +432,7 @@ func (h *Handler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get poll results
-	pollService := &dbservices.PollService{DB: h.App.Pool}
+	pollService := &dbservices.PollService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	results, err := pollService.GetPollResults(ctx, int32(pollID))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get poll results")
@@ -515,7 +515,7 @@ func (h *Handler) SubmitVote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Authenticate user
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -532,7 +532,7 @@ func (h *Handler) SubmitVote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get poll to verify it exists and check game membership
-	pollService := &dbservices.PollService{DB: h.App.Pool}
+	pollService := &dbservices.PollService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	poll, err := pollService.GetPoll(ctx, int32(pollID))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get poll")
@@ -563,7 +563,7 @@ func (h *Handler) SubmitVote(w http.ResponseWriter, r *http.Request) {
 
 	// If character voting, verify user owns the character
 	if data.CharacterID != nil {
-		characterService := &dbservices.CharacterService{DB: h.App.Pool}
+		characterService := &dbservices.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 		char, err := characterService.GetCharacter(ctx, *data.CharacterID)
 		if err != nil {
 			h.App.ObsLogger.LogError(ctx, err, "Character not found")
@@ -618,7 +618,7 @@ func (h *Handler) UpdatePoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Authenticate user
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -635,7 +635,7 @@ func (h *Handler) UpdatePoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get poll to verify it exists and get game ID
-	pollService := &dbservices.PollService{DB: h.App.Pool}
+	pollService := &dbservices.PollService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	poll, err := pollService.GetPoll(ctx, int32(pollID))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get poll")
@@ -686,7 +686,7 @@ func (h *Handler) DeletePoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Authenticate user
-	userService := &dbservices.UserService{DB: h.App.Pool}
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -695,7 +695,7 @@ func (h *Handler) DeletePoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get poll to verify it exists and get game ID
-	pollService := &dbservices.PollService{DB: h.App.Pool}
+	pollService := &dbservices.PollService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	poll, err := pollService.GetPoll(ctx, int32(pollID))
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get poll")

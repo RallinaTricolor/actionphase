@@ -19,7 +19,7 @@ import (
 // setupDeadlineTestRouter creates a test router with deadline endpoints
 func setupDeadlineTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	r := chi.NewRouter()
 
@@ -64,10 +64,11 @@ func TestCreateDeadline_Success(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user and regular user
@@ -75,7 +76,7 @@ func TestCreateDeadline_Success(t *testing.T) {
 	// Note: only gmUser needed for this test
 
 	// Create a game owned by test GM
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game for Deadlines",
 		Description: "Testing deadline creation",
@@ -132,10 +133,11 @@ func TestCreateDeadline_Unauthorized(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user and regular user
@@ -143,7 +145,7 @@ func TestCreateDeadline_Unauthorized(t *testing.T) {
 	regularUser := testDB.CreateTestUser(t, "regularuser", "regular@example.com")
 
 	// Create a game owned by test GM
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game for Deadlines",
 		Description: "Testing unauthorized access",
@@ -180,10 +182,11 @@ func TestCreateDeadline_InvalidGameID(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user
@@ -215,17 +218,19 @@ func TestGetGameDeadlines_Success(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+	deadlineService := &db.DeadlineService{DB: testDB.Pool, Logger: app.ObsLogger}
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user
 	gmUser := testDB.CreateTestUser(t, "testgm", "testgm@example.com")
 
 	// Create a game
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game for Deadlines",
 		Description: "Testing deadline retrieval",
@@ -235,7 +240,6 @@ func TestGetGameDeadlines_Success(t *testing.T) {
 	core.AssertNoError(t, err, "Game creation should succeed")
 
 	// Create multiple deadlines
-	deadlineService := &db.DeadlineService{DB: testDB.Pool}
 	deadline1, err := deadlineService.CreateDeadline(context.Background(), core.CreateDeadlineRequest{
 		GameID:      game.ID,
 		Title:       "First Deadline",
@@ -280,10 +284,11 @@ func TestGetGameDeadlines_Unauthorized(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user and regular user
@@ -291,7 +296,7 @@ func TestGetGameDeadlines_Unauthorized(t *testing.T) {
 	regularUser := testDB.CreateTestUser(t, "regularuser", "regular@example.com")
 
 	// Create a game owned by test GM
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Private Game",
 		Description: "Testing unauthorized access",
@@ -318,17 +323,19 @@ func TestUpdateDeadline_Success(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+	deadlineService := &db.DeadlineService{DB: testDB.Pool, Logger: app.ObsLogger}
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user
 	gmUser := testDB.CreateTestUser(t, "testgm", "testgm@example.com")
 
 	// Create a game
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game",
 		Description: "Testing deadline update",
@@ -338,7 +345,6 @@ func TestUpdateDeadline_Success(t *testing.T) {
 	core.AssertNoError(t, err, "Game creation should succeed")
 
 	// Create a deadline
-	deadlineService := &db.DeadlineService{DB: testDB.Pool}
 	deadline, err := deadlineService.CreateDeadline(context.Background(), core.CreateDeadlineRequest{
 		GameID:      game.ID,
 		Title:       "Original Title",
@@ -383,10 +389,12 @@ func TestUpdateDeadline_Unauthorized(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+	deadlineService := &db.DeadlineService{DB: testDB.Pool, Logger: app.ObsLogger}
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user and regular user
@@ -394,7 +402,7 @@ func TestUpdateDeadline_Unauthorized(t *testing.T) {
 	regularUser := testDB.CreateTestUser(t, "regularuser", "regular@example.com")
 
 	// Create a game owned by test GM
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game",
 		Description: "Testing unauthorized update",
@@ -404,7 +412,6 @@ func TestUpdateDeadline_Unauthorized(t *testing.T) {
 	core.AssertNoError(t, err, "Game creation should succeed")
 
 	// Create a deadline
-	deadlineService := &db.DeadlineService{DB: testDB.Pool}
 	deadline, err := deadlineService.CreateDeadline(context.Background(), core.CreateDeadlineRequest{
 		GameID:      game.ID,
 		Title:       "Test Deadline",
@@ -441,10 +448,11 @@ func TestUpdateDeadline_NotFound(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user
@@ -475,17 +483,19 @@ func TestDeleteDeadline_Success(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+	deadlineService := &db.DeadlineService{DB: testDB.Pool, Logger: app.ObsLogger}
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user
 	gmUser := testDB.CreateTestUser(t, "testgm", "testgm@example.com")
 
 	// Create a game
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game",
 		Description: "Testing deadline deletion",
@@ -495,7 +505,6 @@ func TestDeleteDeadline_Success(t *testing.T) {
 	core.AssertNoError(t, err, "Game creation should succeed")
 
 	// Create a deadline
-	deadlineService := &db.DeadlineService{DB: testDB.Pool}
 	deadline, err := deadlineService.CreateDeadline(context.Background(), core.CreateDeadlineRequest{
 		GameID:      game.ID,
 		Title:       "Test Deadline",
@@ -527,10 +536,12 @@ func TestDeleteDeadline_Unauthorized(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+	deadlineService := &db.DeadlineService{DB: testDB.Pool, Logger: app.ObsLogger}
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user and regular user
@@ -538,7 +549,7 @@ func TestDeleteDeadline_Unauthorized(t *testing.T) {
 	regularUser := testDB.CreateTestUser(t, "regularuser", "regular@example.com")
 
 	// Create a game owned by test GM
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game",
 		Description: "Testing unauthorized deletion",
@@ -548,7 +559,6 @@ func TestDeleteDeadline_Unauthorized(t *testing.T) {
 	core.AssertNoError(t, err, "Game creation should succeed")
 
 	// Create a deadline
-	deadlineService := &db.DeadlineService{DB: testDB.Pool}
 	deadline, err := deadlineService.CreateDeadline(context.Background(), core.CreateDeadlineRequest{
 		GameID:      game.ID,
 		Title:       "Test Deadline",
@@ -576,10 +586,11 @@ func TestDeleteDeadline_NotFound(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user
@@ -601,17 +612,19 @@ func TestGetUpcomingDeadlines_Success(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+	deadlineService := &db.DeadlineService{DB: testDB.Pool, Logger: app.ObsLogger}
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user
 	gmUser := testDB.CreateTestUser(t, "testgm", "testgm@example.com")
 
 	// Create two games
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game1, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Game 1",
 		Description: "First game",
@@ -629,7 +642,6 @@ func TestGetUpcomingDeadlines_Success(t *testing.T) {
 	core.AssertNoError(t, err, "Game 2 creation should succeed")
 
 	// Create deadlines for both games
-	deadlineService := &db.DeadlineService{DB: testDB.Pool}
 	_, err = deadlineService.CreateDeadline(context.Background(), core.CreateDeadlineRequest{
 		GameID:      game1.ID,
 		Title:       "Game 1 Deadline",
@@ -686,17 +698,19 @@ func TestGetUpcomingDeadlines_WithLimit(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+	deadlineService := &db.DeadlineService{DB: testDB.Pool, Logger: app.ObsLogger}
+
 	testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 	defer testDB.CleanupTables(t, "game_deadlines", "games", "sessions", "users")
 
-	app := core.NewTestApp(testDB.Pool)
 	router := setupDeadlineTestRouter(app, testDB)
 
 	// Create GM user
 	gmUser := testDB.CreateTestUser(t, "testgm", "testgm@example.com")
 
 	// Create a game
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game",
 		Description: "Testing limit parameter",
@@ -706,7 +720,6 @@ func TestGetUpcomingDeadlines_WithLimit(t *testing.T) {
 	core.AssertNoError(t, err, "Game creation should succeed")
 
 	// Create 5 deadlines
-	deadlineService := &db.DeadlineService{DB: testDB.Pool}
 	for i := 1; i <= 5; i++ {
 		_, err := deadlineService.CreateDeadline(context.Background(), core.CreateDeadlineRequest{
 			GameID:      game.ID,

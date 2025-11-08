@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logger, setCorrelationId } from '@/services/LoggingService';
 
 const API_BASE_URL = ''; // Use proxy in development
 
@@ -44,14 +45,50 @@ export class BaseApiClient {
         config.headers['X-Admin-Mode'] = 'true';
       }
 
+      // Log API request
+      logger.debug('API Request', {
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        hasAuth: !!token,
+        adminMode: adminModeEnabled === 'true',
+      });
+
       return config;
     });
 
     // Add response interceptor to handle token refresh
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        // Extract and store correlation ID from response headers
+        const correlationId =
+          response.headers['x-correlation-id'] ||
+          response.headers['x-request-id'] ||
+          null;
+
+        if (correlationId) {
+          setCorrelationId(correlationId);
+        }
+
+        // Log successful API response
+        logger.debug('API Response', {
+          method: response.config.method?.toUpperCase(),
+          url: response.config.url,
+          status: response.status,
+          correlationId,
+        });
+
+        return response;
+      },
       async (error) => {
         const originalRequest = error.config;
+
+        // Log API error
+        logger.error('API Request Failed', {
+          method: error.config?.method?.toUpperCase(),
+          url: error.config?.url,
+          status: error.response?.status,
+          error,
+        });
 
         // Don't try to refresh token for auth endpoints (login, register)
         const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
@@ -60,11 +97,19 @@ export class BaseApiClient {
         if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
           originalRequest._retry = true;
 
+          logger.info('Token refresh needed', {
+            url: originalRequest.url,
+            method: originalRequest.method,
+          });
+
           try {
             // If a refresh is already in progress, wait for it instead of starting a new one
             if (this.refreshPromise) {
               await this.refreshPromise;
               // Refresh completed, retry the original request
+              logger.debug('Retrying request after token refresh', {
+                url: originalRequest.url,
+              });
               return this.client(originalRequest);
             }
 
@@ -74,13 +119,19 @@ export class BaseApiClient {
             try {
               await this.refreshPromise;
               // Refresh successful, retry the original request
+              logger.info('Token refresh successful, retrying request', {
+                url: originalRequest.url,
+              });
               return this.client(originalRequest);
             } finally {
               // Clear the refresh promise so future requests can trigger a new refresh if needed
               this.refreshPromise = null;
             }
           } catch (refreshError) {
-            console.error('Token refresh failed:', refreshError);
+            logger.error('Token refresh failed', {
+              error: refreshError,
+              originalUrl: originalRequest.url,
+            });
 
             // Clear any legacy localStorage tokens
             localStorage.removeItem('auth_token');
@@ -89,6 +140,7 @@ export class BaseApiClient {
             if (!window.location.pathname.includes('/login') &&
                 !window.location.pathname.includes('/games') &&
                 window.location.pathname !== '/') {
+              logger.info('Redirecting to login after failed token refresh');
               window.location.href = '/login';
             }
             return Promise.reject(refreshError);

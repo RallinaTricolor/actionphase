@@ -16,8 +16,10 @@ func TestExtractCharacterMentions_SingleMention(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	ctx := context.Background()
 
@@ -49,8 +51,10 @@ func TestExtractCharacterMentions_MultipleMentions(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	ctx := context.Background()
 
@@ -100,8 +104,10 @@ func TestExtractCharacterMentions_DuplicateMentions(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	ctx := context.Background()
 
@@ -133,8 +139,10 @@ func TestExtractCharacterMentions_NonExistentCharacter(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	ctx := context.Background()
 
@@ -166,7 +174,8 @@ func TestExtractCharacterMentions_EmptyContent(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	ctx := context.Background()
 
@@ -188,7 +197,8 @@ func TestExtractCharacterMentions_NoMentions(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	ctx := context.Background()
 
@@ -210,8 +220,10 @@ func TestExtractCharacterMentions_MultiWordNames(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	ctx := context.Background()
 
@@ -250,8 +262,10 @@ func TestExtractCharacterMentions_CrossGameIsolation(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	ctx := context.Background()
 
@@ -299,8 +313,10 @@ func TestExtractCharacterMentions_EdgeCasePatterns(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	ctx := context.Background()
 
@@ -377,8 +393,10 @@ func TestExtractCharacterMentions_SkipCodeBlocks(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	ctx := context.Background()
 

@@ -64,7 +64,7 @@ func (j *JWTHandler) CreateToken(user *core.User) (string, error) {
 	}
 
 	// Create session with temporary token
-	SessionService := db.SessionService{DB: j.App.Pool}
+	SessionService := db.SessionService{DB: j.App.Pool, Logger: j.App.ObsLogger}
 	j.App.Logger.Info("Creating session for user", "user_id", user.ID, "username", user.Username)
 	session, err := SessionService.CreateSession(&core.Session{User: user, Token: tempTokenString})
 	if err != nil {

@@ -21,7 +21,7 @@ func TestJWTHandler_CreateToken(t *testing.T) {
 	handler := &JWTHandler{App: app}
 
 	// Create a test user
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	user, err := userService.CreateUser(&core.User{
 		Username: "testuser",
 		Password: "password123",
@@ -45,7 +45,7 @@ func TestJWTHandler_CreateToken(t *testing.T) {
 		core.AssertNoError(t, err, "Token creation should succeed")
 
 		// Verify session was created
-		sessionService := &db.SessionService{DB: testDB.Pool}
+		sessionService := &db.SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
 		session, err := sessionService.SessionByToken(token)
 		core.AssertNoError(t, err, "Session should exist")
 		core.AssertNotEqual(t, nil, session, "Session should not be nil")
@@ -82,7 +82,7 @@ func TestJWTHandler_VerifyToken(t *testing.T) {
 	handler := &JWTHandler{App: app}
 
 	// Create a test user and token
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	user, err := userService.CreateUser(&core.User{
 		Username: "testuser",
 		Password: "password123",
@@ -151,7 +151,7 @@ func TestJWTHandler_DecodeToken(t *testing.T) {
 	handler := &JWTHandler{App: app}
 
 	// Create a test user and token
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	user, err := userService.CreateUser(&core.User{
 		Username: "testuser",
 		Password: "password123",

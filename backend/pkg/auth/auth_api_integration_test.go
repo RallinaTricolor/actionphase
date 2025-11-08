@@ -443,7 +443,7 @@ func TestAuthAPI_RateLimiting(t *testing.T) {
 func setupAuthAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	// Use the same secret from app config for consistency
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	r := chi.NewRouter()
 
@@ -480,7 +480,7 @@ func TestAuthAPI_BannedUserLogin(t *testing.T) {
 	router := setupAuthAPITestRouter(app, testDB)
 
 	// Create a user
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	user := &core.User{
 		Username: "testuser",
 		Password: "testpassword123",
@@ -534,7 +534,7 @@ func TestAuthAPI_V1Me(t *testing.T) {
 	router := setupAuthAPITestRouter(app, testDB)
 
 	// Create test user
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	user := &core.User{
 		Username: "testuser",
 		Password: "testpassword123",
@@ -599,7 +599,7 @@ func TestAuthAPI_Preferences(t *testing.T) {
 	router := setupAuthAPITestRouter(app, testDB)
 
 	// Create test user
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	user := &core.User{
 		Username: "prefstest",
 		Password: "testpassword123",
@@ -713,7 +713,7 @@ func TestAuthAPI_SearchUsers(t *testing.T) {
 	router := setupAuthAPITestRouter(app, testDB)
 
 	// Create test users
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	users := []*core.User{
 		{Username: "alice", Email: "alice@example.com", Password: "password123"},
 		{Username: "bob", Email: "bob@example.com", Password: "password123"},
@@ -854,7 +854,7 @@ func BenchmarkAuthAPI_Login(b *testing.B) {
 	router := setupAuthAPITestRouter(app, testDB)
 
 	// Create a test user for login benchmarks
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	plainPassword := "benchpassword123"
 	testUser := &core.User{
 		Username: "benchuser",

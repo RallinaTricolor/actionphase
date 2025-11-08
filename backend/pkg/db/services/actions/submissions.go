@@ -16,15 +16,30 @@ import (
 
 // SubmitAction creates or updates an action submission for a phase
 func (as *ActionSubmissionService) SubmitAction(ctx context.Context, req core.SubmitActionRequest) (*models.ActionSubmission, error) {
+	as.Logger.Info(ctx, "Action submission attempt",
+		"game_id", req.GameID,
+		"user_id", req.UserID,
+		"phase_id", req.PhaseID,
+		"character_id", req.CharacterID,
+		"is_draft", req.IsDraft,
+	)
+
 	queries := models.New(as.DB)
 
 	// Validate game is not completed/cancelled (archived games are read-only)
 	game, err := queries.GetGame(ctx, req.GameID)
 	if err != nil {
+		as.Logger.LogError(ctx, err, "Failed to get game for action submission",
+			"game_id", req.GameID,
+		)
 		return nil, fmt.Errorf("failed to get game: %w", err)
 	}
 
 	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
+		as.Logger.Warn(ctx, "Cannot submit action to completed/cancelled game",
+			"game_id", req.GameID,
+			"game_state", game.State.String,
+		)
 		return nil, err
 	}
 
@@ -34,10 +49,19 @@ func (as *ActionSubmissionService) SubmitAction(ctx context.Context, req core.Su
 		UserID: req.UserID,
 	})
 	if err != nil {
+		as.Logger.LogError(ctx, err, "Failed to check submission permissions",
+			"phase_id", req.PhaseID,
+			"user_id", req.UserID,
+		)
 		return nil, fmt.Errorf("failed to check submission permissions: %w", err)
 	}
 
 	if !canSubmit {
+		as.Logger.Warn(ctx, "User cannot submit to this phase",
+			"phase_id", req.PhaseID,
+			"user_id", req.UserID,
+			"game_id", req.GameID,
+		)
 		return nil, fmt.Errorf("user cannot submit actions to this phase")
 	}
 
@@ -45,16 +69,30 @@ func (as *ActionSubmissionService) SubmitAction(ctx context.Context, req core.Su
 	if req.CharacterID != nil {
 		character, err := queries.GetCharacter(ctx, *req.CharacterID)
 		if err != nil {
+			as.Logger.Warn(ctx, "Character not found for action submission",
+				"character_id", *req.CharacterID,
+				"user_id", req.UserID,
+			)
 			return nil, fmt.Errorf("character not found")
 		}
 
 		// Verify the character belongs to the user submitting the action
 		if !character.UserID.Valid || character.UserID.Int32 != req.UserID {
+			as.Logger.Warn(ctx, "User attempting to submit action for character they don't own",
+				"character_id", *req.CharacterID,
+				"character_owner_id", character.UserID.Int32,
+				"requesting_user_id", req.UserID,
+			)
 			return nil, fmt.Errorf("you can only submit actions for characters you own")
 		}
 
 		// Verify the character belongs to the same game
 		if character.GameID != req.GameID {
+			as.Logger.Warn(ctx, "Character does not belong to game",
+				"character_id", *req.CharacterID,
+				"character_game_id", character.GameID,
+				"requested_game_id", req.GameID,
+			)
 			return nil, fmt.Errorf("character does not belong to this game")
 		}
 	}
@@ -64,6 +102,10 @@ func (as *ActionSubmissionService) SubmitAction(ctx context.Context, req core.Su
 
 	// Validate content length
 	if err := validation.ValidateActionSubmission(contentStr); err != nil {
+		as.Logger.Warn(ctx, "Action submission validation failed",
+			"error", err,
+			"content_length", len(contentStr),
+		)
 		return nil, err
 	}
 
@@ -81,8 +123,22 @@ func (as *ActionSubmissionService) SubmitAction(ctx context.Context, req core.Su
 
 	action, err := queries.SubmitAction(ctx, params)
 	if err != nil {
+		as.Logger.LogError(ctx, err, "Failed to submit action",
+			"game_id", req.GameID,
+			"phase_id", req.PhaseID,
+			"user_id", req.UserID,
+		)
 		return nil, fmt.Errorf("failed to submit action: %w", err)
 	}
+
+	as.Logger.Info(ctx, "Action submitted successfully",
+		"submission_id", action.ID,
+		"game_id", action.GameID,
+		"phase_id", action.PhaseID,
+		"user_id", action.UserID,
+		"character_id", action.CharacterID.Int32,
+		"is_draft", action.IsDraft.Bool,
+	)
 
 	return &action, nil
 }

@@ -28,7 +28,7 @@ func TestGameAPI_ApplicationManagement(t *testing.T) {
 	gmToken, err := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
 	core.AssertNoError(t, err, "GM token creation should succeed")
 
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	playerUser, err := userService.CreateUser(&core.User{
 		Username: "appmanagement_player",
 		Password: "testpass123",
@@ -40,7 +40,7 @@ func TestGameAPI_ApplicationManagement(t *testing.T) {
 	core.AssertNoError(t, err, "Player token creation should succeed")
 
 	// Create a recruiting game
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game for App Management",
 		Description: "Testing application endpoints",
@@ -187,7 +187,7 @@ func TestGameAPI_ParticipantManagementAdvanced(t *testing.T) {
 	core.AssertNoError(t, err, "GM token creation should succeed")
 
 	// Create player users
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	player1, err := userService.CreateUser(&core.User{
 		Username: "participant1",
 		Password: "testpass123",
@@ -209,7 +209,7 @@ func TestGameAPI_ParticipantManagementAdvanced(t *testing.T) {
 	core.AssertNoError(t, err, "Player 2 token creation should succeed")
 
 	// Create a game
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game for Participant Mgmt",
 		Description: "Testing participant endpoints",

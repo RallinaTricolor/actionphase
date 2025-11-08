@@ -11,16 +11,17 @@ import (
 
 func TestAccountService_ChangeUsername(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	testDB.CleanupTables(t, "users")
 	defer testDB.CleanupTables(t, "users")
 
-	userService := &db.UserService{DB: testDB.Pool}
-	logger := core.NewTestLogger()
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+	// logger := core.NewTestLogger()
 	accountService := &AccountService{
 		DB:     testDB.Pool,
-		Logger: &logger,
+		Logger: app.ObsLogger,
 	}
 
 	// Create test user
@@ -188,17 +189,18 @@ func TestAccountService_ChangeUsername(t *testing.T) {
 
 func TestAccountService_SoftDeleteAccount(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	testDB.CleanupTables(t, "sessions", "users")
 	defer testDB.CleanupTables(t, "sessions", "users")
 
-	userService := &db.UserService{DB: testDB.Pool}
-	sessionService := &db.SessionService{DB: testDB.Pool}
-	logger := core.NewTestLogger()
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+	sessionService := &db.SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	// logger := core.NewTestLogger()
 	accountService := &AccountService{
 		DB:     testDB.Pool,
-		Logger: &logger,
+		Logger: app.ObsLogger,
 	}
 
 	// Create test user
@@ -252,17 +254,18 @@ func TestAccountService_SoftDeleteAccount(t *testing.T) {
 
 func TestAccountService_RevokeAllSessions(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	testDB.CleanupTables(t, "sessions", "users")
 	defer testDB.CleanupTables(t, "sessions", "users")
 
-	userService := &db.UserService{DB: testDB.Pool}
-	sessionService := &db.SessionService{DB: testDB.Pool}
-	logger := core.NewTestLogger()
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+	sessionService := &db.SessionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	// logger := core.NewTestLogger()
 	accountService := &AccountService{
 		DB:     testDB.Pool,
-		Logger: &logger,
+		Logger: app.ObsLogger,
 	}
 
 	// Create test user
@@ -309,17 +312,17 @@ func TestAccountService_RevokeAllSessions(t *testing.T) {
 
 func TestAccountService_RequestEmailChange(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	testDB.CleanupTables(t, "email_verification_tokens", "users")
 	defer testDB.CleanupTables(t, "email_verification_tokens", "users")
 
-	userService := &db.UserService{DB: testDB.Pool}
-	logger := core.NewTestLogger()
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	accountService := &AccountService{
 		DB:           testDB.Pool,
 		EmailService: nil, // No email service for unit tests
-		Logger:       &logger,
+		Logger:       app.ObsLogger,
 	}
 
 	// Create test user

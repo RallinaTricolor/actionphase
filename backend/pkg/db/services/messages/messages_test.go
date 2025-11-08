@@ -17,9 +17,11 @@ func TestMessageService_CreatePost(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -145,9 +147,11 @@ func TestMessageService_CreateComment(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup test data
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -295,9 +299,11 @@ func TestMessageService_GetGamePosts(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup test data
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -350,9 +356,11 @@ func TestMessageService_UpdateAndDelete(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -402,9 +410,11 @@ func TestMessageService_Reactions(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	user1 := testDB.CreateTestUser(t, "user1", "user1@example.com")
@@ -476,8 +486,10 @@ func TestMessageService_ValidateCharacterOwnership(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -535,9 +547,11 @@ func TestMessageService_GetComment(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -596,9 +610,11 @@ func TestMessageService_CommentCRUD(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -672,9 +688,11 @@ func TestMessageService_GetPostComments(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -777,10 +795,12 @@ func TestMessageService_GetPhasePosts(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -853,9 +873,11 @@ func TestMessageService_PostCounts(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -927,9 +949,11 @@ func TestMessageService_GetUserPostsInGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	user1 := testDB.CreateTestUser(t, "user1", "user1@example.com")
@@ -1007,9 +1031,11 @@ func TestMessageService_GetMessageReactions(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	user1 := testDB.CreateTestUser(t, "user1", "user1@example.com")
@@ -1080,9 +1106,11 @@ func TestMessageService_PostWithMentions(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -1190,9 +1218,11 @@ func TestMessageService_CommentWithMentions(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -1270,9 +1300,11 @@ func TestMessageService_ThreadPreservation(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -1450,9 +1482,11 @@ func TestMessageService_CommentEditDeleteTracking(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -1628,9 +1662,11 @@ func TestMessageService_UpdateCommentWithMentions(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup
 	player := testDB.CreateTestUser(t, "player", "player@example.com")

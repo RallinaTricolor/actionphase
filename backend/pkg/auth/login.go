@@ -19,7 +19,7 @@ func (h *Handler) V1Login(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, core.ErrInvalidRequest(err))
 		return
 	}
-	UserService := db.UserService{DB: h.App.Pool}
+	UserService := db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Support login with either username or email
 	// The username field may contain either a username or an email address

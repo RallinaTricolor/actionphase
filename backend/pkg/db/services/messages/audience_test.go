@@ -12,8 +12,10 @@ func TestListAllPrivateConversations(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+
 	fixtures := testDB.SetupFixtures(t)
-	msgService := &MessageService{DB: testDB.Pool}
+	msgService := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	gameID := fixtures.TestGame.ID
 
@@ -21,7 +23,7 @@ func TestListAllPrivateConversations(t *testing.T) {
 	player1 := testDB.CreateTestUser(t, "player1_conv", "player1_conv@example.com")
 	player2 := testDB.CreateTestUser(t, "player2_conv", "player2_conv@example.com")
 
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	userID1 := int32(player1.ID)
 	userID2 := int32(player2.ID)
 
@@ -82,13 +84,15 @@ func TestGetAudienceConversationMessages(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+
 	fixtures := testDB.SetupFixtures(t)
-	msgService := &MessageService{DB: testDB.Pool}
+	msgService := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	gameID := fixtures.TestGame.ID
 	player1 := testDB.CreateTestUser(t, "player1_msg", "player1_msg@example.com")
 
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	userID1 := int32(player1.ID)
 	char1, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        gameID,
@@ -142,13 +146,15 @@ func TestGetMessage(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+
 	fixtures := testDB.SetupFixtures(t)
-	msgService := &MessageService{DB: testDB.Pool}
+	msgService := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	gameID := fixtures.TestGame.ID
 	player := testDB.CreateTestUser(t, "player_getmsg", "player_getmsg@example.com")
 
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	userID := int32(player.ID)
 	character, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        gameID,
@@ -215,8 +221,10 @@ func TestGetUnreadCommentIDsForPosts(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
+	app := core.NewTestApp(testDB.Pool)
+
 	fixtures := testDB.SetupFixtures(t)
-	msgService := &MessageService{DB: testDB.Pool}
+	msgService := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	gameID := fixtures.TestGame.ID
 
@@ -225,7 +233,7 @@ func TestGetUnreadCommentIDsForPosts(t *testing.T) {
 	playerUser := testDB.CreateTestUser(t, "player_unread", "player_unread@example.com")
 
 	// Create characters
-	characterService := &db.CharacterService{DB: testDB.Pool}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gmUserID := int32(gmUser.ID)
 	playerUserID := int32(playerUser.ID)
 

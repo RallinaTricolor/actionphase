@@ -4,11 +4,14 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"actionphase/pkg/observability"
 )
 
 // PhaseService implements the PhaseServiceInterface for game phase management.
 type PhaseService struct {
-	DB *pgxpool.Pool
+	DB     *pgxpool.Pool
+	Logger *observability.Logger
 }
 
 // Compile-time verification that PhaseService implements PhaseServiceInterface

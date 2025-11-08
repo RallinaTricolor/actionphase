@@ -16,10 +16,11 @@ func TestGameApplicationService_GMCannotApply(t *testing.T) {
 	// Fix: CanUserApplyToGame query now checks if user is GM
 
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm_user", "gm@example.com")
@@ -76,10 +77,11 @@ func TestGameApplicationService_GMCannotApply(t *testing.T) {
 
 func TestGameApplicationService_CreateGameApplication(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -147,10 +149,11 @@ func TestGameApplicationService_CreateGameApplication(t *testing.T) {
 
 func TestGameApplicationService_ApproveRejectApplication(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -187,10 +190,11 @@ func TestGameApplicationService_ApproveRejectApplication(t *testing.T) {
 
 func TestGameApplicationService_RejectApplication(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -227,10 +231,11 @@ func TestGameApplicationService_RejectApplication(t *testing.T) {
 
 func TestGameApplicationService_GetGameApplications(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -276,10 +281,11 @@ func TestGameApplicationService_GetGameApplications(t *testing.T) {
 
 func TestGameApplicationService_BulkOperations(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -320,10 +326,11 @@ func TestGameApplicationService_BulkOperations(t *testing.T) {
 
 func TestGameApplicationService_ConvertToParticipants(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -369,10 +376,11 @@ func TestGameApplicationService_ConvertToParticipants(t *testing.T) {
 
 func TestGameApplicationService_GetUserGameApplications(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -421,10 +429,11 @@ func TestGameApplicationService_GetUserGameApplications(t *testing.T) {
 
 func TestGameApplicationService_DeleteGameApplication(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -456,10 +465,11 @@ func TestGameApplicationService_DeleteGameApplication(t *testing.T) {
 
 func TestGameApplicationService_HasUserAppliedToGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -501,10 +511,11 @@ func TestGameApplicationService_HasUserAppliedToGame(t *testing.T) {
 
 func TestGameApplicationService_CountPendingApplicationsForGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -563,10 +574,11 @@ func TestGameApplicationService_CountPendingApplicationsForGame(t *testing.T) {
 
 func TestGameApplicationService_BulkRejectApplications(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -619,10 +631,11 @@ func TestGameApplicationService_BulkRejectApplications(t *testing.T) {
 
 func TestGameApplicationService_GetGameApplicationByUserAndGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -660,10 +673,11 @@ func TestGameApplicationService_GetGameApplicationByUserAndGame(t *testing.T) {
 
 func TestGameApplicationService_PublishApplicationStatuses(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
 
 	service := &GameApplicationService{DB: testDB.Pool}
-	gameService := &GameService{DB: testDB.Pool}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test users
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")

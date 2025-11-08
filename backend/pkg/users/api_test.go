@@ -16,7 +16,7 @@ import (
 // setupUserAPITestRouter creates a test router with user profile routes
 func setupUserAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	r := chi.NewRouter()
 
@@ -111,6 +111,7 @@ func TestUserAPI_UpdateUserProfile(t *testing.T) {
 	defer testDB.CleanupTables(t, "users")
 
 	app := core.NewTestApp(testDB.Pool)
+
 	router := setupUserAPITestRouter(app, testDB)
 	fixtures := testDB.SetupFixtures(t)
 
@@ -211,6 +212,7 @@ func TestUserAPI_DeleteUserAvatar(t *testing.T) {
 	defer testDB.CleanupTables(t, "users")
 
 	app := core.NewTestApp(testDB.Pool)
+
 	router := setupUserAPITestRouter(app, testDB)
 	fixtures := testDB.SetupFixtures(t)
 

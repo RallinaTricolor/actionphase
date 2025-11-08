@@ -32,7 +32,7 @@ func TestMessageAPI_PostCreationFlow(t *testing.T) {
 	gameID := fixtures.TestGame.ID
 
 	// Create a character for the GM to post as
-	charService := &db.CharacterService{DB: testDB.Pool}
+	charService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	userID := int32(fixtures.TestUser.ID)
 	gmCharacter, err := charService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        gameID,
@@ -139,7 +139,7 @@ func TestMessageAPI_CommentCreationFlow(t *testing.T) {
 	gameID := fixtures.TestGame.ID
 
 	// Create characters
-	charService := &db.CharacterService{DB: testDB.Pool}
+	charService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gmUserID := int32(fixtures.TestUser.ID)
 	gmCharacter, err := charService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        gameID,
@@ -159,7 +159,7 @@ func TestMessageAPI_CommentCreationFlow(t *testing.T) {
 	core.AssertNoError(t, err, "Player character creation should succeed")
 
 	// Create a post first
-	messageService := &messagesvc.MessageService{DB: testDB.Pool}
+	messageService := &messagesvc.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
 		GameID:      gameID,
 		AuthorID:    int32(fixtures.TestUser.ID),
@@ -268,7 +268,7 @@ func TestMessageAPI_GetGamePosts(t *testing.T) {
 	gameID := fixtures.TestGame.ID
 
 	// Create a character
-	charService := &db.CharacterService{DB: testDB.Pool}
+	charService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gmUserID := int32(fixtures.TestUser.ID)
 	gmCharacter, err := charService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        gameID,
@@ -279,7 +279,7 @@ func TestMessageAPI_GetGamePosts(t *testing.T) {
 	core.AssertNoError(t, err, "Character creation should succeed")
 
 	// Create multiple posts
-	messageService := &messagesvc.MessageService{DB: testDB.Pool}
+	messageService := &messagesvc.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 	for i := 1; i <= 3; i++ {
 		_, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
 			GameID:      gameID,
@@ -341,7 +341,7 @@ func TestMessageAPI_GetPostComments(t *testing.T) {
 	gameID := fixtures.TestGame.ID
 
 	// Create characters
-	charService := &db.CharacterService{DB: testDB.Pool}
+	charService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gmUserID := int32(fixtures.TestUser.ID)
 	gmCharacter, err := charService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        gameID,
@@ -361,7 +361,7 @@ func TestMessageAPI_GetPostComments(t *testing.T) {
 	core.AssertNoError(t, err, "Player character creation should succeed")
 
 	// Create a post
-	messageService := &messagesvc.MessageService{DB: testDB.Pool}
+	messageService := &messagesvc.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
 		GameID:      gameID,
 		AuthorID:    int32(fixtures.TestUser.ID),
@@ -426,12 +426,12 @@ func TestMessageAPI_AuthorizationChecks(t *testing.T) {
 	gameID := fixtures.TestGame.ID
 
 	// Add player as a participant so they can access the game
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	_, err = gameService.AddGameParticipant(context.Background(), gameID, int32(playerUser.ID), "player")
 	core.AssertNoError(t, err, "Failed to add player as participant")
 
 	// Create a character for the player
-	charService := &db.CharacterService{DB: testDB.Pool}
+	charService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	playerUserID := int32(playerUser.ID)
 	playerCharacter, err := charService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        gameID,
@@ -462,7 +462,7 @@ func TestMessageAPI_AuthorizationChecks(t *testing.T) {
 // setupMessageTestRouter creates a test router with message routes
 func setupMessageTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	r := chi.NewRouter()
 
@@ -520,7 +520,7 @@ func TestMessageAPI_GetMessage(t *testing.T) {
 	gameID := fixtures.TestGame.ID
 
 	// Create a character and post
-	charService := &db.CharacterService{DB: testDB.Pool}
+	charService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	userID := int32(fixtures.TestUser.ID)
 	character, err := charService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        gameID,
@@ -531,7 +531,7 @@ func TestMessageAPI_GetMessage(t *testing.T) {
 	core.AssertNoError(t, err, "Character creation should succeed")
 
 	// Create a post via the service
-	messageService := &messagesvc.MessageService{DB: testDB.Pool}
+	messageService := &messagesvc.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
 		GameID:      gameID,
 		AuthorID:    int32(fixtures.TestUser.ID),
@@ -596,7 +596,7 @@ func TestMessageAPI_MarkPostRead(t *testing.T) {
 	gameID := fixtures.TestGame.ID
 
 	// Create a character and post
-	charService := &db.CharacterService{DB: testDB.Pool}
+	charService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	userID := int32(fixtures.TestUser.ID)
 	character, err := charService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        gameID,
@@ -606,7 +606,7 @@ func TestMessageAPI_MarkPostRead(t *testing.T) {
 	})
 	core.AssertNoError(t, err, "Character creation should succeed")
 
-	messageService := &messagesvc.MessageService{DB: testDB.Pool}
+	messageService := &messagesvc.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
 		GameID:      gameID,
 		AuthorID:    int32(fixtures.TestUser.ID),
@@ -665,7 +665,7 @@ func TestMessageAPI_UpdateDeleteComment(t *testing.T) {
 	gameID := fixtures.TestGame.ID
 
 	// Create a character and post
-	charService := &db.CharacterService{DB: testDB.Pool}
+	charService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	userID := int32(fixtures.TestUser.ID)
 	character, err := charService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        gameID,
@@ -675,7 +675,7 @@ func TestMessageAPI_UpdateDeleteComment(t *testing.T) {
 	})
 	core.AssertNoError(t, err, "Character creation should succeed")
 
-	messageService := &messagesvc.MessageService{DB: testDB.Pool}
+	messageService := &messagesvc.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
 		GameID:      gameID,
 		AuthorID:    int32(fixtures.TestUser.ID),
@@ -810,12 +810,12 @@ func TestMessageAPI_ReadTrackingAndRecent(t *testing.T) {
 	gameID := fixtures.TestGame.ID
 
 	// Add player as participant
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	_, err = gameService.AddGameParticipant(context.Background(), gameID, int32(playerUser.ID), "player")
 	core.AssertNoError(t, err, "Adding player participant should succeed")
 
 	// Create characters
-	charService := &db.CharacterService{DB: testDB.Pool}
+	charService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gmCharID := int32(fixtures.TestUser.ID)
 	gmChar, err := charService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        gameID,
@@ -839,7 +839,7 @@ func TestMessageAPI_ReadTrackingAndRecent(t *testing.T) {
 	core.AssertNoError(t, err, "Player character approval should succeed")
 
 	// Create post with comments via service
-	messageService := &messagesvc.MessageService{DB: testDB.Pool}
+	messageService := &messagesvc.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
 	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
 		GameID:      gameID,
 		AuthorID:    int32(fixtures.TestUser.ID),

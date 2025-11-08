@@ -37,7 +37,7 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -600,7 +600,7 @@ func (h *Handler) GetFilteredGames(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Try to get user ID from JWT (optional - unauthenticated users can browse)
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, _ := core.GetUserIDFromJWT(ctx, userService)
 	if userID != 0 {
 		filters.UserID = &userID

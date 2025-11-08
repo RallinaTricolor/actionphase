@@ -7,6 +7,7 @@ import (
 
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/models"
+	"actionphase/pkg/observability"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -15,24 +16,34 @@ import (
 
 // DeadlineService implements the DeadlineServiceInterface
 type DeadlineService struct {
-	DB *pgxpool.Pool
+	DB     *pgxpool.Pool
+	Logger *observability.Logger
 }
 
 // Compile-time verification that DeadlineService implements DeadlineServiceInterface
 var _ core.DeadlineServiceInterface = (*DeadlineService)(nil)
 
 // NewDeadlineService creates a new deadline service
-func NewDeadlineService(dbPool *pgxpool.Pool) *DeadlineService {
-	return &DeadlineService{DB: dbPool}
+func NewDeadlineService(dbPool *pgxpool.Pool, logger *observability.Logger) *DeadlineService {
+	return &DeadlineService{DB: dbPool, Logger: logger}
 }
 
 // CreateDeadline creates a new deadline for a game
 func (s *DeadlineService) CreateDeadline(ctx context.Context, req core.CreateDeadlineRequest) (*db.GameDeadline, error) {
+	s.Logger.Info(ctx, "Creating deadline",
+		"game_id", req.GameID,
+		"title", req.Title,
+		"created_by_user_id", req.CreatedBy,
+	)
+
 	queries := db.New(s.DB)
 
 	// Convert time.Time to pgtype.Timestamptz
 	deadline := pgtype.Timestamptz{}
 	if err := deadline.Scan(req.Deadline); err != nil {
+		s.Logger.LogError(ctx, err, "Invalid deadline timestamp",
+			"game_id", req.GameID,
+		)
 		return nil, fmt.Errorf("invalid deadline timestamp: %w", err)
 	}
 
@@ -52,8 +63,18 @@ func (s *DeadlineService) CreateDeadline(ctx context.Context, req core.CreateDea
 
 	createdDeadline, err := queries.CreateDeadline(ctx, params)
 	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to create deadline",
+			"game_id", req.GameID,
+			"title", req.Title,
+		)
 		return nil, fmt.Errorf("failed to create deadline: %w", err)
 	}
+
+	s.Logger.Info(ctx, "Deadline created successfully",
+		"deadline_id", createdDeadline.ID,
+		"game_id", req.GameID,
+		"title", req.Title,
+	)
 
 	return &createdDeadline, nil
 }
@@ -134,11 +155,19 @@ func (s *DeadlineService) GetUpcomingDeadlines(ctx context.Context, userID int32
 
 // UpdateDeadline updates deadline details (title, description, timestamp)
 func (s *DeadlineService) UpdateDeadline(ctx context.Context, deadlineID int32, req core.UpdateDeadlineRequest) (*db.GameDeadline, error) {
+	s.Logger.Info(ctx, "Updating deadline",
+		"deadline_id", deadlineID,
+		"title", req.Title,
+	)
+
 	queries := db.New(s.DB)
 
 	// Convert time.Time to pgtype.Timestamptz
 	deadline := pgtype.Timestamptz{}
 	if err := deadline.Scan(req.Deadline); err != nil {
+		s.Logger.LogError(ctx, err, "Invalid deadline timestamp",
+			"deadline_id", deadlineID,
+		)
 		return nil, fmt.Errorf("invalid deadline timestamp: %w", err)
 	}
 
@@ -158,10 +187,22 @@ func (s *DeadlineService) UpdateDeadline(ctx context.Context, deadlineID int32, 
 	updatedDeadline, err := queries.UpdateDeadline(ctx, params)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			s.Logger.LogError(ctx, err, "Deadline not found",
+				"deadline_id", deadlineID,
+			)
 			return nil, fmt.Errorf("deadline not found: %d", deadlineID)
 		}
+		s.Logger.LogError(ctx, err, "Failed to update deadline",
+			"deadline_id", deadlineID,
+			"title", req.Title,
+		)
 		return nil, fmt.Errorf("failed to update deadline: %w", err)
 	}
+
+	s.Logger.Info(ctx, "Deadline updated successfully",
+		"deadline_id", deadlineID,
+		"title", req.Title,
+	)
 
 	return &updatedDeadline, nil
 }
@@ -169,22 +210,46 @@ func (s *DeadlineService) UpdateDeadline(ctx context.Context, deadlineID int32, 
 // DeleteDeadline soft-deletes a deadline by setting deleted_at timestamp
 // Authorization check (GM verification) should be performed at the handler layer before calling this method
 func (s *DeadlineService) DeleteDeadline(ctx context.Context, deadlineID int32, userID int32) error {
+	s.Logger.Info(ctx, "Deleting deadline",
+		"deadline_id", deadlineID,
+		"user_id", userID,
+	)
+
 	queries := db.New(s.DB)
 
 	// First verify the deadline exists
-	_, err := queries.GetDeadline(ctx, deadlineID)
+	deadline, err := queries.GetDeadline(ctx, deadlineID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			s.Logger.LogError(ctx, err, "Deadline not found for deletion",
+				"deadline_id", deadlineID,
+				"user_id", userID,
+			)
 			return fmt.Errorf("deadline not found: %d", deadlineID)
 		}
+		s.Logger.LogError(ctx, err, "Failed to verify deadline for deletion",
+			"deadline_id", deadlineID,
+			"user_id", userID,
+		)
 		return fmt.Errorf("failed to verify deadline: %w", err)
 	}
 
 	// Perform soft delete
 	// Note: Authorization (GM verification) is handled at the handler layer
 	if err := queries.DeleteDeadline(ctx, deadlineID); err != nil {
+		s.Logger.LogError(ctx, err, "Failed to delete deadline",
+			"deadline_id", deadlineID,
+			"user_id", userID,
+		)
 		return fmt.Errorf("failed to delete deadline: %w", err)
 	}
+
+	s.Logger.Warn(ctx, "Deadline deleted",
+		"deadline_id", deadlineID,
+		"game_id", deadline.GameID,
+		"title", deadline.Title,
+		"user_id", userID,
+	)
 
 	return nil
 }

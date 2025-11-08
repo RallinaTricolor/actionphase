@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"regexp"
 
 	core "actionphase/pkg/core"
@@ -43,12 +42,15 @@ func (s *MessageService) notifyCharacterMentions(ctx context.Context, mentionedC
 	}
 
 	queries := models.New(s.DB)
-	notificationService := &db.NotificationService{DB: s.DB}
+	notificationService := &db.NotificationService{DB: s.DB, Logger: s.Logger}
 
 	// Get the author character's name
 	authorChar, err := queries.GetCharacter(ctx, authorCharacterID)
 	if err != nil {
-		slog.Error("Failed to get author character for mention notifications", "error", err, "character_id", authorCharacterID)
+		s.Logger.LogError(ctx, err, "Failed to get author character for mention notifications",
+			"character_id", authorCharacterID,
+			"game_id", gameID,
+		)
 		return
 	}
 
@@ -56,7 +58,10 @@ func (s *MessageService) notifyCharacterMentions(ctx context.Context, mentionedC
 	for _, mentionedCharID := range mentionedCharacterIDs {
 		mentionedChar, err := queries.GetCharacter(ctx, mentionedCharID)
 		if err != nil {
-			slog.Error("Failed to get mentioned character", "error", err, "character_id", mentionedCharID)
+			s.Logger.LogError(ctx, err, "Failed to get mentioned character",
+				"character_id", mentionedCharID,
+				"game_id", gameID,
+			)
 			continue
 		}
 
@@ -68,7 +73,9 @@ func (s *MessageService) notifyCharacterMentions(ctx context.Context, mentionedC
 			// NPC - notify the GM
 			game, err := queries.GetGame(ctx, gameID)
 			if err != nil {
-				slog.Error("Failed to get game for NPC mention notification", "error", err, "game_id", gameID)
+				s.Logger.LogError(ctx, err, "Failed to get game for NPC mention notification",
+					"game_id", gameID,
+				)
 				continue
 			}
 			characterOwnerID = game.GmUserID
@@ -89,7 +96,11 @@ func (s *MessageService) notifyCharacterMentions(ctx context.Context, mentionedC
 			mentionedChar.Name,
 		)
 		if err != nil {
-			slog.Error("Failed to send character mention notification", "error", err, "mentioned_character_id", mentionedCharID)
+			s.Logger.LogError(ctx, err, "Failed to send character mention notification",
+				"mentioned_character_id", mentionedCharID,
+				"message_id", messageID,
+				"game_id", gameID,
+			)
 		}
 	}
 }
@@ -98,12 +109,15 @@ func (s *MessageService) notifyCharacterMentions(ctx context.Context, mentionedC
 // This runs in a goroutine and should not fail the parent operation
 func (s *MessageService) notifyCommentReply(ctx context.Context, parentMessageID, replierCharacterID, replierUserID, gameID, replyMessageID int32) {
 	queries := models.New(s.DB)
-	notificationService := &db.NotificationService{DB: s.DB}
+	notificationService := &db.NotificationService{DB: s.DB, Logger: s.Logger}
 
 	// Get the parent message
 	parentMessage, err := queries.GetComment(ctx, parentMessageID)
 	if err != nil {
-		slog.Error("Failed to get parent message for reply notification", "error", err, "parent_id", parentMessageID)
+		s.Logger.LogError(ctx, err, "Failed to get parent message for reply notification",
+			"parent_id", parentMessageID,
+			"game_id", gameID,
+		)
 		return
 	}
 
@@ -115,7 +129,10 @@ func (s *MessageService) notifyCommentReply(ctx context.Context, parentMessageID
 	// Get the replier character's name
 	replierChar, err := queries.GetCharacter(ctx, replierCharacterID)
 	if err != nil {
-		slog.Error("Failed to get replier character", "error", err, "character_id", replierCharacterID)
+		s.Logger.LogError(ctx, err, "Failed to get replier character",
+			"character_id", replierCharacterID,
+			"game_id", gameID,
+		)
 		return
 	}
 
@@ -128,7 +145,11 @@ func (s *MessageService) notifyCommentReply(ctx context.Context, parentMessageID
 		replierChar.Name,
 	)
 	if err != nil {
-		slog.Error("Failed to send comment reply notification", "error", err, "parent_author_id", parentMessage.AuthorID)
+		s.Logger.LogError(ctx, err, "Failed to send comment reply notification",
+			"parent_author_id", parentMessage.AuthorID,
+			"reply_message_id", replyMessageID,
+			"game_id", gameID,
+		)
 	}
 }
 
@@ -147,16 +168,12 @@ func (s *MessageService) extractCharacterMentions(ctx context.Context, content s
 		return nil, fmt.Errorf("failed to get game characters: %w", err)
 	}
 
-	slog.Info("Extracting mentions", "game_id", gameID, "num_characters", len(characters), "content", content)
-
 	// Remove code blocks before extracting mentions
 	// This regex matches:
 	// - Fenced code blocks (```lang\ncode\n``` or ```code```)
 	// - Inline code (`code`)
 	codeBlockRegex := regexp.MustCompile("```[\\s\\S]*?```|`[^`\\n]+?`")
 	contentWithoutCode := codeBlockRegex.ReplaceAllString(content, "")
-
-	slog.Info("Content after removing code blocks", "content", contentWithoutCode)
 
 	mentionedIDs := make([]int32, 0)
 	seenIDs := make(map[int32]bool)
@@ -174,7 +191,6 @@ func (s *MessageService) extractCharacterMentions(ctx context.Context, content s
 
 		matched := mentionRegex.MatchString(contentWithoutCode)
 		if matched {
-			slog.Info("Matched character mention", "character_name", char.Name, "character_id", char.ID)
 			// Deduplicate - only add each character ID once
 			if !seenIDs[char.ID] {
 				mentionedIDs = append(mentionedIDs, char.ID)
@@ -182,8 +198,6 @@ func (s *MessageService) extractCharacterMentions(ctx context.Context, content s
 			}
 		}
 	}
-
-	slog.Info("Mention extraction complete", "num_mentions", len(mentionedIDs), "mentioned_ids", mentionedIDs)
 
 	return mentionedIDs, nil
 }

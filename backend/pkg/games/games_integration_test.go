@@ -213,7 +213,7 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 	core.AssertNoError(t, err, "Test token creation should succeed")
 
 	// Create a test game directly via service
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	createdGame, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Public Test Game",
 		Description: "A game for testing public endpoints",
@@ -337,7 +337,7 @@ func TestGameAPI_ParticipantManagement(t *testing.T) {
 	accessToken, _ := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
 
 	// Create a game for testing participation
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	testGame, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Participant Test Game",
 		Description: "A game for testing participant management",
@@ -352,7 +352,7 @@ func TestGameAPI_ParticipantManagement(t *testing.T) {
 	core.AssertNoError(t, err, "Game state update should succeed")
 
 	// Create a second test user for joining the game
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	secondUser := &core.User{
 		Username: "participant_user_" + strconv.Itoa(int(time.Now().UnixNano())),
 		Email:    "participant_" + strconv.Itoa(int(time.Now().UnixNano())) + "@test.com",
@@ -430,7 +430,7 @@ func TestGameAPI_Authorization(t *testing.T) {
 	fixtures := testDB.SetupFixtures(t)
 
 	// Create a game owned by the test user
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	testGame, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Authorization Test Game",
 		Description: "A game for testing authorization",
@@ -440,7 +440,7 @@ func TestGameAPI_Authorization(t *testing.T) {
 	core.AssertNoError(t, err, "Test game creation should succeed")
 
 	// Create a second user who doesn't own the game
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	nonOwner := &core.User{
 		Username: "nonowner_" + strconv.Itoa(int(time.Now().UnixNano())),
 		Email:    "nonowner_" + strconv.Itoa(int(time.Now().UnixNano())) + "@test.com",
@@ -627,7 +627,7 @@ func TestGameAPI_ErrorHandling(t *testing.T) {
 // setupGameTestRouter creates a test router with game routes configured
 func setupGameTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	r := chi.NewRouter()
 
@@ -683,7 +683,7 @@ func setupGameTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 // setupAuthTestRouter creates a test router with auth routes for token creation
 func setupAuthTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	r := chi.NewRouter()
 
@@ -759,7 +759,7 @@ func BenchmarkGameAPI_GetAllGames(b *testing.B) {
 	}
 
 	// Create some test games
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	for i := 0; i < 10; i++ {
 		_, _ = gameService.CreateGame(context.Background(), core.CreateGameRequest{
 			Title:       "Benchmark Game " + strconv.Itoa(i),
@@ -800,7 +800,7 @@ func TestGameAPI_GameApplications(t *testing.T) {
 	gmToken, err := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
 	core.AssertNoError(t, err, "GM token creation should succeed")
 
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	playerUser, err := userService.CreateUser(&core.User{
 		Username: "player1",
 		Password: "testpass123",
@@ -812,7 +812,7 @@ func TestGameAPI_GameApplications(t *testing.T) {
 	core.AssertNoError(t, err, "Player token creation should succeed")
 
 	// Create a recruiting game
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game for Applications",
 		Description: "A game to test applications",
@@ -1087,7 +1087,7 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 	core.AssertNoError(t, err, "GM token creation should succeed")
 
 	// Create audience user
-	userService := &db.UserService{DB: testDB.Pool}
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
 	audienceUser, err := userService.CreateUser(&core.User{
 		Username: "audience1",
 		Password: "testpass123",
@@ -1099,7 +1099,7 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 	core.AssertNoError(t, err, "Audience token creation should succeed")
 
 	// Create a game
-	gameService := &db.GameService{DB: testDB.Pool}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
 		Title:       "Test Game for Audience",
 		Description: "A game to test audience features",

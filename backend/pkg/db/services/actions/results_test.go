@@ -16,9 +16,11 @@ func TestActionSubmissionService_CreateActionResult(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -81,9 +83,11 @@ func TestActionSubmissionService_ActionResultOperations(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -179,9 +183,11 @@ func TestActionSubmissionService_GetUserPhaseResults(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -295,9 +301,11 @@ func TestActionSubmissionService_PublishAllPhaseResults(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool}
-	phaseService := &phases.PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")

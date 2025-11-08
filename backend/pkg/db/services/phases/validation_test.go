@@ -16,7 +16,8 @@ func TestPhaseService_ExtendPhaseDeadline(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	phaseService := &PhaseService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+	phaseService := &PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	user := testDB.CreateTestUser(t, "testuser", "test@example.com")
@@ -46,8 +47,10 @@ func TestPhaseService_PermissionChecks(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	phaseService := &PhaseService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	phaseService := &PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")

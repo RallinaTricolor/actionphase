@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -59,11 +58,7 @@ func TestV1VerifyEmail(t *testing.T) {
 	pool := setupTestDB(t)
 	defer pool.Close()
 
-	app := &core.App{
-		Pool:   pool,
-		Logger: *slog.Default(),
-	}
-
+	app := core.NewTestApp(pool)
 	handler := Handler{App: app}
 	queries := db.New(pool)
 	ctx := context.Background()
@@ -168,10 +163,7 @@ func TestV1ChangeUsername(t *testing.T) {
 	pool := setupTestDB(t)
 	defer pool.Close()
 
-	app := &core.App{
-		Pool:   pool,
-		Logger: *slog.Default(),
-	}
+	app := core.NewTestApp(pool)
 
 	handler := Handler{App: app}
 	queries := db.New(pool)
@@ -268,10 +260,7 @@ func TestV1RequestEmailChange(t *testing.T) {
 	pool := setupTestDB(t)
 	defer pool.Close()
 
-	app := &core.App{
-		Pool:   pool,
-		Logger: *slog.Default(),
-	}
+	app := core.NewTestApp(pool)
 
 	handler := Handler{App: app}
 	queries := db.New(pool)
@@ -426,10 +415,7 @@ func TestV1DeleteAccount(t *testing.T) {
 	pool := setupTestDB(t)
 	defer pool.Close()
 
-	app := &core.App{
-		Pool:   pool,
-		Logger: *slog.Default(),
-	}
+	app := core.NewTestApp(pool)
 
 	handler := Handler{App: app}
 	queries := db.New(pool)
@@ -487,10 +473,7 @@ func TestV1ListSessions(t *testing.T) {
 	pool := setupTestDB(t)
 	defer pool.Close()
 
-	app := &core.App{
-		Pool:   pool,
-		Logger: *slog.Default(),
-	}
+	app := core.NewTestApp(pool)
 
 	handler := Handler{App: app}
 	queries := db.New(pool)
@@ -535,10 +518,7 @@ func TestV1RevokeSession(t *testing.T) {
 	pool := setupTestDB(t)
 	defer pool.Close()
 
-	app := &core.App{
-		Pool:   pool,
-		Logger: *slog.Default(),
-	}
+	app := core.NewTestApp(pool)
 
 	handler := Handler{App: app}
 	queries := db.New(pool)

@@ -3,6 +3,7 @@ package db
 import (
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/models"
+	"actionphase/pkg/observability"
 	"context"
 	"errors"
 	"time"
@@ -12,7 +13,8 @@ import (
 )
 
 type UserService struct {
-	DB *pgxpool.Pool
+	DB     *pgxpool.Pool
+	Logger *observability.Logger
 }
 
 // Ensure UserService implements the interface
@@ -171,6 +173,12 @@ func (s *UserService) Users() ([]*core.User, error) {
 
 func (s *UserService) CreateUser(u *core.User) (*core.User, error) {
 	ctx := context.Background()
+
+	s.Logger.Info(ctx, "Creating new user account",
+		"username", u.Username,
+		"email", u.Email,
+	)
+
 	u.HashPassword()
 	q := db.New(s.DB)
 	dbUser, err := q.CreateUser(ctx, db.CreateUserParams{
@@ -178,13 +186,29 @@ func (s *UserService) CreateUser(u *core.User) (*core.User, error) {
 		Password: u.Password,
 		Email:    u.Email,
 	})
+
+	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to create user account",
+			"username", u.Username,
+			"email", u.Email,
+		)
+		return nil, err
+	}
+
+	s.Logger.Info(ctx, "User account created successfully",
+		"user_id", dbUser.ID,
+		"username", dbUser.Username,
+		"email", dbUser.Email,
+		"email_verified", dbUser.EmailVerified,
+	)
+
 	return &core.User{
 		ID:            int(dbUser.ID),
 		Username:      dbUser.Username,
 		Email:         dbUser.Email,
 		EmailVerified: dbUser.EmailVerified,
 		CreatedAt:     &dbUser.CreatedAt.Time,
-	}, err
+	}, nil
 }
 
 func (s *UserService) DeleteUser(id int) error {
@@ -193,15 +217,34 @@ func (s *UserService) DeleteUser(id int) error {
 
 // SetAdminStatus grants or revokes admin privileges for a user
 func (s *UserService) SetAdminStatus(ctx context.Context, userID int32, isAdmin bool, requesterID int32) error {
+	action := "revoke"
+	if isAdmin {
+		action = "grant"
+	}
+
+	s.Logger.Info(ctx, "Admin privilege modification attempt",
+		"action", action,
+		"target_user_id", userID,
+		"requester_id", requesterID,
+	)
+
 	q := db.New(s.DB)
 
 	// Check if requester is admin
 	requester, err := q.GetUser(ctx, requesterID)
 	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to get requester user",
+			"requester_id", requesterID,
+		)
 		return err
 	}
 
 	if !requester.IsAdmin.Bool {
+		s.Logger.Warn(ctx, "Unauthorized admin privilege modification attempt",
+			"requester_id", requesterID,
+			"requester_username", requester.Username,
+			"target_user_id", userID,
+		)
 		return errors.New("Unauthorized: admin privileges required")
 	}
 
@@ -210,7 +253,24 @@ func (s *UserService) SetAdminStatus(ctx context.Context, userID int32, isAdmin 
 		ID:      userID,
 		IsAdmin: pgtype.Bool{Bool: isAdmin, Valid: true},
 	})
-	return err
+
+	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to update admin status",
+			"action", action,
+			"target_user_id", userID,
+			"requester_id", requesterID,
+		)
+		return err
+	}
+
+	s.Logger.Warn(ctx, "Admin privilege modified - security event",
+		"action", action,
+		"target_user_id", userID,
+		"requester_id", requesterID,
+		"requester_username", requester.Username,
+	)
+
+	return nil
 }
 
 // ListAdmins returns all users with admin privileges
@@ -237,21 +297,50 @@ func (s *UserService) ListAdmins(ctx context.Context) ([]*core.User, error) {
 
 // BanUser bans a user from the platform
 func (s *UserService) BanUser(ctx context.Context, userID int32, adminID int32) error {
+	s.Logger.Info(ctx, "User ban attempt",
+		"target_user_id", userID,
+		"admin_id", adminID,
+	)
+
 	// Prevent admin from banning themselves
 	if userID == adminID {
+		s.Logger.Warn(ctx, "Admin attempted to ban themselves",
+			"admin_id", adminID,
+		)
 		return errors.New("Cannot ban yourself")
 	}
 
 	q := db.New(s.DB)
 
+	// Get target user for logging
+	targetUser, err := q.GetUser(ctx, userID)
+	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to get target user for ban",
+			"target_user_id", userID,
+		)
+		return err
+	}
+
 	// Ban the user
-	err := q.BanUser(ctx, db.BanUserParams{
+	err = q.BanUser(ctx, db.BanUserParams{
 		ID:             userID,
 		BannedByUserID: pgtype.Int4{Int32: adminID, Valid: true},
 	})
 	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to ban user",
+			"target_user_id", userID,
+			"target_username", targetUser.Username,
+			"admin_id", adminID,
+		)
 		return err
 	}
+
+	s.Logger.Warn(ctx, "User banned - critical security event",
+		"target_user_id", userID,
+		"target_username", targetUser.Username,
+		"target_email", targetUser.Email,
+		"admin_id", adminID,
+	)
 
 	// Invalidate all sessions for the banned user
 	// This will be handled by SessionService
@@ -260,8 +349,37 @@ func (s *UserService) BanUser(ctx context.Context, userID int32, adminID int32) 
 
 // UnbanUser removes ban from a user
 func (s *UserService) UnbanUser(ctx context.Context, userID int32) error {
+	s.Logger.Info(ctx, "User unban attempt",
+		"target_user_id", userID,
+	)
+
 	q := db.New(s.DB)
-	return q.UnbanUser(ctx, userID)
+
+	// Get target user for logging
+	targetUser, err := q.GetUser(ctx, userID)
+	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to get target user for unban",
+			"target_user_id", userID,
+		)
+		return err
+	}
+
+	err = q.UnbanUser(ctx, userID)
+	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to unban user",
+			"target_user_id", userID,
+			"target_username", targetUser.Username,
+		)
+		return err
+	}
+
+	s.Logger.Warn(ctx, "User unbanned - security event",
+		"target_user_id", userID,
+		"target_username", targetUser.Username,
+		"target_email", targetUser.Email,
+	)
+
+	return nil
 }
 
 // ListBannedUsers returns all banned users with ban details

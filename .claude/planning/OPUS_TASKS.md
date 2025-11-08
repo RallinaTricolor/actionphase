@@ -4,3 +4,5 @@
   - Antipatterns?
 - Test coverage and useful tests
   - Are we mostly happy path testing?
+- Look for unused code/files
+  - Try to really, really find and remove all the unused files

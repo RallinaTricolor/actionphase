@@ -40,7 +40,7 @@ func (h *Handler) SetCharacterData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify user can edit this character
-	characterService := &services.CharacterService{DB: h.App.Pool}
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	canEdit, err := characterService.CanUserEditCharacter(ctx, int32(characterID), userID)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to check character edit permission", "error", err)
@@ -118,7 +118,7 @@ func (h *Handler) GetCharacterData(w http.ResponseWriter, r *http.Request) {
 		userID = &id
 	}
 
-	characterService := &services.CharacterService{DB: h.App.Pool}
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Check if user can view private data
 	var characterData []models.CharacterDatum

@@ -37,7 +37,7 @@ func (h *Handler) CreateHandout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -102,7 +102,7 @@ func (h *Handler) GetHandout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -149,7 +149,7 @@ func (h *Handler) ListHandouts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -219,7 +219,7 @@ func (h *Handler) UpdateHandout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -291,7 +291,7 @@ func (h *Handler) DeleteHandout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -353,7 +353,7 @@ func (h *Handler) PublishHandout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -423,7 +423,7 @@ func (h *Handler) PublishHandout(w http.ResponseWriter, r *http.Request) {
 		linkURL := fmt.Sprintf("/games/%d?tab=handouts", handout.GameID)
 
 		// Create notification request
-		notifService := &db.NotificationService{DB: h.App.Pool}
+		notifService := &db.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 		notifReq := &core.CreateNotificationRequest{
 			GameID:      &handout.GameID,
 			Type:        core.NotificationTypeHandoutPublished,
@@ -474,7 +474,7 @@ func (h *Handler) UnpublishHandout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")

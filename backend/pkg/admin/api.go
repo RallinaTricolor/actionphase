@@ -30,7 +30,7 @@ func (h *Handler) getUserIDFromContext(r *http.Request) (int32, error) {
 // GET /admin/admins
 func (h *Handler) ListAdmins(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	admins, err := userService.ListAdmins(ctx)
 	if err != nil {
@@ -62,7 +62,7 @@ func (h *Handler) GrantAdminStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.Background()
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	err = userService.SetAdminStatus(ctx, int32(userID), true, requesterID)
 	if err != nil {
@@ -100,7 +100,7 @@ func (h *Handler) RevokeAdminStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.Background()
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	err = userService.SetAdminStatus(ctx, int32(userID), false, requesterID)
 	if err != nil {
@@ -138,8 +138,8 @@ func (h *Handler) BanUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.Background()
-	userService := &db.UserService{DB: h.App.Pool}
-	sessionService := &db.SessionService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	sessionService := &db.SessionService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Ban the user
 	err = userService.BanUser(ctx, int32(userID), adminID)
@@ -187,7 +187,7 @@ func (h *Handler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.Background()
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	err = userService.UnbanUser(ctx, int32(userID))
 	if err != nil {
@@ -210,7 +210,7 @@ func (h *Handler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 // GET /admin/users/banned
 func (h *Handler) ListBannedUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	bannedUsers, err := userService.ListBannedUsers(ctx)
 	if err != nil {
@@ -232,7 +232,7 @@ func (h *Handler) GetUserByUsername(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	user, err := userService.UserByUsername(username)
 	if err != nil {

@@ -36,7 +36,7 @@ func (h *Handler) CreateHandoutComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -113,7 +113,7 @@ func (h *Handler) ListHandoutComments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -186,7 +186,7 @@ func (h *Handler) UpdateHandoutComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
@@ -239,7 +239,7 @@ func (h *Handler) DeleteHandoutComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from JWT token
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
 	if errResp != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")

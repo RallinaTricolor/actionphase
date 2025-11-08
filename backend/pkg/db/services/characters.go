@@ -8,10 +8,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	models "actionphase/pkg/db/models"
+	"actionphase/pkg/observability"
 )
 
 type CharacterService struct {
-	DB *pgxpool.Pool
+	DB     *pgxpool.Pool
+	Logger *observability.Logger
 }
 
 type CreateCharacterRequest struct {
@@ -31,15 +33,29 @@ type CharacterDataRequest struct {
 }
 
 func (cs *CharacterService) CreateCharacter(ctx context.Context, req CreateCharacterRequest) (*models.Character, error) {
+	defer cs.Logger.LogOperation(ctx, "create_character",
+		"game_id", req.GameID,
+		"character_type", req.CharacterType,
+		"character_name", req.Name,
+	)()
+
 	queries := models.New(cs.DB)
 
 	// Validate character type
 	if !isValidCharacterType(req.CharacterType) {
+		cs.Logger.Warn(ctx, "Invalid character type provided",
+			"character_type", req.CharacterType,
+			"game_id", req.GameID,
+		)
 		return nil, fmt.Errorf("invalid character type: %s", req.CharacterType)
 	}
 
 	// For player characters, user ID is required
 	if req.CharacterType == "player_character" && req.UserID == nil {
+		cs.Logger.Warn(ctx, "User ID required for player character creation",
+			"game_id", req.GameID,
+			"character_name", req.Name,
+		)
 		return nil, fmt.Errorf("user ID required for player characters")
 	}
 
@@ -56,7 +72,23 @@ func (cs *CharacterService) CreateCharacter(ctx context.Context, req CreateChara
 		Status:        pgtype.Text{String: "pending", Valid: true}, // Default status
 	})
 
-	return &character, err
+	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to create character",
+			"game_id", req.GameID,
+			"character_type", req.CharacterType,
+		)
+		return nil, err
+	}
+
+	cs.Logger.Info(ctx, "Character created successfully",
+		"character_id", character.ID,
+		"game_id", req.GameID,
+		"character_type", req.CharacterType,
+		"character_name", character.Name,
+		"status", character.Status.String,
+	)
+
+	return &character, nil
 }
 
 func (cs *CharacterService) GetCharacter(ctx context.Context, characterID int32) (*models.Character, error) {
@@ -89,33 +121,74 @@ func (cs *CharacterService) GetUserControllableCharacters(ctx context.Context, g
 }
 
 func (cs *CharacterService) ApproveCharacter(ctx context.Context, characterID int32) (*models.Character, error) {
+	defer cs.Logger.LogOperation(ctx, "approve_character", "character_id", characterID)()
+
 	queries := models.New(cs.DB)
 	character, err := queries.UpdateCharacterStatus(ctx, models.UpdateCharacterStatusParams{
 		ID:     characterID,
 		Status: pgtype.Text{String: "approved", Valid: true},
 	})
-	return &character, err
+
+	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to approve character", "character_id", characterID)
+		return nil, err
+	}
+
+	cs.Logger.Info(ctx, "Character approved",
+		"character_id", character.ID,
+		"character_name", character.Name,
+		"game_id", character.GameID,
+		"status", character.Status.String,
+	)
+
+	return &character, nil
 }
 
 func (cs *CharacterService) RejectCharacter(ctx context.Context, characterID int32) (*models.Character, error) {
+	defer cs.Logger.LogOperation(ctx, "reject_character", "character_id", characterID)()
+
 	queries := models.New(cs.DB)
 	character, err := queries.UpdateCharacterStatus(ctx, models.UpdateCharacterStatusParams{
 		ID:     characterID,
 		Status: pgtype.Text{String: "rejected", Valid: true},
 	})
-	return &character, err
+
+	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to reject character", "character_id", characterID)
+		return nil, err
+	}
+
+	cs.Logger.Info(ctx, "Character rejected",
+		"character_id", character.ID,
+		"character_name", character.Name,
+		"game_id", character.GameID,
+		"status", character.Status.String,
+	)
+
+	return &character, nil
 }
 
 func (cs *CharacterService) AssignNPCToUser(ctx context.Context, characterID, assignedUserID, assignedByUserID int32) error {
+	defer cs.Logger.LogOperation(ctx, "assign_npc_to_user",
+		"character_id", characterID,
+		"assigned_user_id", assignedUserID,
+		"assigned_by_user_id", assignedByUserID,
+	)()
+
 	queries := models.New(cs.DB)
 
 	// Verify this is an NPC
 	character, err := queries.GetCharacter(ctx, characterID)
 	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to get character for NPC assignment", "character_id", characterID)
 		return err
 	}
 
 	if character.CharacterType != "npc" {
+		cs.Logger.Warn(ctx, "Attempted to assign non-NPC character to user",
+			"character_id", characterID,
+			"character_type", character.CharacterType,
+		)
 		return fmt.Errorf("character is not an NPC")
 	}
 
@@ -125,7 +198,22 @@ func (cs *CharacterService) AssignNPCToUser(ctx context.Context, characterID, as
 		AssignedByUserID: assignedByUserID,
 	})
 
-	return err
+	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to assign NPC to user",
+			"character_id", characterID,
+			"assigned_user_id", assignedUserID,
+		)
+		return err
+	}
+
+	cs.Logger.Info(ctx, "NPC assigned to user",
+		"character_id", characterID,
+		"character_name", character.Name,
+		"assigned_user_id", assignedUserID,
+		"assigned_by_user_id", assignedByUserID,
+	)
+
+	return nil
 }
 
 func (cs *CharacterService) SetCharacterData(ctx context.Context, req CharacterDataRequest) error {
@@ -171,21 +259,40 @@ func (cs *CharacterService) CanUserEditCharacter(ctx context.Context, characterI
 
 	character, err := queries.GetCharacter(ctx, characterID)
 	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to get character for permission check",
+			"character_id", characterID,
+			"user_id", userID,
+		)
 		return false, err
 	}
 
 	// Character owner can edit
 	if character.UserID.Valid && character.UserID.Int32 == userID {
+		cs.Logger.Debug(ctx, "Authorization granted: character owner",
+			"character_id", characterID,
+			"user_id", userID,
+			"reason", "character_owner",
+		)
 		return true, nil
 	}
 
 	// GM can edit any character in their game
 	game, err := queries.GetGame(ctx, character.GameID)
 	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to get game for permission check",
+			"character_id", characterID,
+			"game_id", character.GameID,
+		)
 		return false, err
 	}
 
 	if game.GmUserID == userID {
+		cs.Logger.Debug(ctx, "Authorization granted: game GM",
+			"character_id", characterID,
+			"user_id", userID,
+			"game_id", character.GameID,
+			"reason", "game_gm",
+		)
 		return true, nil
 	}
 
@@ -194,12 +301,25 @@ func (cs *CharacterService) CanUserEditCharacter(ctx context.Context, characterI
 		assignment, err := queries.GetNPCAssignment(ctx, characterID)
 		// Ignore "no rows" error - just means NPC is not assigned
 		if err == nil && assignment.AssignedUserID == userID {
+			cs.Logger.Debug(ctx, "Authorization granted: NPC assigned user",
+				"character_id", characterID,
+				"user_id", userID,
+				"reason", "npc_assignment",
+			)
 			return true, nil
 		}
 		// If there's an error other than "no rows", it's a real problem
 		// But we should still allow GM and owner permissions to work
 		// So we don't return the error here, just continue to return false
 	}
+
+	cs.Logger.Warn(ctx, "Authorization denied: cannot edit character",
+		"character_id", characterID,
+		"user_id", userID,
+		"character_owner_id", character.UserID.Int32,
+		"game_id", character.GameID,
+		"gm_user_id", game.GmUserID,
+	)
 
 	return false, nil
 }
@@ -218,6 +338,11 @@ func isValidCharacterType(characterType string) bool {
 
 // ReassignCharacter reassigns a character to a new owner (used when removing players)
 func (cs *CharacterService) ReassignCharacter(ctx context.Context, characterID, newOwnerUserID int32) (*models.Character, error) {
+	defer cs.Logger.LogOperation(ctx, "reassign_character",
+		"character_id", characterID,
+		"new_owner_user_id", newOwnerUserID,
+	)()
+
 	queries := models.New(cs.DB)
 
 	character, err := queries.ReassignCharacter(ctx, models.ReassignCharacterParams{
@@ -225,7 +350,22 @@ func (cs *CharacterService) ReassignCharacter(ctx context.Context, characterID, 
 		UserID: pgtype.Int4{Int32: newOwnerUserID, Valid: true},
 	})
 
-	return &character, err
+	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to reassign character",
+			"character_id", characterID,
+			"new_owner_user_id", newOwnerUserID,
+		)
+		return nil, err
+	}
+
+	cs.Logger.Info(ctx, "Character reassigned to new owner",
+		"character_id", character.ID,
+		"character_name", character.Name,
+		"new_owner_user_id", newOwnerUserID,
+		"game_id", character.GameID,
+	)
+
+	return &character, nil
 }
 
 // ListInactiveCharacters returns all inactive characters for a game
@@ -236,41 +376,76 @@ func (cs *CharacterService) ListInactiveCharacters(ctx context.Context, gameID i
 
 // DeactivatePlayerCharacters marks all player characters for a user as inactive
 func (cs *CharacterService) DeactivatePlayerCharacters(ctx context.Context, gameID, userID int32) error {
+	defer cs.Logger.LogOperation(ctx, "deactivate_player_characters",
+		"game_id", gameID,
+		"user_id", userID,
+	)()
+
 	queries := models.New(cs.DB)
-	return queries.DeactivatePlayerCharacters(ctx, models.DeactivatePlayerCharactersParams{
+	err := queries.DeactivatePlayerCharacters(ctx, models.DeactivatePlayerCharactersParams{
 		GameID: gameID,
 		UserID: pgtype.Int4{Int32: userID, Valid: true},
 	})
+
+	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to deactivate player characters",
+			"game_id", gameID,
+			"user_id", userID,
+		)
+		return err
+	}
+
+	cs.Logger.Info(ctx, "Player characters deactivated",
+		"game_id", gameID,
+		"user_id", userID,
+	)
+
+	return nil
 }
 
 // DeleteCharacter deletes a character if it has no activity (messages or actions)
 // Returns error if character has messages or action submissions
 func (cs *CharacterService) DeleteCharacter(ctx context.Context, characterID int32) error {
+	defer cs.Logger.LogOperation(ctx, "delete_character", "character_id", characterID)()
+
 	queries := models.New(cs.DB)
 
 	// Verify character exists
 	character, err := queries.GetCharacter(ctx, characterID)
 	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to get character for deletion", "character_id", characterID)
 		return fmt.Errorf("failed to get character: %w", err)
 	}
 
 	// Check if character has any messages
 	hasMessages, err := cs.characterHasMessages(ctx, characterID)
 	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to check character messages", "character_id", characterID)
 		return fmt.Errorf("failed to check character messages: %w", err)
 	}
 
 	if hasMessages {
+		cs.Logger.Warn(ctx, "Cannot delete character: has existing messages",
+			"character_id", characterID,
+			"character_name", character.Name,
+			"game_id", character.GameID,
+		)
 		return fmt.Errorf("cannot delete character with existing messages")
 	}
 
 	// Check if character has any action submissions
 	hasActions, err := cs.characterHasActionSubmissions(ctx, characterID)
 	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to check character actions", "character_id", characterID)
 		return fmt.Errorf("failed to check character actions: %w", err)
 	}
 
 	if hasActions {
+		cs.Logger.Warn(ctx, "Cannot delete character: has existing action submissions",
+			"character_id", characterID,
+			"character_name", character.Name,
+			"game_id", character.GameID,
+		)
 		return fmt.Errorf("cannot delete character with existing action submissions")
 	}
 
@@ -278,8 +453,19 @@ func (cs *CharacterService) DeleteCharacter(ctx context.Context, characterID int
 	// Note: character_data and npc_assignments will CASCADE delete
 	err = queries.DeleteCharacter(ctx, character.ID)
 	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to delete character",
+			"character_id", characterID,
+			"character_name", character.Name,
+		)
 		return fmt.Errorf("failed to delete character: %w", err)
 	}
+
+	cs.Logger.Info(ctx, "Character deleted successfully",
+		"character_id", characterID,
+		"character_name", character.Name,
+		"game_id", character.GameID,
+		"character_type", character.CharacterType,
+	)
 
 	return nil
 }
@@ -330,15 +516,28 @@ func (cs *CharacterService) ListAudienceNPCs(ctx context.Context, gameID int32) 
 // AssignNPCToAudience assigns an NPC character to an audience member
 // Creates or updates the NPC assignment record
 func (cs *CharacterService) AssignNPCToAudience(ctx context.Context, characterID, assignedUserID, assignedByUserID int32) (*models.NpcAssignment, error) {
+	defer cs.Logger.LogOperation(ctx, "assign_npc_to_audience",
+		"character_id", characterID,
+		"assigned_user_id", assignedUserID,
+		"assigned_by_user_id", assignedByUserID,
+	)()
+
 	queries := models.New(cs.DB)
 
 	// Verify this is an NPC
 	character, err := queries.GetCharacter(ctx, characterID)
 	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to get character for audience assignment",
+			"character_id", characterID,
+		)
 		return nil, fmt.Errorf("failed to get character: %w", err)
 	}
 
 	if character.CharacterType != "npc" {
+		cs.Logger.Warn(ctx, "Attempted to assign non-NPC character to audience",
+			"character_id", characterID,
+			"character_type", character.CharacterType,
+		)
 		return nil, fmt.Errorf("character is not an NPC (type: %s)", character.CharacterType)
 	}
 
@@ -350,8 +549,19 @@ func (cs *CharacterService) AssignNPCToAudience(ctx context.Context, characterID
 	})
 
 	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to assign NPC to audience",
+			"character_id", characterID,
+			"assigned_user_id", assignedUserID,
+		)
 		return nil, fmt.Errorf("failed to assign NPC to audience: %w", err)
 	}
+
+	cs.Logger.Info(ctx, "NPC assigned to audience member",
+		"character_id", characterID,
+		"character_name", character.Name,
+		"assigned_user_id", assignedUserID,
+		"assigned_by_user_id", assignedByUserID,
+	)
 
 	return &assignment, nil
 }

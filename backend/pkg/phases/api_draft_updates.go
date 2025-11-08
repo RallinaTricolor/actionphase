@@ -42,7 +42,7 @@ func (h *Handler) validateGMAccessAndResult(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Check GM permissions
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	canManage, err := phaseService.CanUserManagePhases(r.Context(), int32(gameID), int32(authUser.ID))
 	if err != nil {
 		h.App.ObsLogger.Error(r.Context(), "Failed to check phase management permission", "error", err)
@@ -56,7 +56,7 @@ func (h *Handler) validateGMAccessAndResult(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Verify the action result exists and belongs to this game
-	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	result, err := actionService.GetActionResult(r.Context(), int32(resultID))
 	if err != nil {
 		h.App.ObsLogger.Error(r.Context(), "Failed to get action result", "error", err)

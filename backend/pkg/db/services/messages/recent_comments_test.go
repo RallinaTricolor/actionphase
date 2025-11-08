@@ -18,9 +18,11 @@ func TestMessageService_ListRecentCommentsWithParents(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
@@ -324,9 +326,11 @@ func TestMessageService_GetTotalCommentCount(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 
-	service := &MessageService{DB: testDB.Pool}
-	characterService := &db.CharacterService{DB: testDB.Pool}
-	gameService := &db.GameService{DB: testDB.Pool}
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Setup test data
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")

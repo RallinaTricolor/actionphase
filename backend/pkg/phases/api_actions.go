@@ -40,8 +40,8 @@ func (h *Handler) SubmitAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
-	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Check if user can submit actions
 	canSubmit, err := phaseService.CanUserSubmitActions(ctx, int32(gameID), int32(authUser.ID))
@@ -190,7 +190,7 @@ func (h *Handler) GetGameActions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check permissions
-	phaseService := &phasesvc.PhaseService{DB: h.App.Pool}
+	phaseService := &phasesvc.PhaseService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	canManage, err := phaseService.CanUserManagePhases(ctx, int32(gameID), int32(authUser.ID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to check phase management permission", "error", err)

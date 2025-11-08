@@ -71,7 +71,7 @@ func (h *Handler) V1Me(w http.ResponseWriter, r *http.Request) {
 	fmt.Sscanf(userIDStr.(string), "%d", &uid)
 
 	// Look up current user from database
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	user, err := userService.User(uid)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to find user", "error", err, "user_id", uid)
@@ -136,7 +136,7 @@ func (h *Handler) V1GetPreferences(w http.ResponseWriter, r *http.Request) {
 	fmt.Sscanf(userIDStr.(string), "%d", &userID)
 
 	// Look up current user
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	user, err := userService.User(userID)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to find user", "error", err, "user_id", userID)
@@ -187,7 +187,7 @@ func (h *Handler) V1UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 	fmt.Sscanf(userIDStr.(string), "%d", &userID)
 
 	// Look up current user
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	user, err := userService.User(userID)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to find user", "error", err, "user_id", userID)
@@ -253,7 +253,7 @@ func (h *Handler) V1SearchUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Search users
-	userService := &db.UserService{DB: h.App.Pool}
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	users, err := userService.SearchUsers(ctx, query)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to search users", "error", err, "query", query)
