@@ -86,10 +86,17 @@ func main() {
 	var storageBackend core.StorageBackendInterface
 	if config.Storage.Backend == "s3" {
 		// S3 storage for production
+		// Only use custom PublicURL if explicitly set (for CDN)
+		// Otherwise, let S3Storage auto-generate the S3 URL
+		publicURL := ""
+		if os.Getenv("STORAGE_PUBLIC_URL") != "" {
+			publicURL = config.Storage.PublicURL
+		}
+
 		s3Storage, err := storage.NewS3Storage(
 			config.Storage.S3Bucket,
 			config.Storage.S3Region,
-			config.Storage.PublicURL,
+			publicURL,
 			config.Storage.S3Endpoint,
 		)
 		if err != nil {
@@ -99,7 +106,8 @@ func main() {
 		storageBackend = s3Storage
 		logger.Info("Using S3 storage",
 			"bucket", config.Storage.S3Bucket,
-			"region", config.Storage.S3Region)
+			"region", config.Storage.S3Region,
+			"public_url", publicURL)
 	} else {
 		// Local filesystem storage for development/staging
 		storageBackend = storage.NewLocalStorage(
