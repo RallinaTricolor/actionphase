@@ -109,16 +109,17 @@ describe('CharactersList', () => {
       expect(screen.getByText('NPCs')).toBeInTheDocument()
     })
 
-    it('should display character status badges', async () => {
+    it('should display character status badges for pending characters', async () => {
       renderWithProviders(
         <CharactersList gameId={123} userRole="gm" currentUserId={1} />
       )
 
       await waitFor(() => {
-        expect(screen.getAllByText('approved').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('pending')[0]).toBeInTheDocument()
       })
 
-      expect(screen.getAllByText('pending')[0]).toBeInTheDocument()
+      // Approved badge should NOT be shown
+      expect(screen.queryByText('approved')).not.toBeInTheDocument()
     })
 
     it('should show ownership badge for user characters', async () => {
@@ -146,17 +147,17 @@ describe('CharactersList', () => {
       expect(screen.getAllByText('Villain NPC')[0]).toBeInTheDocument()
     })
 
-    it('GM should see approve button for pending characters', async () => {
+    it('GM should see publish button for pending characters', async () => {
       renderWithProviders(
         <CharactersList gameId={123} userRole="gm" currentUserId={1} />
       )
 
       await waitFor(() => {
-        expect(screen.getAllByText('Approve')[0]).toBeInTheDocument()
+        expect(screen.getAllByText('Publish')[0]).toBeInTheDocument()
       })
     })
 
-    it('GM should NOT see approve button for approved characters', async () => {
+    it('GM should NOT see publish button for approved characters', async () => {
       server.use(
         http.get('http://localhost:3000/api/v1/games/:gameId/characters', () => {
           return HttpResponse.json([mockCharacters[0]]) // Only approved character
@@ -171,7 +172,7 @@ describe('CharactersList', () => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
-      expect(screen.queryByText('Approve')).not.toBeInTheDocument()
+      expect(screen.queryByText('Publish')).not.toBeInTheDocument()
     })
   })
 
@@ -192,7 +193,7 @@ describe('CharactersList', () => {
       expect(screen.getAllByText('Villain NPC')[0]).toBeInTheDocument()
     })
 
-    it('Player should NOT see approve button', async () => {
+    it('Player should NOT see publish button', async () => {
       renderWithProviders(
         <CharactersList gameId={123} userRole="player" currentUserId={1} />
       )
@@ -201,7 +202,7 @@ describe('CharactersList', () => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
-      expect(screen.queryByText('Approve')).not.toBeInTheDocument()
+      expect(screen.queryByText('Publish')).not.toBeInTheDocument()
     })
   })
 
@@ -355,7 +356,7 @@ describe('CharactersList', () => {
   })
 
   describe('Character actions', () => {
-    it('should call approve mutation when approve button is clicked', async () => {
+    it('should call approve mutation when publish button is clicked', async () => {
       let approvePayload: any = null
 
       server.use(
@@ -370,10 +371,10 @@ describe('CharactersList', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getAllByText('Approve')[0]).toBeInTheDocument()
+        expect(screen.getAllByText('Publish')[0]).toBeInTheDocument()
       })
 
-      const approveButton = screen.getAllByText('Approve')[0]
+      const approveButton = screen.getAllByText('Publish')[0]
       fireEvent.click(approveButton)
 
       await waitFor(() => {
@@ -420,18 +421,17 @@ describe('CharactersList', () => {
   })
 
   describe('Status badges', () => {
-    it('should show green badge for approved characters', async () => {
+    it('should NOT show badge for approved characters', async () => {
       renderWithProviders(
         <CharactersList gameId={123} userRole="gm" currentUserId={1} />
       )
 
       await waitFor(() => {
-        const approvedBadges = screen.getAllByText('approved')
-        expect(approvedBadges.length).toBeGreaterThan(0)
-        // Check that the badge's parent element has the correct classes
-        const badgeElement = approvedBadges[0].closest('.bg-semantic-success-subtle')
-        expect(badgeElement).toBeInTheDocument()
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
+
+      // Approved badge should be hidden
+      expect(screen.queryByText('approved')).not.toBeInTheDocument()
     })
 
     it('should show yellow badge for pending characters', async () => {
