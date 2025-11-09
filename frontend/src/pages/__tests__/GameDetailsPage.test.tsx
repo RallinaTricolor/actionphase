@@ -356,18 +356,26 @@ describe('GameDetailsPage', () => {
       }, { timeout: 3000 })
     })
 
-    it('should display participants list when clicking Participants tab in character creation', async () => {
-      // Use character_creation state which has a Participants tab
+    it('should display participants list when clicking People tab in character creation', async () => {
+      // Use character_creation state which has a People tab
       const characterCreationGame = { ...mockGame, state: 'character_creation' as const }
       setupDefaultHandlers(characterCreationGame, mockParticipants, 999)
 
       renderGameDetailsPage(1)
 
+      // Click the People tab
       await waitFor(() => {
-        const participantsTab = screen.getByRole('tab', { name: /participants/i })
-        fireEvent.click(participantsTab)
+        const peopleTab = screen.getByRole('tab', { name: /people/i })
+        fireEvent.click(peopleTab)
       })
 
+      // Click the "Game Participants" sub-tab within the People view
+      await waitFor(() => {
+        const participantsSubTab = screen.getByRole('button', { name: /game participants/i })
+        fireEvent.click(participantsSubTab)
+      })
+
+      // Verify participants are displayed
       await waitFor(() => {
         expect(screen.getByText('player1')).toBeInTheDocument()
         expect(screen.getByText('player2')).toBeInTheDocument()

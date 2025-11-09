@@ -39,31 +39,43 @@ Before any fixes are implemented:
 ## Category 1: Game State & Tab Visibility Issues (8 issues)
 
 ### Issue 1.1: Deadlines Header Visible in Wrong States
-**Status:** 🔴 Not Investigated
+**Status:** ✅ Fixed (2025-01-08)
 **Priority:** High
 **Reported Behavior:**
 Deadlines header is visible in "Setup" and "Recruiting" states, but should only be visible in "Character Creation" and "In Progress" states.
 
 **Investigation:**
-- [ ] Check current game state conditions in frontend tab rendering
-- [ ] Verify backend game state transitions
-- [ ] Identify where deadline visibility logic is implemented
+- [x] Check current game state conditions in frontend tab rendering
+- [x] Verify backend game state transitions
+- [x] Identify where deadline visibility logic is implemented
 
 **Root Cause:**
-_To be determined_
+`DeadlineStrip.tsx` (lines 152-155) had incomplete visibility logic that only excluded 'completed' and 'cancelled' states, but did not exclude 'setup' and 'recruitment' states. The component was using negative logic (exclude these states) instead of positive logic (only include these states).
 
-**Proposed Solution:**
-_To be determined_
+**Implemented Solution:**
+Changed visibility logic from exclusion-based to inclusion-based:
+```typescript
+// OLD (lines 152-155):
+if (gameState === 'completed' || gameState === 'cancelled') {
+  return null;
+}
+
+// NEW:
+if (gameState !== 'character_creation' && gameState !== 'in_progress') {
+  return null;
+}
+```
 
 **Test Strategy:**
-- [ ] Add E2E test for deadline visibility by game state
-- [ ] Unit test for tab visibility logic
-- [ ] Test all game states: Setup, Recruiting, Character Creation, In Progress, Completed
+- [x] Created comprehensive unit tests for DeadlineStrip component (13 tests)
+- [x] Test all 6 game states: setup, recruitment, character_creation, in_progress, completed, cancelled
+- [x] Test empty state visibility (GM vs non-GM)
+- [x] Test loading state in allowed/disallowed game states
+- [x] All tests passing (13/13)
 
-**Files to Review:**
-- Frontend game detail page component
-- Tab rendering logic
-- Game state constants
+**Files Modified:**
+- `frontend/src/components/DeadlineStrip.tsx` (fixed visibility logic)
+- `frontend/src/components/DeadlineStrip.test.tsx` (created comprehensive tests)
 
 ---
 

@@ -149,8 +149,8 @@ export function DeadlineStrip({
     return null;
   }
 
-  // Hide deadlines section for completed/cancelled games (read-only)
-  if (gameState === 'completed' || gameState === 'cancelled') {
+  // Only show deadlines during character creation and in-progress states
+  if (gameState !== 'character_creation' && gameState !== 'in_progress') {
     return null;
   }
 
