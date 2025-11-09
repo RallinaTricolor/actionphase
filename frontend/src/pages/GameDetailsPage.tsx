@@ -10,6 +10,7 @@ import { usePolls } from '../hooks';
 import { GameHeader } from '../components/GameHeader';
 import { GameApplicationStatus } from '../components/GameApplicationStatus';
 import { GameActions } from '../components/GameActions';
+import { GameInfoGrid } from '../components/GameInfoGrid';
 import { TabNavigation } from '../components/TabNavigation';
 import { GameTabContent } from '../components/GameTabContent';
 import { ApplyToGameModal } from '../components/ApplyToGameModal';
@@ -306,6 +307,9 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
               )}
             </div>
           )}
+
+          {/* Game Info Grid - Show game metadata */}
+          <GameInfoGrid game={game} />
 
           {/* User Application Status - Only show during recruitment */}
           {!isGM && userApplication && game.state === 'recruitment' && (

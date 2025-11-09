@@ -299,7 +299,7 @@ describe('GameDetailsPage', () => {
 
       // Then check for state transition buttons in the opened menu
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /close recruitment/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /start character creation/i })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: /cancel game/i })).toBeInTheDocument()
       })
     })

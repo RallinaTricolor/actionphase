@@ -191,7 +191,7 @@ export function useGameStateManagement({
         actions.push({ label: 'Start Recruitment', state: 'recruitment', color: 'bg-semantic-success hover:bg-semantic-success-hover text-white' });
         break;
       case 'recruitment':
-        actions.push({ label: 'Close Recruitment', state: 'character_creation', color: 'bg-interactive-primary hover:bg-interactive-primary-hover text-white' });
+        actions.push({ label: 'Start Character Creation', state: 'character_creation', color: 'bg-interactive-primary hover:bg-interactive-primary-hover text-white' });
         actions.push({ label: 'Cancel Game', state: 'cancelled', color: 'bg-semantic-danger hover:bg-semantic-danger-hover text-white' });
         break;
       case 'character_creation':
