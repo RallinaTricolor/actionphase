@@ -505,65 +505,112 @@ Game editing allowed enabling "Anonymous Mode" but NOT "Auto Accept Audience", d
 ## Category 3: Filter/Query Issues (2 issues)
 
 ### Issue 3.1: "Has Open Spots" Filter Shows Wrong Games
-**Status:** 🔴 Not Investigated
+**Status:** 🟢 Reproduced - Solution Proposed
 **Priority:** High
 **Reported Behavior:**
 "Has Open Spots" filter shows games that aren't in "Recruiting" state.
 
 **Investigation:**
-- [ ] Check filter query logic
-- [ ] Review database query for "Has Open Spots"
-- [ ] Verify game state is included in filter
-- [ ] Test with various game states
+✅ Investigated - Backend query missing game state filter
+
+**Reproduced:**
+✅ Confirmed - Filter returns games in "setup", "in_progress", "paused", "completed" states when has_open_spots=true
 
 **Root Cause:**
-_To be determined_
+The SQL query filter (lines 78-82 in `games_listing.sql`) checks if a game has open spots:
+```sql
+AND (
+  $4::boolean IS NOT true OR
+  (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') < g.max_players)
+)
+```
+
+**Problem:** The filter checks `current_players < max_players` but does NOT filter by game state. This means games in ANY state with open spots will match, even though only games in "recruitment" state should be looking for new players.
 
 **Proposed Solution:**
-_To be determined_
+Update the `has_open_spots` filter to ONLY match games in "recruitment" state:
+
+```sql
+-- Filter by open spots (only recruiting games with available spots)
+AND (
+  $4::boolean IS NOT true OR
+  (
+    g.state = 'recruitment' AND
+    (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') < g.max_players)
+  )
+)
+```
 
 **Test Strategy:**
-- [ ] Backend unit test for filter query
-- [ ] Integration test with test data
-- [ ] E2E test for filter UI
-- [ ] Verify filter with games in each state
+- [ ] Backend unit test: has_open_spots=true returns ONLY recruitment games
+- [ ] Backend unit test: has_open_spots=true excludes games in other states (setup, in_progress, completed)
+- [ ] Backend unit test: has_open_spots=false works correctly
+- [ ] Integration test with curl: verify filter returns correct games
+- [ ] E2E test: UI filter shows only recruiting games with spots
 
-**Files to Review:**
-- Game list filter logic
-- Backend game query handler
-- SQL query for game filtering
+**Files to Modify:**
+- `backend/pkg/db/queries/games_listing.sql` (lines 78-82) - Add state check
+- `backend/pkg/db/queries/games_listing.sql` (lines 149-153) - Add state check to CountFilteredGames
+- `backend/pkg/db/services/games_test.go` - Add unit tests
+- `frontend/e2e/games/game-filters.spec.ts` - Add E2E test
 
 ---
 
 ### Issue 3.2: "Applied" Filter Doesn't Show Applied Games
-**Status:** 🔴 Not Investigated
+**Status:** 🟢 Reproduced - Solution Proposed
 **Priority:** High
 **Reported Behavior:**
 "Applied" game filter doesn't show games that the user has applied to.
 
 **Investigation:**
-- [ ] Check "Applied" filter query
-- [ ] Verify application tracking in database
-- [ ] Review user-application relationship
-- [ ] Test with applied and non-applied games
+✅ Investigated - Frontend/Backend parameter name mismatch
+
+**Reproduced:**
+✅ Confirmed - Filter returns ALL games (292 games) instead of just applied games when using `participation_filter=applied`
 
 **Root Cause:**
-_To be determined_
+**Parameter name mismatch between frontend and backend:**
+
+1. **Frontend** sends: `participation_filter=applied`
+2. **Backend** expects: `participation=applied` (line 596 in `api_crud.go`)
+
+```go
+// Backend reads "participation" parameter
+if participationParam := queryParams.Get("participation"); participationParam != "" {
+    filters.ParticipationFilter = &participationParam
+}
+```
+
+When the parameter name doesn't match, the backend receives `nil` for `ParticipationFilter`, which causes the SQL query's participation filter to be skipped (line 71-76 in `games_listing.sql`), returning ALL visible games instead of filtering by application status.
+
+**Verified:** Using `participation=applied` returns correct result (1 game with user_relationship="applied").
 
 **Proposed Solution:**
-_To be determined_
+**Option 1 (Recommended):** Update backend to accept `participation_filter` to match frontend convention:
+```go
+if participationParam := queryParams.Get("participation_filter"); participationParam != "" {
+    filters.ParticipationFilter = &participationParam
+}
+```
+
+**Option 2:** Update frontend to send `participation` instead of `participation_filter`.
+
+**Recommendation:** Option 1 (update backend) is preferred because:
+- "participation_filter" is more descriptive
+- Frontend code may already be deployed/in use
+- Backend change is simpler (single line)
 
 **Test Strategy:**
-- [ ] Backend unit test for "Applied" filter
-- [ ] Integration test with applications
-- [ ] E2E test for filter UI
-- [ ] Test with pending/approved/rejected applications
+- [ ] Backend unit test: participation_filter=applied returns only applied games
+- [ ] Backend unit test: participation_filter=my_games returns only joined games
+- [ ] Backend unit test: participation_filter=not_joined returns only non-joined games
+- [ ] Integration test with curl: verify all participation filters work
+- [ ] E2E test: UI filter dropdowns work correctly
 
-**Files to Review:**
-- Game list filter logic
-- Backend game query handler
-- Application tracking logic
-- SQL query for user applications
+**Files to Modify:**
+- `backend/pkg/games/api_crud.go` (line 596) - Change "participation" to "participation_filter"
+- `backend/pkg/games/api_crud_test.go` - Add/update filter tests
+- `frontend/e2e/games/game-filters.spec.ts` - Add E2E test
 
 ---
 

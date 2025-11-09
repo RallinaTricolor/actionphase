@@ -953,10 +953,11 @@ func TestGameService_AudienceParticipation(t *testing.T) {
 
 	// Create a test game
 	game, err := gameService.CreateGame(ctx, core.CreateGameRequest{
-		Title:       "Audience Test Game",
-		Description: "Testing audience participation",
-		GMUserID:    int32(fixtures.TestUser.ID),
-		IsPublic:    true,
+		Title:              "Audience Test Game",
+		Description:        "Testing audience participation",
+		GMUserID:           int32(fixtures.TestUser.ID),
+		IsPublic:           true,
+		AutoAcceptAudience: true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 
@@ -1219,10 +1220,11 @@ func TestGameService_PromoteToCoGM(t *testing.T) {
 
 	// Create a test game
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
-		Title:       "Co-GM Test Game",
-		Description: "Testing co-GM promotion",
-		GMUserID:    int32(fixtures.TestUser.ID),
-		IsPublic:    false,
+		Title:              "Co-GM Test Game",
+		Description:        "Testing co-GM promotion",
+		GMUserID:           int32(fixtures.TestUser.ID),
+		IsPublic:           false,
+		AutoAcceptAudience: true,
 	})
 	core.AssertNoError(t, err, "Failed to create game")
 
@@ -1317,10 +1319,11 @@ func TestGameService_PromoteToCoGM_OnlyOneCoGMAllowed(t *testing.T) {
 
 	// Create a test game
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
-		Title:       "Co-GM Limit Test Game",
-		Description: "Testing single co-GM limit",
-		GMUserID:    int32(fixtures.TestUser.ID),
-		IsPublic:    false,
+		Title:              "Co-GM Limit Test Game",
+		Description:        "Testing single co-GM limit",
+		GMUserID:           int32(fixtures.TestUser.ID),
+		IsPublic:           false,
+		AutoAcceptAudience: true,
 	})
 	core.AssertNoError(t, err, "Failed to create game")
 
@@ -1388,10 +1391,11 @@ func TestGameService_DemoteFromCoGM(t *testing.T) {
 
 	// Create a test game
 	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
-		Title:       "Co-GM Demotion Test Game",
-		Description: "Testing co-GM demotion",
-		GMUserID:    int32(fixtures.TestUser.ID),
-		IsPublic:    false,
+		Title:              "Co-GM Demotion Test Game",
+		Description:        "Testing co-GM demotion",
+		GMUserID:           int32(fixtures.TestUser.ID),
+		IsPublic:           false,
+		AutoAcceptAudience: true,
 	})
 	core.AssertNoError(t, err, "Failed to create game")
 

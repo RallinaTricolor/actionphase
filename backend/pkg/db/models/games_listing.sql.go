@@ -31,10 +31,13 @@ WHERE
     ($3 = 'not_joined' AND ($1::int IS NOT NULL AND g.gm_user_id != $1 AND NOT EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1)))
   )
 
-  -- Filter by open spots (only filter when explicitly true)
+  -- Filter by open spots (only recruiting games with available spots)
   AND (
     $4::boolean IS NOT true OR
-    (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') < g.max_players)
+    (
+      g.state = 'recruitment' AND
+      (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') < g.max_players)
+    )
   )
 
   -- Filter by search text (case-insensitive search in title and description)
@@ -206,10 +209,13 @@ WHERE
     ($3 = 'not_joined' AND ($1::int IS NOT NULL AND g.gm_user_id != $1 AND NOT EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1)))
   )
 
-  -- Filter by open spots (only filter when explicitly true)
+  -- Filter by open spots (only recruiting games with available spots)
   AND (
     $4::boolean IS NOT true OR
-    (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') < g.max_players)
+    (
+      g.state = 'recruitment' AND
+      (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') < g.max_players)
+    )
   )
 
   -- Filter by search text (case-insensitive search in title and description)
