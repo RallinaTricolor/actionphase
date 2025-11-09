@@ -92,7 +92,7 @@ test.describe('Character Approval Workflow', () => {
    * Helper: Transition game to character_creation state
    */
   async function transitionToCharacterCreation(gmPage: any) {
-    await gmPage.getByRole('button', { name: 'Close Recruitment' }).click();
+    await gmPage.getByRole('button', { name: 'Start Character Creation' }).click();
     await gmPage.waitForLoadState('networkidle');
   }
 

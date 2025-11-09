@@ -34,15 +34,31 @@ export const AbilitiesTab: React.FC<AbilitiesTabProps> = (props) => {
         },
       ]}
       buildFieldName={(formData) => formData.abilityName.trim()}
-      buildFieldValue={(formData) => formData.abilityDescription.trim()}
-      getFieldType={() => 'text'}
-      renderDraftContent={(draft) => (
-        draft.field_value && (
-          <p className="text-sm text-content-secondary mt-1">
-            {draft.field_value}
-          </p>
-        )
-      )}
+      buildFieldValue={(formData) => {
+        const abilityData = {
+          name: formData.abilityName.trim(),
+          description: formData.abilityDescription.trim(),
+        };
+        return JSON.stringify(abilityData);
+      }}
+      getFieldType={() => 'json'}
+      renderDraftContent={(draft) => {
+        try {
+          const abilityData = JSON.parse(draft.field_value);
+          return (
+            <p className="text-sm text-content-secondary mt-1">
+              {abilityData.description}
+            </p>
+          );
+        } catch {
+          // Fallback for legacy text format
+          return (
+            <p className="text-sm text-content-secondary mt-1">
+              {draft.field_value}
+            </p>
+          );
+        }
+      }}
     />
   );
 };

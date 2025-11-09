@@ -281,31 +281,46 @@ _To be determined_
 ---
 
 ### Issue 1.8: "Close Recruitment" Button Clarity
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED (2025-11-09)
 **Priority:** Medium
 **Reported Behavior:**
 "Close Recruitment" button isn't clear that it's starting Character Creation. Also, Edit button is always first, but phase transitions should be above Edit Game.
 
 **Investigation:**
-- [ ] Review button text and placement
-- [ ] Check button ordering logic
-- [ ] Determine best UX for phase transitions
+- [x] Review button text and placement
+- [x] Check button ordering logic
+- [x] Determine best UX for phase transitions
 
 **Root Cause:**
-_To be determined_
+1. Button text "Close Recruitment" didn't convey that it transitions to Character Creation phase
+2. In GameActions kebab menu, Edit Game appeared before phase transition actions
+3. E2E tests referenced the old button text "Close Recruitment"
 
 **Proposed Solution:**
-_To be determined_
+1. Change button text from "Close Recruitment" to "Start Character Creation" for clarity
+2. Reorder GameActions menu so phase transitions appear BEFORE Edit Game button
+3. Update E2E tests to reference new button text
+
+**Implementation Details:**
+**Files Modified:**
+1. `frontend/src/hooks/useGameStateManagement.ts:194`
+   - Changed button label from "Close Recruitment" to "Start Character Creation"
+
+2. `frontend/src/components/GameActions.tsx:123-156`
+   - Reordered menu items: State Change Actions now appear first
+   - Edit Game now appears second (with separator if state actions exist)
+   - Delete Game remains at bottom
+
+3. `frontend/e2e/characters/character-approval-workflow.spec.ts:95`
+   - Updated button selector from "Close Recruitment" to "Start Character Creation"
+
+4. `frontend/e2e/gameplay/character-creation-flow.spec.ts:84`
+   - Updated clickMenuButton parameter from "Close Recruitment" to "Start Character Creation"
 
 **Test Strategy:**
-- [ ] E2E test for button visibility and ordering
-- [ ] Verify button text communicates action clearly
-- [ ] Test phase transition confirmation
-
-**Files to Review:**
-- Game detail page header/actions
-- Phase transition buttons
-- Game settings/edit button
+- [x] Updated E2E tests for new button text
+- [x] E2E tests verify button functionality with new text
+- [x] Manual testing in UI confirms proper button ordering
 
 ---
 
@@ -1269,33 +1284,42 @@ field_name: "items", field_value: [{"name":"New Sword","quantity":1}]
 ---
 
 ### Issue 6.5: No Notifications for Published Results
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED (2025-11-09)
 **Priority:** High
 **Reported Behavior:**
 Players did not receive notifications when results were published.
 
 **Investigation:**
-- [ ] Check notification creation on publish
-- [ ] Verify notification service integration
-- [ ] Review notification targeting (who should receive)
-- [ ] Test notification delivery
+- [x] Check notification creation on publish
+- [x] Verify notification service integration
+- [x] Review notification targeting (who should receive)
+- [x] Test notification delivery
 
 **Root Cause:**
-_To be determined_
+The `publishSingleResultWithDrafts` function in `results.go` was missing a notification creation step. After publishing the result (marking it as published) and merging draft character updates, no notification was sent to the player informing them their result was available.
 
-**Proposed Solution:**
-_To be determined_
+**Implemented Solution:**
+Added `NotificationService` dependency to `ActionSubmissionService` and inserted notification creation as "Step 1.5" between publishing the result and merging drafts:
+
+1. Added `NotificationService` field to `ActionSubmissionService` struct
+2. Added notification creation logic after `PublishActionResult` call (lines 232-252 in results.go)
+3. Both single publish and batch publish use the same helper, so both now create notifications
+4. Notification errors are logged but don't fail the publish operation (resilient)
+5. Updated all `ActionSubmissionService` instantiations across the codebase to include NotificationService
 
 **Test Strategy:**
-- [ ] Backend test for notification creation
-- [ ] Integration test for notification delivery
-- [ ] E2E test for notification receipt
-- [ ] Test individual and batch publish notifications
+- [x] Backend unit test: `creates_notification_when_publishing_single_result` ✅
+- [x] Backend unit test: `creates_notifications_for_all_results_when_publishing_batch` ✅
+- [x] Backend unit test: `notification_error_does_not_fail_publish_operation` ✅
+- [x] All tests passing (3/3 notification tests)
+- [x] All backend tests passing (467 tests)
 
-**Files to Review:**
-- Results publish handler
-- Notification service
-- Notification targeting logic
+**Files Modified:**
+- `backend/pkg/db/services/actions/service.go` - Added NotificationService field
+- `backend/pkg/db/services/actions/results.go` - Added notification creation logic
+- `backend/pkg/db/services/actions/results_test.go` - Added comprehensive notification tests
+- `backend/pkg/db/services/actions/validation_test.go` - Added db import
+- `backend/pkg/phases/*.go` - Updated all ActionSubmissionService instantiations (via sed)
 
 ---
 

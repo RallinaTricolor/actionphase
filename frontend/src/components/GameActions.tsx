@@ -120,21 +120,7 @@ export function GameActions({
 
           {showMenu && (
             <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-theme-default surface-raised shadow-xl py-1 z-50">
-              {/* Edit Game */}
-              {hasEditAction && (
-                <button
-                  onClick={() => {
-                    onEditGame();
-                    setShowMenu(false);
-                  }}
-                  disabled={actionLoading}
-                  className="w-full text-left px-4 py-2 text-sm text-content-primary hover:bg-surface-raised transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Edit Game
-                </button>
-              )}
-
-              {/* State Change Actions */}
+              {/* State Change Actions - Phase transitions first */}
               {hasStateActions && stateActions.map((action) => (
                 <button
                   key={action.state}
@@ -149,6 +135,25 @@ export function GameActions({
                   {action.label}
                 </button>
               ))}
+
+              {/* Edit Game - After phase transitions */}
+              {hasEditAction && (
+                <>
+                  {hasStateActions && (
+                    <div className="border-t border-border-primary my-1" />
+                  )}
+                  <button
+                    onClick={() => {
+                      onEditGame();
+                      setShowMenu(false);
+                    }}
+                    disabled={actionLoading}
+                    className="w-full text-left px-4 py-2 text-sm text-content-primary hover:bg-surface-raised transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Edit Game
+                  </button>
+                </>
+              )}
 
               {/* Delete Game */}
               {hasDeleteAction && (

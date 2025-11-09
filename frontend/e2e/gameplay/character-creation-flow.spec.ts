@@ -81,7 +81,7 @@ test.describe('Character Creation Flow', () => {
       // GM transitions game to character_creation state using POM (handles kebab menu)
       await gmGameDetailsPage.goto(parseInt(gameId!));
       const gmGameDetailsPage2 = new GameDetailsPage(gmPage);
-      await gmGameDetailsPage2.clickMenuButton('Close Recruitment');
+      await gmGameDetailsPage2.clickMenuButton('Start Character Creation');
       await gmPage.waitForLoadState('networkidle');
 
       // === Player Creates Character ===
