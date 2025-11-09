@@ -17,7 +17,7 @@ func TestActionSubmissionService_CreateDraftCharacterUpdate(t *testing.T) {
 	defer testDB.Close()
 
 	app := core.NewTestApp(testDB.Pool)
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
@@ -197,7 +197,7 @@ func TestActionSubmissionService_GetDraftCharacterUpdates(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
@@ -291,7 +291,7 @@ func TestActionSubmissionService_UpdateDraftCharacterUpdate(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
@@ -359,7 +359,7 @@ func TestActionSubmissionService_DeleteDraftCharacterUpdate(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
@@ -429,7 +429,7 @@ func TestActionSubmissionService_GetDraftUpdateCount(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
@@ -502,7 +502,7 @@ func TestActionSubmissionService_PublishDraftCharacterUpdates(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
@@ -592,7 +592,7 @@ func TestActionSubmissionService_PublishActionResult_WithDrafts(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
@@ -681,7 +681,7 @@ func TestActionSubmissionService_PublishAllPhaseResults_WithDrafts(t *testing.T)
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}

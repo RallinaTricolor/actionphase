@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	core "actionphase/pkg/core"
+	db "actionphase/pkg/db/services"
 	phases "actionphase/pkg/db/services/phases"
 
 	"github.com/stretchr/testify/assert"
@@ -16,7 +17,7 @@ func TestActionSubmissionService_CanUserSubmitAction(t *testing.T) {
 	defer testDB.Close()
 
 	app := core.NewTestApp(testDB.Pool)
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Create test data

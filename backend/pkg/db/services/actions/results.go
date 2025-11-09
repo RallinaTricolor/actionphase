@@ -224,9 +224,31 @@ func (as *ActionSubmissionService) mergeAndPublishDraftUpdates(ctx context.Conte
 // The queries parameter must be from a transaction context to ensure atomicity.
 func (as *ActionSubmissionService) publishSingleResultWithDrafts(ctx context.Context, queries *models.Queries, resultID int32) error {
 	// Step 1: Publish the action result (marks it as published)
-	_, err := queries.PublishActionResult(ctx, resultID)
+	result, err := queries.PublishActionResult(ctx, resultID)
 	if err != nil {
 		return fmt.Errorf("failed to publish action result %d: %w", resultID, err)
+	}
+
+	// Step 1.5: Create notification for the player
+	content := "Your action result has been published by the GM"
+	linkURL := fmt.Sprintf("/games/%d?tab=actions", result.GameID)
+	relatedType := "action_result"
+	_, notifErr := as.NotificationService.CreateNotification(ctx, &core.CreateNotificationRequest{
+		UserID:      result.UserID,
+		GameID:      &result.GameID,
+		Type:        core.NotificationTypeActionResult,
+		Title:       "Action Result Published",
+		Content:     &content,
+		RelatedType: &relatedType,
+		RelatedID:   &result.ID,
+		LinkURL:     &linkURL,
+	})
+	if notifErr != nil {
+		// Log error but don't fail the publish operation
+		as.Logger.LogError(ctx, notifErr, "Failed to create notification for published result",
+			"result_id", resultID,
+			"user_id", result.UserID,
+		)
 	}
 
 	// Step 2: Merge and publish draft character updates
