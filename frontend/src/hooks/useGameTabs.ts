@@ -78,16 +78,12 @@ export function useGameTabs({
       tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });
     } else if (gameState === 'in_progress') {
       // Common Room tab - only during common_room phases
-      if (currentPhaseType === 'common_room') {
-        tabList.push({ id: 'common-room', label: 'Common Room', icon: icons.commonRoom });
-      }
-
-      // Polls tab - only during common_room phases
+      // Badge shows unvoted polls count (polls are integrated as sub-tab within Common Room)
       if (currentPhaseType === 'common_room') {
         tabList.push({
-          id: 'polls',
-          label: 'Polls',
-          icon: icons.polls,
+          id: 'common-room',
+          label: 'Common Room',
+          icon: icons.commonRoom,
           badge: unvotedPollsCount > 0 ? unvotedPollsCount : undefined
         });
       }
