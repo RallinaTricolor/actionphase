@@ -59,6 +59,11 @@ describe('CharactersList', () => {
     server.use(
       http.get('http://localhost:3000/api/v1/games/:gameId/characters', () => {
         return HttpResponse.json(mockCharacters)
+      }),
+      // Mock controllable characters endpoint for ownership detection
+      http.get('http://localhost:3000/api/v1/games/:gameId/characters/controllable', () => {
+        // Return characters owned by user_id 1 (default test user)
+        return HttpResponse.json(mockCharacters.filter(c => c.user_id === 1))
       })
     )
   })
@@ -67,6 +72,9 @@ describe('CharactersList', () => {
     it('should show empty state when no characters exist', async () => {
       server.use(
         http.get('http://localhost:3000/api/v1/games/:gameId/characters', () => {
+          return HttpResponse.json([])
+        }),
+        http.get('http://localhost:3000/api/v1/games/:gameId/characters/controllable', () => {
           return HttpResponse.json([])
         })
       )
@@ -207,6 +215,14 @@ describe('CharactersList', () => {
 
     it('Player should see their own pending character during character_creation', async () => {
       // Test for Issue 4.1: Player should be able to see their own pending character
+      // Override controllable endpoint for user 2
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/characters/controllable', () => {
+          // Return pending character owned by user_id 2
+          return HttpResponse.json(mockCharacters.filter(c => c.user_id === 2))
+        })
+      )
+
       renderWithProviders(
         <CharactersList gameId={123} userRole="player" currentUserId={2} gameState="character_creation" />
       )
@@ -294,6 +310,13 @@ describe('CharactersList', () => {
     })
 
     it('should show "View Sheet" button for other approved characters', async () => {
+      // Override controllable endpoint for user 999 (doesn't own any characters)
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/characters/controllable', () => {
+          return HttpResponse.json([])
+        })
+      )
+
       renderWithProviders(
         <CharactersList gameId={123} userRole="player" currentUserId={999} />
       )
@@ -315,7 +338,7 @@ describe('CharactersList', () => {
   })
 
   describe('Anonymous mode', () => {
-    it('should hide ownership badges in anonymous mode', async () => {
+    it('should show "Your Character" badge for owned characters even in anonymous mode', async () => {
       renderWithProviders(
         <CharactersList
           gameId={123}
@@ -329,7 +352,10 @@ describe('CharactersList', () => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
       })
 
-      expect(screen.queryByText('Your Character')).not.toBeInTheDocument()
+      // Players should see "Your Character" badge for their own characters even in anonymous mode
+      // User 1 owns Hero Character and Villain NPC, so should see 2 badges
+      const yourCharacterBadges = screen.getAllByText('Your Character')
+      expect(yourCharacterBadges.length).toBeGreaterThan(0)
     })
 
     it('should hide character type in anonymous mode', async () => {

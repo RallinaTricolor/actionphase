@@ -37,6 +37,7 @@ export function CreateCharacterModal({
       apiClient.characters.createCharacter(gameId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['userControllableCharacters', gameId] });
       onClose();
       setFormData({ name: '', character_type: 'player_character' });
     },

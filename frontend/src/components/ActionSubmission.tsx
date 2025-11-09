@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useUserCharacters } from '../hooks/useUserCharacters';
 import { CountdownTimer } from './CountdownTimer';
 import { Button, Select, Textarea, Alert } from './ui';
 import type { GamePhase, ActionSubmissionRequest, ActionWithDetails } from '../types/phases';
@@ -13,10 +14,6 @@ interface ActionSubmissionProps {
 }
 
 export function ActionSubmission({ gameId, currentPhase, className = '' }: ActionSubmissionProps) {
-  // Get current user from AuthContext
-  const { currentUser } = useAuth();
-  const currentUserId = currentUser?.id ?? null;
-
   const [content, setContent] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -24,12 +21,8 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
 
   const queryClient = useQueryClient();
 
-  // Get user's characters for this game
-  const { data: characters = [] } = useQuery({
-    queryKey: ['gameCharacters', gameId],
-    queryFn: () => apiClient.characters.getGameCharacters(gameId).then(res => res.data),
-    enabled: !!gameId
-  });
+  // Get user's controllable characters (works in anonymous mode)
+  const { characters: availableCharacters } = useUserCharacters(gameId);
 
   // Get user's previous actions
   const { data: userActionsData } = useQuery({
@@ -45,14 +38,6 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
   const currentAction = currentPhase
     ? userActions.find(action => action.phase_id === currentPhase.id)
     : null;
-
-  // Filter characters to only show those owned by or assigned to the current user (memoized)
-  const availableCharacters = useMemo(() => {
-    return characters.filter(char => {
-      // Include if character belongs to the current user
-      return char.user_id === currentUserId;
-    });
-  }, [characters, currentUserId]);
 
   const submitActionMutation = useMutation({
     mutationFn: (data: ActionSubmissionRequest) => apiClient.phases.submitAction(gameId, data),
