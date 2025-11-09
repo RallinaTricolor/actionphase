@@ -194,9 +194,9 @@ func (q *Queries) CreateAudienceApplication(ctx context.Context, arg CreateAudie
 const createGame = `-- name: CreateGame :one
 INSERT INTO games (
     title, description, gm_user_id, genre, start_date, end_date,
-    recruitment_deadline, max_players, is_public, is_anonymous
+    recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 ) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at
 `
 
@@ -211,6 +211,7 @@ type CreateGameParams struct {
 	MaxPlayers          pgtype.Int4        `json:"max_players"`
 	IsPublic            pgtype.Bool        `json:"is_public"`
 	IsAnonymous         bool               `json:"is_anonymous"`
+	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
 }
 
 func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, error) {
@@ -225,6 +226,7 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		arg.MaxPlayers,
 		arg.IsPublic,
 		arg.IsAnonymous,
+		arg.AutoAcceptAudience,
 	)
 	var i Game
 	err := row.Scan(
@@ -936,7 +938,7 @@ const updateGame = `-- name: UpdateGame :one
 UPDATE games
 SET title = $2, description = $3, genre = $4, start_date = $5,
     end_date = $6, recruitment_deadline = $7, max_players = $8,
-    is_public = $9, is_anonymous = $10, updated_at = NOW()
+    is_public = $9, is_anonymous = $10, auto_accept_audience = $11, updated_at = NOW()
 WHERE id = $1
 RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at
 `
@@ -952,6 +954,7 @@ type UpdateGameParams struct {
 	MaxPlayers          pgtype.Int4        `json:"max_players"`
 	IsPublic            pgtype.Bool        `json:"is_public"`
 	IsAnonymous         bool               `json:"is_anonymous"`
+	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
 }
 
 func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, error) {
@@ -966,6 +969,7 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		arg.MaxPlayers,
 		arg.IsPublic,
 		arg.IsAnonymous,
+		arg.AutoAcceptAudience,
 	)
 	var i Game
 	err := row.Scan(

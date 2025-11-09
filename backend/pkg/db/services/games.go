@@ -60,6 +60,7 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 		"genre", req.Genre,
 		"is_public", req.IsPublic,
 		"is_anonymous", req.IsAnonymous,
+		"auto_accept_audience", req.AutoAcceptAudience,
 	)
 
 	queries := models.New(gs.DB)
@@ -87,6 +88,7 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 		MaxPlayers:          pgtype.Int4{Int32: req.MaxPlayers, Valid: req.MaxPlayers > 0},
 		IsPublic:            pgtype.Bool{Bool: req.IsPublic, Valid: true},
 		IsAnonymous:         req.IsAnonymous,
+		AutoAcceptAudience:  req.AutoAcceptAudience,
 	})
 
 	if err != nil {
@@ -332,6 +334,7 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 		MaxPlayers:          pgtype.Int4{Int32: req.MaxPlayers, Valid: req.MaxPlayers > 0},
 		IsPublic:            pgtype.Bool{Bool: req.IsPublic, Valid: true},
 		IsAnonymous:         req.IsAnonymous,
+		AutoAcceptAudience:  req.AutoAcceptAudience,
 	})
 
 	return &updatedGame, err

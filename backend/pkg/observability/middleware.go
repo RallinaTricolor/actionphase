@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -101,11 +102,15 @@ func ErrorRecoveryMiddleware(logger *Logger) func(next http.Handler) http.Handle
 				if err := recover(); err != nil {
 					ctx := r.Context()
 
+					// Capture stack trace
+					stackTrace := string(debug.Stack())
+
 					logger.Error(ctx, "Panic recovered in HTTP handler",
 						"panic", err,
 						"method", r.Method,
 						"path", r.URL.Path,
 						"remote_addr", r.RemoteAddr,
+						"stack_trace", stackTrace,
 					)
 
 					// Return 500 error to client

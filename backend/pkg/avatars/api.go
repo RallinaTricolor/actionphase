@@ -72,7 +72,7 @@ func (h *Handler) UploadCharacterAvatar(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Check if user can edit this character
-	characterService := &services.CharacterService{DB: h.App.DB}
+	characterService := &services.CharacterService{DB: h.App.DB, Logger: h.App.ObsLogger}
 	canEdit, err := characterService.CanUserEditCharacter(ctx, int32(characterID), int32(userID))
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
@@ -202,7 +202,7 @@ func (h *Handler) DeleteCharacterAvatar(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Check if user can edit this character
-	characterService := &services.CharacterService{DB: h.App.DB}
+	characterService := &services.CharacterService{DB: h.App.DB, Logger: h.App.ObsLogger}
 	canEdit, err := characterService.CanUserEditCharacter(ctx, int32(characterID), int32(userID))
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)

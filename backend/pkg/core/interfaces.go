@@ -293,6 +293,7 @@ type CreateGameRequest struct {
 	MaxPlayers          int32
 	IsPublic            bool
 	IsAnonymous         bool
+	AutoAcceptAudience  bool
 }
 
 // UpdateGameRequest represents the parameters needed to update an existing game
@@ -307,6 +308,7 @@ type UpdateGameRequest struct {
 	MaxPlayers          int32
 	IsPublic            bool
 	IsAnonymous         bool
+	AutoAcceptAudience  bool
 }
 
 // PhaseServiceInterface defines the contract for game phase management operations.

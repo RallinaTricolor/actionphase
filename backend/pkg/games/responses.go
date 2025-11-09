@@ -18,6 +18,7 @@ type GameResponse struct {
 	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          int32      `json:"max_players,omitempty"`
 	IsAnonymous         bool       `json:"is_anonymous"`
+	AutoAcceptAudience  bool       `json:"auto_accept_audience"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
 }
@@ -40,6 +41,7 @@ type GameWithDetailsResponse struct {
 	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          int32      `json:"max_players,omitempty"`
 	IsAnonymous         bool       `json:"is_anonymous"`
+	AutoAcceptAudience  bool       `json:"auto_accept_audience"`
 	CurrentPlayers      int64      `json:"current_players"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`

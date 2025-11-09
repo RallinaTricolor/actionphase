@@ -58,6 +58,8 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 		RecruitmentDeadline: data.RecruitmentDeadline.ToTimePtr(),
 		MaxPlayers:          data.MaxPlayers,
 		IsPublic:            true, // All games are now public
+		IsAnonymous:         data.IsAnonymous,
+		AutoAcceptAudience:  data.AutoAcceptAudience,
 	})
 
 	if err != nil {
@@ -78,13 +80,15 @@ func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
 
 	// Convert to response format
 	response := &GameResponse{
-		ID:          game.ID,
-		Title:       game.Title,
-		Description: game.Description.String,
-		GMUserID:    game.GmUserID,
-		State:       game.State.String,
-		CreatedAt:   game.CreatedAt.Time,
-		UpdatedAt:   game.UpdatedAt.Time,
+		ID:                 game.ID,
+		Title:              game.Title,
+		Description:        game.Description.String,
+		GMUserID:           game.GmUserID,
+		State:              game.State.String,
+		IsAnonymous:        game.IsAnonymous,
+		AutoAcceptAudience: game.AutoAcceptAudience,
+		CreatedAt:          game.CreatedAt.Time,
+		UpdatedAt:          game.UpdatedAt.Time,
 	}
 
 	if game.Genre.Valid {
@@ -129,13 +133,15 @@ func (h *Handler) GetGame(w http.ResponseWriter, r *http.Request) {
 
 	// Convert to response format (same as CreateGame)
 	response := &GameResponse{
-		ID:          game.ID,
-		Title:       game.Title,
-		Description: game.Description.String,
-		GMUserID:    game.GmUserID,
-		State:       game.State.String,
-		CreatedAt:   game.CreatedAt.Time,
-		UpdatedAt:   game.UpdatedAt.Time,
+		ID:                 game.ID,
+		Title:              game.Title,
+		Description:        game.Description.String,
+		GMUserID:           game.GmUserID,
+		State:              game.State.String,
+		IsAnonymous:        game.IsAnonymous,
+		AutoAcceptAudience: game.AutoAcceptAudience,
+		CreatedAt:          game.CreatedAt.Time,
+		UpdatedAt:          game.UpdatedAt.Time,
 	}
 
 	if game.Genre.Valid {
@@ -344,6 +350,7 @@ func (h *Handler) UpdateGame(w http.ResponseWriter, r *http.Request) {
 		MaxPlayers:          data.MaxPlayers,
 		IsPublic:            data.IsPublic,
 		IsAnonymous:         data.IsAnonymous,
+		AutoAcceptAudience:  data.AutoAcceptAudience,
 	})
 
 	if err != nil {
@@ -354,14 +361,15 @@ func (h *Handler) UpdateGame(w http.ResponseWriter, r *http.Request) {
 
 	// Convert to response format
 	response := &GameResponse{
-		ID:          updatedGame.ID,
-		Title:       updatedGame.Title,
-		Description: updatedGame.Description.String,
-		GMUserID:    updatedGame.GmUserID,
-		State:       updatedGame.State.String,
-		IsAnonymous: updatedGame.IsAnonymous,
-		CreatedAt:   updatedGame.CreatedAt.Time,
-		UpdatedAt:   updatedGame.UpdatedAt.Time,
+		ID:                 updatedGame.ID,
+		Title:              updatedGame.Title,
+		Description:        updatedGame.Description.String,
+		GMUserID:           updatedGame.GmUserID,
+		State:              updatedGame.State.String,
+		IsAnonymous:        updatedGame.IsAnonymous,
+		AutoAcceptAudience: updatedGame.AutoAcceptAudience,
+		CreatedAt:          updatedGame.CreatedAt.Time,
+		UpdatedAt:          updatedGame.UpdatedAt.Time,
 	}
 
 	if updatedGame.Genre.Valid {
@@ -464,15 +472,16 @@ func (h *Handler) GetGameWithDetails(w http.ResponseWriter, r *http.Request) {
 
 	// Convert to response format
 	response := &GameWithDetailsResponse{
-		ID:             game.ID,
-		Title:          game.Title,
-		Description:    game.Description.String,
-		GMUserID:       game.GmUserID,
-		State:          game.State.String,
-		IsAnonymous:    game.IsAnonymous,
-		CurrentPlayers: game.CurrentPlayers,
-		CreatedAt:      game.CreatedAt.Time,
-		UpdatedAt:      game.UpdatedAt.Time,
+		ID:                 game.ID,
+		Title:              game.Title,
+		Description:        game.Description.String,
+		GMUserID:           game.GmUserID,
+		State:              game.State.String,
+		IsAnonymous:        game.IsAnonymous,
+		AutoAcceptAudience: game.AutoAcceptAudience,
+		CurrentPlayers:     game.CurrentPlayers,
+		CreatedAt:          game.CreatedAt.Time,
+		UpdatedAt:          game.UpdatedAt.Time,
 	}
 
 	if game.GmUsername.Valid {
