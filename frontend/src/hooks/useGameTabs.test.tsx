@@ -449,4 +449,140 @@ describe('useGameTabs', () => {
       expect(handoutsTab).toBeDefined();
     });
   });
+
+  describe('Issue 1.3: Applications tab visibility by game state', () => {
+    it('should show Applications tab for GM during recruitment state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'recruitment',
+            isGM: true,
+            participantCount: 0,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: false,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      const applicationsTab = result.current.tabs.find(tab => tab.id === 'applications');
+      expect(applicationsTab).toBeDefined();
+      expect(applicationsTab?.label).toBe('Applications');
+    });
+
+    it('should NOT show Applications tab for players during recruitment state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'recruitment',
+            isGM: false,
+            participantCount: 0,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: false,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      const applicationsTab = result.current.tabs.find(tab => tab.id === 'applications');
+      expect(applicationsTab).toBeUndefined();
+    });
+
+    it('should NOT show Applications tab during character_creation state (even for GM)', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'character_creation',
+            isGM: true,
+            participantCount: 3,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: true,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      const applicationsTab = result.current.tabs.find(tab => tab.id === 'applications');
+      expect(applicationsTab).toBeUndefined();
+    });
+
+    it('should NOT show Applications tab during in_progress state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'in_progress',
+            isGM: true,
+            participantCount: 3,
+            currentPhaseType: 'action',
+            isAudience: false,
+            isParticipant: false,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      const applicationsTab = result.current.tabs.find(tab => tab.id === 'applications');
+      expect(applicationsTab).toBeUndefined();
+    });
+
+    it('should NOT show Applications tab during completed state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'completed',
+            isGM: true,
+            participantCount: 3,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: true,
+            hasCharacters: true,
+          }),
+        { wrapper }
+      );
+
+      const applicationsTab = result.current.tabs.find(tab => tab.id === 'applications');
+      expect(applicationsTab).toBeUndefined();
+    });
+
+    it('should NOT show Applications tab during cancelled state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'cancelled',
+            isGM: true,
+            participantCount: 0,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: false,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      const applicationsTab = result.current.tabs.find(tab => tab.id === 'applications');
+      expect(applicationsTab).toBeUndefined();
+    });
+
+    it('should NOT show Applications tab during setup state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'setup',
+            isGM: true,
+            participantCount: 0,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: false,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      const applicationsTab = result.current.tabs.find(tab => tab.id === 'applications');
+      expect(applicationsTab).toBeUndefined();
+    });
+  });
 });
