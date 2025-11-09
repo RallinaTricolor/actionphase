@@ -14,6 +14,23 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
+
+    // Pool configuration to prevent IPC channel crashes
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: false,
+        minThreads: 2,
+        maxThreads: 4,  // Limit concurrent workers to prevent resource exhaustion
+        useAtomics: true,
+      },
+    },
+
+    // Timeout configuration for better cleanup
+    testTimeout: 15000,  // Increased from default 5000ms
+    teardownTimeout: 5000,
+    hookTimeout: 10000,
+
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
