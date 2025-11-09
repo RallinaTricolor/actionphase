@@ -49,11 +49,25 @@ Issues:
     - History tab should be completely read only, regardless of Game State
 - Poll datepicker is non-standard compared to the rest of the app
 - GM can vote on polls (shouldn't be able to)
-- Poll results are visible to players before the poll ends
-    - Shows "Not Voted" despite having voted
-    - GM should be able to see individual results
-    - GM should be able to see "Other" custom responses
-    - Audience cannot see active "Polls" at all
+- ~~Poll results are visible to players before the poll ends~~ ✅ FIXED (2025-01-08)
+    - ~~Shows "Not Voted" despite having voted~~ ✅ FIXED (2025-01-08): Multiple bugs found and fixed:
+        - **Bug #1**: Players fetching results on active polls (403 errors) - Fixed `onSuccess` callback permission check
+        - **Bug #2**: Initial state triggering unauthorized fetch - Fixed `useState` initialization with permission check
+        - **Bug #3**: State not syncing after cache invalidation - Added `useEffect` to sync state when poll data changes
+        - **Bug #4**: Backend missing `user_has_voted` field - Added `PollListItem` response type with `UserHasVoted` field
+        - **Bug #5**: Character votes not detected - Created `HasUserVotedAny` SQL query to check all votes (player + character)
+    - ~~GM should be able to see individual results~~ ✅ FIXED: GMs can toggle results on active polls
+    - ~~GM should be able to see "Other" custom responses~~ ✅ FIXED: Included in poll results response
+    - ~~Audience cannot see active "Polls" at all~~ ✅ FIXED: Added to test fixtures, backend server restart resolved
     - Poll deadline not in the deadlines section
+
+**Testing Completed:**
+- Backend: `TestPollResultsAccess` - Role-based access control (GM/audience/player) for active/expired polls
+- Frontend: `PollCard.test.tsx` - 13 component tests validating UI visibility by role
+- E2E: `polls-flow.spec.ts` - Added tests for player restrictions and audience access on active polls
+    - **⚠️ E2E TEST ISSUES IDENTIFIED (2025-01-08)**: Existing E2E tests did NOT catch the 5 voting bugs above
+    - Root cause: Test Pyramid violation - tested only UI state, not behavior or errors
+    - See `.claude/planning/POLL_VOTING_BUGS.md` for complete analysis
+    - **Action needed**: Re-evaluate E2E test strategy from ground up
 - No reading mode for completed games
 - GM cannot edit a post they have created for a common room

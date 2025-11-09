@@ -216,3 +216,12 @@ SELECT EXISTS(
       AND user_id = @user_id
       AND COALESCE(character_id, 0) = COALESCE(@character_id, 0)
 ) as has_voted;
+
+-- name: HasUserVotedAny :one
+-- Check if user has voted in a poll at all (as player OR with any character)
+-- Use this for the polls list view to show "Voted" badge
+SELECT EXISTS(
+    SELECT 1 FROM poll_votes
+    WHERE poll_id = @poll_id
+      AND user_id = @user_id
+) as has_voted;

@@ -577,6 +577,28 @@ func (q *Queries) HasUserVoted(ctx context.Context, arg HasUserVotedParams) (boo
 	return has_voted, err
 }
 
+const hasUserVotedAny = `-- name: HasUserVotedAny :one
+SELECT EXISTS(
+    SELECT 1 FROM poll_votes
+    WHERE poll_id = $1
+      AND user_id = $2
+) as has_voted
+`
+
+type HasUserVotedAnyParams struct {
+	PollID int32 `json:"poll_id"`
+	UserID int32 `json:"user_id"`
+}
+
+// Check if user has voted in a poll at all (as player OR with any character)
+// Use this for the polls list view to show "Voted" badge
+func (q *Queries) HasUserVotedAny(ctx context.Context, arg HasUserVotedAnyParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasUserVotedAny, arg.PollID, arg.UserID)
+	var has_voted bool
+	err := row.Scan(&has_voted)
+	return has_voted, err
+}
+
 const listPollsByGame = `-- name: ListPollsByGame :many
 SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, vote_as_type, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at FROM common_room_polls
 WHERE game_id = $1

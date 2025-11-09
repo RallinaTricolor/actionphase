@@ -35,6 +35,7 @@ interface GameTabContentProps {
   isLoadingPhase?: boolean;
   isGM: boolean;
   isParticipant: boolean;
+  isAudience?: boolean;
   currentUserId: number | null;
   userCharacters: Character[];
   onLeaveGame?: () => void;
@@ -55,6 +56,7 @@ export function GameTabContent({
   isLoadingPhase = false,
   isGM,
   isParticipant,
+  isAudience = false,
   currentUserId,
   userCharacters,
   onLeaveGame,
@@ -152,6 +154,7 @@ export function GameTabContent({
           currentPhase={currentPhaseData.phase}
           isCurrentPhase={true}
           isGM={isGM}
+          isAudience={isAudience}
         />
       );
     }
@@ -188,6 +191,7 @@ export function GameTabContent({
             gameId={gameId}
             isGM={isGM}
             isCurrentPhase={true}
+            isAudience={isAudience}
           />
         </Suspense>
       );
