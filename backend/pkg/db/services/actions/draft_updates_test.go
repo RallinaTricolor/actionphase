@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	core "actionphase/pkg/core"
@@ -638,8 +639,8 @@ func TestActionSubmissionService_PublishActionResult_WithDrafts(t *testing.T) {
 			CharacterID:    character.ID,
 			ModuleType:     "abilities",
 			FieldName:      "strength",
-			FieldValue:     "20",
-			FieldType:      "number",
+			FieldValue:     `{"name":"strength","value":20,"description":"Physical strength"}`,
+			FieldType:      "json",
 			Operation:      "upsert",
 		}
 		_, err := actionService.CreateDraftCharacterUpdate(context.Background(), createReq)
@@ -659,19 +660,21 @@ func TestActionSubmissionService_PublishActionResult_WithDrafts(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, int64(0), count)
 
-		// Verify character data was updated
+		// Verify character data was updated (should be in 'abilities' array)
 		characterData, err := characterService.GetCharacterData(context.Background(), character.ID)
 		require.NoError(t, err)
 
 		found := false
 		for _, data := range characterData {
-			if data.ModuleType == "abilities" && data.FieldName == "strength" {
-				assert.Equal(t, "20", data.FieldValue.String)
+			if data.ModuleType == "abilities" && data.FieldName == "abilities" {
+				// Should be a JSON array containing our ability
+				assert.Contains(t, data.FieldValue.String, `"name":"strength"`)
+				assert.Contains(t, data.FieldValue.String, `"value":20`)
 				found = true
 				break
 			}
 		}
-		assert.True(t, found, "strength field should be in character_data after publishing")
+		assert.True(t, found, "abilities array should be in character_data after publishing")
 	})
 }
 
@@ -753,8 +756,8 @@ func TestActionSubmissionService_PublishAllPhaseResults_WithDrafts(t *testing.T)
 			CharacterID:    character1.ID,
 			ModuleType:     "abilities",
 			FieldName:      "strength",
-			FieldValue:     "18",
-			FieldType:      "number",
+			FieldValue:     `{"name":"strength","value":18,"description":"Physical strength"}`,
+			FieldType:      "json",
 			Operation:      "upsert",
 		}
 		_, err := actionService.CreateDraftCharacterUpdate(context.Background(), draft1Req)
@@ -766,8 +769,8 @@ func TestActionSubmissionService_PublishAllPhaseResults_WithDrafts(t *testing.T)
 			CharacterID:    character2.ID,
 			ModuleType:     "skills",
 			FieldName:      "lockpicking",
-			FieldValue:     "5",
-			FieldType:      "number",
+			FieldValue:     `{"name":"lockpicking","level":5,"description":"Picking locks"}`,
+			FieldType:      "json",
 			Operation:      "upsert",
 		}
 		_, err = actionService.CreateDraftCharacterUpdate(context.Background(), draft2Req)
@@ -810,26 +813,30 @@ func TestActionSubmissionService_PublishAllPhaseResults_WithDrafts(t *testing.T)
 
 		found1 := false
 		for _, data := range characterData1 {
-			if data.ModuleType == "abilities" && data.FieldName == "strength" {
-				assert.Equal(t, "18", data.FieldValue.String)
+			if data.ModuleType == "abilities" && data.FieldName == "abilities" {
+				// Should be a JSON array containing our ability
+				assert.Contains(t, data.FieldValue.String, `"name":"strength"`)
+				assert.Contains(t, data.FieldValue.String, `"value":18`)
 				found1 = true
 				break
 			}
 		}
-		assert.True(t, found1, "Player 1 strength field should be in character_data")
+		assert.True(t, found1, "Player 1 abilities array should be in character_data")
 
 		characterData2, err := characterService.GetCharacterData(context.Background(), character2.ID)
 		require.NoError(t, err)
 
 		found2 := false
 		for _, data := range characterData2 {
-			if data.ModuleType == "skills" && data.FieldName == "lockpicking" {
-				assert.Equal(t, "5", data.FieldValue.String)
+			if data.ModuleType == "skills" && data.FieldName == "skills" {
+				// Should be a JSON array containing our skill
+				assert.Contains(t, data.FieldValue.String, `"name":"lockpicking"`)
+				assert.Contains(t, data.FieldValue.String, `"level":5`)
 				found2 = true
 				break
 			}
 		}
-		assert.True(t, found2, "Player 2 lockpicking field should be in character_data")
+		assert.True(t, found2, "Player 2 skills array should be in character_data")
 	})
 
 	t.Run("bulk publish is atomic - all or nothing", func(t *testing.T) {
@@ -865,10 +872,10 @@ func TestActionSubmissionService_PublishAllPhaseResults_WithDrafts(t *testing.T)
 			draftReq := core.CreateDraftCharacterUpdateRequest{
 				ActionResultID: result.ID,
 				CharacterID:    character1.ID,
-				ModuleType:     "abilities",
+				ModuleType:     "currency",
 				FieldName:      "test_" + string(rune('a'+i)),
-				FieldValue:     "value",
-				FieldType:      "text",
+				FieldValue:     fmt.Sprintf(`{"name":"test_%s","amount":%d,"description":"Test currency"}`, string(rune('a'+i)), i+1),
+				FieldType:      "json",
 				Operation:      "upsert",
 			}
 			_, err = actionService.CreateDraftCharacterUpdate(context.Background(), draftReq)
