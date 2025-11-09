@@ -80,7 +80,7 @@ if (gameState !== 'character_creation' && gameState !== 'in_progress') {
 ---
 
 ### Issue 1.2: Limited Editing in "Setup" State
-**Status:** 🔴 Not Investigated
+**Status:** ✅ Fixed (2025-01-08)
 **Priority:** High
 **Reported Behavior:**
 In "Setup" state, can only edit game settings. Should have:
@@ -89,25 +89,29 @@ In "Setup" state, can only edit game settings. Should have:
 - Note: Handouts needs to be available in every state for both GMs and players
 
 **Investigation:**
-- [ ] Check tab availability logic by game state
-- [ ] Verify handout creation/editing permissions
-- [ ] Review what "Setup" state should allow vs what it currently allows
+- [x] Check tab availability logic by game state
+- [x] Verify handout creation/editing permissions
+- [x] Review what "Setup" state should allow vs what it currently allows
 
 **Root Cause:**
-_To be determined_
+In `useGameTabs.ts`, the handouts tab was only available in `in_progress` and `completed/cancelled` states. It was missing from `setup`, `recruitment`, and `character_creation` states. This prevented GMs from preparing content early and players from accessing materials during recruitment/character creation.
 
-**Proposed Solution:**
-_To be determined_
+**Implemented Solution:**
+Added handouts tab to all game states following the requirement: "Handouts needs to be available in every state for both GMs and players"
+
+Changes made in `useGameTabs.ts`:
+1. **Setup state** (line 148): Added handouts tab so GMs can prepare content before recruitment
+2. **Recruitment state** (line 69): Added handouts tab so players can review game materials while applying
+3. **Character creation state** (line 80): Added handouts tab so players can reference materials while creating characters
 
 **Test Strategy:**
-- [ ] E2E test for handout access in all game states
-- [ ] Permission tests for GMs and players
-- [ ] Verify handout editing across all states
+- [x] Added 6 unit tests in `useGameTabs.test.tsx` for handout visibility across all 6 game states
+- [x] All 21 tests passing (15 original + 6 new)
+- [x] Tests verify handouts tab appears in: setup, recruitment, character_creation, in_progress, completed, cancelled
 
-**Files to Review:**
-- Game detail page tab logic
-- Handout permissions
-- Game state transition logic
+**Files Modified:**
+- `frontend/src/hooks/useGameTabs.ts` - Added handouts tab to setup, recruitment, and character_creation states
+- `frontend/src/hooks/useGameTabs.test.tsx` - Added 6 tests for handout visibility across all game states
 
 ---
 
