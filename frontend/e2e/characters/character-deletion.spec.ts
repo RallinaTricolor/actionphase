@@ -116,8 +116,14 @@ test.describe('Character Deletion', () => {
     await page.waitForTimeout(1000);
     await page.waitForLoadState('networkidle');
 
-    // 4. Now navigate to characters tab
-    await page.goto(`/games/${gameId}?tab=characters`);
+    // 4. Now navigate to People tab → Characters sub-tab
+    await page.goto(`/games/${gameId}?tab=people`);
+    await page.waitForLoadState('networkidle');
+
+    // Click on Characters sub-tab within People view
+    const charactersSubTab = page.getByRole('button', { name: 'Characters', exact: false });
+    await charactersSubTab.waitFor({ state: 'visible', timeout: 2000 });
+    await charactersSubTab.click();
     await page.waitForLoadState('networkidle');
 
     // 5. Find the GM's NPC character (which now has a message)

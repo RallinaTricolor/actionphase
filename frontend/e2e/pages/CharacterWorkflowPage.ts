@@ -30,19 +30,38 @@ export class CharacterWorkflowPage {
     await this.page.goto(`/games/${this.gameId}`);
     await this.page.waitForLoadState('networkidle');
 
-    // Try People tab first (in-progress games), fall back to Characters tab
+    // During character_creation and in_progress, use the People tab
+    // During other states, try to find a standalone Characters tab (legacy/fallback)
     const peopleTab = this.page.getByTestId('tab-people');
     const charactersTab = this.page.getByTestId('tab-characters');
 
     try {
       await peopleTab.waitFor({ state: 'visible', timeout: 2000 });
       await peopleTab.click();
-    } catch {
-      await charactersTab.waitFor({ state: 'visible', timeout: 5000 });
-      await charactersTab.click();
-    }
+      await this.page.waitForLoadState('networkidle');
 
-    await this.page.waitForLoadState('networkidle');
+      // Within People tab, click on the "Characters" sub-tab
+      // This button has the text "Characters" and is in the sub-tab navigation
+      const charactersSubTab = this.page.getByRole('button', { name: 'Characters', exact: false });
+      try {
+        await charactersSubTab.waitFor({ state: 'visible', timeout: 2000 });
+        await charactersSubTab.click();
+        await this.page.waitForLoadState('networkidle');
+      } catch {
+        // Characters sub-tab not found - might already be on it or in a different state
+        // Continue anyway
+      }
+    } catch {
+      // People tab not found, try standalone Characters tab (legacy/fallback)
+      try {
+        await charactersTab.waitFor({ state: 'visible', timeout: 5000 });
+        await charactersTab.click();
+        await this.page.waitForLoadState('networkidle');
+      } catch {
+        // Neither tab found - might be on a different game state
+        // Continue anyway, let the test fail with a more descriptive error
+      }
+    }
   }
 
   /**
