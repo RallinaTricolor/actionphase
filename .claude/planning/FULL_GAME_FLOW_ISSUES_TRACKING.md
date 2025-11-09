@@ -116,30 +116,45 @@ Changes made in `useGameTabs.ts`:
 ---
 
 ### Issue 1.3: Applications Tab Visible After Recruitment
-**Status:** 🔴 Not Investigated
+**Status:** ✅ Fixed (2025-01-08)
 **Priority:** Medium
 **Reported Behavior:**
 "Applications" tab is still visible after recruitment ends. Should be hidden once character creation or game starts.
 
 **Investigation:**
-- [ ] Check tab visibility conditions
-- [ ] Determine correct states where Applications should be visible
-- [ ] Review game flow: Recruiting → Character Creation transition
+- [x] Check tab visibility conditions
+- [x] Determine correct states where Applications should be visible
+- [x] Review game flow: Recruiting → Character Creation transition
 
 **Root Cause:**
-_To be determined_
+In `useGameTabs.ts` (line 77), the Applications tab was being added during `character_creation` state when the user is GM. This is incorrect because:
+- During `recruitment` state: Players apply, GM reviews applications ✅
+- When GM closes recruitment → game transitions to `character_creation`
+- During `character_creation`: Recruitment is closed, no new applications accepted ❌
+- Applications tab becomes stale/unnecessary at this point
+- GMs should focus on character approval, not application review
 
-**Proposed Solution:**
-_To be determined_
+**Implemented Solution:**
+Removed the Applications tab from `character_creation` state. The Applications tab is now ONLY visible during `recruitment` state for GMs.
+
+**Changes Made:**
+- `useGameTabs.ts` (lines 76-77): Removed conditional that added Applications tab during character_creation
+- Added comment explaining why Applications tab is removed after recruitment closes
 
 **Test Strategy:**
-- [ ] E2E test for tab visibility after recruitment closes
-- [ ] Unit test for conditional rendering
-- [ ] Test transition from Recruiting to Character Creation
+- [x] Added 7 comprehensive unit tests in `useGameTabs.test.tsx` (lines 453-587)
+- [x] Test: Applications tab visible to GM during recruitment ✅
+- [x] Test: Applications tab NOT visible to players during recruitment ✅
+- [x] Test: Applications tab NOT visible during character_creation (even for GM) ✅
+- [x] Test: Applications tab NOT visible during in_progress ✅
+- [x] Test: Applications tab NOT visible during completed ✅
+- [x] Test: Applications tab NOT visible during cancelled ✅
+- [x] Test: Applications tab NOT visible during setup ✅
+- [x] All 28 tests passing (21 original + 7 new)
 
-**Files to Review:**
-- Game detail page tab rendering
-- Game state constants
+**Files Modified:**
+- `frontend/src/hooks/useGameTabs.ts` - Removed Applications tab from character_creation state
+- `frontend/src/hooks/useGameTabs.test.tsx` - Added 7 tests for Applications tab visibility
 
 ---
 

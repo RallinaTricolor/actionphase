@@ -73,9 +73,7 @@ export function useGameTabs({
     } else if (gameState === 'character_creation') {
       // People tab (combines Characters and Participants)
       tabList.push({ id: 'people', label: 'People', badge: participantCount, icon: icons.people });
-      if (isGM) {
-        tabList.push({ id: 'applications', label: 'Applications', icon: icons.applications });
-      }
+      // Note: Applications tab removed - recruitment is closed, no new applications accepted
       // Handouts - players can reference materials while creating characters
       tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });
     } else if (gameState === 'in_progress') {
