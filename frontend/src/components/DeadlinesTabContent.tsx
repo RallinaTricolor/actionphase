@@ -4,7 +4,7 @@ import { CreateDeadlineModal } from './CreateDeadlineModal';
 import { EditDeadlineModal } from './EditDeadlineModal';
 import { DeadlineList } from './DeadlineList';
 import { useDeadlines } from '../hooks/useDeadlines';
-import type { Deadline } from '../types/deadlines';
+import type { UnifiedDeadline } from '../types/deadlines';
 import { logger } from '@/services/LoggingService';
 
 export interface DeadlinesTabContentProps {
@@ -37,7 +37,7 @@ export function DeadlinesTabContent({ gameId, isGM }: DeadlinesTabContentProps) 
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedDeadline, setSelectedDeadline] = useState<Deadline | null>(null);
+  const [selectedDeadline, setSelectedDeadline] = useState<UnifiedDeadline | null>(null);
 
   const handleCreate = async (data: { title: string; description: string; deadline: string }) => {
     try {
@@ -49,7 +49,7 @@ export function DeadlinesTabContent({ gameId, isGM }: DeadlinesTabContentProps) 
     }
   };
 
-  const handleEdit = (deadline: Deadline) => {
+  const handleEdit = (deadline: UnifiedDeadline) => {
     setSelectedDeadline(deadline);
     setShowEditModal(true);
   };
@@ -76,7 +76,7 @@ export function DeadlinesTabContent({ gameId, isGM }: DeadlinesTabContentProps) 
 
   const handleExtend = async (deadlineId: number, hours: number) => {
     try {
-      const deadline = deadlines.find(d => d.id === deadlineId);
+      const deadline = deadlines.find(d => d.source_id === deadlineId);
       if (!deadline?.deadline) return;
 
       // Calculate new deadline by adding hours to current deadline

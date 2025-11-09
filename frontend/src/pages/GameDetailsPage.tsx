@@ -165,7 +165,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   };
 
   const handleExtendDeadline = async (deadlineId: number, hours: number) => {
-    const deadline = deadlines.find(d => d.id === deadlineId);
+    const deadline = deadlines.find(d => d.source_id === deadlineId);
     if (!deadline?.deadline) return;
 
     // Calculate new deadline by adding hours to current deadline

@@ -17,6 +17,60 @@ WHERE game_id = $1
   )
 ORDER BY deadline ASC;
 
+-- name: GetAllGameDeadlines :many
+-- Aggregate ALL deadlines for a game: arbitrary, phase, and poll deadlines
+SELECT
+    'deadline' as deadline_type,
+    gd.id as source_id,
+    gd.title as title,
+    gd.description as description,
+    gd.deadline as deadline,
+    gd.game_id,
+    NULL::INTEGER as phase_id,
+    NULL::INTEGER as poll_id,
+    false as is_system_deadline
+FROM game_deadlines gd
+WHERE gd.game_id = $1
+  AND gd.deleted_at IS NULL
+  AND ($2 = true OR gd.deadline > NOW())
+
+UNION ALL
+
+SELECT
+    'phase' as deadline_type,
+    gp.id as source_id,
+    gp.title as title,
+    CONCAT(gp.phase_type, ' Phase ', gp.phase_number) as description,
+    gp.deadline as deadline,
+    gp.game_id,
+    gp.id as phase_id,
+    NULL::INTEGER as poll_id,
+    true as is_system_deadline
+FROM game_phases gp
+WHERE gp.game_id = $1
+  AND gp.deadline IS NOT NULL
+  AND ($2 = true OR gp.deadline > NOW())
+
+UNION ALL
+
+SELECT
+    'poll' as deadline_type,
+    crp.id as source_id,
+    crp.question as title,
+    COALESCE(crp.description, 'Poll voting deadline') as description,
+    crp.deadline as deadline,
+    crp.game_id,
+    crp.phase_id,
+    crp.id as poll_id,
+    false as is_system_deadline
+FROM common_room_polls crp
+WHERE crp.game_id = $1
+  AND crp.is_deleted = false
+  AND crp.deadline IS NOT NULL
+  AND ($2 = true OR crp.deadline > NOW())
+
+ORDER BY deadline ASC;
+
 -- name: GetUpcomingDeadlinesForUser :many
 -- Get upcoming deadlines across all games user participates in
 SELECT

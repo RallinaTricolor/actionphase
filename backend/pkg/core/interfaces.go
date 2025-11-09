@@ -1152,6 +1152,11 @@ type DeadlineServiceInterface interface {
 	// Results are ordered by deadline timestamp ascending (soonest first).
 	GetGameDeadlines(ctx context.Context, gameID int32, includeExpired bool) ([]models.GameDeadline, error)
 
+	// GetAllGameDeadlines retrieves all deadline types (arbitrary, phase, and poll) for a game.
+	// Returns a unified view of all deadline sources sorted chronologically.
+	// This aggregates deadlines from game_deadlines, game_phases, and common_room_polls tables.
+	GetAllGameDeadlines(ctx context.Context, gameID int32, includeExpired bool) ([]UnifiedDeadline, error)
+
 	// GetUpcomingDeadlines retrieves upcoming deadlines across all user's games.
 	// Used for dashboard view to show deadlines from all games the user participates in.
 	// Returns deadline with associated game information for context.

@@ -137,19 +137,19 @@ func (h *Handler) GetGameDeadlines(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get deadlines
+	// Get all deadlines (unified view of arbitrary, phase, and poll deadlines)
 	deadlineService := &db.DeadlineService{DB: h.App.Pool, Logger: h.App.ObsLogger}
-	deadlines, err := deadlineService.GetGameDeadlines(ctx, int32(gameID), includeExpired)
+	deadlines, err := deadlineService.GetAllGameDeadlines(ctx, int32(gameID), includeExpired)
 	if err != nil {
-		h.App.ObsLogger.LogError(ctx, err, "Failed to get game deadlines")
+		h.App.ObsLogger.LogError(ctx, err, "Failed to get all game deadlines")
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
 	// Convert to response format
-	response := make([]*DeadlineResponse, len(deadlines))
-	for i, deadline := range deadlines {
-		response[i] = toDeadlineResponse(&deadline)
+	response := make([]*UnifiedDeadlineResponse, len(deadlines))
+	for i := range deadlines {
+		response[i] = toUnifiedDeadlineResponse(&deadlines[i])
 	}
 
 	render.JSON(w, r, response)
@@ -395,4 +395,26 @@ func pgTimestampToTimePtr(t pgtype.Timestamptz) *time.Time {
 		return &t.Time
 	}
 	return nil
+}
+
+// Helper function to convert core.UnifiedDeadline to UnifiedDeadlineResponse
+func toUnifiedDeadlineResponse(d *core.UnifiedDeadline) *UnifiedDeadlineResponse {
+	resp := &UnifiedDeadlineResponse{
+		DeadlineType:     d.DeadlineType,
+		SourceID:         d.SourceID,
+		Title:            d.Title,
+		Description:      d.Description,
+		GameID:           d.GameID,
+		PhaseID:          d.PhaseID,
+		PollID:           d.PollID,
+		IsSystemDeadline: d.IsSystemDeadline,
+	}
+
+	// Handle optional deadline timestamp
+	if !d.Deadline.IsZero() {
+		deadline := d.Deadline
+		resp.Deadline = &deadline
+	}
+
+	return resp
 }

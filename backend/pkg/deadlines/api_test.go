@@ -270,13 +270,20 @@ func TestGetGameDeadlines_Success(t *testing.T) {
 
 	core.AssertEqual(t, http.StatusOK, w.Code, "Should return 200 OK")
 
-	var response []*DeadlineResponse
+	var response []*UnifiedDeadlineResponse
 	err = json.NewDecoder(w.Body).Decode(&response)
 	core.AssertNoError(t, err, "Should decode response")
 
 	core.AssertEqual(t, 2, len(response), "Should return 2 deadlines")
-	core.AssertEqual(t, deadline1.ID, response[0].ID, "First deadline ID should match")
-	core.AssertEqual(t, deadline2.ID, response[1].ID, "Second deadline ID should match")
+
+	// Both deadlines should be type "deadline" from game_deadlines table
+	core.AssertEqual(t, "deadline", response[0].DeadlineType, "First deadline type should be 'deadline'")
+	core.AssertEqual(t, deadline1.ID, response[0].SourceID, "First deadline source_id should match")
+	core.AssertEqual(t, "First Deadline", response[0].Title, "First deadline title should match")
+
+	core.AssertEqual(t, "deadline", response[1].DeadlineType, "Second deadline type should be 'deadline'")
+	core.AssertEqual(t, deadline2.ID, response[1].SourceID, "Second deadline source_id should match")
+	core.AssertEqual(t, "Second Deadline", response[1].Title, "Second deadline title should match")
 }
 
 // TestGetGameDeadlines_Unauthorized tests that non-participants cannot view deadlines

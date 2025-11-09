@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import type { Deadline } from '../types/deadlines';
+import type { UnifiedDeadline } from '../types/deadlines';
 
 export type DeadlineUrgency = 'critical' | 'warning' | 'normal' | 'expired';
 
 interface DeadlineCardProps {
-  deadline: Deadline;
+  deadline: UnifiedDeadline;
   isGM: boolean;
   onEdit?: () => void;
   onDelete?: () => void;

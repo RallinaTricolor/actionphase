@@ -2,6 +2,7 @@ import { BaseApiClient } from './client';
 import type {
   Deadline,
   DeadlineWithGame,
+  UnifiedDeadline,
   CreateDeadlineRequest,
   UpdateDeadlineRequest
 } from '../../types/deadlines';
@@ -21,13 +22,14 @@ export class DeadlinesApi extends BaseApiClient {
   }
 
   /**
-   * Get all deadlines for a game
+   * Get all deadlines for a game (unified view of arbitrary, phase, and poll deadlines)
    * @param gameId - Game ID
    * @param includeExpired - Whether to include expired deadlines (default: false)
+   * @returns Array of unified deadlines from all sources (game_deadlines, game_phases, common_room_polls)
    */
   async getGameDeadlines(gameId: number, includeExpired: boolean = false) {
     const params = includeExpired ? '?includeExpired=true' : '';
-    return this.client.get<Deadline[]>(`/api/v1/games/${gameId}/deadlines${params}`);
+    return this.client.get<UnifiedDeadline[]>(`/api/v1/games/${gameId}/deadlines${params}`);
   }
 
   /**

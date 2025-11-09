@@ -4,10 +4,10 @@ import { Button, Modal } from './ui';
 import { DeadlineCard } from './DeadlineCard';
 import { CreateDeadlineModal } from './CreateDeadlineModal';
 import { EditDeadlineModal } from './EditDeadlineModal';
-import type { Deadline } from '../types/deadlines';
+import type { UnifiedDeadline } from '../types/deadlines';
 
 export interface DeadlineStripProps {
-  deadlines: Deadline[];
+  deadlines: UnifiedDeadline[];
   isLoading?: boolean;
   isGM?: boolean;
   gameState?: string; // Hide deadlines for completed/cancelled games
@@ -53,16 +53,16 @@ export function DeadlineStrip({
   const [showAll, setShowAll] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedDeadline, setSelectedDeadline] = useState<Deadline | null>(null);
-  const [deadlineToDelete, setDeadlineToDelete] = useState<Deadline | null>(null);
+  const [selectedDeadline, setSelectedDeadline] = useState<UnifiedDeadline | null>(null);
+  const [deadlineToDelete, setDeadlineToDelete] = useState<UnifiedDeadline | null>(null);
   const [extendingId, setExtendingId] = useState<number | null>(null);
   const [extendHours, setExtendHours] = useState<number>(24);
 
   // Separate and sort deadlines
   const { activeDeadlines, expiredDeadlines } = useMemo(() => {
     const now = new Date();
-    const active: Deadline[] = [];
-    const expired: Deadline[] = [];
+    const active: UnifiedDeadline[] = [];
+    const expired: UnifiedDeadline[] = [];
 
     deadlines.forEach((deadline) => {
       if (!deadline.deadline) {
@@ -96,7 +96,7 @@ export function DeadlineStrip({
   const visibleActiveDeadlines = showAll ? activeDeadlines : activeDeadlines.slice(0, 3);
   const hasMore = activeDeadlines.length > 3 || expiredDeadlines.length > 0;
 
-  const handleEdit = (deadline: Deadline) => {
+  const handleEdit = (deadline: UnifiedDeadline) => {
     setSelectedDeadline(deadline);
     setShowEditModal(true);
   };
@@ -107,13 +107,13 @@ export function DeadlineStrip({
     setSelectedDeadline(null);
   };
 
-  const handleDeleteClick = (deadline: Deadline) => {
+  const handleDeleteClick = (deadline: UnifiedDeadline) => {
     setDeadlineToDelete(deadline);
   };
 
   const handleConfirmDelete = async () => {
     if (deadlineToDelete) {
-      await onDeleteDeadline(deadlineToDelete.id);
+      await onDeleteDeadline(deadlineToDelete.source_id);
       setDeadlineToDelete(null);
     }
   };
@@ -204,11 +204,11 @@ export function DeadlineStrip({
               <div className="flex flex-wrap gap-3">
                 {visibleActiveDeadlines.map((deadline) => (
                   <DeadlineCard
-                    key={deadline.id}
+                    key={`${deadline.deadline_type}-${deadline.source_id}`}
                     deadline={deadline}
                     isGM={isGM}
                     onEdit={() => handleEdit(deadline)}
-                    onExtend={() => handleExtendClick(deadline.id)}
+                    onExtend={() => handleExtendClick(deadline.source_id)}
                     onDelete={() => handleDeleteClick(deadline)}
                   />
                 ))}
@@ -224,7 +224,7 @@ export function DeadlineStrip({
                 <div className="flex flex-wrap gap-3">
                   {expiredDeadlines.map((deadline) => (
                     <DeadlineCard
-                      key={deadline.id}
+                      key={`${deadline.deadline_type}-${deadline.source_id}`}
                       deadline={deadline}
                       isGM={isGM}
                       onDelete={() => handleDeleteClick(deadline)}
@@ -366,7 +366,7 @@ export function DeadlineStrip({
             </div>
 
             {(() => {
-              const currentDeadline = deadlines.find(d => d.id === extendingId);
+              const currentDeadline = deadlines.find(d => d.source_id === extendingId);
               if (currentDeadline?.deadline) {
                 const currentDate = new Date(currentDeadline.deadline);
                 const newDate = new Date(currentDate.getTime() + extendHours * 60 * 60 * 1000);

@@ -115,6 +115,60 @@ func (s *DeadlineService) GetGameDeadlines(ctx context.Context, gameID int32, in
 	return deadlines, nil
 }
 
+// GetAllGameDeadlines retrieves all deadlines (arbitrary, phase, and poll) for a game.
+// Returns a unified view of all deadline types sorted chronologically.
+func (s *DeadlineService) GetAllGameDeadlines(ctx context.Context, gameID int32, includeExpired bool) ([]core.UnifiedDeadline, error) {
+	queries := db.New(s.DB)
+
+	params := db.GetAllGameDeadlinesParams{
+		GameID:  gameID,
+		Column2: includeExpired,
+	}
+
+	rows, err := queries.GetAllGameDeadlines(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all game deadlines: %w", err)
+	}
+
+	if rows == nil {
+		return []core.UnifiedDeadline{}, nil
+	}
+
+	// Convert database rows to core.UnifiedDeadline structs
+	result := make([]core.UnifiedDeadline, 0, len(rows))
+	for _, row := range rows {
+		deadline := core.UnifiedDeadline{
+			DeadlineType:     row.DeadlineType,
+			SourceID:         row.SourceID,
+			Title:            row.Title,
+			Description:      row.Description.String, // Convert pgtype.Text to string
+			GameID:           row.GameID,
+			IsSystemDeadline: row.IsSystemDeadline,
+		}
+
+		// Convert pgtype.Timestamptz to time.Time
+		if row.Deadline.Valid {
+			deadline.Deadline = row.Deadline.Time
+		}
+
+		// Convert nullable phase_id
+		if row.PhaseID.Valid {
+			phaseID := row.PhaseID.Int32
+			deadline.PhaseID = &phaseID
+		}
+
+		// Convert nullable poll_id
+		if row.PollID.Valid {
+			pollID := row.PollID.Int32
+			deadline.PollID = &pollID
+		}
+
+		result = append(result, deadline)
+	}
+
+	return result, nil
+}
+
 // GetUpcomingDeadlines retrieves upcoming deadlines across all user's games
 func (s *DeadlineService) GetUpcomingDeadlines(ctx context.Context, userID int32, limit int32) ([]core.DeadlineWithGame, error) {
 	queries := db.New(s.DB)

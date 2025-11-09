@@ -1,13 +1,15 @@
+import React from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCharacterOwnership } from './useCharacterOwnership';
 import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 
 // Mock the API client
-jest.mock('../lib/api');
+vi.mock('../lib/api');
 
-const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
+const mockApiClient = vi.mocked(apiClient);
 
 describe('useCharacterOwnership', () => {
   let queryClient: QueryClient;
@@ -20,7 +22,7 @@ describe('useCharacterOwnership', () => {
         },
       },
     });
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -33,7 +35,7 @@ describe('useCharacterOwnership', () => {
       { id: 2, name: 'NPC', character_type: 'npc', game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
     ];
 
-    mockApiClient.characters.getUserControllableCharacters = jest.fn().mockResolvedValue({
+    mockApiClient.characters.getUserControllableCharacters = vi.fn().mockResolvedValue({
       data: mockCharacters,
     });
 
@@ -63,7 +65,7 @@ describe('useCharacterOwnership', () => {
       },
     ];
 
-    mockApiClient.characters.getUserControllableCharacters = jest.fn().mockResolvedValue({
+    mockApiClient.characters.getUserControllableCharacters = vi.fn().mockResolvedValue({
       data: mockCharacters,
     });
 
@@ -91,7 +93,7 @@ describe('useCharacterOwnership', () => {
       },
     ];
 
-    mockApiClient.characters.getUserControllableCharacters = jest.fn().mockResolvedValue({
+    mockApiClient.characters.getUserControllableCharacters = vi.fn().mockResolvedValue({
       data: mockCharacters,
     });
 
@@ -105,7 +107,7 @@ describe('useCharacterOwnership', () => {
   });
 
   it('should return empty set when no characters are controllable', async () => {
-    mockApiClient.characters.getUserControllableCharacters = jest.fn().mockResolvedValue({
+    mockApiClient.characters.getUserControllableCharacters = vi.fn().mockResolvedValue({
       data: [],
     });
 
@@ -124,7 +126,7 @@ describe('useCharacterOwnership', () => {
       { id: 3, name: 'Char 3', character_type: 'npc', assigned_user_id: 100, game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
     ];
 
-    mockApiClient.characters.getUserControllableCharacters = jest.fn().mockResolvedValue({
+    mockApiClient.characters.getUserControllableCharacters = vi.fn().mockResolvedValue({
       data: mockCharacters,
     });
 

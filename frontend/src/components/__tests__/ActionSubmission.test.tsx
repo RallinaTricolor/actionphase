@@ -117,7 +117,7 @@ describe('ActionSubmission', () => {
     userActions: ActionWithDetails[] = []
   ) => {
     server.use(
-      http.get('/api/v1/games/:gameId/characters', () => {
+      http.get('/api/v1/games/:gameId/characters/controllable', () => {
         return HttpResponse.json(characters);
       }),
       http.get('/api/v1/games/:gameId/actions/mine', () => {
