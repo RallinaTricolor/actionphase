@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Modal, Input, Textarea, DateTimeInput, Button, Alert } from './ui';
-import type { Deadline, UpdateDeadlineRequest } from '../types/deadlines';
+import type { UnifiedDeadline, UpdateDeadlineRequest } from '../types/deadlines';
 
 export interface EditDeadlineModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (deadlineId: number, data: UpdateDeadlineRequest) => void;
-  deadline: Deadline | null;
+  deadline: UnifiedDeadline | null;
   isLoading?: boolean;
   error?: string;
 }
@@ -115,7 +115,7 @@ export function EditDeadlineModal({
     const deadlineDate = new Date(deadlineValue);
     const isoDeadline = deadlineDate.toISOString();
 
-    onSubmit(deadline.id, {
+    onSubmit(deadline.source_id, {
       title: title.trim(),
       description: description.trim(),
       deadline: isoDeadline,

@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import { TrashIcon, PencilIcon, ClockIcon } from '@heroicons/react/24/outline';
-import { Card, CardBody, Button, Modal } from './ui';
+import { Card, CardBody, Button, Modal, Badge } from './ui';
 import { DeadlineTimer } from './DeadlineTimer';
-import type { Deadline } from '../types/deadlines';
+import type { UnifiedDeadline } from '../types/deadlines';
 
 export interface DeadlineListProps {
-  deadlines: Deadline[];
+  deadlines: UnifiedDeadline[];
   isLoading?: boolean;
-  onEdit?: (deadline: Deadline) => void;
+  onEdit?: (deadline: UnifiedDeadline) => void;
   onDelete?: (deadlineId: number) => void;
   onExtend?: (deadlineId: number, hours: number) => void;
   showActions?: boolean;
@@ -35,6 +35,20 @@ export interface DeadlineListProps {
  * />
  * ```
  */
+/**
+ * Helper function to render deadline type badge
+ */
+function DeadlineTypeBadge({ type }: { type: 'deadline' | 'phase' | 'poll' }) {
+  const config = {
+    deadline: { label: 'Custom', variant: 'primary' as const },
+    phase: { label: 'Phase', variant: 'success' as const },
+    poll: { label: 'Poll', variant: 'warning' as const },
+  };
+
+  const { label, variant } = config[type];
+  return <Badge variant={variant}>{label}</Badge>;
+}
+
 export function DeadlineList({
   deadlines,
   isLoading = false,
@@ -45,15 +59,15 @@ export function DeadlineList({
   emptyMessage = 'No deadlines yet.',
 }: DeadlineListProps) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [deadlineToDelete, setDeadlineToDelete] = useState<Deadline | null>(null);
+  const [deadlineToDelete, setDeadlineToDelete] = useState<UnifiedDeadline | null>(null);
   const [extendingId, setExtendingId] = useState<number | null>(null);
   const [extendHours, setExtendHours] = useState<number>(24);
 
   // Separate active and expired deadlines
   const { activeDeadlines, expiredDeadlines } = useMemo(() => {
     const now = new Date();
-    const active: Deadline[] = [];
-    const expired: Deadline[] = [];
+    const active: UnifiedDeadline[] = [];
+    const expired: UnifiedDeadline[] = [];
 
     deadlines.forEach((deadline) => {
       if (!deadline.deadline) {
@@ -83,14 +97,14 @@ export function DeadlineList({
     return { activeDeadlines: active, expiredDeadlines: expired };
   }, [deadlines]);
 
-  const handleDeleteClick = (deadline: Deadline) => {
+  const handleDeleteClick = (deadline: UnifiedDeadline) => {
     setDeadlineToDelete(deadline);
   };
 
   const handleConfirmDelete = () => {
     if (deadlineToDelete) {
-      setDeletingId(deadlineToDelete.id);
-      onDelete?.(deadlineToDelete.id);
+      setDeletingId(deadlineToDelete.source_id);
+      onDelete?.(deadlineToDelete.source_id);
       setDeadlineToDelete(null);
     }
   };
@@ -140,8 +154,8 @@ export function DeadlineList({
     );
   }
 
-  const renderDeadline = (deadline: Deadline, isExpired: boolean = false) => (
-    <Card key={deadline.id} variant="bordered" padding="md" className={isExpired ? 'opacity-60' : ''}>
+  const renderDeadline = (deadline: UnifiedDeadline, isExpired: boolean = false) => (
+    <Card key={`${deadline.deadline_type}-${deadline.source_id}`} variant="bordered" padding="md" className={isExpired ? 'opacity-60' : ''}>
       <CardBody>
         <div className="flex items-start justify-between gap-4">
           {/* Content */}
@@ -150,6 +164,7 @@ export function DeadlineList({
               <h3 className="text-lg font-semibold text-content-primary truncate">
                 {deadline.title}
               </h3>
+              <DeadlineTypeBadge type={deadline.deadline_type} />
               {deadline.deadline && (
                 <DeadlineTimer deadline={deadline.deadline} />
               )}
@@ -176,7 +191,7 @@ export function DeadlineList({
                   variant="ghost"
                   size="sm"
                   onClick={() => onEdit(deadline)}
-                  disabled={deletingId === deadline.id}
+                  disabled={deletingId === deadline.source_id}
                   icon={<PencilIcon className="h-4 w-4" />}
                   aria-label="Edit deadline"
                 >
@@ -188,8 +203,8 @@ export function DeadlineList({
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => handleExtendClick(deadline.id)}
-                  disabled={deletingId === deadline.id}
+                  onClick={() => handleExtendClick(deadline.source_id)}
+                  disabled={deletingId === deadline.source_id}
                   icon={<ClockIcon className="h-4 w-4" />}
                   aria-label="Extend deadline"
                 >
@@ -197,13 +212,13 @@ export function DeadlineList({
                 </Button>
               )}
 
-              {onDelete && (
+              {onDelete && !deadline.is_system_deadline && (
                 <Button
                   variant="danger"
                   size="sm"
                   onClick={() => handleDeleteClick(deadline)}
-                  loading={deletingId === deadline.id}
-                  disabled={deletingId === deadline.id}
+                  loading={deletingId === deadline.source_id}
+                  disabled={deletingId === deadline.source_id}
                   icon={<TrashIcon className="h-4 w-4" />}
                   aria-label="Delete deadline"
                 >
@@ -342,7 +357,7 @@ export function DeadlineList({
             </div>
 
             {(() => {
-              const currentDeadline = deadlines.find(d => d.id === extendingId);
+              const currentDeadline = deadlines.find(d => d.source_id === extendingId);
               if (currentDeadline?.deadline) {
                 const currentDate = new Date(currentDeadline.deadline);
                 const newDate = new Date(currentDate.getTime() + extendHours * 60 * 60 * 1000);

@@ -2,30 +2,30 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, render, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DeadlineList } from './DeadlineList';
-import type { Deadline } from '../types/deadlines';
+import type { UnifiedDeadline } from '../types/deadlines';
 
 describe('DeadlineList', () => {
   const mockOnEdit = vi.fn();
   const mockOnDelete = vi.fn();
 
-  const sampleDeadlines: Deadline[] = [
+  const sampleDeadlines: UnifiedDeadline[] = [
     {
-      id: 1,
+      deadline_type: 'deadline',
+      source_id: 1,
       game_id: 1,
       title: 'Phase 1 Deadline',
       description: 'Submit your action for Phase 1',
       deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(), // 48 hours from now
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
+      is_system_deadline: false,
     },
     {
-      id: 2,
+      deadline_type: 'deadline',
+      source_id: 2,
       game_id: 1,
       title: 'Character Creation Deadline',
       description: 'Complete your character sheet',
       deadline: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(), // 12 hours from now
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
+      is_system_deadline: false,
     },
   ];
 
@@ -110,10 +110,10 @@ describe('DeadlineList', () => {
     });
 
     it('should handle deadline without description', () => {
-      const deadlineWithoutDescription: Deadline[] = [
+      const deadlineWithoutDescription: UnifiedDeadline[] = [
         {
           ...sampleDeadlines[0],
-          description: undefined,
+          description: '',
         },
       ];
 
@@ -125,7 +125,7 @@ describe('DeadlineList', () => {
     });
 
     it('should handle deadline without deadline field', () => {
-      const deadlineWithoutDate: Deadline[] = [
+      const deadlineWithoutDate: UnifiedDeadline[] = [
         {
           ...sampleDeadlines[0],
           deadline: undefined,
@@ -349,12 +349,14 @@ describe('DeadlineList', () => {
     });
 
     it('should handle many deadlines', () => {
-      const manyDeadlines: Deadline[] = Array.from({ length: 10 }, (_, i) => ({
-        id: i + 1,
+      const manyDeadlines: UnifiedDeadline[] = Array.from({ length: 10 }, (_, i) => ({
+        deadline_type: 'deadline' as const,
+        source_id: i + 1,
         game_id: 1,
         title: `Deadline ${i + 1}`,
         description: `Description ${i + 1}`,
         deadline: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000).toISOString(),
+        is_system_deadline: false,
       }));
 
       render(<DeadlineList deadlines={manyDeadlines} isLoading={false} />);
@@ -403,13 +405,15 @@ describe('DeadlineList', () => {
     });
 
     it('should handle deadline with very long title', () => {
-      const longTitleDeadline: Deadline[] = [
+      const longTitleDeadline: UnifiedDeadline[] = [
         {
-          id: 1,
+          deadline_type: 'deadline',
+          source_id: 1,
           game_id: 1,
           title: 'A'.repeat(200),
           description: 'Test',
           deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+          is_system_deadline: false,
         },
       ];
 
@@ -419,13 +423,15 @@ describe('DeadlineList', () => {
     });
 
     it('should handle deadline with very long description', () => {
-      const longDescriptionDeadline: Deadline[] = [
+      const longDescriptionDeadline: UnifiedDeadline[] = [
         {
-          id: 1,
+          deadline_type: 'deadline',
+          source_id: 1,
           game_id: 1,
           title: 'Test',
           description: 'B'.repeat(1000),
           deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+          is_system_deadline: false,
         },
       ];
 
@@ -470,13 +476,15 @@ describe('DeadlineList', () => {
     });
 
     it('should preserve whitespace in descriptions', () => {
-      const multiLineDescription: Deadline[] = [
+      const multiLineDescription: UnifiedDeadline[] = [
         {
-          id: 1,
+          deadline_type: 'deadline',
+          source_id: 1,
           game_id: 1,
           title: 'Test',
           description: 'Line 1\nLine 2\n\nLine 3',
           deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+          is_system_deadline: false,
         },
       ];
 

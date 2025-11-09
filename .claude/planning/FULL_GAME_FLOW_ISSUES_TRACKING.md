@@ -945,7 +945,7 @@ Polls are now fully integrated into the Common Room tab as a sub-tab:
 ---
 
 ### Issue 5.2: Common Room Deadline Not in Deadlines Section
-**Status:** 🟢 Reproduced - Solution Proposed
+**Status:** ✅ FIXED (2025-11-09)
 **Priority:** Medium
 **Reported Behavior:**
 Common Room Deadline isn't visible in the deadlines section (should be).
@@ -961,19 +961,61 @@ Deadlines are fragmented across 3 separate tables:
 
 The `GetGameDeadlines` query only fetches from `game_deadlines` table, excluding phase and poll deadlines.
 
-**Proposed Solution:**
-**See PROPOSAL 2: Deadline Consolidation Refactor** - Create unified query that aggregates ALL deadline types into single view.
+**Implemented Solution:**
 
-**Test Strategy:**
-- [ ] Unit test for unified deadline query
-- [ ] E2E test for poll deadline visibility in Deadlines section
-- [ ] Backend test for GetAllGameDeadlines query
-- [ ] Test all 3 deadline types showing together
+**Backend (Phase 1 - Complete):**
+✅ Created unified SQL query (`GetAllGameDeadlines`) using UNION ALL to aggregate all 3 deadline types
+✅ Added `UnifiedDeadline` model to `backend/pkg/core/dashboard.go`
+✅ Generated sqlc code for unified query
+✅ Added `GetAllGameDeadlines` method to `DeadlineService` and interface
+✅ Updated `GetGameDeadlines` API handler to use unified query and return `UnifiedDeadlineResponse`
+✅ Backend compiles successfully
 
-**Files to Review:**
-- `backend/pkg/db/queries/deadlines.sql` - Create unified query
-- `frontend/src/components/DeadlinesTabContent.tsx` - Display all deadline types
-- `frontend/src/types/deadlines.ts` - Add UnifiedDeadline type
+**Frontend (Phase 2 - Complete):**
+✅ Added `UnifiedDeadline` TypeScript type to `frontend/src/types/deadlines.ts`
+✅ Updated `frontend/src/lib/api/deadlines.ts` API client to return UnifiedDeadline[]
+✅ Added deadline type badges (Custom/Phase/Poll) to `DeadlineList` component using DeadlineTypeBadge
+✅ Updated `DeadlinesTabContent` to use UnifiedDeadline type
+✅ Updated `EditDeadlineModal` to accept UnifiedDeadline and use source_id
+✅ Handled system deadlines (phase deadlines can't be deleted, no delete button shown)
+✅ All 32 DeadlineList component tests passing
+✅ TypeScript compiles without errors
+
+**Testing (Phase 3 - Complete):**
+✅ API verification with curl (returns unified deadlines correctly)
+✅ Backend unit tests fixed and passing (updated TestGetGameDeadlines_Success to use UnifiedDeadlineResponse)
+✅ Component tests updated and passing (32 tests in DeadlineList.test.tsx)
+✅ E2E test added for unified deadline view with type badges
+✅ All backend tests passing - `just test` runs clean
+
+**Files Modified:**
+
+**Backend:**
+- `backend/pkg/db/queries/deadlines.sql` - Added GetAllGameDeadlines query ✅
+- `backend/pkg/core/dashboard.go` - Added UnifiedDeadline model ✅
+- `backend/pkg/core/interfaces.go` - Added GetAllGameDeadlines to interface ✅
+- `backend/pkg/db/services/deadline_service.go` - Implemented service method ✅
+- `backend/pkg/deadlines/api_deadlines.go` - Updated handler ✅
+- `backend/pkg/deadlines/requests.go` - Added UnifiedDeadlineResponse ✅
+- `backend/pkg/deadlines/api_test.go` - Fixed TestGetGameDeadlines_Success to use UnifiedDeadlineResponse ✅
+
+**Frontend:**
+- `frontend/src/types/deadlines.ts` - Added UnifiedDeadline interface ✅
+- `frontend/src/lib/api/deadlines.ts` - Updated to return UnifiedDeadline[] ✅
+- `frontend/src/components/DeadlineList.tsx` - Added type badges, changed ID references to source_id ✅
+- `frontend/src/components/DeadlinesTabContent.tsx` - Updated to use UnifiedDeadline ✅
+- `frontend/src/components/EditDeadlineModal.tsx` - Updated to accept UnifiedDeadline ✅
+- `frontend/src/components/DeadlineList.test.tsx` - Updated all test data to use UnifiedDeadline ✅
+
+**E2E Tests:**
+- `frontend/e2e/gameplay/deadline-management.spec.ts` - Added test for unified view with badges ✅
+
+**Key Features:**
+- All 3 deadline types (custom, phase, poll) now visible in single unified view
+- Visual type indicators via badges (Custom=blue, Phase=green, Poll=yellow)
+- System deadlines (phase deadlines) properly protected from deletion
+- Composite keys for React rendering: `${deadline_type}-${source_id}`
+- 100% backward compatible - existing deadline operations still work
 
 ---
 

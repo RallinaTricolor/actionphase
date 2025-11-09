@@ -59,6 +59,108 @@ func (q *Queries) DeleteDeadline(ctx context.Context, id int32) error {
 	return err
 }
 
+const getAllGameDeadlines = `-- name: GetAllGameDeadlines :many
+SELECT
+    'deadline' as deadline_type,
+    gd.id as source_id,
+    gd.title as title,
+    gd.description as description,
+    gd.deadline as deadline,
+    gd.game_id,
+    NULL::INTEGER as phase_id,
+    NULL::INTEGER as poll_id,
+    false as is_system_deadline
+FROM game_deadlines gd
+WHERE gd.game_id = $1
+  AND gd.deleted_at IS NULL
+  AND ($2 = true OR gd.deadline > NOW())
+
+UNION ALL
+
+SELECT
+    'phase' as deadline_type,
+    gp.id as source_id,
+    gp.title as title,
+    CONCAT(gp.phase_type, ' Phase ', gp.phase_number) as description,
+    gp.deadline as deadline,
+    gp.game_id,
+    gp.id as phase_id,
+    NULL::INTEGER as poll_id,
+    true as is_system_deadline
+FROM game_phases gp
+WHERE gp.game_id = $1
+  AND gp.deadline IS NOT NULL
+  AND ($2 = true OR gp.deadline > NOW())
+
+UNION ALL
+
+SELECT
+    'poll' as deadline_type,
+    crp.id as source_id,
+    crp.question as title,
+    COALESCE(crp.description, 'Poll voting deadline') as description,
+    crp.deadline as deadline,
+    crp.game_id,
+    crp.phase_id,
+    crp.id as poll_id,
+    false as is_system_deadline
+FROM common_room_polls crp
+WHERE crp.game_id = $1
+  AND crp.is_deleted = false
+  AND crp.deadline IS NOT NULL
+  AND ($2 = true OR crp.deadline > NOW())
+
+ORDER BY deadline ASC
+`
+
+type GetAllGameDeadlinesParams struct {
+	GameID  int32       `json:"game_id"`
+	Column2 interface{} `json:"column_2"`
+}
+
+type GetAllGameDeadlinesRow struct {
+	DeadlineType     string             `json:"deadline_type"`
+	SourceID         int32              `json:"source_id"`
+	Title            string             `json:"title"`
+	Description      pgtype.Text        `json:"description"`
+	Deadline         pgtype.Timestamptz `json:"deadline"`
+	GameID           int32              `json:"game_id"`
+	PhaseID          pgtype.Int4        `json:"phase_id"`
+	PollID           pgtype.Int4        `json:"poll_id"`
+	IsSystemDeadline bool               `json:"is_system_deadline"`
+}
+
+// Aggregate ALL deadlines for a game: arbitrary, phase, and poll deadlines
+func (q *Queries) GetAllGameDeadlines(ctx context.Context, arg GetAllGameDeadlinesParams) ([]GetAllGameDeadlinesRow, error) {
+	rows, err := q.db.Query(ctx, getAllGameDeadlines, arg.GameID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllGameDeadlinesRow
+	for rows.Next() {
+		var i GetAllGameDeadlinesRow
+		if err := rows.Scan(
+			&i.DeadlineType,
+			&i.SourceID,
+			&i.Title,
+			&i.Description,
+			&i.Deadline,
+			&i.GameID,
+			&i.PhaseID,
+			&i.PollID,
+			&i.IsSystemDeadline,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDeadline = `-- name: GetDeadline :one
 SELECT id, game_id, title, description, deadline, created_by_user_id, created_at, updated_at, deleted_at FROM game_deadlines
 WHERE id = $1 AND deleted_at IS NULL
