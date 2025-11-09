@@ -12,6 +12,7 @@ DECLARE
   p1_id INTEGER;
   p2_id INTEGER;
   p3_id INTEGER;
+  aud_id INTEGER;
   phase_id INTEGER;
   c1_id INTEGER;
   c2_id INTEGER;
@@ -22,6 +23,7 @@ BEGIN
   SELECT id INTO p1_id FROM users WHERE email = 'test_player1@example.com';
   SELECT id INTO p2_id FROM users WHERE email = 'test_player2@example.com';
   SELECT id INTO p3_id FROM users WHERE email = 'test_player3@example.com';
+  SELECT id INTO aud_id FROM users WHERE email = 'test_audience@example.com';
 
   -- ============================================
   -- GAME #169: Common Room Polls (polls-flow.spec.ts)
@@ -40,12 +42,13 @@ BEGIN
     NOW()
   );
 
-  -- Add game participants
+  -- Add game participants (including audience member)
   INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
   VALUES
     (169, p1_id, 'player', 'active', NOW() - INTERVAL '4 days'),
     (169, p2_id, 'player', 'active', NOW() - INTERVAL '4 days'),
-    (169, p3_id, 'player', 'active', NOW() - INTERVAL '4 days');
+    (169, p3_id, 'player', 'active', NOW() - INTERVAL '4 days'),
+    (169, aud_id, 'audience', 'active', NOW() - INTERVAL '3 days');
 
   -- Create active common_room phase
   INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)

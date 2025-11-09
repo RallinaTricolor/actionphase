@@ -89,12 +89,15 @@ export function usePollResults(pollId: number | null) {
 /**
  * Hook for submitting/updating a vote
  */
-export function useSubmitVote(pollId: number) {
+export function useSubmitVote(pollId: number, gameId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: SubmitVoteRequest) => apiClient.polls.submitVote(pollId, data),
     onSuccess: () => {
+      // Invalidate polls list to update user_has_voted flag in the list view
+      queryClient.invalidateQueries({ queryKey: ['polls', gameId] });
+
       // Invalidate poll results to show updated vote counts
       queryClient.invalidateQueries({ queryKey: ['pollResults', pollId] });
       queryClient.invalidateQueries({ queryKey: ['poll', pollId] });

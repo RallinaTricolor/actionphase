@@ -8,9 +8,10 @@ interface PollsTabProps {
   gameId: number;
   isGM: boolean;
   isCurrentPhase: boolean;
+  isAudience?: boolean;
 }
 
-export function PollsTab({ gameId, isGM, isCurrentPhase }: PollsTabProps) {
+export function PollsTab({ gameId, isGM, isCurrentPhase, isAudience = false }: PollsTabProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [includeExpired, setIncludeExpired] = useState(false);
 
@@ -106,7 +107,7 @@ export function PollsTab({ gameId, isGM, isCurrentPhase }: PollsTabProps) {
                 Active Polls ({activePolls.length})
               </h4>
               {activePolls.map((poll) => (
-                <PollCard key={poll.id} poll={poll} gameId={gameId} isGM={isGM} />
+                <PollCard key={poll.id} poll={poll} gameId={gameId} isGM={isGM} isAudience={isAudience} />
               ))}
             </div>
           )}
@@ -118,7 +119,7 @@ export function PollsTab({ gameId, isGM, isCurrentPhase }: PollsTabProps) {
                 Expired Polls ({expiredPolls.length})
               </h4>
               {expiredPolls.map((poll) => (
-                <PollCard key={poll.id} poll={poll} gameId={gameId} isGM={isGM} />
+                <PollCard key={poll.id} poll={poll} gameId={gameId} isGM={isGM} isAudience={isAudience} />
               ))}
             </div>
           )}

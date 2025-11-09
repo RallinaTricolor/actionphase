@@ -167,6 +167,19 @@ func (h *Handler) verifyUserInGame(ctx context.Context, gameID int32, userID int
 		return nil
 	}
 
+	// Check if user is a participant or audience member in the game
+	queries := db.New(h.App.Pool)
+	isParticipant, err := queries.IsUserInGame(ctx, db.IsUserInGameParams{
+		GameID: gameID,
+		UserID: userID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to check participant status: %w", err)
+	}
+	if isParticipant {
+		return nil
+	}
+
 	// Check if user has any characters in the game
 	characterService := &dbservices.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	characters, err := characterService.GetCharactersByGame(ctx, gameID)
@@ -302,6 +315,12 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, response)
 }
 
+// PollListItem represents a poll in the list response with vote status
+type PollListItem struct {
+	db.CommonRoomPoll
+	UserHasVoted bool `json:"user_has_voted"`
+}
+
 // ListGamePolls handles GET /games/{gameId}/polls
 func (h *Handler) ListGamePolls(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -346,7 +365,24 @@ func (h *Handler) ListGamePolls(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.JSON(w, r, polls)
+	// Add user_has_voted field to each poll
+	pollListItems := make([]PollListItem, len(polls))
+	for i, poll := range polls {
+		// Check if user has voted at all (as player OR with any character)
+		hasVoted, err := pollService.HasUserVotedAny(ctx, poll.ID, userID)
+		if err != nil {
+			h.App.ObsLogger.LogError(ctx, err, "Failed to check if user voted", "poll_id", poll.ID)
+			// Don't fail the whole request, just set hasVoted to false
+			hasVoted = false
+		}
+
+		pollListItems[i] = PollListItem{
+			CommonRoomPoll: poll,
+			UserHasVoted:   hasVoted,
+		}
+	}
+
+	render.JSON(w, r, pollListItems)
 }
 
 // GetPoll handles GET /polls/{pollId}
@@ -446,6 +482,33 @@ func (h *Handler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, core.ErrForbidden(err.Error()))
 		return
 	}
+
+	// Check access permissions for poll results
+	// GM and audience can always view results
+	// Regular players can only view results after poll expires
+	gameService := &dbservices.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, results.Poll.GameID)
+	if err != nil {
+		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	isGM := game.GmUserID == userID
+	isAudience := core.IsUserAudience(ctx, h.App.Pool, results.Poll.GameID, userID)
+
+	// Check if poll has expired
+	pollExpired := results.Poll.Deadline.Time.Before(time.Now())
+
+	// Players (non-GM, non-audience) can only see results after poll expires
+	if !isGM && !isAudience {
+		if !pollExpired {
+			h.App.ObsLogger.Error(ctx, "Cannot view results - poll still active")
+			render.Render(w, r, core.ErrForbidden("poll results not available until voting closes"))
+			return
+		}
+	}
+	// GM and audience can always view results
 
 	// Convert core.PollResults to API response with flattened structure
 	optionResults := make([]OptionResult, len(results.OptionResults))

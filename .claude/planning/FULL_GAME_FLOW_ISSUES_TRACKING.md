@@ -855,33 +855,116 @@ _To be determined_
 ---
 
 ### Issue 5.5: Poll Results Visible Before End
-**Status:** 🔴 Not Investigated
+**Status:** 🟢 Reproduced - Solution Proposed
 **Priority:** High
 **Reported Behavior:**
 Poll results are visible to players before the poll ends. Also shows "Not Voted" despite having voted.
 
 **Investigation:**
-- [ ] Check poll results visibility logic
-- [ ] Verify poll status tracking
-- [ ] Review vote status display
-- [ ] Test as player before/after voting
+- [x] Check poll results visibility logic
+- [x] Verify poll status tracking
+- [x] Review vote status display
+- [ ] Test as player before/after voting (needs manual verification)
 
 **Root Cause:**
-_To be determined_
+**Two-part issue affecting both frontend and backend:**
+
+1. **Frontend Bug (`PollCard.tsx` lines 119-124):**
+   - "Show Results" button is visible and functional before poll expires
+   - Players can toggle results visibility at any time during active voting
+   - Button shown when `!showVotingForm && !poll.is_expired`
+   - No role-based restriction (GM vs player)
+
+2. **Backend Missing Validation (`backend/pkg/polls/api_polls.go` lines 411-499):**
+   - `GetPollResults` handler has NO access control
+   - Only checks if user is in game (line 443-448)
+   - NO check for poll expiration status
+   - NO check for user role (GM should always see, players only after expiration)
+   - Returns results to anyone in the game regardless of poll status
+
+**Vote Status Badge:**
+- The "Not Voted" badge logic looks correct (PollCard.tsx lines 65-68)
+- This sub-issue likely stems from backend `user_has_voted` not being set correctly
+- Needs separate investigation if still occurs after main fix
 
 **Proposed Solution:**
-_To be determined_
+
+**Frontend Changes (`PollCard.tsx`):**
+```tsx
+// Line 119-124: Update button visibility condition
+{!showVotingForm && (!poll.is_expired ? isGM : true) && (
+  <Button
+    variant="secondary"
+    onClick={() => setShowResults(!showResults)}
+  >
+    {showResults ? 'Hide Results' : 'Show Results'}
+  </Button>
+)}
+```
+- Add `isGM` prop to PollCard component
+- Only show "Show Results" button to players AFTER poll expires
+- GM can always see results (for monitoring progress)
+
+**Backend Changes (`backend/pkg/polls/api_polls.go`):**
+```go
+// Add after line 448 (after verifyUserInGame):
+
+// Check if user is GM or audience
+gameService := &dbservices.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+game, err := gameService.GetGame(ctx, results.Poll.GameID)
+if err != nil {
+    h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
+    render.Render(w, r, core.ErrInternalError(err))
+    return
+}
+
+isGM := game.GmUserID == userID
+
+// Check if user is audience (has characters but none with active status)
+isAudience := false
+if !isGM {
+    // Logic to determine if user is audience vs player
+    // (This may already exist in the codebase - need to verify)
+}
+
+// Players (non-GM, non-audience) can only see results after poll expires
+if !isGM && !isAudience {
+    if !results.Poll.IsExpired {
+        h.App.ObsLogger.Error(ctx, "Cannot view results - poll still active")
+        render.Render(w, r, core.ErrForbidden("poll results not available until voting closes"))
+        return
+    }
+}
+// GM and Audience can always view results
+```
+
+**Note:** Need to verify how audience is determined in the codebase. Audience members typically:
+- Have application accepted but no active player character
+- OR have characters marked as "audience" type
+- Should be able to VIEW polls and results but NOT vote
 
 **Test Strategy:**
-- [ ] E2E test for poll results visibility by status
-- [ ] Unit test for vote status display
-- [ ] Test poll before deadline, after voting, after deadline
-- [ ] Backend test for results query permissions
+- [ ] Backend unit test: Player cannot access results before expiration
+- [ ] Backend unit test: GM can access results before expiration
+- [ ] Backend unit test: Audience can access results (even before expiration)
+- [ ] Backend unit test: Anyone can access results after expiration
+- [ ] Frontend component test: Show Results button visibility by role and status
+- [ ] E2E test: Player cannot see results before expiration
+- [ ] E2E test: Player can see results after expiration
+- [ ] E2E test: GM can always see results
+- [ ] E2E test: Audience can see results (view-only, no voting)
 
-**Files to Review:**
-- Poll results component
-- Poll status logic
-- Vote tracking
+**Visibility Rules Summary:**
+- **GM**: Always see polls and results (can monitor progress)
+- **Audience**: Always see polls and results (view-only, cannot vote)
+- **Players**: See polls always, but results only AFTER expiration
+
+**Files to Modify:**
+- `frontend/src/components/PollCard.tsx` - Add isGM/isAudience props and button visibility logic
+- `frontend/src/components/PollsTab.tsx` - Pass role props to PollCard
+- `backend/pkg/polls/api_polls.go` - Add access control to GetPollResults
+- `backend/pkg/polls/api_polls_test.go` - Add unit tests for access control
+- May need to add helper function to determine if user is audience
 
 ---
 

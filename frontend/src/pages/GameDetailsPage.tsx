@@ -347,6 +347,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
                 isLoadingPhase={isLoadingPhase}
                 isGM={isGM}
                 isParticipant={isParticipant}
+                isAudience={userRole === 'audience'}
                 currentUserId={currentUserId}
                 userCharacters={userCharacters}
                 onLeaveGame={handleLeaveGame}

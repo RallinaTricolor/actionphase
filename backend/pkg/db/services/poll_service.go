@@ -561,3 +561,21 @@ func (s *PollService) HasUserVoted(ctx context.Context, pollID int32, userID int
 
 	return hasVoted, nil
 }
+
+// HasUserVotedAny checks if a user has voted in a poll at all (as player OR with any character)
+// Use this for the polls list view to show "Voted" badge
+func (s *PollService) HasUserVotedAny(ctx context.Context, pollID int32, userID int32) (bool, error) {
+	queries := db.New(s.DB)
+
+	params := db.HasUserVotedAnyParams{
+		PollID: pollID,
+		UserID: userID,
+	}
+
+	hasVoted, err := queries.HasUserVotedAny(ctx, params)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if user voted: %w", err)
+	}
+
+	return hasVoted, nil
+}

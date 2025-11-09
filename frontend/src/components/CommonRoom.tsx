@@ -28,9 +28,10 @@ interface CommonRoomProps {
   currentPhase?: GamePhase | null;
   isCurrentPhase?: boolean;
   isGM?: boolean;
+  isAudience?: boolean;
 }
 
-export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, currentPhase, isCurrentPhase = true, isGM = false }: CommonRoomProps) {
+export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, currentPhase, isCurrentPhase = true, isGM = false, isAudience = false }: CommonRoomProps) {
   // Get current user from AuthContext
   const { currentUser } = useAuth();
   const currentUserId = currentUser?.id;
@@ -375,7 +376,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       ) : (
         /* Polls Tab */
         <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="lg" label="Loading polls..." /></div>}>
-          <PollsTab gameId={gameId} isGM={isGM} isCurrentPhase={isCurrentPhase} />
+          <PollsTab gameId={gameId} isGM={isGM} isCurrentPhase={isCurrentPhase} isAudience={isAudience} />
         </Suspense>
       )}
 

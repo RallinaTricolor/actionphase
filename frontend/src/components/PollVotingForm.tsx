@@ -12,7 +12,7 @@ interface PollVotingFormProps {
 }
 
 export function PollVotingForm({ poll, onSuccess, onCancel }: PollVotingFormProps) {
-  const submitVoteMutation = useSubmitVote(poll.id);
+  const submitVoteMutation = useSubmitVote(poll.id, poll.game_id);
   const { characters } = useUserCharacters(poll.game_id);
 
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePoll, usePollResults } from '../hooks';
 import { Card, CardHeader, CardBody, Button, Badge, Spinner } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
@@ -10,11 +10,30 @@ interface PollCardProps {
   poll: Poll;
   gameId: number;
   isGM: boolean;
+  isAudience?: boolean;
 }
 
-export function PollCard({ poll }: PollCardProps) {
+export function PollCard({ poll, isGM, isAudience = false }: PollCardProps) {
   const [showVotingForm, setShowVotingForm] = useState(false);
-  const [showResults, setShowResults] = useState(poll.is_expired || poll.user_has_voted);
+
+  // Calculate initial showResults state with permission check
+  // Players can only see results on expired polls
+  // GMs and audience can see results anytime (even on active polls)
+  const initialShowResults =
+    (poll.is_expired || poll.user_has_voted) && // User has voted or poll expired
+    (poll.is_expired || isGM || isAudience);     // AND user has permission to view
+
+  const [showResults, setShowResults] = useState(initialShowResults);
+
+  // Sync showResults state when poll data changes (after cache invalidation)
+  useEffect(() => {
+    // Determine if results should be shown based on user permissions
+    const shouldShowResults =
+      (poll.is_expired || poll.user_has_voted) && // User has voted or poll expired
+      (poll.is_expired || isGM || isAudience);     // AND user has permission to view
+
+    setShowResults(shouldShowResults);
+  }, [poll.is_expired, poll.user_has_voted, isGM, isAudience]);
 
   // Fetch full poll details when needed
   const { data: fullPoll, isLoading: pollLoading } = usePoll(showVotingForm ? poll.id : null);
@@ -90,7 +109,12 @@ export function PollCard({ poll }: PollCardProps) {
               poll={fullPoll}
               onSuccess={() => {
                 setShowVotingForm(false);
-                setShowResults(true);
+                // Only show results if user is allowed to view them
+                // Players can only see results on expired polls
+                // GMs and audience can see results anytime
+                if (poll.is_expired || isGM || isAudience) {
+                  setShowResults(true);
+                }
               }}
               onCancel={() => setShowVotingForm(false)}
             />
@@ -116,12 +140,15 @@ export function PollCard({ poll }: PollCardProps) {
                 Vote Now
               </Button>
             )}
-            <Button
-              variant="secondary"
-              onClick={() => setShowResults(!showResults)}
-            >
-              {showResults ? 'Hide Results' : 'Show Results'}
-            </Button>
+            {/* Show Results button: GM and audience can always see, players only after expiration */}
+            {(isGM || isAudience) && (
+              <Button
+                variant="secondary"
+                onClick={() => setShowResults(!showResults)}
+              >
+                {showResults ? 'Hide Results' : 'Show Results'}
+              </Button>
+            )}
           </div>
         )}
 
