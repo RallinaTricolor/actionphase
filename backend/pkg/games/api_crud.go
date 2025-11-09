@@ -593,7 +593,7 @@ func (h *Handler) GetFilteredGames(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse participation filter
-	if participationParam := queryParams.Get("participation_filter"); participationParam != "" {
+	if participationParam := queryParams.Get("participation"); participationParam != "" {
 		filters.ParticipationFilter = &participationParam
 	}
 
