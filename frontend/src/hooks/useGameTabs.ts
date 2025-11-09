@@ -65,6 +65,8 @@ export function useGameTabs({
       if (isGM) {
         tabList.push({ id: 'applications', label: 'Applications', icon: icons.applications });
       }
+      // Handouts - players can review game materials while applying
+      tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });
       // Note: During recruitment, applicants are shown in the Game Info tab
       // No "Participants" tab since there are no confirmed participants yet
       tabList.push({ id: 'info', label: 'Game Info', icon: icons.info });
@@ -74,6 +76,8 @@ export function useGameTabs({
       if (isGM) {
         tabList.push({ id: 'applications', label: 'Applications', icon: icons.applications });
       }
+      // Handouts - players can reference materials while creating characters
+      tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });
     } else if (gameState === 'in_progress') {
       // Common Room tab - only during common_room phases
       if (currentPhaseType === 'common_room') {
@@ -144,7 +148,8 @@ export function useGameTabs({
 
       tabList.push({ id: 'info', label: 'Game Info', icon: icons.info });
     } else {
-      // Setup state - minimal tabs
+      // Setup state - allow GM to prepare content before recruitment
+      tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });
       tabList.push({ id: 'info', label: 'Game Info', icon: icons.info });
     }
 

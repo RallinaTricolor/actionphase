@@ -333,4 +333,120 @@ describe('useGameTabs', () => {
       });
     });
   });
+
+  describe('Issue 1.2: Handouts tab visibility across all game states', () => {
+    it('should show Handouts tab in setup state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'setup',
+            isGM: true,
+            participantCount: 0,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: false,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      const handoutsTab = result.current.tabs.find(tab => tab.id === 'handouts');
+      expect(handoutsTab).toBeDefined();
+    });
+
+    it('should show Handouts tab in recruitment state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'recruitment',
+            isGM: false,
+            participantCount: 0,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: false,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      const handoutsTab = result.current.tabs.find(tab => tab.id === 'handouts');
+      expect(handoutsTab).toBeDefined();
+    });
+
+    it('should show Handouts tab in character_creation state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'character_creation',
+            isGM: false,
+            participantCount: 3,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: true,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      const handoutsTab = result.current.tabs.find(tab => tab.id === 'handouts');
+      expect(handoutsTab).toBeDefined();
+    });
+
+    it('should show Handouts tab in in_progress state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'in_progress',
+            isGM: false,
+            participantCount: 3,
+            currentPhaseType: 'action',
+            isAudience: false,
+            isParticipant: true,
+            hasCharacters: true,
+          }),
+        { wrapper }
+      );
+
+      const handoutsTab = result.current.tabs.find(tab => tab.id === 'handouts');
+      expect(handoutsTab).toBeDefined();
+    });
+
+    it('should show Handouts tab in completed state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'completed',
+            isGM: false,
+            participantCount: 3,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: true,
+            hasCharacters: true,
+          }),
+        { wrapper }
+      );
+
+      const handoutsTab = result.current.tabs.find(tab => tab.id === 'handouts');
+      expect(handoutsTab).toBeDefined();
+    });
+
+    it('should show Handouts tab in cancelled state', () => {
+      const { result } = renderHook(
+        () =>
+          useGameTabs({
+            gameState: 'cancelled',
+            isGM: true,
+            participantCount: 0,
+            currentPhaseType: undefined,
+            isAudience: false,
+            isParticipant: false,
+            hasCharacters: false,
+          }),
+        { wrapper }
+      );
+
+      const handoutsTab = result.current.tabs.find(tab => tab.id === 'handouts');
+      expect(handoutsTab).toBeDefined();
+    });
+  });
 });
