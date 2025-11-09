@@ -898,34 +898,49 @@ const { isUserCharacter } = useCharacterOwnership(gameId);
 ## Category 5: Poll System Issues (8 issues)
 
 ### Issue 5.1: Polls as Separate Tab
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED (2025-01-09)
 **Priority:** Medium
 **Reported Behavior:**
 Polls shouldn't be its own tab, should only be associated with Common Rooms.
 
 **Investigation:**
-- [ ] Review current poll tab implementation
-- [ ] Check how polls relate to common rooms
-- [ ] Determine correct UI integration
-- [ ] Review poll creation/viewing workflow
+- [x] Review current poll tab implementation
+- [x] Check how polls relate to common rooms
+- [x] Determine correct UI integration
+- [x] Review poll creation/viewing workflow
 
 **Root Cause:**
-_To be determined_
+Polls were previously implemented as a separate top-level tab in the game interface. This was architecturally incorrect because polls are conceptually part of the Common Room phase, not a standalone feature. The separate tab structure confused users and violated the game's phase-based architecture.
 
-**Proposed Solution:**
-_To be determined_
+**Implemented Solution:**
+Polls are now fully integrated into the Common Room tab as a sub-tab:
+- **Frontend** (`useGameTabs.ts` lines 79-89): Removed standalone Polls tab
+- **Badge Integration**: Common Room tab displays unvoted polls count as a badge
+- **Navigation**: Users access polls via Common Room tab → Polls sub-tab
+- **State Management**: Polls only visible during `common_room` phase type
+
+**E2E Testing:**
+- [x] Created comprehensive PollsPage POM (`e2e/pages/PollsPage.ts`) with navigation methods
+- [x] Refactored all 14 tests in `polls-flow.spec.ts` to use new tab structure
+- [x] Fixed DOM interaction methods to use page.evaluate() instead of assumptions
+- [x] Added explicit waits for poll loading in all tests
+- [x] Switched from index-based to question-based poll selection (more robust)
+- [x] All tests passing (13/14 passed, 1 intentionally skipped)
 
 **Test Strategy:**
-- [ ] E2E test for poll creation in common room
-- [ ] Test poll visibility in common room view
-- [ ] Verify no standalone Polls tab
-- [ ] Test poll interaction from common room
+- [x] E2E test for poll creation in common room ✅
+- [x] Test poll visibility in common room view ✅
+- [x] Verify no standalone Polls tab ✅ (removed in previous session)
+- [x] Test poll interaction from common room ✅
+- [x] Test vote badge visibility and persistence ✅
+- [x] Test permission enforcement (GM vs Player vs Audience) ✅
+- [x] Test state persistence across page reloads ✅
+- [x] Test error-free behavior (no 403s, no loading flashes) ✅
 
-**Files to Review:**
-- Game detail page tabs
-- Poll component
-- Common room component
-- Poll creation workflow
+**Files Modified:**
+- `frontend/src/hooks/useGameTabs.ts` - Removed Polls tab, integrated into Common Room (modified in previous session)
+- `frontend/e2e/pages/PollsPage.ts` - Created new POM for poll navigation and interaction
+- `frontend/e2e/gameplay/polls-flow.spec.ts` - Refactored all 14 tests to use POM and new navigation
 
 ---
 

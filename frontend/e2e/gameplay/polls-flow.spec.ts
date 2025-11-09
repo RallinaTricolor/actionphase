@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
-import { navigateToGame } from '../utils/navigation';
+import { PollsPage } from '../pages/PollsPage';
 
 /**
  * E2E Tests for Common Room Polling System
@@ -89,137 +89,85 @@ test.describe.serial('Polls Flow', () => {
   test('GM creates player-level poll successfully', async ({ page }) => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    // Navigate to Polls tab
-    await expect(page.getByTestId('tab-polls')).toBeVisible({ timeout: 10000 });
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
 
-    // Click Create Poll button
-    await expect(page.getByRole('button', { name: 'Create Poll' })).toBeVisible();
-    await page.getByRole('button', { name: 'Create Poll' }).click();
-
-    // Fill out poll form
-    await expect(page.getByRole('heading', { name: 'Create New Poll', level: 4 })).toBeVisible();
-    await page.getByPlaceholder('What would you like to ask?').fill('What should the party do next?');
-    await page.getByPlaceholder('Provide additional context or instructions...').fill('Vote for the next adventure direction');
-
-    // Set deadline to tomorrow
+    // Create poll using POM
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const deadlineString = tomorrow.toISOString().slice(0, 16);
-    await page.locator('input[type="datetime-local"]').fill(deadlineString);
 
-    // Verify player voting is selected (default)
-    await expect(page.getByRole('radio', { name: 'Player' })).toBeChecked();
+    await pollsPage.createPoll({
+      question: 'What should the party do next?',
+      description: 'Vote for the next adventure direction',
+      deadline: tomorrow,
+      votingType: 'player',
+      options: [
+        'Explore the abandoned castle',
+        'Investigate the mysterious forest',
+        'Return to town for supplies'
+      ],
+      allowOther: true
+    });
 
-    // Add options
-    await page.locator('input[placeholder="Option 1"]').fill('Explore the abandoned castle');
-    await page.locator('input[placeholder="Option 2"]').fill('Investigate the mysterious forest');
-    await page.getByRole('button', { name: 'Add Option' }).click();
-    await page.locator('input[placeholder="Option 3"]').fill('Return to town for supplies');
-
-    // Enable "other" responses
-    await page.locator('div:has(label:has-text("Allow \'Other\' text responses")) input[type="checkbox"]').last().check();
-
-    // Submit poll
-    await page.getByRole('button', { name: 'Create Poll', exact: true }).click();
-    await page.waitForLoadState('networkidle');
-
-    // Verify poll appears
-    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
+    // Verify poll details
     await expect(page.getByText('Vote as: player')).toBeVisible();
-    await expect(page.getByText('Not Voted')).toBeVisible();
+    expect(await pollsPage.getPollVoteStatus('What should the party do next?')).toBe('not-voted');
   });
 
   test('Player votes on poll and sees correct badge', async ({ page }) => {
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
 
-    // Vote on poll
-    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 10000 });
-    await page.getByRole('button', { name: 'Vote Now' }).click();
-    await expect(page.getByText('Select your response')).toBeVisible({ timeout: 5000 });
-    await page.getByRole('radio', { name: 'Investigate the mysterious forest' }).check();
-    await expect(page.getByRole('button', { name: 'Submit Vote' })).toBeEnabled();
-    await page.getByRole('button', { name: 'Submit Vote' }).click();
+    // Vote using POM
+    await pollsPage.voteOnPoll('What should the party do next?', 'Investigate the mysterious forest');
 
-    // Verify form closes and badge updates
-    await expect(page.getByText('Select your response')).not.toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Voted')).toBeVisible({ timeout: 5000 });
+    // Verify badge updated
+    expect(await pollsPage.getPollVoteStatus('What should the party do next?')).toBe('voted');
   });
 
   test('GM creates character-level poll successfully', async ({ page }) => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
-
-    // Create character-level poll
-    await page.getByRole('button', { name: 'Create Poll' }).click();
-    await expect(page.getByRole('heading', { name: 'Create New Poll', level: 4 })).toBeVisible();
-
-    await page.getByPlaceholder('What would you like to ask?').fill('Which faction should your character support?');
-    await page.getByPlaceholder('Provide additional context or instructions...').fill('This is an in-character decision');
+    await pollsPage.goto();
 
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    await page.locator('input[type="datetime-local"]').fill(tomorrow.toISOString().slice(0, 16));
 
-    // Select character voting
-    await page.getByRole('radio', { name: 'Character' }).click();
+    await pollsPage.createPoll({
+      question: 'Which faction should your character support?',
+      description: 'This is an in-character decision',
+      deadline: tomorrow,
+      votingType: 'character',
+      options: [
+        'The Merchants Guild',
+        'The Thieves Guild',
+        'The City Watch'
+      ],
+      showIndividualVotes: true
+    });
 
-    await page.locator('input[placeholder="Option 1"]').fill('The Merchants Guild');
-    await page.locator('input[placeholder="Option 2"]').fill('The Thieves Guild');
-    await page.getByRole('button', { name: 'Add Option' }).click();
-    await page.locator('input[placeholder="Option 3"]').fill('The City Watch');
-
-    // Enable individual vote visibility
-    await page.locator('div:has(label:has-text("Show individual votes to all players")) input[type="checkbox"]').first().check();
-
-    await page.getByRole('button', { name: 'Create Poll', exact: true }).click();
-    await page.waitForLoadState('networkidle');
-
-    // Verify poll appears
-    await expect(page.getByText('Which faction should your character support?')).toBeVisible({ timeout: 5000 });
+    // Verify poll details
     await expect(page.getByText('Vote as: Character')).toBeVisible();
   });
 
   test('Player votes as character and sees badge update', async ({ page }) => {
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
 
-    await expect(page.getByRole('heading', { name: 'Which faction should your character support?' })).toBeVisible({ timeout: 10000 });
-
-    // Find the second "Vote Now" button (character poll)
-    const voteButtons = page.getByRole('button', { name: 'Vote Now' });
-    const count = await voteButtons.count();
-    await voteButtons.nth(count > 1 ? 1 : 0).click();
-
-    await expect(page.getByText('Select your response')).toBeVisible({ timeout: 5000 });
-    await page.getByRole('radio', { name: 'The Merchants Guild' }).check();
-    await page.getByRole('button', { name: 'Submit Vote' }).click();
-
-    await expect(page.getByText('Select your response')).not.toBeVisible({ timeout: 5000 });
+    // Vote on character poll by question
+    await pollsPage.voteOnPoll('Which faction should your character support?', 'The Merchants Guild');
 
     // Should now have 2 "Voted" badges (player poll + character poll)
-    const votedBadges = page.getByText('Voted');
-    await expect(votedBadges).toHaveCount(2, { timeout: 5000 });
+    expect(await pollsPage.getVotedBadgeCount()).toBe(2);
   });
 
   // ==========================================================================
@@ -234,18 +182,12 @@ test.describe.serial('Polls Flow', () => {
 
     await loginAs(page, 'PLAYER_2');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
 
-    // Vote on first poll
-    await page.getByRole('button', { name: 'Vote Now' }).first().click();
-    await expect(page.getByText('Select your response')).toBeVisible({ timeout: 5000 });
-    await page.getByRole('radio', { name: 'Explore the abandoned castle' }).check();
-    await page.getByRole('button', { name: 'Submit Vote' }).click();
-    await expect(page.getByText('Select your response')).not.toBeVisible({ timeout: 5000 });
+    // Vote on player poll
+    await pollsPage.voteOnPoll('What should the party do next?', 'Explore the abandoned castle');
 
     // Wait a bit for any async errors to appear
     await page.waitForTimeout(500);
@@ -257,22 +199,14 @@ test.describe.serial('Polls Flow', () => {
   test('Player voting does not show Loading results flash', async ({ page }) => {
     await loginAs(page, 'PLAYER_2');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
 
-    // Find a poll we haven't voted on yet
+    // Vote on character poll (the one remaining after voting on player poll in previous test)
     const voteButtons = page.getByRole('button', { name: 'Vote Now' });
     if (await voteButtons.count() > 0) {
-      await voteButtons.first().click();
-      await expect(page.getByText('Select your response')).toBeVisible({ timeout: 5000 });
-
-      // Select "Other" option to test that path
-      await page.getByRole('radio', { name: 'Other (specify below)' }).check();
-      await page.locator('input[placeholder="Enter your custom response..."]').fill('Split the party');
-      await page.getByRole('button', { name: 'Submit Vote' }).click();
+      await pollsPage.voteOnPoll('Which faction should your character support?', 'The City Watch');
 
       // CRITICAL: "Loading results..." should NEVER appear for players on active polls
       await expect(page.getByText('Loading results...')).not.toBeVisible({ timeout: 100 });
@@ -284,11 +218,9 @@ test.describe.serial('Polls Flow', () => {
 
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
 
     // Just navigate to polls tab - should not make /results calls
     await page.waitForTimeout(500);
@@ -304,30 +236,20 @@ test.describe.serial('Polls Flow', () => {
   test('Character voting does not trigger errors', async ({ page }) => {
     const { consoleErrors } = setupMonitoring(page);
 
-    await loginAs(page, 'PLAYER_2');
+    await loginAs(page, 'PLAYER_3');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
 
-    // Vote on character poll
-    const voteButtons = page.getByRole('button', { name: 'Vote Now' });
-    const count = await voteButtons.count();
-    if (count > 0) {
-      await voteButtons.last().click();
-      await expect(page.getByText('Select your response')).toBeVisible({ timeout: 5000 });
-      await page.getByRole('radio').first().check();
-      await page.getByRole('button', { name: 'Submit Vote' }).click();
-      await expect(page.getByText('Select your response')).not.toBeVisible({ timeout: 5000 });
+    // PLAYER_3 votes on character poll
+    await pollsPage.voteOnPoll('Which faction should your character support?', 'The Thieves Guild');
 
-      // Wait for any async errors
-      await page.waitForTimeout(500);
+    // Wait for any async errors
+    await page.waitForTimeout(500);
 
-      // Check for errors
-      checkPollErrors(consoleErrors, 'Character voting does not trigger errors');
-    }
+    // Check for errors
+    checkPollErrors(consoleErrors, 'Character voting does not trigger errors');
   });
 
   // ==========================================================================
@@ -340,51 +262,54 @@ test.describe.serial('Polls Flow', () => {
   test('Voted badge persists after page reload (player vote)', async ({ page }) => {
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
+
+    // Wait for polls to load
+    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
 
     // Verify badge shows "Voted" for previously voted polls (PLAYER_1 voted on both polls)
-    const votedBadges = page.getByText('Voted');
-    await expect(votedBadges).toHaveCount(2, { timeout: 5000 });
+    expect(await pollsPage.getVotedBadgeCount()).toBe(2);
 
-    // Reload page
+    // Reload page (loses query params, so we need to navigate again)
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Navigate back to polls
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    // Navigate back to polls tab
+    await pollsPage.goto();
+
+    // Wait for polls to load after reload
+    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
 
     // Badges should STILL show "Voted" (tests API contract persists across reload)
-    await expect(votedBadges).toHaveCount(2, { timeout: 5000 });
+    expect(await pollsPage.getVotedBadgeCount()).toBe(2);
   });
 
   test('Character vote badge persists after page reload', async ({ page }) => {
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
+
+    // Wait for polls to load
+    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
 
     // Should have 2 "Voted" badges from previous tests
-    let votedBadges = page.getByText('Voted');
-    await expect(votedBadges).toHaveCount(2, { timeout: 5000 });
+    expect(await pollsPage.getVotedBadgeCount()).toBe(2);
 
     // Reload page
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
+
+    // Wait for polls to load after reload
+    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
 
     // Should STILL have 2 "Voted" badges (validates Bug #5 fix)
-    votedBadges = page.getByText('Voted');
-    await expect(votedBadges).toHaveCount(2, { timeout: 5000 });
+    expect(await pollsPage.getVotedBadgeCount()).toBe(2);
   });
 
   // ==========================================================================
@@ -396,32 +321,33 @@ test.describe.serial('Polls Flow', () => {
   test('Player cannot view results on active poll', async ({ page }) => {
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
+
+    // Wait for polls to load
+    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
 
     // Player should NOT see "Show Results" button on ANY active poll
-    await expect(page.getByRole('button', { name: 'Show Results' })).not.toBeVisible();
+    expect(await pollsPage.canViewResults()).toBe(false);
     await expect(page.getByRole('button', { name: 'Hide Results' })).not.toBeVisible();
   });
 
   test('GM can view results on active poll', async ({ page }) => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
+
+    // Wait for polls to load
+    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
 
     // GM should see "Show Results" button
-    await expect(page.getByRole('button', { name: 'Show Results' }).first()).toBeVisible({ timeout: 5000 });
+    expect(await pollsPage.canViewResults()).toBe(true);
 
-    // Click to show results
-    await page.getByRole('button', { name: 'Show Results' }).first().click();
-    await page.waitForTimeout(500);
+    // Show results using POM
+    await pollsPage.showResults(0);
 
     // Should see results
     await expect(page.getByRole('heading', { name: 'Results' }).first()).toBeVisible();
@@ -434,23 +360,21 @@ test.describe.serial('Polls Flow', () => {
   test('Audience can toggle results on active poll', async ({ page }) => {
     await loginAs(page, 'AUDIENCE');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await expect(page.getByTestId('tab-polls')).toBeVisible({ timeout: 10000 });
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
+
+    // Wait for polls to load
+    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
 
     // Audience should see "Show Results" button
-    await expect(page.getByRole('button', { name: 'Show Results' }).first()).toBeVisible();
+    expect(await pollsPage.canViewResults()).toBe(true);
 
-    // Toggle results
-    await page.getByRole('button', { name: 'Show Results' }).first().click();
-    await page.waitForTimeout(500);
+    // Toggle results using POM
+    await pollsPage.showResults(0);
     await expect(page.getByRole('heading', { name: 'Results' }).first()).toBeVisible();
 
-    await page.getByRole('button', { name: 'Hide Results' }).first().click();
-    await page.waitForTimeout(500);
+    await pollsPage.hideResults(0);
     await expect(page.getByRole('heading', { name: 'Results' }).first()).not.toBeVisible();
   });
 
@@ -463,11 +387,12 @@ test.describe.serial('Polls Flow', () => {
   test('Poll filtering shows/hides expired polls', async ({ page }) => {
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    await navigateToGame(page, gameId);
-    await page.waitForLoadState('networkidle');
+    const pollsPage = new PollsPage(page, gameId);
 
-    await page.getByTestId('tab-polls').click();
-    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
+
+    // Wait for polls to load
+    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
 
     // Should show "Active Polls" by default
     await expect(page.getByText(/Active Polls/)).toBeVisible();
@@ -475,7 +400,7 @@ test.describe.serial('Polls Flow', () => {
     // If there's an expired polls toggle, test it
     const expiredToggle = page.locator('input[type="checkbox"][id="show-expired"]');
     if (await expiredToggle.isVisible()) {
-      await expiredToggle.check();
+      await pollsPage.toggleExpiredPolls();
       await expect(page.getByText(/Expired Polls/)).toBeVisible({ timeout: 3000 });
     }
   });
