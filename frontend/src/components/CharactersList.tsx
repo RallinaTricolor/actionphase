@@ -9,6 +9,7 @@ import { Modal } from './Modal';
 import { Card, Button, Badge, Spinner, type BadgeVariant } from './ui';
 import CharacterAvatar from './CharacterAvatar';
 import { logger } from '@/services/LoggingService';
+import { useCharacterOwnership } from '../hooks/useCharacterOwnership';
 
 interface CharactersListProps {
   gameId: number;
@@ -30,6 +31,9 @@ export function CharactersList({
   const [npcToAssign, setNpcToAssign] = useState<Character | null>(null);
   const [characterToDelete, setCharacterToDelete] = useState<Character | null>(null);
   const queryClient = useQueryClient();
+
+  // Use ownership hook to check character ownership (works in anonymous mode)
+  const { isUserCharacter: isUserCharacterById } = useCharacterOwnership(gameId);
 
   const { data: charactersData, isLoading } = useQuery({
     queryKey: ['gameCharacters', gameId],
@@ -53,6 +57,7 @@ export function CharactersList({
       apiClient.characters.approveCharacter(characterId, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['userControllableCharacters', gameId] });
     }
   });
 
@@ -60,6 +65,7 @@ export function CharactersList({
     mutationFn: (characterId: number) => apiClient.characters.deleteCharacter(characterId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['userControllableCharacters', gameId] });
       setCharacterToDelete(null);
     },
     onError: (error: any) => {
@@ -90,7 +96,8 @@ export function CharactersList({
           return false;
         }
         // Otherwise, show approved characters + their own characters
-        return char.status === 'approved' || char.user_id === currentUserId;
+        // Use ownership hook instead of user_id comparison (works in anonymous mode)
+        return char.status === 'approved' || isUserCharacterById(char.id);
       });
 
   // Group characters by type
@@ -106,18 +113,15 @@ export function CharactersList({
   };
 
   // Check if character belongs to current user
+  // Wrapper around ownership hook to handle NPCs with GM logic
   const isUserCharacter = (character: Character) => {
-    if (character.character_type === 'player_character') {
-      return character.user_id === currentUserId;
+    // Use ownership hook for all controllable characters (player characters and assigned NPCs)
+    if (isUserCharacterById(character.id)) {
+      return true;
     }
-    // For NPCs: GM owns all unassigned NPCs, or users own NPCs assigned to them
-    if (character.character_type === 'npc') {
-      // If NPC is assigned to someone, check if it's assigned to current user
-      if (character.assigned_user_id) {
-        return character.assigned_user_id === currentUserId;
-      }
-      // If NPC is unassigned, GM owns it
-      return userRole === 'gm';
+    // Special case: GMs own all unassigned NPCs
+    if (character.character_type === 'npc' && !character.assigned_user_id && userRole === 'gm') {
+      return true;
     }
     return false;
   };
@@ -427,7 +431,7 @@ function CharacterCard({
                   <span data-testid="character-status-badge">{character.status}</span>
                 </Badge>
               )}
-              {isOwner && canSeePlayerNames(isAnonymous || false, userRole) && (
+              {isOwner && (
                 <Badge variant="secondary" size="sm">
                   Your Character
                 </Badge>
@@ -511,8 +515,8 @@ function CharacterCard({
                   <span data-testid="character-status-badge">{character.status}</span>
                 </Badge>
               )}
-              {/* Show ownership badge if not anonymous mode OR if user can see player names (GM/co-GM/audience) */}
-              {isOwner && canSeePlayerNames(isAnonymous || false, userRole) && (
+              {/* Show ownership badge - always visible for owned characters */}
+              {isOwner && (
                 <Badge variant="secondary" size="sm">
                   Your Character
                 </Badge>
