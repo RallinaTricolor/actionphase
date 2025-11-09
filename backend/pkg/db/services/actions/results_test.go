@@ -423,3 +423,202 @@ func TestActionSubmissionService_PublishAllPhaseResults(t *testing.T) {
 		assert.Equal(t, int64(0), count, "Empty phase should have 0 unpublished results")
 	})
 }
+
+// TestActionSubmissionService_PublishCharacterUpdates tests the character update merge logic
+// This is a regression test for Issue 6.4: Pending Character Updates Not Applied
+func TestActionSubmissionService_PublishCharacterUpdates(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Create test data
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	// Create character
+	userID := int32(player.ID)
+	charReq := db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &userID,
+		Name:          "Test Character",
+		CharacterType: "player_character",
+	}
+	character, err := characterService.CreateCharacter(context.Background(), charReq)
+	require.NoError(t, err)
+
+	// Approve character
+	_, err = characterService.ApproveCharacter(context.Background(), character.ID)
+	require.NoError(t, err)
+
+	// Create action phase
+	phase, err := phaseService.TransitionToNextPhase(context.Background(), game.ID, int32(gm.ID), core.TransitionPhaseRequest{
+		PhaseType: "action",
+		Title:     "Action Phase",
+	})
+	require.NoError(t, err)
+
+	// Create action result
+	resultReq := core.CreateActionResultRequest{
+		GameID:      game.ID,
+		PhaseID:     phase.ID,
+		UserID:      int32(player.ID),
+		Content:     "You successfully complete your action.",
+		IsPublished: false,
+	}
+	result, err := actionService.CreateActionResult(context.Background(), resultReq)
+	require.NoError(t, err)
+
+	t.Run("merges inventory items into array format", func(t *testing.T) {
+		// Create draft character updates (individual rows per item)
+		// This simulates how the frontend stores draft updates
+		drafts := []struct {
+			fieldName  string
+			fieldValue string
+		}{
+			{"Sword", `{"name":"Sword","description":"A sharp blade","quantity":1}`},
+			{"Potion", `{"name":"Potion","description":"Healing potion","quantity":3}`},
+		}
+
+		for _, draft := range drafts {
+			_, err := testDB.Pool.Exec(context.Background(),
+				`INSERT INTO action_result_character_updates
+				(action_result_id, character_id, module_type, field_name, field_value, field_type, operation)
+				VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+				result.ID, character.ID, "inventory", draft.fieldName, draft.fieldValue, "json", "upsert")
+			require.NoError(t, err)
+		}
+
+		// Publish the result (should trigger merge logic)
+		err = actionService.PublishActionResult(context.Background(), result.ID, int32(player.ID))
+		require.NoError(t, err)
+
+		// Verify character_data has correct format: field_name='items' with JSON array
+		var fieldName, fieldValue string
+		err = testDB.Pool.QueryRow(context.Background(),
+			`SELECT field_name, field_value FROM character_data
+			WHERE character_id = $1 AND module_type = $2`,
+			character.ID, "inventory").Scan(&fieldName, &fieldValue)
+		require.NoError(t, err)
+
+		// Assertions
+		assert.Equal(t, "items", fieldName, "Field name should be 'items', not individual item names")
+		assert.Contains(t, fieldValue, `"name":"Sword"`, "Merged array should contain Sword")
+		assert.Contains(t, fieldValue, `"name":"Potion"`, "Merged array should contain Potion")
+		assert.Contains(t, fieldValue, `"quantity":1`, "Sword should have quantity 1")
+		assert.Contains(t, fieldValue, `"quantity":3`, "Potion should have quantity 3")
+
+		// Verify it's a JSON array, not individual fields
+		assert.True(t, fieldValue[0] == '[', "Field value should be a JSON array starting with '['")
+
+		// Verify drafts were cleaned up
+		var draftCount int
+		err = testDB.Pool.QueryRow(context.Background(),
+			`SELECT COUNT(*) FROM action_result_character_updates WHERE action_result_id = $1`,
+			result.ID).Scan(&draftCount)
+		require.NoError(t, err)
+		assert.Equal(t, 0, draftCount, "Draft updates should be deleted after publishing")
+	})
+
+	t.Run("merges abilities into array format", func(t *testing.T) {
+		// Create new result for abilities test
+		result2, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
+			GameID:      game.ID,
+			PhaseID:     phase.ID,
+			UserID:      int32(player.ID),
+			Content:     "You gain new abilities.",
+			IsPublished: false,
+		})
+		require.NoError(t, err)
+
+		// Create draft ability updates
+		abilities := []struct {
+			fieldName  string
+			fieldValue string
+		}{
+			{"Fireball", `{"name":"Fireball","description":"Cast a fireball","cost":5}`},
+			{"Shield", `{"name":"Shield","description":"Protective barrier","cost":3}`},
+		}
+
+		for _, ability := range abilities {
+			_, err := testDB.Pool.Exec(context.Background(),
+				`INSERT INTO action_result_character_updates
+				(action_result_id, character_id, module_type, field_name, field_value, field_type, operation)
+				VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+				result2.ID, character.ID, "abilities", ability.fieldName, ability.fieldValue, "json", "upsert")
+			require.NoError(t, err)
+		}
+
+		// Publish
+		err = actionService.PublishActionResult(context.Background(), result2.ID, int32(player.ID))
+		require.NoError(t, err)
+
+		// Verify merged format
+		var fieldName, fieldValue string
+		err = testDB.Pool.QueryRow(context.Background(),
+			`SELECT field_name, field_value FROM character_data
+			WHERE character_id = $1 AND module_type = $2`,
+			character.ID, "abilities").Scan(&fieldName, &fieldValue)
+		require.NoError(t, err)
+
+		assert.Equal(t, "abilities", fieldName, "Field name should be 'abilities'")
+		assert.Contains(t, fieldValue, `"name":"Fireball"`)
+		assert.Contains(t, fieldValue, `"name":"Shield"`)
+		assert.True(t, fieldValue[0] == '[', "Should be JSON array")
+	})
+
+	t.Run("merges new items with existing items", func(t *testing.T) {
+		// First, create existing character data with one item
+		_, err := testDB.Pool.Exec(context.Background(),
+			`INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (character_id, module_type, field_name) DO UPDATE
+			SET field_value = EXCLUDED.field_value`,
+			character.ID, "inventory", "items",
+			`[{"name":"Existing Item","quantity":1}]`, "json")
+		require.NoError(t, err)
+
+		// Create new result with additional item
+		result3, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
+			GameID:      game.ID,
+			PhaseID:     phase.ID,
+			UserID:      int32(player.ID),
+			Content:     "You find more items.",
+			IsPublished: false,
+		})
+		require.NoError(t, err)
+
+		// Add draft update for new item
+		_, err = testDB.Pool.Exec(context.Background(),
+			`INSERT INTO action_result_character_updates
+			(action_result_id, character_id, module_type, field_name, field_value, field_type, operation)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			result3.ID, character.ID, "inventory", "New Sword",
+			`{"name":"New Sword","quantity":1}`, "json", "upsert")
+		require.NoError(t, err)
+
+		// Publish
+		err = actionService.PublishActionResult(context.Background(), result3.ID, int32(player.ID))
+		require.NoError(t, err)
+
+		// Verify both items exist in merged array
+		var fieldValue string
+		err = testDB.Pool.QueryRow(context.Background(),
+			`SELECT field_value FROM character_data
+			WHERE character_id = $1 AND module_type = $2 AND field_name = $3`,
+			character.ID, "inventory", "items").Scan(&fieldValue)
+		require.NoError(t, err)
+
+		assert.Contains(t, fieldValue, `"Existing Item"`, "Should preserve existing items")
+		assert.Contains(t, fieldValue, `"New Sword"`, "Should add new items")
+	})
+}

@@ -70,6 +70,8 @@ export function usePublishActionResult(gameId: number) {
       queryClient.invalidateQueries({ queryKey: ['actionResults', 'user', gameId] });
       queryClient.invalidateQueries({ queryKey: ['draftCharacterUpdates'] });
       queryClient.invalidateQueries({ queryKey: ['draftUpdateCount'] });
+      // Invalidate character data to show published character updates
+      queryClient.invalidateQueries({ queryKey: ['characterData'] });
     },
   });
 }

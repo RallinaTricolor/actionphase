@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -80,6 +81,144 @@ func (as *ActionSubmissionService) GetUserPhaseResults(ctx context.Context, phas
 	return results, nil
 }
 
+// mergeAndPublishDraftUpdates merges individual draft updates into array format and publishes them.
+// This handles the mismatch between how drafts are stored (individual rows per item/ability/skill)
+// and how character sheets expect data (single rows with JSON arrays).
+func (as *ActionSubmissionService) mergeAndPublishDraftUpdates(ctx context.Context, queries *models.Queries, resultID int32) error {
+	// Get all draft updates for this result
+	drafts, err := queries.GetDraftCharacterUpdates(ctx, resultID)
+	if err != nil {
+		return fmt.Errorf("failed to get draft updates: %w", err)
+	}
+
+	if len(drafts) == 0 {
+		return nil // Nothing to publish
+	}
+
+	// Define which module_types need array aggregation and their target field names
+	// Map structure: module_type -> target_field_name
+	arrayModules := map[string]string{
+		"inventory": "items",     // Inventory items stored individually, need to merge into 'items' array
+		"currency":  "currency",  // Currency entries stored individually, need to merge into 'currency' array
+		"abilities": "abilities", // Abilities stored individually, need to merge into 'abilities' array
+		"skills":    "skills",    // Skills stored individually, need to merge into 'skills' array
+	}
+
+	// Group drafts by (character_id, module_type)
+	type groupKey struct {
+		characterID int32
+		moduleType  string
+	}
+	groups := make(map[groupKey][]models.ActionResultCharacterUpdate)
+	for _, draft := range drafts {
+		if draft.Operation != "upsert" {
+			continue // Only handle upsert operations
+		}
+		key := groupKey{characterID: draft.CharacterID, moduleType: draft.ModuleType}
+		groups[key] = append(groups[key], draft)
+	}
+
+	// Process each group
+	for key, groupDrafts := range groups {
+		targetFieldName, needsAggregation := arrayModules[key.moduleType]
+
+		if !needsAggregation {
+			// For non-array modules, use simple upsert (old behavior)
+			for _, draft := range groupDrafts {
+				_, err := queries.CreateCharacterData(ctx, models.CreateCharacterDataParams{
+					CharacterID: draft.CharacterID,
+					ModuleType:  draft.ModuleType,
+					FieldName:   draft.FieldName,
+					FieldValue:  draft.FieldValue,
+					FieldType:   pgtype.Text{String: draft.FieldType, Valid: true},
+					IsPublic:    pgtype.Bool{Bool: false, Valid: true}, // Default to private
+				})
+				if err != nil {
+					return fmt.Errorf("failed to upsert non-array field: %w", err)
+				}
+			}
+			continue
+		}
+
+		// For array modules, merge all drafts into a single array
+		// 1. Fetch existing array data (if any)
+		existingData, err := queries.GetCharacterDataByModule(ctx, models.GetCharacterDataByModuleParams{
+			CharacterID: key.characterID,
+			ModuleType:  key.moduleType,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get existing character data: %w", err)
+		}
+
+		// 2. Parse existing array or initialize empty
+		var existingArray []map[string]interface{}
+		for _, data := range existingData {
+			if data.FieldName == targetFieldName && data.FieldValue.Valid {
+				if err := json.Unmarshal([]byte(data.FieldValue.String), &existingArray); err != nil {
+					// If parse fails, start with empty array
+					existingArray = []map[string]interface{}{}
+				}
+				break
+			}
+		}
+		if existingArray == nil {
+			existingArray = []map[string]interface{}{}
+		}
+
+		// 3. Merge draft items into existing array
+		// Use item name as unique key for upsert behavior
+		itemMap := make(map[string]map[string]interface{})
+
+		// Add existing items to map
+		for _, item := range existingArray {
+			if name, ok := item["name"].(string); ok {
+				itemMap[name] = item
+			}
+		}
+
+		// Upsert draft items (overwrite if same name exists)
+		for _, draft := range groupDrafts {
+			if !draft.FieldValue.Valid {
+				continue
+			}
+
+			var draftItem map[string]interface{}
+			if err := json.Unmarshal([]byte(draft.FieldValue.String), &draftItem); err != nil {
+				return fmt.Errorf("failed to parse draft item JSON: %w", err)
+			}
+
+			// Use the field_name (item/ability/skill name) as the key
+			itemMap[draft.FieldName] = draftItem
+		}
+
+		// 4. Convert map back to array
+		mergedArray := make([]map[string]interface{}, 0, len(itemMap))
+		for _, item := range itemMap {
+			mergedArray = append(mergedArray, item)
+		}
+
+		// 5. Marshal to JSON and save
+		mergedJSON, err := json.Marshal(mergedArray)
+		if err != nil {
+			return fmt.Errorf("failed to marshal merged array: %w", err)
+		}
+
+		_, err = queries.CreateCharacterData(ctx, models.CreateCharacterDataParams{
+			CharacterID: key.characterID,
+			ModuleType:  key.moduleType,
+			FieldName:   targetFieldName, // Use the target field name (e.g., 'items', 'abilities')
+			FieldValue:  pgtype.Text{String: string(mergedJSON), Valid: true},
+			FieldType:   pgtype.Text{String: "json", Valid: true},
+			IsPublic:    pgtype.Bool{Bool: false, Valid: true},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to save merged array: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // publishSingleResultWithDrafts is a helper that publishes a single result and its draft updates.
 // This is called by both PublishActionResult and PublishAllPhaseResults to ensure consistent behavior.
 // The queries parameter must be from a transaction context to ensure atomicity.
@@ -90,11 +229,11 @@ func (as *ActionSubmissionService) publishSingleResultWithDrafts(ctx context.Con
 		return fmt.Errorf("failed to publish action result %d: %w", resultID, err)
 	}
 
-	// Step 2: Publish any draft character updates associated with this result
-	// This copies the drafts to character_data table
-	err = queries.PublishDraftCharacterUpdates(ctx, resultID)
+	// Step 2: Merge and publish draft character updates
+	// This aggregates individual draft rows into array format expected by character sheets
+	err = as.mergeAndPublishDraftUpdates(ctx, queries, resultID)
 	if err != nil {
-		return fmt.Errorf("failed to publish draft character updates for result %d: %w", resultID, err)
+		return fmt.Errorf("failed to merge and publish draft character updates for result %d: %w", resultID, err)
 	}
 
 	// Step 3: Delete the published drafts (cleanup)
