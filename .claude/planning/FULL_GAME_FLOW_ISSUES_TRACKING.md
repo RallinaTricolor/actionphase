@@ -128,30 +128,38 @@ _To be determined_
 ---
 
 ### Issue 1.4: Participants/Characters Tabs Split During Character Creation
-**Status:** 🔴 Not Investigated
+**Status:** ✅ COMPLETE - Fixed + Tests Passing
 **Priority:** Medium
 **Reported Behavior:**
 During character creation, "Participants" and "Characters" are shown as separate tabs instead of a unified "People" tab.
 
 **Investigation:**
-- [ ] Review tab structure during character creation
-- [ ] Check if unified "People" tab exists or needs to be created
-- [ ] Determine what information should be in unified view
+- [x] Review tab structure during character creation
+- [x] Check if unified "People" tab exists or needs to be created
+- [x] Determine what information should be in unified view
 
 **Root Cause:**
-_To be determined_
+In `useGameTabs.ts`, the `character_creation` state was adding separate "characters" and "participants" tabs instead of using the unified "People" tab that was already implemented for `in_progress` and `completed` states.
 
 **Proposed Solution:**
-_To be determined_
+Replace the split tabs with the unified "People" tab during character_creation state, matching the pattern used in in_progress games.
 
-**Test Strategy:**
-- [ ] E2E test for People tab in character creation
-- [ ] Verify content shows both participants and characters
-- [ ] Test tab visibility across all game states
+**Implementation:**
+- [x] Updated `useGameTabs.ts` to use unified "People" tab for character_creation (line 74-78)
+- [x] Updated default tab logic to default to "people" tab (line 189-192)
+- [x] Removed old "participants" and "characters" tab handlers from `GameTabContent.tsx`
+- [x] Removed unused "participants" and "characters" icon definitions from `useGameTabs.ts`
+- [x] All tests passing (15/15 in useGameTabs.test.tsx)
+- [x] Fixed E2E tests affected by tab structure changes:
+  - Updated `CharacterWorkflowPage.ts` POM to navigate People → Characters sub-tab
+  - Updated `character-deletion.spec.ts` to navigate to People tab first
+  - Both E2E tests passing ✅
 
-**Files to Review:**
-- Game detail page tabs
-- People/Participants/Characters components
+**Files Modified:**
+- `frontend/src/hooks/useGameTabs.ts` - Unified tab configuration
+- `frontend/src/components/GameTabContent.tsx` - Removed old tab handlers
+- `frontend/e2e/pages/CharacterWorkflowPage.ts` - Fixed navigation for new tab structure
+- `frontend/e2e/characters/character-deletion.spec.ts` - Updated to use People → Characters navigation
 
 ---
 
@@ -505,7 +513,7 @@ Game editing allowed enabling "Anonymous Mode" but NOT "Auto Accept Audience", d
 ## Category 3: Filter/Query Issues (2 issues)
 
 ### Issue 3.1: "Has Open Spots" Filter Shows Wrong Games
-**Status:** 🟢 Reproduced - Solution Proposed
+**Status:** ✅ COMPLETE - Fixed + Tests Added
 **Priority:** High
 **Reported Behavior:**
 "Has Open Spots" filter shows games that aren't in "Recruiting" state.
@@ -557,7 +565,7 @@ AND (
 ---
 
 ### Issue 3.2: "Applied" Filter Doesn't Show Applied Games
-**Status:** 🟢 Reproduced - Solution Proposed
+**Status:** ✅ COMPLETE - Fixed + Tests Added
 **Priority:** High
 **Reported Behavior:**
 "Applied" game filter doesn't show games that the user has applied to.
@@ -617,33 +625,42 @@ if participationParam := queryParams.Get("participation_filter"); participationP
 ## Category 4: Character Visibility & Permissions (3 issues)
 
 ### Issue 4.1: Player Can't See Own Pending Character
-**Status:** 🔴 Not Investigated
+**Status:** ✅ COMPLETE - Fixed via Issue 1.4 + Verified with Tests
 **Priority:** High
 **Reported Behavior:**
 Player can create their own character but can't see it while it's pending (they should be able to).
 
 **Investigation:**
-- [ ] Check character visibility logic
-- [ ] Verify permission checks for pending characters
-- [ ] Review player vs GM character views
-- [ ] Test character creation and visibility
+- [x] Check character visibility logic
+- [x] Verify permission checks for pending characters
+- [x] Review player vs GM character views
+- [x] Test character creation and visibility
 
 **Root Cause:**
-_To be determined_
+This was caused by the same issue as Issue 1.4. During `character_creation` state, the split "Characters" and "Participants" tabs were being shown, and users were landing on the wrong tab where characters weren't visible.
 
-**Proposed Solution:**
-_To be determined_
+**Character Visibility Logic (Verified):**
+In `CharactersList.tsx` (lines 85-94), the filtering logic is:
+- **GM**: Sees ALL characters regardless of status
+- **Players during `character_creation`**: See approved characters + their own characters (including pending)
+- **Players during `in_progress`**: Only see approved characters (pending hidden even from owners)
 
-**Test Strategy:**
-- [ ] E2E test for character creation and immediate visibility
-- [ ] Permission test for viewing own pending character
-- [ ] Backend test for character query filtering
-- [ ] Test edit permissions for pending character
+This logic was already correct - the issue was purely the wrong tab being displayed.
 
-**Files to Review:**
-- Character list component
-- Character visibility/permission logic
-- Backend character query handler
+**Solution:**
+Fixed by implementing unified "People" tab for character_creation state (same fix as Issue 1.4).
+
+**Implementation:**
+- [x] Unified tab structure in `useGameTabs.ts` (Issue 1.4 fix)
+- [x] Removed split tab handlers
+- [x] Default to "People" tab → "Characters" sub-tab during character_creation
+- [x] **Added comprehensive tests** in `CharactersList.test.tsx`:
+  - `Player should see their own pending character during character_creation`
+  - `Player should NOT see their own pending character during in_progress`
+- [x] All tests passing (35/35)
+
+**Verified Fix:**
+The unified "People" tab defaults to the "Characters" sub-tab, which renders `CharactersList`. This component correctly shows players their own pending characters during `character_creation` state.
 
 ---
 

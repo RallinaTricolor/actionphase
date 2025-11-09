@@ -72,7 +72,7 @@ export function GameTabContent({
     return <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} />;
   }
 
-  // People Tab (combines Characters and GameParticipants)
+  // People Tab (combines Characters and Participants) - used for character_creation, in_progress, and completed states
   if (activeTab === 'people') {
     return (
       <PeopleView
@@ -86,78 +86,6 @@ export function GameTabContent({
         onLeaveGame={onLeaveGame}
         actionLoading={actionLoading}
       />
-    );
-  }
-
-  // GameParticipants Tab (for other game states)
-  if (activeTab === 'participants') {
-    return (
-      <>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-content-primary">GameParticipants</h2>
-          {isGM && game.state !== 'completed' && game.state !== 'cancelled' && (
-            <Button
-              variant="primary"
-              onClick={() => setShowAddPlayerModal(true)}
-            >
-              Add Player
-            </Button>
-          )}
-        </div>
-
-        {participants.length === 0 ? (
-          <p className="text-content-tertiary">No participants yet.</p>
-        ) : (
-          <div className="space-y-4">
-            {['player', 'co_gm', 'audience'].map((role) => {
-              const roleGameParticipants = participants.filter(p => p.role === role);
-              if (roleGameParticipants.length === 0) return null;
-              return (
-                <div key={role}>
-                  <h3 className="font-semibold text-content-primary mb-2 capitalize">
-                    {role.replace('_', ' ')}s ({roleGameParticipants.length})
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {roleGameParticipants.map((participant) => (
-                      <div key={participant.id} className="border border-theme-default rounded-lg p-4 surface-raised">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <div className="font-medium text-content-primary">{participant.username}</div>
-                              {participant.role === 'audience' && <AudienceMemberBadge />}
-                            </div>
-                            <div className="text-sm text-content-tertiary">
-                              Joined {new Date(participant.joined_at).toLocaleDateString()}
-                            </div>
-                          </div>
-                          {isGM && participant.user_id !== currentUserId && game.state !== 'completed' && game.state !== 'cancelled' && (
-                            <RemovePlayerButton
-                              gameId={gameId}
-                              participant={participant}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {isGM && (
-          <div className="mt-8">
-            <InactiveCharactersList gameId={gameId} />
-          </div>
-        )}
-
-        <AddPlayerModal
-          gameId={gameId}
-          isOpen={showAddPlayerModal}
-          onClose={() => setShowAddPlayerModal(false)}
-        />
-      </>
     );
   }
 
@@ -198,19 +126,6 @@ export function GameTabContent({
           </div>
         )}
       </>
-    );
-  }
-
-  // Characters Tab
-  if (activeTab === 'characters') {
-    return (
-      <CharactersList
-        gameId={gameId}
-        userRole={isGM ? 'gm' : (isParticipant ? 'player' : 'audience')}
-        currentUserId={currentUserId || undefined}
-        gameState={game.state}
-        isAnonymous={game.is_anonymous || false}
-      />
     );
   }
 

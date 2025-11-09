@@ -204,6 +204,36 @@ describe('CharactersList', () => {
 
       expect(screen.queryByText('Publish')).not.toBeInTheDocument()
     })
+
+    it('Player should see their own pending character during character_creation', async () => {
+      // Test for Issue 4.1: Player should be able to see their own pending character
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="player" currentUserId={2} gameState="character_creation" />
+      )
+
+      await waitFor(() => {
+        // Should see their own pending character (user_id=2, status='pending')
+        expect(screen.getAllByText('Pending Character')[0]).toBeInTheDocument()
+      })
+
+      // Should also see approved characters
+      expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
+    })
+
+    it('Player should NOT see their own pending character during in_progress', async () => {
+      // During in_progress, pending characters are hidden even from their owners
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="player" currentUserId={2} gameState="in_progress" />
+      )
+
+      await waitFor(() => {
+        // Should see approved characters
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
+      })
+
+      // Should NOT see their own pending character during in_progress
+      expect(screen.queryByText('Pending Character')).not.toBeInTheDocument()
+    })
   })
 
   describe('Create Character button', () => {
