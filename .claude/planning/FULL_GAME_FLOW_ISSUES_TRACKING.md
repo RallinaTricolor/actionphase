@@ -886,7 +886,7 @@ _To be determined_
 ---
 
 ### Issue 5.5: Poll Results Visible Before End
-**Status:** 🟢 Reproduced - Solution Proposed
+**Status:** ✅ COMPLETE - Already Fixed (Verified 2025-01-08)
 **Priority:** High
 **Reported Behavior:**
 Poll results are visible to players before the poll ends. Also shows "Not Voted" despite having voted.
@@ -917,6 +917,24 @@ Poll results are visible to players before the poll ends. Also shows "Not Voted"
 - The "Not Voted" badge logic looks correct (PollCard.tsx lines 65-68)
 - This sub-issue likely stems from backend `user_has_voted` not being set correctly
 - Needs separate investigation if still occurs after main fix
+
+**Verification (2025-01-08):**
+✅ **Frontend Already Fixed** (`PollCard.tsx`):
+- Lines 22-24, 31-33: Permission logic ensures players only see results after expiration
+- Line 144: "Show Results" button only visible to GM/Audience during active polls
+- Implements defense-in-depth: both state management AND UI button visibility
+
+✅ **Backend Already Fixed** (`api_polls.go` lines 486-507):
+- Lines 497-498: Determines if user is GM or audience using `core.IsUserAudience`
+- Lines 501: Checks if poll has expired
+- Lines 504-507: Blocks regular players from accessing results API before expiration
+- Returns 403 Forbidden with clear error message
+
+**Implementation Complete:**
+- Both frontend and backend have complete access control
+- Defense-in-depth approach: UI hides button AND API enforces permissions
+- GM and audience can monitor results (for moderation/engagement)
+- Players can only see results after poll closes (maintains fairness)
 
 **Proposed Solution:**
 
@@ -1180,34 +1198,73 @@ _To be determined_
 ---
 
 ### Issue 6.4: Pending Character Updates Not Applied
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED (2025-01-09)
 **Priority:** High
 **Reported Behavior:**
 Pending character sheet updates were not applied on publish (individual or publish all).
 
 **Investigation:**
-- [ ] Check publish handler
-- [ ] Verify pending update tracking
-- [ ] Review database transaction
-- [ ] Test individual and batch publish
+- [x] Check publish handler - Located in `backend/pkg/db/services/actions/results.go`
+- [x] Verify pending update tracking - Drafts stored in `action_result_character_updates` table
+- [x] Review database transaction - Uses `pgx.BeginFunc` for atomicity
+- [x] Test individual and batch publish - Both confirmed working after fix
 
 **Root Cause:**
-_To be determined_
+**Architectural data structure mismatch** between how draft updates are stored vs how character sheets expect data:
+
+- **Draft Storage Format** (from tab components):
+  - Individual rows: `field_name = [item/ability/skill name]` per item
+  - Example: `field_name = "New Sword"`, `field_value = {"name":"New Sword","quantity":1}`
+
+- **Character Sheet Expected Format** (CharacterSheet.tsx):
+  - Single row with constant field name containing JSON array
+  - Example: `field_name = "items"`, `field_value = [{"name":"New Sword","quantity":1}, ...]`
+
+- **Old Publish Logic** (PublishDraftCharacterUpdates SQL):
+  - Simple INSERT/UPDATE copying individual rows directly to `character_data`
+  - No aggregation into arrays → Wrong format → Character sheet can't parse data
+
+**Modules Affected:**
+- `inventory` → expects `field_name = 'items'` and `'currency'` (arrays)
+- `abilities` → expects `field_name = 'abilities'` and `'skills'` (arrays)
 
 **Proposed Solution:**
-_To be determined_
+Replace SQL-based publish with Go merge logic that aggregates individual draft rows into array format:
+
+1. Fetch all draft updates for result ID
+2. Group by (character_id, module_type)
+3. For array-based modules (inventory, abilities, skills, currency):
+   - Fetch existing array from character_data
+   - Parse JSON, merge draft items into array (upsert by name)
+   - Save merged array with correct field_name ('items', 'abilities', etc.)
+4. For non-array modules: Keep simple upsert behavior
+
+**Implementation:**
+- [x] Created `mergeAndPublishDraftUpdates()` function in `results.go:84-220`
+- [x] Updated `publishSingleResultWithDrafts()` to call new merge logic (`results.go:234`)
+- [x] Added `encoding/json` import for array marshaling
+- [x] Tested compilation successfully
+- [x] Verified database format after publish: `field_name='items'` with JSON array
 
 **Test Strategy:**
-- [ ] Backend unit test for applying pending updates
-- [ ] Integration test for publish operation
-- [ ] E2E test for individual and batch publish
-- [ ] Verify updates persist after publish
+- [x] Manual test: Created draft update, published, verified in database
+- [x] UI verification: Sword appeared in Rook's inventory after publish
+- [x] Cache invalidation test: UI updated immediately (React Query working)
+- [ ] Backend unit test for merge logic (future enhancement)
+- [ ] E2E test for character update publish flow (future enhancement)
 
-**Files to Review:**
-- Results publish handler
-- Character update service
-- Pending update tracking
-- Database transaction logic
+**Files Modified:**
+- `backend/pkg/db/services/actions/results.go:3-220,234` - Added merge logic and updated publish flow
+- `frontend/src/hooks/useActionResults.ts:74` - Added cache invalidation for characterData (already present)
+
+**Database Verification:**
+```sql
+-- Before fix (WRONG):
+field_name: "New Sword", field_value: {"name":"New Sword","quantity":1}
+
+-- After fix (CORRECT):
+field_name: "items", field_value: [{"name":"New Sword","quantity":1}]
+```
 
 ---
 
