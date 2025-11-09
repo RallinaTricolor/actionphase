@@ -47,7 +47,7 @@ export class GamesListPage {
 
   /**
    * Create a new game via the modal form
-   * @param gameData - Game details (title, description, genre, maxPlayers)
+   * @param gameData - Game details (title, description, genre, maxPlayers, isAnonymous, autoAcceptAudience)
    * @returns The new game ID extracted from the URL after creation
    */
   async createGame(gameData: {
@@ -55,6 +55,8 @@ export class GamesListPage {
     description: string;
     genre?: string;
     maxPlayers?: number;
+    isAnonymous?: boolean;
+    autoAcceptAudience?: boolean;
   }): Promise<number> {
     // Open the create game modal
     await this.page.getByRole('button', { name: 'Create Game' }).click();
@@ -72,6 +74,21 @@ export class GamesListPage {
 
     if (gameData.maxPlayers) {
       await this.page.fill('#max_players', gameData.maxPlayers.toString());
+    }
+
+    // Toggle checkbox settings if specified
+    if (gameData.isAnonymous !== undefined) {
+      const isChecked = await this.page.locator('#is_anonymous').isChecked();
+      if (isChecked !== gameData.isAnonymous) {
+        await this.page.locator('#is_anonymous').click();
+      }
+    }
+
+    if (gameData.autoAcceptAudience !== undefined) {
+      const isChecked = await this.page.locator('#auto_accept_audience').isChecked();
+      if (isChecked !== gameData.autoAcceptAudience) {
+        await this.page.locator('#auto_accept_audience').click();
+      }
     }
 
     // Submit the form by clicking the submit button

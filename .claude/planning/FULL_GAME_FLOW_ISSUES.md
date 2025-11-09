@@ -10,9 +10,11 @@ should consist of the following information:
 - Any tests that need to be created or updated
 - Any other notes you want to make about the issue
 
-Investigate the issues systematically
+Investigate the issues systematically, reproducing the problem and creating tasks. Do not start fixing these until you have
+reproduced the problem, investigated a fix, and proposed a solution and appropriate tests to prevent regressions. Once the
+task tracking is complete, you can start working on the issues. Ask clarifying questions if you are unsure about anything.
 
-
+Issues:
 - Deadlines header visible in "Setup" and "Recruiting" state--should be Character Creation / In Progress *only*
 - Can't edit anything in "Setup" state other than game settings -- should have Handouts tab available to start writing content, maybe People
     - Handouts needs to be available in every state for both GMs and players
@@ -41,6 +43,7 @@ Investigate the issues systematically
     - Adding currency is still unclear if you are setting, adding or subtracting
 - Remove the "Publish Immediately" checkbox from the "Results" tab
 - Pending character sheet updates were not applied on publish (individual or publish all)
+- Players did not receive notifications for published results
 - The GM should not see "Recent Action Results"
 - You can still edit/delete comments in the "History" view of a completed game
     - History tab should be completely read only, regardless of Game State

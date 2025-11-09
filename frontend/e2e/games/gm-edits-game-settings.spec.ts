@@ -98,6 +98,27 @@ test.describe.serial('GM Edits Game Settings', () => {
     await settingsPage.cancel();
   });
 
+  test('GM can toggle auto accept audience', async ({ page }) => {
+    // Login as GM
+    await loginAs(page, 'GM');
+
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
+
+    const settingsPage = new GameSettingsPage(page);
+
+    // Get current state and toggle
+    await settingsPage.openEditModal();
+    const wasChecked = await settingsPage.isAutoAcceptAudience();
+    await settingsPage.toggleAutoAcceptAudience();
+    await settingsPage.saveChanges();
+
+    // Verify change by opening edit modal again
+    await settingsPage.openEditModal();
+    expect(await settingsPage.isAutoAcceptAudience()).toBe(!wasChecked);
+    await settingsPage.cancel();
+  });
+
   test('GM can edit game dates', async ({ page }) => {
     // Login as GM
     await loginAs(page, 'GM');

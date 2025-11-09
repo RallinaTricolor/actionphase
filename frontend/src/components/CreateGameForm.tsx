@@ -20,6 +20,7 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
     recruitment_deadline: '',
     max_players: 6,
     is_anonymous: false,
+    auto_accept_audience: false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,6 +50,7 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
         recruitment_deadline: convertToISO8601(formData.recruitment_deadline) || undefined,
         max_players: formData.max_players === '' ? undefined : Number(formData.max_players),
         is_anonymous: formData.is_anonymous,
+        auto_accept_audience: formData.auto_accept_audience,
       };
 
       const response = await apiClient.games.createGame(gameData);

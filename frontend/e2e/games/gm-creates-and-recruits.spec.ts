@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { GamesListPage } from '../pages/GamesListPage';
+import { GameSettingsPage } from '../pages/GameSettingsPage';
 import { navigateToGamesList } from '../utils/navigation';
 import { assertTextVisible } from '../utils/assertions';
 
@@ -72,5 +73,41 @@ test.describe('GM Creates Game & Recruits Players', () => {
 
     // Verify recruitment-specific content
     await expect(page.getByRole('heading', { name: /Recruitment Deadline/i, level: 3 }).locator('visible=true').first()).toBeVisible();
+  });
+
+  test('GM can create a game with anonymous mode and auto accept audience enabled', async ({ page }) => {
+    // Login as GM
+    await loginAs(page, 'GM');
+    await expect(page).toHaveURL('/dashboard');
+
+    // Navigate to games list
+    await navigateToGamesList(page);
+
+    // Create a game with both settings enabled
+    const timestamp = Date.now();
+    const gameTitle = `E2E Settings Test ${timestamp}`;
+    const gamesListPage = new GamesListPage(page);
+    const gameId = await gamesListPage.createGame({
+      title: gameTitle,
+      description: 'Testing game creation with settings enabled',
+      genre: 'Test Genre',
+      maxPlayers: 4,
+      isAnonymous: true,
+      autoAcceptAudience: true
+    });
+
+    // Verify we're on game details page
+    await assertTextVisible(page, gameTitle);
+    await expect(page).toHaveURL(`/games/${gameId}`);
+
+    // Open edit modal to verify settings persisted
+    const settingsPage = new GameSettingsPage(page);
+    await settingsPage.openEditModal();
+
+    // Verify both settings are enabled
+    expect(await settingsPage.isAnonymous()).toBe(true);
+    expect(await settingsPage.isAutoAcceptAudience()).toBe(true);
+
+    await settingsPage.cancel();
   });
 });

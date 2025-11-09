@@ -57,6 +57,7 @@ export interface CreateGameRequest {
   recruitment_deadline?: string;
   max_players?: number;
   is_anonymous?: boolean;
+  auto_accept_audience?: boolean;
 }
 
 export interface UpdateGameRequest extends CreateGameRequest {

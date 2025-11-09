@@ -154,6 +154,13 @@ export class GameSettingsPage {
   }
 
   /**
+   * Toggle auto accept audience
+   */
+  async toggleAutoAcceptAudience() {
+    await this.page.locator('#auto_accept_audience').click();
+  }
+
+  /**
    * Save changes and close modal
    */
   async saveChanges() {
@@ -178,6 +185,13 @@ export class GameSettingsPage {
    */
   async isAnonymous(): Promise<boolean> {
     return await this.page.locator('#is_anonymous').isChecked();
+  }
+
+  /**
+   * Get current auto accept audience checkbox state
+   */
+  async isAutoAcceptAudience(): Promise<boolean> {
+    return await this.page.locator('#auto_accept_audience').isChecked();
   }
 
   /**
