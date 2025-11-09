@@ -71,7 +71,7 @@ func (h *Handler) CreateActionResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create action result using ActionSubmissionService
-	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger, NotificationService: &gamesvc.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}}
 	req := core.CreateActionResultRequest{
 		GameID:      int32(gameID),
 		UserID:      data.UserID,
@@ -128,7 +128,7 @@ func (h *Handler) GetUserActionResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Migrate GetUserResults to actions package
-	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger, NotificationService: &gamesvc.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}}
 	results, err := legacyActionService.GetUserResults(ctx, int32(gameID), int32(authUser.ID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get user action results", "error", err)
@@ -214,7 +214,7 @@ func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Migrate GetGameResults to actions package
-	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger, NotificationService: &gamesvc.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}}
 	results, err := legacyActionService.GetGameResults(ctx, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get game action results", "error", err)
@@ -302,7 +302,7 @@ func (h *Handler) UpdateActionResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the action result
-	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger, NotificationService: &gamesvc.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}}
 	result, err := actionService.UpdateActionResult(ctx, int32(resultID), data.Content)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to update action result", "error", err)
@@ -370,7 +370,7 @@ func (h *Handler) PublishActionResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Publish the action result
-	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger, NotificationService: &gamesvc.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}}
 	err = actionService.PublishActionResult(ctx, int32(resultID), int32(authUser.ID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to publish action result", "error", err)

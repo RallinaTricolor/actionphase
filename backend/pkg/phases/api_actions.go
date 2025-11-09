@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"actionphase/pkg/core"
+	gamesvc "actionphase/pkg/db/services"
 	actionsvc "actionphase/pkg/db/services/actions"
 	phasesvc "actionphase/pkg/db/services/phases"
 
@@ -41,7 +42,7 @@ func (h *Handler) SubmitAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	phaseService := &phasesvc.PhaseService{DB: h.App.Pool, Logger: h.App.ObsLogger}
-	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger, NotificationService: &gamesvc.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}}
 
 	// Check if user can submit actions
 	canSubmit, err := phaseService.CanUserSubmitActions(ctx, int32(gameID), int32(authUser.ID))
@@ -131,7 +132,7 @@ func (h *Handler) GetUserActions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Migrate GetUserActions to actions package
-	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
+	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger, NotificationService: &gamesvc.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}}
 	actions, err := legacyActionService.GetUserActions(ctx, int32(gameID), int32(authUser.ID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get user actions", "error", err)
@@ -204,7 +205,7 @@ func (h *Handler) GetGameActions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Migrate GetGameActions to actions package
-	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool}
+	legacyActionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger, NotificationService: &gamesvc.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}}
 	actions, err := legacyActionService.GetGameActions(ctx, int32(gameID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get game actions", "error", err)

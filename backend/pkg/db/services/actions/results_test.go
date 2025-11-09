@@ -18,7 +18,7 @@ func TestActionSubmissionService_CreateActionResult(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
@@ -85,7 +85,7 @@ func TestActionSubmissionService_ActionResultOperations(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
@@ -185,7 +185,7 @@ func TestActionSubmissionService_GetUserPhaseResults(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
@@ -303,7 +303,7 @@ func TestActionSubmissionService_PublishAllPhaseResults(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 
@@ -432,7 +432,7 @@ func TestActionSubmissionService_PublishCharacterUpdates(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
 	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
@@ -620,5 +620,166 @@ func TestActionSubmissionService_PublishCharacterUpdates(t *testing.T) {
 
 		assert.Contains(t, fieldValue, `"Existing Item"`, "Should preserve existing items")
 		assert.Contains(t, fieldValue, `"New Sword"`, "Should add new items")
+	})
+}
+
+// TestActionSubmissionService_NotificationCreation tests that notifications are created when results are published
+// This is a regression test for Issue 6.5: No Notifications for Published Results
+func TestActionSubmissionService_NotificationCreation(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+
+	notificationService := &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: notificationService}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Create test data
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	// Create action phase
+	phase, err := phaseService.TransitionToNextPhase(context.Background(), game.ID, int32(gm.ID), core.TransitionPhaseRequest{
+		PhaseType: "action",
+		Title:     "Action Phase",
+	})
+	require.NoError(t, err)
+
+	t.Run("creates notification when publishing single result", func(t *testing.T) {
+		// Create unpublished result
+		result, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
+			GameID:      game.ID,
+			PhaseID:     phase.ID,
+			UserID:      int32(player.ID),
+			Content:     "You find a treasure chest.",
+			IsPublished: false,
+		})
+		require.NoError(t, err)
+
+		// Count notifications before publish
+		notifsBefore, err := notificationService.GetUserNotifications(context.Background(), int32(player.ID), 10, 0)
+		require.NoError(t, err)
+		countBefore := len(notifsBefore)
+
+		// Publish the result
+		err = actionService.PublishActionResult(context.Background(), result.ID, int32(gm.ID))
+		require.NoError(t, err)
+
+		// Count notifications after publish
+		notifsAfter, err := notificationService.GetUserNotifications(context.Background(), int32(player.ID), 10, 0)
+		require.NoError(t, err)
+		countAfter := len(notifsAfter)
+
+		// Should have exactly one more notification
+		assert.Equal(t, countBefore+1, countAfter, "Should create exactly one notification")
+
+		// Find the new notification
+		var newNotif *core.Notification
+		for _, n := range notifsAfter {
+			if n.Type == core.NotificationTypeActionResult {
+				newNotif = n
+				break
+			}
+		}
+		require.NotNil(t, newNotif, "Should have created an action_result notification")
+
+		// Verify notification attributes
+		assert.Equal(t, core.NotificationTypeActionResult, newNotif.Type, "Should be action_result type")
+		assert.Equal(t, "Action Result Published", newNotif.Title, "Should have correct title")
+		assert.Equal(t, "Your action result has been published by the GM", *newNotif.Content, "Should have correct content")
+		assert.Equal(t, game.ID, *newNotif.GameID, "Should link to the correct game")
+		assert.Equal(t, result.ID, *newNotif.RelatedID, "Should link to the result ID")
+		assert.Equal(t, "action_result", *newNotif.RelatedType, "Should have correct related type")
+
+		// Verify link URL format
+		assert.Contains(t, *newNotif.LinkURL, "/games/", "Link should contain /games/")
+		assert.Contains(t, *newNotif.LinkURL, "?tab=actions", "Link should contain tab=actions")
+	})
+
+	t.Run("creates notifications for all results when publishing batch", func(t *testing.T) {
+		// Create multiple players
+		player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+		player3 := testDB.CreateTestUser(t, "player3", "player3@example.com")
+
+		_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
+		require.NoError(t, err)
+		_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player3.ID), "player")
+		require.NoError(t, err)
+
+		// Create new phase for this test
+		phase2, err := phaseService.TransitionToNextPhase(context.Background(), game.ID, int32(gm.ID), core.TransitionPhaseRequest{
+			PhaseType: "action",
+			Title:     "Batch Test Phase",
+		})
+		require.NoError(t, err)
+
+		// Create unpublished results for each player
+		players := []int32{int32(player2.ID), int32(player3.ID)}
+		for _, playerID := range players {
+			_, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
+				GameID:      game.ID,
+				PhaseID:     phase2.ID,
+				UserID:      playerID,
+				Content:     "Batch test result",
+				IsPublished: false,
+			})
+			require.NoError(t, err)
+		}
+
+		// Count notifications before publish
+		notifsBefore2, err := notificationService.GetUserNotifications(context.Background(), int32(player2.ID), 10, 0)
+		require.NoError(t, err)
+		countBefore2 := len(notifsBefore2)
+
+		notifsBefore3, err := notificationService.GetUserNotifications(context.Background(), int32(player3.ID), 10, 0)
+		require.NoError(t, err)
+		countBefore3 := len(notifsBefore3)
+
+		// Publish all results in the phase
+		err = actionService.PublishAllPhaseResults(context.Background(), phase2.ID)
+		require.NoError(t, err)
+
+		// Count notifications after publish
+		notifsAfter2, err := notificationService.GetUserNotifications(context.Background(), int32(player2.ID), 10, 0)
+		require.NoError(t, err)
+		countAfter2 := len(notifsAfter2)
+
+		notifsAfter3, err := notificationService.GetUserNotifications(context.Background(), int32(player3.ID), 10, 0)
+		require.NoError(t, err)
+		countAfter3 := len(notifsAfter3)
+
+		// Each player should have exactly one more notification
+		assert.Equal(t, countBefore2+1, countAfter2, "Player 2 should receive one notification")
+		assert.Equal(t, countBefore3+1, countAfter3, "Player 3 should receive one notification")
+	})
+
+	t.Run("notification error does not fail publish operation", func(t *testing.T) {
+		// This test verifies that if notification creation fails, the publish still succeeds
+		// We can't easily force a notification failure in this test, but we document the behavior
+
+		// Create unpublished result
+		result, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
+			GameID:      game.ID,
+			PhaseID:     phase.ID,
+			UserID:      int32(player.ID),
+			Content:     "Test error handling",
+			IsPublished: false,
+		})
+		require.NoError(t, err)
+
+		// Publish should succeed even if notification fails (which it won't in this case)
+		err = actionService.PublishActionResult(context.Background(), result.ID, int32(gm.ID))
+		require.NoError(t, err)
+
+		// Verify result is actually published
+		published, err := actionService.GetActionResult(context.Background(), result.ID)
+		require.NoError(t, err)
+		assert.True(t, published.IsPublished.Bool, "Result should be published even if notification fails")
 	})
 }

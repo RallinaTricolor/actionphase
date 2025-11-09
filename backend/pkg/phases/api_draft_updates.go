@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"actionphase/pkg/core"
+	gamesvc "actionphase/pkg/db/services"
 	actionsvc "actionphase/pkg/db/services/actions"
 	phasesvc "actionphase/pkg/db/services/phases"
 
@@ -56,7 +57,7 @@ func (h *Handler) validateGMAccessAndResult(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Verify the action result exists and belongs to this game
-	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger, NotificationService: &gamesvc.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}}
 	result, err := actionService.GetActionResult(r.Context(), int32(resultID))
 	if err != nil {
 		h.App.ObsLogger.Error(r.Context(), "Failed to get action result", "error", err)
