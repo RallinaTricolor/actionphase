@@ -727,4 +727,58 @@ test.describe('Common Room Flow', () => {
     // Verify (edited) marker appears
     await expect(commentContainer.getByText('(edited)').first()).toBeVisible({ timeout: 3000 });
   });
+
+  test('GM can edit their own post', async ({ page }) => {
+    // Test that GMs can edit their own posts
+    // Validates Issue 8.4: GM Can't Edit Common Room Posts
+
+    await loginAs(page, 'GM');
+
+    const gameId = await getFixtureGameId(page, 'CO_GM_MANAGEMENT'); // Co-GM management fixture
+    const commonRoom = new CommonRoomPage(page);
+    await commonRoom.goto(gameId);
+
+    // Verify Common Room is loaded
+    await expect(commonRoom.heading).toBeVisible({ timeout: 5000 });
+
+    // Create a post
+    const originalContent = `Original Post ${Date.now()}: This is the initial content`;
+    await commonRoom.createPost(originalContent);
+    await commonRoom.verifyPostExists(originalContent);
+
+    // Get reference to the post card BEFORE clicking edit
+    const postCard = commonRoom.getPostCard(originalContent);
+
+    // Click Edit button
+    const editButton = postCard.getByRole('button', { name: /^edit$/i }).locator('visible=true').first();
+    await editButton.click();
+
+    // Wait for edit textarea to appear
+    const textarea = page.locator('textarea[placeholder*="Edit your post"]').locator('visible=true').first();
+    await textarea.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Modify the content
+    const updatedContent = `Updated Post ${Date.now()}: This content has been changed`;
+    await textarea.fill(updatedContent);
+
+    // Verify the textarea has the new content
+    await expect(textarea).toHaveValue(updatedContent);
+
+    // Click Save button
+    const saveButton = page.getByRole('button', { name: 'Save' }).locator('visible=true').first();
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click();
+
+    // Wait for edit mode to close (Edit button reappears)
+    await expect(page.getByRole('button', { name: /^edit$/i }).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
+
+    // Verify the content updates
+    await expect(page.getByText(updatedContent)).toBeVisible({ timeout: 5000 });
+
+    // Verify the original content is no longer showing
+    await expect(page.getByText(originalContent)).not.toBeVisible();
+
+    // Verify (edited) marker appears
+    await expect(page.getByText('(edited)').first()).toBeVisible({ timeout: 5000 });
+  });
 });

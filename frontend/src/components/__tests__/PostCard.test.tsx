@@ -1305,4 +1305,241 @@ describe('PostCard', () => {
       expect(screen.getByRole('button', { name: /add comment/i })).toBeInTheDocument();
     });
   });
+
+  describe('Post Editing', () => {
+    it('shows edit button for post author', () => {
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100} // Same as post author_id
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /^edit$/i })).toBeInTheDocument();
+    });
+
+    it('does not show edit button for non-author', () => {
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={999} // Different from post author_id (100)
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
+    });
+
+    it('does not show edit button in read-only mode', () => {
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+          readOnly={true}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
+    });
+
+    it('shows editor when edit button is clicked', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+
+      // Editor should appear with current content
+      expect(screen.getByPlaceholderText(/edit your post\.\.\./i)).toBeInTheDocument();
+      expect(screen.getByDisplayValue(mockPost.content)).toBeInTheDocument();
+
+      // Save and Cancel buttons should appear
+      expect(screen.getByRole('button', { name: /^save$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^cancel$/i })).toBeInTheDocument();
+
+      // Edit button should be hidden
+      expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
+    });
+
+    it('reverts changes when cancel button is clicked', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      // Click edit
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+
+      // Modify content
+      const textarea = screen.getByPlaceholderText(/edit your post\.\.\./i);
+      await user.clear(textarea);
+      await user.type(textarea, 'Modified content');
+
+      // Click cancel
+      await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+
+      // Should exit edit mode
+      await waitFor(() => {
+        expect(screen.queryByPlaceholderText(/edit your post\.\.\./i)).not.toBeInTheDocument();
+      });
+
+      // Edit button should reappear
+      expect(screen.getByRole('button', { name: /^edit$/i })).toBeInTheDocument();
+
+      // Original content should be visible
+      expect(screen.getByText(mockPost.content)).toBeInTheDocument();
+    });
+
+    it('saves post when save button is clicked', async () => {
+      const updatedContent = 'Updated post content';
+      server.use(
+        http.patch('/api/v1/games/:gameId/posts/:postId', () => {
+          return HttpResponse.json({
+            ...mockPost,
+            content: updatedContent,
+            is_edited: true,
+          });
+        })
+      );
+
+      const user = userEvent.setup();
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      // Click edit
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+
+      // Modify content
+      const textarea = screen.getByPlaceholderText(/edit your post\.\.\./i);
+      await user.clear(textarea);
+      await user.type(textarea, updatedContent);
+
+      // Click save
+      await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+      // Should exit edit mode
+      await waitFor(() => {
+        expect(screen.queryByPlaceholderText(/edit your post\.\.\./i)).not.toBeInTheDocument();
+      });
+
+      // Edit button should reappear
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /^edit$/i })).toBeInTheDocument();
+      });
+    });
+
+    it('disables save button when content is unchanged', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+
+      // Save button should be disabled (content hasn't changed)
+      expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
+    });
+
+    it('disables save button when content is empty', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+
+      // Clear content
+      const textarea = screen.getByPlaceholderText(/edit your post\.\.\./i);
+      await user.clear(textarea);
+
+      // Save button should be disabled
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
+      });
+    });
+
+    it('shows saving state while update is in progress', async () => {
+      // Delay the response to see loading state
+      server.use(
+        http.patch('/api/v1/games/:gameId/posts/:postId', async () => {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          return HttpResponse.json({
+            ...mockPost,
+            content: 'Updated content',
+            is_edited: true,
+          });
+        })
+      );
+
+      const user = userEvent.setup();
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+
+      const textarea = screen.getByPlaceholderText(/edit your post\.\.\./i);
+      await user.type(textarea, ' Updated');
+
+      await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+      // Should show "Saving..." temporarily
+      expect(screen.getByRole('button', { name: /saving\.\.\./i })).toBeInTheDocument();
+    });
+  });
 });

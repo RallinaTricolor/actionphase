@@ -218,6 +218,7 @@ func (h *Handler) Start() {
 			// Create post requires email verification
 			r.With(core.RequireEmailVerificationMiddleware(h.App.Pool)).Post("/{gameId}/posts", messageHandler.CreatePost)
 			r.Get("/{gameId}/posts", messageHandler.GetGamePosts)
+			r.Patch("/{gameId}/posts/{postId}", messageHandler.UpdatePost) // Edit post
 			// Create comment requires email verification
 			r.With(core.RequireEmailVerificationMiddleware(h.App.Pool)).Post("/{gameId}/posts/{postId}/comments", messageHandler.CreateComment)
 			r.Get("/{gameId}/posts/{postId}/comments", messageHandler.GetPostComments)

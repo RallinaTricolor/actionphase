@@ -213,6 +213,15 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     }
   };
 
+  const handlePostUpdated = (updatedPost: Message) => {
+    // Update the post in the local state to reflect the edit
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === updatedPost.id ? updatedPost : post
+      )
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -362,6 +371,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
                   characters={allCharacters}
                   controllableCharacters={controllableCharacters}
                   onCreateComment={handleCreateComment}
+                  onPostUpdated={handlePostUpdated}
                   currentUserId={currentUserId}
                   data-testid={`post-${post.id}`}
                   readOnly={!isCurrentPhase}

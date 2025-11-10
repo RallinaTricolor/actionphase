@@ -70,8 +70,32 @@ export class PollsPage {
 
     // Set deadline if provided
     if (options.deadline) {
-      const deadlineString = options.deadline.toISOString().slice(0, 16);
-      await this.page.locator('input[type="datetime-local"]').fill(deadlineString);
+      // Find the deadline input by its placeholder text (react-datepicker renders a regular input)
+      // We need to scroll to it first as it may be below the fold in the modal
+      const deadlineInput = this.page.getByPlaceholder('Select date and time');
+
+      // Scroll to the deadline input to make it visible
+      await deadlineInput.scrollIntoViewIfNeeded();
+      await deadlineInput.click();
+
+      // ReactDatePicker expects format: "MMMM d, yyyy h:mm aa" (e.g., "January 15, 2025 3:00 PM")
+      const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+      const month = months[options.deadline.getMonth()];
+      const day = options.deadline.getDate();
+      const year = options.deadline.getFullYear();
+      const hours = options.deadline.getHours();
+      const minutes = String(options.deadline.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+
+      const dateString = `${month} ${day}, ${year} ${displayHours}:${minutes} ${ampm}`;
+
+      // Clear and type the date in the format react-datepicker expects
+      await deadlineInput.clear();
+      await deadlineInput.fill(dateString);
+      // Press Tab to confirm and move to next field
+      await deadlineInput.press('Tab');
     }
 
     // Select voting type

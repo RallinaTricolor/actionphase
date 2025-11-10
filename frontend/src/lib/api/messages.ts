@@ -32,6 +32,10 @@ export class MessagesApi extends BaseApiClient {
     return this.client.get<Message[]>(url);
   }
 
+  async updatePost(gameId: number, postId: number, content: string) {
+    return this.client.patch<Message>(`/api/v1/games/${gameId}/posts/${postId}`, { content });
+  }
+
   // Comment endpoints
   async createComment(gameId: number, postId: number, data: CreateCommentRequest) {
     return this.client.post<Message>(`/api/v1/games/${gameId}/posts/${postId}/comments`, data);

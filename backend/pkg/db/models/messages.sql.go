@@ -59,6 +59,24 @@ func (q *Queries) CheckCommentOwnership(ctx context.Context, id int32) (CheckCom
 	return i, err
 }
 
+const checkPostOwnership = `-- name: CheckPostOwnership :one
+SELECT author_id, deleted_at
+FROM messages
+WHERE id = $1 AND message_type = 'post'
+`
+
+type CheckPostOwnershipRow struct {
+	AuthorID  int32            `json:"author_id"`
+	DeletedAt pgtype.Timestamp `json:"deleted_at"`
+}
+
+func (q *Queries) CheckPostOwnership(ctx context.Context, id int32) (CheckPostOwnershipRow, error) {
+	row := q.db.QueryRow(ctx, checkPostOwnership, id)
+	var i CheckPostOwnershipRow
+	err := row.Scan(&i.AuthorID, &i.DeletedAt)
+	return i, err
+}
+
 const countMessagesByCharacter = `-- name: CountMessagesByCharacter :one
 SELECT COUNT(*)
 FROM messages
@@ -1662,13 +1680,26 @@ func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) (M
 }
 
 const updatePost = `-- name: UpdatePost :one
-UPDATE messages
-SET content = $2,
-    is_edited = true
-WHERE id = $1
-  AND is_deleted = false
-  AND message_type = 'post'
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, deleted_at, deleted_by_user_id, edited_at, edit_count
+WITH updated AS (
+  UPDATE messages
+  SET content = $2,
+      is_edited = true,
+      edited_at = NOW(),
+      edit_count = edit_count + 1
+  WHERE messages.id = $1
+    AND messages.is_deleted = false
+    AND messages.message_type = 'post'
+  RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, mentioned_character_ids, is_edited, is_deleted, created_at, deleted_at, deleted_by_user_id, edited_at, edit_count
+)
+SELECT
+  m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.mentioned_character_ids, m.is_edited, m.is_deleted, m.created_at, m.deleted_at, m.deleted_by_user_id, m.edited_at, m.edit_count,
+  u.username as author_username,
+  c.name as character_name,
+  c.avatar_url as character_avatar_url,
+  (SELECT COUNT(*) FROM messages WHERE parent_id = m.id) as comment_count
+FROM updated m
+JOIN users u ON m.author_id = u.id
+LEFT JOIN characters c ON m.character_id = c.id
 `
 
 type UpdatePostParams struct {
@@ -1676,9 +1707,34 @@ type UpdatePostParams struct {
 	Content string `json:"content"`
 }
 
-func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Message, error) {
+type UpdatePostRow struct {
+	ID                    int32              `json:"id"`
+	GameID                int32              `json:"game_id"`
+	PhaseID               pgtype.Int4        `json:"phase_id"`
+	AuthorID              int32              `json:"author_id"`
+	CharacterID           int32              `json:"character_id"`
+	Content               string             `json:"content"`
+	MessageType           MessageType        `json:"message_type"`
+	ParentID              pgtype.Int4        `json:"parent_id"`
+	ThreadDepth           int32              `json:"thread_depth"`
+	Visibility            MessageVisibility  `json:"visibility"`
+	MentionedCharacterIds []int32            `json:"mentioned_character_ids"`
+	IsEdited              bool               `json:"is_edited"`
+	IsDeleted             bool               `json:"is_deleted"`
+	CreatedAt             pgtype.Timestamp   `json:"created_at"`
+	DeletedAt             pgtype.Timestamp   `json:"deleted_at"`
+	DeletedByUserID       pgtype.Int4        `json:"deleted_by_user_id"`
+	EditedAt              pgtype.Timestamptz `json:"edited_at"`
+	EditCount             int32              `json:"edit_count"`
+	AuthorUsername        string             `json:"author_username"`
+	CharacterName         pgtype.Text        `json:"character_name"`
+	CharacterAvatarUrl    pgtype.Text        `json:"character_avatar_url"`
+	CommentCount          int64              `json:"comment_count"`
+}
+
+func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (UpdatePostRow, error) {
 	row := q.db.QueryRow(ctx, updatePost, arg.ID, arg.Content)
-	var i Message
+	var i UpdatePostRow
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
@@ -1698,6 +1754,10 @@ func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Message
 		&i.DeletedByUserID,
 		&i.EditedAt,
 		&i.EditCount,
+		&i.AuthorUsername,
+		&i.CharacterName,
+		&i.CharacterAvatarUrl,
+		&i.CommentCount,
 	)
 	return i, err
 }

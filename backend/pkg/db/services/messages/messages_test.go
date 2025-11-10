@@ -1852,3 +1852,109 @@ func TestMessageService_UpdateCommentWithMentions(t *testing.T) {
 		assert.True(t, updated.IsEdited)
 	})
 }
+
+func TestMessageService_PostEditPermissions(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Setup
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	otherPlayer := testDB.CreateTestUser(t, "otherplayer", "other@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Test Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	t.Run("CanUserEditPost - only author can edit", func(t *testing.T) {
+		post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			Content:     "Test post",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Author can edit
+		canEdit, err := service.CanUserEditPost(context.Background(), post.ID, int32(player.ID))
+		require.NoError(t, err)
+		assert.True(t, canEdit)
+
+		// GM cannot edit
+		canEdit, err = service.CanUserEditPost(context.Background(), post.ID, int32(gm.ID))
+		require.NoError(t, err)
+		assert.False(t, canEdit)
+
+		// Other player cannot edit
+		canEdit, err = service.CanUserEditPost(context.Background(), post.ID, int32(otherPlayer.ID))
+		require.NoError(t, err)
+		assert.False(t, canEdit)
+	})
+
+	t.Run("Cannot edit deleted post", func(t *testing.T) {
+		post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			Content:     "Post to delete",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Delete the post
+		err = service.DeletePost(context.Background(), post.ID)
+		require.NoError(t, err)
+
+		// Author cannot edit deleted post
+		canEdit, err := service.CanUserEditPost(context.Background(), post.ID, int32(player.ID))
+		require.NoError(t, err)
+		assert.False(t, canEdit, "Should not be able to edit deleted post")
+	})
+
+	t.Run("UpdatePost tracks edit history correctly", func(t *testing.T) {
+		post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			Content:     "Original post",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Verify initial state
+		assert.Equal(t, int32(0), post.EditCount)
+		assert.False(t, post.EditedAt.Valid)
+
+		// Update post once
+		updated1, err := service.UpdatePost(context.Background(), post.ID, "First edit")
+		require.NoError(t, err)
+		assert.Equal(t, "First edit", updated1.Content)
+		assert.Equal(t, int32(1), updated1.EditCount)
+		assert.True(t, updated1.EditedAt.Valid)
+		firstEditTime := updated1.EditedAt
+
+		// Update post again
+		updated2, err := service.UpdatePost(context.Background(), post.ID, "Second edit")
+		require.NoError(t, err)
+		assert.Equal(t, "Second edit", updated2.Content)
+		assert.Equal(t, int32(2), updated2.EditCount)
+		assert.True(t, updated2.EditedAt.Valid)
+		// EditedAt should be more recent
+		assert.True(t, updated2.EditedAt.Time.After(firstEditTime.Time) || updated2.EditedAt.Time.Equal(firstEditTime.Time))
+	})
+}

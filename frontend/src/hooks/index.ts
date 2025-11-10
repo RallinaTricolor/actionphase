@@ -29,8 +29,8 @@ export { useAuth as useAuthLegacy, usePing } from './useAuth';
 // Admin-related hooks
 export { useAdminMode, type UseAdminModeReturn } from './useAdminMode';
 
-// Comment mutation hooks
-export { useUpdateComment, useDeleteComment } from './useCommentMutations';
+// Message mutation hooks (posts and comments)
+export { useUpdatePost, useUpdateComment, useDeleteComment } from './useCommentMutations';
 
 // Recent comments hooks
 export { useRecentComments, useTotalCommentCount } from './useRecentComments';

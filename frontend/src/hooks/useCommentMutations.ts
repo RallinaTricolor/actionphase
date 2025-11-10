@@ -3,6 +3,45 @@ import { apiClient } from '../lib/api';
 import type { UpdateCommentRequest, Message } from '../types/messages';
 
 /**
+ * Hook to update a post
+ */
+export function useUpdatePost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      gameId,
+      postId,
+      content
+    }: {
+      gameId: number;
+      postId: number;
+      content: string;
+    }) => {
+      const response = await apiClient.messages.updatePost(gameId, postId, content);
+      return response.data;
+    },
+    onSuccess: async (updatedPost, variables) => {
+      // Update the post in the game posts cache immediately
+      queryClient.setQueryData<Message[]>(
+        ['gamePosts', variables.gameId],
+        (oldPosts) => {
+          if (!oldPosts) return oldPosts;
+          return oldPosts.map(post =>
+            post.id === updatedPost.id ? updatedPost : post
+          );
+        }
+      );
+
+      // Invalidate queries to ensure fresh data
+      await queryClient.invalidateQueries({
+        queryKey: ['gamePosts', variables.gameId]
+      });
+    },
+  });
+}
+
+/**
  * Hook to update a comment
  */
 export function useUpdateComment() {

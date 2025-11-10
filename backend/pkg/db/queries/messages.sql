@@ -158,13 +158,26 @@ WHERE m.phase_id = $1
 ORDER BY m.created_at DESC;
 
 -- name: UpdatePost :one
-UPDATE messages
-SET content = $2,
-    is_edited = true
-WHERE id = $1
-  AND is_deleted = false
-  AND message_type = 'post'
-RETURNING *;
+WITH updated AS (
+  UPDATE messages
+  SET content = $2,
+      is_edited = true,
+      edited_at = NOW(),
+      edit_count = edit_count + 1
+  WHERE messages.id = $1
+    AND messages.is_deleted = false
+    AND messages.message_type = 'post'
+  RETURNING *
+)
+SELECT
+  m.*,
+  u.username as author_username,
+  c.name as character_name,
+  c.avatar_url as character_avatar_url,
+  (SELECT COUNT(*) FROM messages WHERE parent_id = m.id) as comment_count
+FROM updated m
+JOIN users u ON m.author_id = u.id
+LEFT JOIN characters c ON m.character_id = c.id;
 
 -- name: DeletePost :one
 UPDATE messages
@@ -251,6 +264,11 @@ WHERE id = $1
 SELECT author_id, deleted_at
 FROM messages
 WHERE id = $1 AND message_type = 'comment';
+
+-- name: CheckPostOwnership :one
+SELECT author_id, deleted_at
+FROM messages
+WHERE id = $1 AND message_type = 'post';
 
 -- ============================================================================
 -- STATISTICS & COUNTS
