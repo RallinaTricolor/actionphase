@@ -19,6 +19,12 @@ interface FormField {
   gridColumn?: 'full' | 'half';
 }
 
+interface CustomFormComponentProps {
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
+  submitButtonTestId?: string;
+}
+
 interface CharacterSheetTabProps {
   gameId: number;
   actionResultId: number;
@@ -32,13 +38,17 @@ interface CharacterSheetTabProps {
   addButtonLabel: string;
   emptyMessage: string;
 
-  // Form configuration
-  formFields: FormField[];
+  // Form configuration - either formFields OR customFormComponent
+  formFields?: FormField[];
+  customFormComponent?: React.ComponentType<CustomFormComponentProps>;
 
-  // Value transformation functions
-  buildFieldValue: (formData: Record<string, any>) => string;
-  buildFieldName: (formData: Record<string, any>) => string;
-  getFieldType: () => FieldType;
+  // Value transformation functions (required when using formFields)
+  buildFieldValue?: (formData: Record<string, any>) => string;
+  buildFieldName?: (formData: Record<string, any>) => string;
+  getFieldType?: () => FieldType;
+
+  // For custom form component: transform submitted data to field value
+  transformCustomData?: (data: any) => { fieldName: string; fieldValue: string; fieldType: FieldType };
 
   // Render functions for draft display
   renderDraftContent: (draft: DraftCharacterUpdate) => ReactNode;
@@ -58,9 +68,11 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
   addButtonLabel,
   emptyMessage,
   formFields,
+  customFormComponent: CustomFormComponent,
   buildFieldValue,
   buildFieldName,
   getFieldType,
+  transformCustomData,
   renderDraftContent,
   validateForm,
 }) => {
@@ -70,13 +82,41 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
 
   const createDraft = useCreateDraftCharacterUpdate(gameId, actionResultId);
 
-  // Initialize form data with default values
+  // Initialize form data with default values (only for dynamic forms)
   const initializeForm = () => {
     const initialData: Record<string, any> = {};
-    formFields.forEach(field => {
+    formFields?.forEach(field => {
       initialData[field.name] = field.type === 'number' ? '0' : '';
     });
     setFormData(initialData);
+  };
+
+  const handleCustomSubmit = async (data: any) => {
+    if (!transformCustomData) {
+      logger.error('transformCustomData is required when using custom form component', { gameId, actionResultId, characterId, moduleType });
+      setError('Configuration error. Please contact support.');
+      return;
+    }
+
+    try {
+      const { fieldName, fieldValue, fieldType } = transformCustomData(data);
+
+      await createDraft.mutateAsync({
+        character_id: characterId,
+        module_type: moduleType,
+        field_name: fieldName,
+        field_value: fieldValue,
+        field_type: fieldType,
+        operation: 'upsert',
+      });
+
+      // Reset form
+      setIsAdding(false);
+      setError(null);
+    } catch (err) {
+      logger.error(`Failed to add ${moduleType.slice(0, -1)}`, { error: err, gameId, actionResultId, characterId, moduleType });
+      setError(`Failed to add ${moduleType.slice(0, -1)}. Please try again.`);
+    }
   };
 
   const handleAdd = async () => {
@@ -91,11 +131,11 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
 
     // Default validation: check required fields
     const hasRequiredFields = formFields
-      .filter(field => field.required)
+      ?.filter(field => field.required)
       .every(field => {
         const value = formData[field.name];
         return value && value.toString().trim();
-      });
+      }) ?? true;
 
     if (!hasRequiredFields) {
       setError('Please fill in all required fields');
@@ -106,9 +146,9 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
       await createDraft.mutateAsync({
         character_id: characterId,
         module_type: moduleType,
-        field_name: buildFieldName(formData),
-        field_value: buildFieldValue(formData),
-        field_type: getFieldType(),
+        field_name: buildFieldName!(formData),
+        field_value: buildFieldValue!(formData),
+        field_type: getFieldType!(),
         operation: 'upsert',
       });
 
@@ -194,9 +234,9 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
     setIsAdding(true);
   };
 
-  // Separate fields by grid column
-  const fullWidthFields = formFields.filter(f => !f.gridColumn || f.gridColumn === 'full');
-  const halfWidthFields = formFields.filter(f => f.gridColumn === 'half');
+  // Separate fields by grid column (only if using formFields)
+  const fullWidthFields = formFields?.filter(f => !f.gridColumn || f.gridColumn === 'full') || [];
+  const halfWidthFields = formFields?.filter(f => f.gridColumn === 'half') || [];
 
   return (
     <div className="space-y-4">
@@ -224,36 +264,46 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
       {isAdding && (
         <Card variant="elevated" padding="md">
           <CardBody>
-            <div className="space-y-3">
-              {/* Full-width fields */}
-              {fullWidthFields.map(field => renderFormField(field))}
+            {/* Custom Form Component */}
+            {CustomFormComponent ? (
+              <CustomFormComponent
+                onSubmit={handleCustomSubmit}
+                onCancel={handleCancel}
+                submitButtonTestId={`add-${moduleType}-button`}
+              />
+            ) : (
+              /* Dynamic Form Fields */
+              <div className="space-y-3">
+                {/* Full-width fields */}
+                {fullWidthFields.map(field => renderFormField(field))}
 
-              {/* Half-width fields in grid */}
-              {halfWidthFields.length > 0 && (
-                <div className="grid grid-cols-2 gap-3">
-                  {halfWidthFields.map(field => renderFormField(field))}
+                {/* Half-width fields in grid */}
+                {halfWidthFields.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {halfWidthFields.map(field => renderFormField(field))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="primary"
+                    onClick={handleAdd}
+                    disabled={createDraft.isPending}
+                    data-testid={`add-${moduleType}-button`}
+                  >
+                    {createDraft.isPending ? 'Adding...' : addButtonLabel}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleCancel}
+                    disabled={createDraft.isPending}
+                    data-testid={`cancel-${moduleType}-button`}
+                  >
+                    Cancel
+                  </Button>
                 </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  onClick={handleAdd}
-                  disabled={createDraft.isPending}
-                  data-testid={`add-${moduleType}-button`}
-                >
-                  {createDraft.isPending ? 'Adding...' : addButtonLabel}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={handleCancel}
-                  disabled={createDraft.isPending}
-                  data-testid={`cancel-${moduleType}-button`}
-                >
-                  Cancel
-                </Button>
               </div>
-            </div>
+            )}
           </CardBody>
         </Card>
       )}

@@ -22,7 +22,6 @@ interface CharactersListProps {
 export function CharactersList({
   gameId,
   userRole = 'player',
-  currentUserId,
   gameState = 'setup',
   isAnonymous = false
 }: CharactersListProps) {

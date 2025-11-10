@@ -1,8 +1,7 @@
-import { useState, lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import type { Character } from '../types/characters';
 import { GameApplicationsList } from './GameApplicationsList';
 import { PublicApplicantsList } from './PublicApplicantsList';
-import { CharactersList } from './CharactersList';
 import { PhaseManagement } from './PhaseManagement';
 import { ActionSubmission } from './ActionSubmission';
 import { ActionsList } from './ActionsList';
@@ -11,15 +10,10 @@ import { GameResultsManager } from './GameResultsManager';
 import { CommonRoom } from './CommonRoom';
 import { PrivateMessages } from './PrivateMessages';
 import { HistoryView } from './HistoryView';
-import { RemovePlayerButton } from './RemovePlayerButton';
-import { AddPlayerModal } from './AddPlayerModal';
-import { InactiveCharactersList } from './InactiveCharactersList';
 import { AudienceView } from './AudienceView';
-import { AudienceMemberBadge } from './AudienceMemberBadge';
 import { PeopleView } from './PeopleView';
 import { HandoutsList } from './HandoutsList';
 import { DeadlinesTabContent } from './DeadlinesTabContent';
-import { Button } from './ui';
 import type { GameWithDetails, GameParticipant } from '../types/games';
 import type { GamePhase } from '../types/phases';
 
@@ -55,14 +49,12 @@ export function GameTabContent({
   currentPhaseData,
   isLoadingPhase = false,
   isGM,
-  isParticipant,
   isAudience = false,
   currentUserId,
   userCharacters,
   onLeaveGame,
   actionLoading = false,
 }: GameTabContentProps) {
-  const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
 
   // Applications Tab (Recruitment - GM only)
   if (activeTab === 'applications' && game.state === 'recruitment' && isGM) {
