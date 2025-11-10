@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Alert } from '../components/ui';
 
@@ -43,6 +43,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const dismissToast = (id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
+
+  // Listen for session expiration events from API client
+  useEffect(() => {
+    const handleSessionExpired = (event: Event) => {
+      const customEvent = event as CustomEvent<{ message: string }>;
+      showError(customEvent.detail.message);
+    };
+
+    window.addEventListener('auth:sessionExpired', handleSessionExpired);
+
+    return () => {
+      window.removeEventListener('auth:sessionExpired', handleSessionExpired);
+    };
+  }, [showError]);
 
   return (
     <ToastContext.Provider value={{ showToast, showSuccess, showError, showWarning, showInfo }}>

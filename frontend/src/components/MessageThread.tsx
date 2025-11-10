@@ -18,9 +18,12 @@ interface MessageThreadProps {
   characters: Character[];
   onMarkedAsRead?: () => void;
   conversationInfo?: ConversationListItem; // For read tracking info
+  currentPhaseType?: string; // Current game phase type (common_room, action, results, etc.)
 }
 
-export function MessageThread({ gameId, conversationId, characters, onMarkedAsRead, conversationInfo }: MessageThreadProps) {
+export function MessageThread({ gameId, conversationId, characters, onMarkedAsRead, conversationInfo, currentPhaseType }: MessageThreadProps) {
+  // Check if we're in a common room phase (when messaging is allowed)
+  const isCommonRoomPhase = currentPhaseType === 'common_room';
   const { currentUser } = useAuth();
   const { showError } = useToast();
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
@@ -349,6 +352,13 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
 
       {/* Message Input */}
       <div className="surface-base border-t border-theme-default p-4">
+        {/* Phase restriction alert */}
+        {!isCommonRoomPhase && (
+          <Alert variant="info" className="mb-4">
+            New messages can only be sent during Common Room phases. You can read message history at any time.
+          </Alert>
+        )}
+
         <form onSubmit={handleSendMessage}>
           {participantCharacters.length > 0 ? (
             <>
@@ -357,7 +367,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                   <Select
                     value={selectedCharacterId?.toString() || ''}
                     onChange={(e) => setSelectedCharacterId(Number(e.target.value))}
-                    disabled={sending}
+                    disabled={sending || !isCommonRoomPhase}
                   >
                     {participantCharacters.map((char) => (
                       <option key={char.id} value={char.id}>
@@ -374,8 +384,8 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     rows={3}
-                    placeholder="Type your message... (Markdown supported)"
-                    disabled={sending}
+                    placeholder={isCommonRoomPhase ? "Type your message... (Markdown supported)" : "Messaging is only available during Common Room phases"}
+                    disabled={sending || !isCommonRoomPhase}
                     maxLength={50000}
                     showCharacterCount={true}
                     helperText="Maximum 50,000 characters"
@@ -391,7 +401,8 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                 <Button
                     type="submit"
                     variant="primary"
-                    disabled={sending || !newMessage.trim()}
+                    disabled={sending || !newMessage.trim() || !isCommonRoomPhase}
+                    title={!isCommonRoomPhase ? 'Messages can only be sent during Common Room phases' : undefined}
                 >
                   {sending ? 'Sending...' : 'Send'}
                 </Button>

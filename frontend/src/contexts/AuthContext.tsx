@@ -138,6 +138,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  // Listen for logout events from API client (e.g., when token refresh fails)
+  useEffect(() => {
+    const handleLogout = () => {
+      logger.info('Handling auth:logout event - clearing React Query cache');
+      queryClient.setQueryData(['currentUser'], null);
+      queryClient.clear();
+      setAuthError(null);
+    };
+
+    window.addEventListener('auth:logout', handleLogout);
+
+    return () => {
+      window.removeEventListener('auth:logout', handleLogout);
+    };
+  }, [queryClient]);
+
   // Combined loading state
   const isLoading = loginMutation.isPending || registerMutation.isPending;
 

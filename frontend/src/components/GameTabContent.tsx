@@ -252,6 +252,7 @@ export function GameTabContent({
           gameId={gameId}
           characters={userCharacters}
           isAnonymous={game.is_anonymous || false}
+          currentPhaseType={currentPhaseData?.phase?.phase_type}
         />
       </div>
     );

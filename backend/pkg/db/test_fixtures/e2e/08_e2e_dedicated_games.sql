@@ -281,11 +281,11 @@ BEGIN
   VALUES
     (game_messages_id, p3_id, 'E2E Test Char 3', 'player_character', 'approved', NOW() - INTERVAL '7 days', NOW()) RETURNING id INTO char7_id;
 
-  -- Add active action phase
+  -- Add active common room phase (for private messaging)
   INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, deadline, is_active, is_published, created_at)
   VALUES (
     game_messages_id,
-    'action',
+    'common_room',
     1,
     'Current Phase',
     'Active phase for testing private messages',
