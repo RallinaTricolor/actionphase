@@ -5,13 +5,14 @@ import { NewConversationModal } from './NewConversationModal';
 import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 import type { ConversationListItem } from '../types/conversations';
-import { Button } from './ui';
+import { Button, Alert } from './ui';
 import { logger } from '@/services/LoggingService';
 
 interface PrivateMessagesProps {
   gameId: number;
   characters: Character[];
   isAnonymous: boolean;
+  currentPhaseType?: string; // Current game phase type (common_room, action, results, etc.)
 }
 
 /**
@@ -27,13 +28,22 @@ interface PrivateMessagesProps {
  * - List view: Full-width conversation cards
  * - Thread view: Full-screen messages with centered content on desktop
  */
-export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMessagesProps) {
+export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseType }: PrivateMessagesProps) {
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
 
-  logger.debug('PrivateMessages component state', { selectedConversationId, charactersCount: characters.length, gameId });
+  // Check if we're in a common room phase (when messaging is allowed)
+  const isCommonRoomPhase = currentPhaseType === 'common_room';
+
+  logger.debug('PrivateMessages component state', {
+    selectedConversationId,
+    charactersCount: characters.length,
+    gameId,
+    currentPhaseType,
+    isCommonRoomPhase
+  });
 
   // Load conversations for read tracking info
   useEffect(() => {
@@ -88,10 +98,17 @@ export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMess
                 variant="primary"
                 size="sm"
                 onClick={() => setShowNewConversationModal(true)}
+                disabled={!isCommonRoomPhase}
+                title={!isCommonRoomPhase ? 'New conversations can only be started during Common Room phases' : 'Start a new private conversation'}
               >
                 + New
               </Button>
             </div>
+            {!isCommonRoomPhase && (
+              <Alert variant="info" className="mt-2">
+                You can read message history, but new messages can only be sent during Common Room phases.
+              </Alert>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -132,6 +149,7 @@ export function PrivateMessages({ gameId, characters, isAnonymous }: PrivateMess
                 characters={characters}
                 onMarkedAsRead={() => setRefreshKey(prev => prev + 1)}
                 conversationInfo={selectedConversationInfo}
+                currentPhaseType={currentPhaseType}
               />
             </div>
           </div>

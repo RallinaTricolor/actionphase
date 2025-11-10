@@ -103,7 +103,7 @@ describe('MessageThread', () => {
   describe('Loading State', () => {
     it('shows loading indicator initially', () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       expect(screen.getByText(/loading messages/i)).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe('MessageThread', () => {
 
     it('hides loading indicator after messages load', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -129,7 +129,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -145,7 +145,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -157,7 +157,7 @@ describe('MessageThread', () => {
   describe('Conversation Display', () => {
     it('displays conversation title', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -167,7 +167,7 @@ describe('MessageThread', () => {
 
     it('displays participant list', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -192,7 +192,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -204,7 +204,7 @@ describe('MessageThread', () => {
   describe('Message Display', () => {
     it('displays all messages', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -215,7 +215,7 @@ describe('MessageThread', () => {
 
     it('displays sender names', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -226,7 +226,7 @@ describe('MessageThread', () => {
 
     it('displays timestamps', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -238,7 +238,7 @@ describe('MessageThread', () => {
 
     it('renders markdown in messages', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -256,7 +256,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -269,7 +269,7 @@ describe('MessageThread', () => {
   describe('Message Input', () => {
     it('shows message input when user has participating characters', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -279,7 +279,7 @@ describe('MessageThread', () => {
 
     it('shows character selector when user has multiple participants', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -292,7 +292,7 @@ describe('MessageThread', () => {
       const singleCharacter = [mockCharacters[0]];
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={singleCharacter} />
+        <MessageThread gameId={1} conversationId={1} characters={singleCharacter} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -302,7 +302,7 @@ describe('MessageThread', () => {
 
     it('shows help text about keyboard shortcut', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -312,7 +312,7 @@ describe('MessageThread', () => {
 
     it('shows message when user has no characters', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={[]} />
+        <MessageThread gameId={1} conversationId={1} characters={[]} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -332,7 +332,7 @@ describe('MessageThread', () => {
       };
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={[nonParticipantCharacter]} />
+        <MessageThread gameId={1} conversationId={1} characters={[nonParticipantCharacter]} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -346,7 +346,7 @@ describe('MessageThread', () => {
       const user = userEvent.setup();
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -373,7 +373,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -402,7 +402,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -429,7 +429,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -448,7 +448,7 @@ describe('MessageThread', () => {
 
     it('disables send button when message is empty', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -461,7 +461,7 @@ describe('MessageThread', () => {
       const user = userEvent.setup();
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -487,7 +487,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -514,7 +514,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -541,7 +541,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -573,7 +573,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -585,7 +585,7 @@ describe('MessageThread', () => {
   describe('Character Selection Logic', () => {
     it('auto-selects first participating character', async () => {
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -609,7 +609,7 @@ describe('MessageThread', () => {
       ];
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mixedCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mixedCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -634,7 +634,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -656,7 +656,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -682,7 +682,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -705,7 +705,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -735,7 +735,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -779,7 +779,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -824,7 +824,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -853,7 +853,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -882,7 +882,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -926,7 +926,7 @@ describe('MessageThread', () => {
       );
 
       renderWithProviders(
-        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} />
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
       );
 
       await waitFor(() => {
@@ -948,6 +948,130 @@ describe('MessageThread', () => {
 
       await waitFor(() => {
         expect(messagesFetchCount).toBeGreaterThan(initialFetchCount);
+      });
+    });
+  });
+
+  describe('Phase Restrictions', () => {
+    it('disables messaging during action phase', async () => {
+      renderWithProviders(
+        <MessageThread
+          gameId={1}
+          conversationId={1}
+          characters={mockCharacters}
+          currentPhaseType="action"
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/new messages can only be sent during common room phases/i)).toBeInTheDocument();
+      });
+
+      const sendButton = screen.getByRole('button', { name: /send/i });
+      expect(sendButton).toBeDisabled();
+
+      const textarea = screen.getByPlaceholderText(/messaging is only available during common room phases/i);
+      expect(textarea).toBeDisabled();
+    });
+
+    it('enables messaging during common_room phase', async () => {
+      renderWithProviders(
+        <MessageThread
+          gameId={1}
+          conversationId={1}
+          characters={mockCharacters}
+          currentPhaseType="common_room"
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByText(/new messages can only be sent during common room phases/i)).not.toBeInTheDocument();
+      });
+
+      const textarea = screen.getByPlaceholderText(/type your message/i);
+      expect(textarea).not.toBeDisabled();
+    });
+
+    it('disables messaging during results phase', async () => {
+      renderWithProviders(
+        <MessageThread
+          gameId={1}
+          conversationId={1}
+          characters={mockCharacters}
+          currentPhaseType="results"
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/new messages can only be sent during common room phases/i)).toBeInTheDocument();
+      });
+
+      const textarea = screen.getByPlaceholderText(/messaging is only available during common room phases/i);
+      expect(textarea).toBeDisabled();
+    });
+
+    it('disables messaging when phase type is undefined', async () => {
+      renderWithProviders(
+        <MessageThread
+          gameId={1}
+          conversationId={1}
+          characters={mockCharacters}
+          currentPhaseType={undefined}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/new messages can only be sent during common room phases/i)).toBeInTheDocument();
+      });
+
+      const sendButton = screen.getByRole('button', { name: /send/i });
+      expect(sendButton).toBeDisabled();
+    });
+
+    it('disables character selector during non-common-room phase', async () => {
+      renderWithProviders(
+        <MessageThread
+          gameId={1}
+          conversationId={1}
+          characters={mockCharacters}
+          currentPhaseType="action"
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('combobox')).toBeDisabled();
+      });
+    });
+
+    it('shows tooltip on disabled send button during non-common-room phase', async () => {
+      renderWithProviders(
+        <MessageThread
+          gameId={1}
+          conversationId={1}
+          characters={mockCharacters}
+          currentPhaseType="action"
+        />
+      );
+
+      await waitFor(() => {
+        const sendButton = screen.getByRole('button', { name: /send/i });
+        expect(sendButton).toHaveAttribute('title', 'Messages can only be sent during Common Room phases');
+      });
+    });
+
+    it('does not show tooltip on enabled send button during common_room phase', async () => {
+      renderWithProviders(
+        <MessageThread
+          gameId={1}
+          conversationId={1}
+          characters={mockCharacters}
+          currentPhaseType="common_room"
+        />
+      );
+
+      await waitFor(() => {
+        const sendButton = screen.getByRole('button', { name: /send/i });
+        expect(sendButton).not.toHaveAttribute('title');
       });
     });
   });

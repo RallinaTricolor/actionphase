@@ -368,6 +368,43 @@ test.describe.serial('Co-GM Management', () => {
     await page.getByRole('button', { name: 'Cancel' }).click();
   });
 
+  test('Co-GM can send private messages as GM NPC', async ({ page }) => {
+    // TestAudience2 is promoted to co-GM in test "Primary GM can promote audience member to co-GM"
+    // Fixture provides a GM NPC ("GM Test NPC") that the co-GM can use for messaging
+    // Messages tab is visible because co-GM role grants access (hasGMRole || isCoGM)
+    // NOTE: This test runs BEFORE action phase activation to ensure common_room phase is active (Issue #10)
+
+    await loginAs(page, 'AUDIENCE_2');
+
+    const messagingPage = new MessagingPage(page);
+    await messagingPage.goto(gameId);
+
+    // Reload to ensure fresh auth state
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Navigate to Messages tab using POM method
+    await messagingPage.navigateToMessages();
+
+    // Verify co-GM can access conversation creation (GM-only permission)
+    // GMs can create conversations and send messages as their NPCs
+    await expect(messagingPage.newConversationButton).toBeVisible();
+    await expect(messagingPage.newConversationButton).toBeEnabled();
+
+    // Open conversation modal to verify co-GM has full access
+    await messagingPage.openNewConversationForm();
+
+    // Verify modal opens with conversation form
+    await expect(messagingPage.conversationTitleInput).toBeVisible();
+
+    // Close modal without creating (prevents test data accumulation)
+    await page.keyboard.press('Escape');
+
+    // Note: Full messaging flow is already tested in private-messages-flow.spec.ts for GMs
+    // This test verifies co-GMs have the same messaging permissions (access to New Conversation button and form)
+  });
+
   test('Co-GM can view player actions on Actions tab', async ({ page }) => {
     // First, activate the action phase so the Actions tab becomes visible
     await loginAs(page, 'GM');
@@ -554,41 +591,6 @@ test.describe.serial('Co-GM Management', () => {
 
     // Verify NPC appears in character list
     await expect(page.getByText(npcName).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
-  });
-
-  test('Co-GM can send private messages as GM NPC', async ({ page }) => {
-    // Co-GM has been promoted from audience (AUDIENCE_2)
-    // Fixture provides a GM NPC ("GM Test NPC") that the co-GM can use for messaging
-    // Messages tab is visible because co-GM has the NPC character (isAudience && hasCharacters)
-
-    await loginAs(page, 'AUDIENCE_2');
-
-    const messagingPage = new MessagingPage(page);
-    await messagingPage.goto(gameId);
-
-    // Reload to ensure fresh auth state
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
-    // Navigate to Messages tab using POM method
-    await messagingPage.navigateToMessages();
-
-    // Verify co-GM can access conversation creation (GM-only permission)
-    // GMs can create conversations and send messages as their NPCs
-    await expect(messagingPage.newConversationButton).toBeVisible();
-
-    // Open conversation modal to verify co-GM has full access
-    await messagingPage.openNewConversationForm();
-
-    // Verify modal opens with conversation form
-    await expect(messagingPage.conversationTitleInput).toBeVisible();
-
-    // Close modal without creating (prevents test data accumulation)
-    await page.keyboard.press('Escape');
-
-    // Note: Full messaging flow is already tested in private-messages-flow.spec.ts for GMs
-    // This test verifies co-GMs have the same messaging permissions (access to New Conversation button and form)
   });
 
   test('Co-GM can access Audience tab', async ({ page }) => {

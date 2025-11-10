@@ -90,9 +90,11 @@ export class BaseApiClient {
           error,
         });
 
-        // Don't try to refresh token for auth endpoints (login, register)
+        // Don't try to refresh token for auth endpoints (login, register, me)
+        // /auth/me is used to CHECK if user is authenticated, so it shouldn't trigger refresh
         const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
-                               originalRequest.url?.includes('/auth/register');
+                               originalRequest.url?.includes('/auth/register') ||
+                               originalRequest.url?.includes('/auth/me');
 
         if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
           originalRequest._retry = true;
@@ -135,6 +137,14 @@ export class BaseApiClient {
 
             // Clear any legacy localStorage tokens
             localStorage.removeItem('auth_token');
+
+            // Dispatch event to show user-facing error message
+            window.dispatchEvent(new CustomEvent('auth:sessionExpired', {
+              detail: { message: 'Your session has expired. Please log in again.' }
+            }));
+
+            // Dispatch event to clear React Query cache
+            window.dispatchEvent(new CustomEvent('auth:logout'));
 
             // Don't redirect if we're already on login page or public pages
             if (!window.location.pathname.includes('/login') &&
