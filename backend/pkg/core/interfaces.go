@@ -1238,7 +1238,8 @@ type PollServiceInterface interface {
 
 	// GetPollResults retrieves aggregated results for a poll.
 	// Returns vote counts per option and respects show_individual_votes setting.
-	GetPollResults(ctx context.Context, pollID int32) (*PollResults, error)
+	// If canSeeIndividualVotes is true (GM, co-GM, or audience), individual votes are always included.
+	GetPollResults(ctx context.Context, pollID int32, canSeeIndividualVotes bool) (*PollResults, error)
 
 	// UpdatePoll updates poll details (question, description, deadline, settings).
 	// Only GMs can update polls for their games.

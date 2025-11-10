@@ -504,7 +504,7 @@ func TestPollService_GetPollResults(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get poll results
-	results, err := pollService.GetPollResults(ctx, pollWithOptions.Poll.ID)
+	results, err := pollService.GetPollResults(ctx, pollWithOptions.Poll.ID, false)
 	require.NoError(t, err)
 	require.NotNil(t, results)
 

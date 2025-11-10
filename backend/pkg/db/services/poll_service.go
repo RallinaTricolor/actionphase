@@ -354,7 +354,8 @@ func (s *PollService) GetVote(ctx context.Context, pollID int32, userID int32, c
 }
 
 // GetPollResults retrieves aggregated results for a poll
-func (s *PollService) GetPollResults(ctx context.Context, pollID int32) (*core.PollResults, error) {
+// If canSeeIndividualVotes is true (GM, co-GM, or audience), individual votes are always included regardless of poll settings
+func (s *PollService) GetPollResults(ctx context.Context, pollID int32, canSeeIndividualVotes bool) (*core.PollResults, error) {
 	queries := db.New(s.DB)
 
 	// Get the poll
@@ -397,8 +398,9 @@ func (s *PollService) GetPollResults(ctx context.Context, pollID int32) (*core.P
 	}
 	totalVotes += int32(otherCount)
 
-	// Get detailed votes if show_individual_votes is true
-	showIndividualVotes := poll.ShowIndividualVotes.Bool
+	// Get detailed votes if show_individual_votes is true OR user has privileges
+	// GMs, co-GMs, and audience always see individual votes for game management/observation
+	showIndividualVotes := poll.ShowIndividualVotes.Bool || canSeeIndividualVotes
 	if showIndividualVotes {
 		votes, err := queries.GetPollVotesWithDetails(ctx, pollID)
 		if err != nil {
