@@ -257,8 +257,8 @@ export function GameTabContent({
     );
   }
 
-  // Handouts Tab (In Progress & Completed)
-  if (activeTab === 'handouts' && (game.state === 'in_progress' || game.state === 'completed')) {
+  // Handouts Tab (All States - tab is always visible per useGameTabs)
+  if (activeTab === 'handouts') {
     return <HandoutsList gameId={gameId} isGM={isGM} />;
   }
 
