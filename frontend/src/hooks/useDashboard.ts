@@ -14,8 +14,8 @@ export function useDashboard() {
       const response = await simpleApi.getDashboard();
       return response.data;
     },
-    // Refetch every 60 seconds to keep dashboard fresh
-    refetchInterval: 60000,
+    // Refetch every 15 seconds to match notification polling and keep unread counts fresh
+    refetchInterval: 15000,
     // Refetch on window focus to show latest data
     refetchOnWindowFocus: true,
     // Keep previous data while refetching for smoother UX

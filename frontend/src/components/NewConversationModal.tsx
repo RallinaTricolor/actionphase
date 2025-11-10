@@ -102,15 +102,16 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
     }
   };
 
-  // Get characters that are not the selected "your character" (available as participants)
-  // This allows GMs to add their other NPCs to conversations
+  // Get characters that are not controlled by the user (available as participants)
+  // Exclude user's own characters (they can only send FROM one of their characters, not TO them)
   // Exclude pending/rejected characters from recipient selection for everyone (including GMs)
   // GMs can still see these characters in CharactersList for management purposes
   const availableParticipants = allCharacters.filter(
     char =>
       char.id !== yourCharacterId &&
       char.status !== 'pending' &&
-      char.status !== 'rejected'
+      char.status !== 'rejected' &&
+      !characters.some(c => c.id === char.id) // Exclude ALL user's controllable characters
   );
 
   return (

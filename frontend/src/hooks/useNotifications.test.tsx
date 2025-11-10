@@ -200,6 +200,7 @@ describe('useNotifications hooks', () => {
       });
 
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['notifications'] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['dashboard'] });
     });
 
     it('handles API errors', async () => {
@@ -256,6 +257,7 @@ describe('useNotifications hooks', () => {
       });
 
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['notifications'] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['dashboard'] });
     });
 
     it('handles API errors', async () => {
@@ -310,6 +312,7 @@ describe('useNotifications hooks', () => {
       });
 
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['notifications'] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['dashboard'] });
     });
 
     it('handles API errors', async () => {

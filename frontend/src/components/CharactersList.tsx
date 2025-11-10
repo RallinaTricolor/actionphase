@@ -17,13 +17,15 @@ interface CharactersListProps {
   currentUserId?: number;
   gameState?: string;
   isAnonymous?: boolean;
+  isParticipant?: boolean; // Whether the user is an active participant in this game
 }
 
 export function CharactersList({
   gameId,
   userRole = 'player',
   gameState = 'setup',
-  isAnonymous = false
+  isAnonymous = false,
+  isParticipant = false
 }: CharactersListProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
@@ -107,7 +109,8 @@ export function CharactersList({
   const canCreateCharacter = () => {
     if (gameState === 'completed' || gameState === 'cancelled') return false;
     if (userRole === 'gm') return true;
-    if (userRole === 'player' && (gameState === 'character_creation' || gameState === 'setup')) return true;
+    // Players must be active participants to create characters
+    if (userRole === 'player' && isParticipant && (gameState === 'character_creation' || gameState === 'setup')) return true;
     return false;
   };
 
