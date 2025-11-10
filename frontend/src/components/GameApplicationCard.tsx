@@ -97,7 +97,7 @@ export const GameApplicationCard = ({
       </div>
 
       {isGM && gameState === 'recruitment' && onApprove && onReject && (
-        <div className="flex justify-end gap-3 pt-4 border-t border-theme-default">
+        <div className="flex justify-end gap-3 pt-4 border-t border-theme-default min-h-[52px]">
           {application.status === 'pending' && (
             <>
               <Button

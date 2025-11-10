@@ -308,8 +308,8 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
         </nav>
       </div>
 
-      {/* Recent Results Section - only for current phase */}
-      {isCurrentPhase && previousPhaseResults.shouldShowResults && (
+      {/* Recent Results Section - only for current phase and players (not GMs) */}
+      {isCurrentPhase && !isGM && previousPhaseResults.shouldShowResults && (
         <RecentResultsSection
           gameId={gameId}
           results={previousPhaseResults.results}
