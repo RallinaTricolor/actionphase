@@ -397,6 +397,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
           parentChain={threadModalContext?.parentChain}
           hasFullThread={threadModalContext?.hasFullThread}
           targetCommentId={threadModalContext?.targetCommentId}
+          readOnly={!isCurrentPhase}
         />
       )}
     </div>

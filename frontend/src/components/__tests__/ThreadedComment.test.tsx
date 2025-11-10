@@ -1751,4 +1751,122 @@ describe('ThreadedComment', () => {
       expect(screen.queryByRole('link', { name: /parent/i })).not.toBeInTheDocument();
     });
   });
+
+  describe('Read-Only Mode', () => {
+    it('should not show edit/delete buttons when readOnly=true', async () => {
+      // Create a comment owned by current user (so edit/delete buttons would normally show)
+      const myComment: Message = {
+        ...mockComment,
+        author_id: mockCurrentUserId,
+        character_id: mockCharacters[0].id,
+        character_name: mockCharacters[0].name,
+        author_username: 'testuser',
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={myComment}
+          gameId={mockGameId}
+          postId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+          readOnly={true}
+        />
+      );
+
+      // Comment content should be visible
+      expect(screen.getByText('This is a test comment')).toBeInTheDocument();
+
+      // Edit/delete buttons should NOT be visible (even though user owns the comment)
+      expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+    });
+
+    it('should not show reply button when readOnly=true', async () => {
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockComment}
+          gameId={mockGameId}
+          postId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+          readOnly={true}
+        />
+      );
+
+      // Reply button should NOT be visible
+      expect(screen.queryByRole('button', { name: /reply/i })).not.toBeInTheDocument();
+    });
+
+    it('should allow edit/delete buttons when readOnly=false (default)', async () => {
+      // Create a comment owned by current user
+      const myComment: Message = {
+        ...mockComment,
+        author_id: mockCurrentUserId,
+        character_id: mockCharacters[0].id,
+        character_name: mockCharacters[0].name,
+        author_username: 'testuser',
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={myComment}
+          gameId={mockGameId}
+          postId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+          readOnly={false}
+        />
+      );
+
+      // Hover to show action buttons
+      const commentCard = screen.getByText('This is a test comment').closest('[data-testid^="comment-"]');
+      if (commentCard) {
+        await userEvent.hover(commentCard);
+      }
+
+      // Edit/delete buttons SHOULD be visible when readOnly=false
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+      });
+      expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+    });
+
+    it('should propagate readOnly to nested replies', async () => {
+      // Mock API responses for replies
+      server.use(
+        http.get(`/api/v1/games/${mockGameId}/messages/:messageId/children`, () => {
+          return HttpResponse.json(mockReplies);
+        })
+      );
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockCommentWithReplies}
+          gameId={mockGameId}
+          postId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+          readOnly={true}
+        />
+      );
+
+      // Wait for replies to load
+      await waitFor(() => {
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
+      });
+
+      // Reply buttons should NOT be visible on nested comments either
+      const replyButtons = screen.queryAllByRole('button', { name: /reply/i });
+      expect(replyButtons).toHaveLength(0);
+    });
+  });
 });

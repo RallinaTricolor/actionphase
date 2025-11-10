@@ -223,31 +223,138 @@ _To be determined_
 ---
 
 ### Issue 1.6: History Tab Not Read-Only in Completed Games
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED (2025-11-09)
 **Priority:** Medium
 **Reported Behavior:**
 Can still edit/delete comments in "History" view of completed game. History tab should be completely read-only regardless of game state.
 
 **Investigation:**
-- [ ] Check edit/delete button visibility in History
-- [ ] Verify backend permissions for completed games
-- [ ] Review what actions should be blocked
+- [x] Check edit/delete button visibility in History
+- [x] Verify backend permissions for completed games
+- [x] Review what actions should be blocked
 
 **Root Cause:**
-_To be determined_
+**Missing `readOnly` prop propagation through ThreadViewModal**
+
+The `readOnly` prop is not being propagated through the component chain when viewing History:
+
+1. ✅ `HistoryView.tsx:102` - Correctly passes `isCurrentPhase={false}` to `CommonRoom`
+2. ✅ `CommonRoom.tsx:367` - Correctly passes `readOnly={!isCurrentPhase}` to `PostCard`
+3. ❌ `CommonRoom.tsx:384-401` - Renders `ThreadViewModal` but DOES NOT pass `readOnly` or `isCurrentPhase` prop
+4. ❌ `ThreadViewModal.tsx:171-184, 191-199` - Renders `ThreadedComment` but DOES NOT pass `readOnly` prop
+5. ⚠️ `ThreadedComment.tsx:29, 45` - DOES accept `readOnly` prop (defaults to `false`)
+
+**Result:** When users view History and open thread modals (for deeply nested comments), they can still edit/delete comments because `readOnly` is never passed through the modal component.
 
 **Proposed Solution:**
-_To be determined_
+**Add `readOnly` prop to ThreadViewModal and propagate it to ThreadedComment:**
+
+1. Update `ThreadViewModal` interface to accept `readOnly?: boolean` prop
+2. Pass `readOnly` from `CommonRoom` to `ThreadViewModal` (use `!isCurrentPhase`)
+3. Pass `readOnly` from `ThreadViewModal` to all `ThreadedComment` instances
+
+**Changes Required:**
+
+**File 1: `frontend/src/components/ThreadViewModal.tsx`**
+```tsx
+// Add to interface (after line 23)
+interface ThreadViewModalProps {
+  // ... existing props
+  readOnly?: boolean; // Disable all interactive features (for history view)
+}
+
+// Add to function parameters (after line 42)
+export function ThreadViewModal({
+  // ... existing params
+  readOnly = false,
+}: ThreadViewModalProps) {
+
+// Pass to ThreadedComment (line 171-184)
+<ThreadedComment
+  comment={msg}
+  gameId={gameId}
+  postId={postId}
+  characters={characters}
+  controllableCharacters={controllableCharacters}
+  onCreateReply={onCreateReply}
+  onCommentDeleted={onClose}
+  currentUserId={currentUserId}
+  depth={0}
+  maxDepth={10}
+  unreadCommentIDs={unreadCommentIDs}
+  onOpenThread={(nestedComment) => setNestedModalComment(nestedComment)}
+  readOnly={readOnly}  // ADD THIS LINE
+/>
+
+// Also pass to single comment view (line 191-199)
+<ThreadedComment
+  comment={comment}
+  gameId={gameId}
+  postId={postId}
+  characters={characters}
+  controllableCharacters={controllableCharacters}
+  onCreateReply={onCreateReply}
+  onCommentDeleted={onClose}
+  currentUserId={currentUserId}
+  depth={0}
+  maxDepth={10}
+  unreadCommentIDs={unreadCommentIDs}
+  onOpenThread={onOpenThread}
+  readOnly={readOnly}  // ADD THIS LINE
+/>
+```
+
+**File 2: `frontend/src/components/CommonRoom.tsx`**
+```tsx
+// Pass readOnly to ThreadViewModal (line 384-401)
+{threadModalComment && (
+  <ThreadViewModal
+    gameId={gameId}
+    postId={getRootPostId(threadModalComment)}
+    comment={threadModalComment}
+    characters={allCharacters}
+    controllableCharacters={controllableCharacters}
+    onClose={() => {
+      setThreadModalComment(null);
+      setThreadModalContext(null);
+    }}
+    onCreateReply={handleCreateComment}
+    currentUserId={currentUserId}
+    parentChain={threadModalContext?.parentChain}
+    hasFullThread={threadModalContext?.hasFullThread}
+    targetCommentId={threadModalContext?.targetCommentId}
+    readOnly={!isCurrentPhase}  // ADD THIS LINE
+  />
+)}
+```
+
+**Implementation (2025-11-09):**
+
+✅ **All code changes complete - TypeScript compiles successfully**
+
+**Files Modified:**
+1. `frontend/src/components/ThreadViewModal.tsx` (Lines 9-24, 31-44, 186, 203)
+   - Added `readOnly?: boolean` to `ThreadViewModalProps` interface
+   - Added `readOnly = false` to function parameters
+   - Passed `readOnly` prop to all `ThreadedComment` instances (2 locations: parent chain view and single comment view)
+
+2. `frontend/src/components/CommonRoom.tsx` (Line 400)
+   - Passed `readOnly={!isCurrentPhase}` to `ThreadViewModal`
+
+**How It Works:**
+- HistoryView passes `isCurrentPhase={false}` to CommonRoom
+- CommonRoom converts this to `readOnly={!isCurrentPhase}` (readOnly=true) and passes to ThreadViewModal
+- ThreadViewModal propagates readOnly to all ThreadedComment instances
+- ThreadedComment already had logic to hide edit/delete buttons when readOnly=true
 
 **Test Strategy:**
-- [ ] E2E test for read-only History in completed game
-- [ ] Backend test for permission denial on edit attempts
-- [ ] Test all comment types (common room, private messages, etc.)
-
-**Files to Review:**
-- History tab component
-- Comment edit/delete handlers
-- Backend permission checks
+- [x] Component investigation confirms ThreadedComment accepts readOnly prop
+- [x] TypeScript compilation successful (no errors)
+- [ ] Manual testing: Navigate to History tab and verify no edit/delete buttons in thread modals
+- [ ] Unit test: ThreadViewModal passes readOnly to ThreadedComment
+- [ ] Component test: ThreadedComment hides edit/delete buttons when readOnly=true
+- [ ] E2E test: History tab does not allow editing/deleting comments (including in modals)
+- [ ] E2E test: Current phase Common Room still allows editing (readOnly=false)
 
 ---
 
