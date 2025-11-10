@@ -283,15 +283,15 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 
 	// Filter characters based on game state and user role
 	// When game is in_progress:
-	// - GMs see ALL characters (including pending/rejected) for management in CharactersList
-	// - Non-GMs only see approved/active characters
+	// - GMs, co-GMs, and audience see ALL characters (including pending/rejected)
+	// - Regular players only see approved/active characters
 	// Frontend will handle additional filtering for recipient selection (all users, including GMs)
 	filteredCharacters := make([]models.GetCharactersByGameRow, 0)
 	for _, char := range characters {
-		// If game is in_progress and user is NOT GM, exclude pending/rejected characters
-		if game.State.String == "in_progress" && !isGM {
+		// If game is in_progress and user is NOT GM/co-GM/audience, exclude pending/rejected characters
+		if game.State.String == "in_progress" && !isGM && userRole != "co_gm" && userRole != "audience" {
 			if char.Status.String == "pending" || char.Status.String == "rejected" {
-				continue // Skip this character for non-GMs
+				continue // Skip this character for regular players
 			}
 		}
 
