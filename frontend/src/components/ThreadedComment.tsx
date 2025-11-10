@@ -90,12 +90,21 @@ export function ThreadedComment({
     };
   }, []);
 
-  // Auto-select first character
+  // Auto-select character - prefer parent comment's character if we control it, otherwise first character
+  // This creates a natural conversation flow when GMs reply as NPCs
   useEffect(() => {
     if (controllableCharacters.length > 0 && selectedCharacterId === null) {
-      setSelectedCharacterId(controllableCharacters[0].id);
+      // Check if we control the parent comment's character
+      const parentCharacter = controllableCharacters.find(c => c.id === comment.character_id);
+      if (parentCharacter) {
+        // We control the character that wrote the parent comment - use it as default
+        setSelectedCharacterId(parentCharacter.id);
+      } else {
+        // We don't control the parent's character - use first available
+        setSelectedCharacterId(controllableCharacters[0].id);
+      }
     }
-  }, [controllableCharacters, selectedCharacterId]);
+  }, [controllableCharacters, selectedCharacterId, comment.character_id]);
 
   // Define loadReplies as a regular function (not useCallback to avoid dependency issues)
   const loadReplies = async () => {

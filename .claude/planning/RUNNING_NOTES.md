@@ -8,3 +8,9 @@
 - Re-approve applicant
   - What happens to the characters if a player makes a billion characters. Does the GM see them all all the time?
   - Maybe we need to bring back "Rejected"
+- Dashboard unread count doesn't refresh without hard refresh
+- Reply button even if not a participant in the common room threads
+- Can't vote with multiple characters if the poll allows for it
+- Can't reply to deeply nested comments (no Reply button)
+- Load more button in case of too many top level replies
+- Better user facing errors across the board
