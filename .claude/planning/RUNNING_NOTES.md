@@ -14,3 +14,5 @@
 - Can't reply to deeply nested comments (no Reply button)
 - Load more button in case of too many top level replies
 - Better user facing errors across the board
+- Can send PMs outside of common room
+- Can't look at previous polls in history
