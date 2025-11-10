@@ -45,30 +45,35 @@
   --color-primary-hover*: initial;
   --color-primary-light*: initial;
   --color-primary-text*: initial;
+  --color-interactive-primary-subtle*: initial;
 
   /* Interactive Colors - Danger */
   --color-danger*: initial;
   --color-danger-hover*: initial;
   --color-danger-light*: initial;
   --color-danger-text*: initial;
+  --color-semantic-danger-subtle*: initial;
 
   /* Interactive Colors - Warning */
   --color-warning*: initial;
   --color-warning-hover*: initial;
   --color-warning-light*: initial;
   --color-warning-text*: initial;
+  --color-semantic-warning-subtle*: initial;
 
   /* Interactive Colors - Success */
   --color-success*: initial;
   --color-success-hover*: initial;
   --color-success-light*: initial;
   --color-success-text*: initial;
+  --color-semantic-success-subtle*: initial;
 
   /* Interactive Colors - Info */
   --color-info*: initial;
   --color-info-hover*: initial;
   --color-info-light*: initial;
   --color-info-text*: initial;
+  --color-semantic-info-subtle*: initial;
 
   /* Special Colors */
   --color-placeholder*: initial;
@@ -144,30 +149,35 @@
     --color-primary-hover: 29 78 216; /* blue-700 */
     --color-primary-light: 239 246 255; /* blue-50 */
     --color-primary-text: 29 78 216; /* blue-700 */
+    --color-interactive-primary-subtle: 239 246 255; /* blue-50 - semantic name for bg */
 
     /* Danger (Red) */
     --color-danger: 220 38 38; /* red-600 */
     --color-danger-hover: 185 28 28; /* red-700 */
     --color-danger-light: 254 242 242; /* red-50 */
     --color-danger-text: 185 28 28; /* red-700 */
+    --color-semantic-danger-subtle: 254 242 242; /* red-50 - semantic name for bg */
 
     /* Warning (Yellow) */
     --color-warning: 234 179 8; /* yellow-500 */
     --color-warning-hover: 202 138 4; /* yellow-600 */
     --color-warning-light: 254 252 232; /* yellow-50 */
     --color-warning-text: 161 98 7; /* yellow-700 */
+    --color-semantic-warning-subtle: 254 252 232; /* yellow-50 - semantic name for bg */
 
     /* Success (Green) */
     --color-success: 22 163 74; /* green-600 */
     --color-success-hover: 21 128 61; /* green-700 */
     --color-success-light: 240 253 244; /* green-50 */
     --color-success-text: 21 128 61; /* green-700 */
+    --color-semantic-success-subtle: 240 253 244; /* green-50 - semantic name for bg */
 
     /* Info (Indigo) */
     --color-info: 79 70 229; /* indigo-600 */
     --color-info-hover: 67 56 202; /* indigo-700 */
     --color-info-light: 238 242 255; /* indigo-50 */
     --color-info-text: 67 56 202; /* indigo-700 */
+    --color-semantic-info-subtle: 238 242 255; /* indigo-50 - semantic name for bg */
 
     /* ===== AVATAR COLORS ===== */
     /* Distinct colors for character avatars (deterministic assignment) */
@@ -263,30 +273,35 @@
     --color-primary-hover: 37 99 235; /* blue-600 */
     --color-primary-light: 30 58 138; /* blue-900 (will use with opacity) */
     --color-primary-text: 147 197 253; /* blue-300 */
+    --color-interactive-primary-subtle: 30 58 138; /* blue-900 - semantic name for bg */
 
     /* Danger (Red) */
     --color-danger: 185 28 28; /* red-700 */
     --color-danger-hover: 220 38 38; /* red-600 */
     --color-danger-light: 127 29 29; /* red-900 (will use with opacity) */
     --color-danger-text: 252 165 165; /* red-300 */
+    --color-semantic-danger-subtle: 127 29 29; /* red-900 - semantic name for bg */
 
     /* Warning (Yellow) */
     --color-warning: 202 138 4; /* yellow-600 */
     --color-warning-hover: 234 179 8; /* yellow-500 */
     --color-warning-light: 113 63 18; /* yellow-900 (will use with opacity) */
     --color-warning-text: 253 224 71; /* yellow-300 */
+    --color-semantic-warning-subtle: 113 63 18; /* yellow-900 - semantic name for bg */
 
     /* Success (Green) */
     --color-success: 21 128 61; /* green-700 */
     --color-success-hover: 22 163 74; /* green-600 */
     --color-success-light: 20 83 45; /* green-900 (will use with opacity) */
     --color-success-text: 134 239 172; /* green-300 */
+    --color-semantic-success-subtle: 20 83 45; /* green-900 - semantic name for bg */
 
     /* Info (Indigo) */
     --color-info: 67 56 202; /* indigo-700 */
     --color-info-hover: 79 70 229; /* indigo-600 */
     --color-info-light: 49 46 129; /* indigo-900 (will use with opacity) */
     --color-info-text: 165 180 252; /* indigo-300 */
+    --color-semantic-info-subtle: 49 46 129; /* indigo-900 - semantic name for bg */
 
     /* ===== AVATAR COLORS ===== */
     /* Distinct colors for character avatars (slightly brighter in dark mode) */
@@ -458,7 +473,7 @@
 
   /* Interactive subtle backgrounds (for badges, pills, etc.) */
   .bg-interactive-primary-subtle {
-    background-color: rgb(var(--color-primary-light));
+    background-color: rgb(var(--color-interactive-primary-subtle));
   }
 
   /* Semantic tokens - for status colors */
@@ -471,7 +486,7 @@
   }
 
   .bg-semantic-danger-subtle {
-    background-color: rgb(var(--color-danger-light));
+    background-color: rgb(var(--color-semantic-danger-subtle));
   }
 
   .text-semantic-danger {
@@ -491,7 +506,7 @@
   }
 
   .bg-semantic-warning-subtle {
-    background-color: rgb(var(--color-warning-light));
+    background-color: rgb(var(--color-semantic-warning-subtle));
   }
 
   .text-semantic-warning {
@@ -511,7 +526,7 @@
   }
 
   .bg-semantic-success-subtle {
-    background-color: rgb(var(--color-success-light));
+    background-color: rgb(var(--color-semantic-success-subtle));
   }
 
   .text-semantic-success {
@@ -531,7 +546,7 @@
   }
 
   .bg-semantic-info-subtle {
-    background-color: rgb(var(--color-info-light));
+    background-color: rgb(var(--color-semantic-info-subtle));
   }
 
   .text-semantic-info {
@@ -544,6 +559,27 @@
 
   .ring-info {
     --tw-ring-color: rgb(var(--color-info));
+  }
+
+  /* Surface backgrounds (bg- prefixed versions for consistency) */
+  .bg-surface-page {
+    background-color: rgb(var(--color-surface-page));
+  }
+
+  .bg-surface-base {
+    background-color: rgb(var(--color-surface-base));
+  }
+
+  .bg-surface-raised {
+    background-color: rgb(var(--color-surface-raised));
+  }
+
+  .bg-surface-overlay {
+    background-color: rgb(var(--color-surface-overlay));
+  }
+
+  .bg-surface-sunken {
+    background-color: rgb(var(--color-surface-sunken));
   }
 
   /* Border tokens */

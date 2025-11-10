@@ -25,16 +25,14 @@ export class MessagingPage {
    * Get the Messages heading
    */
   get heading(): Locator {
-    return this.page.getByRole('heading', { name: 'Messages' });
+    return this.page.getByRole('heading', { name: 'Private Messages' });
   }
 
   /**
    * Get the New Conversation button
    */
   get newConversationButton(): Locator {
-    return this.page.getByRole('button', { name: 'New Conversation' }).or(
-      this.page.locator('button[title="New Conversation"]')
-    );
+    return this.page.getByRole('button', { name: '+ New' });
   }
 
   /**

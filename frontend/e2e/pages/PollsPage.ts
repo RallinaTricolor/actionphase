@@ -41,6 +41,12 @@ export class PollsPage {
     await expect(pollsSubTab).toBeVisible({ timeout: 5000 });
     await pollsSubTab.click();
     await this.page.waitForLoadState('networkidle');
+
+    // Wait for polls content to actually load (not just network idle)
+    // Wait for the main "Polls" heading (visible to all users)
+    await expect(
+      this.page.getByRole('heading', { name: /^Polls$/i, level: 3 })
+    ).toBeVisible({ timeout: 5000 });
   }
 
   /**

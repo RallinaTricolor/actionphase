@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import type { UnifiedDeadline } from '../types/deadlines';
 
 export type DeadlineUrgency = 'critical' | 'warning' | 'normal' | 'expired';
@@ -66,26 +67,16 @@ function formatCountdown(deadlineStr?: string): string {
 }
 
 /**
- * Get icon for deadline based on title keywords
- */
-function getDeadlineIcon(title: string): string {
-  const lowerTitle = title.toLowerCase();
-  if (lowerTitle.includes('poll') || lowerTitle.includes('vote')) return '🗳️';
-  if (lowerTitle.includes('phase') || lowerTitle.includes('transition')) return '⏰';
-  if (lowerTitle.includes('action') || lowerTitle.includes('submit')) return '📝';
-  if (lowerTitle.includes('character') || lowerTitle.includes('creation')) return '👤';
-  return '📌';
-}
-
-/**
  * DeadlineCard - Compact horizontal card for displaying a single deadline
  *
  * Features:
- * - Color-coded border based on urgency
+ * - Color-coded border based on urgency (red/yellow/blue)
  * - Real-time countdown timer
- * - Icon based on deadline type
+ * - Description tooltip on info icon hover (when description exists)
  * - GM edit/delete actions on hover
  * - Clickable to navigate to relevant content
+ * - 220px width allows 4 cards comfortably in a row
+ * - 32-character title limit (increased from 20 for better readability)
  *
  * @example
  * ```tsx
@@ -120,7 +111,7 @@ export function DeadlineCard({ deadline, isGM, onEdit, onDelete, onExtend, onCli
     critical: 'border-semantic-danger bg-semantic-danger-subtle',
     warning: 'border-semantic-warning bg-semantic-warning-subtle',
     normal: 'border-interactive-primary bg-interactive-primary-subtle',
-    expired: 'border-border-secondary bg-surface-secondary opacity-60',
+    expired: 'border-border-secondary surface-sunken opacity-60',
   };
 
   const urgencyTextClasses = {
@@ -130,16 +121,15 @@ export function DeadlineCard({ deadline, isGM, onEdit, onDelete, onExtend, onCli
     expired: 'text-content-tertiary',
   };
 
-  const icon = getDeadlineIcon(deadline.title);
   const formattedDate = deadline.deadline ? format(new Date(deadline.deadline), 'MMM d, h:mm a') : '';
 
-  // Truncate title if too long
-  const displayTitle = deadline.title.length > 20 ? deadline.title.slice(0, 20) + '...' : deadline.title;
+  // Truncate title if too long (increased from 20 to 32 characters for better readability)
+  const displayTitle = deadline.title.length > 32 ? deadline.title.slice(0, 32) + '...' : deadline.title;
 
   return (
     <div
       className={`
-        relative rounded-lg border-2 p-3 min-w-[180px] max-w-[200px]
+        relative rounded-lg border-2 p-3 min-w-[200px] max-w-[220px]
         transition-all duration-200
         ${urgencyClasses[urgency]}
         ${onClick ? 'cursor-pointer hover:shadow-md' : ''}
@@ -159,7 +149,7 @@ export function DeadlineCard({ deadline, isGM, onEdit, onDelete, onExtend, onCli
                 e.stopPropagation();
                 onEdit();
               }}
-              className="p-1 rounded bg-surface-page hover:bg-surface-raised transition-colors"
+              className="p-1 rounded bg-surface-page hover:bg-surface-raised transition-colors text-content-primary"
               aria-label="Edit deadline"
               title="Edit deadline"
             >
@@ -174,7 +164,7 @@ export function DeadlineCard({ deadline, isGM, onEdit, onDelete, onExtend, onCli
                 e.stopPropagation();
                 onExtend();
               }}
-              className="p-1 rounded bg-surface-page hover:bg-surface-raised transition-colors"
+              className="p-1 rounded bg-surface-page hover:bg-surface-raised transition-colors text-content-primary"
               aria-label="Extend deadline"
               title="Extend deadline"
             >
@@ -201,10 +191,9 @@ export function DeadlineCard({ deadline, isGM, onEdit, onDelete, onExtend, onCli
         </div>
       )}
 
-      {/* Icon + Title */}
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-xl">{icon}</span>
-        <span className="text-sm font-semibold text-content-primary truncate" title={deadline.title}>
+      {/* Title (emoji removed for more space) */}
+      <div className="mb-1">
+        <span className="text-sm font-semibold text-content-primary" title={deadline.title}>
           {displayTitle}
         </span>
       </div>
@@ -220,6 +209,37 @@ export function DeadlineCard({ deadline, isGM, onEdit, onDelete, onExtend, onCli
       {formattedDate && (
         <div className="text-xs text-content-secondary">
           {urgency === 'expired' ? 'Due: ' : ''}{formattedDate}
+        </div>
+      )}
+
+      {/* Description Tooltip (only for non-system deadlines with user-entered descriptions) */}
+      {deadline.description && deadline.description.trim() && !deadline.is_system_deadline && (
+        <div className="absolute bottom-2 right-2">
+          <div className="group relative">
+            <InformationCircleIcon
+              className="w-4 h-4 text-content-tertiary hover:text-content-primary cursor-help transition-colors"
+              aria-label="View description"
+              title="View description"
+            />
+
+            {/* Tooltip - positioned above card */}
+            <div className="
+              invisible group-hover:visible
+              absolute bottom-full right-0 mb-2
+              w-64 p-3 rounded-lg
+              bg-surface-raised border border-border-primary shadow-lg
+              text-xs text-content-primary
+              z-50
+              pointer-events-none
+            ">
+              <p className="whitespace-pre-wrap">{deadline.description}</p>
+              {/* Arrow pointing down to icon */}
+              <div className="
+                absolute top-full right-3 -mt-1
+                border-8 border-transparent border-t-surface-raised
+              "></div>
+            </div>
+          </div>
         </div>
       )}
     </div>
