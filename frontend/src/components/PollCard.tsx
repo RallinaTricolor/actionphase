@@ -132,7 +132,7 @@ export function PollCard({ poll, isGM, isAudience = false }: PollCardProps) {
         {/* Action Buttons */}
         {!showVotingForm && !poll.is_expired && (
           <div className="flex gap-2 mt-4">
-            {!poll.user_has_voted && (
+            {!poll.user_has_voted && !isGM && (
               <Button
                 variant="primary"
                 onClick={() => setShowVotingForm(true)}

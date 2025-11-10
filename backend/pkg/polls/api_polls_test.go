@@ -5,9 +5,11 @@ import (
 	db "actionphase/pkg/db/models"
 	dbservices "actionphase/pkg/db/services"
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -251,4 +253,137 @@ func TestPollResultsAccess_NotInGame(t *testing.T) {
 
 	// Verify forbidden status
 	core.AssertEqual(t, http.StatusForbidden, w.Code, "Users not in the game should not be able to view poll results")
+}
+
+// setupPollVoteTestRouter creates a test router for poll voting
+func setupPollVoteTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &dbservices.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	router := chi.NewRouter()
+
+	router.Route("/api/v1", func(r chi.Router) {
+		r.Route("/polls/{pollId}/vote", func(r chi.Router) {
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
+
+			handler := &Handler{App: app}
+			r.Post("/", handler.SubmitVote)
+		})
+	})
+
+	return router
+}
+
+// TestPollVoting_GMAndCoGMBlocked tests that GMs and co-GMs cannot vote on polls
+func TestPollVoting_GMAndCoGMBlocked(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "common_room_poll_responses", "common_room_poll_options", "common_room_polls", "co_gms", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupPollVoteTestRouter(app, testDB)
+	fixtures := testDB.SetupFixtures(t)
+
+	// Create test users
+	gmUser := fixtures.TestUser // GM
+	coGMUser := testDB.CreateTestUser(t, "cogm", "cogm@example.com")
+	playerUser := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gameService := &dbservices.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	pollService := &dbservices.PollService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Create a game
+	game := testDB.CreateTestGame(t, int32(gmUser.ID), "Test Game")
+
+	// Add co-GM as a participant with co_gm role
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(coGMUser.ID), "co_gm")
+	core.AssertNoError(t, err, "Adding co-GM should succeed")
+
+	// Add player as participant
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(playerUser.ID), "player")
+	core.AssertNoError(t, err, "Adding player to game should succeed")
+
+	// Create an active poll
+	pollDeadline := time.Now().Add(24 * time.Hour)
+	poll, err := pollService.CreatePollWithOptions(context.Background(), core.CreatePollRequest{
+		GameID:               game.ID,
+		PhaseID:              nil,
+		CreatedByUserID:      int32(gmUser.ID),
+		CreatedByCharacterID: nil,
+		Question:             "Test Poll",
+		Description:          core.StringPtr("Test poll for voting"),
+		Deadline:             pollDeadline,
+		VoteAsType:           "player",
+		ShowIndividualVotes:  false,
+		AllowOtherOption:     false,
+		Options: []core.PollOptionInput{
+			{Text: "Option A", DisplayOrder: 1},
+			{Text: "Option B", DisplayOrder: 2},
+		},
+	})
+	core.AssertNoError(t, err, "Creating poll should succeed")
+
+	// Create tokens
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gmUser)
+	core.AssertNoError(t, err, "GM token creation should succeed")
+
+	coGMToken, err := core.CreateTestJWTTokenForUser(app, coGMUser)
+	core.AssertNoError(t, err, "Co-GM token creation should succeed")
+
+	playerToken, err := core.CreateTestJWTTokenForUser(app, playerUser)
+	core.AssertNoError(t, err, "Player token creation should succeed")
+
+	// Test cases
+	testCases := []struct {
+		name           string
+		token          string
+		expectedStatus int
+		description    string
+	}{
+		{
+			name:           "gm_cannot_vote",
+			token:          gmToken,
+			expectedStatus: http.StatusForbidden,
+			description:    "GMs should not be able to vote on polls",
+		},
+		{
+			name:           "co_gm_cannot_vote",
+			token:          coGMToken,
+			expectedStatus: http.StatusForbidden,
+			description:    "Co-GMs should not be able to vote on polls",
+		},
+		{
+			name:           "player_can_vote",
+			token:          playerToken,
+			expectedStatus: http.StatusOK,
+			description:    "Players should be able to vote on polls",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create vote request body
+			body := `{"selected_option_id":` + strconv.Itoa(int(poll.Options[0].ID)) + `}`
+
+			// Create request
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/polls/"+strconv.Itoa(int(poll.Poll.ID))+"/vote",
+				io.NopCloser(strings.NewReader(body)))
+			req.Header.Set("Authorization", "Bearer "+tc.token)
+			req.Header.Set("Content-Type", "application/json")
+
+			// Set URL parameters
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("pollId", strconv.Itoa(int(poll.Poll.ID)))
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+			// Execute request
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			// Verify status code
+			core.AssertEqual(t, tc.expectedStatus, w.Code, tc.description)
+		})
+	}
 }

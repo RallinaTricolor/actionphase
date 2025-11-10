@@ -623,6 +623,24 @@ func (h *Handler) SubmitVote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// GMs and co-GMs cannot vote on polls
+	gameService := &dbservices.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, poll.GameID)
+	if err != nil {
+		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	isGM := game.GmUserID == userID
+	isCoGM := core.IsUserCoGM(ctx, h.App.Pool, poll.GameID, userID)
+
+	if isGM || isCoGM {
+		h.App.ObsLogger.Error(ctx, "GMs and co-GMs cannot vote on polls")
+		render.Render(w, r, core.ErrForbidden("GMs and co-GMs cannot vote on polls"))
+		return
+	}
+
 	// Check if deadline has passed
 	if poll.Deadline.Time.Before(time.Now()) {
 		h.App.ObsLogger.Error(ctx, "Cannot vote - poll deadline has passed")
