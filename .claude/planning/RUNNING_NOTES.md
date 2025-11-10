@@ -3,3 +3,8 @@
 - Better error feedback on registration/login
   - Password length, validation, etc.
 - Token expiration is weird
+- Character creation shows for non-participants
+- JWT + Auth Cookie are stored at the same time--is this wise?
+- Re-approve applicant
+  - What happens to the characters if a player makes a billion characters. Does the GM see them all all the time?
+  - Maybe we need to bring back "Rejected"

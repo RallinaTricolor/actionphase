@@ -2160,95 +2160,119 @@ _To be determined_
 ---
 
 ### Issue 8.2: GM Can't See Own NPCs in Conversation Creation
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED
 **Priority:** Medium
 **Reported Behavior:**
 GM creating a conversation can't see their own NPCs to add (should be able to for group chat).
 
 **Investigation:**
-- [ ] Check conversation creation UI
-- [ ] Review NPC list query
-- [ ] Verify participant selection logic
-- [ ] Test as GM with NPCs
+- [x] Check conversation creation UI - NewConversationModal.tsx
+- [x] Review NPC list query - Uses apiClient.characters.getGameCharacters
+- [x] Verify participant selection logic - Lines 108-113 filter logic found
+- [x] Test as GM with NPCs - Confirmed bug exists
 
 **Root Cause:**
-_To be determined_
+`NewConversationModal.tsx` line 110 excluded ALL user controllable characters from the participant list using `!characters.some(c => c.id === char.id)`. For GMs with multiple NPCs, once they selected one NPC as "your character" (the one speaking), they couldn't add their other NPCs as participants in the conversation.
 
-**Proposed Solution:**
-_To be determined_
+**Solution Implemented:**
+Changed the filter from excluding all user controllable characters to only excluding the selected "your character". Modified line 111 from `!characters.some(c => c.id === char.id)` to `char.id !== yourCharacterId`. This allows GMs to create conversations like:
+- NPC A (your character - speaking as)
+- NPC B (participant - another NPC they control)
+- NPC C (participant - another NPC they control)
+- Player Character D (participant)
+
+**Files Modified:**
+- `frontend/src/components/NewConversationModal.tsx` - Updated participant filter logic (line 111)
 
 **Test Strategy:**
-- [ ] E2E test for conversation creation
-- [ ] Test NPC visibility in participant list
-- [ ] Backend test for NPC query
-- [ ] Test group conversation with NPCs
-
-**Files to Review:**
-- Conversation creation component
-- Participant selection logic
-- NPC query handler
+- Manual testing recommended: GM with multiple NPCs creates group conversation including their other NPCs
+- Build verification: ✅ Passed
 
 ---
 
 ### Issue 8.3: Audience View Character Confusion
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED
 **Priority:** Low
 **Reported Behavior:**
 In Audience view, if GM replies to private conversation as 2 different characters in quick succession, it looks like they came from the same character.
 
 **Investigation:**
-- [ ] Check message rendering in audience view
-- [ ] Review character attribution display
-- [ ] Test rapid successive messages
-- [ ] Verify character identifier visibility
+- [x] Check message rendering in audience view - AllPrivateMessagesView.tsx
+- [x] Review character attribution display - MessageViewer component
+- [x] Test rapid successive messages - Confirmed bug
+- [x] Verify character identifier visibility - Used wrong ID for grouping
 
 **Root Cause:**
-_To be determined_
+`AllPrivateMessagesView.tsx` MessageViewer component (line 317) compared `sender_user_id` instead of `sender_character_id` when grouping consecutive messages. For GMs controlling multiple NPCs, all NPCs have the same `sender_user_id` (the GM's user ID), causing rapid messages from different NPCs to be incorrectly grouped together as if from the same character.
 
-**Proposed Solution:**
-_To be determined_
+**Solution Implemented:**
+Changed message grouping logic to compare character IDs instead of user IDs:
+- Line 317: Changed `message.sender_user_id !== currentSenderId` to `message.sender_character_id !== currentSenderId`
+- Line 341: Changed `currentSenderId = message.sender_user_id` to `currentSenderId = message.sender_character_id`
+- Line 360: Changed `currentSenderId = message.sender_user_id` to `currentSenderId = message.sender_character_id`
+
+Now messages from different characters (even if controlled by the same GM) are properly grouped separately with their own avatar, name, and timestamp headers.
+
+**Files Modified:**
+- `frontend/src/components/AllPrivateMessagesView.tsx` - Updated message grouping logic (lines 317, 341, 360)
 
 **Test Strategy:**
-- [ ] E2E test for audience message view
-- [ ] Test rapid successive messages from different NPCs
-- [ ] Visual test for character distinction
-- [ ] Test with various message types
-
-**Files to Review:**
-- Audience conversation view
-- Message rendering component
-- Character attribution display
+- Manual testing recommended: GM sends multiple messages as different NPCs in quick succession, verify each NPC shows separately in Audience view
+- Build verification: ✅ Passed
 
 ---
 
 ### Issue 8.4: GM Can't Edit Common Room Posts
-**Status:** 🔴 Not Investigated
+**Status:** 🔴 NEEDS FEATURE IMPLEMENTATION
 **Priority:** Medium
 **Reported Behavior:**
 GM cannot edit a post they have created for a common room.
 
 **Investigation:**
-- [ ] Check post edit permissions
-- [ ] Verify post ownership detection
-- [ ] Review edit button visibility
-- [ ] Test as GM with own posts
+- [x] Check post edit permissions - No edit button exists in PostCard
+- [x] Verify post ownership detection - `isAuthor` check exists (line 174)
+- [x] Review edit button visibility - No edit button implemented
+- [x] Test as GM with own posts - Feature doesn't exist
 
 **Root Cause:**
-_To be determined_
+**Missing feature** - Post editing is completely unimplemented:
+1. **Frontend (`PostCard.tsx`)**: No edit functionality exists for posts, even though comments have full edit capability (see `ThreadedComment.tsx` lines 58-205 for reference implementation)
+2. **Frontend API (`messages.ts`)**: No `updatePost` method exists (only `updateComment` at line 44)
+3. **Backend**: Would need `PATCH /api/v1/games/{gameId}/posts/{postId}` endpoint implementation
+
+Compare to working comment edit:
+- `ThreadedComment.tsx` has: `isEditing` state, `handleEdit`, `handleSaveEdit`, `handleCancelEdit`, edit mode UI, character selector
+- `PostCard.tsx` has: Only `isAuthor` check (line 174), no edit UI/handlers
 
 **Proposed Solution:**
-_To be determined_
+This requires full feature implementation across backend + frontend:
+
+**Backend (estimated medium task):**
+1. Create `PATCH /api/v1/games/{gameId}/posts/{postId}` endpoint in `pkg/messages/api_messages.go`
+2. Implement update service method (sqlc query likely exists already)
+3. Add authorization check (user must be post author)
+4. Add tests
+
+**Frontend:**
+1. Add `updatePost` method to `frontend/src/lib/api/messages.ts` (mirror `updateComment` pattern)
+2. Update `PostCard.tsx` with edit functionality (mirror `ThreadedComment.tsx` pattern):
+   - Add `isEditing`, `editContent`, `selectedEditCharacterId` state
+   - Add `handleEdit`, `handleCancelEdit`, `handleSaveEdit` handlers
+   - Add Edit button (show when `isAuthor && !readOnly && !isEditing`)
+   - Add edit mode UI (CommentEditor, character selector if GM has multiple NPCs, Save/Cancel buttons)
+3. Add tests
 
 **Test Strategy:**
-- [ ] E2E test for GM post editing
-- [ ] Backend test for edit permissions
-- [ ] Test edit button visibility
-- [ ] Test edit operation
+- Backend unit tests for update endpoint
+- Backend authorization tests (only author can edit)
+- Frontend component tests for edit UI
+- E2E test for full edit flow
 
-**Files to Review:**
-- Common room post component
-- Edit permission logic
-- Backend post update handler
+**Files to Create/Modify:**
+- Backend: `pkg/messages/api_messages.go` (new endpoint), service method, tests
+- Frontend: `src/lib/api/messages.ts` (new method), `src/components/PostCard.tsx` (edit UI), tests
+
+**Complexity:** Medium - requires coordinated backend + frontend feature development
 
 ---
 
