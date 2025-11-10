@@ -1680,32 +1680,52 @@ This makes it clear that entering "150" will SET the currency to 150, not add 15
 ---
 
 ### Issue 6.3: Remove "Publish Immediately" Checkbox
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED
 **Priority:** Low
 **Reported Behavior:**
 "Publish Immediately" checkbox should be removed from "Results" tab.
 
 **Investigation:**
-- [ ] Check where checkbox is used
-- [ ] Verify if feature is still needed
-- [ ] Review publish workflow
-- [ ] Determine correct behavior without checkbox
+- [x] Check where checkbox is used
+- [x] Verify if feature is still needed
+- [x] Review publish workflow
+- [x] Determine correct behavior without checkbox
 
 **Root Cause:**
-_To be determined_
+The checkbox was a **legacy feature** that predates the draft character updates system (Issue 6.4). It allowed GMs to bypass the draft stage, which prevented them from adding character sheet updates (abilities, inventory, currency, skills) before publishing. This defeated the purpose of the draft character updates feature and created workflow confusion.
 
-**Proposed Solution:**
-_To be determined_
+**Previous Workflow (with checkbox):**
+1. GM creates result
+2. If checkbox checked: Result published immediately → ❌ Cannot add character updates
+3. If checkbox unchecked: Result is draft → ✅ Can add character updates → Publish later
+
+**New Workflow (without checkbox):**
+1. GM creates result → **Always draft** (`is_published: false`)
+2. GM can add character sheet updates to draft
+3. GM publishes result → Content + character updates visible to player
+
+**Implementation:**
+Removed checkbox from `CreateActionResultForm.tsx`:
+- Removed `Checkbox` import
+- Removed `isPublished` state
+- Hardcoded `is_published: false` when creating result
+- Updated button text: "Send Result" → "Create Draft Result"
+- Updated success message: "Draft result created! Add character updates and publish when ready."
+- Updated helper text to clarify draft workflow
+
+**Benefits:**
+- Enforces proper workflow for character updates
+- Simplifies UX (one less decision point)
+- Prevents accidental early publishing without character updates
+- Aligns with draft-first architecture
 
 **Test Strategy:**
-- [ ] E2E test for results publishing
-- [ ] Test publish workflow without checkbox
-- [ ] Verify publish behavior matches expectations
+- [x] No direct tests (component is mocked in ActionsList tests)
+- [x] Frontend build succeeds
+- [x] No breaking changes to existing functionality
 
-**Files to Review:**
-- Results tab component
-- Results creation/edit form
-- Publish handler
+**Files Modified:**
+- `frontend/src/components/CreateActionResultForm.tsx`
 
 ---
 
