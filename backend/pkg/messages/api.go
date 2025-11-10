@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,6 +17,7 @@ import (
 	models "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
 	messagesvc "actionphase/pkg/db/services/messages"
+	"actionphase/pkg/validation"
 )
 
 type Handler struct {
@@ -52,6 +54,14 @@ func (r *UpdateCommentRequest) Bind(req *http.Request) error {
 	return nil
 }
 
+type UpdatePostRequest struct {
+	Content string `json:"content" validate:"required,min=1"`
+}
+
+func (r *UpdatePostRequest) Bind(req *http.Request) error {
+	return nil
+}
+
 // Response Types
 type MessageResponse struct {
 	ID                    int32      `json:"id"`
@@ -65,7 +75,8 @@ type MessageResponse struct {
 	ThreadDepth           int32      `json:"thread_depth"`
 	AuthorUsername        string     `json:"author_username"`
 	CharacterName         string     `json:"character_name"`
-	CommentCount          int64      `json:"comment_count,omitempty"`
+	CharacterAvatarUrl    *string    `json:"character_avatar_url,omitempty"`
+	CommentCount          int64      `json:"comment_count"` // Always include, even if 0
 	ReplyCount            int64      `json:"reply_count,omitempty"`
 	IsEdited              bool       `json:"is_edited"`
 	IsDeleted             bool       `json:"is_deleted"`
@@ -104,6 +115,7 @@ func messageWithDetailsToResponse(msg *core.MessageWithDetails) *MessageResponse
 		ThreadDepth:           msg.ThreadDepth,
 		AuthorUsername:        msg.AuthorUsername,
 		CharacterName:         msg.CharacterName,
+		CharacterAvatarUrl:    msg.CharacterAvatarUrl,
 		IsEdited:              msg.IsEdited,
 		IsDeleted:             msg.IsDeleted,
 		MentionedCharacterIds: msg.MentionedCharacterIds,
@@ -673,6 +685,98 @@ func (h *Handler) GetUnreadCommentIDs(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// UpdatePost updates the content of an existing post
+// PATCH /api/v1/games/:gameId/posts/:postId
+func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_update_post")()
+
+	// Parse IDs
+	gameIDStr := chi.URLParam(r, "gameId")
+	_, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	postIDStr := chi.URLParam(r, "postId")
+	postID, err := strconv.ParseInt(postIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid post ID")))
+		return
+	}
+
+	// Parse request body
+	data := &UpdatePostRequest{}
+	if err := render.Bind(r, data); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	// Validate content is not empty
+	if len(strings.TrimSpace(data.Content)) == 0 {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("content cannot be empty")))
+		return
+	}
+
+	// Validate content length
+	if err := validation.ValidatePost(data.Content); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	// Get user ID from token
+	userID, err := getUserIDFromToken(r, h.App)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+
+	// Check if user can edit this post (must be author)
+	canEdit, err := messageService.CanUserEditPost(ctx, int32(postID), userID)
+	if err != nil {
+		// Check if error is due to post not existing
+		if strings.Contains(err.Error(), "no rows") {
+			h.App.ObsLogger.Warn(ctx, "Post not found", "post_id", postID)
+			render.Render(w, r, core.ErrNotFound("post not found"))
+			return
+		}
+		h.App.ObsLogger.Error(ctx, "Failed to check edit permission", "error", err, "post_id", postID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canEdit {
+		h.App.ObsLogger.Warn(ctx, "User attempted to edit post without permission", "post_id", postID, "user_id", userID)
+		render.Render(w, r, core.ErrForbidden("You can only edit your own posts"))
+		return
+	}
+
+	// Update the post
+	updatedPost, err := messageService.UpdatePost(ctx, int32(postID), data.Content)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to update post", "error", err, "post_id", postID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	h.App.ObsLogger.Info(ctx, "Post updated successfully", "post_id", postID, "user_id", userID, "edit_count", updatedPost.EditCount)
+
+	// Fetch full post details to return
+	postDetails, err := messageService.GetPost(ctx, updatedPost.ID)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to fetch updated post details", "error", err, "post_id", updatedPost.ID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	response := messageWithDetailsToResponse(postDetails)
+	render.Render(w, r, response)
 }
 
 // UpdateComment updates the content of an existing comment

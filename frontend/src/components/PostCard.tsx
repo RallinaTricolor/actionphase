@@ -10,6 +10,7 @@ import { apiClient } from '../lib/api';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
 import { useMarkPostAsRead, usePostUnreadCommentIDs } from '../hooks/useReadTracking';
+import { useUpdatePost } from '../hooks';
 import { Button, Select } from './ui';
 import { ReadingModeToggle } from './ReadingModeToggle';
 import { useReadingMode } from '../contexts/ReadingModeContext';
@@ -22,12 +23,13 @@ interface PostCardProps {
   characters: Character[]; // All game characters (for autocomplete)
   controllableCharacters: Character[]; // Characters the user can control (for "Reply as" dropdown)
   onCreateComment: (postId: number, characterId: number, content: string) => Promise<void>;
+  onPostUpdated?: (updatedPost: Message) => void; // Callback when post is edited
   currentUserId?: number;
   'data-testid'?: string;
   readOnly?: boolean; // Disable all interactive features (for history view)
 }
 
-export function PostCard({ post, gameId, characters, controllableCharacters, onCreateComment, currentUserId, 'data-testid': dataTestId, readOnly = false }: PostCardProps) {
+export function PostCard({ post, gameId, characters, controllableCharacters, onCreateComment, onPostUpdated, currentUserId, 'data-testid': dataTestId, readOnly = false }: PostCardProps) {
   const [showComments, setShowComments] = useState(true);
   const [isCommenting, setIsCommenting] = useState(false);
   const [topLevelComments, setTopLevelComments] = useState<Message[]>([]);
@@ -37,6 +39,10 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPostCollapsed, setIsPostCollapsed] = useState(false);
   const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
+
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
 
   // Get unread comment IDs for this post from the query
   const unreadCommentIDs = usePostUnreadCommentIDs(gameId, post.id);
@@ -172,6 +178,38 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   };
 
   const isAuthor = currentUserId === post.author_id;
+  const updatePostMutation = useUpdatePost();
+
+  // Edit handlers
+  const handleEdit = () => {
+    setEditContent(post.content);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditContent(post.content);
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editContent.trim() || editContent === post.content) {
+      setIsEditing(false);
+      return;
+    }
+
+    try {
+      const updatedPost = await updatePostMutation.mutateAsync({
+        gameId,
+        postId: post.id,
+        content: editContent.trim()
+      });
+      setIsEditing(false);
+      // Notify parent component of the update so it can update its local state
+      onPostUpdated?.(updatedPost);
+    } catch (err) {
+      logger.error('Failed to update post', { error: err, gameId, postId: post.id });
+    }
+  };
 
   // Determine if post content is long (more than 500 characters)
   const isLongContent = post.content.length > 500;
@@ -271,6 +309,14 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                     {isAuthor && (
                       <span className="ml-2 text-xs bg-interactive-primary-subtle text-interactive-primary px-2 py-0.5 rounded">You</span>
                     )}
+                    {isAuthor && !readOnly && !isEditing && (
+                      <button
+                        onClick={handleEdit}
+                        className="ml-2 text-xs text-interactive-primary hover:text-interactive-primary-hover underline"
+                      >
+                        Edit
+                      </button>
+                    )}
                   </p>
                 </div>
                 {localUnreadCommentIDs.length > 0 && (
@@ -317,17 +363,49 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
           </div>
         </div>
 
-        {/* Post Content - Collapsible for long content */}
+        {/* Post Content - Collapsible for long content or Edit Mode */}
         {(!isLongContent || !isPostCollapsed) && (
           <div className="p-6 surface-base">
-            <div className="prose dark:prose-invert max-w-prose">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeSanitize]}
-              >
-                {post.content}
-              </ReactMarkdown>
-            </div>
+            {isEditing ? (
+              // Edit Mode
+              <div className="space-y-3">
+                <CommentEditor
+                  value={editContent}
+                  onChange={setEditContent}
+                  placeholder="Edit your post..."
+                  disabled={updatePostMutation.isPending}
+                  characters={characters}
+                  maxLength={50000}
+                  showCharacterCount={true}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveEdit}
+                    disabled={updatePostMutation.isPending || !editContent.trim() || editContent === post.content}
+                  >
+                    {updatePostMutation.isPending ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={handleCancelEdit}
+                    disabled={updatePostMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              // View Mode
+              <div className="prose dark:prose-invert max-w-prose">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeSanitize]}
+                >
+                  {post.content}
+                </ReactMarkdown>
+              </div>
+            )}
           </div>
         )}
       </div>

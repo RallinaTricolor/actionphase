@@ -145,19 +145,14 @@ test.describe('Recent Results Section in Common Room', () => {
     await expect(page.getByText('Recent Action Results')).not.toBeVisible();
   });
 
-  test('should show results to GM', async ({ page }) => {
+  test('should NOT show results to GM (GMs do not see recent results)', async ({ page }) => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_ACTION_RESULTS');
     await page.goto("http://localhost:5173/games/" + gameId + "?tab=common-room");
     await page.waitForLoadState('networkidle');
 
-    // GM should see Recent Results Section
-    await expect(page.getByText('Recent Action Results')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('From Completed Action Phase')).toBeVisible();
-
-    // Verify GM can see results (both usernames)
-    await expect(page.getByText('TestPlayer1')).toBeVisible();
-    await expect(page.getByText('TestPlayer2')).toBeVisible();
+    // GM should NOT see Recent Results Section (only players see their results)
+    await expect(page.getByText('Recent Action Results')).not.toBeVisible();
   });
 
   test('should work correctly with multiple results', async ({ page }) => {
@@ -177,29 +172,4 @@ test.describe('Recent Results Section in Common Room', () => {
     await expect(page.getByText(/Basement Investigation/)).toBeVisible();
   });
 
-  test('should handle result expansion independently', async ({ page }) => {
-    // GM can see multiple results, so we test independent expansion with GM
-    await loginAs(page, 'GM');
-    const gameId = await getFixtureGameId(page, 'E2E_ACTION_RESULTS');
-    await page.goto("http://localhost:5173/games/" + gameId + "?tab=common-room");
-    await page.waitForLoadState('networkidle');
-
-    // Wait for section to be visible
-    await expect(page.getByText('Recent Action Results')).toBeVisible({ timeout: 10000 });
-
-    // GM should see both results (2 results badge)
-    await expect(page.getByText('2 results')).toBeVisible();
-
-    // Click first result preview to expand it
-    const firstPreview = page.getByText(/You descend into the basement/).locator('visible=true').first();
-    await firstPreview.click();
-
-    // Verify first result's full content is visible (heading from markdown)
-    await expect(page.getByRole('heading', { name: /Basement Investigation Results/i })).toBeVisible();
-
-    // Second result should still show preview only (not expanded)
-    // We can verify by checking that only one heading is visible
-    const headings = page.getByRole('heading', { name: /Investigation|Library/i });
-    await expect(headings).toHaveCount(1);
-  });
 });

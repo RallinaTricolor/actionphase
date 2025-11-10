@@ -216,7 +216,7 @@ func (s *MessageService) GetPhasePosts(ctx context.Context, phaseID int32) ([]co
 func (s *MessageService) UpdatePost(ctx context.Context, postID int32, content string) (*models.Message, error) {
 	queries := models.New(s.DB)
 
-	message, err := queries.UpdatePost(ctx, models.UpdatePostParams{
+	row, err := queries.UpdatePost(ctx, models.UpdatePostParams{
 		ID:      postID,
 		Content: content,
 	})
@@ -224,7 +224,32 @@ func (s *MessageService) UpdatePost(ctx context.Context, postID int32, content s
 		return nil, fmt.Errorf("failed to update post: %w", err)
 	}
 
-	return &message, nil
+	// Convert UpdatePostRow to Message (base fields only)
+	// The handler will fetch full details with joined fields via GetPost
+	// TODO: Consider refactoring to return *core.MessageWithDetails directly to avoid double DB hit
+	// Currently: UpdatePost query includes JOINs but we discard joined fields, then GetPost re-fetches them
+	message := &models.Message{
+		ID:                    row.ID,
+		GameID:                row.GameID,
+		PhaseID:               row.PhaseID,
+		AuthorID:              row.AuthorID,
+		CharacterID:           row.CharacterID,
+		Content:               row.Content,
+		MessageType:           row.MessageType,
+		ParentID:              row.ParentID,
+		ThreadDepth:           row.ThreadDepth,
+		Visibility:            row.Visibility,
+		MentionedCharacterIds: row.MentionedCharacterIds,
+		IsEdited:              row.IsEdited,
+		IsDeleted:             row.IsDeleted,
+		CreatedAt:             row.CreatedAt,
+		DeletedAt:             row.DeletedAt,
+		DeletedByUserID:       row.DeletedByUserID,
+		EditedAt:              row.EditedAt,
+		EditCount:             row.EditCount,
+	}
+
+	return message, nil
 }
 
 // DeletePost soft-deletes a post (preserves thread structure)
@@ -305,4 +330,22 @@ func (s *MessageService) GetUserPostsInGame(ctx context.Context, gameID, userID 
 	}
 
 	return result, nil
+}
+
+// CanUserEditPost checks if a user can edit a post (must be author)
+func (s *MessageService) CanUserEditPost(ctx context.Context, postID int32, userID int32) (bool, error) {
+	queries := models.New(s.DB)
+
+	post, err := queries.CheckPostOwnership(ctx, postID)
+	if err != nil {
+		return false, fmt.Errorf("failed to check post ownership: %w", err)
+	}
+
+	// Cannot edit deleted posts
+	if post.DeletedAt.Valid {
+		return false, nil
+	}
+
+	// Only the author can edit
+	return post.AuthorID == userID, nil
 }
