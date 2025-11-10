@@ -144,7 +144,7 @@ export function GameTabContent({
           phaseTitle={currentPhaseData.phase.title || `Phase ${currentPhaseData.phase.phase_number}`}
           phaseDescription={currentPhaseData.phase.description}
           currentPhase={currentPhaseData.phase}
-          isCurrentPhase={true}
+          isCurrentPhase={game.state === 'in_progress'}
           isGM={isGM}
           isAudience={isAudience}
         />
