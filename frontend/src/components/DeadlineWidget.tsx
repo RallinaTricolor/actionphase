@@ -4,7 +4,7 @@ import { Card, CardBody, Button, Modal } from './ui';
 import { DeadlineTimer } from './DeadlineTimer';
 import { CreateDeadlineModal } from './CreateDeadlineModal';
 import { EditDeadlineModal } from './EditDeadlineModal';
-import type { Deadline } from '../types/deadlines';
+import type { Deadline, UnifiedDeadline } from '../types/deadlines';
 
 export interface DeadlineWidgetProps {
   deadlines: Deadline[];
@@ -51,7 +51,7 @@ export function DeadlineWidget({
   const [isExpanded, setIsExpanded] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedDeadline, setSelectedDeadline] = useState<Deadline | null>(null);
+  const [selectedDeadline, setSelectedDeadline] = useState<UnifiedDeadline | null>(null);
   const [deadlineToDelete, setDeadlineToDelete] = useState<Deadline | null>(null);
   const [extendingId, setExtendingId] = useState<number | null>(null);
   const [extendHours, setExtendHours] = useState<number>(24);
@@ -92,7 +92,15 @@ export function DeadlineWidget({
   }, [deadlines]);
 
   const handleEdit = (deadline: Deadline) => {
-    setSelectedDeadline(deadline);
+    // Convert Deadline to UnifiedDeadline format for the edit modal
+    const unifiedDeadline: UnifiedDeadline = {
+      ...deadline,
+      description: deadline.description || '',
+      deadline_type: 'deadline',
+      source_id: deadline.id,
+      is_system_deadline: false,
+    };
+    setSelectedDeadline(unifiedDeadline);
     setShowEditModal(true);
   };
 

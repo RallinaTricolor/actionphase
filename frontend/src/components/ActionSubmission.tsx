@@ -1,7 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import { useAuth } from '../contexts/AuthContext';
 import { useUserCharacters } from '../hooks/useUserCharacters';
 import { CountdownTimer } from './CountdownTimer';
 import { Button, Select, Textarea, Alert } from './ui';

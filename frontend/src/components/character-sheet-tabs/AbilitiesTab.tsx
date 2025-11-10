@@ -1,5 +1,7 @@
 import { CharacterSheetTab } from './CharacterSheetTab';
+import { AbilityForm, type AbilityFormData } from '../character-updates/AbilityForm';
 import type { DraftCharacterUpdate } from '../../types/phases';
+import { Badge } from '../ui';
 
 interface AbilitiesTabProps {
   gameId: number;
@@ -17,38 +19,35 @@ export const AbilitiesTab: React.FC<AbilitiesTabProps> = (props) => {
       title="Abilities"
       addButtonLabel="+ Add Ability"
       emptyMessage="No pending ability changes"
-      formFields={[
-        {
-          name: 'abilityName',
-          label: 'Ability Name',
-          type: 'text',
-          placeholder: 'e.g., Fireball, Sneak Attack',
-          required: true,
-        },
-        {
-          name: 'abilityDescription',
-          label: 'Description',
-          type: 'textarea',
-          placeholder: 'Describe this ability...',
-          rows: 3,
-        },
-      ]}
-      buildFieldName={(formData) => formData.abilityName.trim()}
-      buildFieldValue={(formData) => {
+      customFormComponent={AbilityForm}
+      transformCustomData={(data: AbilityFormData) => {
         const abilityData = {
-          name: formData.abilityName.trim(),
-          description: formData.abilityDescription.trim(),
+          name: data.name,
+          type: data.type,
+          description: data.description,
         };
-        return JSON.stringify(abilityData);
+        return {
+          fieldName: data.name,
+          fieldValue: JSON.stringify(abilityData),
+          fieldType: 'json' as const,
+        };
       }}
-      getFieldType={() => 'json'}
       renderDraftContent={(draft) => {
         try {
           const abilityData = JSON.parse(draft.field_value);
           return (
-            <p className="text-sm text-content-secondary mt-1">
-              {abilityData.description}
-            </p>
+            <div className="mt-1 space-y-1">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  {abilityData.type === 'learned' ? 'Learned' : 'Innate'}
+                </Badge>
+              </div>
+              {abilityData.description && (
+                <p className="text-sm text-content-secondary">
+                  {abilityData.description}
+                </p>
+              )}
+            </div>
           );
         } catch {
           // Fallback for legacy text format

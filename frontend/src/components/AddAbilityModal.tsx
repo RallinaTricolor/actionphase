@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import type { CharacterAbility } from '../types/characters';
-import { Button, Input, Select, Textarea } from './ui';
 import { Modal } from './Modal';
+import { AbilityForm, type AbilityFormData } from './character-updates/AbilityForm';
 
 interface AddAbilityModalProps {
   onAdd: (ability: Omit<CharacterAbility, 'id'>) => void;
@@ -9,70 +8,23 @@ interface AddAbilityModalProps {
 }
 
 export const AddAbilityModal: React.FC<AddAbilityModalProps> = ({ onAdd, onCancel }) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [type, setType] = useState<CharacterAbility['type']>('learned');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-
+  const handleSubmit = (data: AbilityFormData) => {
     onAdd({
-      name: name.trim(),
-      description: description.trim() || undefined,
-      type,
+      name: data.name,
+      description: data.description,
+      type: data.type,
       active: true
     });
   };
 
   return (
     <Modal isOpen={true} onClose={onCancel} title="Add New Ability">
-      <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            id="ability-name"
-            label="Ability Name *"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Last Stand, Fire Breath"
-            required
-          />
-
-          <Select
-            id="ability-type"
-            label="Type"
-            value={type}
-            onChange={(e) => setType(e.target.value as CharacterAbility['type'])}
-          >
-            <option value="learned">Learned</option>
-            <option value="innate">Innate</option>
-          </Select>
-
-          <Textarea
-            id="ability-description"
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe what this ability does..."
-            rows={3}
-          />
-
-        <div className="flex justify-end space-x-3 pt-4">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onCancel}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-          >
-            Add Ability
-          </Button>
-        </div>
-      </form>
+      <AbilityForm
+        onSubmit={handleSubmit}
+        onCancel={onCancel}
+        submitLabel="Add Ability"
+        variant="modal"
+      />
     </Modal>
   );
 };
