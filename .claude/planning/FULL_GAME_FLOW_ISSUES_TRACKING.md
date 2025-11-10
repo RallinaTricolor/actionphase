@@ -1207,7 +1207,7 @@ _To be determined_
 ---
 
 ### Issue 5.4: GM Can Vote on Polls
-**Status:** ✅ REPRODUCED - Ready for Fix (2025-11-09)
+**Status:** ✅ FIXED (2025-11-09)
 **Priority:** Medium
 **Reported Behavior:**
 GM can vote on polls but shouldn't be able to.
@@ -1221,10 +1221,10 @@ GM can vote on polls but shouldn't be able to.
 **Root Cause:**
 Both frontend and backend missing GM role validation:
 
-1. **Frontend (PollCard.tsx:135-142)**: "Vote Now" button displays when `!poll.user_has_voted`, but doesn't check `isGM` prop
-2. **Backend (api_polls.go:578-677)**: SubmitVote handler validates authentication, game membership, deadline, and character ownership, but has NO check to reject GM votes
+1. **Frontend (PollCard.tsx:135)**: "Vote Now" button displays when `!poll.user_has_voted`, but doesn't check `isGM` prop
+2. **Backend (api_polls.go:626-642)**: SubmitVote handler validates authentication, game membership, deadline, and character ownership, but had NO check to reject GM/co-GM votes
 
-**Test Results:**
+**Reproduction Test Results:**
 ```bash
 # Created Poll #34 in Game #169
 # Attempted vote as TestGM (user_id: 2913)
@@ -1232,26 +1232,40 @@ Both frontend and backend missing GM role validation:
 # Expected: HTTP 403 Forbidden
 ```
 
-**Proposed Solution:**
-1. **Frontend Fix (PollCard.tsx:135-142)**:
-   - Add `&& !isGM` condition to "Vote Now" button visibility
-   - Hide voting form when user is GM
+**Implemented Solution:**
+1. **Frontend Fix (PollCard.tsx:135)**:
+   - Added `&& !isGM` condition to "Vote Now" button visibility
+   - Vote button now hidden for GMs
 
-2. **Backend Fix (api_polls.go:625+)**:
-   - Add GM check after verifying user in game
-   - Return 403 Forbidden if user is GM of the game
-   - Add similar check for co-GMs (they should also not vote)
+2. **Backend Fix (api_polls.go:626-642)**:
+   - Added GM/co-GM check after verifying user in game
+   - Returns 403 Forbidden if user is GM or co-GM
+   - Error message: "GMs and co-GMs cannot vote on polls"
+
+**Fix Verification:**
+```bash
+# Test 1: GM Voting (should be blocked)
+curl POST /api/v1/polls/34/vote (as TestGM)
+Result: HTTP 403 Forbidden ✅
+
+# Test 2: Regular Player Voting (should succeed)
+curl POST /api/v1/polls/34/vote (as TestPlayer1)
+Result: HTTP 200 OK - Vote ID 54 recorded ✅
+```
 
 **Test Strategy:**
-- [x] Manual API test confirming GM can vote
-- [ ] Backend unit test for GM vote rejection
-- [ ] Backend unit test for co-GM vote rejection
-- [ ] Frontend component test for vote button hidden when isGM
-- [ ] E2E test verifying GM cannot vote (button hidden + API rejects)
+- [x] Manual API test confirming GM vote blocked (403)
+- [x] Manual API test confirming player can vote (200)
+- [x] Backend unit test for GM vote rejection (TestPollVoting_GMAndCoGMBlocked)
+- [x] Backend unit test for co-GM vote rejection (TestPollVoting_GMAndCoGMBlocked)
+- [x] Backend unit test for player voting success (TestPollVoting_GMAndCoGMBlocked)
+- [ ] Frontend component test (deferred - PollCard already well-tested)
+- [ ] E2E test (deferred - manual verification sufficient for button visibility)
 
 **Files Modified:**
-- `frontend/src/components/PollCard.tsx` - Hide vote button for GMs
-- `backend/pkg/polls/api_polls.go` - Add GM/co-GM check in SubmitVote handler
+- `frontend/src/components/PollCard.tsx` - Added `!isGM` check to vote button (line 135)
+- `backend/pkg/polls/api_polls.go` - Added GM/co-GM validation (lines 626-642)
+- `backend/pkg/polls/api_polls_test.go` - Added TestPollVoting_GMAndCoGMBlocked (3 test cases, all passing)
 
 ---
 
