@@ -467,17 +467,18 @@ func (h *Handler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get poll results
+	// Verify user is in game first (need game info to determine GM status)
 	pollService := &dbservices.PollService{DB: h.App.Pool, Logger: h.App.ObsLogger}
-	results, err := pollService.GetPollResults(ctx, int32(pollID))
+
+	// Get poll to find game ID
+	poll, err := pollService.GetPoll(ctx, int32(pollID))
 	if err != nil {
-		h.App.ObsLogger.LogError(ctx, err, "Failed to get poll results")
+		h.App.ObsLogger.LogError(ctx, err, "Failed to get poll")
 		render.Render(w, r, core.ErrNotFound("poll"))
 		return
 	}
 
-	// Verify user is in game
-	if err := h.verifyUserInGame(ctx, results.Poll.GameID, userID); err != nil {
+	if err := h.verifyUserInGame(ctx, poll.GameID, userID); err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "User is not in the game")
 		render.Render(w, r, core.ErrForbidden(err.Error()))
 		return
@@ -487,7 +488,7 @@ func (h *Handler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 	// GM and audience can always view results
 	// Regular players can only view results after poll expires
 	gameService := &dbservices.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
-	game, err := gameService.GetGame(ctx, results.Poll.GameID)
+	game, err := gameService.GetGame(ctx, poll.GameID)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
 		render.Render(w, r, core.ErrInternalError(err))
@@ -495,7 +496,19 @@ func (h *Handler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	isGM := game.GmUserID == userID
-	isAudience := core.IsUserAudience(ctx, h.App.Pool, results.Poll.GameID, userID)
+	isAudience := core.IsUserAudience(ctx, h.App.Pool, poll.GameID, userID)
+	isCoGM := core.IsUserCoGM(ctx, h.App.Pool, poll.GameID, userID)
+
+	// GMs, co-GMs, and audience can always see individual poll results
+	canSeeIndividualVotes := isGM || isCoGM || isAudience
+
+	// Get poll results with privilege flag to include individual votes for privileged users
+	results, err := pollService.GetPollResults(ctx, int32(pollID), canSeeIndividualVotes)
+	if err != nil {
+		h.App.ObsLogger.LogError(ctx, err, "Failed to get poll results")
+		render.Render(w, r, core.ErrNotFound("poll"))
+		return
+	}
 
 	// Check if poll has expired
 	pollExpired := results.Poll.Deadline.Time.Before(time.Now())
