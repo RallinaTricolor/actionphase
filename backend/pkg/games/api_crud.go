@@ -255,6 +255,13 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 		h.App.ObsLogger.Info(ctx, "Transitioning out of recruitment, converting approved applications", "game_id", gameID)
 
 		applicationService := &db.GameApplicationService{DB: h.App.Pool}
+		notificationService := &db.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+
+		// Get approved applications before conversion (for notifications)
+		approvedApps, err := applicationService.GetApprovedApplicationsForGame(ctx, int32(gameID))
+		if err != nil {
+			h.App.ObsLogger.Error(ctx, "Failed to get approved applications", "error", err, "game_id", gameID)
+		}
 
 		// Auto-reject all pending applications (those not explicitly approved)
 		err = applicationService.BulkRejectApplications(ctx, int32(gameID), user.ID)
@@ -279,6 +286,20 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 			// Don't fail the state transition, but log the error
 		} else {
 			h.App.ObsLogger.Info(ctx, "Successfully converted approved applications to participants", "game_id", gameID)
+
+			// Send acceptance notifications to approved applicants
+			for _, app := range approvedApps {
+				if err := notificationService.NotifyApplicationStatusChange(ctx, app.UserID, int32(gameID), updatedGame.Title, true); err != nil {
+					h.App.ObsLogger.Warn(ctx, "Failed to create acceptance notification",
+						"error", err,
+						"game_id", gameID,
+						"user_id", app.UserID)
+				} else {
+					h.App.ObsLogger.Info(ctx, "Sent acceptance notification",
+						"game_id", gameID,
+						"user_id", app.UserID)
+				}
+			}
 		}
 	}
 
