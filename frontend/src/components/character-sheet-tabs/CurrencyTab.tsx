@@ -28,9 +28,9 @@ export const CurrencyTab: React.FC<CurrencyTabProps> = (props) => {
         },
         {
           name: 'adjustment',
-          label: 'Amount',
+          label: 'New Amount',
           type: 'number',
-          placeholder: '+100 or -50',
+          placeholder: 'e.g., 150',
           required: true,
           gridColumn: 'half',
         },
