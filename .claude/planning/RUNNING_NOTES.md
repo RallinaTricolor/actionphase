@@ -2,3 +2,4 @@
 - USER AND API DOCS
 - Better error feedback on registration/login
   - Password length, validation, etc.
+- Token expiration is weird
