@@ -20,6 +20,7 @@ interface ThreadViewModalProps {
   parentChain?: Message[]; // Array of parent messages (oldest → target)
   hasFullThread?: boolean; // Whether we fetched all the way to root
   targetCommentId?: number; // ID of the originally requested comment to highlight
+  readOnly?: boolean; // Disable all interactive features (for history view)
 }
 
 /**
@@ -40,6 +41,7 @@ export function ThreadViewModal({
   parentChain,
   hasFullThread = true,
   targetCommentId,
+  readOnly = false,
 }: ThreadViewModalProps) {
   // State for nested modal (modal-within-modal for deeply nested threads)
   const [nestedModalComment, setNestedModalComment] = useState<Message | null>(null);
@@ -181,6 +183,7 @@ export function ThreadViewModal({
                         maxDepth={10}  // Show all replies for target
                         unreadCommentIDs={unreadCommentIDs}
                         onOpenThread={(nestedComment) => setNestedModalComment(nestedComment)}
+                        readOnly={readOnly}
                       />
                     </div>
                   );
@@ -197,6 +200,7 @@ export function ThreadViewModal({
                 onCreateReply={onCreateReply}
                 onCommentDeleted={onClose}
                 currentUserId={currentUserId}
+                readOnly={readOnly}
                 depth={0}
                 maxDepth={10}
                 unreadCommentIDs={unreadCommentIDs}

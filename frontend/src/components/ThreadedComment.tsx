@@ -502,7 +502,7 @@ export function ThreadedComment({
             )}
           </Button>
 
-          {isAuthor && !isEditing && !comment.is_deleted && (
+          {isAuthor && !isEditing && !comment.is_deleted && !readOnly && (
             <Button
               variant="ghost"
               size="sm"
@@ -517,7 +517,7 @@ export function ThreadedComment({
             </Button>
           )}
 
-          {(isAuthor || isGM || adminModeEnabled) && !isEditing && !comment.is_deleted && (
+          {(isAuthor || isGM || adminModeEnabled) && !isEditing && !comment.is_deleted && !readOnly && (
             <Button
               variant="ghost"
               size="sm"
