@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { usePolls } from '../hooks';
-import { Button, Input, Textarea, Card, CardBody, Alert, Checkbox } from './ui';
+import { Button, Input, Textarea, Card, CardBody, Alert, Checkbox, DateTimeInput } from './ui';
 import type { CreatePollRequest } from '../types/polls';
 import { logger } from '@/services/LoggingService';
 
@@ -108,9 +108,8 @@ export function CreatePollForm({ gameId, onSuccess, onCancel }: CreatePollFormPr
           />
 
           {/* Deadline */}
-          <Input
+          <DateTimeInput
             label="Deadline"
-            type="datetime-local"
             required
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}

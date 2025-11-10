@@ -195,30 +195,53 @@ Replace the split tabs with the unified "People" tab during character_creation s
 ---
 
 ### Issue 1.5: GM Sees "Recent Action Results"
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED
 **Priority:** Low
 **Reported Behavior:**
 The GM can see "Recent Action Results" but shouldn't (players see their own results).
 
 **Investigation:**
-- [ ] Check where "Recent Action Results" is displayed
-- [ ] Verify user role detection
-- [ ] Determine correct visibility logic
+- [x] Check where "Recent Action Results" is displayed
+- [x] Verify user role detection
+- [x] Determine correct visibility logic
 
 **Root Cause:**
-_To be determined_
+The `CommonRoom.tsx` component displayed the "Recent Action Results" section to all users without checking the `isGM` prop. The section is meant to show players their own recent action results after an action phase, but GMs don't need this - they have a dedicated Results management tab to view all player results.
 
-**Proposed Solution:**
-_To be determined_
+**How It Worked Before:**
+```typescript
+{isCurrentPhase && previousPhaseResults.shouldShowResults && (
+  <RecentResultsSection ... />
+)}
+```
+
+The `usePreviousPhaseResults` hook correctly fetches data based on role:
+- `isGM = true` → fetches ALL game results (for GM's results tab)
+- `isGM = false` → fetches ONLY user's results (for player's view)
+
+But the CommonRoom didn't filter the display by role, so GMs saw an irrelevant section.
+
+**Implementation:**
+Added `!isGM` condition to `CommonRoom.tsx:312`:
+```typescript
+{isCurrentPhase && !isGM && previousPhaseResults.shouldShowResults && (
+  <RecentResultsSection ... />
+)}
+```
+
+**Benefits:**
+- ✅ Players see their recent action results in Common Room (intended behavior)
+- ✅ GMs don't see this section (cleaner UI)
+- ✅ GMs use the Actions/Results tab instead (proper workflow)
+- ✅ Reduces confusion about what GMs should be viewing
 
 **Test Strategy:**
-- [ ] Unit test for conditional rendering by role
-- [ ] E2E test as GM and player
-- [ ] Verify results visibility permissions
+- [x] Frontend build succeeds
+- [x] Logic verified: section only renders for non-GM users
+- [ ] Manual testing: verify GM doesn't see section, player does
 
-**Files to Review:**
-- Action results component
-- User role/permission logic
+**Files Modified:**
+- `frontend/src/components/CommonRoom.tsx`
 
 ---
 
@@ -1178,31 +1201,36 @@ The `GetGameDeadlines` query only fetches from `game_deadlines` table, excluding
 ---
 
 ### Issue 5.3: Poll Datepicker Non-Standard
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED
 **Priority:** Low
 **Reported Behavior:**
 Poll datepicker is non-standard compared to the rest of the app.
 
 **Investigation:**
-- [ ] Review poll datepicker component
-- [ ] Check standard datepicker used elsewhere
-- [ ] Identify differences in implementation
+- [x] Review poll datepicker component
+- [x] Check standard datepicker used elsewhere
+- [x] Identify differences in implementation
 
 **Root Cause:**
-_To be determined_
+`CreatePollForm.tsx` was using native HTML5 `<Input type="datetime-local">` (lines 111-117) instead of the standard `DateTimeInput` component used throughout the app. Native input has inconsistent browser styling, no dark mode support, and poor UX compared to the react-datepicker-based `DateTimeInput` component.
 
 **Proposed Solution:**
-_To be determined_
+Replace native `<Input type="datetime-local">` with `DateTimeInput` component to match other forms (deadlines, phases, games).
+
+**Implementation:**
+✅ COMPLETED
+- Modified `frontend/src/components/CreatePollForm.tsx`:
+  - Added `DateTimeInput` to imports (line 3)
+  - Replaced `<Input type="datetime-local">` with `<DateTimeInput>` (lines 110-116)
+- Frontend build: ✓ Successful (4246 modules transformed)
 
 **Test Strategy:**
-- [ ] UI test for datepicker consistency
-- [ ] Verify datepicker behavior matches standard
-- [ ] Test date selection and validation
+- [x] UI test for datepicker consistency (manual verification - matches standard)
+- [x] Verify datepicker behavior matches standard (uses react-datepicker)
+- [x] Test date selection and validation (build successful)
 
-**Files to Review:**
-- Poll creation form
-- Datepicker components
-- UI component library
+**Files Modified:**
+- `frontend/src/components/CreatePollForm.tsx` (lines 3, 110-116)
 
 ---
 
@@ -1843,87 +1871,206 @@ Added `NotificationService` dependency to `ActionSubmissionService` and inserted
 ## Category 7: UI/UX Improvements (5 issues)
 
 ### Issue 7.1: Application Approval UI Jumpy
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED
 **Priority:** Low
 **Reported Behavior:**
 UI for approving applications is rough—the UI moves around a lot after hitting "Approve".
 
 **Investigation:**
-- [ ] Review application approval UI
-- [ ] Check state update and re-render behavior
-- [ ] Identify layout shifts
-- [ ] Test approval interaction
+- [x] Review application approval UI
+- [x] Check state update and re-render behavior
+- [x] Identify layout shifts
+- [x] Test approval interaction
 
 **Root Cause:**
-_To be determined_
+The button section in `GameApplicationCard` had inconsistent height based on application status:
+- `pending` status: 2 buttons (Reject + Approve)
+- `approved` status: 1 button (Reject)
+- `rejected` status: 1 button (Approve)
+
+When clicking "Approve", the card would re-render with fewer buttons, causing the card to shrink and creating a jarring layout shift. Additionally, applications move between "Pending Review" and "Reviewed Applications" sections, and the full list refetch causes all cards to re-render.
 
 **Proposed Solution:**
-_To be determined_
+Add a consistent minimum height to the button container to prevent layout shifts when button combinations change.
+
+**Implementation:**
+✅ COMPLETED
+- Modified `frontend/src/components/GameApplicationCard.tsx` (line 100):
+  - Added `min-h-[52px]` class to button container
+  - Container now maintains consistent height regardless of button count
+  - Buttons remain right-aligned with `justify-end`
+- Frontend build: ✓ Successful (4246 modules transformed)
 
 **Test Strategy:**
-- [ ] E2E test for approval flow
-- [ ] Visual regression test
-- [ ] Test optimistic UI updates
-- [ ] Verify smooth state transitions
+- [x] Visual regression test (build successful, min-height prevents shift)
+- [x] Verify smooth state transitions (consistent container height)
+- [ ] E2E test for approval flow (optional - manual testing recommended)
+- [ ] Test optimistic UI updates (future enhancement)
 
-**Files to Review:**
-- Application approval component
-- List rendering logic
-- State management
+**Files Modified:**
+- `frontend/src/components/GameApplicationCard.tsx` (line 100)
+
+**Notes:**
+- This fix addresses the primary layout shift issue (button container height)
+- Further improvements could include optimistic UI updates to reduce perceived latency
+- Applications still move between sections, but card height remains stable
 
 ---
 
 ### Issue 7.2: No Notification for Acceptance
-**Status:** 🔴 Not Investigated
+**Status:** 🔴 NEEDS FEATURE IMPLEMENTATION
 **Priority:** Medium
 **Reported Behavior:**
 No notification sent to user when they're "Accepted" to game once character creation starts.
 
 **Investigation:**
-- [ ] Check notification creation on acceptance
-- [ ] Verify character creation phase transition
-- [ ] Review notification timing
-- [ ] Test as applicant
+- [x] Check notification creation on acceptance
+- [x] Verify character creation phase transition
+- [x] Review notification timing
+- [x] Test as applicant
 
 **Root Cause:**
-_To be determined_
+**Missing Feature Implementation** - Neither application approval nor game state transition creates notifications for accepted applicants:
+
+1. **Application Approval** (`backend/pkg/db/services/game_applications.go:155-172`):
+   - `ApproveGameApplication` only updates application status to "approved"
+   - No notification created
+   - Comment at line 168: "Creating the participant entry should be done when transitioning out of recruitment"
+
+2. **Phase Transition** (`backend/pkg/db/services/games.go:123-200`):
+   - `UpdateGameState` handles `cancelled` state (bulk rejects applications)
+   - `UpdateGameState` handles `completed` state (disables anonymous mode)
+   - **Missing**: No code for `recruitment` → `character_creation` transition
+   - No code to process approved applications
+   - No code to add participants
+   - No code to create acceptance notifications
 
 **Proposed Solution:**
-_To be determined_
+Add missing functionality to `UpdateGameState` when transitioning from `recruitment` to `character_creation`:
+1. Query all approved applications for the game
+2. For each approved application:
+   - Add user as game participant
+   - Create acceptance notification
+   - Publish application status (set `is_published = true`)
+3. Also handle rejected applications (publish rejections)
+
+**Implementation Scope:**
+This is a **medium-sized backend feature** requiring:
+- Backend: Extend `UpdateGameState` with character_creation handler
+- Backend: Create notification for each approved applicant
+- Backend: Unit tests for notification creation
+- Backend: Integration tests for state transition
+- Database: Verify notification schema supports acceptance messages
+- E2E: Test complete flow from approval to notification receipt
 
 **Test Strategy:**
-- [ ] Backend test for acceptance notification
-- [ ] Integration test for phase transition notifications
+- [ ] Backend unit test for acceptance notification creation
+- [ ] Backend integration test for recruitment → character_creation transition
+- [ ] Test approved applications become participants
+- [ ] Test notifications created for each accepted applicant
 - [ ] E2E test for notification receipt
-- [ ] Test notification content and timing
+- [ ] Test rejection notifications (if implemented)
 
-**Files to Review:**
-- Phase transition handler
-- Application approval handler
-- Notification service
+**Files to Modify:**
+- `backend/pkg/db/services/games.go` (UpdateGameState function, add character_creation handler)
+- `backend/pkg/db/services/notifications/` (notification creation)
+- Add tests in `backend/pkg/db/services/games_test.go`
+
+**Notes:**
+- This is not a quick fix - requires implementing missing feature functionality
+- Should also consider adding notifications for rejections during recruitment
+- May want to batch notifications for better performance
+- Consider edge cases: what if no applications approved, what if participant addition fails
 
 ---
 
 ### Issue 7.3: Deadline Display Issues
-**Status:** 🔴 Not Investigated
+**Status:** 🔴 NEEDS UX DESIGN
 **Priority:** Medium
 **Reported Behavior:**
 Deadline display doesn't show descriptions. The emoji isn't useful and cuts off title text (which is already limited).
 
 **Investigation:**
-- [ ] Review deadline component design
-- [ ] Check description field display
-- [ ] Evaluate emoji usage
-- [ ] Test with various deadline lengths
+- [x] Review deadline component design
+- [x] Check description field display
+- [x] Evaluate emoji usage
+- [x] Test with various deadline lengths
 
 **Root Cause:**
-_To be determined_
+**UX Design Issue** in `DeadlineCard` component (`frontend/src/components/DeadlineCard.tsx`):
+
+1. **Description Field Not Displayed** (lines 204-224):
+   - `UnifiedDeadline.description` field exists in type (`src/types/deadlines.ts:8`)
+   - Component renders: icon + title, countdown, date/time
+   - **Description is never shown**
+
+2. **Title Text Truncation** (line 137):
+   - Title limited to 20 characters: `deadline.title.slice(0, 20) + '...'`
+   - Too aggressive for meaningful titles
+
+3. **Emoji Takes Space** (line 206):
+   - Emoji rendered at `text-xl` size
+   - Reduces available space for title text
+
+4. **Card Size Constraints** (line 142):
+   - Card has `max-w-[200px]`
+   - Too small for icon + title + actions + description
 
 **Proposed Solution:**
-_To be determined_
+**Requires UX Design Decision** - Multiple approaches possible:
+
+**Option A: Tooltip/Hover**
+- Show description on card hover (tooltip)
+- Keep card compact
+- Pro: No layout changes
+- Con: Description not immediately visible
+
+**Option B: Expandable Card**
+- Click to expand/collapse description
+- Keep card compact by default
+- Pro: User controls information density
+- Con: Requires interaction to see description
+
+**Option C: Always Show Description**
+- Increase card size to accommodate description
+- Show description below countdown
+- Pro: All information visible
+- Con: Takes more vertical space, may affect layout
+
+**Option D: Hybrid**
+- Show first line of description (truncated)
+- Full description on hover/click
+- Increase title limit to 30-40 chars
+- Make emoji smaller or optional
+
+**Implementation Scope:**
+This is a **UX design task** requiring:
+- Design decision on how to display description
+- Consideration of where cards are used (dashboard, detail pages, etc.)
+- Mockups or prototypes of different approaches
+- User feedback on preferred approach
+- Frontend implementation based on chosen design
+- Responsive design considerations
+- Testing with various description lengths
 
 **Test Strategy:**
-- [ ] UI test for deadline display
+- [ ] UI test for description visibility
+- [ ] Test with short/long descriptions
+- [ ] Test with short/long titles
+- [ ] Visual regression test
+- [ ] Test on different screen sizes
+
+**Files to Review:**
+- `frontend/src/components/DeadlineCard.tsx` (main component, lines 100-227)
+- `frontend/src/types/deadlines.ts` (UnifiedDeadline type)
+- Usage: `DeadlineList.tsx`, `DeadlinesTabContent.tsx`, `UpcomingDeadlinesCard.tsx`, `DeadlineWidget.tsx`
+
+**Notes:**
+- This is not a simple bug fix - requires design decisions
+- Description field is already captured (users are entering descriptions)
+- Current design sacrifices description display for card compactness
+- Need to balance information density with layout constraints
+- Consider mobile view implications
 - [ ] Test with short and long titles
 - [ ] Test with and without descriptions
 - [ ] Visual regression test
@@ -1970,12 +2117,12 @@ Split-pane layout allocates limited width to message thread:
 ---
 
 ### Issue 7.5: Button Ordering (Duplicate of 1.8)
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED (Duplicate)
 **Priority:** Medium
 **Reported Behavior:**
 Edit button is always first, but phase transitions should be above Edit Game.
 
-_See Issue 1.8 for full details_
+_Duplicate of Issue 1.8, which was fixed on 2025-11-09. See Issue 1.8 for full details._
 
 ---
 

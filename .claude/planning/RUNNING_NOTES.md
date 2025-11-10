@@ -1,2 +1,4 @@
 - Notification sound effect
 - USER AND API DOCS
+- Better error feedback on registration/login
+  - Password length, validation, etc.
