@@ -3,6 +3,7 @@ import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { CommonRoomPage } from '../pages/CommonRoomPage';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { MessagingPage } from '../pages/MessagingPage';
 import { PhaseManagementPage } from '../pages/PhaseManagementPage';
 import { navigateToGame } from '../utils/navigation';
 import { assertTextVisible } from '../utils/assertions';
@@ -417,39 +418,16 @@ test.describe('Notification System', () => {
           initialCount = parseInt(badgeText || '0', 10);
         }
 
-        // 3. Sender sends a private message using GameDetailsPage
-        const senderGamePage = new GameDetailsPage(senderPage);
-        await senderGamePage.goto(gameId);
-        await senderGamePage.goToMessages();
+        // 3. Sender sends a private message using MessagingPage POM
+        const messagingPage = new MessagingPage(senderPage);
+        await messagingPage.goto(gameId);
 
-        // Click "New Conversation" button
-        const newConversationButton = senderPage.locator('button[title="New Conversation"]');
-        await expect(newConversationButton).toBeVisible({ timeout: 5000 });
-        await newConversationButton.click();
-
-        // Wait for the conversation form to appear
-        await senderPage.waitForSelector('input[placeholder*="Planning the heist"]', { timeout: 5000 });
-
-        // Fill in conversation title
+        // Create conversation and send message
         const conversationTitle = `Polling test - ${Date.now()}`;
-        await senderPage.fill('input[placeholder*="Planning the heist"], input[placeholder*="title"]', conversationTitle);
-
-        // Select Player 2's character as participant
-        await senderPage.getByLabel(/E2E Test Char 2|TestPlayer2/).locator('visible=true').first().click();
-
-        // Click "Create Conversation" button
-        await senderPage.click('button:has-text("Create Conversation")');
-        await senderPage.waitForLoadState('networkidle');
-
-        // Send a message in the conversation
         const testMessage = `Polling test message - ${Date.now()}`;
-        await senderPage.fill('textarea[placeholder*="Type your message"]', testMessage);
-        // Use type="submit" to target message send button specifically (avoid "Resend Email" button)
-        await senderPage.locator('button[type="submit"]:has-text("Send")').click();
-        await senderPage.waitForLoadState('networkidle');
 
-        // Verify message was sent
-        await assertTextVisible(senderPage, testMessage);
+        await messagingPage.createConversation(conversationTitle, ['Test Player 2 Character']);
+        await messagingPage.sendMessage(testMessage);
 
         // 4. Recipient's notification count should update automatically (polling interval is 15s)
         // Wait up to 25 seconds for the polling to pick it up

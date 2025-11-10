@@ -267,7 +267,10 @@ test.describe.serial('Polls Flow', () => {
     await pollsPage.goto();
 
     // Wait for polls to load
-    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'What should the party do next?' })).toBeVisible({ timeout: 5000 });
+
+    // Wait for vote status to load (the badges are populated by API call)
+    await page.waitForTimeout(1000);
 
     // Verify badge shows "Voted" for previously voted polls (PLAYER_1 voted on both polls)
     expect(await pollsPage.getVotedBadgeCount()).toBe(2);
@@ -279,8 +282,14 @@ test.describe.serial('Polls Flow', () => {
     // Navigate back to polls tab
     await pollsPage.goto();
 
+    // Wait for loading state to clear
+    await expect(page.getByText('Loading polls')).not.toBeVisible({ timeout: 5000 });
+
     // Wait for polls to load after reload
-    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'What should the party do next?' })).toBeVisible({ timeout: 5000 });
+
+    // Wait for vote status to load (the badges are populated by API call)
+    await page.waitForTimeout(1000);
 
     // Badges should STILL show "Voted" (tests API contract persists across reload)
     expect(await pollsPage.getVotedBadgeCount()).toBe(2);
@@ -294,7 +303,10 @@ test.describe.serial('Polls Flow', () => {
     await pollsPage.goto();
 
     // Wait for polls to load
-    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'What should the party do next?' })).toBeVisible({ timeout: 5000 });
+
+    // Wait for vote status to load (the badges are populated by API call)
+    await page.waitForTimeout(1000);
 
     // Should have 2 "Voted" badges from previous tests
     expect(await pollsPage.getVotedBadgeCount()).toBe(2);
@@ -306,7 +318,10 @@ test.describe.serial('Polls Flow', () => {
     await pollsPage.goto();
 
     // Wait for polls to load after reload
-    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'What should the party do next?' })).toBeVisible({ timeout: 5000 });
+
+    // Wait for vote status to load after reload
+    await page.waitForTimeout(1000);
 
     // Should STILL have 2 "Voted" badges (validates Bug #5 fix)
     expect(await pollsPage.getVotedBadgeCount()).toBe(2);
@@ -326,7 +341,7 @@ test.describe.serial('Polls Flow', () => {
     await pollsPage.goto();
 
     // Wait for polls to load
-    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'What should the party do next?' })).toBeVisible({ timeout: 5000 });
 
     // Player should NOT see "Show Results" button on ANY active poll
     expect(await pollsPage.canViewResults()).toBe(false);
@@ -340,8 +355,11 @@ test.describe.serial('Polls Flow', () => {
 
     await pollsPage.goto();
 
+    // Wait for loading state to clear
+    await expect(page.getByText('Loading polls')).not.toBeVisible({ timeout: 5000 });
+
     // Wait for polls to load
-    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'What should the party do next?' })).toBeVisible({ timeout: 5000 });
 
     // GM should see "Show Results" button
     expect(await pollsPage.canViewResults()).toBe(true);
@@ -364,8 +382,11 @@ test.describe.serial('Polls Flow', () => {
 
     await pollsPage.goto();
 
+    // Wait for loading state to clear
+    await expect(page.getByText('Loading polls')).not.toBeVisible({ timeout: 5000 });
+
     // Wait for polls to load
-    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'What should the party do next?' })).toBeVisible({ timeout: 5000 });
 
     // Audience should see "Show Results" button
     expect(await pollsPage.canViewResults()).toBe(true);
@@ -392,7 +413,7 @@ test.describe.serial('Polls Flow', () => {
     await pollsPage.goto();
 
     // Wait for polls to load
-    await expect(page.getByText('What should the party do next?')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'What should the party do next?' })).toBeVisible({ timeout: 5000 });
 
     // Should show "Active Polls" by default
     await expect(page.getByText(/Active Polls/)).toBeVisible();

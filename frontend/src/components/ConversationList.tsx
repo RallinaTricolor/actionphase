@@ -8,10 +8,9 @@ interface ConversationListProps {
   gameId: number;
   onSelectConversation: (conversationId: number) => void;
   selectedConversationId?: number;
-  collapsed?: boolean;
 }
 
-export function ConversationList({ gameId, onSelectConversation, selectedConversationId, collapsed = false }: ConversationListProps) {
+export function ConversationList({ gameId, onSelectConversation, selectedConversationId }: ConversationListProps) {
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,11 +68,7 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        {collapsed ? (
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-interactive-primary"></div>
-        ) : (
-          <div className="text-content-secondary">Loading conversations...</div>
-        )}
+        <div className="text-content-secondary">Loading conversations...</div>
       </div>
     );
   }
@@ -81,13 +76,9 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
   if (error) {
     return (
       <div className="p-4">
-        {collapsed ? (
-          <div className="text-semantic-danger text-center">!</div>
-        ) : (
-          <div className="bg-semantic-danger-subtle border border-semantic-danger rounded-lg p-4 text-semantic-danger">
-            {error}
-          </div>
-        )}
+        <div className="bg-semantic-danger-subtle border border-semantic-danger rounded-lg p-4 text-semantic-danger">
+          {error}
+        </div>
       </div>
     );
   }
@@ -95,19 +86,13 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
   if (conversations.length === 0) {
     return (
       <div className="flex items-center justify-center p-8">
-        {collapsed ? (
-          <svg className="w-8 h-8 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center">
+          <svg className="w-16 h-16 mx-auto text-content-tertiary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
-        ) : (
-          <div className="text-center">
-            <svg className="w-16 h-16 mx-auto text-content-tertiary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            <p className="text-content-secondary text-lg mb-2">No conversations yet</p>
-            <p className="text-content-tertiary text-sm">Start a conversation with other characters in the game</p>
-          </div>
-        )}
+          <p className="text-content-secondary text-lg mb-2">No conversations yet</p>
+          <p className="text-content-tertiary text-sm">Start a conversation with other characters in the game</p>
+        </div>
       </div>
     );
   }
@@ -122,95 +107,77 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
             logger.debug('Conversation clicked', { conversationId: conversation.id, gameId, title: conversation.title });
             onSelectConversation(conversation.id);
           }}
-          className={`w-full justify-start text-left hover:bg-surface-raised transition-colors rounded-none border-l-4 ${
+          className={`w-full justify-start text-left hover:bg-surface-raised transition-colors rounded-none border-l-4 px-4 py-3 ${
             selectedConversationId === conversation.id
               ? 'bg-interactive-primary-subtle border-interactive-primary'
               : 'border-transparent hover:border-border-primary'
-          } ${collapsed ? 'p-2' : 'px-4 py-3'}`}
-          title={collapsed ? conversation.title || 'Untitled Conversation' : undefined}
+          }`}
           data-testid="conversation-item"
         >
-          {collapsed ? (
-            // Collapsed view: show initial or icon with unread badge
-            <div className="flex items-center justify-center relative">
-              <div className="w-10 h-10 bg-interactive-primary-subtle rounded-full flex items-center justify-center text-interactive-primary font-semibold">
-                {conversation.title ? conversation.title.charAt(0).toUpperCase() : '?'}
-              </div>
-              {conversation.unread_count > 0 && (
-                <span className="absolute -top-1 -right-1 bg-semantic-danger text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
+          {/* Mobile: Vertical Stack Layout */}
+          <div className="md:hidden w-full">
+            {/* Title + Timestamp row */}
+            <div className="flex items-baseline justify-between gap-2 mb-1">
+              <h3 className="font-semibold text-base text-content-primary truncate flex-1 min-w-0">
+                {conversation.title || 'Untitled Conversation'}
+              </h3>
+              {conversation.last_message_at && (
+                <span className="text-xs text-content-tertiary flex-shrink-0 whitespace-nowrap">
+                  {formatDate(conversation.last_message_at)}
                 </span>
               )}
             </div>
-          ) : (
-            // Full view: show complete information
-            <>
-              {/* Mobile: Vertical Stack Layout */}
-              <div className="md:hidden w-full">
-                {/* Title + Timestamp row */}
-                <div className="flex items-baseline justify-between gap-2 mb-1">
-                  <h3 className="font-semibold text-base text-content-primary truncate flex-1 min-w-0">
-                    {conversation.title || 'Untitled Conversation'}
-                  </h3>
-                  {conversation.last_message_at && (
-                    <span className="text-xs text-content-tertiary flex-shrink-0 whitespace-nowrap">
-                      {formatDate(conversation.last_message_at)}
-                    </span>
-                  )}
-                </div>
 
-                {/* Participants + Unread Badge */}
-                <div className="flex items-center gap-2 mb-0.5">
-                  <p className="text-sm text-content-secondary truncate flex-1 min-w-0">
-                    {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
-                  </p>
-                  {conversation.unread_count > 0 && (
-                    <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
-                      {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                    </span>
-                  )}
-                </div>
+            {/* Participants + Unread Badge */}
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="text-sm text-content-secondary truncate flex-1 min-w-0">
+                {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
+              </p>
+              {conversation.unread_count > 0 && (
+                <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
+                  {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                </span>
+              )}
+            </div>
 
-                {/* Last Message preview if available */}
-                {conversation.last_message && (
-                  <p className="text-sm text-content-tertiary truncate">
-                    {conversation.last_message}
-                  </p>
-                )}
-              </div>
+            {/* Last Message preview if available */}
+            {conversation.last_message && (
+              <p className="text-sm text-content-tertiary truncate">
+                {conversation.last_message}
+              </p>
+            )}
+          </div>
 
-              {/* Desktop: Horizontal Layout */}
-              <div className="hidden md:block w-full">
-                <div className="flex items-baseline justify-between gap-3 mb-1">
-                  <h3 className="font-semibold text-base text-content-primary truncate flex-1 min-w-0">
-                    {conversation.title || 'Untitled Conversation'}
-                  </h3>
-                  {conversation.last_message_at && (
-                    <span className="text-xs text-content-tertiary flex-shrink-0 whitespace-nowrap">
-                      {formatDate(conversation.last_message_at)}
-                    </span>
-                  )}
-                </div>
+          {/* Desktop: Horizontal Layout */}
+          <div className="hidden md:block w-full">
+            <div className="flex items-baseline justify-between gap-3 mb-1">
+              <h3 className="font-semibold text-base text-content-primary truncate flex-1 min-w-0">
+                {conversation.title || 'Untitled Conversation'}
+              </h3>
+              {conversation.last_message_at && (
+                <span className="text-xs text-content-tertiary flex-shrink-0 whitespace-nowrap">
+                  {formatDate(conversation.last_message_at)}
+                </span>
+              )}
+            </div>
 
-                <div className="flex items-center gap-2 mb-0.5">
-                  <p className="text-sm text-content-secondary truncate flex-1 min-w-0">
-                    {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
-                  </p>
-                  {conversation.unread_count > 0 && (
-                    <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
-                      {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                    </span>
-                  )}
-                </div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="text-sm text-content-secondary truncate flex-1 min-w-0">
+                {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
+              </p>
+              {conversation.unread_count > 0 && (
+                <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
+                  {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                </span>
+              )}
+            </div>
 
-                {conversation.last_message && (
-                  <p className="text-sm text-content-tertiary truncate">
-                    {conversation.last_message}
-                  </p>
-                )}
-              </div>
-            </>
-          )}
+            {conversation.last_message && (
+              <p className="text-sm text-content-tertiary truncate">
+                {conversation.last_message}
+              </p>
+            )}
+          </div>
         </Button>
       ))}
     </div>

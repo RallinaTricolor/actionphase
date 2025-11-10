@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getWorkerGameId } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { MessagingPage } from '../pages/MessagingPage';
 
 /**
  * Co-GM Management E2E Tests
@@ -562,33 +563,26 @@ test.describe.serial('Co-GM Management', () => {
 
     await loginAs(page, 'AUDIENCE_2');
 
-    const gamePage = new GameDetailsPage(page);
-    await gamePage.goto(gameId);
+    const messagingPage = new MessagingPage(page);
+    await messagingPage.goto(gameId);
 
     // Reload to ensure fresh auth state
     await page.reload();
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
-    // Navigate to Messages tab (visible to co-GMs with characters)
-    await page.getByRole('tab', { name: 'Messages' }).click();
-    await page.waitForLoadState('networkidle');
+    // Navigate to Messages tab using POM method
+    await messagingPage.navigateToMessages();
 
     // Verify co-GM can access conversation creation (GM-only permission)
     // GMs can create conversations and send messages as their NPCs
-    const newConversationButton = page.getByRole('button', { name: 'New Conversation' }).or(
-      page.locator('button[title="New Conversation"]')
-    );
-    await expect(newConversationButton).toBeVisible();
+    await expect(messagingPage.newConversationButton).toBeVisible();
 
     // Open conversation modal to verify co-GM has full access
-    await newConversationButton.click();
+    await messagingPage.openNewConversationForm();
 
     // Verify modal opens with conversation form
-    const conversationTitleInput = page.getByPlaceholder(/Planning the heist/i).or(
-      page.getByRole('textbox', { name: /title/i })
-    );
-    await expect(conversationTitleInput).toBeVisible();
+    await expect(messagingPage.conversationTitleInput).toBeVisible();
 
     // Close modal without creating (prevents test data accumulation)
     await page.keyboard.press('Escape');

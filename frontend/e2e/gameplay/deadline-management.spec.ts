@@ -86,7 +86,7 @@ test.describe('Deadline Management', () => {
 
     // Fill in deadline form
     await page.getByLabel('Title').fill('Test Deadline');
-    await page.getByLabel('Description').fill('This is a test deadline for E2E');
+    await page.getByRole('textbox', { name: 'Description' }).fill('This is a test deadline for E2E');
 
     // Set deadline to 48 hours from now (future, >24h = blue)
     // Round to nearest 15 minutes since the time picker uses 15-minute intervals
@@ -102,7 +102,7 @@ test.describe('Deadline Management', () => {
 
     // Verify deadline appears in widget
     await expect(page.getByText('Test Deadline')).toBeVisible();
-    await expect(page.getByText('This is a test deadline for E2E')).toBeVisible();
+    // Note: Description is now in tooltip (info icon), not directly visible
 
     // Verify countdown timer is displayed (should show something like "2d 0h" for 48 hours)
     await expect(page.getByText(/\d+d \d+h/)).toBeVisible();
@@ -117,7 +117,7 @@ test.describe('Deadline Management', () => {
     // Create a deadline first
     await page.getByRole('button', { name: /Add Deadline/i }).click();
     await page.getByLabel('Title').fill('Original Title');
-    await page.getByLabel('Description').fill('Original description');
+    await page.getByRole('textbox', { name: 'Description' }).fill('Original description');
 
     const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
     futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
@@ -139,7 +139,7 @@ test.describe('Deadline Management', () => {
 
     // Update the deadline
     await page.getByLabel('Title').fill('Updated Title');
-    await page.getByLabel('Description').fill('Updated description');
+    await page.getByRole('textbox', { name: 'Description' }).fill('Updated description');
 
     // Submit changes
     await page.getByRole('button', { name: /Save Changes/i }).click();
@@ -162,7 +162,7 @@ test.describe('Deadline Management', () => {
     // Create a deadline with a near-term date (12 hours = yellow warning)
     await page.getByRole('button', { name: /Add Deadline/i }).click();
     await page.getByLabel('Title').fill('Soon Deadline');
-    await page.getByLabel('Description').fill('This deadline is coming soon');
+    await page.getByRole('textbox', { name: 'Description' }).fill('This deadline is coming soon');
 
     const soonDate = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
     soonDate.setMinutes(Math.round(soonDate.getMinutes() / 15) * 15);
@@ -200,7 +200,7 @@ test.describe('Deadline Management', () => {
     // Create a deadline
     await page.getByRole('button', { name: /Add Deadline/i }).click();
     await page.getByLabel('Title').fill('Deadline to Delete');
-    await page.getByLabel('Description').fill('This deadline will be deleted');
+    await page.getByRole('textbox', { name: 'Description' }).fill('This deadline will be deleted');
 
     const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
     futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
@@ -239,7 +239,7 @@ test.describe('Deadline Management', () => {
 
     await page.getByRole('button', { name: /Add Deadline/i }).click();
     await page.getByLabel('Title').fill('Player View Test');
-    await page.getByLabel('Description').fill('Players should see this read-only');
+    await page.getByRole('textbox', { name: 'Description' }).fill('Players should see this read-only');
 
     const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
     futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
@@ -297,7 +297,7 @@ test.describe('Deadline Management', () => {
     for (let i = 1; i <= 4; i++) {
       await page.getByRole('button', { name: /Add Deadline/i }).click();
       await page.getByLabel('Title').fill(`${uniquePrefix}-${i}`);
-      await page.getByLabel('Description').fill(`Testing multiple deadlines ${i}`);
+      await page.getByRole('textbox', { name: 'Description' }).fill(`Testing multiple deadlines ${i}`);
 
       // Set deadlines far enough in the future to account for test execution time
       // Start at 2 days from now, then add more days for each deadline
@@ -351,7 +351,7 @@ test.describe('Deadline Management', () => {
     // Create a custom deadline
     await page.getByRole('button', { name: /Add Deadline/i }).click();
     await page.getByLabel('Title').fill('Custom Deadline Test');
-    await page.getByLabel('Description').fill('Testing unified deadline view');
+    await page.getByRole('textbox', { name: 'Description' }).fill('Testing unified deadline view');
 
     const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
     futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
