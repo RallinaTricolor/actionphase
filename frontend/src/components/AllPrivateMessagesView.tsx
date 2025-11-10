@@ -313,7 +313,8 @@ function MessageViewer({
     messages.forEach((message, index) => {
       const messageDate = new Date(message.created_at);
       const isNewDate = !currentDate || !isSameDay(currentDate, messageDate);
-      const isNewSender = message.sender_user_id !== currentSenderId;
+      // Compare character IDs instead of user IDs to properly group messages from different NPCs controlled by the same GM
+      const isNewSender = message.sender_character_id !== currentSenderId;
 
       // Start new date group
       if (isNewDate) {
@@ -337,7 +338,7 @@ function MessageViewer({
           messageGroups: [],
         });
         currentMessageGroup = [message];
-        currentSenderId = message.sender_user_id;
+        currentSenderId = message.sender_character_id;
         currentSenderName = message.sender_character_name || 'Unknown Character';
         currentSenderUsername = message.sender_username;
         currentSenderAvatar = message.sender_avatar_url;
@@ -356,7 +357,7 @@ function MessageViewer({
         }
 
         currentMessageGroup = [message];
-        currentSenderId = message.sender_user_id;
+        currentSenderId = message.sender_character_id;
         currentSenderName = message.sender_character_name || 'Unknown Character';
         currentSenderUsername = message.sender_username;
         currentSenderAvatar = message.sender_avatar_url;
