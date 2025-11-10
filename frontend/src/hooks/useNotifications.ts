@@ -45,6 +45,8 @@ export function useMarkNotificationAsRead() {
     onSuccess: () => {
       // Invalidate queries to refetch
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      // Invalidate dashboard to update unread counts (fixes stale count issue)
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }
@@ -60,6 +62,8 @@ export function useMarkAllAsRead() {
     onSuccess: () => {
       // Invalidate queries to refetch
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      // Invalidate dashboard to update unread counts (fixes stale count issue)
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }
@@ -74,6 +78,8 @@ export function useDeleteNotification() {
     onSuccess: () => {
       // Invalidate queries to refetch
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      // Invalidate dashboard to update unread counts (fixes stale count issue)
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

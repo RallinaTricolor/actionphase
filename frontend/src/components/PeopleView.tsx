@@ -44,6 +44,12 @@ export function PeopleView({
     const userParticipant = participants.find(p => p.user_id === currentUserId);
     return userParticipant?.role || 'player';
   })();
+
+  // Check if current user is an active participant (not just viewing the game)
+  const isParticipant = participants.some(
+    p => p.user_id === currentUserId && p.status === 'active'
+  );
+
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
 
   return (
@@ -86,6 +92,7 @@ export function PeopleView({
           currentUserId={currentUserId || undefined}
           gameState={gameState}
           isAnonymous={isAnonymous}
+          isParticipant={isParticipant}
         />
       )}
 

@@ -64,6 +64,13 @@ describe('CharactersList', () => {
       http.get('http://localhost:3000/api/v1/games/:gameId/characters/controllable', () => {
         // Return characters owned by user_id 1 (default test user)
         return HttpResponse.json(mockCharacters.filter(c => c.user_id === 1))
+      }),
+      // Mock game participants endpoint (used by GM for character assignment)
+      http.get('http://localhost:3000/api/v1/games/:gameId/participants', () => {
+        return HttpResponse.json([
+          { id: 1, user_id: 1, username: 'player1', role: 'player', status: 'active', joined_at: '2025-01-01T00:00:00Z' },
+          { id: 2, user_id: 2, username: 'player2', role: 'player', status: 'active', joined_at: '2025-01-01T00:00:00Z' },
+        ])
       })
     )
   })
@@ -80,7 +87,7 @@ describe('CharactersList', () => {
       )
 
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={1} gameState="setup" />
+        <CharactersList gameId={123} userRole="player" currentUserId={1} gameState="setup" isParticipant={true} />
       )
 
       await waitFor(() => {
@@ -265,7 +272,7 @@ describe('CharactersList', () => {
 
     it('should show create button for player in character_creation state', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={1} gameState="character_creation" />
+        <CharactersList gameId={123} userRole="player" currentUserId={1} gameState="character_creation" isParticipant={true} />
       )
 
       await waitFor(() => {
@@ -288,6 +295,118 @@ describe('CharactersList', () => {
     it('should NOT show create button in completed game', async () => {
       renderWithProviders(
         <CharactersList gameId={123} userRole="gm" currentUserId={1} gameState="completed" />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Characters')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByRole('button', { name: 'Create Character' })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Participant-only character creation (Issue #3 fix)', () => {
+    it('should NOT show create button for non-participant player in character_creation', async () => {
+      // Non-participant viewing the game during character creation
+      renderWithProviders(
+        <CharactersList
+          gameId={123}
+          userRole="player"
+          currentUserId={1}
+          gameState="character_creation"
+          isParticipant={false}
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Characters')).toBeInTheDocument()
+      })
+
+      // Create button should NOT appear for non-participants
+      expect(screen.queryByRole('button', { name: 'Create Character' })).not.toBeInTheDocument()
+    })
+
+    it('should NOT show create button for non-participant player in setup', async () => {
+      // Non-participant viewing the game during setup
+      renderWithProviders(
+        <CharactersList
+          gameId={123}
+          userRole="player"
+          currentUserId={1}
+          gameState="setup"
+          isParticipant={false}
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Characters')).toBeInTheDocument()
+      })
+
+      // Create button should NOT appear for non-participants
+      expect(screen.queryByRole('button', { name: 'Create Character' })).not.toBeInTheDocument()
+    })
+
+    it('should show create button for participant player in character_creation', async () => {
+      // Active participant in character creation phase
+      renderWithProviders(
+        <CharactersList
+          gameId={123}
+          userRole="player"
+          currentUserId={1}
+          gameState="character_creation"
+          isParticipant={true}
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Create Character' })).toBeInTheDocument()
+      })
+    })
+
+    it('should show create button for participant player in setup', async () => {
+      // Active participant in setup phase
+      renderWithProviders(
+        <CharactersList
+          gameId={123}
+          userRole="player"
+          currentUserId={1}
+          gameState="setup"
+          isParticipant={true}
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Create Character' })).toBeInTheDocument()
+      })
+    })
+
+    it('GM should see create button regardless of isParticipant prop', async () => {
+      // GM with isParticipant=false should still see button
+      renderWithProviders(
+        <CharactersList
+          gameId={123}
+          userRole="gm"
+          currentUserId={1}
+          gameState="setup"
+          isParticipant={false}
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Create Character' })).toBeInTheDocument()
+      })
+    })
+
+    it('should NOT show create button for non-participant in active game', async () => {
+      // Even participants can't create characters in active games
+      renderWithProviders(
+        <CharactersList
+          gameId={123}
+          userRole="player"
+          currentUserId={1}
+          gameState="active"
+          isParticipant={true}
+        />
       )
 
       await waitFor(() => {
