@@ -29,6 +29,7 @@ func setupCharacterTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux
 
 			handler := &Handler{App: app}
 			r.Post("/characters", handler.CreateCharacter)
+			r.Get("/characters", handler.GetGameCharacters)
 		})
 	})
 
@@ -239,6 +240,150 @@ func TestCharacterAPI_PlayerCanOnlyCreateOwnCharacter(t *testing.T) {
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				core.AssertNoError(t, err, "Response should be valid JSON")
 				tc.validateFn(t, &response)
+			}
+		})
+	}
+}
+
+// TestCharacterAPI_PendingCharacterVisibilityByRole tests that pending characters are visible to appropriate roles
+// Issue 4.2: Audience members and co-GMs should see pending characters, but regular players should not
+func TestCharacterAPI_PendingCharacterVisibilityByRole(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupCharacterTestRouter(app, testDB)
+	fixtures := testDB.SetupFixtures(t)
+
+	// Create test users for different roles
+	gmUser := fixtures.TestUser
+	coGMUser := testDB.CreateTestUser(t, "cogm", "cogm@example.com")
+	audienceUser := testDB.CreateTestUser(t, "audience", "audience@example.com")
+	regularPlayer := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Add participants with different roles
+	_, err := gameService.AddGameParticipant(context.Background(), fixtures.TestGame.ID, int32(coGMUser.ID), "co_gm")
+	core.AssertNoError(t, err, "Adding co-GM to game should succeed")
+
+	_, err = gameService.AddGameParticipant(context.Background(), fixtures.TestGame.ID, int32(audienceUser.ID), "audience")
+	core.AssertNoError(t, err, "Adding audience to game should succeed")
+
+	_, err = gameService.AddGameParticipant(context.Background(), fixtures.TestGame.ID, int32(regularPlayer.ID), "player")
+	core.AssertNoError(t, err, "Adding regular player to game should succeed")
+
+	// Update game to in_progress state to trigger character filtering
+	_, err = gameService.UpdateGameState(context.Background(), fixtures.TestGame.ID, "in_progress")
+	core.AssertNoError(t, err, "Updating game state should succeed")
+
+	// Create a pending character using direct SQL (simplest for test setup)
+	var pendingCharID int32
+	err = testDB.Pool.QueryRow(context.Background(),
+		"INSERT INTO characters (game_id, user_id, name, status, character_type) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		fixtures.TestGame.ID, regularPlayer.ID, "Pending Test Character", "pending", "player_character",
+	).Scan(&pendingCharID)
+	core.AssertNoError(t, err, "Creating pending character should succeed")
+
+	// Create an approved character using direct SQL
+	var approvedCharID int32
+	err = testDB.Pool.QueryRow(context.Background(),
+		"INSERT INTO characters (game_id, user_id, name, status, character_type) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		fixtures.TestGame.ID, regularPlayer.ID, "Approved Test Character", "active", "player_character",
+	).Scan(&approvedCharID)
+	core.AssertNoError(t, err, "Creating approved character should succeed")
+
+	// Create tokens for each user
+	gmToken, err := createTestAuthToken(app, gmUser)
+	core.AssertNoError(t, err, "GM token creation should succeed")
+
+	coGMToken, err := createTestAuthToken(app, coGMUser)
+	core.AssertNoError(t, err, "Co-GM token creation should succeed")
+
+	audienceToken, err := createTestAuthToken(app, audienceUser)
+	core.AssertNoError(t, err, "Audience token creation should succeed")
+
+	playerToken, err := createTestAuthToken(app, regularPlayer)
+	core.AssertNoError(t, err, "Player token creation should succeed")
+
+	testCases := []struct {
+		name              string
+		token             string
+		role              string
+		shouldSeePending  bool
+		shouldSeeApproved bool
+	}{
+		{
+			name:              "gm_sees_both_pending_and_approved",
+			token:             gmToken,
+			role:              "GM",
+			shouldSeePending:  true,
+			shouldSeeApproved: true,
+		},
+		{
+			name:              "co_gm_sees_both_pending_and_approved",
+			token:             coGMToken,
+			role:              "co-GM",
+			shouldSeePending:  true,
+			shouldSeeApproved: true,
+		},
+		{
+			name:              "audience_sees_both_pending_and_approved",
+			token:             audienceToken,
+			role:              "audience",
+			shouldSeePending:  true,
+			shouldSeeApproved: true,
+		},
+		{
+			name:              "regular_player_sees_only_approved",
+			token:             playerToken,
+			role:              "regular player",
+			shouldSeePending:  false,
+			shouldSeeApproved: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(fixtures.TestGame.ID))+"/characters", nil)
+			req.Header.Set("Authorization", "Bearer "+tc.token)
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, req)
+
+			core.AssertEqual(t, 200, w.Code, tc.role+" should successfully get characters")
+
+			var response []CharacterResponse
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			core.AssertNoError(t, err, "Response should be valid JSON")
+
+			// Check if pending character is in response
+			pendingFound := false
+			approvedFound := false
+			for _, char := range response {
+				if char.ID == pendingCharID {
+					pendingFound = true
+				}
+				if char.ID == approvedCharID {
+					approvedFound = true
+				}
+			}
+
+			if tc.shouldSeePending {
+				if !pendingFound {
+					t.Errorf("%s should see pending character (ID: %d) but did not. Response contains %d characters", tc.role, pendingCharID, len(response))
+				}
+			} else {
+				if pendingFound {
+					t.Errorf("%s should NOT see pending character (ID: %d) but did. Response contains %d characters", tc.role, pendingCharID, len(response))
+				}
+			}
+
+			if tc.shouldSeeApproved {
+				if !approvedFound {
+					t.Errorf("%s should see approved character (ID: %d) but did not. Response contains %d characters", tc.role, approvedCharID, len(response))
+				}
 			}
 		})
 	}

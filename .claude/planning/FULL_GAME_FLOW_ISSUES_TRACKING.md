@@ -818,33 +818,84 @@ The unified "People" tab defaults to the "Characters" sub-tab, which renders `Ch
 ---
 
 ### Issue 4.2: Audience Can't See Pending Characters
-**Status:** 🔴 Not Investigated
+**Status:** ✅ FIXED (2025-11-09)
 **Priority:** Medium
 **Reported Behavior:**
 Audience member cannot see pending characters (should be able to see all).
 
 **Investigation:**
-- [ ] Check audience role permissions
-- [ ] Verify character visibility by role
-- [ ] Review what audience should see
-- [ ] Test as audience member
+- [x] Check audience role permissions
+- [x] Verify character visibility by role
+- [x] Review what audience should see
+- [x] Test as audience member
+- [x] Created test pending character (ID: 34809) in Game #339
+- [x] Tested API with TestAudience2 (actual audience role) - confirmed bug
+- [x] Tested API with TestGM (GM role) - also couldn't see pending initially
+- [x] Verified character exists in database with status='pending'
+- [x] Traced bug to backend filtering logic
 
 **Root Cause:**
-_To be determined_
+**Backend incorrectly filtering pending characters for non-GM roles**
+
+The `GetGameCharacters` handler in `backend/pkg/characters/api_crud.go` (lines 284-299) was filtering out pending/rejected characters for ALL non-GM users. The filtering logic only checked `!isGM`, which excluded:
+- Audience members (who should see all characters for observation purposes)
+- Co-GMs (who should see all characters for game management)
+
+This was inconsistent with the `canSeePlayerNames()` helper function (lines 304-309) which correctly treats GM, co-GM, and audience roles equivalently.
+
+**Technical Details:**
+- File: `backend/pkg/characters/api_crud.go`
+- Handler: `GetGameCharacters`
+- Lines: 284-299 (filtering logic)
+- Bug: Line 292 condition `!isGM` was too broad
 
 **Proposed Solution:**
-_To be determined_
+**Extend filtering exemption to co-GM and audience roles**
+
+Modified the filtering condition to exempt co-GM and audience roles from pending character filtering, aligning with the `canSeePlayerNames()` function:
+
+**Before:**
+```go
+if game.State.String == "in_progress" && !isGM {
+    if char.Status.String == "pending" || char.Status.String == "rejected" {
+        continue // Skip this character for non-GMs
+    }
+}
+```
+
+**After:**
+```go
+if game.State.String == "in_progress" && !isGM && userRole != "co_gm" && userRole != "audience" {
+    if char.Status.String == "pending" || char.Status.String == "rejected" {
+        continue // Skip this character for regular players
+    }
+}
+```
 
 **Test Strategy:**
-- [ ] E2E test as audience member
-- [ ] Permission test for audience character visibility
-- [ ] Backend test for character query by role
-- [ ] Test visibility of pending vs approved characters
+- [x] Manual API testing with all user roles
+  - [x] Audience (TestAudience2) - SHOULD see pending character ✅
+  - [x] GM (TestGM) - SHOULD see pending character ✅
+  - [x] Regular Player (TestPlayer1) - should NOT see pending character ✅
+- [ ] Backend unit test for character filtering by role
+- [ ] E2E test for audience viewing pending characters
 
-**Files to Review:**
-- Character list component
-- Role-based visibility logic
-- Backend character query handler
+**Test Results:**
+Verified with curl API testing after fix:
+- **TestAudience2 (audience)**: Returns 5 characters including pending ✅
+- **TestGM (GM)**: Returns 5 characters including pending ✅
+- **TestPlayer1 (player)**: Returns 4 characters, excluding pending ✅
+
+**Files Modified:**
+- `backend/pkg/characters/api_crud.go` - Line 292: Updated filtering condition ✅
+
+**Testing Complete:**
+- [x] Backend unit test added: `TestCharacterAPI_PendingCharacterVisibilityByRole` ✅
+  - Tests GM, co-GM, audience, and regular player roles
+  - Verifies pending characters visible to GM/co-GM/audience
+  - Verifies pending characters hidden from regular players
+  - All test cases passing (backend/pkg/characters/api_crud_test.go:248-391)
+- [ ] E2E test for audience character visibility (optional enhancement)
 
 ---
 
@@ -1383,7 +1434,7 @@ _To be determined_
 ---
 
 ### Issue 5.8: Poll Deadline Not in Deadlines Section
-**Status:** 🟢 Reproduced - Solution Proposed
+**Status:** ✅ FIXED (2025-11-09) - Duplicate of Issue 5.2
 **Priority:** Medium
 **Reported Behavior:**
 Poll deadline is not shown in the deadlines section.
