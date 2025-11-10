@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useCreateActionResult } from '../hooks/useActionResults';
 import { useToast } from '../contexts/ToastContext';
-import { Button, Textarea, Checkbox, Alert } from './ui';
+import { Button, Textarea, Alert } from './ui';
 import { logger } from '@/services/LoggingService';
 
 interface CreateActionResultFormProps {
@@ -19,7 +19,6 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
 }) => {
   const { showWarning } = useToast();
   const [content, setContent] = useState('');
-  const [isPublished, setIsPublished] = useState(false);
   const createResult = useCreateActionResult(gameId);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,14 +33,13 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
       await createResult.mutateAsync({
         user_id: userId,
         content: content.trim(),
-        is_published: isPublished,
+        is_published: false, // Always create as draft
       });
 
       setContent('');
-      setIsPublished(false);
       onSuccess?.();
     } catch (error) {
-      logger.error('Failed to create action result', { error, gameId, userId, userName, isPublished });
+      logger.error('Failed to create action result', { error, gameId, userId, userName });
     }
   };
 
@@ -59,16 +57,7 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
           placeholder="Enter the result of the player's action..."
           maxLength={100000}
           showCharacterCount={true}
-          helperText="Maximum 100,000 characters"
-        />
-      </div>
-
-      <div className="mb-4">
-        <Checkbox
-          id="publish-immediately"
-          checked={isPublished}
-          onChange={(e) => setIsPublished(e.target.checked)}
-          label="Publish immediately (visible to player)"
+          helperText="Maximum 100,000 characters. Result will be created as a draft."
         />
       </div>
 
@@ -78,18 +67,18 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
         disabled={createResult.isPending}
         className="w-full"
       >
-        {createResult.isPending ? 'Sending...' : 'Send Result'}
+        {createResult.isPending ? 'Creating...' : 'Create Draft Result'}
       </Button>
 
       {createResult.isError && (
         <Alert variant="danger" className="mt-2">
-          Failed to send result. Please try again.
+          Failed to create result. Please try again.
         </Alert>
       )}
 
       {createResult.isSuccess && (
         <Alert variant="success" className="mt-2">
-          Result sent successfully!
+          Draft result created! Add character updates and publish when ready.
         </Alert>
       )}
     </form>
