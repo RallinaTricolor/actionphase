@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button, Input, Card, Alert } from './ui';
 import { HCaptchaWrapper } from './HCaptcha';
+import { mapAuthError, validatePasswordRequirements } from '../lib/utils/errorMapper';
+import { CheckCircle, XCircle } from 'lucide-react';
 import type { RegisterRequest } from '../types/auth';
 
 interface RegisterFormProps {
@@ -18,13 +20,15 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     hcaptcha_token: captchaEnabled ? '' : 'dev-bypass-token',
     honeypot_value: '',
   });
-  const { register, isLoading, error } = useAuth();
+  const { register, isLoading } = useAuth();
   const [captchaError, setCaptchaError] = useState<string>('');
   const [submittedOnce, setSubmittedOnce] = useState(false);
+  const [registrationError, setRegistrationError] = useState<unknown>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmittedOnce(true);
+    setRegistrationError(null);
 
     // Validate captcha token (only required if HCAPTCHA_ENABLED is true)
     if (captchaEnabled && !formData.hcaptcha_token) {
@@ -38,7 +42,8 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       await register(formData);
       onSuccess?.();
     } catch (err) {
-      // Error is handled by the hook
+      // Store the error for display
+      setRegistrationError(err);
     }
   };
 
@@ -66,7 +71,8 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     setCaptchaError('CAPTCHA expired, please verify again');
   };
 
-  const errorMessage = (error as any)?.response?.data?.message || 'Registration failed. Please try again.';
+  const passwordRequirements = validatePasswordRequirements(formData.password);
+  const errorMessage = registrationError ? mapAuthError(registrationError) : '';
 
   return (
     <Card variant="elevated" padding="md" className="max-w-md mx-auto">
@@ -97,17 +103,46 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           data-testid="register-email"
         />
 
-        <Input
-          label="Password"
-          id="password"
-          name="password"
-          type="password"
-          required
-          value={formData.password}
-          onChange={handleChange}
-          placeholder="Choose a password"
-          data-testid="register-password"
-        />
+        <div>
+          <Input
+            label="Password"
+            id="password"
+            name="password"
+            type="password"
+            required
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="Choose a password"
+            data-testid="register-password"
+          />
+
+          {/* Password requirements display */}
+          {formData.password && (
+            <div className="mt-3 space-y-2" data-testid="password-requirements">
+              <p className="text-sm font-medium text-content-secondary">
+                Password Requirements:
+              </p>
+              <div className="space-y-1">
+                {passwordRequirements.map((req) => (
+                  <div
+                    key={req.key}
+                    className="flex items-center gap-2 text-sm"
+                    data-testid={`password-requirement-${req.key}`}
+                  >
+                    {req.met ? (
+                      <CheckCircle className="text-success-primary flex-shrink-0" size={16} />
+                    ) : (
+                      <XCircle className="text-content-tertiary flex-shrink-0" size={16} />
+                    )}
+                    <span className={req.met ? 'text-success-primary' : 'text-content-secondary'}>
+                      {req.text}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Honeypot field - hidden from users, catches bots */}
         <div style={{ position: 'absolute', left: '-9999px' }}>
@@ -139,7 +174,7 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           </>
         )}
 
-        {error && submittedOnce && (
+        {registrationError && submittedOnce && (
           <Alert variant="danger" data-testid="error-message">
             {errorMessage}
           </Alert>
