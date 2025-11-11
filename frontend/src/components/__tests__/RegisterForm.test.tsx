@@ -279,10 +279,10 @@ describe('RegisterForm', () => {
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
-      // Error should appear AFTER submission
+      // Error should appear AFTER submission (expect mapped error message)
       await waitFor(() => {
         expect(screen.getByTestId('error-message')).toBeInTheDocument();
-        expect(screen.getByText(/username already taken/i)).toBeInTheDocument();
+        expect(screen.getByText(/this username is already taken/i)).toBeInTheDocument();
       });
     });
 
@@ -306,8 +306,9 @@ describe('RegisterForm', () => {
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
+      // Expect mapped error message, not raw error
       await waitFor(() => {
-        expect(screen.getByText(/username already taken/i)).toBeInTheDocument();
+        expect(screen.getByText(/this username is already taken/i)).toBeInTheDocument();
       });
     });
 
@@ -328,8 +329,9 @@ describe('RegisterForm', () => {
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
+      // Network errors show network error message
       await waitFor(() => {
-        expect(screen.getByText(/registration failed/i)).toBeInTheDocument();
+        expect(screen.getByText(/network error/i)).toBeInTheDocument();
       });
     });
 
@@ -354,9 +356,9 @@ describe('RegisterForm', () => {
       const submitButton = screen.getByRole('button', { name: /^register$/i });
       await user.click(submitButton);
 
-      // Wait for error
+      // Wait for error (500 status shows server error message)
       await waitFor(() => {
-        expect(screen.getByText(/registration/i)).toBeInTheDocument();
+        expect(screen.getByText(/server error/i)).toBeInTheDocument();
       });
 
       // Button should be re-enabled
@@ -384,9 +386,9 @@ describe('RegisterForm', () => {
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
-      // Wait for error to appear
+      // Wait for error to appear (400 status shows generic error)
       await waitFor(() => {
-        expect(screen.getByText(/error/i)).toBeInTheDocument();
+        expect(screen.getByText(/invalid request/i)).toBeInTheDocument();
       });
 
       // onSuccess should not have been called
