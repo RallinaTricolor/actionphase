@@ -534,8 +534,7 @@ describe('ThreadedComment', () => {
       expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     });
 
-    it('shows message when user has no characters', async () => {
-      const user = userEvent.setup();
+    it('does not show reply button when user has no controllable characters', () => {
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -547,10 +546,8 @@ describe('ThreadedComment', () => {
         />
       );
 
-      const replyButton = screen.getByRole('button', { name: /reply/i });
-      await user.click(replyButton);
-
-      expect(screen.getByText(/you need a character to reply/i)).toBeInTheDocument();
+      // Issue #6: Reply button should be hidden when user has no controllable characters
+      expect(screen.queryByRole('button', { name: /reply/i })).not.toBeInTheDocument();
     });
 
     it('allows changing selected character', async () => {

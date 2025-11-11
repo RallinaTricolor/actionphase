@@ -28,9 +28,9 @@ export const LoginPage = () => {
 
         <div className="mt-6">
           {showRegister ? (
-            <RegisterForm onSuccess={handleSuccess} />
+            <RegisterForm key="register" onSuccess={handleSuccess} />
           ) : (
-            <LoginForm onSuccess={handleSuccess} />
+            <LoginForm key="login" onSuccess={handleSuccess} />
           )}
         </div>
 
