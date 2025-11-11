@@ -11,6 +11,7 @@ import type {
   PostUnreadComments,
   PaginatedCommentsResponse
 } from '../../types/messages';
+import { COMMENT_MAX_DEPTH } from '@/config/comments';
 
 /**
  * Messages API client
@@ -55,7 +56,7 @@ export class MessagesApi extends BaseApiClient {
     postId: number,
     limit: number = 200,
     offset: number = 0,
-    maxDepth: number = 5
+    maxDepth: number = COMMENT_MAX_DEPTH
   ) {
     const queryParams = new URLSearchParams();
     queryParams.append('limit', limit.toString());

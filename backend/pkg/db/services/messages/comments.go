@@ -259,7 +259,9 @@ comment_tree AS (
 
   UNION ALL
 
-  -- Recursive case: Get nested replies up to max_depth
+  -- Recursive case: Get nested replies up to max_depth - 1
+  -- This ensures comments at (maxDepth - 1) can have Reply buttons
+  -- and "Continue thread" appears when they have deeper replies
   SELECT
     m.id,
     m.game_id,
@@ -285,7 +287,7 @@ comment_tree AS (
     comment_tree.depth + 1 as depth,
     (SELECT COUNT(*) FROM messages WHERE parent_id = m.id)::bigint as reply_count
   FROM messages m
-  JOIN comment_tree ON m.parent_id = comment_tree.id AND comment_tree.depth < $4
+  JOIN comment_tree ON m.parent_id = comment_tree.id AND comment_tree.depth + 1 < $4
   JOIN users u ON m.author_id = u.id
   LEFT JOIN characters c ON m.character_id = c.id
   WHERE m.message_type = 'comment'

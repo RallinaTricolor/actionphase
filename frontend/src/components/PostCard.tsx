@@ -17,6 +17,7 @@ import { useReadingMode } from '../contexts/ReadingModeContext';
 import { getRootPostId } from '../utils/commentUtils';
 import { logger } from '@/services/LoggingService';
 import { buildCommentTree, type CommentTreeNode } from '../lib/utils/commentTree';
+import { COMMENT_MAX_DEPTH } from '@/config/comments';
 
 interface PostCardProps {
   post: Message;
@@ -287,7 +288,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
         onCommentDeleted={() => {}}
         currentUserId={currentUserId}
         depth={0}
-        maxDepth={5}
+        maxDepth={COMMENT_MAX_DEPTH}
         unreadCommentIDs={[]}
         onOpenThread={handleOpenThreadInReadingMode} // Allow nested thread viewing
         readOnly={true}
@@ -329,7 +330,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                 onCommentDeleted={() => {}} // No interactions in reading mode
                 currentUserId={currentUserId}
                 depth={0}
-                maxDepth={5} // Same as normal view - "Continue thread" button will appear for deep threads
+                maxDepth={COMMENT_MAX_DEPTH} // Same as normal view - "Continue thread" button will appear for deep threads
                 unreadCommentIDs={[]}
                 onOpenThread={handleOpenThreadInReadingMode} // Navigate to thread view
                 readOnly={true} // Disable all interactions
@@ -578,7 +579,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                     onCommentDeleted={loadComments} // Reload comments when one is deleted
                     currentUserId={currentUserId}
                     depth={0}
-                    maxDepth={5}
+                    maxDepth={COMMENT_MAX_DEPTH}
                     unreadCommentIDs={localUnreadCommentIDs}
                     onOpenThread={(comment) => setThreadModalComment(comment)}
                     readOnly={readOnly}

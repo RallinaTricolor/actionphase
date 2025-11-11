@@ -63,6 +63,13 @@ export function ThreadViewModal({
     }
   }, [targetCommentId, showingContext]);
 
+  // Strip children property from comment to force ThreadedComment to load fresh replies
+  // Comments from main view have pre-loaded children with maxDepth=5, but in thread view we want maxDepth=10
+  const stripChildren = (msg: Message): Message => {
+    const { children, ...rest } = msg as any;
+    return rest;
+  };
+
   return (
     <>
       <div
@@ -171,7 +178,7 @@ export function ThreadViewModal({
                       className="ring-2 ring-accent-primary rounded-lg p-1"
                     >
                       <ThreadedComment
-                        comment={msg}
+                        comment={stripChildren(msg)}
                         gameId={gameId}
                         postId={postId}
                         characters={characters}
@@ -192,7 +199,7 @@ export function ThreadViewModal({
             ) : (
               /* Single comment view (original behavior) */
               <ThreadedComment
-                comment={comment}
+                comment={stripChildren(comment)}
                 gameId={gameId}
                 postId={postId}
                 characters={characters}

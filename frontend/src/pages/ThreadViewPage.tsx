@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { ThreadedComment } from '../components/ThreadedComment';
 import { getRootPostId } from '../utils/commentUtils';
+import { THREAD_VIEW_MAX_DEPTH } from '@/config/comments';
 
 /**
  * Focused view for a specific comment thread
@@ -75,7 +76,7 @@ export function ThreadViewPage() {
         controllableCharacters={[]}
         onCreateReply={async () => {}}
         depth={0}
-        maxDepth={5}  // Allow "Continue thread" buttons for very deep threads
+        maxDepth={THREAD_VIEW_MAX_DEPTH}  // Show deep nesting in thread view modal (depth 10)
       />
     </div>
   );
