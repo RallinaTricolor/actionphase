@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { usePoll, usePollResults } from '../hooks';
+import { usePoll, usePollResults, useUserCharacters } from '../hooks';
 import { Card, CardHeader, CardBody, Button, Badge, Spinner } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
 import { PollVotingForm } from './PollVotingForm';
@@ -13,7 +13,9 @@ interface PollCardProps {
   isAudience?: boolean;
 }
 
-export function PollCard({ poll, isGM, isAudience = false }: PollCardProps) {
+export function PollCard({ poll, gameId, isGM, isAudience = false }: PollCardProps) {
+  // Fetch user's characters for character-level polls
+  const { characters } = useUserCharacters(gameId);
   const [showVotingForm, setShowVotingForm] = useState(false);
 
   // Calculate initial showResults state with permission check
@@ -81,6 +83,13 @@ export function PollCard({ poll, isGM, isAudience = false }: PollCardProps) {
           <div className="flex items-center gap-2">
             {poll.is_expired ? (
               <Badge variant="secondary">Expired</Badge>
+            ) : poll.vote_as_type === 'character' && poll.voted_character_ids && poll.voted_character_ids.length > 0 ? (
+              // Character poll: Show voting progress
+              poll.voted_character_ids.length >= characters.length ? (
+                <Badge variant="success">Voted ({poll.voted_character_ids.length}/{characters.length})</Badge>
+              ) : (
+                <Badge variant="primary">Voted ({poll.voted_character_ids.length}/{characters.length})</Badge>
+              )
             ) : poll.user_has_voted ? (
               <Badge variant="success">Voted</Badge>
             ) : (
@@ -132,7 +141,8 @@ export function PollCard({ poll, isGM, isAudience = false }: PollCardProps) {
         {/* Action Buttons */}
         {!showVotingForm && !poll.is_expired && (
           <div className="flex gap-2 mt-4">
-            {!poll.user_has_voted && !isGM && (
+            {/* Show "Vote Now" if: user hasn't voted OR (character poll AND has more characters to vote with) */}
+            {(!poll.user_has_voted || (poll.vote_as_type === 'character' && (poll.voted_character_ids?.length || 0) < characters.length)) && !isGM && (
               <Button
                 variant="primary"
                 onClick={() => setShowVotingForm(true)}

@@ -581,3 +581,29 @@ func (s *PollService) HasUserVotedAny(ctx context.Context, pollID int32, userID 
 
 	return hasVoted, nil
 }
+
+// GetVotedCharacterIDs returns the list of character IDs that a user has already voted with
+// Use this for character-level polls to show voting progress (e.g., "Voted 2/3")
+func (s *PollService) GetVotedCharacterIDs(ctx context.Context, pollID int32, userID int32) ([]int32, error) {
+	queries := db.New(s.DB)
+
+	params := db.GetUserVotedCharacterIDsParams{
+		PollID: pollID,
+		UserID: userID,
+	}
+
+	characterIDs, err := queries.GetUserVotedCharacterIDs(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get voted character IDs: %w", err)
+	}
+
+	// Convert pgtype.Int4 array to []int32
+	result := make([]int32, 0, len(characterIDs))
+	for _, charID := range characterIDs {
+		if charID.Valid {
+			result = append(result, charID.Int32)
+		}
+	}
+
+	return result, nil
+}

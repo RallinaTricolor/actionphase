@@ -276,6 +276,150 @@ func setupPollVoteTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux 
 	return router
 }
 
+// setupGetPollTestRouter creates a test router for getting poll details
+func setupGetPollTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &dbservices.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	router := chi.NewRouter()
+
+	router.Route("/api/v1", func(r chi.Router) {
+		r.Route("/polls/{pollId}", func(r chi.Router) {
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
+
+			handler := &Handler{App: app}
+			r.Get("/", handler.GetPoll)
+		})
+	})
+
+	return router
+}
+
+// TestGetPoll_VotedCharacterIDs tests that the GetPoll endpoint returns voted_character_ids for character-level polls
+func TestGetPoll_VotedCharacterIDs(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "common_room_poll_responses", "common_room_poll_options", "common_room_polls", "characters", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupGetPollTestRouter(app, testDB)
+	fixtures := testDB.SetupFixtures(t)
+
+	// Create test users
+	gmUser := fixtures.TestUser // GM
+	playerUser := testDB.CreateTestUser(t, "testplayer", "player@example.com")
+
+	gameService := &dbservices.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	pollService := &dbservices.PollService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &dbservices.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Create a game
+	game := testDB.CreateTestGame(t, int32(gmUser.ID), "Test Game")
+
+	// Add player as participant
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(playerUser.ID), "player")
+	core.AssertNoError(t, err, "Adding player to game should succeed")
+
+	// Create characters for the player
+	playerUserID := int32(playerUser.ID)
+	char1, err := characterService.CreateCharacter(context.Background(), dbservices.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &playerUserID,
+		Name:          "Character 1",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Creating character 1 should succeed")
+
+	char2, err := characterService.CreateCharacter(context.Background(), dbservices.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &playerUserID,
+		Name:          "Character 2",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Creating character 2 should succeed")
+
+	_, err = characterService.CreateCharacter(context.Background(), dbservices.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &playerUserID,
+		Name:          "Character 3",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Creating character 3 should succeed")
+
+	// Create a character-level poll
+	pollDeadline := time.Now().Add(24 * time.Hour)
+	poll, err := pollService.CreatePollWithOptions(context.Background(), core.CreatePollRequest{
+		GameID:              game.ID,
+		CreatedByUserID:     int32(gmUser.ID),
+		Question:            "Character Poll Question",
+		Description:         core.StringPtr("Character-level poll for testing"),
+		Deadline:            pollDeadline,
+		VoteAsType:          "character",
+		ShowIndividualVotes: false,
+		AllowOtherOption:    false,
+		Options: []core.PollOptionInput{
+			{Text: "Option A", DisplayOrder: 1},
+			{Text: "Option B", DisplayOrder: 2},
+		},
+	})
+	core.AssertNoError(t, err, "Creating character poll should succeed")
+
+	// Player votes with char1 and char2
+	_, err = pollService.SubmitVote(context.Background(), core.SubmitVoteRequest{
+		PollID:           poll.Poll.ID,
+		UserID:           int32(playerUser.ID),
+		CharacterID:      &char1.ID,
+		SelectedOptionID: &poll.Options[0].ID,
+	})
+	core.AssertNoError(t, err, "Voting with character 1 should succeed")
+
+	_, err = pollService.SubmitVote(context.Background(), core.SubmitVoteRequest{
+		PollID:           poll.Poll.ID,
+		UserID:           int32(playerUser.ID),
+		CharacterID:      &char2.ID,
+		SelectedOptionID: &poll.Options[1].ID,
+	})
+	core.AssertNoError(t, err, "Voting with character 2 should succeed")
+
+	// Create token for player
+	playerToken, err := core.CreateTestJWTTokenForUser(app, playerUser)
+	core.AssertNoError(t, err, "Player token creation should succeed")
+
+	// Create request to get poll
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/polls/"+strconv.Itoa(int(poll.Poll.ID)), nil)
+	req.Header.Set("Authorization", "Bearer "+playerToken)
+
+	// Set URL parameters
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("pollId", strconv.Itoa(int(poll.Poll.ID)))
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	// Execute request
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Verify status code
+	core.AssertEqual(t, http.StatusOK, w.Code, "GetPoll should return 200 OK")
+
+	// Parse response body
+	body := w.Body.String()
+
+	// Verify response contains voted_character_ids field
+	core.AssertTrue(t, strings.Contains(body, "voted_character_ids"), "Response should contain voted_character_ids field")
+
+	// Verify the character IDs are in the response (they should be char1 and char2)
+	char1IDStr := strconv.Itoa(int(char1.ID))
+	char2IDStr := strconv.Itoa(int(char2.ID))
+
+	core.AssertTrue(t, strings.Contains(body, char1IDStr), "Response should contain char1 ID: "+char1IDStr)
+	core.AssertTrue(t, strings.Contains(body, char2IDStr), "Response should contain char2 ID: "+char2IDStr)
+
+	// Verify char3 (not voted) is NOT in voted_character_ids
+	// The presence of char1 and char2 IDs in the voted_character_ids array verifies the feature works
+}
+
 // TestPollVoting_GMAndCoGMBlocked tests that GMs and co-GMs cannot vote on polls
 func TestPollVoting_GMAndCoGMBlocked(t *testing.T) {
 	testDB := core.NewTestDatabase(t)

@@ -520,6 +520,41 @@ func (q *Queries) GetUserVote(ctx context.Context, arg GetUserVoteParams) (PollV
 	return i, err
 }
 
+const getUserVotedCharacterIDs = `-- name: GetUserVotedCharacterIDs :many
+SELECT character_id
+FROM poll_votes
+WHERE poll_id = $1
+  AND user_id = $2
+  AND character_id IS NOT NULL
+`
+
+type GetUserVotedCharacterIDsParams struct {
+	PollID int32 `json:"poll_id"`
+	UserID int32 `json:"user_id"`
+}
+
+// Get list of character IDs that a user has already voted with in a poll
+// Use this to show voting progress (e.g., "Voted 2/3") and filter dropdown
+func (q *Queries) GetUserVotedCharacterIDs(ctx context.Context, arg GetUserVotedCharacterIDsParams) ([]pgtype.Int4, error) {
+	rows, err := q.db.Query(ctx, getUserVotedCharacterIDs, arg.PollID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.Int4
+	for rows.Next() {
+		var character_id pgtype.Int4
+		if err := rows.Scan(&character_id); err != nil {
+			return nil, err
+		}
+		items = append(items, character_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getVoteByPollAndUser = `-- name: GetVoteByPollAndUser :one
 SELECT id, poll_id, user_id, character_id, selected_option_id, other_response, created_at, updated_at FROM poll_votes
 WHERE poll_id = $1
