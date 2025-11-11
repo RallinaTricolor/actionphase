@@ -589,6 +589,15 @@ type MessageServiceInterface interface {
 
 	// GetTotalCommentCount returns the total count of non-deleted comments in a game
 	GetTotalCommentCount(ctx context.Context, gameID int32) (int64, error)
+
+	// GetPostCommentsWithThreads retrieves paginated top-level comments with all nested replies
+	// Uses a recursive CTE to load entire comment trees in a single query (eliminates N+1 pattern)
+	// Returns flat array with depth field for frontend tree building
+	GetPostCommentsWithThreads(ctx context.Context, postID int32, limit int32, offset int32, maxDepth int32) ([]CommentWithDepth, error)
+
+	// CountTopLevelComments returns the total count of top-level comments for a post
+	// Used for pagination metadata (calculating has_more, total pages, etc.)
+	CountTopLevelComments(ctx context.Context, postID int32) (int64, error)
 }
 
 // CreatePhaseRequest represents the parameters needed to create a new game phase
@@ -720,6 +729,13 @@ type MessageWithDetails struct {
 	CharacterAvatarUrl *string // Optional - character's avatar URL
 	CommentCount       int64   // For posts
 	ReplyCount         int64   // For comments
+}
+
+// CommentWithDepth represents a comment with its nesting depth for tree building
+// Used for paginated comment loading with recursive CTE queries
+type CommentWithDepth struct {
+	Comment MessageWithDetails
+	Depth   int32 // Nesting level: 0 = top-level, 1+ = nested replies
 }
 
 // CommentWithParent represents a comment along with its parent message/post

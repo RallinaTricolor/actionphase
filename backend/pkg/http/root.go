@@ -222,10 +222,11 @@ func (h *Handler) Start() {
 			// Create comment requires email verification
 			r.With(core.RequireEmailVerificationMiddleware(h.App.Pool)).Post("/{gameId}/posts/{postId}/comments", messageHandler.CreateComment)
 			r.Get("/{gameId}/posts/{postId}/comments", messageHandler.GetPostComments)
-			r.Patch("/{gameId}/posts/{postId}/comments/{commentId}", messageHandler.UpdateComment)  // Edit comment
-			r.Delete("/{gameId}/posts/{postId}/comments/{commentId}", messageHandler.DeleteComment) // Delete comment
-			r.Get("/{gameId}/messages/{messageId}", messageHandler.GetMessage)                      // For deep linking to nested comments
-			r.Get("/{gameId}/comments/recent", messageHandler.ListRecentCommentsWithParents)        // New Comments view
+			r.Get("/{gameId}/posts/{postId}/comments-with-threads", messageHandler.GetPostCommentsWithThreads) // NEW: Paginated with nested replies
+			r.Patch("/{gameId}/posts/{postId}/comments/{commentId}", messageHandler.UpdateComment)             // Edit comment
+			r.Delete("/{gameId}/posts/{postId}/comments/{commentId}", messageHandler.DeleteComment)            // Delete comment
+			r.Get("/{gameId}/messages/{messageId}", messageHandler.GetMessage)                                 // For deep linking to nested comments
+			r.Get("/{gameId}/comments/recent", messageHandler.ListRecentCommentsWithParents)                   // New Comments view
 
 			// Read tracking for common room
 			r.Post("/{gameId}/posts/{postId}/mark-read", messageHandler.MarkPostRead)

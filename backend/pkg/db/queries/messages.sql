@@ -237,6 +237,18 @@ ORDER BY m.created_at DESC;
 -- NOTE: GetCommentThread with recursive CTE is not supported by sqlc
 -- Use GetPostComments recursively on the frontend to build the tree
 -- This is actually more efficient for large thread trees anyway
+--
+-- UPDATE: GetPostCommentsWithThreads uses raw SQL in service layer
+-- sqlc does not support recursive CTEs, so we implement this query directly in Go
+-- See: backend/pkg/db/services/messages/comments.go
+
+-- name: CountTopLevelComments :one
+-- Count total top-level comments for a post (for pagination)
+-- INCLUDES deleted comments to preserve thread structure
+SELECT COUNT(*) as total
+FROM messages
+WHERE parent_id = $1
+  AND message_type = 'comment';
 
 -- name: UpdateComment :one
 UPDATE messages

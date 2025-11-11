@@ -79,6 +79,21 @@ export interface PostUnreadComments {
   unread_comment_ids: number[];
 }
 
+// Paginated comments with threads (includes depth for tree building)
+export interface CommentWithDepth extends Message {
+  depth: number; // Nesting depth (0 = top-level, 1+ = nested replies)
+}
+
+export interface PaginatedCommentsResponse {
+  comments: CommentWithDepth[];
+  total_top_level: number;      // Total top-level comments
+  returned_top_level: number;   // Top-level comments in this response
+  returned_total: number;       // Total comments including nested
+  has_more: boolean;            // More pages available?
+  limit: number;
+  offset: number;
+}
+
 // Comment with parent context (for "New Comments" view)
 export interface CommentWithParent {
   // Comment data
