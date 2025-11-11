@@ -45,9 +45,18 @@ export function ThreadedComment({
   onOpenThread,
   readOnly = false
 }: ThreadedCommentProps) {
-  const { showSuccess: _showSuccess, showError } = useToast();
+  const { showSuccess, showError } = useToast();
   // Use local state to track the current comment data (for immediate UI updates)
-  const [comment, setComment] = useState<Message | CommentTreeNode>(initialComment);
+  // Initialize reply_count from preloaded children if not set
+  const initializeComment = (c: Message | CommentTreeNode): Message | CommentTreeNode => {
+    const hasPreloaded = 'children' in c && Array.isArray(c.children);
+    if (hasPreloaded && (!c.reply_count || c.reply_count === 0)) {
+      return { ...c, reply_count: (c as CommentTreeNode).children.length };
+    }
+    return c;
+  };
+
+  const [comment, setComment] = useState<Message | CommentTreeNode>(initializeComment(initialComment));
   const [replies, setReplies] = useState<Message[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [showReplies, setShowReplies] = useState(true); // Start expanded
@@ -72,18 +81,24 @@ export function ThreadedComment({
   const updateCommentMutation = useUpdateComment();
   const deleteCommentMutation = useDeleteComment();
   const isAuthor = currentUserId === comment.author_id;
+  // Single source of truth: reply_count (initialized from preloaded children, updated on mutations)
   const hasReplies = (comment.reply_count || 0) > 0;
   const isUnread = unreadCommentIDs.includes(comment.id);
 
   // Update local comment state when prop changes (from cache invalidation)
   useEffect(() => {
-    setComment(initialComment);
+    setComment(initializeComment(initialComment));
   }, [initialComment]);
   // On mobile, show "Continue thread" button earlier (depth 3) to save space
   // On desktop, use the normal maxDepth (depth 5)
   const mobileMaxDepth = 3;
+  // True max depth - where we stop rendering entirely
   const isAtMaxDepth = depth >= maxDepth;
   const isAtMobileMaxDepth = depth >= mobileMaxDepth;
+  // Show "Continue thread" button when children WOULD exceed max depth
+  // (i.e., at maxDepth - 1, because children at depth+1 won't be rendered)
+  const shouldShowContinueButton = depth >= maxDepth - 1;
+  const shouldShowMobileContinueButton = depth >= mobileMaxDepth - 1;
   const [linkCopied, setLinkCopied] = useState(false);
 
   // Track component mount status
@@ -258,21 +273,88 @@ export function ThreadedComment({
     e.preventDefault();
     if (!selectedCharacterId || !replyContent.trim()) return;
 
+    // Find the selected character for optimistic rendering
+    const selectedCharacter = controllableCharacters.find(c => c.id === selectedCharacterId);
+    if (!selectedCharacter) return;
+
+    // Create optimistic reply
+    const optimisticReply: Message = {
+      id: Date.now(), // Temporary ID
+      parent_id: comment.id,
+      character_id: selectedCharacterId,
+      author_id: currentUserId || 0,
+      author_username: selectedCharacter.username,
+      character_name: selectedCharacter.name,
+      character_avatar_url: selectedCharacter.avatar_url || undefined,
+      content: replyContent.trim(),
+      message_type: 'comment',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reply_count: 0,
+      is_deleted: false,
+      is_edited: false,
+    };
+
     try {
       setIsSubmitting(true);
-      logger.debug('Creating reply to comment', { commentId: comment.id, gameId, postId, characterId: selectedCharacterId });
-      await onCreateReply(comment.id, selectedCharacterId, replyContent.trim());
-      logger.debug('Reply created successfully', { commentId: comment.id, gameId, postId });
+
+      // Only add optimistic reply if children won't exceed max depth
+      // If at depth maxDepth-1, children would be at maxDepth and won't render
+      if (!shouldShowContinueButton) {
+        // Add optimistic reply immediately
+        setReplies(prev => [...prev, optimisticReply]);
+        hasLoadedRef.current = true; // Mark as loaded so we use replies state instead of preloaded children
+        setShowReplies(true);
+      }
+      // Always increment reply_count immediately for button visibility
+      setComment(prev => ({ ...prev, reply_count: (prev.reply_count || 0) + 1 }));
       setReplyContent('');
       setIsReplying(false);
-      // Ensure replies are shown and reload to display the new one
-      setShowReplies(true);
-      logger.debug('Loading replies after reply creation', { commentId: comment.id, gameId, postId });
-      hasLoadedRef.current = false; // Reset so we can reload with new reply
-      await loadReplies();
+
+      logger.debug('Creating reply to comment', { commentId: comment.id, gameId, postId, characterId: selectedCharacterId });
+      await onCreateReply(comment.id, selectedCharacterId, optimisticReply.content);
+      logger.debug('Reply created successfully', { commentId: comment.id, gameId, postId });
+
+      // Show success toast
+      showSuccess('Reply posted successfully');
+
+      // Reload replies to get the real data (with proper ID, timestamps, etc.)
+      // But skip reloading if at max depth (children won't render anyway)
+      if (!shouldShowContinueButton) {
+        logger.debug('Loading replies after reply creation', { commentId: comment.id, gameId, postId });
+
+        // Force reload by fetching fresh data
+        try {
+          setLoadingReplies(true);
+          const response = await apiClient.messages.getPostComments(gameId, comment.id);
+          if (isMountedRef.current) {
+            setReplies(response.data);
+            // Update comment reply_count to match actual count from server
+            setComment(prev => ({ ...prev, reply_count: response.data.length }));
+            hasLoadedRef.current = true;
+          }
+        } catch (loadErr) {
+          logger.error('Failed to load replies after creation', { error: loadErr, commentId: comment.id });
+          // Keep optimistic reply on load error
+        } finally {
+          if (isMountedRef.current) {
+            setLoadingReplies(false);
+          }
+        }
+      }
+
       logger.debug('Replies loaded after reply creation', { commentId: comment.id, gameId, postId });
     } catch (err) {
       logger.error('Failed to submit reply', { error: err, commentId: comment.id, gameId, postId });
+      // Remove optimistic reply on error
+      setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
+      // Decrement reply_count to rollback optimistic increment
+      setComment(prev => ({ ...prev, reply_count: Math.max(0, (prev.reply_count || 0) - 1) }));
+      hasLoadedRef.current = false; // Reset so we fall back to preloaded children if available
+      showError('Failed to post reply. Please try again.');
+      // Restore reply form state so user can retry
+      setReplyContent(optimisticReply.content);
+      setIsReplying(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -636,7 +718,7 @@ export function ThreadedComment({
         <>
           {/* Mobile: Show at depth 3+ */}
           <div className="mt-2 ml-2 md:hidden">
-            {isAtMobileMaxDepth && (
+            {shouldShowMobileContinueButton && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -653,7 +735,7 @@ export function ThreadedComment({
           </div>
           {/* Desktop: Show at depth 5+ */}
           <div className="hidden md:block mt-2 ml-6">
-            {isAtMaxDepth && (
+            {shouldShowContinueButton && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -682,8 +764,10 @@ export function ThreadedComment({
                         Loading replies...
                       </div>
                   ) : (
-                      // Use pre-loaded children if available, otherwise use dynamically loaded replies
-                      (hasPreloadedChildren ? preloadedChildren : replies).map((reply) => (
+                      // Use dynamically loaded replies if we have them (hasLoadedRef = true means we've loaded/reloaded)
+                      // Otherwise fall back to pre-loaded children
+                      // This allows optimistic updates and fresh data to override preloaded children
+                      (hasLoadedRef.current ? replies : (hasPreloadedChildren ? preloadedChildren : replies)).map((reply) => (
                           <ThreadedComment
                               key={reply.id}
                               comment={reply}

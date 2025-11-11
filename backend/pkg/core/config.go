@@ -93,6 +93,12 @@ type AppConfig struct {
 	// CORS settings for cross-origin requests
 	CORSEnabled bool     `env:"CORS_ENABLED"`
 	CORSOrigins []string `env:"CORS_ORIGINS"`
+
+	// CommentMaxDepth controls the maximum nesting level for threaded comments (1-10)
+	// Comments are shown at depths 0 through (CommentMaxDepth - 1) with Reply buttons
+	// "Continue thread" button appears on comments at (CommentMaxDepth - 1) that have deeper replies
+	// Default: 5 (shows depths 0-4 with Reply buttons, "Continue thread" at depth 4)
+	CommentMaxDepth int `env:"COMMENT_MAX_DEPTH"`
 }
 
 // StorageConfig contains file storage configuration.
@@ -150,11 +156,12 @@ func LoadConfig() (*Config, error) {
 			IdleTimeout:  getEnvDuration("SERVER_IDLE_TIMEOUT", 60*time.Second),
 		},
 		App: AppConfig{
-			Environment:   getEnvString("ENVIRONMENT", "development"),
-			LogLevel:      getEnvString("LOG_LEVEL", "info"),
-			RunMigrations: getEnvBool("RUN_MIGRATIONS", true),
-			CORSEnabled:   getEnvBool("CORS_ENABLED", true),
-			CORSOrigins:   getEnvStringSlice("CORS_ORIGINS", []string{"http://localhost:5173"}),
+			Environment:     getEnvString("ENVIRONMENT", "development"),
+			LogLevel:        getEnvString("LOG_LEVEL", "info"),
+			RunMigrations:   getEnvBool("RUN_MIGRATIONS", true),
+			CORSEnabled:     getEnvBool("CORS_ENABLED", true),
+			CORSOrigins:     getEnvStringSlice("CORS_ORIGINS", []string{"http://localhost:5173"}),
+			CommentMaxDepth: getEnvInt("COMMENT_MAX_DEPTH", 5),
 		},
 		Storage: StorageConfig{
 			Backend:    getEnvString("STORAGE_BACKEND", "local"),
@@ -215,6 +222,11 @@ func (c *Config) Validate() error {
 		if c.Storage.S3Region == "" {
 			return fmt.Errorf("STORAGE_S3_REGION is required when using S3 storage")
 		}
+	}
+
+	// Validate comment max depth
+	if c.App.CommentMaxDepth < 1 || c.App.CommentMaxDepth > 10 {
+		return fmt.Errorf("COMMENT_MAX_DEPTH must be between 1 and 10")
 	}
 
 	return nil

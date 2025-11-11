@@ -486,6 +486,8 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 
 // GetPostCommentsWithThreads fetches paginated top-level comments with nested replies
 // GET /api/v1/games/:gameId/posts/:postId/comments-with-threads?limit=200&offset=0&max_depth=5
+// Returns comments at depths 0 through (max_depth - 1) so Reply buttons appear on all visible comments
+// "Continue thread" button shows on comments at (max_depth - 1) that have deeper replies
 func (h *Handler) GetPostCommentsWithThreads(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_post_comments_with_threads")()
@@ -530,7 +532,7 @@ func (h *Handler) GetPostCommentsWithThreads(w http.ResponseWriter, r *http.Requ
 	}
 
 	maxDepthStr := r.URL.Query().Get("max_depth")
-	maxDepth := int32(5) // Default: 5 levels deep
+	maxDepth := int32(h.App.Config.App.CommentMaxDepth) // Default from config
 	if maxDepthStr != "" {
 		maxDepthInt, err := strconv.ParseInt(maxDepthStr, 10, 32)
 		if err != nil || maxDepthInt < 0 || maxDepthInt > 10 {
