@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button, Input, Card, Alert } from './ui';
 import { HCaptchaWrapper } from './HCaptcha';
@@ -72,7 +72,29 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   };
 
   const passwordRequirements = validatePasswordRequirements(formData.password);
-  const errorMessage = registrationError ? mapAuthError(registrationError) : '';
+  const errorMessage: string = registrationError ? mapAuthError(registrationError) : '';
+
+  // Workaround for TypeScript 5.8/5.9 bug - extract conditional JSX to variables
+  // Bug: TypeScript incorrectly infers conditional JSX as 'unknown' in presence of errorMapper
+  const captchaWidget: React.ReactElement | null = captchaEnabled ? (
+    <>
+      <HCaptchaWrapper
+        onVerify={handleCaptchaVerify}
+        onExpire={handleCaptchaExpire}
+      />
+      {captchaError && (
+        <Alert variant="warning">
+          {captchaError}
+        </Alert>
+      )}
+    </>
+  ) : null;
+
+  const errorAlert: React.ReactElement | null = (registrationError && submittedOnce) ? (
+    <Alert variant="danger" data-testid="error-message">
+      {errorMessage}
+    </Alert>
+  ) : null;
 
   return (
     <Card variant="elevated" padding="md" className="max-w-md mx-auto">
@@ -158,27 +180,9 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
           />
         </div>
 
-        {/* hCaptcha widget - only in production */}
-        {captchaEnabled && (
-          <>
-            <HCaptchaWrapper
-              onVerify={handleCaptchaVerify}
-              onExpire={handleCaptchaExpire}
-            />
+        {captchaWidget}
 
-            {captchaError && (
-              <Alert variant="warning">
-                {captchaError}
-              </Alert>
-            )}
-          </>
-        )}
-
-        {registrationError && submittedOnce && (
-          <Alert variant="danger" data-testid="error-message">
-            {errorMessage}
-          </Alert>
-        )}
+        {errorAlert}
 
         <Button
           type="submit"

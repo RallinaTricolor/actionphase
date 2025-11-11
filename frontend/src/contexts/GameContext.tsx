@@ -170,7 +170,7 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     isParticipant,
     canEditGame,
     userCharacters: userCharacters || [],
-    currentPhaseId: game?.current_phase_id || null,
+    currentPhaseId: null, // TODO: Get current phase ID from phases endpoint
     isUserCharacter,
     refetchGameData,
   };
