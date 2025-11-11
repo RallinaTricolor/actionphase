@@ -91,10 +91,21 @@ describe('PostCard', () => {
 
   beforeEach(() => {
     mockOnCreateComment.mockReset();
-    // Setup default successful responses
+    // Setup default successful responses for new paginated endpoint
     server.use(
-      http.get('/api/v1/games/:gameId/posts/:postId/comments', () => {
-        return HttpResponse.json(mockComments);
+      http.get('/api/v1/games/:gameId/posts/:postId/comments-with-threads', () => {
+        return HttpResponse.json({
+          comments: mockComments,
+          total_top_level: mockComments.length,
+          returned_top_level: mockComments.length,
+          returned_total: mockComments.length,
+          has_more: false,
+          limit: 200,
+          offset: 0,
+        });
+      }),
+      http.get('/api/v1/games/:gameId/unread-comment-ids', () => {
+        return HttpResponse.json([]);
       })
     );
   });
@@ -787,9 +798,17 @@ describe('PostCard', () => {
       let loadCount = 0;
 
       server.use(
-        http.get('/api/v1/games/:gameId/posts/:postId/comments', () => {
+        http.get('/api/v1/games/:gameId/posts/:postId/comments-with-threads', () => {
           loadCount++;
-          return HttpResponse.json(mockComments);
+          return HttpResponse.json({
+            comments: mockComments,
+            total_top_level: mockComments.length,
+            returned_top_level: mockComments.length,
+            returned_total: mockComments.length,
+            has_more: false,
+            limit: 200,
+            offset: 0,
+          });
         })
       );
 
@@ -1032,9 +1051,17 @@ describe('PostCard', () => {
 
     it('shows loading state while loading comments', async () => {
       server.use(
-        http.get('/api/v1/games/:gameId/posts/:postId/comments', async () => {
+        http.get('/api/v1/games/:gameId/posts/:postId/comments-with-threads', async () => {
           await new Promise(resolve => setTimeout(resolve, 100));
-          return HttpResponse.json(mockComments);
+          return HttpResponse.json({
+            comments: mockComments,
+            total_top_level: mockComments.length,
+            returned_top_level: mockComments.length,
+            returned_total: mockComments.length,
+            has_more: false,
+            limit: 200,
+            offset: 0,
+          });
         })
       );
 
@@ -1060,8 +1087,16 @@ describe('PostCard', () => {
 
     it('shows empty state when no comments exist', async () => {
       server.use(
-        http.get('/api/v1/games/:gameId/posts/:postId/comments', () => {
-          return HttpResponse.json([]);
+        http.get('/api/v1/games/:gameId/posts/:postId/comments-with-threads', () => {
+          return HttpResponse.json({
+            comments: [],
+            total_top_level: 0,
+            returned_top_level: 0,
+            returned_total: 0,
+            has_more: false,
+            limit: 200,
+            offset: 0,
+          });
         })
       );
 
@@ -1083,8 +1118,16 @@ describe('PostCard', () => {
 
     it('shows encouragement message in empty state', async () => {
       server.use(
-        http.get('/api/v1/games/:gameId/posts/:postId/comments', () => {
-          return HttpResponse.json([]);
+        http.get('/api/v1/games/:gameId/posts/:postId/comments-with-threads', () => {
+          return HttpResponse.json({
+            comments: [],
+            total_top_level: 0,
+            returned_top_level: 0,
+            returned_total: 0,
+            has_more: false,
+            limit: 200,
+            offset: 0,
+          });
         })
       );
 
@@ -1108,9 +1151,17 @@ describe('PostCard', () => {
       let loadCount = 0;
 
       server.use(
-        http.get('/api/v1/games/:gameId/posts/:postId/comments', () => {
+        http.get('/api/v1/games/:gameId/posts/:postId/comments-with-threads', () => {
           loadCount++;
-          return HttpResponse.json(mockComments);
+          return HttpResponse.json({
+            comments: mockComments,
+            total_top_level: mockComments.length,
+            returned_top_level: mockComments.length,
+            returned_total: mockComments.length,
+            has_more: false,
+            limit: 200,
+            offset: 0,
+          });
         })
       );
 
