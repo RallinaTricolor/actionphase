@@ -839,3 +839,84 @@ func (h *Handler) DeletePoll(w http.ResponseWriter, r *http.Request) {
 
 	render.Status(r, http.StatusNoContent)
 }
+
+// ListPollsByPhase handles GET /games/{gameId}/phases/{phaseId}/polls
+func (h *Handler) ListPollsByPhase(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_polls_by_phase")()
+
+	// Extract game ID from URL
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		h.App.ObsLogger.LogError(ctx, err, "Invalid game ID")
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Extract phase ID from URL
+	phaseIDStr := chi.URLParam(r, "phaseId")
+	phaseID, err := strconv.ParseInt(phaseIDStr, 10, 32)
+	if err != nil {
+		h.App.ObsLogger.LogError(ctx, err, "Invalid phase ID")
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid phase ID")))
+		return
+	}
+
+	// Authenticate user
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	userID, errResp := core.GetUserIDFromJWT(ctx, userService)
+	if errResp != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to authenticate user from JWT")
+		render.Render(w, r, errResp)
+		return
+	}
+
+	// Verify user is in game
+	if err := h.verifyUserInGame(ctx, int32(gameID), userID); err != nil {
+		h.App.ObsLogger.LogError(ctx, err, "User is not in the game")
+		render.Render(w, r, core.ErrForbidden(err.Error()))
+		return
+	}
+
+	// List polls by phase
+	pollService := &dbservices.PollService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	polls, err := pollService.ListPollsByPhase(ctx, int32(gameID), int32(phaseID))
+	if err != nil {
+		h.App.ObsLogger.LogError(ctx, err, "Failed to list polls by phase", "game_id", gameID, "phase_id", phaseID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Add user_has_voted field to each poll
+	pollListItems := make([]PollListItem, len(polls))
+	for i, poll := range polls {
+		// Check if user has voted at all (as player OR with any character)
+		hasVoted, err := pollService.HasUserVotedAny(ctx, poll.ID, userID)
+		if err != nil {
+			h.App.ObsLogger.LogError(ctx, err, "Failed to check if user voted", "poll_id", poll.ID)
+			// Don't fail the whole request, just set hasVoted to false
+			hasVoted = false
+		}
+
+		// For character-level polls, get list of character IDs user has voted with
+		var votedCharacterIDs []int32
+		if poll.VoteAsType == "character" {
+			votedCharacterIDs, err = pollService.GetVotedCharacterIDs(ctx, poll.ID, userID)
+			if err != nil {
+				h.App.ObsLogger.LogError(ctx, err, "Failed to get voted character IDs", "poll_id", poll.ID)
+				// Don't fail the whole request, just set to empty array
+				votedCharacterIDs = []int32{}
+			}
+		}
+
+		pollListItems[i] = PollListItem{
+			CommonRoomPoll:    poll,
+			UserHasVoted:      hasVoted,
+			VotedCharacterIDs: votedCharacterIDs,
+		}
+	}
+
+	h.App.ObsLogger.Info(ctx, "Listed polls by phase", "game_id", gameID, "phase_id", phaseID, "poll_count", len(polls))
+	render.JSON(w, r, pollListItems)
+}

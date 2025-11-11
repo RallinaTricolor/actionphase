@@ -6,11 +6,12 @@ import { logger } from '@/services/LoggingService';
 
 interface CreatePollFormProps {
   gameId: number;
+  currentPhaseId?: number;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export function CreatePollForm({ gameId, onSuccess, onCancel }: CreatePollFormProps) {
+export function CreatePollForm({ gameId, currentPhaseId, onSuccess, onCancel }: CreatePollFormProps) {
   const { createPollMutation } = usePolls(gameId);
 
   const [question, setQuestion] = useState('');
@@ -70,6 +71,7 @@ export function CreatePollForm({ gameId, onSuccess, onCancel }: CreatePollFormPr
       vote_as_type: voteAsType,
       show_individual_votes: showIndividualVotes,
       allow_other_option: allowOtherOption,
+      phase_id: currentPhaseId,
       options: filledOptions.map((text, index) => ({ text, display_order: index }))
     };
 

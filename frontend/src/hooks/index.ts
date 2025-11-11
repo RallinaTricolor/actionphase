@@ -50,4 +50,5 @@ export {
   usePoll,
   usePollResults,
   useSubmitVote,
+  usePollsByPhase,
 } from './usePolls';

@@ -34,6 +34,15 @@ export class PollsApi extends BaseApiClient {
   }
 
   /**
+   * Get all polls for a specific phase
+   * @param gameId - Game ID
+   * @param phaseId - Phase ID
+   */
+  async getPollsByPhase(gameId: number, phaseId: number) {
+    return this.client.get<Poll[]>(`/api/v1/games/${gameId}/phases/${phaseId}/polls`);
+  }
+
+  /**
    * Get a specific poll with its options
    * @param pollId - Poll ID
    */
