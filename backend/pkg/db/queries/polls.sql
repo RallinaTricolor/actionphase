@@ -225,3 +225,12 @@ SELECT EXISTS(
     WHERE poll_id = @poll_id
       AND user_id = @user_id
 ) as has_voted;
+
+-- name: GetUserVotedCharacterIDs :many
+-- Get list of character IDs that a user has already voted with in a poll
+-- Use this to show voting progress (e.g., "Voted 2/3") and filter dropdown
+SELECT character_id
+FROM poll_votes
+WHERE poll_id = @poll_id
+  AND user_id = @user_id
+  AND character_id IS NOT NULL;

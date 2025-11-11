@@ -32,6 +32,7 @@ export interface Poll {
   // Computed properties from backend
   is_expired?: boolean;
   user_has_voted?: boolean;
+  voted_character_ids?: number[]; // Character IDs user has voted with (for character polls)
 }
 
 export interface PollWithOptions extends Poll {

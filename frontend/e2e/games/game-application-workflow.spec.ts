@@ -125,18 +125,26 @@ test.describe('Game Application Workflow', () => {
     const pendingCount = await applicationsPage.getPendingApplicationsCount();
     expect(pendingCount).toBeGreaterThan(0);
 
-    // Handle confirmation dialog
-    page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('reject');
-      dialog.accept();
-    });
-
-    // Reject first pending application using POM
+    // Get first pending application username
     const pendingApplications = await applicationsPage.getPendingApplications();
-    await applicationsPage.rejectApplication(pendingApplications[0]);
+    const usernameToReject = pendingApplications[0];
+
+    // Click reject button (this opens the confirmation modal)
+    const card = await applicationsPage['findApplicationCard'](usernameToReject);
+    const rejectButton = card.getByTestId('reject-application-button');
+    await rejectButton.waitFor({ state: 'visible', timeout: 3000 });
+    await rejectButton.click();
+
+    // Wait for confirmation modal to appear
+    await page.waitForSelector('text=Reject Application', { timeout: 3000 });
+
+    // Confirm rejection by clicking the "Reject" button in the modal
+    const confirmButton = page.getByRole('button', { name: 'Reject', exact: true }).last();
+    await confirmButton.click();
 
     // Wait for rejection to process
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Refresh and navigate back to applications
     await applicationsPage.goto();

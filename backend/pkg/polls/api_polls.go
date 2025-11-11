@@ -94,8 +94,9 @@ type PollResponse struct {
 	db.CommonRoomPoll
 
 	// Additional response fields
-	Options  []db.PollOption `json:"options"`
-	HasVoted bool            `json:"has_voted,omitempty"`
+	Options           []db.PollOption `json:"options"`
+	HasVoted          bool            `json:"has_voted,omitempty"`
+	VotedCharacterIDs []int32         `json:"voted_character_ids,omitempty"` // Character IDs user has voted with (for character polls)
 }
 
 // PollResultsResponse is the API response for poll results
@@ -318,7 +319,8 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 // PollListItem represents a poll in the list response with vote status
 type PollListItem struct {
 	db.CommonRoomPoll
-	UserHasVoted bool `json:"user_has_voted"`
+	UserHasVoted      bool    `json:"user_has_voted"`
+	VotedCharacterIDs []int32 `json:"voted_character_ids,omitempty"` // Character IDs user has voted with (for character polls)
 }
 
 // ListGamePolls handles GET /games/{gameId}/polls
@@ -376,9 +378,21 @@ func (h *Handler) ListGamePolls(w http.ResponseWriter, r *http.Request) {
 			hasVoted = false
 		}
 
+		// For character-level polls, get list of character IDs user has voted with
+		var votedCharacterIDs []int32
+		if poll.VoteAsType == "character" {
+			votedCharacterIDs, err = pollService.GetVotedCharacterIDs(ctx, poll.ID, userID)
+			if err != nil {
+				h.App.ObsLogger.LogError(ctx, err, "Failed to get voted character IDs", "poll_id", poll.ID)
+				// Don't fail the whole request, just set to empty array
+				votedCharacterIDs = []int32{}
+			}
+		}
+
 		pollListItems[i] = PollListItem{
-			CommonRoomPoll: poll,
-			UserHasVoted:   hasVoted,
+			CommonRoomPoll:    poll,
+			UserHasVoted:      hasVoted,
+			VotedCharacterIDs: votedCharacterIDs,
 		}
 	}
 
@@ -434,11 +448,23 @@ func (h *Handler) GetPoll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// For character-level polls, get list of character IDs user has voted with
+	var votedCharacterIDs []int32
+	if pollWithOptions.Poll.VoteAsType == "character" {
+		votedCharacterIDs, err = pollService.GetVotedCharacterIDs(ctx, int32(pollID), userID)
+		if err != nil {
+			h.App.ObsLogger.LogError(ctx, err, "Failed to get voted character IDs", "poll_id", pollID)
+			// Don't fail the whole request, just set to empty array
+			votedCharacterIDs = []int32{}
+		}
+	}
+
 	// Flatten the response structure
 	response := PollResponse{
-		CommonRoomPoll: pollWithOptions.Poll,
-		Options:        pollWithOptions.Options,
-		HasVoted:       hasVoted,
+		CommonRoomPoll:    pollWithOptions.Poll,
+		Options:           pollWithOptions.Options,
+		HasVoted:          hasVoted,
+		VotedCharacterIDs: votedCharacterIDs,
 	}
 
 	render.JSON(w, r, response)

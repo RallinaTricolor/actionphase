@@ -15,9 +15,14 @@ export function PollVotingForm({ poll, onSuccess, onCancel }: PollVotingFormProp
   const submitVoteMutation = useSubmitVote(poll.id, poll.game_id);
   const { characters } = useUserCharacters(poll.game_id);
 
+  // Filter out characters that have already voted (for character-level polls)
+  const availableCharacters = poll.vote_as_type === 'character' && poll.voted_character_ids
+    ? characters.filter(c => !poll.voted_character_ids!.includes(c.id))
+    : characters;
+
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(
-    poll.vote_as_type === 'character' && characters.length === 1 ? characters[0].id : null
+    poll.vote_as_type === 'character' && availableCharacters.length === 1 ? availableCharacters[0].id : null
   );
   const [otherText, setOtherText] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -74,13 +79,15 @@ export function PollVotingForm({ poll, onSuccess, onCancel }: PollVotingFormProp
           <label className="block text-sm font-medium text-text-primary mb-2">
             Vote as Character
           </label>
-          {characters.length === 0 ? (
-            <Alert variant="warning" title="No Characters">
-              You don't have any characters in this game.
+          {availableCharacters.length === 0 ? (
+            <Alert variant="warning" title="No Characters Available">
+              {characters.length === 0
+                ? "You don't have any characters in this game."
+                : "You've already voted with all your characters."}
             </Alert>
-          ) : characters.length === 1 ? (
+          ) : availableCharacters.length === 1 ? (
             <div className="text-sm text-text-secondary">
-              Voting as: <span className="font-medium text-text-primary">{characters[0].name}</span>
+              Voting as: <span className="font-medium text-text-primary">{availableCharacters[0].name}</span>
             </div>
           ) : (
             <Select
@@ -89,7 +96,7 @@ export function PollVotingForm({ poll, onSuccess, onCancel }: PollVotingFormProp
               required
             >
               <option value="">Select a character...</option>
-              {characters.map((char) => (
+              {availableCharacters.map((char) => (
                 <option key={char.id} value={char.id}>
                   {char.name}
                 </option>
