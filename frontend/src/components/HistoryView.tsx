@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { getActionPhaseLabel, getActionPhaseColor } from '../types/phases';
 import { CommonRoom } from './CommonRoom';
+import { PhaseHistoryPolls } from './PhaseHistoryPolls';
 import { Button, Alert } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
 import type { ActionWithDetails } from '../types/phases';
@@ -15,7 +16,7 @@ interface HistoryViewProps {
 
 export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryViewProps) {
   const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'submissions' | 'results'>('submissions');
+  const [activeTab, setActiveTab] = useState<'submissions' | 'results' | 'polls'>('submissions');
 
   const { data: phasesData, isLoading } = useQuery({
     queryKey: ['gamePhases', gameId],
@@ -130,6 +131,16 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
               >
                 Results
               </button>
+              <button
+                onClick={() => setActiveTab('polls')}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'polls'
+                    ? 'text-interactive-primary border-b-2 border-interactive-primary'
+                    : 'text-content-secondary hover:text-content-primary'
+                }`}
+              >
+                Polls
+              </button>
             </div>
 
             {/* Tab Content */}
@@ -182,7 +193,7 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
                   );
                 })()}
               </>
-            ) : (
+            ) : activeTab === 'results' ? (
               // Results Tab
               <>
                 {isLoadingResults ? (
@@ -233,6 +244,9 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
                   );
                 })()}
               </>
+            ) : (
+              // Polls Tab
+              <PhaseHistoryPolls gameId={gameId} phaseId={selectedPhaseId} isGM={isGM} />
             )}
           </div>
         )}

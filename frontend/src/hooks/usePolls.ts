@@ -61,6 +61,25 @@ export function usePolls(gameId: number, includeExpired: boolean = false) {
 }
 
 /**
+ * Custom hook for fetching polls by phase
+ * Used in History tab to display polls from historical phases
+ */
+export function usePollsByPhase(gameId: number, phaseId: number) {
+  const { data: pollsData, isLoading, error } = useQuery({
+    queryKey: ['polls', 'by-phase', gameId, phaseId],
+    queryFn: () => apiClient.polls.getPollsByPhase(gameId, phaseId).then(res => res.data),
+    enabled: !!gameId && !!phaseId,
+    staleTime: 1000 * 60, // 1 minute cache
+  });
+
+  return {
+    data: pollsData || [],
+    isLoading,
+    error,
+  };
+}
+
+/**
  * Hook for fetching a specific poll with its options
  */
 export function usePoll(pollId: number | null) {

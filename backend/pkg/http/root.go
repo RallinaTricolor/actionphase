@@ -262,6 +262,7 @@ func (h *Handler) Start() {
 			pollHandler := &polls.Handler{App: h.App}
 			r.Post("/{gameId}/polls", pollHandler.CreatePoll)
 			r.Get("/{gameId}/polls", pollHandler.ListGamePolls)
+			r.Get("/{gameId}/phases/{phaseId}/polls", pollHandler.ListPollsByPhase)
 		})
 	})
 	apiV1Router.Mount("/games", gamesRouter)

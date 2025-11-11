@@ -3,6 +3,7 @@ import { usePolls } from '../hooks';
 import { Button, Alert, Spinner } from './ui';
 import { CreatePollForm } from './CreatePollForm';
 import { PollCard } from './PollCard';
+import { useGameContext } from '../contexts/GameContext';
 
 interface PollsTabProps {
   gameId: number;
@@ -14,6 +15,7 @@ interface PollsTabProps {
 export function PollsTab({ gameId, isGM, isCurrentPhase, isAudience = false }: PollsTabProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [includeExpired, setIncludeExpired] = useState(false);
+  const { currentPhaseId } = useGameContext();
 
   const { polls, isLoading, createPollMutation } = usePolls(gameId, includeExpired);
 
@@ -56,6 +58,7 @@ export function PollsTab({ gameId, isGM, isCurrentPhase, isAudience = false }: P
       {isGM && showCreateForm && (
         <CreatePollForm
           gameId={gameId}
+          currentPhaseId={currentPhaseId || undefined}
           onSuccess={() => setShowCreateForm(false)}
           onCancel={() => setShowCreateForm(false)}
         />

@@ -29,6 +29,9 @@ interface GameContextValue {
   // User's characters
   userCharacters: Character[];
 
+  // Current phase ID
+  currentPhaseId: number | null;
+
   // Character ownership checker
   isUserCharacter: (characterId: number) => boolean;
 
@@ -167,6 +170,7 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     isParticipant,
     canEditGame,
     userCharacters: userCharacters || [],
+    currentPhaseId: game?.current_phase_id || null,
     isUserCharacter,
     refetchGameData,
   };

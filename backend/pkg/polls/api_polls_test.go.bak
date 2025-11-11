@@ -532,6 +532,7 @@ func TestPollVoting_GMAndCoGMBlocked(t *testing.T) {
 	}
 }
 
+
 // setupListPollsByPhaseTestRouter creates a test router for listing polls by phase
 func setupListPollsByPhaseTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
@@ -574,7 +575,6 @@ func TestListPollsByPhase(t *testing.T) {
 	// Create a game
 	game := testDB.CreateTestGame(t, int32(gmUser.ID), "Test Game")
 
-	factory := core.NewTestDataFactory(testDB, t)
 	// Add player as participant
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(playerUser.ID), "player")
 	core.AssertNoError(t, err, "Adding player to game should succeed")
