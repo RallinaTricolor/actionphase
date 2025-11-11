@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { GameApplication, GameState } from '../types/games';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from '../types/games';
 import { Button } from './ui';
+import { ConfirmModal } from './ConfirmModal';
 import { logger } from '@/services/LoggingService';
 
 interface GameApplicationCardProps {
@@ -20,6 +21,7 @@ export const GameApplicationCard = ({
   onReject
 }: GameApplicationCardProps) => {
   const [actionLoading, setActionLoading] = useState(false);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -44,12 +46,13 @@ export const GameApplicationCard = ({
     }
   };
 
-  const handleReject = async () => {
+  const handleReject = () => {
     if (!onReject) return;
+    setShowRejectConfirm(true);
+  };
 
-    if (!confirm('Are you sure you want to reject this application?')) {
-      return;
-    }
+  const confirmReject = async () => {
+    if (!onReject) return;
 
     try {
       setActionLoading(true);
@@ -144,6 +147,17 @@ export const GameApplicationCard = ({
           )}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={showRejectConfirm}
+        onClose={() => setShowRejectConfirm(false)}
+        onConfirm={confirmReject}
+        title="Reject Application"
+        message={`Are you sure you want to reject ${application.username || 'this user'}'s application?`}
+        confirmText="Reject"
+        variant="danger"
+        isLoading={actionLoading}
+      />
     </div>
   );
 };

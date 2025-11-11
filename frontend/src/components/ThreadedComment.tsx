@@ -442,7 +442,7 @@ export function ThreadedComment({
 
         {/* Action Buttons */}
         <div className="flex items-center flex-wrap gap-2 md:gap-3 text-xs text-content-secondary">
-          {!isAtMaxDepth && !isEditing && !readOnly && !comment.is_deleted && (
+          {!isAtMaxDepth && !isEditing && !readOnly && !comment.is_deleted && controllableCharacters.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
