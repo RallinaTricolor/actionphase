@@ -484,6 +484,139 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// GetPostCommentsWithThreads fetches paginated top-level comments with nested replies
+// GET /api/v1/games/:gameId/posts/:postId/comments-with-threads?limit=200&offset=0&max_depth=5
+func (h *Handler) GetPostCommentsWithThreads(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_post_comments_with_threads")()
+
+	// Parse game ID
+	gameIDStr := chi.URLParam(r, "gameId")
+	_, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	// Parse post ID
+	postIDStr := chi.URLParam(r, "postId")
+	postID, err := strconv.ParseInt(postIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid post ID")))
+		return
+	}
+
+	// Parse query parameters with defaults
+	limitStr := r.URL.Query().Get("limit")
+	limit := int32(200) // Default: 200 top-level comments
+	if limitStr != "" {
+		limitInt, err := strconv.ParseInt(limitStr, 10, 32)
+		if err != nil || limitInt < 1 || limitInt > 500 {
+			render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid limit parameter (must be 1-500)")))
+			return
+		}
+		limit = int32(limitInt)
+	}
+
+	offsetStr := r.URL.Query().Get("offset")
+	offset := int32(0) // Default: start from beginning
+	if offsetStr != "" {
+		offsetInt, err := strconv.ParseInt(offsetStr, 10, 32)
+		if err != nil || offsetInt < 0 {
+			render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid offset parameter (must be >= 0)")))
+			return
+		}
+		offset = int32(offsetInt)
+	}
+
+	maxDepthStr := r.URL.Query().Get("max_depth")
+	maxDepth := int32(5) // Default: 5 levels deep
+	if maxDepthStr != "" {
+		maxDepthInt, err := strconv.ParseInt(maxDepthStr, 10, 32)
+		if err != nil || maxDepthInt < 0 || maxDepthInt > 10 {
+			render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid max_depth parameter (must be 0-10)")))
+			return
+		}
+		maxDepth = int32(maxDepthInt)
+	}
+
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+
+	// Get paginated comments with threads
+	commentsWithDepth, err := messageService.GetPostCommentsWithThreads(ctx, int32(postID), limit, offset, maxDepth)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get post comments with threads", "error", err, "post_id", postID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Get total count for pagination
+	totalCount, err := messageService.CountTopLevelComments(ctx, int32(postID))
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to count top-level comments", "error", err, "post_id", postID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Convert to response format
+	comments := make([]map[string]interface{}, 0)
+	for _, commentWithDepth := range commentsWithDepth {
+		comment := commentWithDepth.Comment
+		commentData := map[string]interface{}{
+			"id":                      comment.ID,
+			"game_id":                 comment.GameID,
+			"author_id":               comment.AuthorID,
+			"character_id":            comment.CharacterID,
+			"content":                 comment.Content,
+			"message_type":            string(comment.MessageType),
+			"thread_depth":            comment.ThreadDepth,
+			"author_username":         comment.AuthorUsername,
+			"character_name":          comment.CharacterName,
+			"character_avatar_url":    comment.CharacterAvatarUrl,
+			"reply_count":             comment.ReplyCount,
+			"is_edited":               comment.IsEdited,
+			"is_deleted":              comment.IsDeleted,
+			"mentioned_character_ids": comment.MentionedCharacterIds,
+			"created_at":              comment.CreatedAt,
+			"depth":                   commentWithDepth.Depth, // NEW: depth for tree building
+		}
+
+		if comment.PhaseID.Valid {
+			commentData["phase_id"] = comment.PhaseID.Int32
+		}
+		if comment.ParentID.Valid {
+			commentData["parent_id"] = comment.ParentID.Int32
+		}
+
+		comments = append(comments, commentData)
+	}
+
+	// Response with pagination metadata
+	response := map[string]interface{}{
+		"comments":           comments,
+		"total_top_level":    totalCount,
+		"limit":              limit,
+		"offset":             offset,
+		"has_more":           totalCount > int64(offset+limit),
+		"returned_top_level": countTopLevelInResponse(commentsWithDepth),
+		"returned_total":     len(comments),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// countTopLevelInResponse counts how many top-level comments (depth=0) are in the response
+func countTopLevelInResponse(comments []core.CommentWithDepth) int {
+	count := 0
+	for _, c := range comments {
+		if c.Depth == 0 {
+			count++
+		}
+	}
+	return count
+}
+
 // ============================================================================
 // READ TRACKING HANDLERS
 // ============================================================================

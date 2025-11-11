@@ -8,7 +8,8 @@ import type {
   ReadMarker,
   PostUnreadInfo,
   MarkPostReadRequest,
-  PostUnreadComments
+  PostUnreadComments,
+  PaginatedCommentsResponse
 } from '../../types/messages';
 
 /**
@@ -43,6 +44,26 @@ export class MessagesApi extends BaseApiClient {
 
   async getPostComments(gameId: number, postId: number) {
     return this.client.get<Message[]>(`/api/v1/games/${gameId}/posts/${postId}/comments`);
+  }
+
+  /**
+   * Get paginated top-level comments with all nested replies (up to max_depth)
+   * Returns flat array with depth field for tree building on frontend
+   */
+  async getPostCommentsWithThreads(
+    gameId: number,
+    postId: number,
+    limit: number = 200,
+    offset: number = 0,
+    maxDepth: number = 5
+  ) {
+    const queryParams = new URLSearchParams();
+    queryParams.append('limit', limit.toString());
+    queryParams.append('offset', offset.toString());
+    queryParams.append('max_depth', maxDepth.toString());
+
+    const url = `/api/v1/games/${gameId}/posts/${postId}/comments-with-threads?${queryParams.toString()}`;
+    return this.client.get<PaginatedCommentsResponse>(url);
   }
 
   async updateComment(gameId: number, postId: number, commentId: number, data: UpdateCommentRequest) {

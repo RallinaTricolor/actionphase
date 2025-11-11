@@ -16,6 +16,7 @@ import { ReadingModeToggle } from './ReadingModeToggle';
 import { useReadingMode } from '../contexts/ReadingModeContext';
 import { getRootPostId } from '../utils/commentUtils';
 import { logger } from '@/services/LoggingService';
+import { buildCommentTree, type CommentTreeNode } from '../lib/utils/commentTree';
 
 interface PostCardProps {
   post: Message;
@@ -32,13 +33,21 @@ interface PostCardProps {
 export function PostCard({ post, gameId, characters, controllableCharacters, onCreateComment, onPostUpdated, currentUserId, 'data-testid': dataTestId, readOnly = false }: PostCardProps) {
   const [showComments, setShowComments] = useState(true);
   const [isCommenting, setIsCommenting] = useState(false);
-  const [topLevelComments, setTopLevelComments] = useState<Message[]>([]);
+  const [commentTree, setCommentTree] = useState<CommentTreeNode[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPostCollapsed, setIsPostCollapsed] = useState(false);
   const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
+
+  // Pagination state
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalTopLevel, setTotalTopLevel] = useState(0);
+  const [returnedTopLevel, setReturnedTopLevel] = useState(0);
+  const COMMENTS_PER_PAGE = 200;
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -73,17 +82,29 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
     }
   }, [unreadCommentIDs, localUnreadCommentIDs.length]);
 
-  // Load top-level comments when showing comments
+  // Load paginated comments with all nested replies when showing comments
   useEffect(() => {
     let isMounted = true;
 
     const loadInitialComments = async () => {
-      if (showComments && topLevelComments.length === 0) {
+      if (showComments && commentTree.length === 0 && offset === 0) {
         try {
           if (isMounted) setLoadingComments(true);
-          const response = await apiClient.messages.getPostComments(gameId, post.id);
+          const response = await apiClient.messages.getPostCommentsWithThreads(
+            gameId,
+            post.id,
+            COMMENTS_PER_PAGE,
+            0,
+            5 // max_depth
+          );
           if (isMounted) {
-            setTopLevelComments(response.data);
+            // Build tree from flat array
+            const tree = buildCommentTree(response.data.comments);
+            setCommentTree(tree);
+            setTotalTopLevel(response.data.total_top_level);
+            setReturnedTopLevel(response.data.returned_top_level);
+            setHasMore(response.data.has_more);
+            setOffset(COMMENTS_PER_PAGE); // Next page starts here
           }
         } catch (err) {
           if (isMounted) {
@@ -100,7 +121,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
     return () => {
       isMounted = false;
     };
-  }, [showComments, topLevelComments.length, gameId, post.id]);
+  }, [showComments, commentTree.length, offset, gameId, post.id, COMMENTS_PER_PAGE]);
 
   // Mark post as read immediately when user views it (on page load with unread comments)
   useEffect(() => {
@@ -119,6 +140,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
     }
   }, [unreadCommentIDs.length, gameId, post.id, markAsReadMutation]);
 
+  // Reload all comments from beginning (resets pagination)
   const loadComments = async (delayMs: number = 0) => {
     try {
       setLoadingComments(true);
@@ -126,12 +148,46 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       if (delayMs > 0) {
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
-      const response = await apiClient.messages.getPostComments(gameId, post.id);
-      setTopLevelComments(response.data);
+      const response = await apiClient.messages.getPostCommentsWithThreads(
+        gameId,
+        post.id,
+        COMMENTS_PER_PAGE,
+        0,
+        5 // max_depth
+      );
+      const tree = buildCommentTree(response.data.comments);
+      setCommentTree(tree);
+      setTotalTopLevel(response.data.total_top_level);
+      setReturnedTopLevel(response.data.returned_top_level);
+      setHasMore(response.data.has_more);
+      setOffset(COMMENTS_PER_PAGE);
     } catch (err) {
       logger.error('Failed to reload comments', { error: err, gameId, postId: post.id });
     } finally {
       setLoadingComments(false);
+    }
+  };
+
+  // Load more comments (append to existing tree)
+  const loadMoreComments = async () => {
+    try {
+      setLoadingMore(true);
+      const response = await apiClient.messages.getPostCommentsWithThreads(
+        gameId,
+        post.id,
+        COMMENTS_PER_PAGE,
+        offset,
+        5 // max_depth
+      );
+      const newTree = buildCommentTree(response.data.comments);
+      setCommentTree(prev => [...prev, ...newTree]);
+      setReturnedTopLevel(prev => prev + response.data.returned_top_level);
+      setHasMore(response.data.has_more);
+      setOffset(prev => prev + COMMENTS_PER_PAGE);
+    } catch (err) {
+      logger.error('Failed to load more comments', { error: err, gameId, postId: post.id, offset });
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -257,14 +313,14 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       </div>
 
       {/* Comments Section */}
-      {topLevelComments.length > 0 && (
+      {commentTree.length > 0 && (
         <div className="border-t border-border-primary pt-8">
           <h2 className="text-2xl font-bold mb-6">Comments ({post.comment_count || 0})</h2>
           <div className="space-y-6">
-            {topLevelComments.map((comment) => (
+            {commentTree.map((commentNode) => (
               <ThreadedComment
-                key={comment.id}
-                comment={comment}
+                key={commentNode.id}
+                comment={commentNode}
                 gameId={gameId}
                 postId={post.id}
                 characters={characters}
@@ -505,29 +561,62 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
         {showComments && (
           loadingComments ? (
             <div className="text-sm text-content-secondary text-center py-4">Loading comments...</div>
-          ) : topLevelComments.length === 0 ? (
+          ) : commentTree.length === 0 ? (
             <p className="text-sm text-content-secondary italic text-center py-4">No comments yet. Be the first to reply!</p>
           ) : (
-            <div className="space-y-4">
-              {topLevelComments.map((comment) => (
-                <ThreadedComment
-                  key={comment.id}
-                  comment={comment}
-                  gameId={gameId}
-                  postId={post.id} // Pass the root post ID
-                  characters={characters}
-                  controllableCharacters={controllableCharacters}
-                  onCreateReply={onCreateComment}
-                  onCommentDeleted={loadComments} // Reload comments when one is deleted
-                  currentUserId={currentUserId}
-                  depth={0}
-                  maxDepth={5}
-                  unreadCommentIDs={localUnreadCommentIDs}
-                  onOpenThread={(comment) => setThreadModalComment(comment)}
-                  readOnly={readOnly}
-                />
-              ))}
-            </div>
+            <>
+              <div className="space-y-4">
+                {commentTree.map((commentNode) => (
+                  <ThreadedComment
+                    key={commentNode.id}
+                    comment={commentNode}
+                    gameId={gameId}
+                    postId={post.id} // Pass the root post ID
+                    characters={characters}
+                    controllableCharacters={controllableCharacters}
+                    onCreateReply={onCreateComment}
+                    onCommentDeleted={loadComments} // Reload comments when one is deleted
+                    currentUserId={currentUserId}
+                    depth={0}
+                    maxDepth={5}
+                    unreadCommentIDs={localUnreadCommentIDs}
+                    onOpenThread={(comment) => setThreadModalComment(comment)}
+                    readOnly={readOnly}
+                  />
+                ))}
+              </div>
+
+              {/* Load More Button */}
+              {hasMore && (
+                <div className="mt-6 flex justify-center border-t border-theme-default pt-4">
+                  <Button
+                    variant="ghost"
+                    onClick={loadMoreComments}
+                    disabled={loadingMore}
+                    className="flex items-center gap-2"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Loading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                        <span>
+                          Load More Comments ({totalTopLevel - returnedTopLevel} remaining)
+                        </span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           )
         )}
       </div>

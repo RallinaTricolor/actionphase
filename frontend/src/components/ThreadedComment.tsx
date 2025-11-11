@@ -12,9 +12,10 @@ import { useUpdateComment, useDeleteComment } from '../hooks/useCommentMutations
 import { useGamePermissions } from '../hooks/useGamePermissions';
 import { ConfirmModal } from './ConfirmModal';
 import { logger } from '@/services/LoggingService';
+import type { CommentTreeNode } from '../lib/utils/commentTree';
 
 interface ThreadedCommentProps {
-  comment: Message;
+  comment: Message | CommentTreeNode; // Supports both individual messages and pre-loaded tree nodes
   gameId: number;
   postId: number; // The root post ID (required for API calls)
   characters: Character[]; // All game characters (for autocomplete)
@@ -46,7 +47,7 @@ export function ThreadedComment({
 }: ThreadedCommentProps) {
   const { showSuccess: _showSuccess, showError } = useToast();
   // Use local state to track the current comment data (for immediate UI updates)
-  const [comment, setComment] = useState<Message>(initialComment);
+  const [comment, setComment] = useState<Message | CommentTreeNode>(initialComment);
   const [replies, setReplies] = useState<Message[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [showReplies, setShowReplies] = useState(true); // Start expanded
@@ -61,6 +62,10 @@ export function ThreadedComment({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isMountedRef = useRef(true);
   const hasLoadedRef = useRef(false);
+
+  // Check if this comment has pre-loaded children (from tree structure)
+  const hasPreloadedChildren = 'children' in comment && Array.isArray(comment.children);
+  const preloadedChildren = hasPreloadedChildren ? (comment as CommentTreeNode).children : [];
 
   const { adminModeEnabled } = useAdminMode();
   const { isGM } = useGamePermissions(gameId);
@@ -108,7 +113,8 @@ export function ThreadedComment({
 
   // Define loadReplies as a regular function (not useCallback to avoid dependency issues)
   const loadReplies = async () => {
-    if (!isMountedRef.current || hasLoadedRef.current) return;
+    // Skip if we have pre-loaded children (from tree structure)
+    if (!isMountedRef.current || hasLoadedRef.current || hasPreloadedChildren) return;
 
     try {
       setLoadingReplies(true);
@@ -126,12 +132,12 @@ export function ThreadedComment({
     }
   };
 
-  // Load replies immediately when component mounts if there are replies
+  // Load replies immediately when component mounts if there are replies (and no pre-loaded children)
   useEffect(() => {
-    if (hasReplies && !hasLoadedRef.current) {
+    if (hasReplies && !hasLoadedRef.current && !hasPreloadedChildren) {
       loadReplies();
     }
-  }, [hasReplies]);
+  }, [hasReplies, hasPreloadedChildren]);
 
   const handleCopyLink = async () => {
     const url = `${window.location.origin}/games/${gameId}?tab=common-room&comment=${comment.id}`;
@@ -666,7 +672,7 @@ export function ThreadedComment({
       )}
 
       {/* Nested Replies */}
-      {showReplies && (hasReplies || replies.length > 0) && (
+      {showReplies && (hasReplies || replies.length > 0 || preloadedChildren.length > 0) && (
           <>
             {/* Show if: under desktop max depth */}
             {!isAtMaxDepth && (
@@ -676,7 +682,8 @@ export function ThreadedComment({
                         Loading replies...
                       </div>
                   ) : (
-                      replies.map((reply) => (
+                      // Use pre-loaded children if available, otherwise use dynamically loaded replies
+                      (hasPreloadedChildren ? preloadedChildren : replies).map((reply) => (
                           <ThreadedComment
                               key={reply.id}
                               comment={reply}

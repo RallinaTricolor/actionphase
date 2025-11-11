@@ -93,6 +93,30 @@ func (q *Queries) CountMessagesByCharacter(ctx context.Context, characterID int3
 	return count, err
 }
 
+const countTopLevelComments = `-- name: CountTopLevelComments :one
+
+SELECT COUNT(*) as total
+FROM messages
+WHERE parent_id = $1
+  AND message_type = 'comment'
+`
+
+// NOTE: GetCommentThread with recursive CTE is not supported by sqlc
+// Use GetPostComments recursively on the frontend to build the tree
+// This is actually more efficient for large thread trees anyway
+//
+// UPDATE: GetPostCommentsWithThreads uses raw SQL in service layer
+// sqlc does not support recursive CTEs, so we implement this query directly in Go
+// See: backend/pkg/db/services/messages/comments.go
+// Count total top-level comments for a post (for pagination)
+// INCLUDES deleted comments to preserve thread structure
+func (q *Queries) CountTopLevelComments(ctx context.Context, parentID pgtype.Int4) (int64, error) {
+	row := q.db.QueryRow(ctx, countTopLevelComments, parentID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const createComment = `-- name: CreateComment :one
 
 INSERT INTO messages (
@@ -1624,7 +1648,6 @@ func (q *Queries) RemoveReaction(ctx context.Context, arg RemoveReactionParams) 
 }
 
 const updateComment = `-- name: UpdateComment :one
-
 UPDATE messages
 SET content = $2,
     character_id = COALESCE($3, character_id),
@@ -1645,9 +1668,6 @@ type UpdateCommentParams struct {
 	MentionedCharacterIds []int32 `json:"mentioned_character_ids"`
 }
 
-// NOTE: GetCommentThread with recursive CTE is not supported by sqlc
-// Use GetPostComments recursively on the frontend to build the tree
-// This is actually more efficient for large thread trees anyway
 func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) (Message, error) {
 	row := q.db.QueryRow(ctx, updateComment,
 		arg.ID,

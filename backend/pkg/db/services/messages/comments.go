@@ -7,6 +7,8 @@ import (
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 	"actionphase/pkg/validation"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // GetRecursiveCommentCount counts all descendant comments recursively
@@ -207,6 +209,189 @@ func (s *MessageService) GetPostComments(ctx context.Context, parentID int32) ([
 	}
 
 	return result, nil
+}
+
+// GetPostCommentsWithThreads fetches paginated top-level comments with all nested replies up to maxDepth
+// Uses raw SQL with recursive CTE since sqlc doesn't support it
+// Returns flat array - frontend builds tree using parent_id relationships
+func (s *MessageService) GetPostCommentsWithThreads(ctx context.Context, postID int32, limit int32, offset int32, maxDepth int32) ([]core.CommentWithDepth, error) {
+	query := `
+WITH RECURSIVE top_level_comments AS (
+  -- Get IDs of paginated top-level comments (newest first)
+  -- INCLUDES deleted comments to preserve thread structure
+  SELECT id
+  FROM messages
+  WHERE messages.parent_id = $1
+    AND messages.message_type = 'comment'
+  ORDER BY messages.created_at DESC
+  LIMIT $2 OFFSET $3
+),
+comment_tree AS (
+  -- Base case: Get full details for paginated top-level comments
+  SELECT
+    m.id,
+    m.game_id,
+    m.phase_id,
+    m.author_id,
+    m.character_id,
+    m.content,
+    m.message_type,
+    m.parent_id,
+    m.thread_depth,
+    m.visibility,
+    m.mentioned_character_ids,
+    m.is_edited,
+    m.is_deleted,
+    m.created_at,
+    m.edited_at,
+    m.edit_count,
+    m.deleted_at,
+    m.deleted_by_user_id,
+    u.username as author_username,
+    c.name as character_name,
+    c.avatar_url as character_avatar_url,
+    0::int as depth,
+    (SELECT COUNT(*) FROM messages WHERE parent_id = m.id)::bigint as reply_count
+  FROM messages m
+  JOIN top_level_comments tlc ON m.id = tlc.id
+  JOIN users u ON m.author_id = u.id
+  LEFT JOIN characters c ON m.character_id = c.id
+
+  UNION ALL
+
+  -- Recursive case: Get nested replies up to max_depth
+  SELECT
+    m.id,
+    m.game_id,
+    m.phase_id,
+    m.author_id,
+    m.character_id,
+    m.content,
+    m.message_type,
+    m.parent_id,
+    m.thread_depth,
+    m.visibility,
+    m.mentioned_character_ids,
+    m.is_edited,
+    m.is_deleted,
+    m.created_at,
+    m.edited_at,
+    m.edit_count,
+    m.deleted_at,
+    m.deleted_by_user_id,
+    u.username as author_username,
+    c.name as character_name,
+    c.avatar_url as character_avatar_url,
+    comment_tree.depth + 1 as depth,
+    (SELECT COUNT(*) FROM messages WHERE parent_id = m.id)::bigint as reply_count
+  FROM messages m
+  JOIN comment_tree ON m.parent_id = comment_tree.id AND comment_tree.depth < $4
+  JOIN users u ON m.author_id = u.id
+  LEFT JOIN characters c ON m.character_id = c.id
+  WHERE m.message_type = 'comment'
+)
+SELECT * FROM comment_tree
+ORDER BY created_at DESC`
+
+	rows, err := s.DB.Query(ctx, query, postID, limit, offset, maxDepth)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute recursive comment query: %w", err)
+	}
+	defer rows.Close()
+
+	var results []core.CommentWithDepth
+	for rows.Next() {
+		var (
+			id                    int32
+			gameID                int32
+			phaseID               pgtype.Int4
+			authorID              int32
+			characterID           int32
+			content               string
+			messageType           string
+			parentID              pgtype.Int4
+			threadDepth           int32
+			visibility            string
+			mentionedCharacterIds []int32
+			isEdited              bool
+			isDeleted             bool
+			createdAt             pgtype.Timestamp
+			editedAt              pgtype.Timestamptz
+			editCount             int32
+			deletedAt             pgtype.Timestamp
+			deletedByUserID       pgtype.Int4
+			authorUsername        string
+			characterName         *string
+			characterAvatarURL    *string
+			depth                 int32
+			replyCount            int64
+		)
+
+		err := rows.Scan(
+			&id, &gameID, &phaseID, &authorID, &characterID,
+			&content, &messageType, &parentID, &threadDepth, &visibility,
+			&mentionedCharacterIds, &isEdited, &isDeleted,
+			&createdAt, &editedAt, &editCount, &deletedAt, &deletedByUserID,
+			&authorUsername, &characterName, &characterAvatarURL,
+			&depth, &replyCount,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan comment row: %w", err)
+		}
+
+		commentWithDepth := core.CommentWithDepth{
+			Comment: core.MessageWithDetails{
+				Message: models.Message{
+					ID:                    id,
+					GameID:                gameID,
+					PhaseID:               phaseID,
+					AuthorID:              authorID,
+					CharacterID:           characterID,
+					Content:               content,
+					MessageType:           models.MessageType(messageType),
+					ParentID:              parentID,
+					ThreadDepth:           threadDepth,
+					Visibility:            models.MessageVisibility(visibility),
+					MentionedCharacterIds: mentionedCharacterIds,
+					IsEdited:              isEdited,
+					IsDeleted:             isDeleted,
+					CreatedAt:             createdAt,
+					DeletedAt:             deletedAt,
+					DeletedByUserID:       deletedByUserID,
+					EditedAt:              editedAt,
+					EditCount:             editCount,
+				},
+				AuthorUsername: authorUsername,
+				CharacterName: func() string {
+					if characterName != nil {
+						return *characterName
+					}
+					return ""
+				}(),
+				CharacterAvatarUrl: characterAvatarURL,
+				ReplyCount:         replyCount,
+			},
+			Depth: depth,
+		}
+
+		results = append(results, commentWithDepth)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating comment rows: %w", err)
+	}
+
+	return results, nil
+}
+
+// CountTopLevelComments returns the total count of top-level comments for a post
+func (s *MessageService) CountTopLevelComments(ctx context.Context, postID int32) (int64, error) {
+	queries := models.New(s.DB)
+	count, err := queries.CountTopLevelComments(ctx, int32ValueToPgInt4(postID))
+	if err != nil {
+		return 0, fmt.Errorf("failed to count top-level comments: %w", err)
+	}
+	return count, nil
 }
 
 // UpdateComment updates the content and optionally the character of an existing comment
