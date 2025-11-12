@@ -56,7 +56,7 @@ export function UserProfileHeader({ profile }: UserProfileHeaderProps) {
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
               <div>
                 {/* Display Name */}
-                <h1 className="text-3xl font-bold text-content-heading">
+                <h1 className="text-3xl font-bold text-content-primary">
                   {displayName}
                 </h1>
 
@@ -86,7 +86,7 @@ export function UserProfileHeader({ profile }: UserProfileHeaderProps) {
 
             {/* Bio */}
             <div className="mt-6">
-              <h2 className="text-lg font-semibold text-content-heading mb-2">
+              <h2 className="text-lg font-semibold text-content-primary mb-2">
                 About
               </h2>
               {profile.bio ? (

@@ -82,7 +82,7 @@ export function InactiveCharactersList({ gameId }: InactiveCharactersListProps) 
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-content-heading">{character.name}</h4>
+                      <h4 className="font-medium text-content-primary">{character.name}</h4>
                       <Badge variant="warning" size="sm">Inactive</Badge>
                     </div>
                     <div className="text-sm text-content-secondary space-y-1">

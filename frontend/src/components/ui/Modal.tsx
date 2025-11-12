@@ -99,7 +99,7 @@ export function Modal({
                 {(title || showCloseButton) && (
                   <div className="flex items-center justify-between px-6 py-4 border-b border-theme-default">
                     {title && (
-                      <DialogTitle as="h3" className="text-lg font-semibold text-content-heading">
+                      <DialogTitle as="h3" className="text-lg font-semibold text-content-primary">
                         {title}
                       </DialogTitle>
                     )}

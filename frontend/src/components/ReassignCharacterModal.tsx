@@ -76,7 +76,7 @@ export function ReassignCharacterModal({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-4 rounded-lg bg-surface-raised border border-border-primary">
-          <h4 className="font-medium text-content-heading mb-2">Character Details</h4>
+          <h4 className="font-medium text-content-primary mb-2">Character Details</h4>
           <div className="text-sm text-content-secondary space-y-1">
             <p><span className="font-medium">Name:</span> {character.name}</p>
             <p><span className="font-medium">Original Owner:</span> {character.original_owner_username || 'Unknown'}</p>

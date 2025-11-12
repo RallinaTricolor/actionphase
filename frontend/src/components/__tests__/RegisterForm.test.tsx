@@ -30,9 +30,10 @@ describe('RegisterForm', () => {
     it('renders all form fields', () => {
       renderWithProviders(<RegisterForm />);
 
-      expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^username/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
     });
 
     it('renders submit button', () => {
@@ -46,9 +47,10 @@ describe('RegisterForm', () => {
     it('has required attributes on all fields', () => {
       renderWithProviders(<RegisterForm />);
 
-      expect(screen.getByLabelText(/username/i)).toBeRequired();
+      expect(screen.getByLabelText(/^username/i)).toBeRequired();
       expect(screen.getByLabelText(/email/i)).toBeRequired();
-      expect(screen.getByLabelText(/password/i)).toBeRequired();
+      expect(screen.getByLabelText(/^password$/i)).toBeRequired();
+      expect(screen.getByLabelText(/confirm password/i)).toBeRequired();
     });
 
     it('has email type on email field', () => {
@@ -61,7 +63,7 @@ describe('RegisterForm', () => {
     it('has password type on password field', () => {
       renderWithProviders(<RegisterForm />);
 
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password$/i);
       expect(passwordInput).toHaveAttribute('type', 'password');
     });
 
@@ -99,7 +101,7 @@ describe('RegisterForm', () => {
       const user = userEvent.setup();
       renderWithProviders(<RegisterForm />);
 
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password$/i);
       await user.type(passwordInput, 'password123');
 
       expect(passwordInput).toHaveValue('password123');
@@ -111,11 +113,13 @@ describe('RegisterForm', () => {
 
       await user.type(screen.getByLabelText(/username/i), 'john');
       await user.type(screen.getByLabelText(/email/i), 'john@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'secret123');
+      await user.type(screen.getByLabelText(/^password$/i), 'secret123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'secret123');
 
       expect(screen.getByLabelText(/username/i)).toHaveValue('john');
       expect(screen.getByLabelText(/email/i)).toHaveValue('john@example.com');
-      expect(screen.getByLabelText(/password/i)).toHaveValue('secret123');
+      expect(screen.getByLabelText(/^password$/i)).toHaveValue('secret123');
+      expect(screen.getByLabelText(/confirm password/i)).toHaveValue('secret123');
     });
   });
 
@@ -143,7 +147,8 @@ describe('RegisterForm', () => {
 
       await user.type(screen.getByLabelText(/username/i), 'testuser');
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'password123');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'password123');
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
@@ -172,7 +177,8 @@ describe('RegisterForm', () => {
 
       await user.type(screen.getByLabelText(/username/i), 'testuser');
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'password123');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'password123');
 
       const submitButton = screen.getByRole('button', { name: /^register$/i });
       await user.click(submitButton);
@@ -196,7 +202,8 @@ describe('RegisterForm', () => {
 
       await user.type(screen.getByLabelText(/username/i), 'testuser');
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'password123');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'password123');
 
       const submitButton = screen.getByRole('button', { name: /^register$/i });
       await user.click(submitButton);
@@ -216,7 +223,8 @@ describe('RegisterForm', () => {
 
       await user.type(screen.getByLabelText(/username/i), 'newuser');
       await user.type(screen.getByLabelText(/email/i), 'new@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'newpass123');
+      await user.type(screen.getByLabelText(/^password$/i), 'newpass123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'newpass123');
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
@@ -232,7 +240,8 @@ describe('RegisterForm', () => {
 
       await user.type(screen.getByLabelText(/username/i), 'testuser');
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'password123');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'password123');
 
       // Should not throw error when onSuccess is undefined
       await user.click(screen.getByRole('button', { name: /^register$/i }));
@@ -275,7 +284,8 @@ describe('RegisterForm', () => {
 
       await user.type(screen.getByLabelText(/username/i), 'taken');
       await user.type(screen.getByLabelText(/email/i), 'taken@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'password123');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'password123');
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
@@ -302,7 +312,8 @@ describe('RegisterForm', () => {
 
       await user.type(screen.getByLabelText(/username/i), 'taken');
       await user.type(screen.getByLabelText(/email/i), 'taken@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'password123');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'password123');
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
@@ -325,7 +336,8 @@ describe('RegisterForm', () => {
 
       await user.type(screen.getByLabelText(/username/i), 'testuser');
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'password123');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'password123');
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
@@ -351,7 +363,8 @@ describe('RegisterForm', () => {
 
       await user.type(screen.getByLabelText(/username/i), 'testuser');
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'password123');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'password123');
 
       const submitButton = screen.getByRole('button', { name: /^register$/i });
       await user.click(submitButton);
@@ -382,7 +395,8 @@ describe('RegisterForm', () => {
 
       await user.type(screen.getByLabelText(/username/i), 'testuser');
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'password123');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'password123');
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
@@ -396,17 +410,103 @@ describe('RegisterForm', () => {
     });
   });
 
+  describe('Password Confirmation', () => {
+    it('shows error when passwords do not match', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(<RegisterForm />);
+
+      await user.type(screen.getByLabelText(/username/i), 'testuser');
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'different456');
+
+      await user.click(screen.getByRole('button', { name: /^register$/i }));
+
+      // Should show password mismatch error (checking for at least one occurrence)
+      await waitFor(() => {
+        const errors = screen.queryAllByText(/passwords do not match/i);
+        expect(errors.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('does not show error when passwords match', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(<RegisterForm />);
+
+      await user.type(screen.getByLabelText(/username/i), 'testuser');
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'password123');
+
+      // Type something to trigger validation display
+      await user.click(screen.getByRole('button', { name: /^register$/i }));
+
+      // Should not show password mismatch error
+      expect(screen.queryByText(/passwords do not match/i)).not.toBeInTheDocument();
+    });
+
+    it('shows inline error on confirm password field when typing mismatched password', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(<RegisterForm />);
+
+      await user.type(screen.getByLabelText(/username/i), 'testuser');
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'different456');
+
+      // Click submit to trigger validation display
+      await user.click(screen.getByRole('button', { name: /^register$/i }));
+
+      // Should show inline error on confirm password field
+      await waitFor(() => {
+        const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
+        const errors = screen.queryAllByText(/passwords do not match/i);
+
+        expect(errors.length).toBeGreaterThan(0);
+        expect(confirmPasswordInput).toBeInTheDocument();
+      });
+    });
+
+    it('prevents form submission when passwords do not match', async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+
+      renderWithProviders(<RegisterForm onSuccess={onSuccess} />);
+
+      await user.type(screen.getByLabelText(/username/i), 'testuser');
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
+      await user.type(screen.getByLabelText(/^password$/i), 'password123');
+      await user.type(screen.getByLabelText(/confirm password/i), 'different456');
+
+      await user.click(screen.getByRole('button', { name: /^register$/i }));
+
+      // Wait for error to appear (may appear in multiple places: inline + alert)
+      await waitFor(() => {
+        const errors = screen.queryAllByText(/passwords do not match/i);
+        expect(errors.length).toBeGreaterThan(0);
+      });
+
+      // onSuccess should not have been called
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Accessibility', () => {
     it('associates labels with inputs', () => {
       renderWithProviders(<RegisterForm />);
 
-      const usernameInput = screen.getByLabelText(/username/i);
+      const usernameInput = screen.getByLabelText(/^username/i);
       const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password$/i);
+      const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
 
       expect(usernameInput).toHaveAttribute('id', 'username');
       expect(emailInput).toHaveAttribute('id', 'email');
       expect(passwordInput).toHaveAttribute('id', 'password');
+      expect(confirmPasswordInput).toHaveAttribute('id', 'confirmPassword');
     });
 
     it('uses semantic HTML elements', () => {
@@ -429,8 +529,12 @@ describe('RegisterForm', () => {
       expect(emailInput).toHaveAttribute('type', 'email');
 
       // Password field should have password type for masking
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password$/i);
       expect(passwordInput).toHaveAttribute('type', 'password');
+
+      // Confirm password field should also have password type for masking
+      const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
+      expect(confirmPasswordInput).toHaveAttribute('type', 'password');
     });
   });
 });

@@ -84,15 +84,15 @@ export function renderWithProviders(
     return (
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={initialEntries}>
-          <AuthProvider>
-            <AdminModeProvider>
-              <ReadingModeProvider>
-                <ToastProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <AdminModeProvider>
+                <ReadingModeProvider>
                   {children}
-                </ToastProvider>
-              </ReadingModeProvider>
-            </AdminModeProvider>
-          </AuthProvider>
+                </ReadingModeProvider>
+              </AdminModeProvider>
+            </AuthProvider>
+          </ToastProvider>
         </MemoryRouter>
       </QueryClientProvider>
     )

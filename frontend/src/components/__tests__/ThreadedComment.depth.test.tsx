@@ -42,9 +42,9 @@ describe('ThreadedComment - Depth Limiting', () => {
   it('should show reply button when under max depth', () => {
     render(
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <AdminModeProvider>
-            <ToastProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <AdminModeProvider>
               <ThreadedComment
                 comment={mockComment}
                 gameId={1}
@@ -54,9 +54,9 @@ describe('ThreadedComment - Depth Limiting', () => {
                 depth={0}
                 maxDepth={5}
               />
-            </ToastProvider>
-          </AdminModeProvider>
-        </AuthProvider>
+            </AdminModeProvider>
+          </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
 
@@ -66,9 +66,9 @@ describe('ThreadedComment - Depth Limiting', () => {
   it('should hide reply button at max depth', () => {
     render(
       <QueryClientProvider client={queryClient}>
+        <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
-          <ToastProvider>
             <ThreadedComment
               comment={mockComment}
               gameId={1}
@@ -78,9 +78,9 @@ describe('ThreadedComment - Depth Limiting', () => {
               depth={5}
               maxDepth={5}
             />
-          </ToastProvider>
         </AdminModeProvider>
         </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
 
@@ -95,9 +95,9 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
-          <ToastProvider>
             <ThreadedComment
               comment={commentWithReplies}
               gameId={1}
@@ -107,9 +107,9 @@ describe('ThreadedComment - Depth Limiting', () => {
               depth={5}
               maxDepth={5}
             />
-          </ToastProvider>
         </AdminModeProvider>
         </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
 
@@ -126,9 +126,9 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
-          <ToastProvider>
             <ThreadedComment
               comment={commentWithoutReplies}
               gameId={1}
@@ -138,9 +138,9 @@ describe('ThreadedComment - Depth Limiting', () => {
               depth={5}
               maxDepth={5}
             />
-          </ToastProvider>
         </AdminModeProvider>
         </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
 
@@ -158,9 +158,9 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
-          <ToastProvider>
             <ThreadedComment
               comment={commentWithReplies}
               gameId={42}
@@ -171,9 +171,9 @@ describe('ThreadedComment - Depth Limiting', () => {
               depth={5}
               maxDepth={5}
             />
-          </ToastProvider>
         </AdminModeProvider>
         </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
 
@@ -191,9 +191,9 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
-          <ToastProvider>
             <ThreadedComment
               comment={commentWithReplies}
               gameId={1}
@@ -203,9 +203,9 @@ describe('ThreadedComment - Depth Limiting', () => {
               depth={5}
               maxDepth={5}
             />
-          </ToastProvider>
         </AdminModeProvider>
         </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
 
@@ -217,9 +217,9 @@ describe('ThreadedComment - Depth Limiting', () => {
   it('should use default maxDepth of 5', () => {
     render(
       <QueryClientProvider client={queryClient}>
+        <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
-          <ToastProvider>
             <ThreadedComment
               comment={mockComment}
               gameId={1}
@@ -229,9 +229,9 @@ describe('ThreadedComment - Depth Limiting', () => {
               depth={4}
               // maxDepth not specified - should default to 5
             />
-          </ToastProvider>
         </AdminModeProvider>
         </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
 
@@ -242,9 +242,9 @@ describe('ThreadedComment - Depth Limiting', () => {
   it('should respect custom maxDepth prop', () => {
     render(
       <QueryClientProvider client={queryClient}>
+        <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
-          <ToastProvider>
             <ThreadedComment
               comment={mockComment}
               gameId={1}
@@ -254,9 +254,9 @@ describe('ThreadedComment - Depth Limiting', () => {
               depth={3}
               maxDepth={3}
             />
-          </ToastProvider>
         </AdminModeProvider>
         </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
 
@@ -272,9 +272,9 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
-          <ToastProvider>
             <ThreadedComment
               comment={commentWithManyReplies}
               gameId={1}
@@ -284,9 +284,9 @@ describe('ThreadedComment - Depth Limiting', () => {
               depth={5}
               maxDepth={5}
             />
-          </ToastProvider>
         </AdminModeProvider>
         </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
 
@@ -301,9 +301,9 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
-          <ToastProvider>
             <ThreadedComment
               comment={commentWithOneReply}
               gameId={1}
@@ -313,9 +313,9 @@ describe('ThreadedComment - Depth Limiting', () => {
               depth={5}
               maxDepth={5}
             />
-          </ToastProvider>
         </AdminModeProvider>
         </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
 
