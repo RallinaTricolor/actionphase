@@ -93,6 +93,32 @@ func (m *MockUserService) DeleteUser(id int) error {
 	return nil
 }
 
+// Admin management methods
+func (m *MockUserService) SetAdminStatus(ctx context.Context, userID int32, isAdmin bool, requesterID int32) error {
+	return nil // No-op for tests
+}
+
+func (m *MockUserService) ListAdmins(ctx context.Context) ([]*User, error) {
+	return nil, nil // No-op for tests
+}
+
+// User banning methods
+func (m *MockUserService) BanUser(ctx context.Context, userID int32, adminID int32) error {
+	return nil // No-op for tests
+}
+
+func (m *MockUserService) UnbanUser(ctx context.Context, userID int32) error {
+	return nil // No-op for tests
+}
+
+func (m *MockUserService) ListBannedUsers(ctx context.Context) ([]*BannedUser, error) {
+	return nil, nil // No-op for tests
+}
+
+func (m *MockUserService) CheckUserBanned(ctx context.Context, userID int32) (bool, error) {
+	return false, nil // No-op for tests
+}
+
 // MockGameService provides a mock implementation of GameServiceInterface for testing
 type MockGameService struct {
 	CreateGameFunc            func(ctx context.Context, req CreateGameRequest) (*models.Game, error)

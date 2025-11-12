@@ -4,7 +4,9 @@ import (
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/models"
 	dbservices "actionphase/pkg/db/services"
+	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -754,6 +756,255 @@ func TestListPollsByPhase(t *testing.T) {
 					// Verify user_has_voted field is present
 					core.AssertTrue(t, strings.Contains(body, "user_has_voted"), "Response should contain user_has_voted field")
 				}
+			}
+		})
+	}
+}
+
+// TestCreatePoll_ValidationErrors tests validation error scenarios for poll creation
+func TestCreatePoll_ValidationErrors(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "common_room_polls", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	fixtures := testDB.SetupFixtures(t)
+
+	// Create GM token
+	gmToken, err := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
+	core.AssertNoError(t, err, "GM token creation should succeed")
+
+	// Future deadline for valid tests
+	futureDeadline := time.Now().Add(24 * time.Hour)
+	pastDeadline := time.Now().Add(-24 * time.Hour)
+
+	testCases := []struct {
+		name           string
+		payload        CreatePollRequest
+		expectedStatus int
+		expectedError  string
+		description    string
+	}{
+		{
+			name: "empty_question",
+			payload: CreatePollRequest{
+				Question:   "",
+				Deadline:   futureDeadline,
+				VoteAsType: "player",
+				Options: []PollOptionRequest{
+					{Text: "Option 1", DisplayOrder: 1},
+					{Text: "Option 2", DisplayOrder: 2},
+				},
+			},
+			expectedStatus: 400,
+			expectedError:  "question is required",
+			description:    "Should reject empty question",
+		},
+		{
+			name: "past_deadline",
+			payload: CreatePollRequest{
+				Question:   "Valid Question",
+				Deadline:   pastDeadline,
+				VoteAsType: "player",
+				Options: []PollOptionRequest{
+					{Text: "Option 1", DisplayOrder: 1},
+					{Text: "Option 2", DisplayOrder: 2},
+				},
+			},
+			expectedStatus: 400,
+			expectedError:  "deadline must be in the future",
+			description:    "Should reject past deadline",
+		},
+		{
+			name: "invalid_vote_as_type",
+			payload: CreatePollRequest{
+				Question:   "Valid Question",
+				Deadline:   futureDeadline,
+				VoteAsType: "invalid",
+				Options: []PollOptionRequest{
+					{Text: "Option 1", DisplayOrder: 1},
+					{Text: "Option 2", DisplayOrder: 2},
+				},
+			},
+			expectedStatus: 400,
+			expectedError:  "vote_as_type must be 'player' or 'character'",
+			description:    "Should reject invalid vote_as_type",
+		},
+		{
+			name: "no_options",
+			payload: CreatePollRequest{
+				Question:   "Valid Question",
+				Deadline:   futureDeadline,
+				VoteAsType: "player",
+				Options:    []PollOptionRequest{},
+			},
+			expectedStatus: 400,
+			expectedError:  "at least 2 options are required",
+			description:    "Should reject poll with no options",
+		},
+		{
+			name: "only_one_option",
+			payload: CreatePollRequest{
+				Question:   "Valid Question",
+				Deadline:   futureDeadline,
+				VoteAsType: "player",
+				Options: []PollOptionRequest{
+					{Text: "Only Option", DisplayOrder: 1},
+				},
+			},
+			expectedStatus: 400,
+			expectedError:  "at least 2 options are required",
+			description:    "Should reject poll with only one option",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			payload, _ := json.Marshal(tc.payload)
+			req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(fixtures.TestGame.ID))+"/polls", bytes.NewBuffer(payload))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+gmToken)
+
+			// Note: This test focuses on request binding validation
+			// Actual route testing would require full router setup
+			// For now, testing the Bind() method directly
+			var testReq CreatePollRequest
+			json.Unmarshal(payload, &testReq)
+			err := testReq.Bind(req)
+
+			if tc.expectedStatus == 400 {
+				core.AssertNotEqual(t, nil, err, tc.description)
+				if err != nil {
+					core.AssertTrue(t, strings.Contains(err.Error(), tc.expectedError), "Error should contain: "+tc.expectedError)
+				}
+			} else {
+				core.AssertEqual(t, nil, err, tc.description)
+			}
+		})
+	}
+}
+
+// TestUpdatePoll_ValidationErrors tests validation error scenarios for poll updates
+func TestUpdatePoll_ValidationErrors(t *testing.T) {
+	futureDeadline := time.Now().Add(24 * time.Hour)
+	pastDeadline := time.Now().Add(-24 * time.Hour)
+
+	testCases := []struct {
+		name           string
+		payload        UpdatePollRequest
+		expectedStatus int
+		expectedError  string
+		description    string
+	}{
+		{
+			name: "empty_question",
+			payload: UpdatePollRequest{
+				Question: "",
+				Deadline: futureDeadline,
+			},
+			expectedStatus: 400,
+			expectedError:  "question is required",
+			description:    "Should reject empty question",
+		},
+		{
+			name: "past_deadline",
+			payload: UpdatePollRequest{
+				Question: "Valid Question",
+				Deadline: pastDeadline,
+			},
+			expectedStatus: 400,
+			expectedError:  "deadline must be in the future",
+			description:    "Should reject past deadline",
+		},
+		{
+			name: "valid_update",
+			payload: UpdatePollRequest{
+				Question: "Updated Question",
+				Deadline: futureDeadline,
+			},
+			expectedStatus: 200,
+			description:    "Should accept valid update",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("PATCH", "/api/v1/polls/1", nil)
+			err := tc.payload.Bind(req)
+
+			if tc.expectedStatus == 400 {
+				core.AssertNotEqual(t, nil, err, tc.description)
+				if err != nil {
+					core.AssertTrue(t, strings.Contains(err.Error(), tc.expectedError), "Error should contain: "+tc.expectedError)
+				}
+			} else {
+				core.AssertEqual(t, nil, err, tc.description)
+			}
+		})
+	}
+}
+
+// TestSubmitVote_ValidationErrors tests validation error scenarios for vote submission
+func TestSubmitVote_ValidationErrors(t *testing.T) {
+	optionID := int32(1)
+	otherText := "Other response"
+
+	testCases := []struct {
+		name           string
+		payload        SubmitVoteRequest
+		expectedStatus int
+		expectedError  string
+		description    string
+	}{
+		{
+			name: "no_selection",
+			payload: SubmitVoteRequest{
+				SelectedOptionID: nil,
+				OtherResponse:    nil,
+			},
+			expectedStatus: 400,
+			expectedError:  "either selected_option_id or other_response is required",
+			description:    "Should reject vote with no selection",
+		},
+		{
+			name: "valid_option_selection",
+			payload: SubmitVoteRequest{
+				SelectedOptionID: &optionID,
+			},
+			expectedStatus: 200,
+			description:    "Should accept vote with option selected",
+		},
+		{
+			name: "valid_other_response",
+			payload: SubmitVoteRequest{
+				OtherResponse: &otherText,
+			},
+			expectedStatus: 200,
+			description:    "Should accept vote with other response",
+		},
+		{
+			name: "both_option_and_other",
+			payload: SubmitVoteRequest{
+				SelectedOptionID: &optionID,
+				OtherResponse:    &otherText,
+			},
+			expectedStatus: 200,
+			description:    "Should accept vote with both (implementation may choose one)",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "/api/v1/polls/1/vote", nil)
+			err := tc.payload.Bind(req)
+
+			if tc.expectedStatus == 400 {
+				core.AssertNotEqual(t, nil, err, tc.description)
+				if err != nil {
+					core.AssertTrue(t, strings.Contains(err.Error(), tc.expectedError), "Error should contain: "+tc.expectedError)
+				}
+			} else {
+				core.AssertEqual(t, nil, err, tc.description)
 			}
 		})
 	}

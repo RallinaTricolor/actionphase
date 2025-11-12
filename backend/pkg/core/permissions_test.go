@@ -1,232 +1,617 @@
 package core
 
 import (
-	models "actionphase/pkg/db/models"
 	"context"
-	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
+	models "actionphase/pkg/db/models"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// TestIsUserCoGM tests the IsUserCoGM permission check
+func TestIsUserCoGM(t *testing.T) {
+	if os.Getenv("SKIP_DB_TESTS") == "true" {
+		t.Skip("Skipping integration test - SKIP_DB_TESTS=true")
+	}
+
+	testDB := NewTestDatabase(t)
+	defer testDB.Close()
+
+	ctx := context.Background()
+
+	// Create test users
+	gmUser := testDB.CreateTestUser(t, "gm_user", "gm@example.com")
+	coGMUser := testDB.CreateTestUser(t, "cogm_user", "cogm@example.com")
+	playerUser := testDB.CreateTestUser(t, "player_user", "player@example.com")
+
+	// Create test game
+	game := testDB.CreateTestGame(t, int32(gmUser.ID), "Test Game")
+
+	// Add co-GM participant
+	queries := models.New(testDB.Pool)
+	_, err := queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
+		GameID: game.ID,
+		UserID: int32(coGMUser.ID),
+		Role:   "co_gm",
+	})
+	if err != nil {
+		t.Fatalf("Failed to add co-GM participant: %v", err)
+	}
+
+	// Add player participant
+	_, err = queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
+		GameID: game.ID,
+		UserID: int32(playerUser.ID),
+		Role:   "player",
+	})
+	if err != nil {
+		t.Fatalf("Failed to add player participant: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		gameID int32
+		userID int32
+		want   bool
+	}{
+		{
+			name:   "co-GM user returns true",
+			gameID: game.ID,
+			userID: int32(coGMUser.ID),
+			want:   true,
+		},
+		{
+			name:   "player user returns false",
+			gameID: game.ID,
+			userID: int32(playerUser.ID),
+			want:   false,
+		},
+		{
+			name:   "primary GM user returns false (not co-GM)",
+			gameID: game.ID,
+			userID: int32(gmUser.ID),
+			want:   false,
+		},
+		{
+			name:   "non-participant returns false",
+			gameID: game.ID,
+			userID: 99999,
+			want:   false,
+		},
+		{
+			name:   "invalid game ID returns false",
+			gameID: 99999,
+			userID: int32(coGMUser.ID),
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsUserCoGM(ctx, testDB.Pool, tt.gameID, tt.userID)
+			if got != tt.want {
+				t.Errorf("IsUserCoGM() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestIsUserAudience tests the IsUserAudience permission check
+func TestIsUserAudience(t *testing.T) {
+	if os.Getenv("SKIP_DB_TESTS") == "true" {
+		t.Skip("Skipping integration test - SKIP_DB_TESTS=true")
+	}
+
+	testDB := NewTestDatabase(t)
+	defer testDB.Close()
+
+	ctx := context.Background()
+
+	// Create test users
+	gmUser := testDB.CreateTestUser(t, "gm_user2", "gm2@example.com")
+	audienceUser := testDB.CreateTestUser(t, "audience_user", "audience@example.com")
+	playerUser := testDB.CreateTestUser(t, "player_user2", "player2@example.com")
+
+	// Create test game
+	game := testDB.CreateTestGame(t, int32(gmUser.ID), "Test Game 2")
+
+	// Add audience participant
+	queries := models.New(testDB.Pool)
+	_, err := queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
+		GameID: game.ID,
+		UserID: int32(audienceUser.ID),
+		Role:   "audience",
+	})
+	if err != nil {
+		t.Fatalf("Failed to add audience participant: %v", err)
+	}
+
+	// Add player participant
+	_, err = queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
+		GameID: game.ID,
+		UserID: int32(playerUser.ID),
+		Role:   "player",
+	})
+	if err != nil {
+		t.Fatalf("Failed to add player participant: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		gameID int32
+		userID int32
+		want   bool
+	}{
+		{
+			name:   "audience user returns true",
+			gameID: game.ID,
+			userID: int32(audienceUser.ID),
+			want:   true,
+		},
+		{
+			name:   "player user returns false",
+			gameID: game.ID,
+			userID: int32(playerUser.ID),
+			want:   false,
+		},
+		{
+			name:   "non-participant returns false",
+			gameID: game.ID,
+			userID: 99999,
+			want:   false,
+		},
+		{
+			name:   "invalid game ID returns false",
+			gameID: 99999,
+			userID: int32(audienceUser.ID),
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsUserAudience(ctx, testDB.Pool, tt.gameID, tt.userID)
+			if got != tt.want {
+				t.Errorf("IsUserAudience() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestIsUserGameMaster tests the IsUserGameMaster permission check with HTTP request headers
 func TestIsUserGameMaster(t *testing.T) {
+	if os.Getenv("SKIP_DB_TESTS") == "true" {
+		t.Skip("Skipping integration test - SKIP_DB_TESTS=true")
+	}
+
 	testDB := NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "games")
 
-	// Create a test game
-	game := models.Game{
-		ID:       1,
-		GmUserID: 100, // GM is user 100
-		Title:    "Test Game",
-		State:    pgtype.Text{String: "in_progress", Valid: true},
+	ctx := context.Background()
+
+	// Create test users
+	gmUser := testDB.CreateTestUser(t, "gm_user3", "gm3@example.com")
+	coGMUser := testDB.CreateTestUser(t, "cogm_user2", "cogm2@example.com")
+	adminUser := testDB.CreateTestUser(t, "admin_user", "admin@example.com")
+	adminUser.IsAdmin = true // Mark as admin
+	playerUser := testDB.CreateTestUser(t, "player_user3", "player3@example.com")
+
+	// Create test game
+	game := testDB.CreateTestGame(t, int32(gmUser.ID), "Test Game 3")
+
+	// Add co-GM participant
+	queries := models.New(testDB.Pool)
+	_, err := queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
+		GameID: game.ID,
+		UserID: int32(coGMUser.ID),
+		Role:   "co_gm",
+	})
+	if err != nil {
+		t.Fatalf("Failed to add co-GM participant: %v", err)
 	}
 
 	tests := []struct {
-		name            string
-		userID          int32
-		isAdmin         bool
-		adminModeHeader string
-		expectedResult  bool
-		description     string
+		name         string
+		userID       int32
+		isAdmin      bool
+		game         models.Game
+		adminModeHdr string
+		want         bool
+		description  string
 	}{
 		{
-			name:            "actual GM user",
-			userID:          100,
-			isAdmin:         false,
-			adminModeHeader: "",
-			expectedResult:  true,
-			description:     "The actual GM should always have GM permissions",
+			name:         "primary GM returns true",
+			userID:       int32(gmUser.ID),
+			isAdmin:      false,
+			game:         *game,
+			adminModeHdr: "",
+			want:         true,
+			description:  "Primary GM should have access",
 		},
 		{
-			name:            "regular user not GM",
-			userID:          200,
-			isAdmin:         false,
-			adminModeHeader: "",
-			expectedResult:  false,
-			description:     "Regular users who are not GM should not have GM permissions",
+			name:         "co-GM returns true",
+			userID:       int32(coGMUser.ID),
+			isAdmin:      false,
+			game:         *game,
+			adminModeHdr: "",
+			want:         true,
+			description:  "Co-GM should have access",
 		},
 		{
-			name:            "admin without admin mode",
-			userID:          300,
-			isAdmin:         true,
-			adminModeHeader: "",
-			expectedResult:  false,
-			description:     "Admin users without admin mode enabled should not have GM permissions",
+			name:         "admin with admin mode enabled returns true",
+			userID:       int32(adminUser.ID),
+			isAdmin:      true,
+			game:         *game,
+			adminModeHdr: "true",
+			want:         true,
+			description:  "Admin with admin mode should have access",
 		},
 		{
-			name:            "admin with admin mode disabled",
-			userID:          300,
-			isAdmin:         true,
-			adminModeHeader: "false",
-			expectedResult:  false,
-			description:     "Admin users with admin mode explicitly disabled should not have GM permissions",
+			name:         "admin without admin mode returns false",
+			userID:       int32(adminUser.ID),
+			isAdmin:      true,
+			game:         *game,
+			adminModeHdr: "",
+			want:         false,
+			description:  "Admin without admin mode should not have access",
 		},
 		{
-			name:            "admin with admin mode enabled",
-			userID:          300,
-			isAdmin:         true,
-			adminModeHeader: "true",
-			expectedResult:  true,
-			description:     "Admin users with admin mode enabled should have GM permissions for all games",
+			name:         "admin with admin mode false returns false",
+			userID:       int32(adminUser.ID),
+			isAdmin:      true,
+			game:         *game,
+			adminModeHdr: "false",
+			want:         false,
+			description:  "Admin with admin mode=false should not have access",
 		},
 		{
-			name:            "non-admin with admin mode header",
-			userID:          200,
-			isAdmin:         false,
-			adminModeHeader: "true",
-			expectedResult:  false,
-			description:     "Non-admin users cannot gain GM permissions by setting admin mode header",
+			name:         "regular player returns false",
+			userID:       int32(playerUser.ID),
+			isAdmin:      false,
+			game:         *game,
+			adminModeHdr: "",
+			want:         false,
+			description:  "Regular player should not have GM access",
 		},
 		{
-			name:            "actual GM who is also admin",
-			userID:          100,
-			isAdmin:         true,
-			adminModeHeader: "",
-			expectedResult:  true,
-			description:     "A user who is both the actual GM and an admin should have GM permissions",
+			name:         "non-admin with admin mode header returns false",
+			userID:       int32(playerUser.ID),
+			isAdmin:      false,
+			game:         *game,
+			adminModeHdr: "true",
+			want:         false,
+			description:  "Non-admin cannot use admin mode",
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// Create a test request with the admin mode header
-			req := httptest.NewRequest(http.MethodGet, "/test", nil)
-			if tc.adminModeHeader != "" {
-				req.Header.Set("X-Admin-Mode", tc.adminModeHeader)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create HTTP request with admin mode header
+			req := httptest.NewRequest("GET", "/test", nil)
+			if tt.adminModeHdr != "" {
+				req.Header.Set("X-Admin-Mode", tt.adminModeHdr)
 			}
 
-			result := IsUserGameMaster(req, tc.userID, tc.isAdmin, game, testDB.Pool)
-
-			if result != tc.expectedResult {
-				t.Errorf("%s: expected %v, got %v", tc.description, tc.expectedResult, result)
+			got := IsUserGameMaster(req, tt.userID, tt.isAdmin, tt.game, testDB.Pool)
+			if got != tt.want {
+				t.Errorf("IsUserGameMaster() = %v, want %v - %s", got, tt.want, tt.description)
 			}
 		})
 	}
 }
 
+// TestIsUserGameMasterCtx tests the context-based IsUserGameMaster variant
 func TestIsUserGameMasterCtx(t *testing.T) {
+	if os.Getenv("SKIP_DB_TESTS") == "true" {
+		t.Skip("Skipping integration test - SKIP_DB_TESTS=true")
+	}
+
 	testDB := NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "games")
 
-	// Create a test game
-	game := models.Game{
-		ID:       1,
-		GmUserID: 100, // GM is user 100
-		Title:    "Test Game",
-		State:    pgtype.Text{String: "in_progress", Valid: true},
+	baseCtx := context.Background()
+
+	// Create test users
+	gmUser := testDB.CreateTestUser(t, "gm_user4", "gm4@example.com")
+	coGMUser := testDB.CreateTestUser(t, "cogm_user3", "cogm3@example.com")
+	adminUser := testDB.CreateTestUser(t, "admin_user2", "admin2@example.com")
+	adminUser.IsAdmin = true
+	playerUser := testDB.CreateTestUser(t, "player_user4", "player4@example.com")
+
+	// Create test game
+	game := testDB.CreateTestGame(t, int32(gmUser.ID), "Test Game 4")
+
+	// Add co-GM participant
+	queries := models.New(testDB.Pool)
+	_, err := queries.AddGameParticipant(baseCtx, models.AddGameParticipantParams{
+		GameID: game.ID,
+		UserID: int32(coGMUser.ID),
+		Role:   "co_gm",
+	})
+	if err != nil {
+		t.Fatalf("Failed to add co-GM participant: %v", err)
 	}
 
 	tests := []struct {
-		name           string
-		userID         int32
-		isAdmin        bool
-		adminModeInCtx bool
-		expectedResult bool
-		description    string
+		name        string
+		userID      int32
+		isAdmin     bool
+		game        models.Game
+		adminMode   bool
+		want        bool
+		description string
 	}{
 		{
-			name:           "actual GM user",
-			userID:         100,
-			isAdmin:        false,
-			adminModeInCtx: false,
-			expectedResult: true,
-			description:    "The actual GM should always have GM permissions",
+			name:        "primary GM returns true",
+			userID:      int32(gmUser.ID),
+			isAdmin:     false,
+			game:        *game,
+			adminMode:   false,
+			want:        true,
+			description: "Primary GM should have access",
 		},
 		{
-			name:           "regular user not GM",
-			userID:         200,
-			isAdmin:        false,
-			adminModeInCtx: false,
-			expectedResult: false,
-			description:    "Regular users who are not GM should not have GM permissions",
+			name:        "co-GM returns true",
+			userID:      int32(coGMUser.ID),
+			isAdmin:     false,
+			game:        *game,
+			adminMode:   false,
+			want:        true,
+			description: "Co-GM should have access",
 		},
 		{
-			name:           "admin without admin mode in context",
-			userID:         300,
-			isAdmin:        true,
-			adminModeInCtx: false,
-			expectedResult: false,
-			description:    "Admin users without admin mode in context should not have GM permissions",
+			name:        "admin with admin mode enabled returns true",
+			userID:      int32(adminUser.ID),
+			isAdmin:     true,
+			game:        *game,
+			adminMode:   true,
+			want:        true,
+			description: "Admin with admin mode should have access",
 		},
 		{
-			name:           "admin with admin mode in context",
-			userID:         300,
-			isAdmin:        true,
-			adminModeInCtx: true,
-			expectedResult: true,
-			description:    "Admin users with admin mode in context should have GM permissions for all games",
+			name:        "admin without admin mode returns false",
+			userID:      int32(adminUser.ID),
+			isAdmin:     true,
+			game:        *game,
+			adminMode:   false,
+			want:        false,
+			description: "Admin without admin mode should not have access",
 		},
 		{
-			name:           "non-admin with admin mode in context",
-			userID:         200,
-			isAdmin:        false,
-			adminModeInCtx: true,
-			expectedResult: false,
-			description:    "Non-admin users cannot gain GM permissions even with admin mode in context",
+			name:        "regular player returns false",
+			userID:      int32(playerUser.ID),
+			isAdmin:     false,
+			game:        *game,
+			adminMode:   false,
+			want:        false,
+			description: "Regular player should not have GM access",
 		},
 		{
-			name:           "actual GM who is also admin",
-			userID:         100,
-			isAdmin:        true,
-			adminModeInCtx: false,
-			expectedResult: true,
-			description:    "A user who is both the actual GM and an admin should have GM permissions",
+			name:        "non-admin with admin mode returns false",
+			userID:      int32(playerUser.ID),
+			isAdmin:     false,
+			game:        *game,
+			adminMode:   true,
+			want:        false,
+			description: "Non-admin cannot use admin mode",
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// Create a context with admin mode state
-			ctx := context.Background()
-			if tc.adminModeInCtx {
-				ctx = WithAdminMode(ctx, true)
-			}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create context with admin mode
+			ctx := WithAdminMode(baseCtx, tt.adminMode)
 
-			result := IsUserGameMasterCtx(ctx, tc.userID, tc.isAdmin, game, testDB.Pool)
-
-			if result != tc.expectedResult {
-				t.Errorf("%s: expected %v, got %v", tc.description, tc.expectedResult, result)
+			got := IsUserGameMasterCtx(ctx, tt.userID, tt.isAdmin, tt.game, testDB.Pool)
+			if got != tt.want {
+				t.Errorf("IsUserGameMasterCtx() = %v, want %v - %s", got, tt.want, tt.description)
 			}
 		})
 	}
 }
 
+// TestAdminModeContext tests the WithAdminMode and GetAdminMode context helpers
 func TestAdminModeContext(t *testing.T) {
-	t.Run("WithAdminMode and GetAdminMode", func(t *testing.T) {
-		ctx := context.Background()
+	ctx := context.Background()
 
-		// Initially, admin mode should be false
-		if GetAdminMode(ctx) != false {
-			t.Error("Admin mode should be false in empty context")
-		}
-
-		// Add admin mode to context
-		ctx = WithAdminMode(ctx, true)
-
-		// Now admin mode should be true
-		if GetAdminMode(ctx) != true {
-			t.Error("Admin mode should be true after WithAdminMode(ctx, true)")
+	t.Run("admin mode not set returns false", func(t *testing.T) {
+		got := GetAdminMode(ctx)
+		if got != false {
+			t.Errorf("GetAdminMode() on empty context = %v, want false", got)
 		}
 	})
 
-	t.Run("GetAdminMode with no admin mode in context", func(t *testing.T) {
-		ctx := context.Background()
-		result := GetAdminMode(ctx)
-
-		if result != false {
-			t.Error("GetAdminMode should return false when admin mode is not in context")
+	t.Run("admin mode set to true returns true", func(t *testing.T) {
+		ctx := WithAdminMode(ctx, true)
+		got := GetAdminMode(ctx)
+		if got != true {
+			t.Errorf("GetAdminMode() after WithAdminMode(true) = %v, want true", got)
 		}
 	})
 
-	t.Run("WithAdminMode setting false", func(t *testing.T) {
-		ctx := context.Background()
+	t.Run("admin mode set to false returns false", func(t *testing.T) {
+		ctx := WithAdminMode(ctx, false)
+		got := GetAdminMode(ctx)
+		if got != false {
+			t.Errorf("GetAdminMode() after WithAdminMode(false) = %v, want false", got)
+		}
+	})
+
+	t.Run("admin mode can be overwritten", func(t *testing.T) {
+		ctx := WithAdminMode(ctx, true)
 		ctx = WithAdminMode(ctx, false)
-
-		if GetAdminMode(ctx) != false {
-			t.Error("Admin mode should be false after WithAdminMode(ctx, false)")
+		got := GetAdminMode(ctx)
+		if got != false {
+			t.Errorf("GetAdminMode() after overwrite = %v, want false", got)
 		}
 	})
+}
+
+// TestCanUserControlNPC tests the NPC control permission check
+func TestCanUserControlNPC(t *testing.T) {
+	if os.Getenv("SKIP_DB_TESTS") == "true" {
+		t.Skip("Skipping integration test - SKIP_DB_TESTS=true")
+	}
+
+	testDB := NewTestDatabase(t)
+	defer testDB.Close()
+
+	ctx := context.Background()
+
+	// Create test users
+	gmUser := testDB.CreateTestUser(t, "gm_user5", "gm5@example.com")
+	coGMUser := testDB.CreateTestUser(t, "cogm_user4", "cogm4@example.com")
+	assignedUser := testDB.CreateTestUser(t, "assigned_user", "assigned@example.com")
+	playerUser := testDB.CreateTestUser(t, "player_user5", "player5@example.com")
+	otherPlayerUser := testDB.CreateTestUser(t, "player_user6", "player6@example.com")
+
+	// Create test game
+	game := testDB.CreateTestGame(t, int32(gmUser.ID), "Test Game 5")
+
+	// Add co-GM participant
+	queries := models.New(testDB.Pool)
+	_, err := queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
+		GameID: game.ID,
+		UserID: int32(coGMUser.ID),
+		Role:   "co_gm",
+	})
+	if err != nil {
+		t.Fatalf("Failed to add co-GM participant: %v", err)
+	}
+
+	// Create player character (has user_id)
+	playerChar, err := queries.CreateCharacter(ctx, models.CreateCharacterParams{
+		GameID:        game.ID,
+		Name:          "Player Character",
+		CharacterType: "player_character",
+		UserID:        pgtype.Int4{Int32: int32(playerUser.ID), Valid: true},
+		Status:        pgtype.Text{String: "active", Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create player character: %v", err)
+	}
+
+	// Create NPC (no user_id, unassigned)
+	unassignedNPC, err := queries.CreateCharacter(ctx, models.CreateCharacterParams{
+		GameID:        game.ID,
+		Name:          "Unassigned NPC",
+		CharacterType: "npc",
+		UserID:        pgtype.Int4{Valid: false}, // NULL
+		Status:        pgtype.Text{String: "active", Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create unassigned NPC: %v", err)
+	}
+
+	// Create NPC and assign to user
+	assignedNPC, err := queries.CreateCharacter(ctx, models.CreateCharacterParams{
+		GameID:        game.ID,
+		Name:          "Assigned NPC",
+		CharacterType: "npc",
+		UserID:        pgtype.Int4{Valid: false}, // NULL
+		Status:        pgtype.Text{String: "active", Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create assigned NPC: %v", err)
+	}
+
+	// Assign NPC to user
+	_, err = queries.AssignNPCToUser(ctx, models.AssignNPCToUserParams{
+		CharacterID:      assignedNPC.ID,
+		AssignedUserID:   int32(assignedUser.ID),
+		AssignedByUserID: int32(gmUser.ID), // GM assigns the NPC
+	})
+	if err != nil {
+		t.Fatalf("Failed to assign NPC: %v", err)
+	}
+
+	tests := []struct {
+		name        string
+		characterID int32
+		userID      int32
+		want        bool
+		description string
+	}{
+		{
+			name:        "player can control their own character",
+			characterID: playerChar.ID,
+			userID:      int32(playerUser.ID),
+			want:        true,
+			description: "Player should control their own character",
+		},
+		{
+			name:        "other player cannot control player character",
+			characterID: playerChar.ID,
+			userID:      int32(otherPlayerUser.ID),
+			want:        false,
+			description: "Other player should not control someone else's character",
+		},
+		{
+			name:        "assigned user can control assigned NPC",
+			characterID: assignedNPC.ID,
+			userID:      int32(assignedUser.ID),
+			want:        true,
+			description: "Assigned user should control their assigned NPC",
+		},
+		{
+			name:        "GM can control unassigned NPC",
+			characterID: unassignedNPC.ID,
+			userID:      int32(gmUser.ID),
+			want:        true,
+			description: "GM should control unassigned NPCs",
+		},
+		{
+			name:        "co-GM can control unassigned NPC",
+			characterID: unassignedNPC.ID,
+			userID:      int32(coGMUser.ID),
+			want:        true,
+			description: "Co-GM should control unassigned NPCs",
+		},
+		{
+			name:        "GM can control assigned NPC",
+			characterID: assignedNPC.ID,
+			userID:      int32(gmUser.ID),
+			want:        true,
+			description: "GM should control all NPCs including assigned ones",
+		},
+		{
+			name:        "co-GM can control assigned NPC",
+			characterID: assignedNPC.ID,
+			userID:      int32(coGMUser.ID),
+			want:        true,
+			description: "Co-GM should control all NPCs including assigned ones",
+		},
+		{
+			name:        "regular player cannot control unassigned NPC",
+			characterID: unassignedNPC.ID,
+			userID:      int32(playerUser.ID),
+			want:        false,
+			description: "Regular player should not control unassigned NPCs",
+		},
+		{
+			name:        "non-assigned user cannot control assigned NPC",
+			characterID: assignedNPC.ID,
+			userID:      int32(playerUser.ID),
+			want:        false,
+			description: "Non-assigned user should not control assigned NPC",
+		},
+		{
+			name:        "invalid character ID returns false",
+			characterID: 99999,
+			userID:      int32(gmUser.ID),
+			want:        false,
+			description: "Invalid character should return false",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CanUserControlNPC(ctx, testDB.Pool, tt.characterID, tt.userID)
+			if got != tt.want {
+				t.Errorf("CanUserControlNPC() = %v, want %v - %s", got, tt.want, tt.description)
+			}
+		})
+	}
 }

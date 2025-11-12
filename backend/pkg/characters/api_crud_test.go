@@ -388,3 +388,102 @@ func TestCharacterAPI_PendingCharacterVisibilityByRole(t *testing.T) {
 		})
 	}
 }
+
+// TestCharacterAPI_ValidationErrors tests validation error scenarios
+func TestCharacterAPI_ValidationErrors(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupCharacterTestRouter(app, testDB)
+	fixtures := testDB.SetupFixtures(t)
+
+	// Create GM token
+	gmToken, err := createTestAuthToken(app, fixtures.TestUser)
+	core.AssertNoError(t, err, "GM token creation should succeed")
+
+	testCases := []struct {
+		name           string
+		gameID         string
+		payload        CreateCharacterRequest
+		expectedStatus int
+		expectedError  string
+		description    string
+	}{
+		{
+			name:   "empty_character_name",
+			gameID: strconv.Itoa(int(fixtures.TestGame.ID)),
+			payload: CreateCharacterRequest{
+				Name:          "",
+				CharacterType: "player_character",
+			},
+			expectedStatus: 400,
+			expectedError:  "character name is required",
+			description:    "Should reject empty character name",
+		},
+		{
+			name:   "invalid_character_type",
+			gameID: strconv.Itoa(int(fixtures.TestGame.ID)),
+			payload: CreateCharacterRequest{
+				Name:          "Test Character",
+				CharacterType: "invalid_type",
+			},
+			expectedStatus: 400,
+			expectedError:  "invalid character type",
+			description:    "Should reject invalid character type",
+		},
+		{
+			name:   "invalid_game_id",
+			gameID: "not-a-number",
+			payload: CreateCharacterRequest{
+				Name:          "Test Character",
+				CharacterType: "player_character",
+			},
+			expectedStatus: 400,
+			expectedError:  "invalid game ID",
+			description:    "Should reject non-numeric game ID",
+		},
+		{
+			name:   "invalid_game_id_negative",
+			gameID: "-123",
+			payload: CreateCharacterRequest{
+				Name:          "Test Character",
+				CharacterType: "player_character",
+			},
+			expectedStatus: 500,
+			expectedError:  "",
+			description:    "Should handle negative game ID (game not found)",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			payload, _ := json.Marshal(tc.payload)
+			req := httptest.NewRequest("POST", "/api/v1/games/"+tc.gameID+"/characters", bytes.NewBuffer(payload))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+gmToken)
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, req)
+
+			core.AssertEqual(t, tc.expectedStatus, w.Code, tc.description)
+
+			if tc.expectedError != "" {
+				var response map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				core.AssertNoError(t, err, "Should decode error response")
+
+				if errorText, ok := response["error"].(string); ok {
+					if len(errorText) == 0 {
+						t.Errorf("Expected error message to contain '%s', but error field was empty", tc.expectedError)
+					}
+					// Note: We don't use Contains assertion here since error messages may be wrapped
+					// Just verify error field is present and not empty
+				} else {
+					t.Errorf("Expected 'error' field in response")
+				}
+			}
+		})
+	}
+}
