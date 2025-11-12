@@ -1,5 +1,6 @@
 import { apiClient } from '../lib/api';
 import type { Message } from '../types/messages';
+import { logger } from '@/services/LoggingService';
 
 /**
  * Fetch a comment with its parent chain context (up to N levels)
@@ -28,7 +29,7 @@ export async function fetchCommentWithParents(
       currentId = message.parent_id;
       depth++;
     } catch (error) {
-      console.error(`Failed to fetch message ${currentId}:`, error);
+      logger.error(`Failed to fetch message ${currentId}`, { error });
       break;
     }
   }

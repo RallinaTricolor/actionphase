@@ -1,4 +1,5 @@
 import type { Message } from '../types/messages';
+import { logger } from '@/services/LoggingService';
 
 /**
  * Gets the root post ID for a message
@@ -26,6 +27,6 @@ export function getRootPostId(message: Message): number {
   }
 
   // Fallback: return the message ID (shouldn't happen for valid comments)
-  console.warn(`Unable to determine root post ID for message ${message.id}, using message ID as fallback`);
+  logger.warn(`Unable to determine root post ID for message ${message.id}, using message ID as fallback`);
   return message.id;
 }

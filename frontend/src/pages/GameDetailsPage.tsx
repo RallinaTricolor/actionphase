@@ -22,6 +22,7 @@ import { LeaveGameConfirmationDialog } from '../components/LeaveGameConfirmation
 import { DeleteGameConfirmationDialog } from '../components/DeleteGameConfirmationDialog';
 import { DeadlineStrip } from '../components/DeadlineStrip';
 import type { CreateDeadlineRequest } from '../types/deadlines';
+import { logger } from '@/services/LoggingService';
 
 interface GameDetailsPageProps {
   gameId: number;
@@ -193,7 +194,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
       // Redirect to games list after successful deletion
       window.location.href = '/games';
     } catch (error) {
-      console.error('Failed to delete game:', error);
+      logger.error('Failed to delete game', { error });
       // Error will be shown by the API client
     }
   };

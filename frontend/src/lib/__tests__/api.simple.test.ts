@@ -10,13 +10,15 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 })
 
-// Mock console to avoid test output noise
-const mockConsole = {
-  error: vi.fn(),
-  log: vi.fn(),
-}
-Object.defineProperty(console, 'error', { value: mockConsole.error })
-Object.defineProperty(console, 'log', { value: mockConsole.log })
+// Mock the logger service
+vi.mock('@/services/LoggingService', () => ({
+  logger: {
+    debug: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  },
+}))
 
 // Mock window.location
 const mockLocation = {
@@ -52,6 +54,7 @@ describe('API Client - Basic Functionality', () => {
 
   it('should handle token utility methods', async () => {
     const { apiClient } = await import('../api')
+    const { logger } = await import('@/services/LoggingService')
 
     // Test getAuthToken when no token exists
     localStorageMock.getItem.mockReturnValue(null)
@@ -69,9 +72,9 @@ describe('API Client - Basic Functionality', () => {
     apiClient.setAuthToken('valid-token')
     expect(localStorageMock.setItem).toHaveBeenCalledWith('auth_token', 'valid-token')
 
-    // Test setAuthToken with invalid token
+    // Test setAuthToken with invalid token (should not log the token value for security)
     apiClient.setAuthToken('')
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token')
-    expect(mockConsole.error).toHaveBeenCalledWith('Attempted to set invalid token:', '')
+    expect(logger.error).toHaveBeenCalledWith('Attempted to set invalid token')
   })
 })

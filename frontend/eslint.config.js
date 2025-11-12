@@ -19,5 +19,10 @@ export default tseslint.config([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Prevent console statements in production code
+      // Use logger service from @/services/LoggingService instead
+      'no-console': 'error',
+    },
   },
 ])

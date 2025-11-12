@@ -191,11 +191,11 @@ export class BaseApiClient {
   // Utility methods for token management
   setAuthToken(token: string) {
     if (!token || token.trim() === '' || token === 'undefined' || token === 'null') {
-      console.error('Attempted to set invalid token:', token);
+      logger.error('Attempted to set invalid token');
       localStorage.removeItem('auth_token');
       return;
     }
-    console.log('Setting auth token:', token.substring(0, 50) + '...');
+    logger.debug('Setting auth token');
     localStorage.setItem('auth_token', token);
     // Reset the session expired flag on successful authentication
     this.sessionExpiredDispatched = false;

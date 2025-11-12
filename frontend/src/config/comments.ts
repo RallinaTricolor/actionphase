@@ -19,6 +19,8 @@
  * - Depth 5+: Hidden (accessible via thread view modal)
  */
 
+import { logger } from '@/services/LoggingService';
+
 /**
  * Desktop comment threading depth limit
  * Default: 5 (shows depths 0-4, "Continue thread" at depth 4)
@@ -47,9 +49,9 @@ export const THREAD_VIEW_MAX_DEPTH = 10;
 
 // Validate configuration
 if (COMMENT_MAX_DEPTH < 1 || COMMENT_MAX_DEPTH > 10) {
-  console.error(`Invalid VITE_COMMENT_MAX_DEPTH: ${COMMENT_MAX_DEPTH}. Must be 1-10.`);
+  logger.error(`Invalid VITE_COMMENT_MAX_DEPTH: ${COMMENT_MAX_DEPTH}. Must be 1-10.`);
 }
 
 if (COMMENT_MAX_DEPTH_MOBILE < 1 || COMMENT_MAX_DEPTH_MOBILE > 10) {
-  console.error(`Invalid VITE_COMMENT_MAX_DEPTH_MOBILE: ${COMMENT_MAX_DEPTH_MOBILE}. Must be 1-10.`);
+  logger.error(`Invalid VITE_COMMENT_MAX_DEPTH_MOBILE: ${COMMENT_MAX_DEPTH_MOBILE}. Must be 1-10.`);
 }
