@@ -277,4 +277,53 @@ test.describe('Game Application Workflow', () => {
     const hasStatus = await statusBadge.first().isVisible().catch(() => false);
     expect(hasStatus).toBe(false); // Status should NOT be visible to non-GMs
   });
+
+  test('player can join as audience during character creation', async ({ page }) => {
+    // Login as PLAYER_4 who is not yet a participant
+    await loginAs(page, 'PLAYER_4');
+    const gameId = await getFixtureGameId(page, 'E2E_GAME_CHARACTER_CREATION_AUDIENCE');
+    const gamePage = new GameDetailsPage(page);
+
+    // Navigate to game in character_creation state
+    await gamePage.goto(gameId);
+    await page.waitForLoadState('networkidle');
+
+    // Verify we're on the right game page
+    await expect(page.locator('text=E2E Test: Character Creation Audience')).toBeVisible({ timeout: 10000 });
+
+    // Should see "Join as Audience" button (not Apply to Join, since recruitment is closed)
+    const joinAsAudienceButton = page.getByTestId('join-as-audience-button');
+    await expect(joinAsAudienceButton).toBeVisible({ timeout: 5000 });
+
+    // Should NOT see "Apply to Join" button (recruitment phase has ended)
+    const applyButton = page.getByTestId(/apply-button-/);
+    await expect(applyButton).not.toBeVisible();
+
+    // Set up dialog handler for window.prompt
+    page.once('dialog', async dialog => {
+      expect(dialog.type()).toBe('prompt');
+      expect(dialog.message()).toContain('audience member');
+      await dialog.accept('I would love to watch the character creation process!');
+    });
+
+    // Click "Join as Audience" button
+    await joinAsAudienceButton.click();
+
+    // Wait for the join to process and for alert confirmation
+    await page.waitForTimeout(2000);
+
+    // Refresh page to see updated state
+    await gamePage.goto(gameId);
+    await page.waitForLoadState('networkidle');
+
+    // Verify "Join as Audience" button is no longer visible (user successfully joined)
+    await expect(page.getByTestId('join-as-audience-button')).not.toBeVisible();
+
+    // Verify no "Apply to Join" button appears (would appear for non-participants)
+    const applyButtonCheck = page.getByTestId(/apply-button-/);
+    const hasApplyButton = await applyButtonCheck.isVisible().catch(() => false);
+    expect(hasApplyButton).toBe(false);
+
+    // Success! User successfully joined as audience during character creation
+  });
 });

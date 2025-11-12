@@ -7,6 +7,7 @@ import { useGameApplication } from '../hooks/useGameApplication';
 import { useGameStateManagement } from '../hooks/useGameStateManagement';
 import { useGameTabs } from '../hooks/useGameTabs';
 import { usePolls } from '../hooks';
+import { useApplyAsAudience } from '../hooks/useAudience';
 import { GameHeader } from '../components/GameHeader';
 import { GameApplicationStatus } from '../components/GameApplicationStatus';
 import { GameActions } from '../components/GameActions';
@@ -117,6 +118,34 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const queryClient = useQueryClient();
+
+  // Audience join mutation
+  const applyAsAudienceMutation = useApplyAsAudience(gameId);
+
+  // Handler for joining as audience
+  const handleJoinAsAudience = async () => {
+    const applicationText = window.prompt(
+      'Please provide a brief message about why you\'d like to join as an audience member (minimum 10 characters):'
+    );
+
+    if (!applicationText) {
+      return; // User cancelled
+    }
+
+    if (applicationText.length < 10) {
+      alert('Application text must be at least 10 characters long.');
+      return;
+    }
+
+    try {
+      await applyAsAudienceMutation.mutateAsync(applicationText);
+      logger.info('Successfully applied as audience member');
+      await refetchGameData();
+    } catch (error) {
+      logger.error('Failed to apply as audience member', { error });
+      alert('Failed to join as audience. Please try again.');
+    }
+  };
 
   // Fetch deadlines
   const { data: deadlines = [], isLoading: isLoadingDeadlines } = useQuery({
@@ -271,6 +300,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
                 onEditGame={() => setShowEditModal(true)}
                 onStateChange={handleStateChange}
                 onApplyToGame={() => setShowApplyModal(true)}
+                onJoinAsAudience={handleJoinAsAudience}
                 onWithdrawApplication={handleWithdrawApplication}
                 onLeaveGame={handleLeaveGame}
                 onDeleteGame={handleDeleteGame}

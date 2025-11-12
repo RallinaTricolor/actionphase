@@ -635,9 +635,16 @@ func setupAuthTestRouter(app *core.App) *chi.Mux {
 		// Auth routes
 		r.Route("/auth", func(r chi.Router) {
 			authHandler := Handler{App: app}
+			// Public routes (no authentication required)
 			r.Post("/register", authHandler.V1Register)
 			r.Post("/login", authHandler.V1Login)
 			r.Post("/logout", authHandler.V1Logout)
+			r.Post("/request-password-reset", authHandler.V1RequestPasswordReset)
+			r.Post("/reset-password", authHandler.V1ResetPassword)
+			r.Get("/validate-reset-token", authHandler.V1ValidateResetToken)
+			r.Post("/verify-email", authHandler.V1VerifyEmail)
+
+			// Protected routes (require authentication)
 			r.Group(func(r chi.Router) {
 				r.Use(jwtauth.Verifier(tokenAuth))
 				r.Use(jwtauth.Authenticator(tokenAuth))
@@ -645,6 +652,9 @@ func setupAuthTestRouter(app *core.App) *chi.Mux {
 				userService := &db.UserService{DB: app.Pool, Logger: app.ObsLogger}
 				r.Use(core.RequireAuthenticationMiddleware(userService))
 				r.Get("/refresh", authHandler.V1Refresh)
+				r.Get("/me", authHandler.V1Me)
+				r.Post("/change-password", authHandler.V1ChangePassword)
+				r.Post("/resend-verification", authHandler.V1ResendVerificationEmail)
 				r.Get("/sessions", authHandler.V1ListSessions)
 				r.Delete("/sessions/{sessionID}", authHandler.V1RevokeSession)
 				r.Post("/revoke-all-sessions", authHandler.V1RevokeAllSessions)

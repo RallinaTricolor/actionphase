@@ -1287,4 +1287,60 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 
 		core.AssertEqual(t, 401, w.Code, "Should return 401 Unauthorized")
 	})
+
+	t.Run("apply_as_audience_during_character_creation", func(t *testing.T) {
+		// Create a new game in character_creation state
+		charCreationGame, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+			Title:       "Test Game Character Creation",
+			Description: "A game to test audience joining during character creation",
+			GMUserID:    int32(fixtures.TestUser.ID),
+			IsPublic:    true,
+		})
+		core.AssertNoError(t, err, "Game creation should succeed")
+
+		// Enable auto-accept audience
+		err = gameService.UpdateGameAutoAcceptAudience(context.Background(), charCreationGame.ID, true)
+		core.AssertNoError(t, err, "Auto-accept audience update should succeed")
+
+		// Transition game to character_creation state
+		_, err = gameService.UpdateGameState(context.Background(), charCreationGame.ID, "recruitment")
+		core.AssertNoError(t, err, "Game state update to recruitment should succeed")
+
+		_, err = gameService.UpdateGameState(context.Background(), charCreationGame.ID, "character_creation")
+		core.AssertNoError(t, err, "Game state update to character_creation should succeed")
+
+		// Create a new user to apply as audience
+		charCreationAudienceUser, err := userService.CreateUser(&core.User{
+			Username: "charaudience",
+			Password: "testpass123",
+			Email:    "charaudience@example.com",
+		})
+		core.AssertNoError(t, err, "User creation should succeed")
+
+		charCreationAudienceToken, err := core.CreateTestJWTTokenForUser(app, charCreationAudienceUser)
+		core.AssertNoError(t, err, "Token creation should succeed")
+
+		// Apply as audience during character_creation state
+		payload := map[string]string{
+			"application_text": "I would love to watch character creation!",
+		}
+		payloadBytes, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(charCreationGame.ID))+"/apply/audience", bytes.NewBuffer(payloadBytes))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+charCreationAudienceToken)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 201, w.Code, "Should return 201 Created - audience can join during character_creation")
+
+		var response AudienceMemberResponse
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		core.AssertEqual(t, charCreationGame.ID, response.GameID, "Game ID should match")
+		core.AssertEqual(t, int32(charCreationAudienceUser.ID), response.UserID, "User ID should match")
+		core.AssertEqual(t, "audience", response.Role, "Role should be audience")
+	})
 }

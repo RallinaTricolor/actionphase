@@ -34,6 +34,7 @@ export const FIXTURE_GAMES = {
   E2E_GAME_APPLICATION_APPROVE: 'E2E Test: Game Application - Approve', // Game with pending application for GM to approve
   E2E_GAME_APPLICATION_REJECT: 'E2E Test: Game Application - Reject', // Game with pending application for GM to reject
   E2E_GAME_APPLICATION_DUPLICATE: 'E2E Test: Game Application - Duplicate', // Game with existing application for duplicate prevention test
+  E2E_GAME_CHARACTER_CREATION_AUDIENCE: 'E2E Test: Character Creation Audience', // Game in character_creation state for testing audience joining
   E2E_GAME_LIFECYCLE_START: 'E2E Test: Game Lifecycle - Start', // Game in recruitment ready to start
   E2E_GAME_LIFECYCLE_PAUSE: 'E2E Test: Game Lifecycle - Pause', // Active game ready to pause
   E2E_GAME_LIFECYCLE_RESUME: 'E2E Test: Game Lifecycle - Resume', // Paused game ready to resume
