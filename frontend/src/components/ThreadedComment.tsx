@@ -435,7 +435,7 @@ export function ThreadedComment({
                 <span className="ml-2 text-xs bg-interactive-primary-subtle text-interactive-primary px-1.5 py-0.5 rounded">You</span>
               )}
               {isUnread && (
-                <span className="ml-2 text-xs bg-semantic-warning-subtle text-semantic-warning px-2 py-0.5 rounded font-semibold">NEW</span>
+                <span className="ml-2 text-xs bg-semantic-warning-subtle text-content-primary px-2 py-0.5 rounded font-semibold">NEW</span>
               )}
             </div>
             {/* Mobile: vertical layout */}
@@ -443,10 +443,10 @@ export function ThreadedComment({
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-semibold text-sm text-content-primary">{comment.character_name}</span>
                 {isAuthor && (
-                  <span className="text-xs bg-interactive-primary-subtle text-interactive-primary px-1.5 py-0.5 rounded">You</span>
+                  <span className="text-xs bg-interactive-primary-subtle text-content-primary px-1.5 py-0.5 rounded">You</span>
                 )}
                 {isUnread && (
-                  <span className="text-xs bg-semantic-warning-subtle text-semantic-warning px-2 py-0.5 rounded font-semibold">NEW</span>
+                  <span className="text-xs bg-semantic-warning-subtle text-content-primary px-2 py-0.5 rounded font-semibold">NEW</span>
                 )}
               </div>
               <div className="text-xs text-content-secondary">

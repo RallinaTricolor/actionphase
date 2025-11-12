@@ -116,12 +116,12 @@ export const GAME_STATE_LABELS: Record<GameState, string> = {
 
 export const GAME_STATE_COLORS: Record<GameState, string> = {
   setup: 'surface-raised text-content-secondary',
-  recruitment: 'bg-semantic-success-subtle text-semantic-success',
-  character_creation: 'bg-interactive-primary-subtle text-interactive-primary',
-  in_progress: 'bg-semantic-warning-subtle text-semantic-warning',
-  paused: 'bg-semantic-warning-subtle text-semantic-warning',
+  recruitment: 'bg-semantic-success-subtle text-content-primary',
+  character_creation: 'bg-interactive-primary-subtle text-content-primary',
+  in_progress: 'bg-semantic-warning-subtle text-content-primary',
+  paused: 'bg-semantic-warning-subtle text-content-primary',
   completed: 'bg-semantic-info-subtle text-content-primary',
-  cancelled: 'bg-semantic-danger-subtle text-semantic-danger'
+  cancelled: 'bg-semantic-danger-subtle text-content-primary'
 };
 
 export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {

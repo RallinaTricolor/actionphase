@@ -31,8 +31,8 @@ export const TestConnection = () => {
 
       {status !== 'idle' && (
         <div className={`mt-4 p-3 rounded ${
-          status === 'success' ? 'bg-semantic-success-subtle text-semantic-success' :
-          status === 'error' ? 'bg-semantic-danger-subtle text-semantic-danger' :
+          status === 'success' ? 'bg-semantic-success-subtle text-content-primary' :
+          status === 'error' ? 'bg-semantic-danger-subtle text-content-primary' :
           'surface-sunken text-content-primary'
         }`}>
           <strong>Status:</strong> {status}<br />

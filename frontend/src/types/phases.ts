@@ -113,8 +113,8 @@ export const PHASE_TYPE_DESCRIPTIONS: Record<GamePhase['phase_type'], string> = 
 };
 
 export const PHASE_TYPE_COLORS: Record<GamePhase['phase_type'], string> = {
-  common_room: 'bg-semantic-success-subtle text-semantic-success border-semantic-success',
-  action: 'bg-interactive-primary-subtle text-interactive-primary border-interactive-primary'
+  common_room: 'bg-semantic-success-subtle text-content-primary border-semantic-success',
+  action: 'bg-interactive-primary-subtle text-content-primary border-interactive-primary'
 };
 
 // Action phase states

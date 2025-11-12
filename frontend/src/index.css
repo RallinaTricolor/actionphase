@@ -179,11 +179,11 @@
   }
 
   .text-text-primary {
-    color: rgb(var(--color-text-primary));
+    color: rgb(var(--color-content-secondary));
   }
 
   .text-text-secondary {
-    color: rgb(var(--color-text-secondary));
+    color: rgb(var(--color-content-secondary));
   }
 
   .text-text-muted {
@@ -258,11 +258,11 @@
 
   /* Semantic tokens - for status colors */
   .bg-semantic-danger {
-    background-color: rgb(var(--color-danger));
+    background-color: rgb(var(--color-semantic-danger));
   }
 
   .hover\:bg-semantic-danger-hover:hover {
-    background-color: rgb(var(--color-danger-hover));
+    background-color: rgb(var(--color-semantic-danger));
   }
 
   .bg-semantic-danger-subtle {
@@ -270,19 +270,19 @@
   }
 
   .text-semantic-danger {
-    color: rgb(var(--color-danger-text));
+    color: rgb(var(--color-semantic-danger));
   }
 
   .border-semantic-danger {
-    border-color: rgb(var(--color-danger));
+    border-color: rgb(var(--color-semantic-danger));
   }
 
   .bg-semantic-warning {
-    background-color: rgb(var(--color-warning));
+    background-color: rgb(var(--color-semantic-warning));
   }
 
   .hover\:bg-semantic-warning-hover:hover {
-    background-color: rgb(var(--color-warning-hover));
+    background-color: rgb(var(--color-semantic-warning));
   }
 
   .bg-semantic-warning-subtle {
@@ -290,19 +290,19 @@
   }
 
   .text-semantic-warning {
-    color: rgb(var(--color-warning-text));
+    color: rgb(var(--color-semantic-warning));
   }
 
   .border-semantic-warning {
-    border-color: rgb(var(--color-warning));
+    border-color: rgb(var(--color-semantic-warning));
   }
 
   .bg-semantic-success {
-    background-color: rgb(var(--color-success));
+    background-color: rgb(var(--color-semantic-success));
   }
 
   .hover\:bg-semantic-success-hover:hover {
-    background-color: rgb(var(--color-success-hover));
+    background-color: rgb(var(--color-semantic-success));
   }
 
   .bg-semantic-success-subtle {
@@ -310,19 +310,19 @@
   }
 
   .text-semantic-success {
-    color: rgb(var(--color-success-text));
+    color: rgb(var(--color-semantic-success));
   }
 
   .border-semantic-success {
-    border-color: rgb(var(--color-success));
+    border-color: rgb(var(--color-semantic-success));
   }
 
   .focus\:ring-semantic-success:focus {
-    --tw-ring-color: rgb(var(--color-success));
+    --tw-ring-color: rgb(var(--color-semantic-success));
   }
 
   .bg-semantic-info {
-    background-color: rgb(var(--color-info));
+    background-color: rgb(var(--color-semantic-info));
   }
 
   .bg-semantic-info-subtle {
@@ -330,15 +330,15 @@
   }
 
   .text-semantic-info {
-    color: rgb(var(--color-info-text));
+    color: rgb(var(--color-semantic-info));
   }
 
   .border-semantic-info {
-    border-color: rgb(var(--color-info));
+    border-color: rgb(var(--color-semantic-info));
   }
 
   .ring-info {
-    --tw-ring-color: rgb(var(--color-info));
+    --tw-ring-color: rgb(var(--color-semantic-info));
   }
 
   /* Surface backgrounds (bg- prefixed versions for consistency) */

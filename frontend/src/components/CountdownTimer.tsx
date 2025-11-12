@@ -65,7 +65,7 @@ export function CountdownTimer({ deadline, className = '', onExpired }: Countdow
 
   if (isExpired) {
     return (
-      <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-semantic-danger-subtle text-semantic-danger ${className}`}>
+      <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-semantic-danger-subtle text-content-primary ${className}`}>
         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
@@ -75,10 +75,10 @@ export function CountdownTimer({ deadline, className = '', onExpired }: Countdow
   }
 
   const timerColor = isUrgent
-    ? 'bg-semantic-danger-subtle text-semantic-danger border-semantic-danger'
+    ? 'bg-semantic-danger-subtle text-content-primary border-semantic-danger'
     : isWarning
-    ? 'bg-semantic-warning-subtle text-semantic-warning border-semantic-warning'
-    : 'bg-interactive-primary-subtle text-interactive-primary border-interactive-primary';
+    ? 'bg-semantic-warning-subtle text-content-primary border-semantic-warning'
+    : 'bg-interactive-primary-subtle text-content-primary border-interactive-primary';
 
   const pulseClass = isUrgent ? 'animate-pulse' : '';
 
