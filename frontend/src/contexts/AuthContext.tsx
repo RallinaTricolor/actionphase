@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { LoginRequest, RegisterRequest, User } from '../types/auth';
@@ -74,11 +74,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [userError]);
 
+  // Track whether we've already shown the draft restoration toast
+  const draftToastShownRef = useRef(false);
+
   // Check for and restore saved drafts when user becomes authenticated
   // This helps recover work-in-progress when session expires
   useEffect(() => {
     // Only check when user first becomes authenticated and auth check is complete
-    if (isAuthenticated && !isCheckingAuth) {
+    // AND we haven't already shown the toast
+    if (isAuthenticated && !isCheckingAuth && !draftToastShownRef.current) {
       const draftData = getSavedDrafts();
       if (draftData) {
         logger.info('Found saved drafts after login', {
@@ -86,11 +90,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
           originalPath: draftData.path,
         });
 
-        // Wait a bit for the page to fully load and fields to be rendered
-        setTimeout(() => {
-          const message = getDraftMessage(draftData);
-          showSuccess(message);
-        }, 500);
+        // Mark that we've shown the toast
+        draftToastShownRef.current = true;
+
+        // Show toast with path information and clear the drafts
+        // Users can navigate back if needed, but we won't keep showing the toast
+        const draftCount = Object.keys(draftData.drafts).length;
+        const pathDisplay = draftData.path === '/' ? 'home page' : draftData.path;
+        const message = `We found ${draftCount} unsaved draft${draftCount > 1 ? 's' : ''} from ${pathDisplay}. Navigate back to that page to see your restored work, or continue - we won't remind you again.`;
+
+        showSuccess(message);
+
+        // Clear the drafts from localStorage so the toast doesn't reappear
+        localStorage.removeItem('session_expired_drafts');
       }
     }
   }, [isAuthenticated, isCheckingAuth, showSuccess]);
