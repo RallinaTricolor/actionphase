@@ -30,6 +30,16 @@ type Config struct {
 
 // DatabaseConfig contains database connection and behavior settings.
 // Supports both development and production database configurations.
+//
+// Connection Pool Sizing Guidelines:
+//   - Formula: connections_per_server = (total_db_connections * 0.8) / num_app_servers
+//   - Example: PostgreSQL max 100, 2 app servers = (100 * 0.8) / 2 = 40 connections per server
+//   - Keep MinConnections at ~25% of MaxConnections for warm connections
+//
+// Environment Defaults:
+//   - Development: MaxConns=5, MinConns=1 (single developer, minimal load)
+//   - Staging: MaxConns=10, MinConns=3 (light testing, 1 server)
+//   - Production: MaxConns=35, MinConns=9 (adjust based on server count and DB limits)
 type DatabaseConfig struct {
 	// URL is the full PostgreSQL connection string
 	// Example: "postgres://user:pass@localhost:5432/dbname?sslmode=disable"
@@ -38,11 +48,29 @@ type DatabaseConfig struct {
 	// TestURL is used for running tests (optional - falls back to URL with _test suffix)
 	TestURL string `env:"TEST_DATABASE_URL"`
 
-	// MaxConnections controls connection pool size (default: 10)
+	// MaxConnections controls maximum connection pool size
+	// Environment-aware defaults: dev=5, staging=10, production=35
 	MaxConnections int `env:"DATABASE_MAX_CONNECTIONS"`
 
-	// MaxIdleTime controls how long connections stay idle (default: 30m)
+	// MinConnections controls minimum connection pool size
+	// Maintains warm connections to avoid latency on cold start
+	// Environment-aware defaults: dev=1, staging=3, production=9
+	MinConnections int `env:"DATABASE_MIN_CONNECTIONS"`
+
+	// MaxConnLifetime controls maximum connection lifetime before recycling
+	// Prevents stale connections and handles database-side connection limits
+	// Default: 1h (connections are recycled after 1 hour)
+	MaxConnLifetime time.Duration `env:"DATABASE_MAX_CONN_LIFETIME"`
+
+	// MaxIdleTime controls how long idle connections stay in pool
+	// Idle connections are closed after this duration
+	// Default: 30m
 	MaxIdleTime time.Duration `env:"DATABASE_MAX_IDLE_TIME"`
+
+	// HealthCheckPeriod controls how often to check connection health
+	// Detects and removes dead connections from pool
+	// Default: 1m (check every minute)
+	HealthCheckPeriod time.Duration `env:"DATABASE_HEALTH_CHECK_PERIOD"`
 }
 
 // JWTConfig contains JWT token configuration for authentication.
@@ -135,12 +163,21 @@ type StorageConfig struct {
 //	export ENVIRONMENT="development"
 //	export LOG_LEVEL="info"
 func LoadConfig() (*Config, error) {
+	// Determine environment first to set appropriate defaults
+	environment := getEnvString("ENVIRONMENT", "development")
+
+	// Get environment-specific connection pool defaults
+	maxConns, minConns := getPoolDefaults(environment)
+
 	config := &Config{
 		Database: DatabaseConfig{
-			URL:            getEnvString("DATABASE_URL", ""),
-			TestURL:        getEnvString("TEST_DATABASE_URL", ""),
-			MaxConnections: getEnvInt("DATABASE_MAX_CONNECTIONS", 10),
-			MaxIdleTime:    getEnvDuration("DATABASE_MAX_IDLE_TIME", 30*time.Minute),
+			URL:               getEnvString("DATABASE_URL", ""),
+			TestURL:           getEnvString("TEST_DATABASE_URL", ""),
+			MaxConnections:    getEnvInt("DATABASE_MAX_CONNECTIONS", maxConns),
+			MinConnections:    getEnvInt("DATABASE_MIN_CONNECTIONS", minConns),
+			MaxConnLifetime:   getEnvDuration("DATABASE_MAX_CONN_LIFETIME", 1*time.Hour),
+			MaxIdleTime:       getEnvDuration("DATABASE_MAX_IDLE_TIME", 30*time.Minute),
+			HealthCheckPeriod: getEnvDuration("DATABASE_HEALTH_CHECK_PERIOD", 1*time.Minute),
 		},
 		JWT: JWTConfig{
 			Secret:             getEnvString("JWT_SECRET", ""),
@@ -156,7 +193,7 @@ func LoadConfig() (*Config, error) {
 			IdleTimeout:  getEnvDuration("SERVER_IDLE_TIMEOUT", 60*time.Second),
 		},
 		App: AppConfig{
-			Environment:     getEnvString("ENVIRONMENT", "development"),
+			Environment:     environment,
 			LogLevel:        getEnvString("LOG_LEVEL", "info"),
 			RunMigrations:   getEnvBool("RUN_MIGRATIONS", true),
 			CORSEnabled:     getEnvBool("CORS_ENABLED", true),
@@ -324,4 +361,28 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+// getPoolDefaults returns environment-specific database connection pool defaults.
+// These values balance resource usage with performance for each environment.
+//
+// Returns: (maxConnections, minConnections)
+func getPoolDefaults(environment string) (int, int) {
+	switch environment {
+	case "development":
+		// Development: Minimal connections for single developer
+		return 5, 1
+	case "staging":
+		// Staging: Light testing load with single server
+		return 10, 3
+	case "production":
+		// Production: Assumes 2 app servers, PostgreSQL max_connections=100
+		// Formula: (100 * 0.8) / 2 = 40 connections per server
+		// Conservative default of 35 to leave headroom
+		// Adjust DATABASE_MAX_CONNECTIONS based on your deployment
+		return 35, 9
+	default:
+		// Unknown environment - use development defaults
+		return 5, 1
+	}
 }
