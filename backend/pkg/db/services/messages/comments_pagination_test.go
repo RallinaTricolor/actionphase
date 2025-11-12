@@ -184,8 +184,10 @@ func TestMessageService_GetPostCommentsWithThreads(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		// Fetch with max_depth=2 (should get levels 0, 1, 2 only)
-		comments, err := service.GetPostCommentsWithThreads(context.Background(), post.ID, 10, 0, 2)
+		// Fetch with max_depth=3 (should get levels 0, 1, 2 only)
+		// With new threading semantics, maxDepth controls where "Continue thread" appears
+		// maxDepth=3 means: show depths 0-2 with Reply buttons, "Continue thread" at depth 2
+		comments, err := service.GetPostCommentsWithThreads(context.Background(), post.ID, 10, 0, 3)
 		require.NoError(t, err)
 
 		// Should return 3 comments: level 0, 1, 2
