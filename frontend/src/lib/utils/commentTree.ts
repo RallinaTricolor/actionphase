@@ -1,4 +1,5 @@
 import type { CommentWithDepth } from '@/types/messages';
+import { logger } from '@/services/LoggingService';
 
 export interface CommentTreeNode extends CommentWithDepth {
   children: CommentTreeNode[];
@@ -51,7 +52,7 @@ export function buildCommentTree(comments: CommentWithDepth[]): CommentTreeNode[
       } else {
         // Parent not found (shouldn't happen with proper backend data)
         // Treat as top-level to avoid losing the comment
-        console.warn(`Comment ${comment.id} has parent_id ${comment.parent_id} but parent not found`);
+        logger.warn(`Comment ${comment.id} has parent_id ${comment.parent_id} but parent not found`);
         topLevelComments.push(node);
       }
     }

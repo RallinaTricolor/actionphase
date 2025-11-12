@@ -1,4 +1,5 @@
 import { BaseApiClient } from './client';
+import { logger } from '@/services/LoggingService';
 import type {
   Character,
   CharacterData,
@@ -53,7 +54,7 @@ export class CharactersApi extends BaseApiClient {
 
   // Avatar endpoints
   async uploadCharacterAvatar(characterId: number, file: File) {
-    console.log('[Avatar Upload] Starting upload:', {
+    logger.debug('Avatar upload starting', {
       characterId,
       fileName: file.name,
       fileSize: file.size,
@@ -63,10 +64,10 @@ export class CharactersApi extends BaseApiClient {
     const formData = new FormData();
     formData.append('avatar', file);
 
-    console.log('[Avatar Upload] FormData created, entries:', Array.from(formData.entries()).map(([key, value]) => ({
-      key,
-      value: value instanceof File ? { name: value.name, size: value.size, type: value.type } : value
-    })));
+    logger.debug('Avatar upload FormData created', {
+      characterId,
+      fileName: file.name,
+    });
 
     // CRITICAL: Must explicitly delete Content-Type header for multipart/form-data
     // The BaseApiClient sets a default 'Content-Type: application/json' header,
@@ -82,14 +83,13 @@ export class CharactersApi extends BaseApiClient {
           },
         }
       );
-      console.log('[Avatar Upload] Success:', response);
+      logger.debug('Avatar upload successful', { characterId });
       return response;
     } catch (error: any) {
-      console.error('[Avatar Upload] Failed:', {
+      logger.error('Avatar upload failed', {
+        characterId,
         message: error.message,
-        response: error.response?.data,
         status: error.response?.status,
-        headers: error.response?.headers,
       });
       throw error;
     }

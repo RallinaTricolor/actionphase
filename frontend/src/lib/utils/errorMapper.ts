@@ -3,6 +3,8 @@
  * Converts backend error responses into user-friendly messages
  */
 
+import { logger } from '@/services/LoggingService';
+
 interface ErrorResponse {
   response?: {
     data?: {
@@ -168,7 +170,7 @@ export function mapAuthError(error: ErrorResponse | unknown): string {
   }
 
   // Generic fallback
-  console.error('Unmapped error:', errorMessage, rawError);
+  logger.error('Unmapped error', { errorMessage, rawError });
   return 'An error occurred. Please try again or contact support if the problem persists.';
 }
 

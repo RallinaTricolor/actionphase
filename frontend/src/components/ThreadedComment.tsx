@@ -281,9 +281,11 @@ export function ThreadedComment({
     const optimisticReply: Message = {
       id: Date.now(), // Temporary ID
       parent_id: comment.id,
+      game_id: gameId,
+      thread_depth: depth + 1,
       character_id: selectedCharacterId,
       author_id: currentUserId || 0,
-      author_username: selectedCharacter.username,
+      author_username: selectedCharacter.username || '',
       character_name: selectedCharacter.name,
       character_avatar_url: selectedCharacter.avatar_url || undefined,
       content: replyContent.trim(),
