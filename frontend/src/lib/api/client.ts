@@ -11,6 +11,8 @@ export class BaseApiClient {
   protected refreshClient: ReturnType<typeof axios.create>;
   private refreshPromise: Promise<void> | null = null;
   private sessionExpiredDispatched: boolean = false;
+  private isLoggingOut: boolean = false;
+  private lastLogoutTime: number = 0;
 
   constructor() {
     this.client = axios.create({
@@ -91,13 +93,26 @@ export class BaseApiClient {
           error,
         });
 
-        // Don't try to refresh token for auth endpoints (login, register, me)
+        // Don't try to refresh token for auth endpoints (login, register, logout, me)
         // /auth/me is used to CHECK if user is authenticated, so it shouldn't trigger refresh
+        // /auth/logout is intentional logout, so it shouldn't trigger refresh
         const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
                                originalRequest.url?.includes('/auth/register') ||
+                               originalRequest.url?.includes('/auth/logout') ||
                                originalRequest.url?.includes('/auth/me');
 
-        if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+        // Don't try to refresh token if logout is in progress
+        const shouldSkipRefresh = isAuthEndpoint || this.isLoggingOut;
+
+        logger.debug('401 Response - Refresh Decision', {
+          url: originalRequest.url,
+          isAuthEndpoint,
+          isLoggingOut: this.isLoggingOut,
+          shouldSkipRefresh,
+          willAttemptRefresh: !shouldSkipRefresh
+        });
+
+        if (error.response?.status === 401 && !originalRequest._retry && !shouldSkipRefresh) {
           originalRequest._retry = true;
 
           logger.info('Token refresh needed', {
@@ -142,10 +157,16 @@ export class BaseApiClient {
             // Clear any legacy localStorage tokens
             localStorage.removeItem('auth_token');
 
+            // Check if we just logged out (within 2 seconds)
+            // If so, skip showing session expired message as this is expected
+            const timeSinceLogout = Date.now() - this.lastLogoutTime;
+            const isRecentLogout = timeSinceLogout < 2000;
+
             // Only dispatch events once to prevent infinite toast loop
             // Multiple requests may fail and enter this catch block, but we only
             // want to show the session expired message once
-            if (!this.sessionExpiredDispatched) {
+            // Skip if this is part of an expected logout flow
+            if (!this.sessionExpiredDispatched && !isRecentLogout) {
               this.sessionExpiredDispatched = true;
 
               // Save any unsaved form data as drafts before redirecting
@@ -167,6 +188,11 @@ export class BaseApiClient {
                 });
                 window.location.href = '/login';
               }
+            } else if (isRecentLogout) {
+              logger.debug('Skipping session expired event - recent logout detected', {
+                timeSinceLogout,
+                originalUrl: originalRequest.url
+              });
             }
             return Promise.reject(refreshError);
           }
@@ -251,6 +277,23 @@ export class BaseApiClient {
 
   removeAuthToken() {
     localStorage.removeItem('auth_token');
+  }
+
+  /**
+   * Mark that logout is in progress to prevent token refresh attempts
+   */
+  startLogout() {
+    logger.info('Setting logout flag - preventing token refresh attempts');
+    this.isLoggingOut = true;
+    this.lastLogoutTime = Date.now();
+  }
+
+  /**
+   * Clear the logout flag after logout is complete
+   */
+  endLogout() {
+    logger.info('Clearing logout flag - token refresh attempts allowed again');
+    this.isLoggingOut = false;
   }
 
   getAuthToken(): string | null {

@@ -158,6 +158,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Logout function
   const logout = async () => {
     logger.info('User logging out');
+
+    // Mark logout as in progress to prevent token refresh attempts
+    apiClient.startLogout();
+
     try {
       // Call backend to invalidate session/clear cookie
       await apiClient.auth.logout();
@@ -171,6 +175,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       queryClient.setQueryData(['currentUser'], null);
       queryClient.clear();
       setAuthError(null);
+
+      // Clear logout flag after cleanup is complete
+      apiClient.endLogout();
     }
   };
 

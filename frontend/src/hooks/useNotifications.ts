@@ -1,16 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 import type { GetNotificationsParams } from '../types/notifications';
 
 export function useNotifications(params?: GetNotificationsParams) {
+  const { isAuthenticated } = useAuth();
+
   return useQuery({
     queryKey: ['notifications', params],
     queryFn: async () => {
       const response = await apiClient.notifications.getNotifications(params);
       return response.data;
     },
-    // Poll every 30 seconds for new notifications
-    refetchInterval: 30000,
+    // Only run query when user is authenticated
+    enabled: isAuthenticated,
+    // Poll every 30 seconds for new notifications, but only when authenticated
+    refetchInterval: isAuthenticated ? 30000 : false,
     // Always refetch when component mounts to ensure fresh data when dropdown opens
     refetchOnMount: 'always',
     // Refetch when window regains focus
@@ -19,14 +24,18 @@ export function useNotifications(params?: GetNotificationsParams) {
 }
 
 export function useUnreadCount() {
+  const { isAuthenticated } = useAuth();
+
   return useQuery({
     queryKey: ['notifications', 'unreadCount'],
     queryFn: async () => {
       const response = await apiClient.notifications.getUnreadCount();
       return response.data.unread_count;
     },
-    // Poll every 15 seconds for unread count (more frequent for bell badge)
-    refetchInterval: 15000,
+    // Only run query when user is authenticated
+    enabled: isAuthenticated,
+    // Poll every 15 seconds for unread count, but only when authenticated
+    refetchInterval: isAuthenticated ? 15000 : false,
     // Always refetch when component mounts to ensure fresh badge count
     refetchOnMount: 'always',
     // Refetch when window regains focus
