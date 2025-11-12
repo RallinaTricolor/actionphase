@@ -10,6 +10,7 @@ export class BaseApiClient {
   protected client: ReturnType<typeof axios.create>;
   protected refreshClient: ReturnType<typeof axios.create>;
   private refreshPromise: Promise<void> | null = null;
+  private sessionExpiredDispatched: boolean = false;
 
   constructor() {
     this.client = axios.create({
@@ -124,6 +125,9 @@ export class BaseApiClient {
               logger.info('Token refresh successful, retrying request', {
                 url: originalRequest.url,
               });
+              // Reset the session expired flag on successful refresh
+              // This allows showing the message again if session expires in the future
+              this.sessionExpiredDispatched = false;
               return this.client(originalRequest);
             } finally {
               // Clear the refresh promise so future requests can trigger a new refresh if needed
@@ -138,20 +142,27 @@ export class BaseApiClient {
             // Clear any legacy localStorage tokens
             localStorage.removeItem('auth_token');
 
-            // Dispatch event to show user-facing error message
-            window.dispatchEvent(new CustomEvent('auth:sessionExpired', {
-              detail: { message: 'Your session has expired. Please log in again.' }
-            }));
+            // Only dispatch events once to prevent infinite toast loop
+            // Multiple requests may fail and enter this catch block, but we only
+            // want to show the session expired message once
+            if (!this.sessionExpiredDispatched) {
+              this.sessionExpiredDispatched = true;
 
-            // Dispatch event to clear React Query cache
-            window.dispatchEvent(new CustomEvent('auth:logout'));
+              // Dispatch event to show user-facing error message
+              window.dispatchEvent(new CustomEvent('auth:sessionExpired', {
+                detail: { message: 'Your session has expired. Please log in again.' }
+              }));
 
-            // Don't redirect if we're already on login page or public pages
-            if (!window.location.pathname.includes('/login') &&
-                !window.location.pathname.includes('/games') &&
-                window.location.pathname !== '/') {
-              logger.info('Redirecting to login after failed token refresh');
-              window.location.href = '/login';
+              // Dispatch event to clear React Query cache
+              window.dispatchEvent(new CustomEvent('auth:logout'));
+
+              // Redirect to login page unless already there
+              if (!window.location.pathname.includes('/login')) {
+                logger.info('Redirecting to login after failed token refresh', {
+                  from: window.location.pathname
+                });
+                window.location.href = '/login';
+              }
             }
             return Promise.reject(refreshError);
           }
@@ -186,6 +197,8 @@ export class BaseApiClient {
     }
     console.log('Setting auth token:', token.substring(0, 50) + '...');
     localStorage.setItem('auth_token', token);
+    // Reset the session expired flag on successful authentication
+    this.sessionExpiredDispatched = false;
   }
 
   removeAuthToken() {
