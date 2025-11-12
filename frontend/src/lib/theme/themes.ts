@@ -40,6 +40,7 @@ export const themes = {
     // Interactive colors - buttons and actions
     '--color-interactive-primary': '37 99 235',         // blue-600 - primary buttons
     '--color-interactive-primary-hover': '29 78 216',   // blue-700 - primary button hover
+    '--color-interactive-primary-subtle': '239 246 255', // blue-50 - subtle backgrounds for badges
     '--color-interactive-secondary': '243 244 246',     // gray-100 - secondary buttons
     '--color-interactive-secondary-hover': '229 231 235', // gray-200 - secondary hover
 
@@ -80,6 +81,7 @@ export const themes = {
     // Interactive colors - buttons and actions
     '--color-interactive-primary': '59 130 246',        // blue-500 - primary buttons
     '--color-interactive-primary-hover': '37 99 235',   // blue-600 - primary button hover
+    '--color-interactive-primary-subtle': '30 58 138',  // blue-900 - subtle backgrounds for badges
     '--color-interactive-secondary': '55 65 81',        // gray-700 - secondary buttons
     '--color-interactive-secondary-hover': '75 85 99',  // gray-600 - secondary hover
 
@@ -122,27 +124,19 @@ export const themes = {
     // Interactive colors - bold and distinct
     '--color-interactive-primary': '0 0 180',           // strong blue
     '--color-interactive-primary-hover': '0 0 140',     // darker blue
+    '--color-interactive-primary-subtle': '230 240 255', // very light blue - subtle backgrounds for badges
     '--color-interactive-secondary': '230 230 230',     // light gray
     '--color-interactive-secondary-hover': '210 210 210', // medium gray
-    '--color-primary-light': '230 240 255',             // very light blue - subtle backgrounds
 
     // Semantic colors - maximum contrast and distinct
-    '--color-danger': '180 0 0',               // strong red
-    '--color-danger-hover': '140 0 0',         // darker red
-    '--color-danger-light': '255 230 230',     // light red
-    '--color-danger-text': '140 0 0',          // darker red for text
-    '--color-warning': '180 120 0',            // strong orange
-    '--color-warning-hover': '140 90 0',       // darker orange
-    '--color-warning-light': '255 245 220',    // light orange
-    '--color-warning-text': '140 90 0',        // darker orange for text
-    '--color-success': '0 130 0',              // strong green
-    '--color-success-hover': '0 100 0',        // darker green
-    '--color-success-light': '230 255 230',    // light green
-    '--color-success-text': '0 100 0',         // darker green for text
-    '--color-info': '0 0 180',                 // strong blue
-    '--color-info-hover': '0 0 140',           // darker blue
-    '--color-info-light': '230 240 255',       // light blue
-    '--color-info-text': '0 0 140',            // darker blue for text
+    '--color-semantic-danger': '180 0 0',               // strong red
+    '--color-semantic-danger-subtle': '255 230 230',    // light red
+    '--color-semantic-warning': '180 120 0',            // strong orange
+    '--color-semantic-warning-subtle': '255 245 220',   // light orange
+    '--color-semantic-success': '0 130 0',              // strong green
+    '--color-semantic-success-subtle': '230 255 230',   // light green
+    '--color-semantic-info': '0 0 180',                 // strong blue
+    '--color-semantic-info-subtle': '230 240 255',      // light blue
 
     // Border colors - strong contrast
     '--color-border-default': '0 0 0',            // black - standard borders
@@ -173,27 +167,19 @@ export const themes = {
     // Interactive colors - bright and bold
     '--color-interactive-primary': '100 150 255',       // bright blue
     '--color-interactive-primary-hover': '140 180 255', // brighter blue
+    '--color-interactive-primary-subtle': '20 30 60',   // dark blue - subtle backgrounds for badges
     '--color-interactive-secondary': '60 60 60',        // dark gray
     '--color-interactive-secondary-hover': '80 80 80',  // lighter dark gray
-    '--color-primary-light': '20 30 60',                // dark blue - subtle backgrounds
 
     // Semantic colors - bright and distinct
-    '--color-danger': '255 100 100',           // bright red
-    '--color-danger-hover': '255 140 140',     // brighter red
-    '--color-danger-light': '60 20 20',        // dark red
-    '--color-danger-text': '255 140 140',      // brighter red for text
-    '--color-warning': '255 200 100',          // bright orange
-    '--color-warning-hover': '255 220 140',    // brighter orange
-    '--color-warning-light': '60 50 20',       // dark orange
-    '--color-warning-text': '255 220 140',     // brighter orange for text
-    '--color-success': '100 255 100',          // bright green
-    '--color-success-hover': '140 255 140',    // brighter green
-    '--color-success-light': '20 60 20',       // dark green
-    '--color-success-text': '140 255 140',     // brighter green for text
-    '--color-info': '100 150 255',             // bright blue
-    '--color-info-hover': '140 180 255',       // brighter blue
-    '--color-info-light': '20 30 60',          // dark blue
-    '--color-info-text': '140 180 255',        // brighter blue for text
+    '--color-semantic-danger': '255 100 100',           // bright red
+    '--color-semantic-danger-subtle': '60 20 20',       // dark red
+    '--color-semantic-warning': '255 200 100',          // bright orange
+    '--color-semantic-warning-subtle': '60 50 20',      // dark orange
+    '--color-semantic-success': '100 255 100',          // bright green
+    '--color-semantic-success-subtle': '20 60 20',      // dark green
+    '--color-semantic-info': '100 150 255',             // bright blue
+    '--color-semantic-info-subtle': '20 30 60',         // dark blue
 
     // Border colors - bright contrast
     '--color-border-default': '255 255 255',      // white - standard borders
@@ -225,31 +211,23 @@ export const themes = {
     // Interactive colors - strong cyan-blue (universally distinguishable)
     '--color-interactive-primary': '6 182 212',         // cyan-600 - very distinct
     '--color-interactive-primary-hover': '8 145 178',   // cyan-700 - hover
+    '--color-interactive-primary-subtle': '207 250 254', // cyan-100 - light cyan subtle backgrounds for badges
     '--color-interactive-secondary': '254 249 238',     // warm beige - secondary
     '--color-interactive-secondary-hover': '250 245 235', // darker warm - hover
-    '--color-primary-light': '207 250 254',             // cyan-100 - light cyan subtle backgrounds
 
     // Semantic colors - colorblind-safe palette with maximum distinction
     // Danger: Strong Orange (not red) - highly visible and distinct from blue
-    '--color-danger': '249 115 22',            // orange-500 - bright and distinct
-    '--color-danger-hover': '234 88 12',       // orange-600 - darker
-    '--color-danger-light': '255 237 213',     // orange-100
-    '--color-danger-text': '194 65 12',        // orange-700 - darker for text
+    '--color-semantic-danger': '249 115 22',            // orange-500 - bright and distinct
+    '--color-semantic-danger-subtle': '255 237 213',    // orange-100
     // Warning: Bright Yellow - maximum brightness contrast
-    '--color-warning': '234 179 8',            // yellow-500 - very bright
-    '--color-warning-hover': '202 138 4',      // yellow-600 - darker
-    '--color-warning-light': '254 252 232',    // yellow-50
-    '--color-warning-text': '161 98 7',        // yellow-700 - darker for text
+    '--color-semantic-warning': '234 179 8',            // yellow-500 - very bright
+    '--color-semantic-warning-subtle': '254 252 232',   // yellow-50
     // Success: Teal (not green) - distinct from cyan primary
-    '--color-success': '20 184 166',           // teal-500 - clearly different from cyan
-    '--color-success-hover': '17 94 89',       // teal-700 - darker
-    '--color-success-light': '204 251 241',    // teal-100
-    '--color-success-text': '15 118 110',      // teal-600 - for text
+    '--color-semantic-success': '20 184 166',           // teal-500 - clearly different from cyan
+    '--color-semantic-success-subtle': '204 251 241',   // teal-100
     // Info: Deep Purple - completely different from other colors
-    '--color-info': '124 58 237',              // violet-600 - strong purple
-    '--color-info-hover': '109 40 217',        // violet-700 - darker
-    '--color-info-light': '237 233 254',       // violet-100
-    '--color-info-text': '109 40 217',         // violet-700 - for text
+    '--color-semantic-info': '124 58 237',              // violet-600 - strong purple
+    '--color-semantic-info-subtle': '237 233 254',      // violet-100
 
     // Border colors - warmer tones
     '--color-border-default': '217 119 6',        // orange-600 - warm accent borders

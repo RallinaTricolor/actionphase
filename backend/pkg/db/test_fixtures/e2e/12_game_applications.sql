@@ -1,15 +1,16 @@
 -- E2E Test Fixture for Game Application Workflow
 -- Creates multiple isolated games for testing different application scenarios
 -- Tests: Player applies → GM receives notification → GM reviews → GM approves/rejects
+-- Also includes audience joining during character_creation state
 --
 -- IDEMPOTENT: Safe to run multiple times - deletes existing data before recreating
 --
--- Game IDs: 329-333 (offset by worker: Worker 1 = 10329-10333, etc.)
+-- Game IDs: 329-333, 346 (offset by worker: Worker 1 = 10329-10333, 10346, etc.)
 
 BEGIN;
 
 -- Delete existing game application test games to prevent duplicates
-DELETE FROM games WHERE id IN (329, 330, 331, 332, 333);
+DELETE FROM games WHERE id IN (329, 330, 331, 332, 333, 346);
 
 DO $$
 DECLARE
@@ -24,6 +25,7 @@ DECLARE
   game3_id INT := 331;
   game4_id INT := 332;
   game5_id INT := 333;
+  game6_id INT := 346;
 BEGIN
   -- Get user IDs
   SELECT id INTO gm_id FROM users WHERE email = 'test_gm@example.com';
@@ -216,7 +218,47 @@ BEGIN
     NOW() - INTERVAL '2 hours'
   );
 
-  RAISE NOTICE 'Game Application Workflow fixtures created: Games % % % % %', game1_id, game2_id, game3_id, game4_id, game5_id;
+  -- ============================================
+  -- Game #334: For testing audience joining during character_creation
+  -- ============================================
+  INSERT INTO games (
+    id,
+    title,
+    description,
+    genre,
+    gm_user_id,
+    max_players,
+    state,
+    is_public,
+    auto_accept_audience,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    game6_id,
+    'E2E Test: Character Creation Audience',
+    'Game in character_creation state for testing audience joining.',
+    'Fantasy',
+    gm_id,
+    5,
+    'character_creation',
+    true,
+    true,
+    NOW() - INTERVAL '3 days',
+    NOW()
+  );
+
+  -- Add a player participant (not PLAYER_4, so they can join as audience)
+  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
+  VALUES (
+    game6_id,
+    player1_id,
+    'player',
+    'active',
+    NOW() - INTERVAL '2 days'
+  );
+
+  RAISE NOTICE 'Game Application Workflow fixtures created: Games % % % % % %', game1_id, game2_id, game3_id, game4_id, game5_id, game6_id;
 
 END $$;
 

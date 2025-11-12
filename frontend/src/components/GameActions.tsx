@@ -22,6 +22,7 @@ interface GameActionsProps {
   onEditGame: () => void;
   onStateChange: (state: GameState) => void;
   onApplyToGame: () => void;
+  onJoinAsAudience: () => void;
   onWithdrawApplication: () => void;
   onLeaveGame: () => void;
   onDeleteGame?: () => void;
@@ -39,13 +40,14 @@ export function GameActions({
   canEditGame,
   isCheckingAuth,
   isParticipant: _isParticipant,
-  userRole: _userRole,
+  userRole,
   userApplication,
   actionLoading,
   stateActions,
   onEditGame,
   onStateChange,
   onApplyToGame,
+  onJoinAsAudience,
   onWithdrawApplication,
   onLeaveGame: _onLeaveGame,
   onDeleteGame,
@@ -77,6 +79,10 @@ export function GameActions({
   const showApplyButton = !isGM && !isCheckingAuth && game.state === 'recruitment' && !userApplication;
   const showWithdrawButton = !isGM && userApplication && userApplication.status === 'pending' && game.state === 'recruitment';
 
+  // Audience join button - show after recruitment for non-participants
+  const showJoinAsAudienceButton = !isGM && !isCheckingAuth && userRole === 'none' &&
+    ['character_creation', 'in_progress', 'paused'].includes(game.state) && !userApplication;
+
   return (
     <div className="flex items-center gap-2">
       {/* Player Actions - Always visible */}
@@ -104,12 +110,29 @@ export function GameActions({
         </Button>
       )}
 
+      {showJoinAsAudienceButton && (
+        <div className="flex flex-col gap-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onJoinAsAudience}
+            disabled={actionLoading}
+            data-testid="join-as-audience-button"
+          >
+            Join as Audience
+          </Button>
+          <p className="text-xs text-text-secondary">
+            Player recruitment has ended. Join as an audience member to follow the game.
+          </p>
+        </div>
+      )}
+
       {/* Kebab Menu for GM/Editor Actions */}
       {hasMenuItems && (
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="p-2 rounded hover:bg-surface-raised transition-colors"
+            className="p-2 rounded hover:bg-surface-raised transition-colors text-content-primary"
             aria-label="Game actions"
             data-testid="game-actions-menu"
           >

@@ -25,8 +25,8 @@ export function AudienceView({ gameId }: AudienceViewProps) {
               whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
               ${
                 activeTab === 'messages'
-                  ? 'border-semantic-info text-semantic-info'
-                  : 'border-transparent text-content-secondary hover:text-content-primary hover:border-border-primary'
+                    ? 'border-interactive-primary text-interactive-primary'
+                    : 'border-transparent text-content-secondary hover:text-content-primary'
               }
             `}
           >
@@ -38,8 +38,8 @@ export function AudienceView({ gameId }: AudienceViewProps) {
               whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
               ${
                 activeTab === 'actions'
-                  ? 'border-semantic-info text-semantic-info'
-                  : 'border-transparent text-content-secondary hover:text-content-primary hover:border-border-primary'
+                    ? 'border-interactive-primary text-interactive-primary'
+                    : 'border-transparent text-content-secondary hover:text-content-primary'
               }
             `}
           >
