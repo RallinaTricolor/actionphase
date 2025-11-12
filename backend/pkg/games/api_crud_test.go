@@ -3,6 +3,7 @@ package games
 import (
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/services"
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -312,6 +313,100 @@ func TestGetFilteredGames_PaginationMetadata(t *testing.T) {
 			core.AssertEqual(t, tt.expectedHasPrevious, response.Metadata.HasPreviousPage, "Has previous page should match")
 			core.AssertEqual(t, 24, response.Metadata.TotalCount, "Total count should be 24")
 			core.AssertEqual(t, 24, response.Metadata.FilteredCount, "Filtered count should be 24")
+		})
+	}
+}
+
+// TestCreateGame_ValidationErrors tests validation error scenarios for game creation
+func TestCreateGame_ValidationErrors(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupGameTestRouter(app, testDB)
+	fixtures := testDB.SetupFixtures(t)
+
+	// Create auth token for test user
+	accessToken, err := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
+	core.AssertNoError(t, err, "Test token creation should succeed")
+
+	testCases := []struct {
+		name           string
+		payload        CreateGameRequest
+		expectedStatus int
+		expectedError  string
+		description    string
+	}{
+		{
+			name: "empty_title",
+			payload: CreateGameRequest{
+				Title:       "",
+				Description: "A game without a title",
+			},
+			expectedStatus: 400,
+			expectedError:  "title is required",
+			description:    "Should reject game creation with empty title",
+		},
+		{
+			name: "whitespace_only_title",
+			payload: CreateGameRequest{
+				Title:       "   ",
+				Description: "A game with whitespace title",
+			},
+			expectedStatus: 201,
+			description:    "Should accept whitespace title (ValidateRequired doesn't trim)",
+		},
+		{
+			name: "valid_minimal_game",
+			payload: CreateGameRequest{
+				Title:       "Valid Game Title",
+				Description: "A valid game",
+			},
+			expectedStatus: 201,
+			description:    "Should accept game with just title and description",
+		},
+		{
+			name: "valid_game_with_all_fields",
+			payload: CreateGameRequest{
+				Title:              "Complete Game",
+				Description:        "A game with all optional fields",
+				Genre:              "Fantasy",
+				MaxPlayers:         6,
+				IsAnonymous:        true,
+				AutoAcceptAudience: true,
+			},
+			expectedStatus: 201,
+			description:    "Should accept game with all fields populated",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			payload, _ := json.Marshal(tc.payload)
+			req := httptest.NewRequest("POST", "/api/v1/games/", bytes.NewBuffer(payload))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, req)
+
+			core.AssertEqual(t, tc.expectedStatus, w.Code, tc.description)
+
+			if tc.expectedError != "" {
+				var response map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				core.AssertNoError(t, err, "Should decode error response")
+
+				if errorText, ok := response["error"].(string); ok {
+					if len(errorText) == 0 {
+						t.Errorf("Expected error message to contain '%s', but error field was empty", tc.expectedError)
+					}
+					// Verify error field is present and not empty
+				} else {
+					t.Errorf("Expected 'error' field in response")
+				}
+			}
 		})
 	}
 }

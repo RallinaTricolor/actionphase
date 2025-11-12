@@ -84,7 +84,9 @@ func TestUserService_CreateUser(t *testing.T) {
 		}
 
 		_, err = service.CreateUser(user2)
-		assert.Error(t, err)
+		require.Error(t, err)
+		// Should contain unique constraint violation message
+		assert.Contains(t, err.Error(), "unique constraint")
 	})
 
 	t.Run("returns error for duplicate email", func(t *testing.T) {
@@ -107,7 +109,9 @@ func TestUserService_CreateUser(t *testing.T) {
 		}
 
 		_, err = service.CreateUser(user2)
-		assert.Error(t, err)
+		require.Error(t, err)
+		// Should contain unique constraint violation message
+		assert.Contains(t, err.Error(), "unique constraint")
 	})
 }
 

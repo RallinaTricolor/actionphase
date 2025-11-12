@@ -1484,3 +1484,50 @@ func TestGameService_DemoteFromCoGM(t *testing.T) {
 		})
 	}
 }
+
+// TestGameService_DatabaseConstraintViolations tests database constraint enforcement
+func TestGameService_DatabaseConstraintViolations(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games", "sessions", "users")
+
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	t.Run("fails to create game with non-existent GM user", func(t *testing.T) {
+		req := core.CreateGameRequest{
+			Title:       "Game with Invalid GM",
+			Description: "Testing FK constraint",
+			GMUserID:    99999, // Non-existent user ID
+			IsPublic:    true,
+		}
+
+		_, err := gameService.CreateGame(context.Background(), req)
+		core.AssertError(t, err, "Should fail with FK constraint violation")
+		core.AssertErrorContains(t, err, "foreign key constraint", "Should contain FK constraint error message")
+	})
+
+	t.Run("fails to create game with zero GM user ID", func(t *testing.T) {
+		req := core.CreateGameRequest{
+			Title:       "Game with Zero GM",
+			Description: "Testing zero FK",
+			GMUserID:    0, // Invalid user ID
+			IsPublic:    true,
+		}
+
+		_, err := gameService.CreateGame(context.Background(), req)
+		core.AssertError(t, err, "Should fail with invalid FK")
+	})
+
+	t.Run("fails to create game with negative GM user ID", func(t *testing.T) {
+		req := core.CreateGameRequest{
+			Title:       "Game with Negative GM",
+			Description: "Testing negative FK",
+			GMUserID:    -1, // Invalid user ID
+			IsPublic:    true,
+		}
+
+		_, err := gameService.CreateGame(context.Background(), req)
+		core.AssertError(t, err, "Should fail with invalid FK")
+	})
+}

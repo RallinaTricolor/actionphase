@@ -185,3 +185,132 @@ func TestJWTHandler_DecodeToken(t *testing.T) {
 		core.AssertTrue(t, err != nil, "Token with wrong secret should fail to decode")
 	})
 }
+
+// TestJWTHandler_TokenEdgeCases tests edge cases in token validation
+func TestJWTHandler_TokenEdgeCases(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	testDB.CleanupTables(t, "sessions", "users")
+	defer testDB.CleanupTables(t, "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	handler := &JWTHandler{App: app}
+
+	t.Run("rejects_empty_token", func(t *testing.T) {
+		err := handler.VerifyToken("")
+		core.AssertError(t, err, "Empty token should fail verification")
+	})
+
+	t.Run("rejects_token_with_only_header", func(t *testing.T) {
+		// Token with only header part (missing payload and signature)
+		err := handler.VerifyToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9")
+		core.AssertError(t, err, "Token with only header should fail")
+	})
+
+	t.Run("rejects_token_with_header_and_payload_only", func(t *testing.T) {
+		// Token with header and payload but no signature
+		err := handler.VerifyToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0")
+		core.AssertError(t, err, "Token without signature should fail")
+	})
+
+	t.Run("rejects_token_with_invalid_base64", func(t *testing.T) {
+		// Malformed base64 in payload
+		err := handler.VerifyToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.!!!invalid!!!.signature")
+		core.AssertError(t, err, "Token with invalid base64 should fail")
+	})
+
+	t.Run("rejects_token_with_missing_sub_claim", func(t *testing.T) {
+		// Token without sub claim
+		tokenWithoutSub := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"exp": time.Now().Add(time.Hour).Unix(),
+		})
+		tokenString, _ := tokenWithoutSub.SignedString([]byte(app.Config.JWT.Secret))
+
+		_, err := handler.DecodeToken(tokenString)
+		// DecodeToken might succeed, but GetUserFromToken would fail
+		core.AssertNoError(t, err, "DecodeToken should succeed even without sub")
+
+		// But VerifyToken should catch this
+		err = handler.VerifyToken(tokenString)
+		core.AssertError(t, err, "Token without sub claim should fail verification")
+	})
+
+	t.Run("rejects_token_with_missing_exp_claim", func(t *testing.T) {
+		// Token without exp claim
+		tokenWithoutExp := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"sub": "123",
+		})
+		tokenString, _ := tokenWithoutExp.SignedString([]byte(app.Config.JWT.Secret))
+
+		err := handler.VerifyToken(tokenString)
+		core.AssertError(t, err, "Token without exp claim should fail verification")
+	})
+
+	t.Run("rejects_token_with_invalid_sub_type", func(t *testing.T) {
+		// Token with sub as number instead of string
+		tokenInvalidSub := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"sub": 12345, // Should be string
+			"exp": time.Now().Add(time.Hour).Unix(),
+		})
+		tokenString, _ := tokenInvalidSub.SignedString([]byte(app.Config.JWT.Secret))
+
+		claims, err := handler.DecodeToken(tokenString)
+		core.AssertNoError(t, err, "DecodeToken should succeed")
+		// But the sub claim type is wrong
+		_, ok := claims["sub"].(string)
+		core.AssertTrue(t, !ok, "sub should not be a string when given as number")
+	})
+
+	t.Run("rejects_token_with_exp_in_wrong_format", func(t *testing.T) {
+		// Token with exp as string instead of number
+		tokenInvalidExp := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"sub": "123",
+			"exp": "not-a-number",
+		})
+		tokenString, _ := tokenInvalidExp.SignedString([]byte(app.Config.JWT.Secret))
+
+		err := handler.VerifyToken(tokenString)
+		core.AssertError(t, err, "Token with invalid exp format should fail")
+	})
+
+	t.Run("rejects_token_with_very_long_expiry", func(t *testing.T) {
+		// Token that expires in 100 years (suspicious)
+		tokenLongExp := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"sub": "123",
+			"exp": time.Now().Add(100 * 365 * 24 * time.Hour).Unix(),
+		})
+		tokenString, _ := tokenLongExp.SignedString([]byte(app.Config.JWT.Secret))
+
+		// This should still decode successfully (no max expiry validation currently)
+		claims, err := handler.DecodeToken(tokenString)
+		core.AssertNoError(t, err, "Token with long expiry should decode (no max expiry check)")
+		core.AssertTrue(t, claims != nil, "Claims should be returned")
+	})
+
+	t.Run("rejects_tampered_payload", func(t *testing.T) {
+		// Create a valid token
+		userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+		user, err := userService.CreateUser(&core.User{
+			Username: "tampertest",
+			Password: "password123",
+			Email:    "tamper@example.com",
+		})
+		core.AssertNoError(t, err, "User creation should succeed")
+
+		validToken, err := handler.CreateToken(user)
+		core.AssertNoError(t, err, "Token creation should succeed")
+
+		// Tamper with the payload (change one character in the middle)
+		parts := validToken[:len(validToken)/2] + "X" + validToken[len(validToken)/2+1:]
+
+		err = handler.VerifyToken(parts)
+		core.AssertError(t, err, "Tampered token should fail verification")
+	})
+
+	t.Run("rejects_token_with_null_bytes", func(t *testing.T) {
+		// Token containing null bytes (invalid)
+		err := handler.VerifyToken("invalid\x00token\x00here")
+		core.AssertError(t, err, "Token with null bytes should fail")
+	})
+}

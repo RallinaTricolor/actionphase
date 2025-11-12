@@ -934,3 +934,70 @@ func TestCharacterService_DeleteCharacter(t *testing.T) {
 		core.AssertError(t, err, "Should fail for nonexistent character")
 	})
 }
+
+// TestCharacterService_DatabaseConstraintViolations tests database constraint enforcement
+func TestCharacterService_DatabaseConstraintViolations(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	t.Run("fails to create character with non-existent game", func(t *testing.T) {
+		userID := int32(fixtures.TestUser.ID)
+		req := CreateCharacterRequest{
+			GameID:        99999, // Non-existent game ID
+			UserID:        &userID,
+			Name:          "Character in Nonexistent Game",
+			CharacterType: "player_character",
+		}
+
+		_, err := characterService.CreateCharacter(context.Background(), req)
+		core.AssertError(t, err, "Should fail with FK constraint violation")
+		core.AssertErrorContains(t, err, "foreign key constraint", "Should contain FK constraint error message")
+	})
+
+	t.Run("fails to create character with non-existent user", func(t *testing.T) {
+		invalidUserID := int32(99999) // Non-existent user ID
+		req := CreateCharacterRequest{
+			GameID:        fixtures.TestGame.ID,
+			UserID:        &invalidUserID,
+			Name:          "Character for Nonexistent User",
+			CharacterType: "player_character",
+		}
+
+		_, err := characterService.CreateCharacter(context.Background(), req)
+		core.AssertError(t, err, "Should fail with FK constraint violation")
+		core.AssertErrorContains(t, err, "foreign key constraint", "Should contain FK constraint error message")
+	})
+
+	t.Run("fails to create character with invalid character type", func(t *testing.T) {
+		userID := int32(fixtures.TestUser.ID)
+		req := CreateCharacterRequest{
+			GameID:        fixtures.TestGame.ID,
+			UserID:        &userID,
+			Name:          "Character with Invalid Type",
+			CharacterType: "invalid_type", // Invalid character type
+		}
+
+		_, err := characterService.CreateCharacter(context.Background(), req)
+		core.AssertError(t, err, "Should fail with validation error")
+		// Note: Character service validates type at application level, not database level
+		core.AssertErrorContains(t, err, "invalid character type", "Should contain validation error message")
+	})
+
+	t.Run("fails to create character with zero game ID", func(t *testing.T) {
+		userID := int32(fixtures.TestUser.ID)
+		req := CreateCharacterRequest{
+			GameID:        0, // Invalid game ID
+			UserID:        &userID,
+			Name:          "Character with Zero Game",
+			CharacterType: "player_character",
+		}
+
+		_, err := characterService.CreateCharacter(context.Background(), req)
+		core.AssertError(t, err, "Should fail with invalid FK")
+	})
+}
