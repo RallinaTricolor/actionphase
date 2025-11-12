@@ -206,17 +206,17 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <AdminModeProvider>
-            <ThemeProvider>
-              <ReadingModeProvider>
-                <ToastProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <AdminModeProvider>
+              <ThemeProvider>
+                <ReadingModeProvider>
                   <AppRoutes />
-                </ToastProvider>
-              </ReadingModeProvider>
-            </ThemeProvider>
-          </AdminModeProvider>
-        </AuthProvider>
+                </ReadingModeProvider>
+              </ThemeProvider>
+            </AdminModeProvider>
+          </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

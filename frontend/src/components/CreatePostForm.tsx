@@ -3,6 +3,7 @@ import type { Character } from '../types/characters';
 import { CommentEditor } from './CommentEditor';
 import { Button, Select, Alert } from './ui';
 import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { useDraftRestoration } from '../hooks/useDraftRestoration';
 
 interface CreatePostFormProps {
   gameId: number;
@@ -18,6 +19,9 @@ export function CreatePostForm({ gameId: _gameId, characters, allCharacters, onS
   const [content, setContent] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(shouldStartCollapsed);
+
+  // Restore draft content if session expired while user was typing
+  useDraftRestoration('content', content, setContent);
 
   // Auto-select first character if available
   useEffect(() => {
