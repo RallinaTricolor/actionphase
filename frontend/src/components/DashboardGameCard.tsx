@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { DashboardGameCard as GameCardType } from '../types/dashboard';
 import { Clock, AlertCircle, Users, MessageSquare } from 'lucide-react';
+import { GAME_STATE_LABELS } from '../types/games';
+import { PHASE_TYPE_LABELS } from '../types/phases';
 
 interface DashboardGameCardProps {
   game: GameCardType;
@@ -11,9 +13,9 @@ interface DashboardGameCardProps {
  */
 export function DashboardGameCard({ game }: DashboardGameCardProps) {
   const deadlineColor = {
-    critical: 'text-semantic-danger bg-semantic-danger-subtle',
-    warning: 'text-semantic-warning bg-semantic-warning-subtle',
-    normal: 'text-semantic-success bg-semantic-success-subtle',
+    critical: 'text-content-primary bg-semantic-danger-subtle',
+    warning: 'text-content-primary bg-semantic-warning-subtle',
+    normal: 'text-content-primary bg-semantic-success-subtle',
   }[game.deadline_status];
 
   const getRoleDisplay = (role: string): string => {
@@ -47,7 +49,7 @@ export function DashboardGameCard({ game }: DashboardGameCardProps) {
               </span>
             )}
             {game.is_urgent && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-semantic-danger-subtle text-semantic-danger">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-semantic-danger-subtle text-content-primary">
                 <AlertCircle className="w-3 h-3 mr-1" />
                 Urgent
               </span>
@@ -59,7 +61,7 @@ export function DashboardGameCard({ game }: DashboardGameCardProps) {
         <div className="flex flex-wrap items-center gap-4 text-sm text-content-secondary mb-4">
           <span className="font-medium">{roleDisplay}</span>
           <span className="text-content-tertiary">•</span>
-          <span>{game.state}</span>
+          <span>{GAME_STATE_LABELS[game.state]}</span>
           {game.genre && (
             <>
               <span className="text-content-tertiary">•</span>
@@ -77,7 +79,7 @@ export function DashboardGameCard({ game }: DashboardGameCardProps) {
                   {game.current_phase_title}
                 </p>
                 <p className="text-xs text-content-secondary mt-0.5">
-                  {game.current_phase_type}
+                  {game.current_phase_type ? PHASE_TYPE_LABELS[game.current_phase_type] : ''}
                 </p>
               </div>
               {game.current_phase_deadline && (
@@ -93,13 +95,13 @@ export function DashboardGameCard({ game }: DashboardGameCardProps) {
         {/* Action Items */}
         <div className="flex items-center gap-4 text-sm">
           {game.has_pending_action && (
-            <span className="inline-flex items-center text-semantic-warning bg-semantic-warning-subtle px-2 py-1 rounded">
+            <span className="inline-flex items-center text-content-primary bg-semantic-warning-subtle px-2 py-1 rounded">
               <AlertCircle className="w-4 h-4 mr-1" />
               Action needed
             </span>
           )}
           {game.pending_applications > 0 && (
-            <span className="inline-flex items-center text-interactive-primary bg-interactive-primary-subtle px-2 py-1 rounded">
+            <span className="inline-flex items-center text-content-primary bg-interactive-primary-subtle px-2 py-1 rounded">
               <Users className="w-4 h-4 mr-1" />
               {game.pending_applications} application{game.pending_applications > 1 ? 's' : ''}
             </span>

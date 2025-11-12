@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { LoginRequest, RegisterRequest, User } from '../types/auth';
 import { logger } from '@/services/LoggingService';
-import { getSavedDrafts, getDraftMessage } from '@/utils/draftRestoration';
+import { getSavedDrafts } from '@/utils/draftRestoration';
 import { useToast } from './ToastContext';
 
 interface AuthContextValue {

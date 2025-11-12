@@ -59,8 +59,8 @@ export function EnhancedGameCard({
                 game.user_relationship === 'gm'
                   ? 'bg-semantic-info-subtle text-content-primary'
                   : game.user_relationship === 'participant'
-                  ? 'bg-interactive-primary-subtle text-interactive-primary'
-                  : 'bg-semantic-warning-subtle text-semantic-warning'
+                  ? 'bg-interactive-primary-subtle text-content-primary'
+                  : 'bg-semantic-warning-subtle text-content-primary'
               }`}
             >
               {USER_RELATIONSHIP_LABELS[game.user_relationship]}
@@ -91,7 +91,7 @@ export function EnhancedGameCard({
 
           {/* Recent Activity Indicator */}
           {game.has_recent_activity && (
-            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-semantic-success-subtle text-semantic-success flex items-center gap-1">
+            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-semantic-success-subtle text-content-primary flex items-center gap-1">
               <span className="w-2 h-2 bg-semantic-success rounded-full animate-pulse"></span>
               New Activity
             </span>
@@ -102,8 +102,8 @@ export function EnhancedGameCard({
             <span
               className={`px-2 py-1 rounded-full text-xs font-semibold ${
                 game.deadline_urgency === 'critical'
-                  ? 'bg-semantic-danger-subtle text-semantic-danger'
-                  : 'bg-semantic-warning-subtle text-semantic-warning'
+                  ? 'bg-semantic-danger-subtle text-content-primary'
+                  : 'bg-semantic-warning-subtle text-content-primary'
               }`}
             >
               {game.deadline_urgency === 'critical' ? '⚠️ Urgent' : '⏰ Soon'}
