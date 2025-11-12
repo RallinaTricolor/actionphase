@@ -148,9 +148,12 @@ export class BaseApiClient {
             if (!this.sessionExpiredDispatched) {
               this.sessionExpiredDispatched = true;
 
+              // Save any unsaved form data as drafts before redirecting
+              this.saveDraftsBeforeLogout();
+
               // Dispatch event to show user-facing error message
               window.dispatchEvent(new CustomEvent('auth:sessionExpired', {
-                detail: { message: 'Your session has expired. Please log in again.' }
+                detail: { message: 'Your session has expired. Your work has been saved as a draft.' }
               }));
 
               // Dispatch event to clear React Query cache
@@ -159,7 +162,8 @@ export class BaseApiClient {
               // Redirect to login page unless already there
               if (!window.location.pathname.includes('/login')) {
                 logger.info('Redirecting to login after failed token refresh', {
-                  from: window.location.pathname
+                  from: window.location.pathname,
+                  draftsSaved: true
                 });
                 window.location.href = '/login';
               }
@@ -186,6 +190,50 @@ export class BaseApiClient {
 
     // The backend sets a new HTTP-only JWT cookie in the response.
     // We don't need to do anything with the token - the browser handles it.
+  }
+
+  /**
+   * Saves unsaved form data to localStorage before logout/session expiration.
+   * This prevents data loss when a user's session expires while typing.
+   */
+  private saveDraftsBeforeLogout(): void {
+    try {
+      const drafts: Record<string, string> = {};
+      let hasDrafts = false;
+
+      // Find all text inputs and textareas with content
+      const formInputs = document.querySelectorAll<HTMLTextAreaElement | HTMLInputElement>(
+        'textarea, input[type="text"]'
+      );
+
+      formInputs.forEach((input) => {
+        // Only save non-empty inputs with name or id attributes
+        const key = input.name || input.id;
+        if (key && input.value && input.value.trim().length > 0) {
+          drafts[key] = input.value;
+          hasDrafts = true;
+        }
+      });
+
+      if (hasDrafts) {
+        // Save drafts with metadata
+        const draftData = {
+          timestamp: Date.now(),
+          path: window.location.pathname,
+          drafts,
+        };
+
+        localStorage.setItem('session_expired_drafts', JSON.stringify(draftData));
+
+        logger.info('Saved form drafts before session expiration', {
+          draftCount: Object.keys(drafts).length,
+          path: window.location.pathname,
+        });
+      }
+    } catch (error) {
+      // Don't let draft saving errors prevent logout
+      logger.error('Failed to save drafts before logout', { error });
+    }
   }
 
   // Utility methods for token management

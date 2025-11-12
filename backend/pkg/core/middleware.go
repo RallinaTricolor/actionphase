@@ -160,60 +160,31 @@ func GetAuthenticatedUsername(ctx context.Context) string {
 	return ""
 }
 
-// RequireGameMasterMiddleware creates middleware that ensures the authenticated user
-// is the Game Master of a specific game. The game ID should be available in the URL path.
+// GM Authorization Pattern
 //
-// This middleware must be used after RequireAuthenticationMiddleware.
+// GM authorization is implemented at the HANDLER level, not via middleware.
+// This is intentional - handler-level checks provide better flexibility for
+// different authorization scenarios (GM, co-GM, admin mode).
 //
-// Usage Example:
+// All GM-only endpoints use the core.IsUserGameMaster() helper function:
 //
-//	r.Route("/games/{id}", func(r chi.Router) {
-//	    r.Use(RequireAuthenticationMiddleware(userService))
-//	    r.Use(RequireGameMasterMiddleware(gameService))
-//	    r.Put("/state", updateGameStateHandler) // Only GM can update state
-//	})
-func RequireGameMasterMiddleware(gameService GameServiceInterface) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Get authenticated user (should be set by RequireAuthenticationMiddleware)
-			user := GetAuthenticatedUser(r.Context())
-			if user == nil {
-				render.Render(w, r, ErrUnauthorized("authentication required"))
-				return
-			}
-
-			// Extract game ID from URL path
-			// This assumes the URL pattern includes {id} parameter
-			// gameIDStr := r.URL.Path // Not used in this simplified version
-			// Simple extraction - in production, you'd use chi.URLParam(r, "id")
-			// This is a simplified version for the middleware example
-
-			// For now, this middleware provides the structure
-			// The actual game ID extraction and GM verification would be implemented
-			// when integrated with the full routing system
-
-			// TODO: Implement actual game ID extraction and GM verification
-			// gameID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 32)
-			// if err != nil {
-			//     render.Render(w, r, ErrInvalidRequest(fmt.Errorf("invalid game ID")))
-			//     return
-			// }
-			//
-			// game, err := gameService.GetGame(r.Context(), int32(gameID))
-			// if err != nil {
-			//     render.Render(w, r, ErrInternalError(err))
-			//     return
-			// }
-			//
-			// if game.GmUserID != user.ID {
-			//     render.Render(w, r, ErrForbidden("only the game master can perform this action"))
-			//     return
-			// }
-
-			next.ServeHTTP(w, r)
-		})
-	}
-}
+//	func HandlerExample(w http.ResponseWriter, r *http.Request) {
+//	    user := core.GetAuthenticatedUser(r.Context())
+//	    game, err := gameService.GetGame(ctx, gameID)
+//
+//	    if !core.IsUserGameMaster(r, user.ID, user.IsAdmin, *game, h.App.Pool) {
+//	        render.Render(w, r, core.ErrForbidden("only the GM can perform this action"))
+//	        return
+//	    }
+//	    // ... handler logic
+//	}
+//
+// The IsUserGameMaster function checks:
+// - Primary GM (game.GmUserID == userID)
+// - Co-GM status
+// - Admin mode override
+//
+// See pkg/core/permissions.go for implementation details.
 
 // LoggingMiddleware creates middleware for request logging.
 // It logs request method, path, duration, and response status.

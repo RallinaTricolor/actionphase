@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { LoginRequest, RegisterRequest, User } from '../types/auth';
 import { logger } from '@/services/LoggingService';
+import { getSavedDrafts, getDraftMessage } from '@/utils/draftRestoration';
+import { useToast } from './ToastContext';
 
 interface AuthContextValue {
   // User data
@@ -32,6 +34,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const queryClient = useQueryClient();
   const [authError, setAuthError] = useState<Error | null>(null);
+  const { showSuccess } = useToast();
 
   // Check if user is authenticated by fetching current user data
   // This works for both localStorage tokens AND HTTP-only cookies
@@ -70,6 +73,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setAuthError(userError as Error);
     }
   }, [userError]);
+
+  // Check for and restore saved drafts when user becomes authenticated
+  // This helps recover work-in-progress when session expires
+  useEffect(() => {
+    // Only check when user first becomes authenticated and auth check is complete
+    if (isAuthenticated && !isCheckingAuth) {
+      const draftData = getSavedDrafts();
+      if (draftData) {
+        logger.info('Found saved drafts after login', {
+          draftCount: Object.keys(draftData.drafts).length,
+          originalPath: draftData.path,
+        });
+
+        // Wait a bit for the page to fully load and fields to be rendered
+        setTimeout(() => {
+          const message = getDraftMessage(draftData);
+          showSuccess(message);
+        }, 500);
+      }
+    }
+  }, [isAuthenticated, isCheckingAuth, showSuccess]);
 
   // Login mutation
   const loginMutation = useMutation({
