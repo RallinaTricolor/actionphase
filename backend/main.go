@@ -64,9 +64,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Configure connection pool settings
+	// Configure connection pool settings for optimal performance and reliability
 	poolConfig.MaxConns = int32(config.Database.MaxConnections)
+	poolConfig.MinConns = int32(config.Database.MinConnections)
+	poolConfig.MaxConnLifetime = config.Database.MaxConnLifetime
 	poolConfig.MaxConnIdleTime = config.Database.MaxIdleTime
+	poolConfig.HealthCheckPeriod = config.Database.HealthCheckPeriod
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
@@ -81,7 +84,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Info("Database connection established")
+	// Log connection pool configuration for monitoring and debugging
+	logger.Info("Database connection established",
+		"max_connections", poolConfig.MaxConns,
+		"min_connections", poolConfig.MinConns,
+		"max_conn_lifetime", poolConfig.MaxConnLifetime,
+		"max_idle_time", poolConfig.MaxConnIdleTime,
+		"health_check_period", poolConfig.HealthCheckPeriod)
 
 	// Initialize storage backend based on configuration
 	var storageBackend core.StorageBackendInterface
