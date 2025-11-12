@@ -36,6 +36,12 @@ export const themes = {
     '--color-content-tertiary': '107 114 128',    // gray-500 - muted text
     '--color-content-disabled': '156 163 175',    // gray-400 - disabled state
     '--color-content-inverse': '255 255 255',     // white - text on dark backgrounds
+    '--color-text-heading': '17 24 39',           // gray-900 - heading text
+    '--color-text-primary': '75 85 99',           // gray-600 - body text
+    '--color-text-secondary': '75 85 99',         // gray-600 - secondary text
+    '--color-primary-text': '255 255 255',        // white - text on primary buttons
+    '--color-danger-text': '255 255 255',         // white - text on danger buttons
+    '--color-success-text': '255 255 255',        // white - text on success buttons
 
     // Interactive colors - buttons and actions
     '--color-interactive-primary': '37 99 235',         // blue-600 - primary buttons
@@ -47,8 +53,10 @@ export const themes = {
     // Semantic colors - status and feedback
     '--color-semantic-danger': '220 38 38',             // red-600
     '--color-semantic-danger-subtle': '254 226 226',    // red-100
+    '--color-danger': '220 38 38',                      // red-600 - danger color
     '--color-semantic-warning': '217 119 6',            // yellow-600
     '--color-semantic-warning-subtle': '254 249 195',   // yellow-100
+    '--color-warning-text': '146 64 14',                // yellow-800 - text on warning backgrounds
     '--color-semantic-success': '22 163 74',            // green-600
     '--color-semantic-success-subtle': '220 252 231',   // green-100
     '--color-semantic-info': '37 99 235',               // blue-600
@@ -58,6 +66,16 @@ export const themes = {
     '--color-border-default': '229 231 235',      // gray-200 - standard borders
     '--color-border-subtle': '243 244 246',       // gray-100 - light dividers
     '--color-border-strong': '156 163 175',       // gray-400 - emphasized borders
+
+    // Avatar colors - diverse palette for character avatars
+    '--color-avatar-1': '239 68 68',              // red-500
+    '--color-avatar-2': '249 115 22',             // orange-500
+    '--color-avatar-3': '245 158 11',             // yellow-500
+    '--color-avatar-4': '34 197 94',              // green-500
+    '--color-avatar-5': '20 184 166',             // teal-500
+    '--color-avatar-6': '59 130 246',             // blue-500
+    '--color-avatar-7': '139 92 246',             // violet-500
+    '--color-avatar-8': '236 72 153',             // pink-500
   },
 
   /**
@@ -77,6 +95,12 @@ export const themes = {
     '--color-content-tertiary': '156 163 175',    // gray-400 - muted text
     '--color-content-disabled': '107 114 128',    // gray-500 - disabled state
     '--color-content-inverse': '17 24 39',        // gray-900 - text on light backgrounds
+    '--color-text-heading': '255 255 255',        // white - heading text
+    '--color-text-primary': '209 213 219',        // gray-300 - body text
+    '--color-text-secondary': '209 213 219',      // gray-300 - secondary text
+    '--color-primary-text': '255 255 255',        // white - text on primary buttons
+    '--color-danger-text': '255 255 255',         // white - text on danger buttons
+    '--color-success-text': '255 255 255',        // white - text on success buttons
 
     // Interactive colors - buttons and actions
     '--color-interactive-primary': '59 130 246',        // blue-500 - primary buttons
@@ -87,9 +111,11 @@ export const themes = {
 
     // Semantic colors - status and feedback
     '--color-semantic-danger': '239 68 68',             // red-500
-    '--color-semantic-danger-subtle': '127 29 29',      // red-900
+    '--color-semantic-danger-subtle': '185 28 28',      // red-700 - less washed out than red-900
+    '--color-danger': '239 68 68',                      // red-500 - danger color
     '--color-semantic-warning': '245 158 11',           // yellow-500
-    '--color-semantic-warning-subtle': '113 63 18',     // yellow-900
+    '--color-semantic-warning-subtle': '161 98 7',      // yellow-700 - less washed out than yellow-900
+    '--color-warning-text': '254 240 138',              // yellow-200 - text on warning backgrounds
     '--color-semantic-success': '34 197 94',            // green-500
     '--color-semantic-success-subtle': '20 83 45',      // green-900
     '--color-semantic-info': '59 130 246',              // blue-500
@@ -99,6 +125,16 @@ export const themes = {
     '--color-border-default': '55 65 81',         // gray-700 - standard borders
     '--color-border-subtle': '75 85 99',          // gray-600 - light dividers
     '--color-border-strong': '107 114 128',       // gray-500 - emphasized borders
+
+    // Avatar colors - slightly brighter for dark theme
+    '--color-avatar-1': '248 113 113',            // red-400
+    '--color-avatar-2': '251 146 60',             // orange-400
+    '--color-avatar-3': '250 204 21',             // yellow-400
+    '--color-avatar-4': '74 222 128',             // green-400
+    '--color-avatar-5': '45 212 191',             // teal-400
+    '--color-avatar-6': '96 165 250',             // blue-400
+    '--color-avatar-7': '167 139 250',            // violet-400
+    '--color-avatar-8': '244 114 182',            // pink-400
   },
 
   /**
@@ -120,6 +156,12 @@ export const themes = {
     '--color-content-tertiary': '70 70 70',       // dark gray - muted text
     '--color-content-disabled': '150 150 150',    // mid gray - disabled
     '--color-content-inverse': '255 255 255',     // pure white - text on dark
+    '--color-text-heading': '0 0 0',              // pure black - heading text
+    '--color-text-primary': '30 30 30',           // near black - body text
+    '--color-text-secondary': '30 30 30',         // near black - secondary text
+    '--color-primary-text': '255 255 255',        // white - text on primary buttons
+    '--color-danger-text': '255 255 255',         // white - text on danger buttons
+    '--color-success-text': '255 255 255',        // white - text on success buttons
 
     // Interactive colors - bold and distinct
     '--color-interactive-primary': '0 0 180',           // strong blue
@@ -131,8 +173,10 @@ export const themes = {
     // Semantic colors - maximum contrast and distinct
     '--color-semantic-danger': '180 0 0',               // strong red
     '--color-semantic-danger-subtle': '255 230 230',    // light red
+    '--color-danger': '180 0 0',                        // strong red - danger color
     '--color-semantic-warning': '180 120 0',            // strong orange
     '--color-semantic-warning-subtle': '255 245 220',   // light orange
+    '--color-warning-text': '120 80 0',                 // dark orange - text on warning backgrounds
     '--color-semantic-success': '0 130 0',              // strong green
     '--color-semantic-success-subtle': '230 255 230',   // light green
     '--color-semantic-info': '0 0 180',                 // strong blue
@@ -142,6 +186,16 @@ export const themes = {
     '--color-border-default': '0 0 0',            // black - standard borders
     '--color-border-subtle': '180 180 180',       // mid gray - light dividers
     '--color-border-strong': '0 0 0',             // black - emphasized borders
+
+    // Avatar colors - bold and saturated for high contrast
+    '--color-avatar-1': '200 0 0',                // strong red
+    '--color-avatar-2': '200 100 0',              // strong orange
+    '--color-avatar-3': '180 140 0',              // strong yellow-orange
+    '--color-avatar-4': '0 150 0',                // strong green
+    '--color-avatar-5': '0 140 140',              // strong teal
+    '--color-avatar-6': '0 0 200',                // strong blue
+    '--color-avatar-7': '100 0 180',              // strong purple
+    '--color-avatar-8': '180 0 120',              // strong magenta
   },
 
   /**
@@ -163,6 +217,12 @@ export const themes = {
     '--color-content-tertiary': '180 180 180',    // medium gray - muted text
     '--color-content-disabled': '100 100 100',    // dark gray - disabled
     '--color-content-inverse': '0 0 0',           // pure black - text on light
+    '--color-text-heading': '255 255 255',        // pure white - heading text
+    '--color-text-primary': '230 230 230',        // light gray - body text
+    '--color-text-secondary': '230 230 230',      // light gray - secondary text
+    '--color-primary-text': '0 0 0',              // black - text on bright primary buttons
+    '--color-danger-text': '0 0 0',               // black - text on bright danger buttons
+    '--color-success-text': '0 0 0',              // black - text on bright success buttons
 
     // Interactive colors - bright and bold
     '--color-interactive-primary': '100 150 255',       // bright blue
@@ -173,9 +233,11 @@ export const themes = {
 
     // Semantic colors - bright and distinct
     '--color-semantic-danger': '255 100 100',           // bright red
-    '--color-semantic-danger-subtle': '60 20 20',       // dark red
+    '--color-semantic-danger-subtle': '127 29 29',      // red-900 - more saturated than 60 20 20
+    '--color-danger': '255 100 100',                    // bright red - danger color
     '--color-semantic-warning': '255 200 100',          // bright orange
-    '--color-semantic-warning-subtle': '60 50 20',      // dark orange
+    '--color-semantic-warning-subtle': '120 53 15',     // orange-900 - more saturated than 60 50 20
+    '--color-warning-text': '254 215 170',              // orange-200 - text on warning backgrounds
     '--color-semantic-success': '100 255 100',          // bright green
     '--color-semantic-success-subtle': '20 60 20',      // dark green
     '--color-semantic-info': '100 150 255',             // bright blue
@@ -185,6 +247,16 @@ export const themes = {
     '--color-border-default': '255 255 255',      // white - standard borders
     '--color-border-subtle': '80 80 80',          // dark gray - light dividers
     '--color-border-strong': '255 255 255',       // white - emphasized borders
+
+    // Avatar colors - very bright for high contrast dark
+    '--color-avatar-1': '255 120 120',            // bright red
+    '--color-avatar-2': '255 180 100',            // bright orange
+    '--color-avatar-3': '255 220 100',            // bright yellow
+    '--color-avatar-4': '120 255 120',            // bright green
+    '--color-avatar-5': '100 240 240',            // bright cyan
+    '--color-avatar-6': '120 160 255',            // bright blue
+    '--color-avatar-7': '180 140 255',            // bright purple
+    '--color-avatar-8': '255 120 200',            // bright pink
   },
 
   /**
@@ -207,6 +279,12 @@ export const themes = {
     '--color-content-tertiary': '75 85 99',       // gray-600 - muted
     '--color-content-disabled': '156 163 175',    // gray-400 - disabled
     '--color-content-inverse': '255 255 255',     // white - text on dark
+    '--color-text-heading': '17 24 39',           // gray-900 - heading text
+    '--color-text-primary': '55 65 81',           // gray-700 - body text
+    '--color-text-secondary': '55 65 81',         // gray-700 - secondary text
+    '--color-primary-text': '255 255 255',        // white - text on primary buttons
+    '--color-danger-text': '255 255 255',         // white - text on danger buttons
+    '--color-success-text': '255 255 255',        // white - text on success buttons
 
     // Interactive colors - strong cyan-blue (universally distinguishable)
     '--color-interactive-primary': '6 182 212',         // cyan-600 - very distinct
@@ -219,9 +297,11 @@ export const themes = {
     // Danger: Strong Orange (not red) - highly visible and distinct from blue
     '--color-semantic-danger': '249 115 22',            // orange-500 - bright and distinct
     '--color-semantic-danger-subtle': '255 237 213',    // orange-100
+    '--color-danger': '249 115 22',                     // orange-500 - danger color
     // Warning: Bright Yellow - maximum brightness contrast
     '--color-semantic-warning': '234 179 8',            // yellow-500 - very bright
     '--color-semantic-warning-subtle': '254 252 232',   // yellow-50
+    '--color-warning-text': '113 63 18',                // yellow-900 - text on warning backgrounds
     // Success: Teal (not green) - distinct from cyan primary
     '--color-semantic-success': '20 184 166',           // teal-500 - clearly different from cyan
     '--color-semantic-success-subtle': '204 251 241',   // teal-100
@@ -233,6 +313,16 @@ export const themes = {
     '--color-border-default': '217 119 6',        // orange-600 - warm accent borders
     '--color-border-subtle': '253 230 138',       // yellow-200 - warm light dividers
     '--color-border-strong': '6 182 212',         // cyan-600 - emphasized borders match primary
+
+    // Avatar colors - colorblind-safe distinctive colors
+    '--color-avatar-1': '249 115 22',             // orange-500 (not red - colorblind safe)
+    '--color-avatar-2': '217 119 6',              // orange-600 (darker variant)
+    '--color-avatar-3': '234 179 8',              // yellow-500 (bright, distinct)
+    '--color-avatar-4': '20 184 166',             // teal-500 (not green - colorblind safe)
+    '--color-avatar-5': '6 182 212',              // cyan-600 (distinct from teal)
+    '--color-avatar-6': '59 130 246',             // blue-500 (distinct from cyan)
+    '--color-avatar-7': '124 58 237',             // violet-600 (purple - distinct)
+    '--color-avatar-8': '161 98 7',               // yellow-700 (brown - very distinct)
   },
 } as const;
 
