@@ -62,6 +62,7 @@ test.describe('User Registration', () => {
     await page.getByTestId('register-username').fill('a');
     await page.getByTestId('register-email').fill('test@example.com');
     await page.getByTestId('register-password').fill('short');
+    await page.getByTestId('register-confirm-password').fill('short');
     await page.getByTestId('register-submit').click();
 
     // Error should appear after submission (mapped to user-friendly message)
@@ -83,6 +84,7 @@ test.describe('User Registration', () => {
     await expect(page.getByTestId('register-username')).toHaveValue('');
     await expect(page.getByTestId('register-email')).toHaveValue('');
     await expect(page.getByTestId('register-password')).toHaveValue('');
+    await expect(page.getByTestId('register-confirm-password')).toHaveValue('');
   });
 
   test(tagTest([tags.AUTH], 'should display validation errors after failed registration'), async ({ page }) => {
@@ -96,6 +98,7 @@ test.describe('User Registration', () => {
     await page.getByTestId('register-username').fill('x'); // Too short
     await page.getByTestId('register-email').fill('invalid@test.com');
     await page.getByTestId('register-password').fill('short'); // Too short
+    await page.getByTestId('register-confirm-password').fill('short');
     await page.getByTestId('register-submit').click();
 
     // Error should appear after submission attempt
@@ -113,11 +116,13 @@ test.describe('User Registration', () => {
     const timestamp = Date.now();
     const username = `e2euser_${timestamp}`;
     const email = `e2euser_${timestamp}@example.com`;
+    const password = 'securepassword123';
 
     // Fill in valid registration data
     await page.getByTestId('register-username').fill(username);
     await page.getByTestId('register-email').fill(email);
-    await page.getByTestId('register-password').fill('securepassword123');
+    await page.getByTestId('register-password').fill(password);
+    await page.getByTestId('register-confirm-password').fill(password);
 
     // Submit the form
     await page.getByTestId('register-submit').click();
@@ -135,9 +140,11 @@ test.describe('User Registration', () => {
 
     // Generate unique user
     const timestamp = Date.now();
+    const password = 'password123';
     await page.getByTestId('register-username').fill(`loadtest_${timestamp}`);
     await page.getByTestId('register-email').fill(`loadtest_${timestamp}@example.com`);
-    await page.getByTestId('register-password').fill('password123');
+    await page.getByTestId('register-password').fill(password);
+    await page.getByTestId('register-confirm-password').fill(password);
 
     // Click submit
     const submitButton = page.getByTestId('register-submit');
@@ -171,9 +178,11 @@ test.describe('User Registration', () => {
 
     // Registration form should be functional without captcha
     const timestamp = Date.now();
+    const password = 'password123';
     await page.getByTestId('register-username').fill(`nocaptcha_${timestamp}`);
     await page.getByTestId('register-email').fill(`nocaptcha_${timestamp}@example.com`);
-    await page.getByTestId('register-password').fill('password123');
+    await page.getByTestId('register-password').fill(password);
+    await page.getByTestId('register-confirm-password').fill(password);
     await page.getByTestId('register-submit').click();
 
     // Should succeed without captcha verification in dev
@@ -185,9 +194,11 @@ test.describe('User Registration', () => {
     await page.getByRole('button', { name: /Don't have an account\? Sign up/i }).click();
 
     // Try to register with existing username from fixtures
+    const password = 'password123';
     await page.getByTestId('register-username').fill('TestPlayer1');
     await page.getByTestId('register-email').fill('newemail@example.com');
-    await page.getByTestId('register-password').fill('password123');
+    await page.getByTestId('register-password').fill(password);
+    await page.getByTestId('register-confirm-password').fill(password);
     await page.getByTestId('register-submit').click();
 
     // Should show error about username being taken
@@ -204,9 +215,11 @@ test.describe('User Registration', () => {
 
     // Generate unique username but use existing email
     const timestamp = Date.now();
+    const password = 'password123';
     await page.getByTestId('register-username').fill(`unique_${timestamp}`);
     await page.getByTestId('register-email').fill('test_player1@example.com'); // Existing email
-    await page.getByTestId('register-password').fill('password123');
+    await page.getByTestId('register-password').fill(password);
+    await page.getByTestId('register-confirm-password').fill(password);
     await page.getByTestId('register-submit').click();
 
     // Should show error
