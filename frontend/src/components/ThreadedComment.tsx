@@ -28,6 +28,7 @@ interface ThreadedCommentProps {
   unreadCommentIDs?: number[]; // IDs of comments that are "new since last visit"
   onOpenThread?: (comment: Message) => void; // Callback to open thread modal with comment object
   readOnly?: boolean; // Disable all interactive features (for history view)
+  parentComment?: Message | CommentTreeNode | null; // Parent comment for smart character defaulting in nested replies
 }
 
 export function ThreadedComment({
@@ -43,7 +44,8 @@ export function ThreadedComment({
   maxDepth = 5,
   unreadCommentIDs = [],
   onOpenThread,
-  readOnly = false
+  readOnly = false,
+  parentComment = null
 }: ThreadedCommentProps) {
   const { showSuccess, showError } = useToast();
   // Use local state to track the current comment data (for immediate UI updates)
@@ -110,21 +112,24 @@ export function ThreadedComment({
     };
   }, []);
 
-  // Auto-select character - prefer parent comment's character if we control it, otherwise first character
-  // This creates a natural conversation flow when GMs reply as NPCs
+  // Auto-select character - prefer grandparent comment's character for nested replies
+  // This creates a natural conversation flow when GMs reply as NPCs in threaded conversations
   useEffect(() => {
     if (controllableCharacters.length > 0 && selectedCharacterId === null) {
-      // Check if we control the parent comment's character
-      const parentCharacter = controllableCharacters.find(c => c.id === comment.character_id);
-      if (parentCharacter) {
-        // We control the character that wrote the parent comment - use it as default
-        setSelectedCharacterId(parentCharacter.id);
+      // For nested replies (when parentComment exists), use the parent's character
+      // This maintains conversation continuity: if replying to a reply, continue as the original NPC
+      const targetCharacterId = parentComment?.character_id || comment.character_id;
+      const targetCharacter = controllableCharacters.find(c => c.id === targetCharacterId);
+
+      if (targetCharacter) {
+        // We control the target character - use it as default
+        setSelectedCharacterId(targetCharacter.id);
       } else {
-        // We don't control the parent's character - use first available
+        // We don't control the target character - use first available
         setSelectedCharacterId(controllableCharacters[0].id);
       }
     }
-  }, [controllableCharacters, selectedCharacterId, comment.character_id]);
+  }, [controllableCharacters, selectedCharacterId, parentComment, comment.character_id]);
 
   // Define loadReplies as a regular function (not useCallback to avoid dependency issues)
   const loadReplies = async () => {
@@ -785,6 +790,7 @@ export function ThreadedComment({
                               unreadCommentIDs={unreadCommentIDs}
                               onOpenThread={onOpenThread}
                               readOnly={readOnly}
+                              parentComment={comment}
                           />
                       ))
                   )}

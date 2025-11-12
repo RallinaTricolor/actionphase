@@ -20,6 +20,7 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     hcaptcha_token: captchaEnabled ? '' : 'dev-bypass-token',
     honeypot_value: '',
   });
+  const [confirmPassword, setConfirmPassword] = useState('');
   const { register, isLoading } = useAuth();
   const [captchaError, setCaptchaError] = useState<string>('');
   const [submittedOnce, setSubmittedOnce] = useState(false);
@@ -29,6 +30,12 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     e.preventDefault();
     setSubmittedOnce(true);
     setRegistrationError(null);
+
+    // Validate passwords match
+    if (formData.password !== confirmPassword) {
+      setRegistrationError({ message: 'Passwords do not match' });
+      return;
+    }
 
     // Validate captcha token (only required if HCAPTCHA_ENABLED is true)
     if (captchaEnabled && !formData.hcaptcha_token) {
@@ -165,6 +172,23 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
             </div>
           )}
         </div>
+
+        <Input
+          label="Confirm Password"
+          id="confirmPassword"
+          name="confirmPassword"
+          type="password"
+          required
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Re-enter your password"
+          error={
+            submittedOnce && confirmPassword && formData.password !== confirmPassword
+              ? 'Passwords do not match'
+              : undefined
+          }
+          data-testid="register-confirm-password"
+        />
 
         {/* Honeypot field - hidden from users, catches bots */}
         <div style={{ position: 'absolute', left: '-9999px' }}>

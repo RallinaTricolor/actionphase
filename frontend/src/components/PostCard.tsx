@@ -292,6 +292,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
         unreadCommentIDs={[]}
         onOpenThread={handleOpenThreadInReadingMode} // Allow nested thread viewing
         readOnly={true}
+        parentComment={null}
       />
     );
     openThreadModal(threadContent);
@@ -334,6 +335,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                 unreadCommentIDs={[]}
                 onOpenThread={handleOpenThreadInReadingMode} // Navigate to thread view
                 readOnly={true} // Disable all interactions
+                parentComment={null}
               />
             ))}
           </div>
@@ -583,6 +585,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                     unreadCommentIDs={localUnreadCommentIDs}
                     onOpenThread={(comment) => setThreadModalComment(comment)}
                     readOnly={readOnly}
+                    parentComment={null}
                   />
                 ))}
               </div>

@@ -572,6 +572,124 @@ describe('ThreadedComment', () => {
       expect(select.value).toBe('2');
     });
 
+    it('auto-selects parent comment character when parentComment is provided and user controls it', async () => {
+      const user = userEvent.setup();
+
+      // Parent comment authored by character ID 2 (Villain)
+      const parentComment: Message = {
+        id: 100,
+        game_id: mockGameId,
+        author_id: 200,
+        character_id: 2, // Villain - user controls this character
+        content: 'Parent comment as Villain',
+        message_type: 'comment',
+        thread_depth: 1,
+        author_username: 'otheruser',
+        character_name: 'Villain',
+        reply_count: 0,
+        is_edited: false,
+        is_deleted: false,
+        created_at: '2025-01-15T10:00:00Z',
+        updated_at: '2025-01-15T10:00:00Z',
+      };
+
+      // Current comment is a reply to the parent comment
+      const nestedComment: Message = {
+        ...mockComment,
+        parent_id: 100,
+        thread_depth: 2,
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={nestedComment}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+          parentComment={parentComment}
+        />
+      );
+
+      const replyButton = screen.getByRole('button', { name: /reply/i });
+      await user.click(replyButton);
+
+      // Should auto-select parent's character (Villain, ID 2) instead of first character (Hero, ID 1)
+      const select = screen.getByRole('combobox') as HTMLSelectElement;
+      expect(select.value).toBe('2');
+    });
+
+    it('auto-selects first character when parentComment is null', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockComment}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+          parentComment={null}
+        />
+      );
+
+      const replyButton = screen.getByRole('button', { name: /reply/i });
+      await user.click(replyButton);
+
+      // Should auto-select first character (Hero, ID 1) when no parent provided
+      const select = screen.getByRole('combobox') as HTMLSelectElement;
+      expect(select.value).toBe('1');
+    });
+
+    it('auto-selects first character when parentComment character is not controllable', async () => {
+      const user = userEvent.setup();
+
+      // Parent comment authored by character ID 99 (not in controllableCharacters)
+      const parentComment: Message = {
+        id: 100,
+        game_id: mockGameId,
+        author_id: 200,
+        character_id: 99, // Not controllable by current user
+        content: 'Parent comment as NPC',
+        message_type: 'comment',
+        thread_depth: 1,
+        author_username: 'otheruser',
+        character_name: 'NPC Guard',
+        reply_count: 0,
+        is_edited: false,
+        is_deleted: false,
+        created_at: '2025-01-15T10:00:00Z',
+        updated_at: '2025-01-15T10:00:00Z',
+      };
+
+      const nestedComment: Message = {
+        ...mockComment,
+        parent_id: 100,
+        thread_depth: 2,
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={nestedComment}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+          parentComment={parentComment}
+        />
+      );
+
+      const replyButton = screen.getByRole('button', { name: /reply/i });
+      await user.click(replyButton);
+
+      // Should fall back to first character (Hero, ID 1) when parent's character not controllable
+      const select = screen.getByRole('combobox') as HTMLSelectElement;
+      expect(select.value).toBe('1');
+    });
+
     it('allows typing in reply textarea', async () => {
       const user = userEvent.setup();
       renderWithProviders(
