@@ -57,7 +57,7 @@ export default function NotificationDropdown({ isOpen, onClose, bellButtonRef }:
   return (
     <div
       ref={dropdownRef}
-      className="absolute right-0 top-full mt-2 w-96 surface-base border border-theme-default rounded-lg shadow-xl z-50"
+      className="fixed md:absolute right-2 md:right-0 top-[60px] md:top-full mt-0 md:mt-2 w-[calc(100vw-1rem)] md:w-96 surface-base border border-theme-default rounded-lg shadow-xl z-50"
       data-testid="notification-dropdown"
     >
       {/* Header */}
