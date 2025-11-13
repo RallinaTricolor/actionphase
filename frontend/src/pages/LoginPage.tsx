@@ -1,8 +1,6 @@
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { LoginForm } from '../components/LoginForm';
 import { RegisterForm } from '../components/RegisterForm';
-import { BackendStatus } from '../components/BackendStatus';
-import { TestConnection } from '../components/TestConnection';
 
 export const LoginPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -22,9 +20,6 @@ export const LoginPage = () => {
         <h1 className="text-center text-3xl font-extrabold text-content-primary mb-8">
           ActionPhase
         </h1>
-
-        <BackendStatus />
-        <TestConnection />
 
         <div className="mt-6">
           {showRegister ? (

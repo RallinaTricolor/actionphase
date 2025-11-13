@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { useGameContext } from '../contexts/GameContext';
 import { useGameApplication } from '../hooks/useGameApplication';
 import { useGameStateManagement } from '../hooks/useGameStateManagement';
@@ -22,6 +23,8 @@ import { CancelGameConfirmationDialog } from '../components/CancelGameConfirmati
 import { LeaveGameConfirmationDialog } from '../components/LeaveGameConfirmationDialog';
 import { DeleteGameConfirmationDialog } from '../components/DeleteGameConfirmationDialog';
 import { DeadlineStrip } from '../components/DeadlineStrip';
+import { Modal } from '../components/Modal';
+import { Button, Textarea } from '../components/ui';
 import type { CreateDeadlineRequest } from '../types/deadlines';
 import { logger } from '@/services/LoggingService';
 
@@ -33,6 +36,7 @@ interface GameDetailsPageProps {
 export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   // Get data from contexts
   const { currentUser, isCheckingAuth } = useAuth();
+  const { showSuccess } = useToast();
   const {
     game,
     participants,
@@ -40,6 +44,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     isLoadingParticipants,
     isGM,
     isParticipant,
+    isInGame,
     canEditGame,
     userRole,
     userCharacters,
@@ -65,10 +70,11 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     setShowApplyModal,
     handleApplicationSubmitted,
     handleWithdrawApplication,
+    refetchUserApplication,
   } = useGameApplication({
     gameId,
     isGM,
-    gameState: game?.state || 'setup',
+    isInGame,
     currentUserId,
     refetchGameData,
   });
@@ -119,31 +125,35 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
 
   const queryClient = useQueryClient();
 
-  // Audience join mutation
+  // Audience join state and mutation
+  const [showJoinAudienceModal, setShowJoinAudienceModal] = useState(false);
+  const [audienceMessage, setAudienceMessage] = useState('');
+  const [audienceError, setAudienceError] = useState<string | null>(null);
   const applyAsAudienceMutation = useApplyAsAudience(gameId);
 
-  // Handler for joining as audience
-  const handleJoinAsAudience = async () => {
-    const applicationText = window.prompt(
-      'Please provide a brief message about why you\'d like to join as an audience member (minimum 10 characters):'
-    );
+  // Handler for opening audience join modal
+  const handleJoinAsAudience = () => {
+    setAudienceMessage('');
+    setAudienceError(null);
+    setShowJoinAudienceModal(true);
+  };
 
-    if (!applicationText) {
-      return; // User cancelled
-    }
-
-    if (applicationText.length < 10) {
-      alert('Application text must be at least 10 characters long.');
-      return;
-    }
-
+  // Handler for submitting audience application
+  const handleSubmitAudienceApplication = async () => {
+    setAudienceError(null);
     try {
-      await applyAsAudienceMutation.mutateAsync(applicationText);
+      // Message is optional - send empty string if not provided
+      await applyAsAudienceMutation.mutateAsync(audienceMessage);
       logger.info('Successfully applied as audience member');
+      setShowJoinAudienceModal(false);
+      setAudienceMessage('');
       await refetchGameData();
+      await refetchUserApplication();
+      showSuccess('Application submitted! The GM will review your request.');
     } catch (error) {
       logger.error('Failed to apply as audience member', { error });
-      alert('Failed to join as audience. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to join as audience. Please try again.';
+      setAudienceError(errorMessage);
     }
   };
 
@@ -295,6 +305,10 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
                 isParticipant={isParticipant}
                 userRole={userRole}
                 userApplication={userApplication}
+                hasPendingAudienceApplication={
+                  // Check if user has a pending audience application in game_applications
+                  !!userApplication && userApplication.role === 'audience' && userApplication.status === 'pending'
+                }
                 actionLoading={actionLoading}
                 stateActions={stateActions}
                 onEditGame={() => setShowEditModal(true)}
@@ -342,8 +356,8 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           {/* Game Info Grid - Show game metadata */}
           <GameInfoGrid game={game} />
 
-          {/* User Application Status - Only show during recruitment */}
-          {!isGM && userApplication && game.state === 'recruitment' && (
+          {/* User Application Status - Show pending applications */}
+          {!isGM && !isInGame && userApplication && (
             <div className="mb-4">
               <GameApplicationStatus application={userApplication} />
             </div>
@@ -386,6 +400,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
                 currentUserId={currentUserId}
                 userCharacters={userCharacters}
                 onLeaveGame={handleLeaveGame}
+                onRefreshData={refetchGameData}
                 actionLoading={actionLoading}
               />
             </div>
@@ -403,6 +418,51 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
           onApplicationSubmitted={handleApplicationSubmitted}
         />
       )}
+
+      {/* Join as Audience Modal */}
+      <Modal
+        isOpen={showJoinAudienceModal}
+        onClose={() => setShowJoinAudienceModal(false)}
+        title="Join as Audience"
+      >
+        <div className="space-y-4">
+          <p className="text-content-secondary">
+            Join as an audience member to follow this game. You can optionally provide a message to the GM.
+          </p>
+
+          <Textarea
+            label="Message to GM (optional)"
+            value={audienceMessage}
+            onChange={(e) => setAudienceMessage(e.target.value)}
+            placeholder="Let the GM know why you're interested in following this game..."
+            rows={4}
+          />
+
+          {audienceError && (
+            <div className="bg-semantic-danger-subtle border border-semantic-danger rounded-lg p-3">
+              <p className="text-sm text-content-primary">{audienceError}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-end pt-4">
+            <Button
+              variant="ghost"
+              onClick={() => setShowJoinAudienceModal(false)}
+              disabled={applyAsAudienceMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSubmitAudienceApplication}
+              disabled={applyAsAudienceMutation.isPending}
+              loading={applyAsAudienceMutation.isPending}
+            >
+              Join as Audience
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Edit Game Modal */}
       {game && (

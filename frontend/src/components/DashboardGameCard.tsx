@@ -61,7 +61,7 @@ export function DashboardGameCard({ game }: DashboardGameCardProps) {
         <div className="flex flex-wrap items-center gap-4 text-sm text-content-secondary mb-4">
           <span className="font-medium">{roleDisplay}</span>
           <span className="text-content-tertiary">•</span>
-          <span>{GAME_STATE_LABELS[game.state]}</span>
+          <span>{GAME_STATE_LABELS[game.state as keyof typeof GAME_STATE_LABELS]}</span>
           {game.genre && (
             <>
               <span className="text-content-tertiary">•</span>
@@ -79,7 +79,7 @@ export function DashboardGameCard({ game }: DashboardGameCardProps) {
                   {game.current_phase_title}
                 </p>
                 <p className="text-xs text-content-secondary mt-0.5">
-                  {game.current_phase_type ? PHASE_TYPE_LABELS[game.current_phase_type] : ''}
+                  {game.current_phase_type ? PHASE_TYPE_LABELS[game.current_phase_type as keyof typeof PHASE_TYPE_LABELS] : ''}
                 </p>
               </div>
               {game.current_phase_deadline && (

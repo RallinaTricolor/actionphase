@@ -115,8 +115,8 @@ export function DeadlineCard({ deadline, isGM, onEdit, onDelete, onExtend, onCli
   };
 
   const urgencyTextClasses = {
-    critical: 'text-semantic-danger',
-    warning: 'text-semantic-warning',
+    critical: 'text-content-primary',
+    warning: 'text-content-primary',
     normal: 'text-interactive-primary',
     expired: 'text-content-tertiary',
   };

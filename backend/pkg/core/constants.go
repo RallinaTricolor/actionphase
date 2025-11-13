@@ -246,6 +246,9 @@ const (
 	// NotificationTypePhaseCreated - New phase was created and activated
 	NotificationTypePhaseCreated = "phase_created"
 
+	// NotificationTypeApplicationSubmitted - Player submitted a game application (for GM)
+	NotificationTypeApplicationSubmitted = "application_submitted"
+
 	// NotificationTypeApplicationApproved - Game application was approved
 	NotificationTypeApplicationApproved = "application_approved"
 
@@ -274,6 +277,7 @@ var ValidNotificationTypes = []string{
 	NotificationTypeActionResult,
 	NotificationTypeCommonRoomPost,
 	NotificationTypePhaseCreated,
+	NotificationTypeApplicationSubmitted,
 	NotificationTypeApplicationApproved,
 	NotificationTypeApplicationRejected,
 	NotificationTypeCharacterApproved,

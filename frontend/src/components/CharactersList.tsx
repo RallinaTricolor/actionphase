@@ -310,6 +310,8 @@ export function CharactersList({
               canEdit={canEditCharacterSheet(character)}
               canEditStats={canEditCharacterStats()}
               onClose={() => setSelectedCharacterId(null)}
+              isAnonymous={isAnonymous}
+              userRole={userRole}
             />
           </Modal>
         );

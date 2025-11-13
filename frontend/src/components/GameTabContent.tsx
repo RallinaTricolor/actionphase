@@ -33,6 +33,7 @@ interface GameTabContentProps {
   currentUserId: number | null;
   userCharacters: Character[];
   onLeaveGame?: () => void;
+  onRefreshData?: () => Promise<void>;
   actionLoading?: boolean;
 }
 
@@ -53,6 +54,7 @@ export function GameTabContent({
   currentUserId,
   userCharacters,
   onLeaveGame,
+  onRefreshData,
   actionLoading = false,
 }: GameTabContentProps) {
 
@@ -78,6 +80,7 @@ export function GameTabContent({
         gameState={game.state}
         isAnonymous={game.is_anonymous || false}
         onLeaveGame={onLeaveGame}
+        onRefreshData={onRefreshData}
         actionLoading={actionLoading}
       />
     );

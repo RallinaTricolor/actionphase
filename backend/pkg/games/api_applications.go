@@ -75,6 +75,37 @@ func (h *Handler) ApplyToGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get the game to find the GM
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, int32(gameID))
+	if err == nil {
+		// Create notification for GM about new application
+		notificationService := &db.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+		roleLabel := "player"
+		if data.Role == "audience" {
+			roleLabel = "audience member"
+		}
+		title := fmt.Sprintf("New %s application for %s", roleLabel, game.Title)
+		content := fmt.Sprintf("%s applied to join your game as a %s", authUser.Username, roleLabel)
+		linkURL := fmt.Sprintf("/games/%d?tab=applications", gameID)
+		relatedType := core.TableGameApplications
+
+		_, err = notificationService.CreateNotification(ctx, &core.CreateNotificationRequest{
+			UserID:      game.GmUserID,
+			GameID:      &application.GameID,
+			Type:        core.NotificationTypeApplicationSubmitted,
+			Title:       title,
+			Content:     &content,
+			RelatedType: &relatedType,
+			RelatedID:   &application.ID,
+			LinkURL:     &linkURL,
+		})
+		if err != nil {
+			// Log error but don't fail the request
+			h.App.ObsLogger.Error(ctx, "Failed to create notification for GM", "error", err, "game_id", gameID, "gm_user_id", game.GmUserID)
+		}
+	}
+
 	// Convert to response format
 	response := &GameApplicationResponse{
 		ID:        application.ID,
@@ -257,6 +288,40 @@ func (h *Handler) ReviewGameApplication(w http.ResponseWriter, r *http.Request) 
 		h.App.ObsLogger.Error(ctx, "Failed to review game application", "error", err, "application_id", applicationID, "action", data.Action)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
+	}
+
+	// Send notification to applicant about the decision
+	notificationService := &db.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	var notifType, title, content string
+	if data.Action == "approve" {
+		notifType = core.NotificationTypeApplicationApproved
+		roleLabel := "player"
+		if application.Role == "audience" {
+			roleLabel = "audience member"
+		}
+		title = fmt.Sprintf("Application approved for %s", game.Title)
+		content = fmt.Sprintf("Your application to join %s as %s has been approved!", game.Title, roleLabel)
+	} else {
+		notifType = core.NotificationTypeApplicationRejected
+		title = fmt.Sprintf("Application decision for %s", game.Title)
+		content = fmt.Sprintf("Your application to join %s has been reviewed", game.Title)
+	}
+
+	linkURL := fmt.Sprintf("/games/%d", gameID)
+	relatedType := core.TableGameApplications
+	_, err = notificationService.CreateNotification(ctx, &core.CreateNotificationRequest{
+		UserID:      application.UserID,
+		GameID:      &application.GameID,
+		Type:        notifType,
+		Title:       title,
+		Content:     &content,
+		RelatedType: &relatedType,
+		RelatedID:   &application.ID,
+		LinkURL:     &linkURL,
+	})
+	if err != nil {
+		// Log error but don't fail the request
+		h.App.ObsLogger.Error(ctx, "Failed to send application review notification", "error", err, "user_id", application.UserID)
 	}
 
 	// Return updated application

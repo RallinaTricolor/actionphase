@@ -24,6 +24,7 @@ interface GameContextValue {
   userRole: UserGameRole;
   isGM: boolean;
   isParticipant: boolean;
+  isInGame: boolean; // True if user has any role (including audience)
   canEditGame: boolean;
 
   // User's characters
@@ -135,6 +136,11 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     return userRole !== 'none' && userRole !== 'audience';
   }, [userRole]);
 
+  // Check if user has any role in the game (including audience)
+  const isInGame = useMemo((): boolean => {
+    return userRole !== 'none';
+  }, [userRole]);
+
   // Only primary GM (not co-GM) can edit game settings
   const canEditGame = useMemo((): boolean => {
     const isPrimaryGM = userRole === 'gm';
@@ -168,6 +174,7 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     userRole,
     isGM,
     isParticipant,
+    isInGame,
     canEditGame,
     userCharacters: userCharacters || [],
     currentPhaseId: null, // TODO: Get current phase ID from phases endpoint

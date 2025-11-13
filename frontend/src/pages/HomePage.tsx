@@ -1,6 +1,5 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { BackendStatus } from '../components/BackendStatus';
 
 export const HomePage = () => {
   const { isAuthenticated } = useAuth();
@@ -35,11 +34,6 @@ export const HomePage = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Backend Status */}
-        <div className="mb-8">
-          <BackendStatus />
-        </div>
-
         {/* Hero CTA */}
         <div className="mb-8 bg-surface-base shadow rounded-lg overflow-hidden">
           <div className="px-8 py-12 text-center">

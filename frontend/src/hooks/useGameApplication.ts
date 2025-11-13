@@ -6,7 +6,7 @@ import { useToast } from '../contexts/ToastContext';
 interface UseGameApplicationOptions {
   gameId: number;
   isGM: boolean;
-  gameState: string;
+  isInGame: boolean; // True if user has any role in the game (including audience)
   currentUserId: number | null;
   refetchGameData: () => Promise<void>;
 }
@@ -14,7 +14,7 @@ interface UseGameApplicationOptions {
 export function useGameApplication({
   gameId,
   isGM,
-  gameState,
+  isInGame,
   currentUserId,
   refetchGameData,
 }: UseGameApplicationOptions) {
@@ -23,10 +23,11 @@ export function useGameApplication({
   const [actionLoading, setActionLoading] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
 
-  // Fetch user's application if not GM and game is in recruitment
+  // Fetch user's application if not GM and not already in the game
+  // Note: Users can apply during recruitment (player) or anytime (audience)
   useEffect(() => {
     const fetchUserApplication = async () => {
-      if (!isGM && gameState === 'recruitment' && currentUserId) {
+      if (!isGM && !isInGame && currentUserId) {
         try {
           const applicationResponse = await apiClient.games.getMyGameApplication(gameId);
           setUserApplication(applicationResponse.data);
@@ -40,10 +41,23 @@ export function useGameApplication({
     };
 
     fetchUserApplication();
-  }, [gameId, isGM, gameState, currentUserId]);
+  }, [gameId, isGM, isInGame, currentUserId]);
+
+  const refetchUserApplication = async () => {
+    if (!isGM && !isInGame && currentUserId) {
+      try {
+        const applicationResponse = await apiClient.games.getMyGameApplication(gameId);
+        setUserApplication(applicationResponse.data);
+      } catch (appErr) {
+        // User has no application - that's fine
+        setUserApplication(null);
+      }
+    }
+  };
 
   const handleApplicationSubmitted = async () => {
     await refetchGameData();
+    await refetchUserApplication();
   };
 
   const handleWithdrawApplication = async () => {
@@ -53,6 +67,7 @@ export function useGameApplication({
       setActionLoading(true);
       await apiClient.games.withdrawGameApplication(gameId);
       await refetchGameData();
+      await refetchUserApplication();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to withdraw application');
     } finally {
@@ -67,5 +82,6 @@ export function useGameApplication({
     setShowApplyModal,
     handleApplicationSubmitted,
     handleWithdrawApplication,
+    refetchUserApplication,
   };
 }

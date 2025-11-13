@@ -23,9 +23,7 @@ type ApplyAsAudienceRequest struct {
 }
 
 func (a *ApplyAsAudienceRequest) Bind(r *http.Request) error {
-	if len(a.ApplicationText) < 10 {
-		return fmt.Errorf("application text must be at least 10 characters")
-	}
+	// Message is optional - only validate max length if provided
 	if len(a.ApplicationText) > 1000 {
 		return fmt.Errorf("application text must not exceed 1000 characters")
 	}
@@ -60,6 +58,7 @@ func (a *UpdateAutoAcceptAudienceRequest) Bind(r *http.Request) error {
 
 // ApplyAsAudience allows a user to apply to join a game as an audience member
 // POST /api/v1/games/:id/apply/audience
+// Uses the unified game_applications system (same as player applications)
 func (h *Handler) ApplyAsAudience(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	defer h.App.ObsLogger.LogOperation(ctx, "api_apply_as_audience")()
@@ -86,17 +85,26 @@ func (h *Handler) ApplyAsAudience(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := int32(authUser.ID)
-	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	applicationService := &db.GameApplicationService{DB: h.App.Pool}
 
-	// Create the audience application
-	participant, err := gameService.CreateAudienceApplication(ctx, int32(gameID), userID)
+	// Create the audience application using the unified application system
+	application, err := applicationService.CreateGameApplication(ctx, core.CreateGameApplicationRequest{
+		GameID:  int32(gameID),
+		UserID:  userID,
+		Role:    "audience",
+		Message: data.ApplicationText,
+	})
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to create audience application", "error", err, "game_id", gameID, "user_id", userID)
 
 		// Check for specific error types to provide better responses
 		errStr := fmt.Sprintf("%v", err)
+		if errStr == "user already has a pending application for this game" {
+			render.Render(w, r, core.ErrBadRequest(err))
+			return
+		}
 		if errStr == "user is already a participant in this game" {
-			render.Render(w, r, core.ErrConflict("user is already a participant in this game"))
+			render.Render(w, r, core.ErrBadRequest(err))
 			return
 		}
 
@@ -104,19 +112,50 @@ func (h *Handler) ApplyAsAudience(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert to response format
-	response := &AudienceMemberResponse{
-		ID:       participant.ID,
-		GameID:   participant.GameID,
-		UserID:   participant.UserID,
-		Username: authUser.Username,
-		Role:     participant.Role,
-		Status:   participant.Status.String,
-		JoinedAt: participant.JoinedAt.Time,
+	// Get the game to find the GM
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, int32(gameID))
+	if err == nil {
+		// Create notification for GM about new audience application
+		notificationService := &db.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+		title := fmt.Sprintf("New audience application for %s", game.Title)
+		content := fmt.Sprintf("%s applied to join your game as an audience member", authUser.Username)
+		linkURL := fmt.Sprintf("/games/%d?tab=people", gameID)
+		relatedType := core.TableGameApplications
+
+		_, err = notificationService.CreateNotification(ctx, &core.CreateNotificationRequest{
+			UserID:      game.GmUserID,
+			GameID:      &application.GameID,
+			Type:        core.NotificationTypeApplicationSubmitted,
+			Title:       title,
+			Content:     &content,
+			RelatedType: &relatedType,
+			RelatedID:   &application.ID,
+			LinkURL:     &linkURL,
+		})
+		if err != nil {
+			// Log error but don't fail the request
+			h.App.ObsLogger.Error(ctx, "Failed to create notification for GM", "error", err, "game_id", gameID, "gm_user_id", game.GmUserID)
+		}
+	}
+
+	// Convert to response format (matching GameApplicationResponse structure)
+	response := &GameApplicationResponse{
+		ID:        application.ID,
+		GameID:    application.GameID,
+		UserID:    application.UserID,
+		Username:  authUser.Username,
+		Role:      application.Role,
+		Status:    application.Status.String,
+		AppliedAt: application.AppliedAt.Time,
+	}
+
+	if application.Message.Valid {
+		response.Message = application.Message.String
 	}
 
 	render.Status(r, http.StatusCreated)
-	render.JSON(w, r, response)
+	render.Render(w, r, response)
 }
 
 // ListAudienceMembers lists all audience members in a game

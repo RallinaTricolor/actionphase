@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import { useAuth, usePing } from '../useAuth'
+import { useAuth } from '../useAuth'
 
 // Mock the API clients
 vi.mock('../../lib/api', () => ({
@@ -15,14 +15,7 @@ vi.mock('../../lib/api', () => ({
   },
 }))
 
-vi.mock('../../lib/simple-api', () => ({
-  simpleApi: {
-    ping: vi.fn(),
-  },
-}))
-
 import { apiClient } from '../../lib/api'
-import { simpleApi } from '../../lib/simple-api'
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -74,25 +67,5 @@ describe('useAuth', () => {
     result.current.logout()
 
     expect(apiClient.removeAuthToken).toHaveBeenCalled()
-  })
-})
-
-describe('usePing', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('should call ping API', async () => {
-    vi.mocked(simpleApi.ping).mockResolvedValue({ success: true })
-
-    const { result } = renderHook(() => usePing(), {
-      wrapper: createWrapper(),
-    })
-
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true)
-    })
-
-    expect(simpleApi.ping).toHaveBeenCalled()
   })
 })

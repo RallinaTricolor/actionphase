@@ -52,10 +52,10 @@ export function CommentWithParentCard({
               <span className="font-medium text-text-heading">
                 {comment.character_name || 'Unknown'}
               </span>
-              <span className="text-sm text-text-muted">
+              <span className="text-sm text-content-tertiary">
                 @{comment.author_username}
               </span>
-              <span className="text-sm text-text-muted">{timeAgo}</span>
+              <span className="text-sm text-content-tertiary">{timeAgo}</span>
               {isEdited && (
                 <Badge variant="secondary" size="sm">
                   Edited
@@ -68,7 +68,7 @@ export function CommentWithParentCard({
         {/* Comment content */}
         <div>
           {comment.is_deleted ? (
-            <p className="text-text-muted italic">[deleted]</p>
+            <p className="text-content-tertiary italic">[deleted]</p>
           ) : (
             <MarkdownPreview content={comment.content} />
           )}
@@ -79,7 +79,7 @@ export function CommentWithParentCard({
           <div className="mt-3 pt-3 border-t border-border-primary">
             <button
               onClick={onNavigateToComment}
-              className="text-sm text-accent-primary hover:text-accent-secondary font-medium"
+              className="text-sm text-interactive-primary hover:text-accent-secondary font-medium"
             >
               View in thread →
             </button>

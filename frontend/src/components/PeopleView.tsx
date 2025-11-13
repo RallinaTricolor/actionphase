@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CharactersList } from './CharactersList';
 import { ParticipantActionsMenu } from './ParticipantActionsMenu';
 import { AddPlayerModal } from './AddPlayerModal';
 import { InactiveCharactersList } from './InactiveCharactersList';
 import { AudienceMemberBadge } from './AudienceMemberBadge';
 import { Button } from './ui';
-import type { GameParticipant } from '../types/games';
+import { apiClient } from '../lib/api';
+import type { GameParticipant, GameApplication } from '../types/games';
 
 interface PeopleViewProps {
   gameId: number;
@@ -16,10 +17,18 @@ interface PeopleViewProps {
   gameState?: string;
   isAnonymous?: boolean;
   onLeaveGame?: () => void;
+  onRefreshData?: () => Promise<void>;
   actionLoading?: boolean;
 }
 
 type SubTab = 'characters' | 'participants';
+
+// Role label mapping for participant sections
+const ROLE_LABELS: Record<string, string> = {
+  player: 'Players',
+  co_gm: 'Co-GMs',
+  audience: 'Audience',
+};
 
 /**
  * Combined view for Characters and GameParticipants
@@ -34,6 +43,7 @@ export function PeopleView({
   gameState,
   isAnonymous = false,
   onLeaveGame,
+  onRefreshData,
   actionLoading = false
 }: PeopleViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('characters');
@@ -51,6 +61,28 @@ export function PeopleView({
   );
 
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
+  const [pendingAudienceApplications, setPendingAudienceApplications] = useState<GameApplication[]>([]);
+
+  // Fetch pending audience applications for GMs
+  useEffect(() => {
+    const fetchApplications = async () => {
+      if (!isGM) return;
+
+      try {
+        const response = await apiClient.games.getGameApplications(gameId);
+        // Filter for pending audience applications
+        const audienceApps = response.data.filter(
+          (app: GameApplication) => app.role === 'audience' && app.status === 'pending'
+        );
+        setPendingAudienceApplications(audienceApps);
+      } catch (err) {
+        // Silently fail - not critical
+        console.error('Failed to fetch audience applications:', err);
+      }
+    };
+
+    fetchApplications();
+  }, [gameId, isGM]);
 
   return (
     <div className="space-y-6">
@@ -115,13 +147,58 @@ export function PeopleView({
             <p className="text-content-tertiary">No participants yet.</p>
           ) : (
             <div className="space-y-4">
+              {/* Pending Audience Applications (GM only) */}
+              {isGM && pendingAudienceApplications.length > 0 && (
+                <div key="pending-audience">
+                  <h3 className="font-semibold text-content-primary mb-2">
+                    Pending Audience Applications ({pendingAudienceApplications.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {pendingAudienceApplications.map((application) => (
+                      <div key={application.id} className="border border-theme-default rounded-lg p-4 surface-raised">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="font-medium text-content-primary">{application.username}</div>
+                            <div className="text-sm text-content-tertiary">
+                              Applied {new Date(application.applied_at).toLocaleDateString()}
+                            </div>
+                            {application.message && (
+                              <div className="text-sm text-content-secondary mt-2 italic">
+                                "{application.message}"
+                              </div>
+                            )}
+                          </div>
+                          <ParticipantActionsMenu
+                            gameId={gameId}
+                            application={application}
+                            isPrimaryGM={currentUserId === gmUserId}
+                            onSuccess={async () => {
+                              // Refetch applications after approval/rejection
+                              const response = await apiClient.games.getGameApplications(gameId);
+                              const audienceApps = response.data.filter(
+                                (app: GameApplication) => app.role === 'audience' && app.status === 'pending'
+                              );
+                              setPendingAudienceApplications(audienceApps);
+
+                              // Refetch participants to show newly approved audience member
+                              await onRefreshData?.();
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Active Participants */}
               {['player', 'co_gm', 'audience'].map((role) => {
-                const roleGameParticipants = participants.filter(p => p.role === role);
+                const roleGameParticipants = participants.filter(p => p.role === role && p.status === 'active');
                 if (roleGameParticipants.length === 0) return null;
                 return (
                   <div key={role}>
-                    <h3 className="font-semibold text-content-primary mb-2 capitalize">
-                      {role.replace('_', ' ')}s ({roleGameParticipants.length})
+                    <h3 className="font-semibold text-content-primary mb-2">
+                      {ROLE_LABELS[role]} ({roleGameParticipants.length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {roleGameParticipants.map((participant) => {
@@ -146,7 +223,7 @@ export function PeopleView({
                                     size="sm"
                                     onClick={onLeaveGame}
                                     disabled={actionLoading}
-                                    className="mt-2 text-content-tertiary hover:text-semantic-danger"
+                                    className="mt-2 text-content-primary hover:text-semantic-danger"
                                   >
                                     Leave Game
                                   </Button>

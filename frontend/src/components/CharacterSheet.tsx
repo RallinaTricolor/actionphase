@@ -17,9 +17,11 @@ interface CharacterSheetProps {
   canEdit?: boolean;
   canEditStats?: boolean; // Separate permission for abilities, skills, items, currency (GM only)
   onClose?: () => void;
+  isAnonymous?: boolean; // Whether the game is in anonymous mode
+  userRole?: string; // User's role in the game ('gm', 'player', 'audience')
 }
 
-export function CharacterSheet({ characterId, canEdit = false, canEditStats = false, onClose }: CharacterSheetProps) {
+export function CharacterSheet({ characterId, canEdit = false, canEditStats = false, onClose, isAnonymous = false, userRole }: CharacterSheetProps) {
   const [activeModule, setActiveModule] = useState('bio');
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -28,12 +30,12 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
 
   const queryClient = useQueryClient();
 
-  // If user cannot edit and is viewing a restricted module, switch to bio
+  // If user cannot edit and is not audience and is viewing a restricted module, switch to bio
   useEffect(() => {
-    if (!canEdit && activeModule !== 'bio') {
+    if (!canEdit && userRole !== 'audience' && activeModule !== 'bio') {
       setActiveModule('bio');
     }
-  }, [canEdit, activeModule]);
+  }, [canEdit, userRole, activeModule]);
 
   const { data: character } = useQuery({
     queryKey: ['character', characterId],
@@ -200,9 +202,12 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
               </h2>
               {character && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="primary" size="sm">
-                    {character.character_type.replace('_', ' ')}
-                  </Badge>
+                  {/* Hide character type badge only for players in anonymous mode (GMs and audience can see it) */}
+                  {!(isAnonymous && userRole === 'player') && (
+                    <Badge variant="primary" size="sm">
+                      {character.character_type.replace('_', ' ')}
+                    </Badge>
+                  )}
                   <Badge variant={character.status === 'approved' ? 'success' : 'warning'} size="sm">
                     {character.status}
                   </Badge>
@@ -229,8 +234,8 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
           tabs={CHARACTER_MODULES.filter((module) => {
             // Bio is always visible (public information)
             if (module.type === 'bio') return true;
-            // Private modules only visible to editors (GM, owner, audience)
-            return canEdit;
+            // Private modules visible to editors (GM, owner) and audience members
+            return canEdit || userRole === 'audience';
           }).map((module): Tab => ({
             id: module.type,
             label: module.name
@@ -244,7 +249,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
         {CHARACTER_MODULES.filter(module => {
           // Only render modules the user has permission to view
           if (module.type === 'bio') return true;
-          return canEdit;
+          return canEdit || userRole === 'audience';
         }).filter(module => module.type === activeModule).map((module) => (
           <div key={module.type} className="max-w-4xl mx-auto">
             <div className="mb-4 md:mb-6">
@@ -278,10 +283,10 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                   const value = getFieldValue(module.type, field.name);
                   const isEditing = editingField === key;
 
-                  // Hide private fields if user cannot edit
+                  // Hide private fields if user cannot edit and is not audience
                   // If fieldData exists, use its is_public value; otherwise fall back to field.isPublic
                   const isFieldPublic = fieldData ? fieldData.is_public : (field.isPublic ?? true);
-                  if (!canEdit && !isFieldPublic) {
+                  if (!canEdit && userRole !== 'audience' && !isFieldPublic) {
                     return null; // Don't render private fields for viewers
                   }
 

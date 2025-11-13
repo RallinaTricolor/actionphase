@@ -46,7 +46,7 @@ export function ParentCommentPreview({
     <div className="bg-bg-secondary border-l-4 border-border-secondary rounded-lg p-3 mb-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-xs text-text-muted">Replying to</span>
+          <span className="text-xs text-content-tertiary">Replying to</span>
           {messageType && (
             <Badge variant="secondary" size="sm">
               {messageType === 'post' ? 'Post' : 'Comment'}
@@ -56,15 +56,15 @@ export function ParentCommentPreview({
             <span className="font-medium text-text-heading">{characterName}</span>
           )}
           {authorUsername && (
-            <span className="text-text-muted">@{authorUsername}</span>
+            <span className="text-content-tertiary">@{authorUsername}</span>
           )}
-          {timeAgo && <span className="text-xs text-text-muted">{timeAgo}</span>}
+          {timeAgo && <span className="text-xs text-content-tertiary">{timeAgo}</span>}
         </div>
 
         {!isDeleted && (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs text-accent-primary hover:text-accent-secondary flex items-center gap-1"
+            className="text-xs text-interactive-primary hover:text-interactive-secondary flex items-center gap-1"
           >
             <svg
               className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -80,9 +80,9 @@ export function ParentCommentPreview({
       </div>
 
       {isDeleted ? (
-        <div className="text-sm text-text-muted italic">[deleted]</div>
+        <div className="text-sm text-content-tertiary italic">[deleted]</div>
       ) : isExpanded ? (
-        <div>
+        <div className="text-sm">
           <MarkdownPreview
             content={content || ''}
             mentionedCharacters={mentionedCharacters?.map(char => ({
@@ -95,13 +95,18 @@ export function ParentCommentPreview({
           />
         </div>
       ) : (
-        <div className="text-sm text-text-heading italic line-clamp-2">{content}</div>
+        <div className="text-sm text-content-secondary line-clamp-2 relative">
+          {content}
+          {content && content.length > 100 && (
+            <span className="text-content-tertiary"> ...</span>
+          )}
+        </div>
       )}
 
       {onNavigateToParent && !isDeleted && (
         <button
           onClick={onNavigateToParent}
-          className="text-xs text-accent-primary hover:text-accent-secondary mt-2 flex items-center gap-1"
+          className="text-xs text-interactive-primary hover:text-accent-secondary mt-2 flex items-center gap-1"
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

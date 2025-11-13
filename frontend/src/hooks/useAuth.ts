@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import { simpleApi } from '../lib/simple-api';
 import type { LoginRequest, RegisterRequest } from '../types/auth';
 import { logger } from '@/services/LoggingService';
 
@@ -66,12 +65,4 @@ export const useAuth = () => {
     isLoading: loginMutation.isPending || registerMutation.isPending,
     error: loginMutation.error || registerMutation.error,
   };
-};
-
-export const usePing = () => {
-  return useQuery({
-    queryKey: ['ping'],
-    queryFn: () => simpleApi.ping(),
-    retry: 1,
-  });
 };

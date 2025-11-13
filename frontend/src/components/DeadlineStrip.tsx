@@ -144,24 +144,19 @@ export function DeadlineStrip({
     setShowCreateModal(false);
   };
 
-  // Don't show strip if no deadlines and user is not GM
-  if (!isLoading && deadlines.length === 0 && !isGM) {
-    return null;
-  }
-
   // Only show deadlines during character creation and in-progress states
   if (gameState !== 'character_creation' && gameState !== 'in_progress') {
     return null;
   }
 
+  // Hide during loading
   if (isLoading) {
-    return (
-      <div className="border-t border-border-primary pt-4 pb-4">
-        <div className="flex items-center justify-center py-8">
-          <div className="text-content-secondary">Loading deadlines...</div>
-        </div>
-      </div>
-    );
+    return null;
+  }
+
+  // Don't show strip if no deadlines and user is not GM
+  if (deadlines.length === 0 && !isGM) {
+    return null;
   }
 
   return (

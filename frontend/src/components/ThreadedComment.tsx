@@ -97,10 +97,10 @@ export function ThreadedComment({
   // True max depth - where we stop rendering entirely
   const isAtMaxDepth = depth >= maxDepth;
   const isAtMobileMaxDepth = depth >= mobileMaxDepth;
-  // Show "Continue thread" button when children WOULD exceed max depth
-  // (i.e., at maxDepth - 1, because children at depth+1 won't be rendered)
-  const shouldShowContinueButton = depth >= maxDepth - 1;
-  const shouldShowMobileContinueButton = depth >= mobileMaxDepth - 1;
+  // Show "Continue thread" button only when at exactly maxDepth - 1 (the last visible level)
+  // At this depth, we stop rendering children and show the button instead
+  const shouldShowContinueButton = depth === maxDepth - 1;
+  const shouldShowMobileContinueButton = depth === mobileMaxDepth - 1;
   const [linkCopied, setLinkCopied] = useState(false);
 
   // Track component mount status
@@ -409,10 +409,10 @@ export function ThreadedComment({
     <div
       id={`comment-${comment.id}`}
       data-testid="threaded-comment"
-      className={`${getIndentPadding()} ${depth > 0 ? 'border-l-2 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2 rounded-r-lg' : 'py-2'}`}
+      className={`${getIndentPadding()} ${depth > 0 ? 'border-l-2 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2' : 'py-2'}`}
     >
       {/* Comment Header and Content */}
-      <div className={`${isUnread ? 'border-2 border-semantic-warning bg-semantic-warning-subtle rounded-lg p-3 -ml-3' : ''}`}>
+      <div className={`${isUnread ? 'border border-semantic-warning rounded-lg p-3 -ml-3' : ''}`}>
         <div className="flex items-start gap-2 mb-1">
           <CharacterAvatar
             avatarUrl={comment.character_avatar_url}
@@ -536,13 +536,13 @@ export function ThreadedComment({
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center flex-wrap gap-2 md:gap-3 text-xs text-content-secondary">
+        <div className="flex items-center flex-wrap gap-3 text-xs text-content-secondary">
           {!isAtMaxDepth && !isEditing && !readOnly && !comment.is_deleted && controllableCharacters.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsReplying(!isReplying)}
-              className="text-xs h-auto py-1 px-2 md:p-0 hover:text-interactive-primary-hover font-medium"
+              className="text-xs h-auto py-2 px-3 md:p-0 hover:text-interactive-primary-hover font-medium min-h-[44px] md:min-h-0"
             >
               Reply
             </Button>
@@ -558,7 +558,7 @@ export function ThreadedComment({
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowReplies(!showReplies)}
-                    className="text-xs h-auto py-1 px-2 hover:text-interactive-primary-hover font-medium flex items-center gap-1"
+                    className="text-xs h-auto py-2 px-3 hover:text-interactive-primary-hover font-medium flex items-center gap-1 min-h-[44px]"
                   >
                     <span>{showReplies ? '▼' : '▶'}</span>
                     <span>{comment.reply_count}</span>
@@ -586,22 +586,22 @@ export function ThreadedComment({
             variant="ghost"
             size="sm"
             onClick={handleCopyLink}
-            className="text-xs h-auto py-1 px-2 md:p-0 hover:text-interactive-primary-hover font-medium flex items-center gap-1"
+            className="text-xs h-auto py-2 px-3 md:p-0 hover:text-interactive-primary-hover font-medium flex items-center gap-1.5 min-h-[44px] md:min-h-0"
             title="Copy link to this comment"
           >
             {linkCopied ? (
               <>
-                <svg className="w-3.5 h-3.5 text-semantic-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-semantic-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-semantic-success hidden md:inline">Copied!</span>
+                <span className="text-semantic-success">Copied!</span>
               </>
             ) : (
               <>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
-                <span className="hidden md:inline">Copy link</span>
+                <span>Link</span>
               </>
             )}
           </Button>
@@ -611,13 +611,13 @@ export function ThreadedComment({
               variant="ghost"
               size="sm"
               onClick={handleEdit}
-              className="text-xs h-auto py-1 px-2 md:p-0 hover:text-interactive-primary-hover font-medium flex items-center gap-1"
+              className="text-xs h-auto py-2 px-3 md:p-0 hover:text-interactive-primary-hover font-medium flex items-center gap-1.5 min-h-[44px] md:min-h-0"
               title="Edit this comment"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              <span className="hidden md:inline">Edit</span>
+              <span>Edit</span>
             </Button>
           )}
 
@@ -627,13 +627,13 @@ export function ThreadedComment({
               size="sm"
               onClick={handleDeleteClick}
               disabled={isDeleting}
-              className="text-xs h-auto py-1 px-2 md:p-0 hover:text-semantic-danger font-medium text-semantic-danger flex items-center gap-1"
+              className="text-xs h-auto py-2 px-3 md:p-0 hover:text-semantic-danger font-medium text-semantic-danger flex items-center gap-1.5 min-h-[44px] md:min-h-0"
               title={isAuthor ? "Delete this comment" : (isGM ? "Delete this comment (GM)" : "Delete this comment (admin)")}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
-              <span className="hidden md:inline">{isDeleting ? 'Deleting...' : 'Delete'}</span>
+              <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
             </Button>
           )}
 
@@ -644,13 +644,13 @@ export function ThreadedComment({
                   ? `/games/${gameId}?tab=common-room&postId=${comment.parent_id}`
                   : `/games/${gameId}?tab=common-room&comment=${comment.parent_id}`
               }
-              className="hover:text-interactive-primary-hover font-medium transition-colors flex items-center gap-1 py-1 px-2 md:p-0"
+              className="hover:text-interactive-primary-hover font-medium transition-colors flex items-center gap-1.5 py-2 px-3 md:p-0 min-h-[44px] md:min-h-0 text-xs"
               title={comment.thread_depth === 1 ? "Go to parent post" : "Go to parent comment"}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              <span className="hidden md:inline">Parent</span>
+              <span>Parent</span>
             </a>
           )}
         </div>
@@ -763,8 +763,8 @@ export function ThreadedComment({
       {/* Nested Replies */}
       {showReplies && (hasReplies || replies.length > 0 || preloadedChildren.length > 0) && (
           <>
-            {/* Show if: under desktop max depth */}
-            {!isAtMaxDepth && (
+            {/* Show if: not at or beyond max depth - 1 (stop rendering one level early to show "Continue thread") */}
+            {depth < maxDepth - 1 && (
                 <div className={`space-y-0 ${isAtMobileMaxDepth ? 'hidden md:block' : ''}`}>
                   {loadingReplies ? (
                       <div className="ml-2 md:ml-6 py-2 text-xs text-content-secondary">

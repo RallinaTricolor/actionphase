@@ -23,7 +23,6 @@ const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage').then(m => (
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const GamesPage = lazy(() => import('./pages/GamesPage').then(m => ({ default: m.GamesPage })));
 const GameDetailsPage = lazy(() => import('./pages/GameDetailsPage').then(m => ({ default: m.GameDetailsPage })));
-const ThreadViewPage = lazy(() => import('./pages/ThreadViewPage').then(m => ({ default: m.ThreadViewPage })));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
@@ -138,14 +137,6 @@ function AppRoutes() {
           <Route
             path="/games/recruiting"
             element={<Navigate to="/games?states=recruitment" replace />}
-          />
-          <Route
-            path="/games/:gameId/common-room/thread/:commentId"
-            element={
-              <PublicArchiveRoute>
-                <ThreadViewPage />
-              </PublicArchiveRoute>
-            }
           />
           <Route
             path="/games/:gameId"
