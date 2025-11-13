@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -122,6 +122,17 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+
+  // Header collapse state for mobile (persisted in localStorage)
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(() => {
+    const stored = localStorage.getItem('gameHeaderCollapsed');
+    return stored === 'true';
+  });
+
+  // Persist header collapse state
+  useEffect(() => {
+    localStorage.setItem('gameHeaderCollapsed', String(isHeaderCollapsed));
+  }, [isHeaderCollapsed]);
 
   const queryClient = useQueryClient();
 
@@ -270,10 +281,10 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
 
   return (
     <div className="min-h-screen surface-page">
-      <div className="max-w-6xl mx-auto py-8 px-4">
+      <div className="max-w-6xl mx-auto py-8 md:px-4">
         {/* Public Archive Notice */}
         {isPublicViewer && (
-          <div className="bg-interactive-primary/10 border border-interactive-primary rounded-lg p-4 mb-6">
+          <div className="bg-interactive-primary/10 border border-interactive-primary md:rounded-lg py-3 px-3 md:p-4 mb-6">
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-interactive-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -290,12 +301,14 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
         )}
 
         {/* Header - Compact Layout */}
-        <div className="surface-base rounded-lg shadow-md p-6 mb-6">
+        <div className="surface-base md:rounded-lg shadow-md py-4 px-3 md:p-6 mb-6">
           {/* Compact Header with integrated action menu */}
           <GameHeader
             game={game}
             participants={participants}
             playerCount={`${game.current_players || 0}/${game.max_players || '∞'}`}
+            isCollapsed={isHeaderCollapsed}
+            onToggleCollapse={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
             actionMenu={
               <GameActions
                 game={game}
@@ -322,39 +335,42 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
             }
           />
 
-          {/* Description - Truncated with expand */}
-          {game.description && (
-            <div className="mt-3 mb-4">
-              <p className={`text-content-secondary leading-relaxed ${!isDescriptionExpanded && game.description.length > 200 ? 'line-clamp-1' : ''}`}>
-                {game.description}
-              </p>
-              {game.description.length > 200 && (
-                <button
-                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                  className="text-sm text-interactive-primary hover:text-interactive-primary-hover font-medium mt-1 transition-colors inline-flex items-center gap-1"
-                >
-                  {isDescriptionExpanded ? (
-                    <>
-                      <span>Show Less</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
-                    </>
-                  ) : (
-                    <>
-                      <span>Show More</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          )}
+          {/* Description and Game Info - Hidden when collapsed on mobile, always visible on desktop */}
+          <div className={isHeaderCollapsed ? 'hidden md:block' : ''}>
+            {/* Description - Truncated with expand */}
+            {game.description && (
+              <div className="mt-3 mb-4">
+                <p className={`text-content-secondary leading-relaxed ${!isDescriptionExpanded && game.description.length > 200 ? 'line-clamp-1' : ''}`}>
+                  {game.description}
+                </p>
+                {game.description.length > 200 && (
+                  <button
+                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                    className="text-sm text-interactive-primary hover:text-interactive-primary-hover font-medium mt-1 transition-colors inline-flex items-center gap-1"
+                  >
+                    {isDescriptionExpanded ? (
+                      <>
+                        <span>Show Less</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      </>
+                    ) : (
+                      <>
+                        <span>Show More</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
 
-          {/* Game Info Grid - Show game metadata */}
-          <GameInfoGrid game={game} />
+            {/* Game Info Grid - Show game metadata */}
+            <GameInfoGrid game={game} />
+          </div>
 
           {/* User Application Status - Show pending applications */}
           {!isGM && !isInGame && userApplication && (
@@ -386,7 +402,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
             />
 
             {/* Tab Content */}
-            <div className={`surface-base rounded-b-lg shadow-md ${activeTab === 'common-room' ? 'p-4' : 'p-6'}`}>
+            <div className={`surface-base md:rounded-b-lg shadow-md py-4 md:p-6`}>
               <GameTabContent
                 activeTab={activeTab}
                 gameId={gameId}

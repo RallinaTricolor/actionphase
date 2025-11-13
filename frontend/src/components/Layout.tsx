@@ -34,7 +34,7 @@ export const Layout = ({ children }: LayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen surface-sunken">
+    <div className="min-h-screen surface-sunken" data-root-layout="true">
       {/* Navigation Bar */}
       {isAuthenticated && (
         <nav className="bg-interactive-primary shadow-lg">
