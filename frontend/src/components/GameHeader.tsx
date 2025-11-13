@@ -38,39 +38,74 @@ export function GameHeader({ game, participants = [], playerCount, actionMenu }:
         )}
       </div>
 
-      {/* Metadata Line - GM, Genre, Players, Dates */}
-      <div className="flex items-center gap-2 text-sm text-content-secondary flex-wrap">
-        <span>GM: {game.gm_username}</span>
-        {coGM && (
-          <>
-            <span className="text-content-tertiary">•</span>
-            <span>Co-GM: {coGM.username}</span>
-          </>
-        )}
-        {game.genre && (
-          <>
-            <span className="text-content-tertiary">•</span>
-            <span>Genre: {game.genre}</span>
-          </>
-        )}
-        {playerCount && (
-          <>
-            <span className="text-content-tertiary">•</span>
-            <span>{playerCount} Players</span>
-          </>
-        )}
-        {game.start_date && (
-          <>
-            <span className="text-content-tertiary">•</span>
-            <span>Started: {format(new Date(game.start_date), 'MMM d, yyyy')}</span>
-          </>
-        )}
-        {game.end_date && (
-          <>
-            <span className="text-content-tertiary">•</span>
-            <span>Ended: {format(new Date(game.end_date), 'MMM d, yyyy')}</span>
-          </>
-        )}
+      {/* Metadata - Mobile: Stacked rows for better readability, Desktop: Single line */}
+      <div className="text-sm text-content-secondary">
+        {/* Mobile: Stacked layout */}
+        <div className="flex flex-col gap-1 md:hidden">
+          {/* Row 1: GM info */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>GM: {game.gm_username}</span>
+            {coGM && (
+              <>
+                <span className="text-content-tertiary">•</span>
+                <span>Co-GM: {coGM.username}</span>
+              </>
+            )}
+          </div>
+
+          {/* Row 2: Game details */}
+          {(game.genre || playerCount) && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {game.genre && <span>Genre: {game.genre}</span>}
+              {game.genre && playerCount && <span className="text-content-tertiary">•</span>}
+              {playerCount && <span>{playerCount} Players</span>}
+            </div>
+          )}
+
+          {/* Row 3: Dates */}
+          {(game.start_date || game.end_date) && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {game.start_date && <span>Started: {format(new Date(game.start_date), 'MMM d, yyyy')}</span>}
+              {game.start_date && game.end_date && <span className="text-content-tertiary">•</span>}
+              {game.end_date && <span>Ended: {format(new Date(game.end_date), 'MMM d, yyyy')}</span>}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop: Single line (original layout) */}
+        <div className="hidden md:flex md:items-center md:gap-2 md:flex-wrap">
+          <span>GM: {game.gm_username}</span>
+          {coGM && (
+            <>
+              <span className="text-content-tertiary">•</span>
+              <span>Co-GM: {coGM.username}</span>
+            </>
+          )}
+          {game.genre && (
+            <>
+              <span className="text-content-tertiary">•</span>
+              <span>Genre: {game.genre}</span>
+            </>
+          )}
+          {playerCount && (
+            <>
+              <span className="text-content-tertiary">•</span>
+              <span>{playerCount} Players</span>
+            </>
+          )}
+          {game.start_date && (
+            <>
+              <span className="text-content-tertiary">•</span>
+              <span>Started: {format(new Date(game.start_date), 'MMM d, yyyy')}</span>
+            </>
+          )}
+          {game.end_date && (
+            <>
+              <span className="text-content-tertiary">•</span>
+              <span>Ended: {format(new Date(game.end_date), 'MMM d, yyyy')}</span>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

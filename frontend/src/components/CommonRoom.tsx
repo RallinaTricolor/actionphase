@@ -265,6 +265,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
         {/* Phase Description */}
         {phaseDescription && (
           <Card variant="bordered" padding="sm" className="mt-4">
+            <h3 className="text-sm font-semibold text-content-primary mb-2">Phase Description</h3>
             <MarkdownPreview content={phaseDescription} />
           </Card>
         )}
@@ -272,14 +273,14 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
 
       {/* Tab Navigation */}
       <div className="border-b border-border-primary mb-6">
-        <nav className="flex space-x-8">
+        <nav className="flex space-x-6 md:space-x-8">
           <button
             onClick={() => {
               const newParams = new URLSearchParams(searchParams);
               newParams.set('view', 'posts');
               setSearchParams(newParams, { replace: false });
             }}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+            className={`py-3 md:py-2 px-1 border-b-[3px] md:border-b-2 font-semibold md:font-medium text-base md:text-sm transition-colors ${
               activeTab === 'posts'
                 ? 'border-accent-primary text-interactive-primary'
                 : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-secondary'
@@ -293,7 +294,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
               newParams.set('view', 'newComments');
               setSearchParams(newParams, { replace: false });
             }}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+            className={`py-3 md:py-2 px-1 border-b-[3px] md:border-b-2 font-semibold md:font-medium text-base md:text-sm transition-colors ${
               activeTab === 'newComments'
                 ? 'border-accent-primary text-interactive-primary'
                 : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-secondary'
@@ -307,7 +308,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
               newParams.set('view', 'polls');
               setSearchParams(newParams, { replace: false });
             }}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+            className={`py-3 md:py-2 px-1 border-b-[3px] md:border-b-2 font-semibold md:font-medium text-base md:text-sm transition-colors ${
               activeTab === 'polls'
                 ? 'border-accent-primary text-interactive-primary'
                 : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-secondary'
