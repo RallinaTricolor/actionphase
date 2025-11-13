@@ -396,13 +396,16 @@ export function ThreadedComment({
   ];
   const bgColor = backgroundColors[depth % backgroundColors.length];
 
-  // Mobile-friendly indentation: cap at 3 levels with smaller increments
-  // Only apply left padding (for border spacing), no right padding to maximize screen space
+  // Mobile-friendly indentation: reduced from 12px to 8px per level for better readability on small screens
+  // Desktop keeps 24px per level for clearer visual hierarchy
+  // Max indentation prevents overly narrow content areas
   const getIndentPadding = () => {
-    if (depth === 0) return 'px-3'; // Base left padding for all comments
-    if (depth === 1) return 'pl-3 md:pl-6'; // Just enough for border + small indent
-    if (depth === 2) return 'pl-3 md:pl-6'; // Same - don't increase on mobile
-    return 'pl-3 md:pl-6'; // Cap at same level
+    if (depth === 0) return 'px-3'; // Base padding for top-level comments
+    if (depth === 1) return 'pl-2 md:pl-6'; // 8px mobile (vs 12px before), 24px desktop
+    if (depth === 2) return 'pl-2 md:pl-6'; // 8px mobile, 24px desktop
+    if (depth === 3) return 'pl-2 md:pl-6'; // 8px mobile, 24px desktop
+    // Depth 4+ (only visible in thread modal): cap at same level to prevent excessive narrowing
+    return 'pl-2 md:pl-6';
   };
 
   return (
@@ -417,7 +420,7 @@ export function ThreadedComment({
           <CharacterAvatar
             avatarUrl={comment.character_avatar_url}
             characterName={comment.character_name}
-            size="sm"
+            size="md"
           />
           <div className="flex-1 min-w-0">
             {/* Desktop: horizontal layout */}
