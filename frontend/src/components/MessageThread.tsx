@@ -36,6 +36,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firstUnreadRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [hasScrolledToUnread, setHasScrolledToUnread] = useState(false);
   const [deleteMessageId, setDeleteMessageId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -106,6 +107,19 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
   useEffect(() => {
     setHasScrolledToUnread(false);
   }, [conversationId]);
+
+  // Auto-resize textarea as user types
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set height to scrollHeight (content height)
+      // Max height of 200px (about 8 lines at 24px line height)
+      const newHeight = Math.min(textarea.scrollHeight, 200);
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, [newMessage]);
 
   const markAsRead = async () => {
     try {
@@ -390,14 +404,16 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
                   <Textarea
+                    ref={textareaRef}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    rows={3}
+                    rows={1}
                     placeholder={isCommonRoomPhase ? "Type your message... (Markdown supported)" : "Messaging is only available during Common Room phases"}
                     disabled={sending || !isCommonRoomPhase}
                     maxLength={50000}
                     showCharacterCount={true}
                     helperText="Maximum 50,000 characters"
+                    className="max-h-[200px]"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                         handleSendMessage(e);
