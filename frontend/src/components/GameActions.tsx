@@ -17,6 +17,7 @@ interface GameActionsProps {
   isParticipant: boolean;
   userRole: UserGameRole;
   userApplication: GameApplication | null;
+  hasPendingAudienceApplication?: boolean; // Whether user has a pending audience application
   actionLoading: boolean;
   stateActions: StateAction[];
   onEditGame: () => void;
@@ -42,6 +43,7 @@ export function GameActions({
   isParticipant: _isParticipant,
   userRole,
   userApplication,
+  hasPendingAudienceApplication = false,
   actionLoading,
   stateActions,
   onEditGame,
@@ -80,8 +82,10 @@ export function GameActions({
   const showWithdrawButton = !isGM && userApplication && userApplication.status === 'pending' && game.state === 'recruitment';
 
   // Audience join button - show after recruitment for non-participants
+  // Hide if user already has a pending audience application
   const showJoinAsAudienceButton = !isGM && !isCheckingAuth && userRole === 'none' &&
-    ['character_creation', 'in_progress', 'paused'].includes(game.state) && !userApplication;
+    ['character_creation', 'in_progress', 'paused'].includes(game.state) &&
+    !userApplication && !hasPendingAudienceApplication;
 
   return (
     <div className="flex items-center gap-2">
@@ -111,20 +115,16 @@ export function GameActions({
       )}
 
       {showJoinAsAudienceButton && (
-        <div className="flex flex-col gap-1">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onJoinAsAudience}
-            disabled={actionLoading}
-            data-testid="join-as-audience-button"
-          >
-            Join as Audience
-          </Button>
-          <p className="text-xs text-text-secondary">
-            Player recruitment has ended. Join as an audience member to follow the game.
-          </p>
-        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onJoinAsAudience}
+          disabled={actionLoading}
+          data-testid="join-as-audience-button"
+          title="Player recruitment has ended. Join as an audience member to follow the game."
+        >
+          Join as Audience
+        </Button>
       )}
 
       {/* Kebab Menu for GM/Editor Actions */}

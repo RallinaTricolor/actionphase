@@ -97,25 +97,13 @@ export function ThreadViewModal({
               </Button>
             </div>
 
-            {/* Context info and "Show full thread" button */}
+            {/* Context info */}
             {showingContext && (
-              <div className="flex items-center justify-between text-sm">
+              <div className="text-sm">
                 <p className="text-content-secondary">
                   Showing {parentChain.length} {parentChain.length === 1 ? 'message' : 'messages'}
                   {!hasFullThread && ' (partial context)'}
                 </p>
-                {!hasFullThread && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      // Navigate to full thread view
-                      window.location.href = `/games/${gameId}/common-room/thread/${comment.id}`;
-                    }}
-                  >
-                    Show full thread
-                  </Button>
-                )}
               </div>
             )}
           </div>
@@ -123,79 +111,38 @@ export function ThreadViewModal({
           {/* Content */}
           <div className="px-6 py-6">
             {showingContext ? (
-              /* Render parent chain with clear visual hierarchy */
-              <div>
-                {parentChain.map((msg, index) => {
-                  const isLast = index === parentChain.length - 1;
+              /* Render parent chain as nested structure */
+              (() => {
+                // Separate parents from target
+                const parents = parentChain.slice(0, -1);
+                const target = parentChain[parentChain.length - 1];
 
-                  // Render parents as simple read-only comments, target as full ThreadedComment
-                  if (!isLast) {
-                    // Alternating backgrounds for visual separation
-                    // Target comment (depth 0 in ThreadedComment) uses 'surface-raised'
-                    // Ensure proper alternation: if parent count is even, start with base
-                    // This ensures the parent of target always contrasts with target
-                    const parentCount = parentChain.length - 1; // Number of parent comments
-                    const shouldStartWithBase = parentCount % 2 === 1; // Odd number of parents
-                    const bgColor = shouldStartWithBase
-                      ? (index % 2 === 0 ? 'surface-base' : 'surface-raised')
-                      : (index % 2 === 0 ? 'surface-raised' : 'surface-base');
+                // Reconstruct parents as nested structure, with target as the deepest child
+                // Use reduceRight to build from deepest to shallowest
+                const reconstructedRoot = parents.reduceRight((child, parent) => {
+                  return { ...parent, children: [child] };
+                }, stripChildren(target));
 
-                    // Simple parent comment rendering
-                    return (
-                      <div
-                        key={msg.id}
-                        style={{ marginLeft: `${index * 20}px` }}
-                        className={`mb-3 p-4 ${bgColor} rounded-lg`}
-                      >
-                        <div className="flex items-start gap-2 mb-2">
-                          <CharacterAvatar
-                            avatarUrl={msg.character_avatar_url}
-                            characterName={msg.character_name}
-                            size="sm"
-                          />
-                          <div>
-                            <span className="font-semibold text-sm text-content-primary">
-                              {msg.character_name}
-                            </span>
-                            <span className="text-xs text-content-secondary ml-2">
-                              @{msg.author_username}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-sm text-content-primary">
-                          <MarkdownPreview content={msg.content} mentionedCharacters={characters} />
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Target comment - full ThreadedComment with replies
-                  return (
-                    <div
-                      key={msg.id}
-                      id={`comment-${msg.id}`}
-                      style={{ marginLeft: `${index * 20}px` }}
-                      className="ring-2 ring-accent-primary rounded-lg p-1"
-                    >
-                      <ThreadedComment
-                        comment={stripChildren(msg)}
-                        gameId={gameId}
-                        postId={postId}
-                        characters={characters}
-                        controllableCharacters={controllableCharacters}
-                        onCreateReply={onCreateReply}
-                        onCommentDeleted={onClose}
-                        currentUserId={currentUserId}
-                        depth={0}
-                        maxDepth={10}  // Show all replies for target
-                        unreadCommentIDs={unreadCommentIDs}
-                        onOpenThread={(nestedComment) => setNestedModalComment(nestedComment)}
-                        readOnly={readOnly}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+                // Render the root parent as ThreadedComment, which cascades down to target
+                // The auto-scroll effect will handle highlighting the target
+                return (
+                  <ThreadedComment
+                    comment={reconstructedRoot}
+                    gameId={gameId}
+                    postId={postId}
+                    characters={characters}
+                    controllableCharacters={controllableCharacters}
+                    onCreateReply={onCreateReply}
+                    onCommentDeleted={onClose}
+                    currentUserId={currentUserId}
+                    depth={0}
+                    maxDepth={10}
+                    unreadCommentIDs={unreadCommentIDs}
+                    onOpenThread={(nestedComment) => setNestedModalComment(nestedComment)}
+                    readOnly={readOnly}
+                  />
+                );
+              })()
             ) : (
               /* Single comment view (original behavior) */
               <ThreadedComment
@@ -230,6 +177,7 @@ export function ThreadViewModal({
           onCreateReply={onCreateReply}
           currentUserId={currentUserId}
           unreadCommentIDs={unreadCommentIDs}
+          readOnly={readOnly}
         />
       )}
     </>

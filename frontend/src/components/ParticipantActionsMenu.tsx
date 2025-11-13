@@ -14,12 +14,14 @@ import { useState, useRef, useEffect } from 'react';
 import { Button, Alert } from './ui';
 import { Modal } from './Modal';
 import { usePromoteToCoGM, useDemoteFromCoGM, useRemovePlayer } from '../hooks/usePlayerManagement';
-import type { GameParticipant } from '../types/games';
+import { apiClient } from '../lib/api';
+import type { GameParticipant, GameApplication } from '../types/games';
 import { logger } from '@/services/LoggingService';
 
 interface ParticipantActionsMenuProps {
   gameId: number;
-  participant: GameParticipant;
+  participant?: GameParticipant;
+  application?: GameApplication;
   isPrimaryGM: boolean;
   onSuccess?: () => void;
 }
@@ -27,6 +29,7 @@ interface ParticipantActionsMenuProps {
 export function ParticipantActionsMenu({
   gameId,
   participant,
+  application,
   isPrimaryGM,
   onSuccess
 }: ParticipantActionsMenuProps) {
@@ -34,6 +37,10 @@ export function ParticipantActionsMenu({
   const [showPromoteConfirm, setShowPromoteConfirm] = useState(false);
   const [showDemoteConfirm, setShowDemoteConfirm] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const promoteToCoGM = usePromoteToCoGM(gameId);
@@ -58,6 +65,7 @@ export function ParticipantActionsMenu({
   }, [isOpen]);
 
   const handlePromote = async () => {
+    if (!participant) return;
     try {
       await promoteToCoGM.mutateAsync(participant.user_id);
       setShowPromoteConfirm(false);
@@ -69,6 +77,7 @@ export function ParticipantActionsMenu({
   };
 
   const handleDemote = async () => {
+    if (!participant) return;
     try {
       await demoteFromCoGM.mutateAsync(participant.user_id);
       setShowDemoteConfirm(false);
@@ -80,6 +89,7 @@ export function ParticipantActionsMenu({
   };
 
   const handleRemove = async () => {
+    if (!participant) return;
     try {
       await removePlayer.mutateAsync(participant.user_id);
       setShowRemoveConfirm(false);
@@ -90,12 +100,49 @@ export function ParticipantActionsMenu({
     }
   };
 
-  const canPromote = isPrimaryGM && participant.role === 'audience';
-  const canDemote = isPrimaryGM && participant.role === 'co_gm';
-  const canRemove = true; // Both primary GM and co-GM can remove
+  const handleApprove = async () => {
+    if (!application) return;
+    try {
+      setIsProcessing(true);
+      setErrorMessage(null);
+      await apiClient.games.reviewGameApplication(gameId, application.id, { action: 'approve' });
+      setShowApproveConfirm(false);
+      setIsOpen(false);
+      onSuccess?.();
+    } catch (error) {
+      logger.error('Failed to approve application', { error, gameId, applicationId: application.id });
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to approve application');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!application) return;
+    try {
+      setIsProcessing(true);
+      setErrorMessage(null);
+      await apiClient.games.reviewGameApplication(gameId, application.id, { action: 'reject' });
+      setShowRejectConfirm(false);
+      setIsOpen(false);
+      onSuccess?.();
+    } catch (error) {
+      logger.error('Failed to reject application', { error, gameId, applicationId: application.id });
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to reject application');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Determine available actions
+  const canApprove = !!application;
+  const canReject = !!application;
+  const canPromote = !!participant && isPrimaryGM && participant.role === 'audience';
+  const canDemote = !!participant && isPrimaryGM && participant.role === 'co_gm';
+  const canRemove = !!participant; // Both primary GM and co-GM can remove
 
   // If no actions available, don't render anything
-  if (!canPromote && !canDemote && !canRemove) {
+  if (!canPromote && !canDemote && !canRemove && !canApprove && !canReject) {
     return null;
   }
 
@@ -114,6 +161,32 @@ export function ParticipantActionsMenu({
         {isOpen && (
           <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-bg-primary border border-border-primary z-10 surface-raised">
             <div className="py-1" role="menu">
+              {canApprove && (
+                <button
+                  onClick={() => {
+                    setShowApproveConfirm(true);
+                    setIsOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm text-content-primary hover:bg-bg-secondary"
+                  role="menuitem"
+                >
+                  Approve Application
+                </button>
+              )}
+
+              {canReject && (
+                <button
+                  onClick={() => {
+                    setShowRejectConfirm(true);
+                    setIsOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm text-semantic-danger hover:bg-bg-secondary"
+                  role="menuitem"
+                >
+                  Reject Application
+                </button>
+              )}
+
               {canPromote && (
                 <button
                   onClick={() => {
@@ -178,7 +251,7 @@ export function ParticipantActionsMenu({
           </Alert>
 
           <p className="text-sm text-content-secondary">
-            Promote <strong>{participant.username}</strong> to co-GM?
+            Promote <strong>{participant?.username}</strong> to co-GM?
           </p>
 
           <div className="flex justify-end gap-3">
@@ -216,7 +289,7 @@ export function ParticipantActionsMenu({
       >
         <div className="space-y-4">
           <p className="text-sm text-content-secondary">
-            <strong>{participant.username}</strong> will be demoted from co-GM to audience member.
+            <strong>{participant?.username}</strong> will be demoted from co-GM to audience member.
             They will lose GM permissions but remain in the game.
           </p>
 
@@ -256,7 +329,7 @@ export function ParticipantActionsMenu({
         <div className="space-y-4">
           <Alert variant="danger" title="Warning: This action has serious consequences">
             <ul className="text-sm space-y-1 list-disc list-inside">
-              <li>Player <strong>{participant.username}</strong> will be removed from the game</li>
+              <li>Player <strong>{participant?.username}</strong> will be removed from the game</li>
               <li>They will lose all access to the game immediately</li>
               <li>Their character(s) will be marked as inactive</li>
               <li>You can reassign their characters to yourself or other players</li>
@@ -290,6 +363,86 @@ export function ParticipantActionsMenu({
               <p className="text-sm">
                 Failed to remove player. {(removePlayer.error as Error)?.message || 'Please try again.'}
               </p>
+            </Alert>
+          )}
+        </div>
+      </Modal>
+
+      {/* Approve Application Confirmation Modal */}
+      <Modal
+        isOpen={showApproveConfirm}
+        onClose={() => setShowApproveConfirm(false)}
+        title="Approve Audience Application?"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-content-secondary">
+            Approve <strong>{application?.username}</strong> to join as an audience member?
+          </p>
+
+          {application?.message && (
+            <div className="bg-bg-secondary border border-border-primary rounded-lg p-3">
+              <p className="text-sm text-content-tertiary mb-1">Application message:</p>
+              <p className="text-sm text-content-primary italic">"{application.message}"</p>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setShowApproveConfirm(false)}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleApprove}
+              loading={isProcessing}
+            >
+              Approve Application
+            </Button>
+          </div>
+
+          {errorMessage && (
+            <Alert variant="danger" dismissible onDismiss={() => setErrorMessage(null)}>
+              <p className="text-sm">{errorMessage}</p>
+            </Alert>
+          )}
+        </div>
+      </Modal>
+
+      {/* Reject Application Confirmation Modal */}
+      <Modal
+        isOpen={showRejectConfirm}
+        onClose={() => setShowRejectConfirm(false)}
+        title="Reject Audience Application?"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-content-secondary">
+            Reject <strong>{application?.username}</strong>'s application to join as an audience member?
+            The application will be removed.
+          </p>
+
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setShowRejectConfirm(false)}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleReject}
+              loading={isProcessing}
+            >
+              Reject Application
+            </Button>
+          </div>
+
+          {errorMessage && (
+            <Alert variant="danger" dismissible onDismiss={() => setErrorMessage(null)}>
+              <p className="text-sm">{errorMessage}</p>
             </Alert>
           )}
         </div>

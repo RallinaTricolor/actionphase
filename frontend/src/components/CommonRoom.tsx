@@ -100,11 +100,13 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
         // Comment is visible in the DOM - scroll to it
         element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
 
-        // Highlight the comment briefly with theme-aware info color
-        element.classList.add('ring-4', 'ring-info');
+        // Add bordered box styling to match modal appearance
+        element.classList.add('ring-2', 'ring-interactive-primary', 'rounded-lg', 'p-1');
+
+        // Remove after 5 seconds
         setTimeout(() => {
-          element.classList.remove('ring-4', 'ring-info');
-        }, 3000);
+          element.classList.remove('ring-2', 'ring-interactive-primary', 'rounded-lg', 'p-1');
+        }, 5000);
 
         // Clear the comment parameter from URL after scrolling
         const newParams = new URLSearchParams(searchParams);
@@ -146,8 +148,11 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
             setSearchParams(newParams, { replace: true });
           } catch (err) {
             logger.error('Failed to fetch comment for modal', { error: err, commentId: commentIdParam, gameId });
-            // If fetch fails, navigate to ThreadViewPage as fallback
-            navigate(`/games/${gameId}/common-room/thread/${commentIdParam}`);
+            // If fetch fails, clear the comment parameter and show error
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('comment');
+            setSearchParams(newParams, { replace: true });
+            setError('Failed to load comment. The comment may have been deleted.');
           }
         };
 
@@ -276,7 +281,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
             }}
             className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === 'posts'
-                ? 'border-accent-primary text-accent-primary'
+                ? 'border-accent-primary text-interactive-primary'
                 : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-secondary'
             }`}
           >
@@ -290,7 +295,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
             }}
             className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === 'newComments'
-                ? 'border-accent-primary text-accent-primary'
+                ? 'border-accent-primary text-interactive-primary'
                 : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-secondary'
             }`}
           >
@@ -304,7 +309,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
             }}
             className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === 'polls'
-                ? 'border-accent-primary text-accent-primary'
+                ? 'border-accent-primary text-interactive-primary'
                 : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-secondary'
             }`}
           >

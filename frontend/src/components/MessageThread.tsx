@@ -79,8 +79,10 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
         conversationId,
       });
 
+      const hasUnreads = conversationInfo && conversationInfo.unread_count > 0 && conversationInfo.last_read_at;
+
       // If there are unread messages and we have read tracking info, scroll to first unread
-      if (conversationInfo && conversationInfo.unread_count > 0 && conversationInfo.last_read_at) {
+      if (hasUnreads) {
         logger.debug('Scrolling to first unread message', { conversationId, unreadCount: conversationInfo.unread_count });
         scrollToFirstUnread();
       } else {
@@ -91,8 +93,12 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       }
       setHasScrolledToUnread(true);
 
-      // Mark as read AFTER scrolling
-      markAsRead();
+      // Mark as read AFTER a delay to give user time to see the "New messages" badge
+      // If there are no unreads, mark as read immediately (no badge to see)
+      const delay = hasUnreads ? 2000 : 0;
+      setTimeout(() => {
+        markAsRead();
+      }, delay);
     }
   }, [messages, hasScrolledToUnread, conversationInfo]);
 
@@ -205,6 +211,9 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
 
       setNewMessage('');
       await loadMessages();
+
+      // Mark as read immediately after sending to avoid showing own message as "new"
+      await markAsRead();
 
       // Scroll to bottom after sending (use setTimeout to ensure messages are rendered)
       setTimeout(() => scrollToBottom(), 100);

@@ -93,12 +93,13 @@ export function useGameTabs({
         tabList.push({ id: 'phases', label: 'Phases', icon: icons.phases });
       }
 
-      // Actions tab - Only visible during action phases to:
-      // 1. GM (can see all actions)
+      // Actions tab - Visible during action phases to:
+      // 1. GM (can see all actions and manage)
       // 2. Regular participants (can submit actions)
-      // NOT visible to audience or non-participants
-      if (currentPhaseType === 'action' && (isGM || isParticipant)) {
-        tabList.push({ id: 'actions', label: isGM ? 'Actions' : 'Submit Action', icon: icons.actions });
+      // 3. Audience members (read-only view of all actions)
+      if (currentPhaseType === 'action' && (isGM || isParticipant || isAudience)) {
+        const label = isGM ? 'Actions' : isAudience ? 'View Actions' : 'Submit Action';
+        tabList.push({ id: 'actions', label, icon: icons.actions });
       }
 
       // People tab (combines Characters and Participants)

@@ -124,13 +124,13 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
     };
   }, [showComments, commentTree.length, offset, gameId, post.id, COMMENTS_PER_PAGE]);
 
-  // Mark post as read immediately when user views it (on page load with unread comments)
+  // Mark post as read immediately when user views it (on page load)
   useEffect(() => {
-    // Only mark as read if:
-    // 1. There are unread comments (from the query, not local state)
-    // 2. Haven't already marked as read
-    // This happens on mount/page load, ensuring next refresh shows no "NEW" badges
-    if (unreadCommentIDs.length > 0 && !hasMarkedAsRead.current) {
+    // Always mark as read on first view to establish a read marker
+    // This ensures that future comments will be correctly detected as "new"
+    // Without this, users who view a post before any comments exist will never get
+    // a read marker, and thus will never see new comments highlighted
+    if (!hasMarkedAsRead.current) {
       markAsReadMutation.mutate({
         gameId,
         postId: post.id,
@@ -139,7 +139,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
 
       hasMarkedAsRead.current = true;
     }
-  }, [unreadCommentIDs.length, gameId, post.id, markAsReadMutation]);
+  }, [gameId, post.id, markAsReadMutation]);
 
   // Reload all comments from beginning (resets pagination)
   const loadComments = async (delayMs: number = 0) => {
@@ -639,6 +639,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
           onCreateReply={onCreateComment}
           currentUserId={currentUserId}
           unreadCommentIDs={localUnreadCommentIDs}
+          readOnly={readOnly}
         />
       )}
     </div>

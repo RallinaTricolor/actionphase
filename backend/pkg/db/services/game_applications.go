@@ -44,7 +44,10 @@ func (gas *GameApplicationService) CreateGameApplication(ctx context.Context, re
 		case core.ApplicationRejected:
 			return nil, fmt.Errorf("user's previous application was rejected")
 		case core.NotRecruiting:
-			return nil, fmt.Errorf("game is not currently recruiting")
+			// Audience can apply at any time, but players can only apply during recruitment
+			if req.Role != core.RoleAudience {
+				return nil, fmt.Errorf("game is not currently recruiting")
+			}
 		default:
 			return nil, fmt.Errorf("cannot apply to game: %s", canApplyStatus)
 		}
@@ -155,8 +158,14 @@ func (gas *GameApplicationService) GetUserGameApplications(ctx context.Context, 
 func (gas *GameApplicationService) ApproveGameApplication(ctx context.Context, applicationID, reviewerID int32) error {
 	queries := models.New(gas.DB)
 
+	// Get the application to check the role
+	application, err := gas.GetGameApplication(ctx, applicationID)
+	if err != nil {
+		return fmt.Errorf("failed to get game application: %w", err)
+	}
+
 	// Update application status
-	_, err := queries.UpdateGameApplicationStatus(ctx, models.UpdateGameApplicationStatusParams{
+	_, err = queries.UpdateGameApplicationStatus(ctx, models.UpdateGameApplicationStatusParams{
 		ID:               applicationID,
 		Status:           pgtype.Text{String: core.ApplicationStatusApproved, Valid: true},
 		ReviewedByUserID: pgtype.Int4{Int32: reviewerID, Valid: true},
@@ -165,8 +174,23 @@ func (gas *GameApplicationService) ApproveGameApplication(ctx context.Context, a
 		return fmt.Errorf("failed to approve game application: %w", err)
 	}
 
-	// Note: Creating the participant entry should be done when transitioning out of recruitment
-	// This allows the GM to approve applications without immediately adding them as participants
+	// For audience applications, create participant immediately
+	// Audience members can apply at any time (not just during recruitment),
+	// so they should become participants as soon as approved
+	if application.Role == core.RoleAudience {
+		_, err = queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
+			GameID: application.GameID,
+			UserID: application.UserID,
+			Role:   application.Role,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create participant from audience application: %w", err)
+		}
+	}
+
+	// Note: For player applications during recruitment, the participant entry
+	// is created when transitioning out of recruitment. This allows the GM to
+	// approve applications without immediately adding them as participants.
 
 	return nil
 }

@@ -119,30 +119,44 @@ func (h *Handler) GetCharacterData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	gameService := &services.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
-	// Check if user can view private data
+	// Check if user can view private data (editors or audience members)
 	var characterData []models.CharacterDatum
+	canViewPrivate := false
+
 	if userID != nil {
+		// Check if user can edit
 		canEdit, err := characterService.CanUserEditCharacter(ctx, int32(characterID), *userID)
 		if err == nil && canEdit {
-			// User can edit, so they can see all data
-			data, err := characterService.GetCharacterData(ctx, int32(characterID))
-			if err != nil {
-				h.App.ObsLogger.Error(ctx, "Failed to get character data", "error", err)
-				render.Render(w, r, core.ErrInternalError(err))
-				return
-			}
-			characterData = data
+			canViewPrivate = true
 		} else {
-			// User cannot edit, only show public data
-			data, err := characterService.GetPublicCharacterData(ctx, int32(characterID))
-			if err != nil {
-				h.App.ObsLogger.Error(ctx, "Failed to get public character data", "error", err)
-				render.Render(w, r, core.ErrInternalError(err))
-				return
+			// Check if user is an audience member of this character's game
+			queries := models.New(h.App.Pool)
+			character, err := queries.GetCharacter(ctx, int32(characterID))
+			if err == nil {
+				userRole, err := gameService.GetUserRole(ctx, character.GameID, *userID)
+				if err == nil && userRole == "audience" {
+					canViewPrivate = true
+					h.App.ObsLogger.Debug(ctx, "Audience member viewing character data",
+						"character_id", characterID,
+						"user_id", *userID,
+						"game_id", character.GameID,
+					)
+				}
 			}
-			characterData = data
 		}
+	}
+
+	if canViewPrivate {
+		// User can view all data (editor or audience)
+		data, err := characterService.GetCharacterData(ctx, int32(characterID))
+		if err != nil {
+			h.App.ObsLogger.Error(ctx, "Failed to get character data", "error", err)
+			render.Render(w, r, core.ErrInternalError(err))
+			return
+		}
+		characterData = data
 	} else {
 		// No user token, only show public data
 		data, err := characterService.GetPublicCharacterData(ctx, int32(characterID))

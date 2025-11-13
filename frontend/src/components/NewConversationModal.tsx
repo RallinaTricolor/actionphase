@@ -25,9 +25,9 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
   // Debug logging
   logger.debug('NewConversationModal state', {
     gameId,
-    receivedCharactersCount: characters.length,
+    controllableCharactersCount: characters.length,
     allCharactersCount: allCharacters.length,
-    availableParticipantsCount: allCharacters.filter(char => !characters.some(c => c.id === char.id)).length,
+    yourCharacterId,
   });
 
   useEffect(() => {
@@ -62,6 +62,18 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
       newSelected.add(characterId);
     }
     setSelectedParticipants(newSelected);
+  };
+
+  const handleYourCharacterChange = (characterId: number) => {
+    // Set the new character
+    setYourCharacterId(characterId);
+
+    // Remove this character from selected participants if it was selected
+    if (selectedParticipants.has(characterId)) {
+      const newSelected = new Set(selectedParticipants);
+      newSelected.delete(characterId);
+      setSelectedParticipants(newSelected);
+    }
   };
 
   const handleCreate = async () => {
@@ -102,16 +114,15 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
     }
   };
 
-  // Get characters that are not controlled by the user (available as participants)
-  // Exclude user's own characters (they can only send FROM one of their characters, not TO them)
-  // Exclude pending/rejected characters from recipient selection for everyone (including GMs)
-  // GMs can still see these characters in CharactersList for management purposes
+  // Get available participants for the conversation
+  // Exclude the character being used to send FROM (already auto-included)
+  // Exclude pending/rejected characters
+  // Allow user's other controllable characters (e.g., GM can include multiple NPCs)
   const availableParticipants = allCharacters.filter(
     char =>
-      char.id !== yourCharacterId &&
+      char.id !== yourCharacterId &&  // Don't show the character we're sending from
       char.status !== 'pending' &&
-      char.status !== 'rejected' &&
-      !characters.some(c => c.id === char.id) // Exclude ALL user's controllable characters
+      char.status !== 'rejected'
   );
 
   return (
@@ -147,7 +158,9 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
           ) : characters.length === 1 ? (
             <div className="p-3 bg-interactive-primary-subtle border border-interactive-primary rounded">
               <div className="font-medium text-content-primary">{characters[0].name}</div>
-              <div className="text-xs text-content-secondary">{characters[0].character_type.replace('_', ' ')}</div>
+              {!isAnonymous && (
+                <div className="text-xs text-content-secondary">{characters[0].character_type.replace('_', ' ')}</div>
+              )}
               {!isAnonymous && characters[0].username && (
                 <div className="text-xs text-content-tertiary">Played by {characters[0].username}</div>
               )}
@@ -155,13 +168,13 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
           ) : (
             <Select
               value={yourCharacterId || ''}
-              onChange={(e) => setYourCharacterId(Number(e.target.value))}
+              onChange={(e) => handleYourCharacterChange(Number(e.target.value))}
               disabled={creating}
             >
               <option value="">Select your character...</option>
               {characters.map((char) => (
                 <option key={char.id} value={char.id}>
-                  {char.name} ({char.character_type.replace('_', ' ')}){!isAnonymous && char.username ? ` - ${char.username}` : ''}
+                  {char.name}{!isAnonymous ? ` (${char.character_type.replace('_', ' ')})` : ''}{!isAnonymous && char.username ? ` - ${char.username}` : ''}
                 </option>
               ))}
             </Select>
@@ -201,7 +214,9 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
                   />
                   <div className="flex-1">
                     <div className="font-medium text-content-primary">{character.name}</div>
-                    <div className="text-xs text-content-tertiary">{character.character_type.replace('_', ' ')}</div>
+                    {!isAnonymous && (
+                      <div className="text-xs text-content-tertiary">{character.character_type.replace('_', ' ')}</div>
+                    )}
                     {!isAnonymous && character.username && (
                       <div className="text-xs text-content-tertiary">Played by {character.username}</div>
                     )}

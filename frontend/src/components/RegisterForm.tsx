@@ -159,11 +159,11 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
                     data-testid={`password-requirement-${req.key}`}
                   >
                     {req.met ? (
-                      <CheckCircle className="text-success-primary flex-shrink-0" size={16} />
+                      <CheckCircle className="text-semantic-success flex-shrink-0" size={16} />
                     ) : (
                       <XCircle className="text-content-tertiary flex-shrink-0" size={16} />
                     )}
-                    <span className={req.met ? 'text-success-primary' : 'text-content-secondary'}>
+                    <span className={req.met ? 'text-semantic-success' : 'text-content-secondary'}>
                       {req.text}
                     </span>
                   </div>

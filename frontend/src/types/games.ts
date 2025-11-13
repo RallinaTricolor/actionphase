@@ -132,9 +132,9 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
 };
 
 export const APPLICATION_STATUS_COLORS: Record<ApplicationStatus, string> = {
-  pending: 'bg-semantic-warning-subtle text-semantic-warning',
-  approved: 'bg-semantic-success-subtle text-semantic-success',
-  rejected: 'bg-semantic-danger-subtle text-semantic-danger',
+  pending: 'bg-semantic-warning-subtle text-content-primary',
+  approved: 'bg-semantic-success-subtle text-content-primary',
+  rejected: 'bg-semantic-danger-subtle text-content-primary',
   withdrawn: 'surface-raised text-content-secondary'
 };
 
