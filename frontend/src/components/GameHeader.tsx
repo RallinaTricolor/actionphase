@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
 import type { GameListItem, GameWithDetails, GameParticipant } from '../types/games';
 import { Badge } from './ui';
@@ -8,6 +9,8 @@ interface GameHeaderProps {
   participants?: GameParticipant[];
   playerCount?: string; // e.g., "3/5" or "3" for current players / max
   actionMenu?: React.ReactNode; // Optional action menu in top-right
+  isCollapsed?: boolean; // External collapse state (for parent to control what gets hidden)
+  onToggleCollapse?: () => void; // Callback when collapse button is clicked
 }
 
 /**
@@ -17,31 +20,86 @@ interface GameHeaderProps {
  * - Line 1: Title + Status Badge + Action Menu (right)
  * - Line 2: GM • Genre • Players (compact metadata chips)
  */
-export function GameHeader({ game, participants = [], playerCount, actionMenu }: GameHeaderProps) {
+export function GameHeader({
+  game,
+  participants = [],
+  playerCount,
+  actionMenu,
+  isCollapsed: externalIsCollapsed,
+  onToggleCollapse
+}: GameHeaderProps) {
   // Find co-GM from participants
   const coGM = participants.find(p => p.role === 'co_gm');
+
+  // Internal collapsible state for mobile (persisted in localStorage)
+  // Only used if parent doesn't provide isCollapsed/onToggleCollapse
+  const [internalIsCollapsed, setInternalIsCollapsed] = useState(() => {
+    const stored = localStorage.getItem('gameHeaderCollapsed');
+    return stored === 'true';
+  });
+
+  // Use external state if provided, otherwise use internal state
+  const isCollapsed = externalIsCollapsed !== undefined ? externalIsCollapsed : internalIsCollapsed;
+
+  // Persist collapse state to localStorage (only for internal state)
+  useEffect(() => {
+    if (externalIsCollapsed === undefined) {
+      localStorage.setItem('gameHeaderCollapsed', String(internalIsCollapsed));
+    }
+  }, [internalIsCollapsed, externalIsCollapsed]);
+
+  const toggleCollapse = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    } else {
+      setInternalIsCollapsed(!internalIsCollapsed);
+    }
+  };
 
   return (
     <div className="space-y-1">
       {/* Title + Status + Actions */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <h1 className="text-2xl font-bold text-content-primary truncate">{game.title}</h1>
-          <Badge className={GAME_STATE_COLORS[game.state]} data-testid="game-status-badge" size="sm">
-            {GAME_STATE_LABELS[game.state]}
-          </Badge>
+      <div className="flex items-start md:items-center justify-between gap-4">
+        {/* Mobile: Stack title and badge vertically, Desktop: Horizontal with truncate */}
+        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 min-w-0 flex-1">
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <h1 className="text-2xl font-bold text-content-primary break-words md:truncate flex-1 md:flex-none">{game.title}</h1>
+            {/* Mobile-only collapse toggle button */}
+            <button
+              onClick={toggleCollapse}
+              className="md:hidden flex-shrink-0 p-1 text-content-secondary hover:text-content-primary transition-colors"
+              aria-label={isCollapsed ? 'Expand game details' : 'Collapse game details'}
+            >
+              <svg
+                className={`w-5 h-5 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+          {/* Badge - hidden when collapsed on mobile, always visible on desktop */}
+          <div className={`self-start ${isCollapsed ? 'hidden md:block' : ''}`}>
+            <Badge className={GAME_STATE_COLORS[game.state]} data-testid="game-status-badge" size="sm">
+              {GAME_STATE_LABELS[game.state]}
+            </Badge>
+          </div>
         </div>
+        {/* Action menu - hidden when collapsed on mobile, always visible on desktop */}
         {actionMenu && (
-          <div className="flex-shrink-0">
+          <div className={`flex-shrink-0 ${isCollapsed ? 'hidden md:block' : ''}`}>
             {actionMenu}
           </div>
         )}
       </div>
 
       {/* Metadata - Mobile: Stacked rows for better readability, Desktop: Single line */}
-      <div className="text-sm text-content-secondary">
-        {/* Mobile: Stacked layout */}
-        <div className="flex flex-col gap-1 md:hidden">
+      {/* Mobile: Hidden when collapsed, Desktop: Always visible */}
+      <div className={`text-sm text-content-secondary ${isCollapsed ? 'hidden md:block' : ''}`}>
+          {/* Mobile: Stacked layout */}
+          <div className="flex flex-col gap-1 md:hidden">
           {/* Row 1: GM info */}
           <div className="flex items-center gap-2 flex-wrap">
             <span>GM: {game.gm_username}</span>

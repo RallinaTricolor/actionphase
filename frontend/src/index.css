@@ -758,6 +758,11 @@
     font-size: 1.0625rem; /* 17px - optimal for mobile reading */
   }
 
+  /* Smaller font for comments on mobile to save space */
+  [data-testid="threaded-comment"] .prose {
+    font-size: 0.875rem; /* 14px - more compact for threaded comments */
+  }
+
   /* Ensure adequate touch targets (minimum 44x44px for accessibility) */
   button,
   a,
@@ -767,10 +772,10 @@
     min-height: 44px;
   }
 
-  /* Increase padding for thumb-friendly interactions */
+  /* Minimal padding for maximum content width on mobile */
   .card,
   [class*="surface-"] {
-    padding: 1rem; /* More generous padding on mobile */
+    padding: 5px; /* Minimal padding for mobile */
   }
 }
 

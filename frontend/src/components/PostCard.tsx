@@ -347,11 +347,11 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
   return (
     <div ref={postRef} id={`comment-${post.id}`} data-testid={dataTestId || "post-card"} className="mb-8">
       {/* Post Card - Contains both post and comments */}
-      <div className="surface-base rounded-xl shadow-lg border border-theme-default overflow-hidden">
+      <div className="surface-base md:rounded-xl shadow-lg border border-theme-default overflow-hidden">
       {/* GM Post Header Section */}
       <div className="bg-interactive-primary-subtle border-b-2 border-interactive-primary">
         {/* Post Header - Always visible */}
-        <div className="p-4 surface-base bg-opacity-90 border-b border-interactive-primary">
+        <div className="py-3 px-3 md:p-4 surface-base bg-opacity-90 border-b border-interactive-primary">
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1">
               <div className="flex items-center gap-3">
@@ -424,7 +424,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
 
         {/* Post Content - Collapsible for long content or Edit Mode */}
         {(!isLongContent || !isPostCollapsed) && (
-          <div className="p-6 surface-base">
+          <div className="py-4 px-3 md:p-6 surface-base">
             {isEditing ? (
               // Edit Mode
               <div className="space-y-3">
@@ -470,8 +470,8 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       </div>
 
       {/* Comments Section - Inside the card */}
-      <div className="surface-raised border-t border-theme-default">
-        <div className="p-4 flex items-center gap-4 text-sm text-content-secondary flex-wrap border-b border-theme-default">
+      <div className="surface-raised border-t border-theme-default" data-comments-section="true">
+        <div className="py-4 px-3 md:p-4 flex items-center gap-4 text-sm text-content-secondary flex-wrap border-b border-theme-default">
           <Button
             variant="ghost"
             onClick={handleShowComments}
@@ -501,8 +501,8 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
 
         {/* Inline Reply Form (at top level) */}
         {isCommenting && !readOnly && (
-          <div className="px-4 pb-4">
-            <form onSubmit={handleSubmitComment} className="surface-base rounded-lg p-4 border border-theme-default shadow-sm">
+          <div className="px-3 md:px-4 pb-4">
+            <form onSubmit={handleSubmitComment} className="surface-base rounded-lg py-3 px-3 md:p-4 border border-theme-default shadow-sm">
             {controllableCharacters.length > 0 ? (
               <>
                 {controllableCharacters.length > 1 && (

@@ -22,7 +22,7 @@ interface TabNavigationProps {
 export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationProps) {
 
   return (
-    <div className="border-b border-theme-default surface-base rounded-t-lg">
+    <div className="border-b border-theme-default surface-base md:rounded-t-lg">
       {/* Mobile: Dropdown Select */}
       <div className="md:hidden relative">
         <label htmlFor="tab-select" className="sr-only">
@@ -32,7 +32,7 @@ export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationPro
           id="tab-select"
           value={activeTab}
           onChange={(e) => onTabChange(e.target.value)}
-          className="block w-full py-3 pl-4 pr-10 text-base font-semibold surface-raised text-content-primary border border-border-primary rounded-t-lg shadow-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:border-interactive-primary transition-all"
+          className="block w-full py-3 pl-2 pr-10 text-base font-semibold surface-raised text-content-primary border border-border-primary md:rounded-t-lg shadow-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:border-interactive-primary transition-all"
           style={{ backgroundImage: 'none' }}
         >
           {tabs.map((tab) => (
