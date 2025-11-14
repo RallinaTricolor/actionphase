@@ -416,7 +416,7 @@ export function ThreadedComment({
     <div
       id={`comment-${comment.id}${variant ? `-${variant}` : ''}`}
       data-testid="threaded-comment"
-      className={`${getIndentPadding()} ${depth > 0 ? 'border-l-2 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2' : 'py-2'}`}
+      className={`${getIndentPadding()} ${depth > 0 ? 'border-l-2 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2' : 'py-2'} border-b border-theme-subtle`}
     >
       {/* Comment Header and Content */}
       <div className={`${isUnread ? 'border border-semantic-warning rounded-lg p-3 -ml-3' : ''}`}>
@@ -780,7 +780,7 @@ export function ThreadedComment({
             {variant !== 'mobile' && (
               <div className="hidden md:block">
                 {depth < maxDepth - 1 && (
-                  <div className="space-y-0">
+                  <div className="space-y-1">
                     {loadingReplies ? (
                         <div className="ml-2 md:ml-6 py-2 text-xs text-content-secondary">
                           Loading replies...
@@ -820,7 +820,7 @@ export function ThreadedComment({
             {variant !== 'desktop' && (
               <div className="md:hidden">
                 {depth < mobileMaxDepth - 1 && (
-                  <div className="space-y-0">
+                  <div className="space-y-1">
                     {loadingReplies ? (
                         <div className="ml-2 md:ml-6 py-2 text-xs text-content-secondary">
                           Loading replies...
