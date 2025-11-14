@@ -3,8 +3,6 @@ import { ThreadedComment } from './ThreadedComment';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { Button } from './ui';
-import { MarkdownPreview } from './MarkdownPreview';
-import CharacterAvatar from './CharacterAvatar';
 
 interface ThreadViewModalProps {
   gameId: number;

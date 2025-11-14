@@ -227,12 +227,14 @@ test.describe.serial('Polls Flow', () => {
     // Just navigate to polls tab - should not make /results calls
     await page.waitForTimeout(500);
 
-    // Verify NO calls to /results endpoint for active polls
-    checkUnauthorizedCalls(
-      apiCalls,
-      '/results',
-      'Players do not make /results API calls on active polls'
-    );
+    // Verify NO calls to POLL results endpoint (/polls/{id}/results) for active polls
+    // Note: /games/{id}/results/mine is a different endpoint for action results, which is OK
+    const pollResultsCalls = apiCalls.filter(url => url.includes('/polls/') && url.includes('/results'));
+    if (pollResultsCalls.length > 0) {
+      throw new Error(
+        `[Players do not make /results API calls on active polls] Made ${pollResultsCalls.length} unauthorized poll results calls: ${pollResultsCalls.join(', ')}`
+      );
+    }
   });
 
   test('Character voting does not trigger errors', async ({ page }) => {

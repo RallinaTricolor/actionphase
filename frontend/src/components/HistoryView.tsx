@@ -139,19 +139,7 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
               >
                 Results
               </button>
-              {/* Only show Polls tab for Common Room phases */}
-              {selectedPhase.phase_type === 'common_room' && (
-                <button
-                  onClick={() => setActiveTab('polls')}
-                  className={`px-4 py-2 font-medium transition-colors ${
-                    activeTab === 'polls'
-                      ? 'text-interactive-primary border-b-2 border-interactive-primary'
-                      : 'text-content-secondary hover:text-content-primary'
-                  }`}
-                >
-                  Polls
-                </button>
-              )}
+              {/* Polls tab is not shown for Action phases (handled by the outer if/else at line 105) */}
             </div>
 
             {/* Tab Content */}
