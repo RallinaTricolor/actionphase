@@ -104,6 +104,36 @@ export const handlers = [
   }),
 
   // Game-related endpoints (fallback handlers to prevent 404s)
+  http.get('/api/v1/games/:gameId/details', ({ params }) => {
+    return HttpResponse.json({
+      id: Number(params.gameId),
+      title: 'Test Game',
+      description: 'A test game',
+      gm_user_id: 1,
+      gm_username: 'testgm',
+      state: 'setup',
+      max_players: 4,
+      is_public: true,
+      is_anonymous: false,
+      auto_accept_audience: false,
+      game_config: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+  }),
+
+  http.get('/api/v1/games/:gameId/participants', () => {
+    return HttpResponse.json([
+      {
+        id: 1,
+        user_id: 1,
+        username: 'testuser',
+        role: 'player',
+        status: 'active',
+      },
+    ]);
+  }),
+
   http.get('/api/v1/games/:gameId/polls', () => {
     return HttpResponse.json([]);
   }),
@@ -129,6 +159,10 @@ export const handlers = [
   }),
 
   http.get('/api/v1/games/:gameId/characters', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.get('/api/v1/games/:gameId/characters/mine', () => {
     return HttpResponse.json([]);
   }),
 ];

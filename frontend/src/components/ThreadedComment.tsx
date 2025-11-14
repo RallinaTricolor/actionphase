@@ -791,7 +791,7 @@ export function ThreadedComment({
                         // This allows optimistic updates and fresh data to override preloaded children
                         (hasLoadedRef.current ? replies : (hasPreloadedChildren ? preloadedChildren : replies)).map((reply) => (
                             <ThreadedComment
-                                key={reply.id}
+                                key={`${reply.id}-desktop`}
                                 comment={reply}
                                 gameId={gameId}
                                 postId={postId}
@@ -831,7 +831,7 @@ export function ThreadedComment({
                         // This allows optimistic updates and fresh data to override preloaded children
                         (hasLoadedRef.current ? replies : (hasPreloadedChildren ? preloadedChildren : replies)).map((reply) => (
                             <ThreadedComment
-                                key={reply.id}
+                                key={`${reply.id}-mobile`}
                                 comment={reply}
                                 gameId={gameId}
                                 postId={postId}

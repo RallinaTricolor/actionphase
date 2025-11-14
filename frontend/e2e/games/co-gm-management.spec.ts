@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
-import { getWorkerGameId } from '../fixtures/game-helpers';
+import { getWorkerGameId, getWorkerUsername } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { MessagingPage } from '../pages/MessagingPage';
 
@@ -36,8 +36,8 @@ test.describe.serial('Co-GM Management', () => {
     await page.getByRole('button', { name: /Game Participants/ }).click();
 
     // Wait for co-GM section and find TestAudience1's actions button
-    await page.waitForSelector('h3:has-text("co gm")');
-    const coGmSection = page.locator('div:has(> h3:has-text("co gm"))').first();
+    await expect(page.getByRole('heading', { name: /Co-GMs/ })).toBeVisible();
+    const coGmSection = page.locator('div:has(> h3:has-text("Co-GMs"))').first();
     const actionsButton = coGmSection.getByRole('button', { name: 'Participant actions' }).first();
     await actionsButton.click();
 
@@ -54,7 +54,7 @@ test.describe.serial('Co-GM Management', () => {
     // Verify modal closes and co-GM section disappears
     await expect(page.getByRole('heading', { name: 'Demote from Co-GM?' })).not.toBeVisible();
     await page.waitForTimeout(500);
-    await expect(page.locator('h3:has-text("co gm")')).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: /Co-GMs/ })).not.toBeVisible();
   });
 
   test('Primary GM can promote audience member to co-GM', async ({ page }) => {
@@ -69,13 +69,13 @@ test.describe.serial('Co-GM Management', () => {
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /Game Participants/ }).click();
 
-    // Wait for participant data to load and find the audiences heading
-    await page.waitForSelector('h3:has-text("audiences")');
+    // Wait for participant data to load and find the audience heading
+    await expect(page.getByRole('heading', { name: /Audience/ })).toBeVisible();
 
     // Find TestAudience2 in the audience section
     // Both TestAudience1 and TestAudience2 are now audience members
     // We want TestAudience2 (the second one)
-    const audienceSection = page.locator('div:has(> h3:has-text("audiences"))').first();
+    const audienceSection = page.locator('div:has(> h3:has-text("Audience"))').first();
     const actionsButtons = await audienceSection.getByRole('button', { name: 'Participant actions' }).all();
     await actionsButtons[1].click(); // Second audience member (TestAudience2)
 
@@ -94,7 +94,7 @@ test.describe.serial('Co-GM Management', () => {
 
     // Verify modal closes and co-GM appears in Co GMs section
     await expect(page.getByRole('heading', { name: 'Promote to Co-GM?' })).not.toBeVisible({ timeout: 10000 });
-    await expect(page.locator('h3:has-text("co gm")')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Co-GMs/ })).toBeVisible();
   });
 
   test('Co-GM appears in game header', async ({ page }) => {
@@ -104,11 +104,15 @@ test.describe.serial('Co-GM Management', () => {
     const gamePage = new GameDetailsPage(page);
     await gamePage.goto(gameId);
 
-    // Verify co-GM is displayed in header metadata line
-    await expect(page.getByText(/Co-GM:/)).toBeVisible();
+    // Wait for page to fully load
+    await page.waitForLoadState('networkidle');
+
+    // Verify co-GM is displayed in header metadata line (with timeout)
+    await expect(page.getByText(/Co-GM:/).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
     // Verify the full co-GM text (includes username)
-    await expect(page.getByText(/Co-GM: TestAudience2/)).toBeVisible();
+    const coGmUsername = getWorkerUsername('TestAudience2');
+    await expect(page.getByText(new RegExp(`Co-GM: ${coGmUsername}`)).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('Co-GM can access GM features (phase management)', async ({ page }) => {
@@ -184,8 +188,8 @@ test.describe.serial('Co-GM Management', () => {
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /Game Participants/ }).click();
 
-    // Wait for co-GM section to load (heading should be "co gms")
-    const coGmHeading = await page.waitForSelector('h3:has-text("co gm")');
+    // Wait for co-GM section to load
+    await expect(page.getByRole('heading', { name: /Co-GMs/ })).toBeVisible({ timeout: 10000 });
 
     // Find the actions button by filtering all participant action buttons
     // NOTE: There is only ONE co-GM (TestAudience1, promoted in previous test)
@@ -210,7 +214,7 @@ test.describe.serial('Co-GM Management', () => {
 
     // Wait for the page to update and verify co-GM section is gone
     await page.waitForTimeout(500); // Brief wait for state update
-    const coGMSectionAfter = page.locator('h3:has-text("co gm")');
+    const coGMSectionAfter = page.locator('h3:has-text("Co-GMs")');
     // Co-GM section should disappear since we demoted the only co-GM
     await expect(coGMSectionAfter).not.toBeVisible();
   });
@@ -268,12 +272,12 @@ test.describe.serial('Co-GM Management', () => {
     await page.getByRole('button', { name: /Game Participants/ }).click();
 
     // Wait for audience section
-    await page.waitForSelector('h3:has-text("audiences")');
+    await page.waitForSelector('h3:has-text("Audience")');
 
     // Find TestAudience2 specifically (should be second audience member)
     // TestAudience1 was demoted first, TestAudience2 was demoted second
     // So TestAudience2 should be the last one in the audience list
-    const audienceSection = page.locator('div:has(> h3:has-text("audiences"))').first();
+    const audienceSection = page.locator('div:has(> h3:has-text("Audience"))').first();
     const actionsButtons = await audienceSection.getByRole('button', { name: 'Participant actions' }).all();
 
     // Click the LAST audience member's actions button (TestAudience2)
@@ -292,7 +296,7 @@ test.describe.serial('Co-GM Management', () => {
 
     // Verify modal closes and co-GM section appears
     await expect(page.getByRole('heading', { name: 'Promote to Co-GM?' })).not.toBeVisible({ timeout: 10000 });
-    await expect(page.locator('h3:has-text("co gm")')).toBeVisible();
+    await expect(page.locator('h3:has-text("Co-GMs")')).toBeVisible();
   });
 
   test('Co-GM can create a new phase', async ({ page }) => {
@@ -310,7 +314,7 @@ test.describe.serial('Co-GM Management', () => {
     await page.waitForTimeout(2000);
 
     // Verify we're logged in as the correct user and they're shown as co-GM in header
-    await expect(page.getByText(/Co-GM:.*TestAudience2/)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/Co-GM:.*TestAudience2/).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
     // Wait for Phases tab to appear (GM-only tab, confirms co-GM permissions)
     await expect(page.getByRole('tab', { name: 'Phases' })).toBeVisible({ timeout: 10000 });
@@ -537,7 +541,7 @@ test.describe.serial('Co-GM Management', () => {
     await page.getByRole('button', { name: /Game Participants/ }).click();
 
     // Verify co-GM can see participant management UI
-    await expect(page.getByRole('heading', { name: /audiences/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Audience/i })).toBeVisible();
 
     // Verify co-GM can see participant action menus (but not promote to co-GM, tested elsewhere)
     const participantActions = page.getByRole('button', { name: 'Participant actions' });

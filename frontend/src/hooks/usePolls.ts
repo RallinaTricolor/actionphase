@@ -29,7 +29,9 @@ export function usePolls(gameId: number, includeExpired: boolean = false) {
   const createPollMutation = useMutation({
     mutationFn: (data: CreatePollRequest) => apiClient.polls.createPoll(gameId, data),
     onSuccess: () => {
+      // Invalidate all polls queries for this game (with any includeExpired value)
       queryClient.invalidateQueries({ queryKey: ['polls', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['polls', 'by-phase'] });
     }
   });
 

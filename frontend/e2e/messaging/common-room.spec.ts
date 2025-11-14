@@ -224,7 +224,7 @@ test.describe('Common Room Flow', () => {
 
       // Verify Player 2 can see Player 1's reply to their comment
       // Give it more time since nested replies might take longer to load
-      await expect(player2Page.getByText(player1Reply)).toBeVisible({ timeout: 15000 });
+      await expect(player2Page.getByText(player1Reply).first()).toBeVisible({ timeout: 15000 });
 
       // Verify the reply appears as a nested comment (has the threaded-comment test ID)
       const nestedReply = player2Page.locator('[data-testid="threaded-comment"]').filter({ hasText: player1Reply }).locator('visible=true').first();
@@ -436,7 +436,7 @@ test.describe('Common Room Flow', () => {
         await currentPage.waitForLoadState('networkidle');
 
         // Verify the reply appears
-        await expect(currentPage.getByText(nestedReply)).toBeVisible({ timeout: 5000 });
+        await expect(currentPage.getByText(nestedReply).first()).toBeVisible({ timeout: 5000 });
 
         // Update for next iteration
         previousComment = nestedReply;

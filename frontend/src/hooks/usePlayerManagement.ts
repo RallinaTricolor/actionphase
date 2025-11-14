@@ -138,7 +138,7 @@ export function useReassignCharacter() {
  */
 export function useGameParticipants(gameId: number) {
   return useQuery<GameParticipant[]>({
-    queryKey: ['game-participants', gameId],
+    queryKey: ['gameParticipants', gameId],
     queryFn: async () => {
       const response = await apiClient.games.getGameParticipants(gameId);
       return response.data || [];
