@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { getActionPhaseLabel, getActionPhaseColor } from '../types/phases';
@@ -64,6 +64,14 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
 
   // Get the selected phase details
   const selectedPhase = phases.find(p => p.id === selectedPhaseId);
+
+  // Reset to 'submissions' tab when switching to Action phase while 'polls' is selected
+  // (Action phases don't have polls)
+  useEffect(() => {
+    if (selectedPhase && selectedPhase.phase_type === 'action' && activeTab === 'polls') {
+      setActiveTab('submissions');
+    }
+  }, [selectedPhase, activeTab]);
 
   if (isLoading) {
     return (
@@ -131,16 +139,19 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
               >
                 Results
               </button>
-              <button
-                onClick={() => setActiveTab('polls')}
-                className={`px-4 py-2 font-medium transition-colors ${
-                  activeTab === 'polls'
-                    ? 'text-interactive-primary border-b-2 border-interactive-primary'
-                    : 'text-content-secondary hover:text-content-primary'
-                }`}
-              >
-                Polls
-              </button>
+              {/* Only show Polls tab for Common Room phases */}
+              {selectedPhase.phase_type === 'common_room' && (
+                <button
+                  onClick={() => setActiveTab('polls')}
+                  className={`px-4 py-2 font-medium transition-colors ${
+                    activeTab === 'polls'
+                      ? 'text-interactive-primary border-b-2 border-interactive-primary'
+                      : 'text-content-secondary hover:text-content-primary'
+                  }`}
+                >
+                  Polls
+                </button>
+              )}
             </div>
 
             {/* Tab Content */}
@@ -284,14 +295,14 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
                 key={phase.id}
                 variant="ghost"
                 onClick={() => setSelectedPhaseId(phase.id)}
-                className={`w-full text-left border rounded-lg p-3 md:p-4 hover:border-theme-subtle ${
+                className={`w-full justify-start text-left border rounded-lg p-4 hover:border-theme-subtle ${
                   isActive ? 'border-interactive-primary bg-interactive-primary-subtle' : 'border-theme-default'
                 }`}
               >
                 {/* Mobile: Vertical Stack Layout */}
-                <div className="md:hidden space-y-3">
+                <div className="md:hidden flex flex-col items-start gap-3">
                   {/* Badge + Active indicator */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className={`px-2.5 py-1 text-xs rounded-full font-medium border whitespace-nowrap ${phaseColorClass}`}>
                       Phase {phase.phase_number}
                     </span>
@@ -303,46 +314,38 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
                   </div>
 
                   {/* Title + Description */}
-                  <div>
-                    <h4 className="font-semibold text-base text-content-primary mb-1">
+                  <div className="w-full">
+                    <h4 className="font-semibold text-base text-content-primary mb-1 text-left">
                       {phase.title || phaseLabel}
                     </h4>
                     {phase.description && (
-                      <p className="text-sm text-content-secondary leading-relaxed">{phase.description}</p>
+                      <p className="text-sm text-content-secondary leading-relaxed text-left">{phase.description}</p>
                     )}
-                  </div>
-
-                  {/* View arrow */}
-                  <div className="flex justify-end">
-                    <svg className="w-5 h-5 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
                   </div>
                 </div>
 
-                {/* Desktop: Horizontal Layout (Original) */}
-                <div className="hidden md:flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <span className={`px-2 py-1 text-xs rounded-full font-medium border whitespace-nowrap ${phaseColorClass}`}>
-                      Phase {phase.phase_number}
-                    </span>
-                    <div>
-                      <h4 className="font-medium text-content-primary">{phase.title || phaseLabel}</h4>
-                      {phase.description && (
-                        <p className="text-sm text-content-secondary mt-1">{phase.description}</p>
-                      )}
-                    </div>
+                {/* Desktop: Grid Layout for consistent alignment */}
+                <div className="hidden md:grid md:grid-cols-[auto_1fr_auto] md:gap-4 md:items-start">
+                  {/* Badge - fixed width column */}
+                  <span className={`px-2 py-1 text-xs rounded-full font-medium border whitespace-nowrap ${phaseColorClass}`}>
+                    Phase {phase.phase_number}
+                  </span>
+
+                  {/* Title + Description - flexible column */}
+                  <div>
+                    <h4 className="font-medium text-content-primary">{phase.title || phaseLabel}</h4>
+                    {phase.description && (
+                      <p className="text-sm text-content-secondary mt-1">{phase.description}</p>
+                    )}
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  {/* Active indicator - fixed width column */}
+                  <div className="flex justify-end">
                     {isActive && (
                       <span className="px-2 py-1 text-xs bg-interactive-primary-subtle text-interactive-primary rounded-full font-medium whitespace-nowrap">
                         Active
                       </span>
                     )}
-                    <svg className="w-5 h-5 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
                   </div>
                 </div>
               </Button>

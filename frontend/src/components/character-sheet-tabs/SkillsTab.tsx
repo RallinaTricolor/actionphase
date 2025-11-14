@@ -12,6 +12,8 @@ interface SkillsTabProps {
 type ProficiencyLevel = 'Trained' | 'Expert' | 'Master' | 'Legendary';
 
 interface SkillData {
+  id: string;
+  name: string;
   level: ProficiencyLevel;
   bonus: number;
 }
@@ -55,6 +57,8 @@ export const SkillsTab: React.FC<SkillsTabProps> = (props) => {
       buildFieldName={(formData) => formData.skillName.trim()}
       buildFieldValue={(formData) => {
         const skillData: SkillData = {
+          id: crypto.randomUUID(), // Generate unique ID
+          name: formData.skillName.trim(),
           level: formData.proficiencyLevel || 'Trained',
           bonus: parseInt(formData.bonus, 10) || 0,
         };

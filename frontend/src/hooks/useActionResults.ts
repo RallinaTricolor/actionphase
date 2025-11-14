@@ -27,7 +27,7 @@ export function useCreateActionResult(gameId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { user_id: number; content: string; is_published?: boolean }) => {
+    mutationFn: async (data: { user_id: number; character_id?: number; action_submission_id?: number; content: string; is_published?: boolean }) => {
       const response = await apiClient.phases.createActionResult(gameId, data);
       return response.data;
     },

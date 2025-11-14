@@ -261,18 +261,18 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
             {module.type === 'abilities' ? (
               <AbilitiesManager
                 abilities={parseJsonField('abilities', 'abilities') as CharacterAbility[]}
-                skills={parseJsonField('abilities', 'skills') as CharacterSkill[]}
+                skills={parseJsonField('skills', 'skills') as CharacterSkill[]}
                 canEdit={canEditStats}
                 onAbilitiesChange={(abilities) => saveJsonField('abilities', 'abilities', abilities)}
-                onSkillsChange={(skills) => saveJsonField('abilities', 'skills', skills)}
+                onSkillsChange={(skills) => saveJsonField('skills', 'skills', skills)}
               />
             ) : module.type === 'inventory' ? (
               <InventoryManager
                 items={parseJsonField('inventory', 'items') as InventoryItem[]}
-                currency={parseJsonField('inventory', 'currency') as CurrencyEntry[]}
+                currency={parseJsonField('currency', 'currency') as CurrencyEntry[]}
                 canEdit={canEditStats}
                 onItemsChange={(items) => saveJsonField('inventory', 'items', items)}
-                onCurrencyChange={(currency) => saveJsonField('inventory', 'currency', currency)}
+                onCurrencyChange={(currency) => saveJsonField('currency', 'currency', currency)}
               />
             ) : (
               /* Regular text-based fields for bio and notes modules */

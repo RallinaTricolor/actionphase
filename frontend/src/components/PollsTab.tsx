@@ -1,23 +1,40 @@
 import { useState } from 'react';
-import { usePolls } from '../hooks';
+import { usePollsByPhase } from '../hooks';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '../lib/api';
 import { Button, Alert, Spinner } from './ui';
 import { CreatePollForm } from './CreatePollForm';
 import { PollCard } from './PollCard';
 import { useGameContext } from '../contexts/GameContext';
+import type { CreatePollRequest } from '../types/polls';
 
 interface PollsTabProps {
   gameId: number;
+  phaseId?: number; // Optional: if provided, shows polls for this specific phase
   isGM: boolean;
   isCurrentPhase: boolean;
   isAudience?: boolean;
 }
 
-export function PollsTab({ gameId, isGM, isCurrentPhase, isAudience = false }: PollsTabProps) {
+export function PollsTab({ gameId, phaseId, isGM, isCurrentPhase, isAudience = false }: PollsTabProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [includeExpired, setIncludeExpired] = useState(false);
   const { currentPhaseId } = useGameContext();
+  const queryClient = useQueryClient();
 
-  const { polls, isLoading, createPollMutation } = usePolls(gameId, includeExpired);
+  // Use provided phaseId or fall back to current phase from context
+  const effectivePhaseId = phaseId ?? currentPhaseId;
+
+  // Use phase-specific polls instead of game-wide polls
+  const { data: polls, isLoading } = usePollsByPhase(gameId, effectivePhaseId || 0);
+
+  // Create poll mutation with phase-specific cache invalidation
+  const createPollMutation = useMutation({
+    mutationFn: (data: CreatePollRequest) => apiClient.polls.createPoll(gameId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['polls', 'by-phase', gameId, effectivePhaseId] });
+    }
+  });
 
   const activePolls = polls.filter(poll => !poll.is_expired);
   const expiredPolls = polls.filter(poll => poll.is_expired);
@@ -58,7 +75,7 @@ export function PollsTab({ gameId, isGM, isCurrentPhase, isAudience = false }: P
       {isGM && showCreateForm && (
         <CreatePollForm
           gameId={gameId}
-          currentPhaseId={currentPhaseId || undefined}
+          currentPhaseId={effectivePhaseId || undefined}
           onSuccess={() => setShowCreateForm(false)}
           onCancel={() => setShowCreateForm(false)}
         />

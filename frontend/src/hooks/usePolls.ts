@@ -39,6 +39,7 @@ export function usePolls(gameId: number, includeExpired: boolean = false) {
       apiClient.polls.updatePoll(pollId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polls', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['polls', 'by-phase'] });
       queryClient.invalidateQueries({ queryKey: ['poll'] });
     }
   });
@@ -48,6 +49,7 @@ export function usePolls(gameId: number, includeExpired: boolean = false) {
     mutationFn: (pollId: number) => apiClient.polls.deletePoll(pollId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polls', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['polls', 'by-phase'] });
     }
   });
 
@@ -114,8 +116,9 @@ export function useSubmitVote(pollId: number, gameId: number) {
   return useMutation({
     mutationFn: (data: SubmitVoteRequest) => apiClient.polls.submitVote(pollId, data),
     onSuccess: () => {
-      // Invalidate polls list to update user_has_voted flag in the list view
+      // Invalidate ALL polls queries to update user_has_voted flag
       queryClient.invalidateQueries({ queryKey: ['polls', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['polls', 'by-phase'] });
 
       // Invalidate poll results to show updated vote counts
       queryClient.invalidateQueries({ queryKey: ['pollResults', pollId] });

@@ -97,14 +97,16 @@ func (ns NullMessageVisibility) Value() (driver.Value, error) {
 }
 
 type ActionResult struct {
-	ID          int32              `json:"id"`
-	GameID      int32              `json:"game_id"`
-	UserID      int32              `json:"user_id"`
-	PhaseID     int32              `json:"phase_id"`
-	GmUserID    int32              `json:"gm_user_id"`
-	Content     string             `json:"content"`
-	IsPublished pgtype.Bool        `json:"is_published"`
-	SentAt      pgtype.Timestamptz `json:"sent_at"`
+	ID                 int32              `json:"id"`
+	GameID             int32              `json:"game_id"`
+	UserID             int32              `json:"user_id"`
+	PhaseID            int32              `json:"phase_id"`
+	CharacterID        pgtype.Int4        `json:"character_id"`
+	ActionSubmissionID pgtype.Int4        `json:"action_submission_id"`
+	GmUserID           int32              `json:"gm_user_id"`
+	Content            string             `json:"content"`
+	IsPublished        pgtype.Bool        `json:"is_published"`
+	SentAt             pgtype.Timestamptz `json:"sent_at"`
 }
 
 type ActionResultCharacterUpdate struct {

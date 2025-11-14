@@ -9,14 +9,16 @@ interface PollVotingFormProps {
   poll: PollWithOptions;
   onSuccess: () => void;
   onCancel: () => void;
+  isChangingVote?: boolean; // If true, allow changing votes for characters that have already voted
 }
 
-export function PollVotingForm({ poll, onSuccess, onCancel }: PollVotingFormProps) {
+export function PollVotingForm({ poll, onSuccess, onCancel, isChangingVote = false }: PollVotingFormProps) {
   const submitVoteMutation = useSubmitVote(poll.id, poll.game_id);
   const { characters } = useUserCharacters(poll.game_id);
 
   // Filter out characters that have already voted (for character-level polls)
-  const availableCharacters = poll.vote_as_type === 'character' && poll.voted_character_ids
+  // UNLESS we're changing a vote, in which case show all characters
+  const availableCharacters = poll.vote_as_type === 'character' && poll.voted_character_ids && !isChangingVote
     ? characters.filter(c => !poll.voted_character_ids!.includes(c.id))
     : characters;
 
@@ -83,7 +85,9 @@ export function PollVotingForm({ poll, onSuccess, onCancel }: PollVotingFormProp
             <Alert variant="warning" title="No Characters Available">
               {characters.length === 0
                 ? "You don't have any characters in this game."
-                : "You've already voted with all your characters."}
+                : isChangingVote
+                  ? "You don't have any characters in this game."
+                  : "You've already voted with all your characters."}
             </Alert>
           ) : availableCharacters.length === 1 ? (
             <div className="text-sm text-text-secondary">

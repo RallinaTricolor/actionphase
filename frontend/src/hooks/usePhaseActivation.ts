@@ -21,8 +21,15 @@ export function usePhaseActivation(gameId: number, currentPhaseId: number | unde
   const publishAllMutation = useMutation({
     mutationFn: () => apiClient.phases.publishAllPhaseResults(gameId, currentPhaseId!),
     onSuccess: () => {
+      // Invalidate all action result queries to refetch
       queryClient.invalidateQueries({ queryKey: ['unpublishedResultsCount'] });
       queryClient.invalidateQueries({ queryKey: ['userResults'] });
+      queryClient.invalidateQueries({ queryKey: ['actionResults', 'game', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['actionResults', 'user', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['draftCharacterUpdates'] });
+      queryClient.invalidateQueries({ queryKey: ['draftUpdateCount'] });
+      // Invalidate character data to show published character updates
+      queryClient.invalidateQueries({ queryKey: ['characterData'] });
     }
   });
 

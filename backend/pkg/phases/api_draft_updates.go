@@ -91,7 +91,7 @@ func (h *Handler) CreateDraftCharacterUpdate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Get result to access user_id for character lookup
+	// Get result to access user_id for validation
 	result, err := actionService.GetActionResult(ctx, resultID)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get action result", "error", err)
@@ -99,15 +99,15 @@ func (h *Handler) CreateDraftCharacterUpdate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Get the character_id by finding the user's character in this game
-	// The user_id from the result maps to a character in the game
-	// SECURITY: We must validate that the character belongs to the correct user/game
-	var characterID int32
-	query := `SELECT id FROM characters WHERE user_id = $1 AND game_id = $2 LIMIT 1`
-	err = h.App.Pool.QueryRow(ctx, query, result.UserID, gameID).Scan(&characterID)
+	// Use the character_id from the request and validate it belongs to the correct user/game
+	// SECURITY: We must validate that the character belongs to the correct user and game
+	characterID := data.CharacterID
+	var validatedCharacterID int32
+	query := `SELECT id FROM characters WHERE id = $1 AND user_id = $2 AND game_id = $3`
+	err = h.App.Pool.QueryRow(ctx, query, characterID, result.UserID, gameID).Scan(&validatedCharacterID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to get character ID for user in game", "error", err, "user_id", result.UserID, "game_id", gameID)
-		render.Render(w, r, core.ErrNotFound("character not found for this user in this game"))
+		h.App.ObsLogger.Error(ctx, "Character validation failed", "error", err, "character_id", characterID, "user_id", result.UserID, "game_id", gameID)
+		render.Render(w, r, core.ErrBadRequest(fmt.Errorf("character not found or does not belong to this user/game")))
 		return
 	}
 

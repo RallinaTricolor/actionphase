@@ -3,14 +3,19 @@ import type { PollResults as PollResultsType, Poll } from '../types/polls';
 interface PollResultsProps {
   results: PollResultsType;
   poll: Poll;
+  isGM?: boolean;
+  isAudience?: boolean;
 }
 
-export function PollResults({ results, poll }: PollResultsProps) {
+export function PollResults({ results, poll, isGM = false, isAudience = false }: PollResultsProps) {
   // Use total votes from backend (includes "other" votes)
   const totalVotes = results.total_votes;
 
   // Sort options by vote count (descending)
   const sortedOptions = [...results.option_results].sort((a, b) => b.vote_count - a.vote_count);
+
+  // GMs and audience can see individual votes and other responses even when poll.show_individual_votes is false
+  const canSeeDetails = poll.show_individual_votes || isGM || isAudience;
 
   return (
     <div className="space-y-4">
@@ -40,7 +45,7 @@ export function PollResults({ results, poll }: PollResultsProps) {
                   <span className="text-sm font-medium text-text-primary">
                     {option.option_text || 'Other responses'}
                     {isWinning && sortedOptions[0].vote_count > 0 && (
-                      <span className="ml-2 text-xs text-accent-primary">● Leading</span>
+                      <span className="ml-2 text-xs font-semibold text-semantic-success">● Leading</span>
                     )}
                   </span>
                   <span className="text-sm text-text-secondary">
@@ -58,8 +63,8 @@ export function PollResults({ results, poll }: PollResultsProps) {
                   />
                 </div>
 
-                {/* Individual Voters (if enabled) */}
-                {poll.show_individual_votes && option.voters && option.voters.length > 0 && (
+                {/* Individual Voters (if enabled or GM/Audience) */}
+                {canSeeDetails && option.voters && option.voters.length > 0 && (
                   <div className="ml-4 text-xs text-text-secondary">
                     {option.voters.map((voter, idx) => (
                       <span key={idx}>
@@ -78,10 +83,30 @@ export function PollResults({ results, poll }: PollResultsProps) {
         </div>
       )}
 
-      {/* Other Responses Summary */}
-      {!poll.show_individual_votes && results.other_responses.length > 0 && (
-        <div className="text-xs text-text-secondary italic pt-2 border-t border-border-primary">
-          {results.other_responses.length} custom {results.other_responses.length === 1 ? 'response' : 'responses'}
+      {/* Other Responses - Show full list to GM/Audience, count only to players */}
+      {results.other_responses.length > 0 && (
+        <div className="pt-4 border-t border-border-primary">
+          {canSeeDetails ? (
+            <div>
+              <h6 className="text-sm font-semibold text-text-heading mb-2">
+                Other Responses ({results.other_responses.length})
+              </h6>
+              <div className="space-y-2">
+                {results.other_responses.map((response) => (
+                  <div key={response.vote_id} className="text-sm text-text-secondary">
+                    <span className="font-medium text-text-primary">
+                      {poll.vote_as_type === 'character' ? response.character_name : response.username}:
+                    </span>{' '}
+                    <span className="italic">"{response.other_text}"</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-text-secondary italic">
+              {results.other_responses.length} custom {results.other_responses.length === 1 ? 'response' : 'responses'}
+            </div>
+          )}
         </div>
       )}
     </div>

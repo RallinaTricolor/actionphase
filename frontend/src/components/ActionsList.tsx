@@ -357,6 +357,9 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
                   gameId={gameId}
                   userId={action.user_id}
                   userName={action.username || 'Unknown User'}
+                  characterId={action.character_id}
+                  characterName={action.character_name}
+                  actionSubmissionId={action.id}
                   onSuccess={() => {
                     setShowResultForm(false);
                     // Could add a success toast here

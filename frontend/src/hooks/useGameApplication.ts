@@ -8,6 +8,7 @@ interface UseGameApplicationOptions {
   isGM: boolean;
   isInGame: boolean; // True if user has any role in the game (including audience)
   currentUserId: number | null;
+  isLoadingParticipants: boolean; // Prevent checking application while participants are loading
   refetchGameData: () => Promise<void>;
 }
 
@@ -16,6 +17,7 @@ export function useGameApplication({
   isGM,
   isInGame,
   currentUserId,
+  isLoadingParticipants,
   refetchGameData,
 }: UseGameApplicationOptions) {
   const { showError } = useToast();
@@ -25,9 +27,10 @@ export function useGameApplication({
 
   // Fetch user's application if not GM and not already in the game
   // Note: Users can apply during recruitment (player) or anytime (audience)
+  // Wait for participants to load to avoid race condition
   useEffect(() => {
     const fetchUserApplication = async () => {
-      if (!isGM && !isInGame && currentUserId) {
+      if (!isGM && !isInGame && !isLoadingParticipants && currentUserId) {
         try {
           const applicationResponse = await apiClient.games.getMyGameApplication(gameId);
           setUserApplication(applicationResponse.data);
@@ -41,7 +44,7 @@ export function useGameApplication({
     };
 
     fetchUserApplication();
-  }, [gameId, isGM, isInGame, currentUserId]);
+  }, [gameId, isGM, isInGame, isLoadingParticipants, currentUserId]);
 
   const refetchUserApplication = async () => {
     if (!isGM && !isInGame && currentUserId) {

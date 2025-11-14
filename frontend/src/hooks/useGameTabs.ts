@@ -96,9 +96,9 @@ export function useGameTabs({
       // Actions tab - Visible during action phases to:
       // 1. GM (can see all actions and manage)
       // 2. Regular participants (can submit actions)
-      // 3. Audience members (read-only view of all actions)
-      if (currentPhaseType === 'action' && (isGM || isParticipant || isAudience)) {
-        const label = isGM ? 'Actions' : isAudience ? 'View Actions' : 'Submit Action';
+      // Note: Audience members view actions via the Audience tab instead
+      if (currentPhaseType === 'action' && (isGM || isParticipant)) {
+        const label = isGM ? 'Actions' : 'Submit Action';
         tabList.push({ id: 'actions', label, icon: icons.actions });
       }
 
@@ -162,9 +162,11 @@ export function useGameTabs({
         if (tabs.some(t => t.id === 'common-room')) return 'common-room';
       } else if (currentPhaseType === 'action') {
         // Action phase - different default for GM vs players
-        // Both GM and players benefit from seeing Actions tab first
-        // GM: See pending submissions
-        // Players: Submit or review their action
+        // GM & Players: See Actions tab first
+        // Audience: Go to Audience tab to view action submissions
+        if (isAudience && tabs.some(t => t.id === 'audience')) {
+          return 'audience';
+        }
         if (tabs.some(t => t.id === 'actions')) return 'actions';
       }
 
@@ -196,7 +198,7 @@ export function useGameTabs({
 
     // Fallback: First tab
     return tabs[0].id;
-  }, [tabs, gameState, currentPhaseType, isGM]);
+  }, [tabs, gameState, currentPhaseType, isGM, isAudience]);
 
   // Handle URL parameters and apply smart defaults
   useEffect(() => {

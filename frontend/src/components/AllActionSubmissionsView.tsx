@@ -206,7 +206,7 @@ function ActionSubmissionCard({ gameId, submission }: { gameId: number; submissi
       setLoadingResult(true);
       apiClient.phases.getGameResults(gameId)
         .then((res: { data: any[] }) => {
-          const result = res.data.find((r: any) => r.action_id === submission.id);
+          const result = res.data.find((r: any) => r.action_submission_id === submission.id);
           setActionResult(result);
         })
         .catch((err: Error) => {
@@ -287,7 +287,7 @@ function ActionSubmissionCard({ gameId, submission }: { gameId: number; submissi
                 </div>
               ) : actionResult ? (
                 <div className="bg-bg-tertiary p-3 rounded-lg border border-border-primary">
-                  <MarkdownPreview content={actionResult.result_text} />
+                  <MarkdownPreview content={actionResult.content} />
                 </div>
               ) : (
                 <div className="text-sm text-content-secondary italic">

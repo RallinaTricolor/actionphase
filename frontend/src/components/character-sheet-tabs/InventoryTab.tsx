@@ -10,6 +10,7 @@ interface InventoryTabProps {
 }
 
 interface ItemData {
+  id: string;
   name: string;
   description?: string;
   quantity: number;
@@ -48,6 +49,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = (props) => {
       buildFieldName={(formData) => formData.itemName.trim()}
       buildFieldValue={(formData) => {
         const itemData: ItemData = {
+          id: crypto.randomUUID(), // Generate unique ID
           name: formData.itemName.trim(),
           description: formData.itemDescription?.trim() || undefined,
           quantity: parseInt(formData.quantity, 10) || 1,
