@@ -670,7 +670,6 @@ func setupGameTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 				r.Delete("/{id}/application", gameHandler.WithdrawGameApplication)
 
 				// Audience management
-				r.Post("/{id}/apply/audience", gameHandler.ApplyAsAudience)
 				r.Get("/{id}/audience", gameHandler.ListAudienceMembers)
 				r.Put("/{id}/settings/auto-accept-audience", gameHandler.UpdateAutoAcceptAudience)
 			})
@@ -1117,12 +1116,13 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 	core.AssertNoError(t, err, "Game state update should succeed")
 
 	t.Run("apply_as_audience_success", func(t *testing.T) {
-		payload := map[string]string{
-			"application_text": "I would love to watch this game!",
+		payload := ApplyToGameRequest{
+			Role:    "audience",
+			Message: "I would love to watch this game!",
 		}
 		payloadBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/apply/audience", bytes.NewBuffer(payloadBytes))
+		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/apply", bytes.NewBuffer(payloadBytes))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+audienceToken)
 		w := httptest.NewRecorder()
@@ -1131,7 +1131,7 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 
 		core.AssertEqual(t, 201, w.Code, "Should return 201 Created")
 
-		var response AudienceMemberResponse
+		var response GameApplicationResponse
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		core.AssertNoError(t, err, "Response should be valid JSON")
 
@@ -1141,12 +1141,13 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 	})
 
 	t.Run("apply_as_audience_duplicate", func(t *testing.T) {
-		payload := map[string]string{
-			"application_text": "I would love to watch this game!",
+		payload := ApplyToGameRequest{
+			Role:    "audience",
+			Message: "I would love to watch this game!",
 		}
 		payloadBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/apply/audience", bytes.NewBuffer(payloadBytes))
+		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/apply", bytes.NewBuffer(payloadBytes))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+audienceToken)
 		w := httptest.NewRecorder()
@@ -1157,7 +1158,7 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 		core.AssertEqual(t, 400, w.Code, "Should return 400 Bad Request for duplicate application")
 	})
 
-	t.Run("apply_as_audience_short_text", func(t *testing.T) {
+	t.Run("apply_as_audience_optional_message", func(t *testing.T) {
 		// Create another user for this test
 		user2, err := userService.CreateUser(&core.User{
 			Username: "audience2",
@@ -1169,28 +1170,31 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 		token2, err := core.CreateTestJWTTokenForUser(app, user2)
 		core.AssertNoError(t, err, "Token creation should succeed")
 
-		payload := map[string]string{
-			"application_text": "Short",
+		// Message is optional for audience applications
+		payload := ApplyToGameRequest{
+			Role:    "audience",
+			Message: "", // Empty message is allowed
 		}
 		payloadBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/apply/audience", bytes.NewBuffer(payloadBytes))
+		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/apply", bytes.NewBuffer(payloadBytes))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token2)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Should return 400 Bad Request for short text")
+		core.AssertEqual(t, 201, w.Code, "Should return 201 Created - message is optional")
 	})
 
 	t.Run("apply_as_audience_unauthorized", func(t *testing.T) {
-		payload := map[string]string{
-			"application_text": "I would love to watch this game!",
+		payload := ApplyToGameRequest{
+			Role:    "audience",
+			Message: "I would love to watch this game!",
 		}
 		payloadBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/apply/audience", bytes.NewBuffer(payloadBytes))
+		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/apply", bytes.NewBuffer(payloadBytes))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
@@ -1321,12 +1325,13 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 		core.AssertNoError(t, err, "Token creation should succeed")
 
 		// Apply as audience during character_creation state
-		payload := map[string]string{
-			"application_text": "I would love to watch character creation!",
+		payload := ApplyToGameRequest{
+			Role:    "audience",
+			Message: "I would love to watch character creation!",
 		}
 		payloadBytes, _ := json.Marshal(payload)
 
-		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(charCreationGame.ID))+"/apply/audience", bytes.NewBuffer(payloadBytes))
+		req := httptest.NewRequest("POST", "/api/v1/games/"+strconv.Itoa(int(charCreationGame.ID))+"/apply", bytes.NewBuffer(payloadBytes))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+charCreationAudienceToken)
 		w := httptest.NewRecorder()
@@ -1335,7 +1340,7 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 
 		core.AssertEqual(t, 201, w.Code, "Should return 201 Created - audience can join during character_creation")
 
-		var response AudienceMemberResponse
+		var response GameApplicationResponse
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		core.AssertNoError(t, err, "Response should be valid JSON")
 

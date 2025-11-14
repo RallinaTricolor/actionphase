@@ -172,7 +172,6 @@ func (h *Handler) Start() {
 			r.Delete("/{id}/application", gameHandler.WithdrawGameApplication)
 
 			// Audience participation
-			r.Post("/{id}/apply/audience", gameHandler.ApplyAsAudience)
 			r.Get("/{id}/audience", gameHandler.ListAudienceMembers)
 			r.Get("/{id}/characters/audience-npcs", gameHandler.ListAudienceNPCs)
 			r.Put("/{id}/settings/auto-accept-audience", gameHandler.UpdateAutoAcceptAudience)

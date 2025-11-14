@@ -79,30 +79,76 @@ func (h *Handler) ApplyToGame(w http.ResponseWriter, r *http.Request) {
 	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err == nil {
-		// Create notification for GM about new application
-		notificationService := &db.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
-		roleLabel := "player"
-		if data.Role == "audience" {
-			roleLabel = "audience member"
-		}
-		title := fmt.Sprintf("New %s application for %s", roleLabel, game.Title)
-		content := fmt.Sprintf("%s applied to join your game as a %s", authUser.Username, roleLabel)
-		linkURL := fmt.Sprintf("/games/%d?tab=applications", gameID)
-		relatedType := core.TableGameApplications
+		// Auto-accept audience applications if setting is enabled
+		if data.Role == core.RoleAudience && game.AutoAcceptAudience {
+			// Auto-approve the application (creates participant immediately)
+			approveErr := applicationService.ApproveGameApplication(ctx, application.ID, game.GmUserID)
+			if approveErr != nil {
+				h.App.ObsLogger.LogError(ctx, approveErr, "Failed to auto-approve audience application",
+					"application_id", application.ID, "user_id", userID, "game_id", gameID)
+				// Don't fail the request - application still created as pending
+			} else {
+				// Delete the application record since user is now a participant
+				// This prevents confusion - approved audience members should only exist as participants
+				deleteErr := applicationService.DeleteGameApplication(ctx, application.ID, userID)
+				if deleteErr != nil {
+					h.App.ObsLogger.LogError(ctx, deleteErr, "Failed to delete application after auto-accept",
+						"application_id", application.ID, "user_id", userID, "game_id", gameID)
+					// Don't fail - participant is created, we can clean up application later
+				}
 
-		_, err = notificationService.CreateNotification(ctx, &core.CreateNotificationRequest{
-			UserID:      game.GmUserID,
-			GameID:      &application.GameID,
-			Type:        core.NotificationTypeApplicationSubmitted,
-			Title:       title,
-			Content:     &content,
-			RelatedType: &relatedType,
-			RelatedID:   &application.ID,
-			LinkURL:     &linkURL,
-		})
-		if err != nil {
-			// Log error but don't fail the request
-			h.App.ObsLogger.Error(ctx, "Failed to create notification for GM", "error", err, "game_id", gameID, "gm_user_id", game.GmUserID)
+				// Send approval notification to the applicant
+				notificationService := &db.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+				title := fmt.Sprintf("Joined %s", game.Title)
+				content := fmt.Sprintf("You have joined %s as an audience member!", game.Title)
+				linkURL := fmt.Sprintf("/games/%d", gameID)
+				relatedType := core.TableGameParticipants
+				_, notifErr := notificationService.CreateNotification(ctx, &core.CreateNotificationRequest{
+					UserID:      userID,
+					GameID:      &application.GameID,
+					Type:        core.NotificationTypeApplicationApproved,
+					Title:       title,
+					Content:     &content,
+					RelatedType: &relatedType,
+					RelatedID:   &application.GameID, // Link to game instead of deleted application
+					LinkURL:     &linkURL,
+				})
+				if notifErr != nil {
+					// Log error but don't fail the request
+					h.App.ObsLogger.LogError(ctx, notifErr, "Failed to send auto-approval notification",
+						"user_id", userID, "game_id", gameID)
+				}
+			}
+		}
+
+		// Create notification for GM about new application
+		// Skip if audience application was auto-accepted
+		skipGMNotification := data.Role == core.RoleAudience && game.AutoAcceptAudience
+		if !skipGMNotification {
+			notificationService := &db.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+			roleLabel := "player"
+			if data.Role == "audience" {
+				roleLabel = "audience member"
+			}
+			title := fmt.Sprintf("New %s application for %s", roleLabel, game.Title)
+			content := fmt.Sprintf("%s applied to join your game as a %s", authUser.Username, roleLabel)
+			linkURL := fmt.Sprintf("/games/%d?tab=applications", gameID)
+			relatedType := core.TableGameApplications
+
+			_, err = notificationService.CreateNotification(ctx, &core.CreateNotificationRequest{
+				UserID:      game.GmUserID,
+				GameID:      &application.GameID,
+				Type:        core.NotificationTypeApplicationSubmitted,
+				Title:       title,
+				Content:     &content,
+				RelatedType: &relatedType,
+				RelatedID:   &application.ID,
+				LinkURL:     &linkURL,
+			})
+			if err != nil {
+				// Log error but don't fail the request
+				h.App.ObsLogger.Error(ctx, "Failed to create notification for GM", "error", err, "game_id", gameID, "gm_user_id", game.GmUserID)
+			}
 		}
 	}
 
