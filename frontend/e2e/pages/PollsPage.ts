@@ -82,26 +82,48 @@ export class PollsPage {
 
       // Scroll to the deadline input to make it visible
       await deadlineInput.scrollIntoViewIfNeeded();
+
+      // Click to open the calendar popup
       await deadlineInput.click();
+      // Wait for calendar to appear by checking for the month heading
+      await this.page.waitForSelector('.react-datepicker', { timeout: 5000 });
 
-      // ReactDatePicker expects format: "MMMM d, yyyy h:mm aa" (e.g., "January 15, 2025 3:00 PM")
-      const months = ['January', 'February', 'March', 'April', 'May', 'June',
-                      'July', 'August', 'September', 'October', 'November', 'December'];
-      const month = months[options.deadline.getMonth()];
+      // Calculate which date to click in the calendar
       const day = options.deadline.getDate();
+      const month = options.deadline.toLocaleString('default', { month: 'long' });
       const year = options.deadline.getFullYear();
+      const dayOfWeek = options.deadline.toLocaleString('default', { weekday: 'long' });
+
+      // Click the date cell in the calendar
+      // Use ordinal suffix for date (1st, 2nd, 3rd, 4th, etc.)
+      const getOrdinalSuffix = (n: number) => {
+        const s = ['th', 'st', 'nd', 'rd'];
+        const v = n % 100;
+        return s[(v - 20) % 10] || s[v] || s[0];
+      };
+      const ordinalDay = `${day}${getOrdinalSuffix(day)}`;
+      const dateLabel = `Choose ${dayOfWeek}, ${month} ${ordinalDay}, ${year}`;
+
+      await this.page.getByRole('gridcell', { name: new RegExp(dateLabel, 'i') }).click();
+
+      // Select time from the time listbox
+      // Round minutes to nearest 15-minute interval (00, 15, 30, 45)
       const hours = options.deadline.getHours();
-      const minutes = String(options.deadline.getMinutes()).padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      const displayHours = hours % 12 || 12;
+      const minutes = options.deadline.getMinutes();
+      const roundedMinutes = Math.round(minutes / 15) * 15;
 
-      const dateString = `${month} ${day}, ${year} ${displayHours}:${minutes} ${ampm}`;
+      // Handle hour overflow if rounding causes minutes to be 60
+      const finalHours = roundedMinutes === 60 ? hours + 1 : hours;
+      const finalMinutes = roundedMinutes === 60 ? 0 : roundedMinutes;
 
-      // Clear and type the date in the format react-datepicker expects
-      await deadlineInput.clear();
-      await deadlineInput.fill(dateString);
-      // Press Tab to confirm and move to next field
-      await deadlineInput.press('Tab');
+      const hoursString = String(finalHours).padStart(2, '0');
+      const minutesString = String(finalMinutes).padStart(2, '0');
+      const timeString = `${hoursString}:${minutesString}`;
+
+      await this.page.getByRole('option', { name: timeString }).click();
+
+      // Wait a moment for the selection to be processed and calendar to close
+      await this.page.waitForTimeout(500);
     }
 
     // Select voting type
@@ -113,13 +135,15 @@ export class PollsPage {
 
     // Add poll options
     for (let i = 0; i < options.options.length; i++) {
+      // Add more option fields if needed (before filling)
+      if (i >= 2) {
+        await this.page.getByRole('button', { name: 'Add Option' }).click();
+        // Wait for new option field to appear
+        await this.page.locator(`input[placeholder="Option ${i + 1}"]`).waitFor({ timeout: 5000 });
+      }
+
       const optionInput = this.page.locator(`input[placeholder="Option ${i + 1}"]`);
       await optionInput.fill(options.options[i]);
-
-      // Add more option fields if needed
-      if (i < options.options.length - 1 && i >= 1) {
-        await this.page.getByRole('button', { name: 'Add Option' }).click();
-      }
     }
 
     // Optional settings

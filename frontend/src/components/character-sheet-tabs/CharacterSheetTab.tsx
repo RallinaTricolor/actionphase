@@ -57,6 +57,19 @@ interface CharacterSheetTabProps {
   validateForm?: (formData: Record<string, any>) => string | null;
 }
 
+/**
+ * Helper function to convert plural module type to singular for error messages
+ */
+const getSingularModuleType = (moduleType: string): string => {
+  const singularMap: Record<string, string> = {
+    'abilities': 'ability',
+    'skills': 'skill',
+    'inventory': 'inventory item',
+    'currency': 'currency',
+  };
+  return singularMap[moduleType] || moduleType.slice(0, -1);
+};
+
 export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
   gameId,
   actionResultId,
@@ -114,8 +127,8 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
       setIsAdding(false);
       setError(null);
     } catch (err) {
-      logger.error(`Failed to add ${moduleType.slice(0, -1)}`, { error: err, gameId, actionResultId, characterId, moduleType });
-      setError(`Failed to add ${moduleType.slice(0, -1)}. Please try again.`);
+      logger.error(`Failed to add ${getSingularModuleType(moduleType)}`, { error: err, gameId, actionResultId, characterId, moduleType });
+      setError(`Failed to add ${getSingularModuleType(moduleType)}. Please try again.`);
     }
   };
 
@@ -157,8 +170,8 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
       setIsAdding(false);
       setError(null);
     } catch (err) {
-      logger.error(`Failed to add ${moduleType.slice(0, -1)}`, { error: err, gameId, actionResultId, characterId, moduleType, fieldName: formData.fieldName });
-      setError(`Failed to add ${moduleType.slice(0, -1)}. Please try again.`);
+      logger.error(`Failed to add ${getSingularModuleType(moduleType)}`, { error: err, gameId, actionResultId, characterId, moduleType, fieldName: formData.fieldName });
+      setError(`Failed to add ${getSingularModuleType(moduleType)}. Please try again.`);
     }
   };
 

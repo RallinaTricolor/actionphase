@@ -299,25 +299,29 @@ test.describe('Game Application Workflow', () => {
     const applyButton = page.getByTestId(/apply-button-/);
     await expect(applyButton).not.toBeVisible();
 
-    // Set up dialog handler for window.prompt
-    page.once('dialog', async dialog => {
-      expect(dialog.type()).toBe('prompt');
-      expect(dialog.message()).toContain('audience member');
-      await dialog.accept('I would love to watch the character creation process!');
-    });
-
-    // Click "Join as Audience" button
+    // Click "Join as Audience" button to open modal
     await joinAsAudienceButton.click();
 
-    // Wait for the join to process and for alert confirmation
-    await page.waitForTimeout(2000);
+    // Wait for modal to appear
+    await expect(page.getByRole('heading', { name: 'Join as Audience' })).toBeVisible({ timeout: 5000 });
 
-    // Refresh page to see updated state
-    await gamePage.goto(gameId);
-    await page.waitForLoadState('networkidle');
+    // Fill in the message textarea (optional, but let's provide one)
+    const messageTextarea = page.getByPlaceholder(/Let the GM know/i);
+    await messageTextarea.fill('I would love to watch the character creation process!');
+
+    // Click the "Join as Audience" button in the modal (use .last() to get modal button, not page button)
+    const submitButton = page.getByRole('button', { name: 'Join as Audience', exact: true }).last();
+    await submitButton.click();
+
+    // Wait for modal to close and success toast
+    await expect(page.getByRole('heading', { name: 'Join as Audience' })).not.toBeVisible({ timeout: 5000 });
+
+    // With auto_accept_audience: true, user should be immediately added as participant
+    // Wait a moment for the data to refetch
+    await page.waitForTimeout(1000);
 
     // Verify "Join as Audience" button is no longer visible (user successfully joined)
-    await expect(page.getByTestId('join-as-audience-button')).not.toBeVisible();
+    await expect(page.getByTestId('join-as-audience-button')).not.toBeVisible({ timeout: 5000 });
 
     // Verify no "Apply to Join" button appears (would appear for non-participants)
     const applyButtonCheck = page.getByTestId(/apply-button-/);

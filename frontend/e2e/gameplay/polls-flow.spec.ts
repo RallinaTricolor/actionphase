@@ -112,7 +112,9 @@ test.describe.serial('Polls Flow', () => {
 
     // Verify poll details
     await expect(page.getByText('Vote as: player')).toBeVisible();
-    expect(await pollsPage.getPollVoteStatus('What should the party do next?')).toBe('not-voted');
+    // GMs see "Show Results" and "Delete Poll" buttons instead of vote status badges
+    await expect(page.getByRole('button', { name: 'Show Results' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete Poll' })).toBeVisible();
   });
 
   test('Player votes on poll and sees correct badge', async ({ page }) => {

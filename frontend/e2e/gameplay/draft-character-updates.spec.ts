@@ -64,12 +64,21 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     // Click "+ Add Ability" to show form
     await page.getByRole('button', { name: '+ Add Ability' }).click();
 
+    // Wait for form to appear
+    await expect(page.getByPlaceholder('e.g., Fireball, Sneak Attack')).toBeVisible({ timeout: 5000 });
+
     // Fill in ability
     await page.getByPlaceholder('e.g., Fireball, Sneak Attack').fill('Dark Vision');
     await page.getByPlaceholder('Describe this ability...').fill('You can see in darkness within 60 feet');
 
+    // Wait a moment for React state to update
+    await page.waitForTimeout(500);
+
     // Add the ability
     await page.getByTestId('add-abilities-button').click();
+
+    // Wait for the draft to be created and appear in the list
+    await page.waitForLoadState('networkidle');
 
     // Should see draft in list
     await expect(page.getByText('Dark Vision')).toBeVisible({ timeout: 5000 });

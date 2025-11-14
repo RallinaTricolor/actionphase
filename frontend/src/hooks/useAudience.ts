@@ -11,7 +11,7 @@ export function useApplyAsAudience(gameId: number) {
     mutationFn: (applicationText: string) =>
       apiClient.games.applyAsAudience(gameId, applicationText),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['game-participants', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['gameParticipants', gameId] });
       queryClient.invalidateQueries({ queryKey: ['audience-members', gameId] });
       queryClient.invalidateQueries({ queryKey: ['game-details', gameId] });
     },
