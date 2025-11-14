@@ -118,15 +118,16 @@ describe('DeadlineStrip', () => {
   });
 
   describe('Loading State', () => {
-    it('should show loading state when isLoading is true (in allowed game state)', () => {
-      render(
+    it('should hide component when isLoading is true (in allowed game state)', () => {
+      const { container } = render(
         <DeadlineStrip
           {...defaultProps}
           isLoading={true}
           gameState="in_progress"
         />
       );
-      expect(screen.getByText(/loading deadlines/i)).toBeInTheDocument();
+      // Component returns null during loading (hides itself)
+      expect(container.firstChild).toBeNull();
     });
 
     it('should NOT show loading state in disallowed game states', () => {

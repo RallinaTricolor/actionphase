@@ -67,7 +67,7 @@ BEGIN
     (char1_id, 'abilities', 'abilities',
      '[{"id":"ability-1","name":"Keen Eye","description":"Can spot hidden details","type":"passive"},{"id":"ability-2","name":"Quick Draw","description":"Fast weapon draw","type":"active"}]',
      'json', true, NOW(), NOW()),
-    (char1_id, 'abilities', 'skills',
+    (char1_id, 'skills', 'skills',
      '[{"id":"skill-1","name":"Archery","proficiency":"expert","description":"Master archer"},{"id":"skill-2","name":"Tracking","proficiency":"proficient","description":"Can track creatures"}]',
      'json', true, NOW(), NOW());
 
@@ -77,7 +77,7 @@ BEGIN
     (char1_id, 'inventory', 'items',
      '[{"id":"item-1","name":"Longbow","quantity":1,"description":"Masterwork longbow"},{"id":"item-2","name":"Arrows","quantity":20,"description":"Steel-tipped arrows"}]',
      'json', true, NOW(), NOW()),
-    (char1_id, 'inventory', 'currency',
+    (char1_id, 'currency', 'currency',
      '[{"name":"Gold","amount":50},{"name":"Silver","amount":25}]',
      'json', false, NOW(), NOW());
 
@@ -99,7 +99,7 @@ BEGIN
     (char2_id, 'abilities', 'abilities',
      '[{"id":"ability-3","name":"Fireball","description":"Launches a ball of fire","type":"spell"},{"id":"ability-4","name":"Shield","description":"Creates magical barrier","type":"spell"},{"id":"ability-5","name":"Arcane Knowledge","description":"Deep understanding of magic","type":"passive"}]',
      'json', true, NOW(), NOW()),
-    (char2_id, 'abilities', 'skills',
+    (char2_id, 'skills', 'skills',
      '[{"id":"skill-3","name":"Arcana","proficiency":"expert","description":"Knowledge of magical theory"}]',
      'json', true, NOW(), NOW());
 
@@ -109,7 +109,7 @@ BEGIN
     (char2_id, 'inventory', 'items',
      '[{"id":"item-3","name":"Spellbook","quantity":1,"description":"Personal grimoire"},{"id":"item-4","name":"Spell Components","quantity":10,"description":"Various magical reagents"}]',
      'json', true, NOW(), NOW()),
-    (char2_id, 'inventory', 'currency',
+    (char2_id, 'currency', 'currency',
      '[{"name":"Gold","amount":100},{"name":"Platinum","amount":5}]',
      'json', false, NOW(), NOW());
 

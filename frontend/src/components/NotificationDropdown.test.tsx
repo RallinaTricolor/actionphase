@@ -1,15 +1,26 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll, vi } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { renderWithProviders, createTestQueryClient } from '../test-utils';
 import NotificationDropdown from './NotificationDropdown';
 import type { Notification } from '../types/notifications';
+import type { QueryClient } from '@tanstack/react-query';
 
-// Setup MSW server
-const server = setupServer();
+// Setup MSW server with default handlers
+const server = setupServer(
+  // Mock auth/me endpoint that AuthContext calls
+  http.get('/api/v1/auth/me', () => {
+    return HttpResponse.json({
+      id: 1,
+      username: 'testuser',
+      email: 'test@example.com',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+  })
+);
 
 beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
@@ -19,24 +30,8 @@ describe('NotificationDropdown', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
-    });
+    queryClient = createTestQueryClient();
   });
-
-  const renderWithProviders = (component: React.ReactElement) => {
-    return render(
-      <BrowserRouter>
-        <QueryClientProvider client={queryClient}>
-          {component}
-        </QueryClientProvider>
-      </BrowserRouter>
-    );
-  };
 
   const createMockNotifications = (count: number): Notification[] => {
     return Array.from({ length: count }, (_, i) => ({
@@ -53,7 +48,7 @@ describe('NotificationDropdown', () => {
   };
 
   it('does not render when isOpen is false', () => {
-    renderWithProviders(<NotificationDropdown isOpen={false} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={false} onClose={vi.fn()} />, { queryClient });
 
     expect(screen.queryByTestId('notification-dropdown')).not.toBeInTheDocument();
   });
@@ -68,14 +63,14 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
       expect(screen.getByTestId('notification-dropdown')).toBeInTheDocument();
     });
   });
 
-  it('displays loading state while fetching notifications', () => {
+  it('displays loading state while fetching notifications', async () => {
     server.use(
       http.get('/api/v1/notifications', async () => {
         // Delay response
@@ -87,9 +82,12 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
-    expect(screen.getByText(/loading notifications/i)).toBeInTheDocument();
+    // Wait for loading state to appear (after auth check completes)
+    await waitFor(() => {
+      expect(screen.getByText(/loading notifications/i)).toBeInTheDocument();
+    });
   });
 
   it('displays error state when API fails', async () => {
@@ -99,7 +97,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
       expect(screen.getByText(/failed to load notifications/i)).toBeInTheDocument();
@@ -116,7 +114,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
       expect(screen.getByText('No notifications')).toBeInTheDocument();
@@ -136,7 +134,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
       notifications.forEach(notif => {
@@ -160,7 +158,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
       expect(screen.getByText('Mark all read')).toBeInTheDocument();
@@ -181,7 +179,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
       expect(screen.queryByText('Mark all read')).not.toBeInTheDocument();
@@ -208,7 +206,7 @@ describe('NotificationDropdown', () => {
     );
 
     const user = userEvent.setup();
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
       expect(screen.getByText('Mark all read')).toBeInTheDocument();
@@ -239,7 +237,7 @@ describe('NotificationDropdown', () => {
     );
 
     const user = userEvent.setup();
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
       expect(screen.getByText('Mark all read')).toBeInTheDocument();
@@ -329,7 +327,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
       expect(screen.getByText('View all notifications')).toBeInTheDocument();
@@ -346,7 +344,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
       // Footer is always shown, even with no notifications
@@ -398,7 +396,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />);
+    renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
       expect(requestParams?.get('limit')).toBe('20');

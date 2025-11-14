@@ -104,7 +104,8 @@ describe('ParentCommentPreview', () => {
 
     const contentElement = container.querySelector('.line-clamp-2');
     expect(contentElement).toBeInTheDocument();
-    expect(contentElement?.textContent).toBe(longContent);
+    // Component adds " ..." for content > 100 chars
+    expect(contentElement?.textContent).toBe(longContent + ' ...');
   });
 
   it('returns null when no content and not deleted', () => {

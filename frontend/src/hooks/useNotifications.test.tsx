@@ -11,6 +11,9 @@ import {
   useDeleteNotification,
 } from './useNotifications';
 import type { Notification } from '../types/notifications';
+import { AuthProvider } from '../contexts/AuthContext';
+import { ToastProvider } from '../contexts/ToastContext';
+import { MemoryRouter } from 'react-router-dom';
 
 // Setup MSW server
 const server = setupServer();
@@ -39,7 +42,15 @@ describe('useNotifications hooks', () => {
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>
+    </MemoryRouter>
   );
 
   const createMockNotifications = (count: number): Notification[] => {

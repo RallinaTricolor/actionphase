@@ -82,6 +82,43 @@ export const handlers = [
     })
   }),
 
+  http.get('/api/v1/games/:gameId/details', ({ params }) => {
+    return HttpResponse.json({
+      id: Number(params.gameId),
+      title: 'Test Game',
+      description: 'A test game',
+      gm_user_id: 1,
+      gm_username: 'testgm',
+      state: 'setup',
+      max_players: 4,
+      is_public: true,
+      is_anonymous: false,
+      game_config: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+  }),
+
+  http.get('/api/v1/games/:gameId/participants', () => {
+    return HttpResponse.json([
+      {
+        id: 1,
+        user_id: 1,
+        username: 'testuser',
+        role: 'player',
+        status: 'active',
+      },
+    ])
+  }),
+
+  http.post('/api/v1/games/:gameId/posts/:postId/mark-read', () => {
+    return HttpResponse.json({ success: true })
+  }),
+
+  http.get('/api/v1/games/:gameId/deadlines', () => {
+    return HttpResponse.json([])
+  }),
+
   http.post('/api/v1/games', () => {
     return HttpResponse.json({
       id: 1,
@@ -231,6 +268,51 @@ export const handlers = [
 
   http.get('/api/v1/conversations/:conversationId/messages', () => {
     return HttpResponse.json([])
+  }),
+
+  // Notifications endpoints
+  http.get('/api/v1/notifications', () => {
+    return HttpResponse.json([
+      {
+        id: 1,
+        user_id: 1,
+        type: 'game_invite',
+        title: 'Test Notification',
+        content: 'Test notification content',
+        is_read: false,
+        game_id: 1,
+        created_at: new Date().toISOString(),
+      },
+    ])
+  }),
+
+  http.get('/api/v1/notifications/unread-count', () => {
+    return HttpResponse.json({ count: 5 })
+  }),
+
+  http.post('/api/v1/notifications/:notificationId/read', () => {
+    return HttpResponse.json({ success: true })
+  }),
+
+  http.post('/api/v1/notifications/mark-all-read', () => {
+    return HttpResponse.json({ success: true })
+  }),
+
+  // Polls endpoints
+  http.get('/api/v1/games/:gameId/polls', () => {
+    return HttpResponse.json([])
+  }),
+
+  http.get('/api/v1/games/:gameId/phases/:phaseId/polls', () => {
+    return HttpResponse.json([])
+  }),
+
+  http.post('/api/v1/polls/:pollId/vote', () => {
+    return HttpResponse.json({ success: true })
+  }),
+
+  http.get('/api/v1/polls/:pollId/results', () => {
+    return HttpResponse.json({ results: [] })
   }),
 
   // Health check

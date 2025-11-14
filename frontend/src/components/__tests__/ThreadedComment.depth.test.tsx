@@ -104,7 +104,7 @@ describe('ThreadedComment - Depth Limiting', () => {
               characters={[]}
               controllableCharacters={[]}
               onCreateReply={vi.fn()}
-              depth={5}
+              depth={4}
               maxDepth={5}
             />
         </AdminModeProvider>
@@ -168,7 +168,7 @@ describe('ThreadedComment - Depth Limiting', () => {
               controllableCharacters={[]}
               onCreateReply={vi.fn()}
               onOpenThread={onOpenThread}
-              depth={5}
+              depth={4}
               maxDepth={5}
             />
         </AdminModeProvider>
@@ -281,7 +281,7 @@ describe('ThreadedComment - Depth Limiting', () => {
               characters={[]}
               controllableCharacters={[]}
               onCreateReply={vi.fn()}
-              depth={5}
+              depth={4}
               maxDepth={5}
             />
         </AdminModeProvider>
@@ -310,7 +310,7 @@ describe('ThreadedComment - Depth Limiting', () => {
               characters={[]}
               controllableCharacters={[]}
               onCreateReply={vi.fn()}
-              depth={5}
+              depth={4}
               maxDepth={5}
             />
         </AdminModeProvider>

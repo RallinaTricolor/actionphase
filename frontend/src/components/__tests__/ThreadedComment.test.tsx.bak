@@ -1045,8 +1045,8 @@ describe('ThreadedComment', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
-        expect(screen.queryAllByText('Another reply').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
+        expect(screen.getByText('Another reply')).toBeInTheDocument();
       });
     });
 
@@ -1069,7 +1069,7 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.queryAllByText(/loading replies\.\.\./i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText(/loading replies\.\.\./i)).toBeInTheDocument();
 
       await waitFor(() => {
         expect(screen.queryByText(/loading replies\.\.\./i)).not.toBeInTheDocument();
@@ -1091,7 +1091,7 @@ describe('ThreadedComment', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
       });
 
       const toggleButton = screen.getByRole('button', { name: /replies/i });
@@ -1104,7 +1104,7 @@ describe('ThreadedComment', () => {
       await user.click(toggleButton);
 
       await waitFor(() => {
-        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
       });
     });
 
@@ -1141,7 +1141,7 @@ describe('ThreadedComment', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
       });
 
       // Parent should have depth 1 indentation (verify by border presence)
@@ -1167,7 +1167,7 @@ describe('ThreadedComment', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
       });
 
       const toggleButton = screen.getByRole('button', { name: /replies/i });
@@ -1201,7 +1201,7 @@ describe('ThreadedComment', () => {
 
       // After submission, replies should be loaded and visible
       await waitFor(() => {
-        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
       });
     });
   });
@@ -1395,7 +1395,7 @@ describe('ThreadedComment', () => {
 
       // Wait for replies to load
       await waitFor(() => {
-        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
       });
 
       // Collapse replies
@@ -1428,7 +1428,7 @@ describe('ThreadedComment', () => {
 
       // Replies should be visible again after submission
       await waitFor(() => {
-        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
       });
     });
 
@@ -1450,7 +1450,7 @@ describe('ThreadedComment', () => {
 
       // Wait for nested replies to load
       await waitFor(() => {
-        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
       });
 
       // Click reply button
@@ -1619,8 +1619,8 @@ describe('ThreadedComment', () => {
 
       // Wait for replies to load automatically
       await waitFor(() => {
-        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
-        expect(screen.queryAllByText('Another reply').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
+        expect(screen.getByText('Another reply')).toBeInTheDocument();
       });
 
       // Deleted comment placeholder should still be visible
@@ -1744,21 +1744,21 @@ describe('ThreadedComment', () => {
 
       // Wait for comment A to load its replies (deleted comment B)
       await waitFor(() => {
-        expect(screen.queryAllByText('[Comment deleted]').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('[Comment deleted]')).toBeInTheDocument();
       });
 
       // Wait for deleted comment B to load its replies (comment C)
       await waitFor(() => {
-        expect(screen.queryAllByText('Comment C - nested under deleted B').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('Comment C - nested under deleted B')).toBeInTheDocument();
       });
 
       // Verify the full thread structure is preserved:
       // - Comment A (active) is visible
-      expect(screen.queryAllByText('Comment A - top level').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Comment A - top level')).toBeInTheDocument();
       // - Comment B (deleted) shows placeholder
-      expect(screen.queryAllByText('[Comment deleted]').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('[Comment deleted]')).toBeInTheDocument();
       // - Comment C (active under deleted B) is visible
-      expect(screen.queryAllByText('Comment C - nested under deleted B').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Comment C - nested under deleted B')).toBeInTheDocument();
     });
   });
 
@@ -1980,7 +1980,7 @@ describe('ThreadedComment', () => {
 
       // Wait for replies to load
       await waitFor(() => {
-        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('This is a reply')).toBeInTheDocument();
       });
 
       // Reply buttons should NOT be visible on nested comments either

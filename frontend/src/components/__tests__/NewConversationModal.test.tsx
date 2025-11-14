@@ -245,32 +245,36 @@ describe('NewConversationModal', () => {
         expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
       })
 
-      // Should show characters NOT controlled by user
+      // Should show other characters (Charlie and NPC)
       expect(screen.getByText('Charlie')).toBeInTheDocument()
       expect(screen.getByText('The Mysterious NPC')).toBeInTheDocument()
 
-      // Should NOT show user's own characters in participant list
+      // Should ALSO show user's own characters in participant list
+      // (component allows selecting your own other characters as participants)
       const participantsList = screen.getByText('Charlie').closest('div[class*="space-y-2"]')
       expect(participantsList).toBeInTheDocument()
 
-      // Alice and Bob should not be in the participants list
+      // Alice and Bob SHOULD be in the participants list (they can be selected as participants)
       const aliceInParticipants = within(participantsList!).queryByText('Alice')
       const bobInParticipants = within(participantsList!).queryByText('Bob')
-      expect(aliceInParticipants).not.toBeInTheDocument()
-      expect(bobInParticipants).not.toBeInTheDocument()
+      expect(aliceInParticipants).toBeInTheDocument()
+      expect(bobInParticipants).toBeInTheDocument()
     })
 
     it('shows message when no other characters available', async () => {
+      // Use only ONE character so it gets auto-selected, leaving no other participants available
+      const singleCharacter = [userCharacters[0]] // Just Alice
+
       server.use(
         http.get('/api/v1/games/:gameId/characters', () => {
-          return HttpResponse.json(userCharacters) // Only user's characters
+          return HttpResponse.json(singleCharacter) // Only Alice in the game
         })
       )
 
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
-          characters={userCharacters}
+          characters={singleCharacter} // Only Alice is controllable
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -278,6 +282,8 @@ describe('NewConversationModal', () => {
       )
 
       await waitFor(() => {
+        // Alice gets auto-selected as "your character"
+        // No other characters exist, so "No other characters available" should show
         expect(screen.getByText('No other characters available')).toBeInTheDocument()
       })
     })

@@ -54,7 +54,11 @@ export function ThreadViewModal({
     if (targetCommentId && showingContext) {
       // Wait for DOM to render, then scroll to target
       const timer = setTimeout(() => {
-        const element = document.getElementById(`comment-${targetCommentId}`);
+        // Try to find comment with various ID patterns (base, -desktop, -mobile)
+        // Root comments use base ID, nested comments may have -desktop/-mobile suffix
+        const element = document.getElementById(`comment-${targetCommentId}`) ||
+                        document.getElementById(`comment-${targetCommentId}-desktop`) ||
+                        document.getElementById(`comment-${targetCommentId}-mobile`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }

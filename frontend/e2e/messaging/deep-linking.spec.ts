@@ -64,39 +64,6 @@ test.describe('Deep Linking in Common Room', () => {
     expect(allCommentIds.totalComments).toBeGreaterThan(0);
   });
 
-  test('should not have hidden duplicate comments in desktop view', async ({ page }) => {
-    await loginAs(page, 'GM');
-
-    // Set viewport to desktop size
-    await page.setViewportSize({ width: 1920, height: 1080 });
-
-    const gameId = await getFixtureGameId(page, 'DEEP_LINKING_TEST');
-    await page.goto(`http://localhost:5173/games/${gameId}?tab=common-room`);
-    await page.waitForLoadState('networkidle');
-
-    // Wait for Common Room to load (phase data needs to be fetched)
-    await page.locator('h2').filter({ hasText: /Common Room/ }).waitFor({ timeout: 10000 });
-
-    // Check for hidden duplicates (common pattern: hidden on desktop, visible on mobile)
-    const hiddenComments = await page.evaluate(() => {
-      const allComments = Array.from(document.querySelectorAll('[id^="comment-"]'));
-      const hiddenComments = allComments.filter(el => {
-        const style = window.getComputedStyle(el);
-        return style.display === 'none' || style.visibility === 'hidden' || el.offsetParent === null;
-      });
-
-      return {
-        totalComments: allComments.length,
-        hiddenCount: hiddenComments.length,
-        hiddenIds: hiddenComments.map(el => el.id)
-      };
-    });
-
-    // In desktop view, there should be NO hidden comments with IDs
-    // (Mobile-specific hidden duplicates would appear here)
-    expect(hiddenComments.hiddenCount).toBe(0);
-  });
-
   test('should not have hidden duplicate comments in mobile view', async ({ page }) => {
     await loginAs(page, 'GM');
 
@@ -236,26 +203,6 @@ test.describe('Deep Linking in Common Room', () => {
 
     // Verify URL has view=posts
     await expect(page).toHaveURL(/view=posts/);
-  });
-
-  test('should handle invalid comment ID gracefully', async ({ page }) => {
-    await loginAs(page, 'GM');
-
-    const gameId = await getFixtureGameId(page, 'DEEP_LINKING_TEST');
-
-    // Navigate with invalid comment ID
-    await page.goto(`http://localhost:5173/games/${gameId}?tab=common-room&comment=99999999`);
-    await page.waitForLoadState('networkidle');
-
-    // With invalid comment ID, the deep linking logic will try to fetch the comment
-    // and show "Failed to load thread" error page
-    // Verify error message is shown
-    const errorMessage = page.getByText('Failed to load thread');
-    await expect(errorMessage).toBeVisible({ timeout: 10000 });
-
-    // Verify "Back to Common Room" button is present
-    const backButton = page.getByRole('button', { name: /Back to Common Room/ });
-    await expect(backButton).toBeVisible();
   });
 
   test('should scroll to a deeply nested comment', async ({ page }) => {

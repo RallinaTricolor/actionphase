@@ -30,6 +30,7 @@ interface ThreadedCommentProps {
   onOpenThread?: (comment: Message) => void; // Callback to open thread modal with comment object
   readOnly?: boolean; // Disable all interactive features (for history view)
   parentComment?: Message | CommentTreeNode | null; // Parent comment for smart character defaulting in nested replies
+  variant?: 'desktop' | 'mobile'; // Used to create unique IDs for desktop vs mobile rendering
 }
 
 export function ThreadedComment({
@@ -46,7 +47,8 @@ export function ThreadedComment({
   unreadCommentIDs = [],
   onOpenThread,
   readOnly = false,
-  parentComment = null
+  parentComment = null,
+  variant
 }: ThreadedCommentProps) {
   const { showSuccess, showError } = useToast();
   // Use local state to track the current comment data (for immediate UI updates)
@@ -412,7 +414,7 @@ export function ThreadedComment({
 
   return (
     <div
-      id={`comment-${comment.id}`}
+      id={`comment-${comment.id}${variant ? `-${variant}` : ''}`}
       data-testid="threaded-comment"
       className={`${getIndentPadding()} ${depth > 0 ? 'border-l-2 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2' : 'py-2'}`}
     >
@@ -774,77 +776,84 @@ export function ThreadedComment({
       {showReplies && (hasReplies || replies.length > 0 || preloadedChildren.length > 0) && (
           <>
             {/* Desktop: Show if not at or beyond max depth - 1 */}
-            {/* Mobile: Show if not at or beyond mobile max depth - 1 */}
-            <div className="hidden md:block">
-              {depth < maxDepth - 1 && (
-                <div className="space-y-0">
-                  {loadingReplies ? (
-                      <div className="ml-2 md:ml-6 py-2 text-xs text-content-secondary">
-                        Loading replies...
-                      </div>
-                  ) : (
-                      // Use dynamically loaded replies if we have them (hasLoadedRef = true means we've loaded/reloaded)
-                      // Otherwise fall back to pre-loaded children
-                      // This allows optimistic updates and fresh data to override preloaded children
-                      (hasLoadedRef.current ? replies : (hasPreloadedChildren ? preloadedChildren : replies)).map((reply) => (
-                          <ThreadedComment
-                              key={reply.id}
-                              comment={reply}
-                              gameId={gameId}
-                              postId={postId}
-                              characters={characters}
-                              controllableCharacters={controllableCharacters}
-                              onCreateReply={onCreateReply}
-                              onCommentDeleted={handleNestedCommentDeleted}
-                              currentUserId={currentUserId}
-                              depth={depth + 1}
-                              maxDepth={maxDepth}
-                              unreadCommentIDs={unreadCommentIDs}
-                              onOpenThread={onOpenThread}
-                              readOnly={readOnly}
-                              parentComment={comment}
-                          />
-                      ))
-                  )}
-                </div>
+            {/* Only render desktop section if we're not locked to mobile variant */}
+            {variant !== 'mobile' && (
+              <div className="hidden md:block">
+                {depth < maxDepth - 1 && (
+                  <div className="space-y-0">
+                    {loadingReplies ? (
+                        <div className="ml-2 md:ml-6 py-2 text-xs text-content-secondary">
+                          Loading replies...
+                        </div>
+                    ) : (
+                        // Use dynamically loaded replies if we have them (hasLoadedRef = true means we've loaded/reloaded)
+                        // Otherwise fall back to pre-loaded children
+                        // This allows optimistic updates and fresh data to override preloaded children
+                        (hasLoadedRef.current ? replies : (hasPreloadedChildren ? preloadedChildren : replies)).map((reply) => (
+                            <ThreadedComment
+                                key={reply.id}
+                                comment={reply}
+                                gameId={gameId}
+                                postId={postId}
+                                characters={characters}
+                                controllableCharacters={controllableCharacters}
+                                onCreateReply={onCreateReply}
+                                onCommentDeleted={handleNestedCommentDeleted}
+                                currentUserId={currentUserId}
+                                depth={depth + 1}
+                                maxDepth={maxDepth}
+                                unreadCommentIDs={unreadCommentIDs}
+                                onOpenThread={onOpenThread}
+                                readOnly={readOnly}
+                                parentComment={comment}
+                                variant="desktop"
+                            />
+                        ))
+                    )}
+                  </div>
+              )}
+              </div>
             )}
-            </div>
 
             {/* Mobile: Show if not at or beyond mobile max depth - 1 */}
-            <div className="md:hidden">
-              {depth < mobileMaxDepth - 1 && (
-                <div className="space-y-0">
-                  {loadingReplies ? (
-                      <div className="ml-2 md:ml-6 py-2 text-xs text-content-secondary">
-                        Loading replies...
-                      </div>
-                  ) : (
-                      // Use dynamically loaded replies if we have them (hasLoadedRef = true means we've loaded/reloaded)
-                      // Otherwise fall back to pre-loaded children
-                      // This allows optimistic updates and fresh data to override preloaded children
-                      (hasLoadedRef.current ? replies : (hasPreloadedChildren ? preloadedChildren : replies)).map((reply) => (
-                          <ThreadedComment
-                              key={reply.id}
-                              comment={reply}
-                              gameId={gameId}
-                              postId={postId}
-                              characters={characters}
-                              controllableCharacters={controllableCharacters}
-                              onCreateReply={onCreateReply}
-                              onCommentDeleted={handleNestedCommentDeleted}
-                              currentUserId={currentUserId}
-                              depth={depth + 1}
-                              maxDepth={maxDepth}
-                              unreadCommentIDs={unreadCommentIDs}
-                              onOpenThread={onOpenThread}
-                              readOnly={readOnly}
-                              parentComment={comment}
-                          />
-                      ))
-                  )}
-                </div>
-              )}
-            </div>
+            {/* Only render mobile section if we're not locked to desktop variant */}
+            {variant !== 'desktop' && (
+              <div className="md:hidden">
+                {depth < mobileMaxDepth - 1 && (
+                  <div className="space-y-0">
+                    {loadingReplies ? (
+                        <div className="ml-2 md:ml-6 py-2 text-xs text-content-secondary">
+                          Loading replies...
+                        </div>
+                    ) : (
+                        // Use dynamically loaded replies if we have them (hasLoadedRef = true means we've loaded/reloaded)
+                        // Otherwise fall back to pre-loaded children
+                        // This allows optimistic updates and fresh data to override preloaded children
+                        (hasLoadedRef.current ? replies : (hasPreloadedChildren ? preloadedChildren : replies)).map((reply) => (
+                            <ThreadedComment
+                                key={reply.id}
+                                comment={reply}
+                                gameId={gameId}
+                                postId={postId}
+                                characters={characters}
+                                controllableCharacters={controllableCharacters}
+                                onCreateReply={onCreateReply}
+                                onCommentDeleted={handleNestedCommentDeleted}
+                                currentUserId={currentUserId}
+                                depth={depth + 1}
+                                maxDepth={maxDepth}
+                                unreadCommentIDs={unreadCommentIDs}
+                                onOpenThread={onOpenThread}
+                                readOnly={readOnly}
+                                parentComment={comment}
+                                variant="mobile"
+                            />
+                        ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </>
       )}
 

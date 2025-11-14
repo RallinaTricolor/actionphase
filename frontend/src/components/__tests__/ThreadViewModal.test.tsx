@@ -1,5 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { ThreadViewModal } from '../ThreadViewModal';
 import type { Message } from '../../types/messages';
@@ -42,6 +44,22 @@ describe('ThreadViewModal', () => {
     created_at: '2025-01-15T10:30:00Z',
     updated_at: '2025-01-15T10:30:00Z',
   };
+
+  beforeEach(() => {
+    // Setup MSW handlers for API calls made by components
+    server.use(
+      http.get('/api/v1/games/:gameId/details', () => {
+        return HttpResponse.json({
+          id: 1,
+          title: 'Test Game',
+          state: 'in_progress',
+        });
+      }),
+      http.get('/api/v1/games/:gameId/participants', () => {
+        return HttpResponse.json([]);
+      })
+    );
+  });
 
   describe('Read-Only Mode', () => {
     it('should pass readOnly prop to ThreadedComment', async () => {
@@ -133,13 +151,14 @@ describe('ThreadViewModal', () => {
       );
 
       // All comments should be visible
-      expect(screen.getByText('Parent comment 1')).toBeInTheDocument();
-      expect(screen.getByText('Parent comment 2')).toBeInTheDocument();
-      expect(screen.getByText('Target comment (deepest)')).toBeInTheDocument();
+      expect(screen.queryAllByText('Parent comment 1').length).toBeGreaterThanOrEqual(1);
+      expect(screen.queryAllByText('Parent comment 2').length).toBeGreaterThanOrEqual(1);
+      expect(screen.queryAllByText('Target comment (deepest)').length).toBeGreaterThanOrEqual(1);
 
-      // No reply buttons should be visible (readOnly=true)
-      const replyButtons = screen.queryAllByRole('button', { name: /reply/i });
-      expect(replyButtons).toHaveLength(0);
+      // No "Reply" action buttons should be visible (readOnly=true)
+      // Note: This looks for the "Reply" button to create a new reply, not the collapse buttons
+      const replyActionButtons = screen.queryAllByRole('button', { name: /^reply$/i });
+      expect(replyActionButtons).toHaveLength(0);
     });
 
     it('should default readOnly to false when not provided', async () => {
