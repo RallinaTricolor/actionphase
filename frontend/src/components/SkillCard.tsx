@@ -117,7 +117,7 @@ export const SkillCard: React.FC<SkillCardProps> = ({ skill, canEdit, onUpdate, 
               rows={3}
             />
           ) : (
-            <p className="text-sm text-content-primary leading-relaxed">{skill.description}</p>
+            <p className="text-sm text-content-primary leading-relaxed whitespace-pre-line">{skill.description}</p>
           )}
         </div>
       )}

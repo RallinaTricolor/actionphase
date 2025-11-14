@@ -119,7 +119,7 @@ export const AbilityCard: React.FC<AbilityCardProps> = ({ ability, canEdit, onUp
               rows={3}
             />
           ) : (
-            <p className="text-sm text-content-primary leading-relaxed">{ability.description}</p>
+            <p className="text-sm text-content-primary leading-relaxed whitespace-pre-line">{ability.description}</p>
           )}
         </div>
       )}
