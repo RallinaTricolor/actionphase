@@ -115,7 +115,7 @@ export const CurrencyCard: React.FC<CurrencyCardProps> = ({ currency, canEdit, o
               className="text-sm"
             />
           ) : (
-            <p className="text-sm text-content-secondary">{currency.description}</p>
+            <p className="text-sm text-content-secondary whitespace-pre-line">{currency.description}</p>
           )}
         </div>
       )}

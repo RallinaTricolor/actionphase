@@ -215,7 +215,7 @@ test.describe.serial('Polls Flow', () => {
     }
   });
 
-  test.skip('Players do not make /results API calls on active polls', async ({ page }) => {
+  test('Players do not make /results API calls on active polls', async ({ page }) => {
     const { apiCalls } = setupMonitoring(page);
 
     await loginAs(page, 'PLAYER_1');

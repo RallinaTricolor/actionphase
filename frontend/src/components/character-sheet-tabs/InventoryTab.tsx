@@ -1,5 +1,7 @@
 import { CharacterSheetTab } from './CharacterSheetTab';
+import { ItemForm, type ItemFormData } from '../character-updates/ItemForm';
 import type { DraftCharacterUpdate } from '../../types/phases';
+import { Badge } from '../ui';
 
 interface InventoryTabProps {
   gameId: number;
@@ -7,13 +9,6 @@ interface InventoryTabProps {
   characterId: number;
   drafts: DraftCharacterUpdate[];
   onDeleteDraft: (draftId: number) => void;
-}
-
-interface ItemData {
-  id: string;
-  name: string;
-  description?: string;
-  quantity: number;
 }
 
 export const InventoryTab: React.FC<InventoryTabProps> = (props) => {
@@ -24,53 +19,54 @@ export const InventoryTab: React.FC<InventoryTabProps> = (props) => {
       title="Inventory"
       addButtonLabel="+ Add Item"
       emptyMessage="No pending inventory changes"
-      formFields={[
-        {
-          name: 'itemName',
-          label: 'Item Name',
-          type: 'text',
-          placeholder: 'e.g., Healing Potion, Rope',
-          required: true,
-        },
-        {
-          name: 'itemDescription',
-          label: 'Description',
-          type: 'textarea',
-          placeholder: 'Describe this item...',
-          rows: 2,
-        },
-        {
-          name: 'quantity',
-          label: 'Quantity',
-          type: 'number',
-          placeholder: '1',
-        },
-      ]}
-      buildFieldName={(formData) => formData.itemName.trim()}
-      buildFieldValue={(formData) => {
-        const itemData: ItemData = {
+      customFormComponent={ItemForm}
+      transformCustomData={(data: ItemFormData) => {
+        const itemData = {
           id: crypto.randomUUID(), // Generate unique ID
-          name: formData.itemName.trim(),
-          description: formData.itemDescription?.trim() || undefined,
-          quantity: parseInt(formData.quantity, 10) || 1,
+          name: data.name,
+          description: data.description,
+          quantity: data.quantity,
+          category: data.category,
+          value: data.value,
+          weight: data.weight,
+          equipped: false, // Default for new items
         };
-        return JSON.stringify(itemData);
+        return {
+          fieldName: data.name,
+          fieldValue: JSON.stringify(itemData),
+          fieldType: 'json' as const,
+        };
       }}
-      getFieldType={() => 'json'}
       renderDraftContent={(draft) => {
-        const itemData: ItemData = JSON.parse(draft.field_value);
-        return (
-          <>
-            {itemData.description && (
-              <p className="text-sm text-content-secondary mt-1">
-                {itemData.description}
-              </p>
-            )}
+        try {
+          const itemData = JSON.parse(draft.field_value);
+          return (
+            <>
+              {itemData.category && (
+                <Badge variant="primary" className="text-xs mt-1">
+                  {itemData.category}
+                </Badge>
+              )}
+              {itemData.description && (
+                <p className="text-sm text-content-secondary mt-1 whitespace-pre-line">
+                  {itemData.description}
+                </p>
+              )}
+              <div className="flex gap-3 text-xs text-content-secondary mt-1">
+                <span>Qty: {itemData.quantity}</span>
+                {itemData.value !== undefined && <span>Value: {itemData.value}</span>}
+                {itemData.weight !== undefined && <span>Weight: {itemData.weight}</span>}
+              </div>
+            </>
+          );
+        } catch {
+          // Fallback for legacy format
+          return (
             <p className="text-sm text-content-secondary mt-1">
-              Quantity: {itemData.quantity}
+              {draft.field_value}
             </p>
-          </>
-        );
+          );
+        }
       }}
     />
   );

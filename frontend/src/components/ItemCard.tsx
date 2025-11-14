@@ -154,7 +154,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
               rows={3}
             />
           ) : (
-            <p className="text-sm text-content-primary leading-relaxed">{item.description}</p>
+            <p className="text-sm text-content-primary leading-relaxed whitespace-pre-line">{item.description}</p>
           )}
         </div>
       )}
