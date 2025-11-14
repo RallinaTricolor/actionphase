@@ -7,7 +7,7 @@ import { useGameContext } from '../contexts/GameContext';
 import { useGameApplication } from '../hooks/useGameApplication';
 import { useGameStateManagement } from '../hooks/useGameStateManagement';
 import { useGameTabs } from '../hooks/useGameTabs';
-import { usePolls } from '../hooks';
+import { usePollsByPhase } from '../hooks';
 import { useApplyAsAudience } from '../hooks/useAudience';
 import { GameHeader } from '../components/GameHeader';
 import { GameApplicationStatus } from '../components/GameApplicationStatus';
@@ -76,6 +76,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     isGM,
     isInGame,
     currentUserId,
+    isLoadingParticipants,
     refetchGameData,
   });
 
@@ -102,8 +103,9 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     refetchGameData,
   });
 
-  // Fetch polls to calculate unvoted count for badge
-  const { polls } = usePolls(gameId, false);
+  // Fetch polls to calculate unvoted count for badge (phase-specific)
+  const currentPhaseId = currentPhaseData?.phase?.id;
+  const { data: polls = [] } = usePollsByPhase(gameId, currentPhaseId || 0);
   const unvotedPollsCount = polls.filter(poll => !poll.user_has_voted).length;
 
   // Custom hooks for tab management

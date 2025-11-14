@@ -38,9 +38,17 @@ export const CurrencyTab: React.FC<CurrencyTabProps> = (props) => {
       buildFieldName={(formData) => formData.currencyType.trim()}
       buildFieldValue={(formData) => {
         const amount = parseInt(formData.adjustment, 10);
-        return isNaN(amount) ? '0' : amount.toString();
+        if (isNaN(amount)) {
+          return JSON.stringify({ type: formData.currencyType.trim(), amount: 0 });
+        }
+        // Build a proper CurrencyEntry JSON object
+        const currencyEntry = {
+          type: formData.currencyType.trim(),
+          amount: amount
+        };
+        return JSON.stringify(currencyEntry);
       }}
-      getFieldType={() => 'number'}
+      getFieldType={() => 'json'}
       validateForm={(formData) => {
         const amount = parseInt(formData.adjustment, 10);
         if (isNaN(amount) || amount === 0) {
@@ -49,13 +57,25 @@ export const CurrencyTab: React.FC<CurrencyTabProps> = (props) => {
         return null;
       }}
       renderDraftContent={(draft) => {
-        const amount = parseInt(draft.field_value, 10);
-        const isPositive = amount >= 0;
-        return (
-          <p className={`text-sm font-semibold mt-1 ${isPositive ? 'text-semantic-success' : 'text-semantic-danger'}`}>
-            {isPositive ? '+' : ''}{amount}
-          </p>
-        );
+        try {
+          const currencyData = JSON.parse(draft.field_value);
+          const amount = currencyData.amount || 0;
+          const isPositive = amount >= 0;
+          return (
+            <p className={`text-sm font-semibold mt-1 ${isPositive ? 'text-semantic-success' : 'text-semantic-danger'}`}>
+              {amount}
+            </p>
+          );
+        } catch (e) {
+          // Fallback for old format (plain numbers)
+          const amount = parseInt(draft.field_value, 10);
+          const isPositive = amount >= 0;
+          return (
+            <p className={`text-sm font-semibold mt-1 ${isPositive ? 'text-semantic-success' : 'text-semantic-danger'}`}>
+              {amount}
+            </p>
+          );
+        }
       }}
     />
   );

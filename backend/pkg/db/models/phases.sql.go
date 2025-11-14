@@ -178,18 +178,20 @@ func (q *Queries) CountThreadsByPhase(ctx context.Context, phaseID pgtype.Int4) 
 }
 
 const createActionResult = `-- name: CreateActionResult :one
-INSERT INTO action_results (game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at)
-VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6 THEN NOW() ELSE NULL END)
-RETURNING id, game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at
+INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 THEN NOW() ELSE NULL END)
+RETURNING id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at
 `
 
 type CreateActionResultParams struct {
-	GameID      int32       `json:"game_id"`
-	UserID      int32       `json:"user_id"`
-	PhaseID     int32       `json:"phase_id"`
-	GmUserID    int32       `json:"gm_user_id"`
-	Content     string      `json:"content"`
-	IsPublished pgtype.Bool `json:"is_published"`
+	GameID             int32       `json:"game_id"`
+	UserID             int32       `json:"user_id"`
+	PhaseID            int32       `json:"phase_id"`
+	CharacterID        pgtype.Int4 `json:"character_id"`
+	ActionSubmissionID pgtype.Int4 `json:"action_submission_id"`
+	GmUserID           int32       `json:"gm_user_id"`
+	Content            string      `json:"content"`
+	IsPublished        pgtype.Bool `json:"is_published"`
 }
 
 func (q *Queries) CreateActionResult(ctx context.Context, arg CreateActionResultParams) (ActionResult, error) {
@@ -197,6 +199,8 @@ func (q *Queries) CreateActionResult(ctx context.Context, arg CreateActionResult
 		arg.GameID,
 		arg.UserID,
 		arg.PhaseID,
+		arg.CharacterID,
+		arg.ActionSubmissionID,
 		arg.GmUserID,
 		arg.Content,
 		arg.IsPublished,
@@ -207,6 +211,8 @@ func (q *Queries) CreateActionResult(ctx context.Context, arg CreateActionResult
 		&i.GameID,
 		&i.UserID,
 		&i.PhaseID,
+		&i.CharacterID,
+		&i.ActionSubmissionID,
 		&i.GmUserID,
 		&i.Content,
 		&i.IsPublished,
@@ -377,7 +383,7 @@ func (q *Queries) DeletePhase(ctx context.Context, id int32) error {
 }
 
 const getActionResult = `-- name: GetActionResult :one
-SELECT id, game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at FROM action_results WHERE id = $1
+SELECT id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at FROM action_results WHERE id = $1
 `
 
 func (q *Queries) GetActionResult(ctx context.Context, id int32) (ActionResult, error) {
@@ -388,6 +394,8 @@ func (q *Queries) GetActionResult(ctx context.Context, id int32) (ActionResult, 
 		&i.GameID,
 		&i.UserID,
 		&i.PhaseID,
+		&i.CharacterID,
+		&i.ActionSubmissionID,
 		&i.GmUserID,
 		&i.Content,
 		&i.IsPublished,
@@ -542,26 +550,31 @@ func (q *Queries) GetGamePhases(ctx context.Context, gameID int32) ([]GamePhase,
 }
 
 const getGameResults = `-- name: GetGameResults :many
-SELECT results.id, results.game_id, results.user_id, results.phase_id, results.gm_user_id, results.content, results.is_published, results.sent_at, u.username, gp.phase_type, gp.phase_number
+SELECT results.id, results.game_id, results.user_id, results.phase_id, results.character_id, results.action_submission_id, results.gm_user_id, results.content, results.is_published, results.sent_at, u.username, gp.phase_type, gp.phase_number,
+       c.name as character_name
 FROM action_results results
 JOIN users u ON results.user_id = u.id
 JOIN game_phases gp ON results.phase_id = gp.id
+LEFT JOIN characters c ON results.character_id = c.id
 WHERE results.game_id = $1
 ORDER BY gp.phase_number, results.sent_at
 `
 
 type GetGameResultsRow struct {
-	ID          int32              `json:"id"`
-	GameID      int32              `json:"game_id"`
-	UserID      int32              `json:"user_id"`
-	PhaseID     int32              `json:"phase_id"`
-	GmUserID    int32              `json:"gm_user_id"`
-	Content     string             `json:"content"`
-	IsPublished pgtype.Bool        `json:"is_published"`
-	SentAt      pgtype.Timestamptz `json:"sent_at"`
-	Username    string             `json:"username"`
-	PhaseType   string             `json:"phase_type"`
-	PhaseNumber int32              `json:"phase_number"`
+	ID                 int32              `json:"id"`
+	GameID             int32              `json:"game_id"`
+	UserID             int32              `json:"user_id"`
+	PhaseID            int32              `json:"phase_id"`
+	CharacterID        pgtype.Int4        `json:"character_id"`
+	ActionSubmissionID pgtype.Int4        `json:"action_submission_id"`
+	GmUserID           int32              `json:"gm_user_id"`
+	Content            string             `json:"content"`
+	IsPublished        pgtype.Bool        `json:"is_published"`
+	SentAt             pgtype.Timestamptz `json:"sent_at"`
+	Username           string             `json:"username"`
+	PhaseType          string             `json:"phase_type"`
+	PhaseNumber        int32              `json:"phase_number"`
+	CharacterName      pgtype.Text        `json:"character_name"`
 }
 
 func (q *Queries) GetGameResults(ctx context.Context, gameID int32) ([]GetGameResultsRow, error) {
@@ -578,6 +591,8 @@ func (q *Queries) GetGameResults(ctx context.Context, gameID int32) ([]GetGameRe
 			&i.GameID,
 			&i.UserID,
 			&i.PhaseID,
+			&i.CharacterID,
+			&i.ActionSubmissionID,
 			&i.GmUserID,
 			&i.Content,
 			&i.IsPublished,
@@ -585,6 +600,7 @@ func (q *Queries) GetGameResults(ctx context.Context, gameID int32) ([]GetGameRe
 			&i.Username,
 			&i.PhaseType,
 			&i.PhaseNumber,
+			&i.CharacterName,
 		); err != nil {
 			return nil, err
 		}
@@ -689,7 +705,7 @@ func (q *Queries) GetPhaseActions(ctx context.Context, phaseID int32) ([]GetPhas
 }
 
 const getPhaseResults = `-- name: GetPhaseResults :many
-SELECT results.id, results.game_id, results.user_id, results.phase_id, results.gm_user_id, results.content, results.is_published, results.sent_at, u.username, gm.username as gm_username
+SELECT results.id, results.game_id, results.user_id, results.phase_id, results.character_id, results.action_submission_id, results.gm_user_id, results.content, results.is_published, results.sent_at, u.username, gm.username as gm_username
 FROM action_results results
 JOIN users u ON results.user_id = u.id
 JOIN users gm ON results.gm_user_id = gm.id
@@ -698,16 +714,18 @@ ORDER BY results.sent_at
 `
 
 type GetPhaseResultsRow struct {
-	ID          int32              `json:"id"`
-	GameID      int32              `json:"game_id"`
-	UserID      int32              `json:"user_id"`
-	PhaseID     int32              `json:"phase_id"`
-	GmUserID    int32              `json:"gm_user_id"`
-	Content     string             `json:"content"`
-	IsPublished pgtype.Bool        `json:"is_published"`
-	SentAt      pgtype.Timestamptz `json:"sent_at"`
-	Username    string             `json:"username"`
-	GmUsername  string             `json:"gm_username"`
+	ID                 int32              `json:"id"`
+	GameID             int32              `json:"game_id"`
+	UserID             int32              `json:"user_id"`
+	PhaseID            int32              `json:"phase_id"`
+	CharacterID        pgtype.Int4        `json:"character_id"`
+	ActionSubmissionID pgtype.Int4        `json:"action_submission_id"`
+	GmUserID           int32              `json:"gm_user_id"`
+	Content            string             `json:"content"`
+	IsPublished        pgtype.Bool        `json:"is_published"`
+	SentAt             pgtype.Timestamptz `json:"sent_at"`
+	Username           string             `json:"username"`
+	GmUsername         string             `json:"gm_username"`
 }
 
 func (q *Queries) GetPhaseResults(ctx context.Context, phaseID int32) ([]GetPhaseResultsRow, error) {
@@ -724,6 +742,8 @@ func (q *Queries) GetPhaseResults(ctx context.Context, phaseID int32) ([]GetPhas
 			&i.GameID,
 			&i.UserID,
 			&i.PhaseID,
+			&i.CharacterID,
+			&i.ActionSubmissionID,
 			&i.GmUserID,
 			&i.Content,
 			&i.IsPublished,
@@ -1047,7 +1067,7 @@ func (q *Queries) GetUserActions(ctx context.Context, arg GetUserActionsParams) 
 }
 
 const getUserPhaseResults = `-- name: GetUserPhaseResults :many
-SELECT id, game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at FROM action_results
+SELECT id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at FROM action_results
 WHERE phase_id = $1 AND user_id = $2
 ORDER BY sent_at
 `
@@ -1071,6 +1091,8 @@ func (q *Queries) GetUserPhaseResults(ctx context.Context, arg GetUserPhaseResul
 			&i.GameID,
 			&i.UserID,
 			&i.PhaseID,
+			&i.CharacterID,
+			&i.ActionSubmissionID,
 			&i.GmUserID,
 			&i.Content,
 			&i.IsPublished,
@@ -1114,7 +1136,7 @@ func (q *Queries) GetUserPhaseSubmission(ctx context.Context, arg GetUserPhaseSu
 }
 
 const getUserResults = `-- name: GetUserResults :many
-SELECT results.id, results.game_id, results.user_id, results.phase_id, results.gm_user_id, results.content, results.is_published, results.sent_at, gp.phase_type, gp.phase_number, u.username as gm_username
+SELECT results.id, results.game_id, results.user_id, results.phase_id, results.character_id, results.action_submission_id, results.gm_user_id, results.content, results.is_published, results.sent_at, gp.phase_type, gp.phase_number, u.username as gm_username
 FROM action_results results
 JOIN game_phases gp ON results.phase_id = gp.id
 JOIN users u ON results.gm_user_id = u.id
@@ -1128,17 +1150,19 @@ type GetUserResultsParams struct {
 }
 
 type GetUserResultsRow struct {
-	ID          int32              `json:"id"`
-	GameID      int32              `json:"game_id"`
-	UserID      int32              `json:"user_id"`
-	PhaseID     int32              `json:"phase_id"`
-	GmUserID    int32              `json:"gm_user_id"`
-	Content     string             `json:"content"`
-	IsPublished pgtype.Bool        `json:"is_published"`
-	SentAt      pgtype.Timestamptz `json:"sent_at"`
-	PhaseType   string             `json:"phase_type"`
-	PhaseNumber int32              `json:"phase_number"`
-	GmUsername  string             `json:"gm_username"`
+	ID                 int32              `json:"id"`
+	GameID             int32              `json:"game_id"`
+	UserID             int32              `json:"user_id"`
+	PhaseID            int32              `json:"phase_id"`
+	CharacterID        pgtype.Int4        `json:"character_id"`
+	ActionSubmissionID pgtype.Int4        `json:"action_submission_id"`
+	GmUserID           int32              `json:"gm_user_id"`
+	Content            string             `json:"content"`
+	IsPublished        pgtype.Bool        `json:"is_published"`
+	SentAt             pgtype.Timestamptz `json:"sent_at"`
+	PhaseType          string             `json:"phase_type"`
+	PhaseNumber        int32              `json:"phase_number"`
+	GmUsername         string             `json:"gm_username"`
 }
 
 func (q *Queries) GetUserResults(ctx context.Context, arg GetUserResultsParams) ([]GetUserResultsRow, error) {
@@ -1155,6 +1179,8 @@ func (q *Queries) GetUserResults(ctx context.Context, arg GetUserResultsParams) 
 			&i.GameID,
 			&i.UserID,
 			&i.PhaseID,
+			&i.CharacterID,
+			&i.ActionSubmissionID,
 			&i.GmUserID,
 			&i.Content,
 			&i.IsPublished,
@@ -1175,11 +1201,18 @@ func (q *Queries) GetUserResults(ctx context.Context, arg GetUserResultsParams) 
 
 const listAllActionSubmissions = `-- name: ListAllActionSubmissions :many
 
-SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.is_draft, acts.submitted_at, acts.updated_at, u.username, c.name as character_name, gp.phase_type, gp.phase_number, gp.title as phase_title
+SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.is_draft, acts.submitted_at, acts.updated_at, u.username, c.name as character_name, gp.phase_type, gp.phase_number, gp.title as phase_title,
+       ar.id as action_result_id,
+       CASE
+         WHEN ar.id IS NOT NULL THEN 'result_posted'
+         WHEN acts.is_draft THEN 'draft'
+         ELSE 'submitted'
+       END as status
 FROM action_submissions acts
 JOIN users u ON acts.user_id = u.id
 JOIN game_phases gp ON acts.phase_id = gp.id
 LEFT JOIN characters c ON acts.character_id = c.id
+LEFT JOIN action_results ar ON ar.action_submission_id = acts.id
 WHERE acts.game_id = $1
   AND (CASE WHEN $2 = 0 THEN TRUE ELSE acts.phase_id = $2 END)
 ORDER BY gp.phase_number DESC, acts.submitted_at DESC
@@ -1194,20 +1227,22 @@ type ListAllActionSubmissionsParams struct {
 }
 
 type ListAllActionSubmissionsRow struct {
-	ID            int32              `json:"id"`
-	GameID        int32              `json:"game_id"`
-	UserID        int32              `json:"user_id"`
-	PhaseID       int32              `json:"phase_id"`
-	CharacterID   pgtype.Int4        `json:"character_id"`
-	Content       string             `json:"content"`
-	IsDraft       pgtype.Bool        `json:"is_draft"`
-	SubmittedAt   pgtype.Timestamptz `json:"submitted_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-	Username      string             `json:"username"`
-	CharacterName pgtype.Text        `json:"character_name"`
-	PhaseType     string             `json:"phase_type"`
-	PhaseNumber   int32              `json:"phase_number"`
-	PhaseTitle    string             `json:"phase_title"`
+	ID             int32              `json:"id"`
+	GameID         int32              `json:"game_id"`
+	UserID         int32              `json:"user_id"`
+	PhaseID        int32              `json:"phase_id"`
+	CharacterID    pgtype.Int4        `json:"character_id"`
+	Content        string             `json:"content"`
+	IsDraft        pgtype.Bool        `json:"is_draft"`
+	SubmittedAt    pgtype.Timestamptz `json:"submitted_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	Username       string             `json:"username"`
+	CharacterName  pgtype.Text        `json:"character_name"`
+	PhaseType      string             `json:"phase_type"`
+	PhaseNumber    int32              `json:"phase_number"`
+	PhaseTitle     string             `json:"phase_title"`
+	ActionResultID pgtype.Int4        `json:"action_result_id"`
+	Status         string             `json:"status"`
 }
 
 // Audience Participation Queries (Action Viewing)
@@ -1242,6 +1277,8 @@ func (q *Queries) ListAllActionSubmissions(ctx context.Context, arg ListAllActio
 			&i.PhaseType,
 			&i.PhaseNumber,
 			&i.PhaseTitle,
+			&i.ActionResultID,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -1257,7 +1294,7 @@ const publishActionResult = `-- name: PublishActionResult :one
 UPDATE action_results
 SET is_published = true, sent_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at
+RETURNING id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at
 `
 
 func (q *Queries) PublishActionResult(ctx context.Context, id int32) (ActionResult, error) {
@@ -1268,6 +1305,8 @@ func (q *Queries) PublishActionResult(ctx context.Context, id int32) (ActionResu
 		&i.GameID,
 		&i.UserID,
 		&i.PhaseID,
+		&i.CharacterID,
+		&i.ActionSubmissionID,
 		&i.GmUserID,
 		&i.Content,
 		&i.IsPublished,
@@ -1334,7 +1373,7 @@ const updateActionResult = `-- name: UpdateActionResult :one
 UPDATE action_results
 SET content = $2
 WHERE id = $1 AND is_published = false
-RETURNING id, game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at
+RETURNING id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at
 `
 
 type UpdateActionResultParams struct {
@@ -1350,6 +1389,8 @@ func (q *Queries) UpdateActionResult(ctx context.Context, arg UpdateActionResult
 		&i.GameID,
 		&i.UserID,
 		&i.PhaseID,
+		&i.CharacterID,
+		&i.ActionSubmissionID,
 		&i.GmUserID,
 		&i.Content,
 		&i.IsPublished,

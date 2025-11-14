@@ -68,7 +68,7 @@ export class PhasesApi extends BaseApiClient {
     return this.client.get<ActionResult[]>(`/api/v1/games/${gameId}/results`);
   }
 
-  async createActionResult(gameId: number, data: { user_id: number; content: string; is_published?: boolean }) {
+  async createActionResult(gameId: number, data: { user_id: number; character_id?: number; action_submission_id?: number; content: string; is_published?: boolean }) {
     return this.client.post<ActionResult>(`/api/v1/games/${gameId}/results`, data);
   }
 

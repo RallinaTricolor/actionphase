@@ -52,9 +52,11 @@ func (r *SubmitActionRequest) Bind(req *http.Request) error {
 
 // CreateActionResultRequest represents the request to create an action result
 type CreateActionResultRequest struct {
-	UserID      int32  `json:"user_id" validate:"required"`
-	Content     string `json:"content" validate:"required"`
-	IsPublished bool   `json:"is_published,omitempty"`
+	UserID             int32  `json:"user_id" validate:"required"`
+	CharacterID        *int32 `json:"character_id,omitempty"`
+	ActionSubmissionID *int32 `json:"action_submission_id,omitempty"`
+	Content            string `json:"content" validate:"required"`
+	IsPublished        bool   `json:"is_published,omitempty"`
 }
 
 func (r *CreateActionResultRequest) Bind(req *http.Request) error {

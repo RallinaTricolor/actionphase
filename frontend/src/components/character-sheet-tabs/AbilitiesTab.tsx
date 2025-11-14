@@ -22,9 +22,11 @@ export const AbilitiesTab: React.FC<AbilitiesTabProps> = (props) => {
       customFormComponent={AbilityForm}
       transformCustomData={(data: AbilityFormData) => {
         const abilityData = {
+          id: crypto.randomUUID(), // Generate unique ID
           name: data.name,
           type: data.type,
           description: data.description,
+          active: true, // New abilities are active by default
         };
         return {
           fieldName: data.name,

@@ -14,7 +14,7 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { RecentResultsSection } from './RecentResultsSection';
 import { usePreviousPhaseResults } from '../hooks/usePreviousPhaseResults';
 import { getRootPostId } from '../utils/commentUtils';
-import { usePolls } from '../hooks';
+import { usePollsByPhase } from '../hooks';
 import { logger } from '@/services/LoggingService';
 
 // Lazy load PollsTab component
@@ -57,8 +57,8 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
   const [activeTab, setActiveTab] = useState<'posts' | 'newComments' | 'polls'>(viewParam || 'posts');
   const navigate = useNavigate();
 
-  // Fetch polls to calculate unvoted count for badge
-  const { polls, isLoading: pollsLoading } = usePolls(gameId, false);
+  // Fetch polls to calculate unvoted count for badge (phase-specific)
+  const { data: polls = [], isLoading: pollsLoading } = usePollsByPhase(gameId, phaseId || 0);
   const unvotedPollsCount = polls.filter(poll => !poll.user_has_voted).length;
 
   // Fetch previous phase results (if applicable)
@@ -392,7 +392,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       ) : (
         /* Polls Tab */
         <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="lg" label="Loading polls..." /></div>}>
-          <PollsTab gameId={gameId} isGM={isGM} isCurrentPhase={isCurrentPhase} isAudience={isAudience} />
+          <PollsTab gameId={gameId} phaseId={phaseId} isGM={isGM} isCurrentPhase={isCurrentPhase} isAudience={isAudience} />
         </Suspense>
       )}
 

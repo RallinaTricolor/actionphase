@@ -223,6 +223,7 @@ export function GameTabContent({
             />
             <GameResultsManager
               gameId={gameId}
+              currentPhase={currentPhaseData?.phase}
             />
           </>
         ) : (

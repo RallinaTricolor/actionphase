@@ -648,8 +648,9 @@ type CreateActionResultRequest struct {
 	GameID             int32
 	PhaseID            int32
 	UserID             int32
+	CharacterID        *int32      // Optional reference to character (for multi-character scenarios)
+	ActionSubmissionID *int32      // Optional reference to the action submission this result is for
 	GMUserID           int32       // The GM creating the result
-	ActionSubmissionID *int32      // Optional reference to submission
 	Content            interface{} // Rich text content (JSON)
 	IsPublished        bool
 }

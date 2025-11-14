@@ -8,6 +8,9 @@ interface CreateActionResultFormProps {
   gameId: number;
   userId: number;
   userName: string;
+  characterId?: number;
+  characterName?: string;
+  actionSubmissionId?: number;
   onSuccess?: () => void;
 }
 
@@ -15,6 +18,9 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
   gameId,
   userId,
   userName,
+  characterId,
+  characterName,
+  actionSubmissionId,
   onSuccess,
 }) => {
   const { showWarning } = useToast();
@@ -32,6 +38,8 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
     try {
       await createResult.mutateAsync({
         user_id: userId,
+        character_id: characterId,
+        action_submission_id: actionSubmissionId,
         content: content.trim(),
         is_published: false, // Always create as draft
       });
@@ -39,13 +47,15 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
       setContent('');
       onSuccess?.();
     } catch (error) {
-      logger.error('Failed to create action result', { error, gameId, userId, userName });
+      logger.error('Failed to create action result', { error, gameId, userId, userName, characterId, characterName, actionSubmissionId });
     }
   };
 
+  const recipientLabel = characterName ? `${characterName} (${userName})` : userName;
+
   return (
     <form onSubmit={handleSubmit} className="p-4 surface-base border border-theme-default rounded shadow-sm">
-      <h4 className="font-semibold text-content-primary mb-2">Send Result to {userName}</h4>
+      <h4 className="font-semibold text-content-primary mb-2">Send Result to {recipientLabel}</h4>
 
       <div className="mb-4">
         <Textarea

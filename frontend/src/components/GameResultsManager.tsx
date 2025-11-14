@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGameActionResults, useUpdateActionResult, usePublishActionResult } from '../hooks/useActionResults';
-import type { ActionResult } from '../types/phases';
+import type { ActionResult, GamePhase } from '../types/phases';
 import { Button, Textarea, Badge, Alert } from './ui';
 import { UpdateCharacterSheetModal } from './UpdateCharacterSheetModal';
 import { PublishResultConfirmationDialog } from './PublishResultConfirmationDialog';
@@ -9,10 +9,11 @@ import { logger } from '@/services/LoggingService';
 
 interface GameResultsManagerProps {
   gameId: number;
+  currentPhase?: GamePhase | null;
   className?: string;
 }
 
-export function GameResultsManager({ gameId, className = '' }: GameResultsManagerProps) {
+export function GameResultsManager({ gameId, currentPhase, className = '' }: GameResultsManagerProps) {
   const { data: results, isLoading } = useGameActionResults(gameId);
   const [editingResultId, setEditingResultId] = useState<number | null>(null);
 
@@ -31,7 +32,10 @@ export function GameResultsManager({ gameId, className = '' }: GameResultsManage
     );
   }
 
-  const allResults = results || [];
+  // Filter results to only show those from the current phase (if provided)
+  const allResults = currentPhase?.id
+    ? (results || []).filter(r => r.phase_id === currentPhase.id)
+    : (results || []);
   const unpublishedResults = allResults.filter(r => !r.is_published);
   const publishedResults = allResults.filter(r => r.is_published);
 
@@ -187,7 +191,7 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
             </div>
             <div>
               <h4 className="font-medium text-content-primary">
-                To: {result.username || `User #${result.user_id}`}
+                To: {result.character_name ? `${result.character_name} (${result.username})` : (result.username || `User #${result.user_id}`)}
               </h4>
               <div className="flex items-center space-x-2 text-xs text-content-secondary mt-0.5">
                 {result.phase_type && result.phase_number && (
@@ -317,8 +321,8 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
           onClose={() => setIsModalOpen(false)}
           gameId={gameId}
           actionResultId={result.id}
-          characterId={result.user_id} // Using user_id as character_id for now
-          characterName={result.username || `User #${result.user_id}`}
+          characterId={result.character_id || result.user_id}
+          characterName={result.character_name || result.username || `User #${result.user_id}`}
         />
 
         {/* Publish Confirmation Dialog */}

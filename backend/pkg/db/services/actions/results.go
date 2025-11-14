@@ -32,16 +32,28 @@ func (as *ActionSubmissionService) CreateActionResult(ctx context.Context, req c
 		return nil, err
 	}
 
-	params := models.CreateActionResultParams{
-		GameID:      req.GameID,
-		UserID:      req.UserID,
-		PhaseID:     req.PhaseID,
-		GmUserID:    game.GmUserID,
-		Content:     contentStr,
-		IsPublished: pgtype.Bool{Bool: req.IsPublished, Valid: true},
+	// Convert character_id to pgtype.Int4
+	var characterID pgtype.Int4
+	if req.CharacterID != nil {
+		characterID = pgtype.Int4{Int32: *req.CharacterID, Valid: true}
 	}
 
-	// Note: ActionSubmissionID field not available in CreateActionResultParams
+	// Convert action_submission_id to pgtype.Int4
+	var actionSubmissionID pgtype.Int4
+	if req.ActionSubmissionID != nil {
+		actionSubmissionID = pgtype.Int4{Int32: *req.ActionSubmissionID, Valid: true}
+	}
+
+	params := models.CreateActionResultParams{
+		GameID:             req.GameID,
+		UserID:             req.UserID,
+		PhaseID:            req.PhaseID,
+		CharacterID:        characterID,
+		ActionSubmissionID: actionSubmissionID,
+		GmUserID:           game.GmUserID,
+		Content:            contentStr,
+		IsPublished:        pgtype.Bool{Bool: req.IsPublished, Valid: true},
+	}
 
 	result, err := queries.CreateActionResult(ctx, params)
 	if err != nil {
@@ -183,11 +195,31 @@ func (as *ActionSubmissionService) mergeAndPublishDraftUpdates(ctx context.Conte
 			}
 
 			var draftItem map[string]interface{}
+
+			// Try to unmarshal as JSON first
 			if err := json.Unmarshal([]byte(draft.FieldValue.String), &draftItem); err != nil {
-				return fmt.Errorf("failed to parse draft item JSON: %w", err)
+				// If unmarshal fails and this is currency, it might be in the old format (plain number)
+				// Handle legacy format for currency: convert plain number to proper currency object
+				if key.moduleType == "currency" {
+					// Try parsing as a plain number (old format)
+					var amount float64
+					if numErr := json.Unmarshal([]byte(draft.FieldValue.String), &amount); numErr == nil {
+						// Successfully parsed as number - construct proper currency object
+						draftItem = map[string]interface{}{
+							"type":   draft.FieldName,
+							"amount": amount,
+						}
+					} else {
+						// Not JSON and not a number - fail
+						return fmt.Errorf("failed to parse draft item JSON: %w (also not a valid number)", err)
+					}
+				} else {
+					// For non-currency modules, JSON parse failure is an error
+					return fmt.Errorf("failed to parse draft item JSON: %w", err)
+				}
 			}
 
-			// Use the field_name (item/ability/skill name) as the key
+			// Use the field_name (item/ability/skill/currency name) as the key
 			itemMap[draft.FieldName] = draftItem
 		}
 

@@ -93,18 +93,21 @@ func (rd *ActionResultResponse) Render(w http.ResponseWriter, r *http.Request) e
 
 // ActionResultWithDetailsResponse represents an action result with additional details
 type ActionResultWithDetailsResponse struct {
-	ID          int32      `json:"id"`
-	GameID      int32      `json:"game_id"`
-	UserID      int32      `json:"user_id"`
-	PhaseID     int32      `json:"phase_id"`
-	GMUserID    int32      `json:"gm_user_id"`
-	Content     string     `json:"content"`
-	IsPublished bool       `json:"is_published"`
-	SentAt      *time.Time `json:"sent_at,omitempty"`
-	Username    string     `json:"username,omitempty"`    // Player username (for GM view)
-	GMUsername  string     `json:"gm_username,omitempty"` // GM username (for player view)
-	PhaseType   string     `json:"phase_type,omitempty"`
-	PhaseNumber int32      `json:"phase_number,omitempty"`
+	ID                 int32      `json:"id"`
+	GameID             int32      `json:"game_id"`
+	UserID             int32      `json:"user_id"`
+	PhaseID            int32      `json:"phase_id"`
+	CharacterID        *int32     `json:"character_id,omitempty"`         // Character the action/result is for
+	ActionSubmissionID *int32     `json:"action_submission_id,omitempty"` // Reference to the original action submission
+	GMUserID           int32      `json:"gm_user_id"`
+	Content            string     `json:"content"`
+	IsPublished        bool       `json:"is_published"`
+	SentAt             *time.Time `json:"sent_at,omitempty"`
+	Username           string     `json:"username,omitempty"`       // Player username (for GM view)
+	CharacterName      string     `json:"character_name,omitempty"` // Character name (for GM view)
+	GMUsername         string     `json:"gm_username,omitempty"`    // GM username (for player view)
+	PhaseType          string     `json:"phase_type,omitempty"`
+	PhaseNumber        int32      `json:"phase_number,omitempty"`
 }
 
 func (rd *ActionResultWithDetailsResponse) Render(w http.ResponseWriter, r *http.Request) error {

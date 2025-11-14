@@ -88,8 +88,8 @@ DELETE FROM action_submissions
 WHERE game_id = $1 AND user_id = $2 AND phase_id = $3;
 
 -- name: CreateActionResult :one
-INSERT INTO action_results (game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at)
-VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6 THEN NOW() ELSE NULL END)
+INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 THEN NOW() ELSE NULL END)
 RETURNING *;
 
 -- name: GetUserResults :many
@@ -109,10 +109,12 @@ WHERE results.phase_id = $1
 ORDER BY results.sent_at;
 
 -- name: GetGameResults :many
-SELECT results.*, u.username, gp.phase_type, gp.phase_number
+SELECT results.*, u.username, gp.phase_type, gp.phase_number,
+       c.name as character_name
 FROM action_results results
 JOIN users u ON results.user_id = u.id
 JOIN game_phases gp ON results.phase_id = gp.id
+LEFT JOIN characters c ON results.character_id = c.id
 WHERE results.game_id = $1
 ORDER BY gp.phase_number, results.sent_at;
 
@@ -239,11 +241,18 @@ ORDER BY pt.created_at;
 -- name: ListAllActionSubmissions :many
 -- List all action submissions for a game (for audience/GM)
 -- Includes character name and submission status
-SELECT acts.*, u.username, c.name as character_name, gp.phase_type, gp.phase_number, gp.title as phase_title
+SELECT acts.*, u.username, c.name as character_name, gp.phase_type, gp.phase_number, gp.title as phase_title,
+       ar.id as action_result_id,
+       CASE
+         WHEN ar.id IS NOT NULL THEN 'result_posted'
+         WHEN acts.is_draft THEN 'draft'
+         ELSE 'submitted'
+       END as status
 FROM action_submissions acts
 JOIN users u ON acts.user_id = u.id
 JOIN game_phases gp ON acts.phase_id = gp.id
 LEFT JOIN characters c ON acts.character_id = c.id
+LEFT JOIN action_results ar ON ar.action_submission_id = acts.id
 WHERE acts.game_id = sqlc.arg(game_id)
   AND (CASE WHEN sqlc.arg(phase_id) = 0 THEN TRUE ELSE acts.phase_id = sqlc.arg(phase_id) END)
 ORDER BY gp.phase_number DESC, acts.submitted_at DESC

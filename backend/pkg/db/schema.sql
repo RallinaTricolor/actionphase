@@ -192,6 +192,8 @@ CREATE TABLE action_results (
     game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     phase_id INTEGER NOT NULL REFERENCES game_phases(id) ON DELETE CASCADE,
+    character_id INTEGER REFERENCES characters(id) ON DELETE SET NULL,
+    action_submission_id INTEGER REFERENCES action_submissions(id) ON DELETE CASCADE,
     gm_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     is_published BOOLEAN DEFAULT FALSE,
@@ -316,6 +318,8 @@ CREATE INDEX idx_action_submissions_phase_id ON action_submissions(phase_id);
 CREATE INDEX idx_action_submissions_user_id ON action_submissions(user_id);
 CREATE INDEX idx_action_results_phase_id ON action_results(phase_id);
 CREATE INDEX idx_action_results_user_id ON action_results(user_id);
+CREATE INDEX idx_action_results_character_id ON action_results(character_id);
+CREATE INDEX idx_action_results_submission_id ON action_results(action_submission_id);
 CREATE INDEX idx_phase_transitions_game_id ON phase_transitions(game_id);
 CREATE INDEX idx_game_participants_game_id ON game_participants(game_id);
 CREATE INDEX idx_game_participants_user_id ON game_participants(user_id);

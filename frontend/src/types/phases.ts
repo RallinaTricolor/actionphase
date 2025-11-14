@@ -58,6 +58,9 @@ export interface ActionWithDetails extends ActionSubmission {
   character_name?: string;
   phase_type?: string;
   phase_number?: number;
+  phase_title?: string;
+  action_result_id?: number;
+  status?: 'draft' | 'submitted' | 'result_posted';
 }
 
 export interface ActionResult {
@@ -65,6 +68,8 @@ export interface ActionResult {
   game_id: number;
   user_id: number;
   phase_id: number;
+  character_id?: number;
+  action_submission_id?: number;
   gm_user_id: number;
   content: string;
   is_published: boolean;
@@ -73,6 +78,7 @@ export interface ActionResult {
   phase_number?: number;
   gm_username?: string;
   username?: string;
+  character_name?: string;
 }
 
 export interface DraftCharacterUpdate {

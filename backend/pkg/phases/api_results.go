@@ -73,12 +73,14 @@ func (h *Handler) CreateActionResult(w http.ResponseWriter, r *http.Request) {
 	// Create action result using ActionSubmissionService
 	actionService := &actionsvc.ActionSubmissionService{DB: h.App.Pool, Logger: h.App.ObsLogger, NotificationService: &gamesvc.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}}
 	req := core.CreateActionResultRequest{
-		GameID:      int32(gameID),
-		UserID:      data.UserID,
-		PhaseID:     activePhase.ID,
-		GMUserID:    int32(gmUser.ID),
-		Content:     data.Content,
-		IsPublished: data.IsPublished,
+		GameID:             int32(gameID),
+		UserID:             data.UserID,
+		CharacterID:        data.CharacterID,
+		ActionSubmissionID: data.ActionSubmissionID,
+		PhaseID:            activePhase.ID,
+		GMUserID:           int32(gmUser.ID),
+		Content:            data.Content,
+		IsPublished:        data.IsPublished,
 	}
 
 	result, err := actionService.CreateActionResult(ctx, req)
@@ -237,6 +239,23 @@ func (h *Handler) GetGameActionResults(w http.ResponseWriter, r *http.Request) {
 			Username:    result.Username,
 			PhaseType:   result.PhaseType,
 			PhaseNumber: result.PhaseNumber,
+		}
+
+		// Add character_id if available
+		if result.CharacterID.Valid {
+			charID := result.CharacterID.Int32
+			resultResp.CharacterID = &charID
+		}
+
+		// Add action_submission_id if available
+		if result.ActionSubmissionID.Valid {
+			submissionID := result.ActionSubmissionID.Int32
+			resultResp.ActionSubmissionID = &submissionID
+		}
+
+		// Add character_name if available
+		if result.CharacterName.Valid {
+			resultResp.CharacterName = result.CharacterName.String
 		}
 
 		if result.SentAt.Valid {
