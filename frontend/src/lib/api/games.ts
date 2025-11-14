@@ -144,12 +144,6 @@ export class GamesApi extends BaseApiClient {
   }
 
   // Audience Participation endpoints
-  async applyAsAudience(gameId: number, applicationText: string) {
-    return this.client.post<GameParticipant>(`/api/v1/games/${gameId}/apply/audience`, {
-      application_text: applicationText
-    });
-  }
-
   async listAudienceMembers(gameId: number) {
     return this.client.get<{ audience_members: GameParticipant[] }>(`/api/v1/games/${gameId}/audience`);
   }

@@ -15,6 +15,7 @@ interface GameActionsProps {
   canEditGame: boolean;
   isCheckingAuth: boolean;
   isParticipant: boolean;
+  isInGame: boolean; // Whether user has any role in the game (including audience)
   userRole: UserGameRole;
   userApplication: GameApplication | null;
   hasPendingAudienceApplication?: boolean; // Whether user has a pending audience application
@@ -23,7 +24,6 @@ interface GameActionsProps {
   onEditGame: () => void;
   onStateChange: (state: GameState) => void;
   onApplyToGame: () => void;
-  onJoinAsAudience: () => void;
   onWithdrawApplication: () => void;
   onLeaveGame: () => void;
   onDeleteGame?: () => void;
@@ -41,15 +41,15 @@ export function GameActions({
   canEditGame,
   isCheckingAuth,
   isParticipant: _isParticipant,
-  userRole,
+  isInGame,
+  userRole: _userRole,
   userApplication,
-  hasPendingAudienceApplication = false,
+  hasPendingAudienceApplication: _hasPendingAudienceApplication = false,
   actionLoading,
   stateActions,
   onEditGame,
   onStateChange,
   onApplyToGame,
-  onJoinAsAudience,
   onWithdrawApplication,
   onLeaveGame: _onLeaveGame,
   onDeleteGame,
@@ -78,14 +78,13 @@ export function GameActions({
   const hasMenuItems = hasEditAction || hasStateActions || hasDeleteAction;
 
   // Player action buttons (always visible when applicable)
-  const showApplyButton = !isGM && !isCheckingAuth && game.state === 'recruitment' && !userApplication;
+  const showApplyButton = !isGM && !isCheckingAuth && !isInGame && game.state === 'recruitment' && !userApplication;
   const showWithdrawButton = !isGM && userApplication && userApplication.status === 'pending' && game.state === 'recruitment';
 
-  // Audience join button - show after recruitment for non-participants
-  // Hide if user already has a pending audience application
-  const showJoinAsAudienceButton = !isGM && !isCheckingAuth && userRole === 'none' &&
-    ['character_creation', 'in_progress', 'paused'].includes(game.state) &&
-    !userApplication && !hasPendingAudienceApplication;
+  // Audience can join at any time (not just recruitment)
+  const showJoinAsAudienceButton = !isGM && !isCheckingAuth && !isInGame &&
+    (game.state === 'character_creation' || game.state === 'in_progress' || game.state === 'completed') &&
+    !userApplication;
 
   return (
     <div className="flex items-center gap-2">
@@ -118,10 +117,9 @@ export function GameActions({
         <Button
           variant="secondary"
           size="sm"
-          onClick={onJoinAsAudience}
+          onClick={onApplyToGame}
           disabled={actionLoading}
           data-testid="join-as-audience-button"
-          title="Player recruitment has ended. Join as an audience member to follow the game."
         >
           Join as Audience
         </Button>

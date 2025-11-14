@@ -72,7 +72,7 @@ export const GameApplicationCard = ({
             {application.username || `User ${application.user_id}`}
           </h3>
           <p className="text-sm text-content-secondary capitalize">
-            Applying as {application.role}
+            Applying as <b className={"text-semantic-info"}>{application.role}</b>
           </p>
           {application.email && (
             <p className="text-sm text-content-secondary">{application.email}</p>

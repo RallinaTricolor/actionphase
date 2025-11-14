@@ -2,23 +2,6 @@ import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tansta
 import { apiClient } from '../lib/api';
 
 /**
- * Hook to apply as an audience member
- */
-export function useApplyAsAudience(gameId: number) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (applicationText: string) =>
-      apiClient.games.applyAsAudience(gameId, applicationText),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['gameParticipants', gameId] });
-      queryClient.invalidateQueries({ queryKey: ['audience-members', gameId] });
-      queryClient.invalidateQueries({ queryKey: ['game-details', gameId] });
-    },
-  });
-}
-
-/**
  * Hook to fetch all audience members for a game
  */
 export function useAudienceMembers(gameId: number) {
