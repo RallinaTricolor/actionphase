@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { InventoryItem } from '../../types/characters';
 import { Button, Input, Textarea } from '../ui';
 
 export interface ItemFormData {

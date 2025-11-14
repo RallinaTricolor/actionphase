@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { CurrencyEntry } from '../../types/characters';
 import { Button, Input } from '../ui';
 
 export interface CurrencyFormData {
