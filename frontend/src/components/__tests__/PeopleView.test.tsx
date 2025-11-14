@@ -27,23 +27,35 @@ vi.mock('../AudienceMemberBadge', () => ({
 
 describe('PeopleView - Leave Game Button', () => {
   const mockPlayerParticipant: GameParticipant = {
+    id: 1,
+    game_id: 1,
     user_id: 1,
     username: 'player1',
+    email: 'player1@example.com',
     role: 'player',
+    status: 'active',
     joined_at: '2024-01-01',
   };
 
   const mockAudienceParticipant: GameParticipant = {
+    id: 2,
+    game_id: 1,
     user_id: 2,
     username: 'audience1',
+    email: 'audience1@example.com',
     role: 'audience',
+    status: 'active',
     joined_at: '2024-01-02',
   };
 
   const mockGMParticipant: GameParticipant = {
+    id: 3,
+    game_id: 1,
     user_id: 3,
     username: 'gm1',
+    email: 'gm1@example.com',
     role: 'gm',
+    status: 'active',
     joined_at: '2024-01-03',
   };
 

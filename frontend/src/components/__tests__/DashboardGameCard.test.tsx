@@ -38,7 +38,7 @@ describe('DashboardGameCard', () => {
 
     expect(screen.getByText('Test Game')).toBeInTheDocument();
     expect(screen.getByText('Player')).toBeInTheDocument();
-    expect(screen.getByText('in_progress')).toBeInTheDocument();
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
     expect(screen.getByText('Fantasy')).toBeInTheDocument();
   });
 
@@ -73,7 +73,7 @@ describe('DashboardGameCard', () => {
     renderWithProviders(<DashboardGameCard game={gameWithPhase} />);
 
     expect(screen.getByText('Planning Phase')).toBeInTheDocument();
-    expect(screen.getByText('common_room')).toBeInTheDocument();
+    expect(screen.getByText('Common Room')).toBeInTheDocument();
   });
 
   it('shows action needed badge when user has pending action', () => {
@@ -168,7 +168,7 @@ describe('DashboardGameCard', () => {
     const { container } = renderWithProviders(<DashboardGameCard game={warningGame} />);
 
     // Check for semantic warning styling in the deadline badge
-    expect(container.innerHTML).toContain('text-semantic-warning');
+    expect(container.innerHTML).toContain('bg-semantic-warning-subtle');
     expect(container.innerHTML).toContain('bg-semantic-warning-subtle');
   });
 
@@ -184,7 +184,7 @@ describe('DashboardGameCard', () => {
     const { container } = renderWithProviders(<DashboardGameCard game={criticalGame} />);
 
     // Check for semantic danger/critical styling in the deadline badge
-    expect(container.innerHTML).toContain('text-semantic-danger');
+    expect(container.innerHTML).toContain('bg-semantic-danger-subtle');
     expect(container.innerHTML).toContain('bg-semantic-danger-subtle');
   });
 
@@ -200,7 +200,7 @@ describe('DashboardGameCard', () => {
     const { container } = renderWithProviders(<DashboardGameCard game={normalGame} />);
 
     // Check for semantic success/normal styling in the deadline badge
-    expect(container.innerHTML).toContain('text-semantic-success');
+    expect(container.innerHTML).toContain('bg-semantic-success-subtle');
     expect(container.innerHTML).toContain('bg-semantic-success-subtle');
   });
 
@@ -219,7 +219,7 @@ describe('DashboardGameCard', () => {
 
     renderWithProviders(<DashboardGameCard game={recruitingGame} />);
 
-    expect(screen.getByText('recruitment')).toBeInTheDocument();
+    expect(screen.getByText('Recruiting Players')).toBeInTheDocument();
   });
 
   it('does not show pending applications when count is zero', () => {

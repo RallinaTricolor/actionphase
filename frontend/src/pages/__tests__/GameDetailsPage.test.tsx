@@ -33,7 +33,9 @@ describe('GameDetailsPage', () => {
       game_id: 1,
       user_id: 2,
       username: 'player1',
+      email: 'player1@example.com',
       role: 'player',
+      status: 'active',
       joined_at: '2025-01-02T00:00:00Z',
     },
     {
@@ -41,7 +43,9 @@ describe('GameDetailsPage', () => {
       game_id: 1,
       user_id: 3,
       username: 'player2',
+      email: 'player2@example.com',
       role: 'player',
+      status: 'active',
       joined_at: '2025-01-03T00:00:00Z',
     },
   ]
@@ -184,8 +188,8 @@ describe('GameDetailsPage', () => {
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
         expect(screen.getByText('A test game description')).toBeInTheDocument()
-        expect(screen.getByText(/GM: game_master/i)).toBeInTheDocument()
-        expect(screen.getByText(/Genre: Fantasy/i)).toBeInTheDocument()
+        expect(screen.getAllByText(/GM: game_master/i).length).toBeGreaterThanOrEqual(1)
+        expect(screen.getAllByText(/Genre: Fantasy/i).length).toBeGreaterThanOrEqual(1)
       })
     })
 

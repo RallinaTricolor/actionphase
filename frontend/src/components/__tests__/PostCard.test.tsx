@@ -354,7 +354,7 @@ describe('PostCard', () => {
   });
 
   describe('Comments Toggle', () => {
-    it('shows hide comments button initially', () => {
+    it('shows collapse comments button initially', () => {
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -366,7 +366,7 @@ describe('PostCard', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: /hide comments \(2\)/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /collapse comments \(2\)/i })).toBeInTheDocument();
     });
 
     it('displays comment count', () => {
@@ -400,7 +400,7 @@ describe('PostCard', () => {
       expect(screen.getByText(/comments \(0\)/i)).toBeInTheDocument();
     });
 
-    it('toggles to show comments when hide is clicked', async () => {
+    it('toggles to expand comments when collapse is clicked', async () => {
       const user = userEvent.setup();
       renderWithProviders(
         <PostCard
@@ -413,10 +413,10 @@ describe('PostCard', () => {
         />
       );
 
-      const toggleButton = screen.getByRole('button', { name: /hide comments/i });
+      const toggleButton = screen.getByRole('button', { name: /collapse comments/i });
       await user.click(toggleButton);
 
-      expect(screen.getByRole('button', { name: /show comments/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /expand comments/i })).toBeInTheDocument();
     });
   });
 
@@ -1179,8 +1179,8 @@ describe('PostCard', () => {
         />
       );
 
-      // Hide comments
-      await user.click(screen.getByRole('button', { name: /hide comments/i }));
+      // Collapse comments
+      await user.click(screen.getByRole('button', { name: /collapse comments/i }));
 
       // Should load comments initially since showComments defaults to true
       await waitFor(() => {

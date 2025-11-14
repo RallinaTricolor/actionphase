@@ -6,22 +6,37 @@ import { setupServer } from 'msw/node';
 import { PollCard } from './PollCard';
 import type { Poll } from '../types/polls';
 
-// Mock useUserCharacters hook
+// Mock hooks
 vi.mock('../hooks', () => ({
   usePoll: vi.fn(() => ({
     data: undefined,
     isLoading: false,
+    isPending: false,
     error: null,
   })),
   usePollResults: vi.fn(() => ({
     data: undefined,
     isLoading: false,
+    isPending: false,
     error: null,
   })),
   useUserCharacters: vi.fn(() => ({
     characters: [],
     isLoading: false,
+    isPending: false,
     error: null,
+  })),
+  usePolls: vi.fn(() => ({
+    data: [],
+    isLoading: false,
+    isPending: false,
+    error: null,
+    deletePollMutation: {
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: false,
+      error: null,
+    },
   })),
 }));
 

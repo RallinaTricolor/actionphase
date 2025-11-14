@@ -95,7 +95,12 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
 
     // Wait for DOM to be ready, then try to scroll to comment
     const timer = setTimeout(async () => {
-      const element = document.getElementById(`comment-${commentIdParam}`);
+      // Try to find comment with various ID patterns (base, -desktop, -mobile)
+      // Root comments use base ID, nested comments may have -desktop/-mobile suffix
+      let element = document.getElementById(`comment-${commentIdParam}`) ||
+                    document.getElementById(`comment-${commentIdParam}-desktop`) ||
+                    document.getElementById(`comment-${commentIdParam}-mobile`);
+
       if (element) {
         // Comment is visible in the DOM - scroll to it
         element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
