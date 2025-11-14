@@ -1153,8 +1153,8 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		// Current behavior returns 500 - TODO: improve handler to return 409
-		core.AssertEqual(t, 500, w.Code, "Should return error for duplicate application")
+		// Handler now returns 400 for duplicate applications
+		core.AssertEqual(t, 400, w.Code, "Should return 400 Bad Request for duplicate application")
 	})
 
 	t.Run("apply_as_audience_short_text", func(t *testing.T) {

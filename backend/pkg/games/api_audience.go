@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // ============================================================================
@@ -23,7 +24,10 @@ type ApplyAsAudienceRequest struct {
 }
 
 func (a *ApplyAsAudienceRequest) Bind(r *http.Request) error {
-	// Message is optional - only validate max length if provided
+	// Validate application text
+	if len(a.ApplicationText) < 10 {
+		return fmt.Errorf("application text must be at least 10 characters")
+	}
 	if len(a.ApplicationText) > 1000 {
 		return fmt.Errorf("application text must not exceed 1000 characters")
 	}
@@ -112,30 +116,45 @@ func (h *Handler) ApplyAsAudience(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the game to find the GM
+	// Get the game to check auto-accept setting and find the GM
 	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, int32(gameID))
-	if err == nil {
-		// Create notification for GM about new audience application
-		notificationService := &db.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
-		title := fmt.Sprintf("New audience application for %s", game.Title)
-		content := fmt.Sprintf("%s applied to join your game as an audience member", authUser.Username)
-		linkURL := fmt.Sprintf("/games/%d?tab=people", gameID)
-		relatedType := core.TableGameApplications
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", gameID)
+		// Application was created, so this is not a critical error
+	} else {
+		// If auto-accept is enabled, automatically approve the application
+		if game.AutoAcceptAudience {
+			err = applicationService.ApproveGameApplication(ctx, application.ID, game.GmUserID)
+			if err != nil {
+				h.App.ObsLogger.Error(ctx, "Failed to auto-approve audience application", "error", err, "application_id", application.ID)
+				// Don't fail the request - the application was created, just not auto-approved
+			} else {
+				// Update the application status in our response
+				application.Status = pgtype.Text{String: core.ApplicationStatusApproved, Valid: true}
+			}
+		} else {
+			// Create notification for GM about new audience application (manual approval required)
+			notificationService := &db.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+			title := fmt.Sprintf("New audience application for %s", game.Title)
+			content := fmt.Sprintf("%s applied to join your game as an audience member", authUser.Username)
+			linkURL := fmt.Sprintf("/games/%d?tab=people", gameID)
+			relatedType := core.TableGameApplications
 
-		_, err = notificationService.CreateNotification(ctx, &core.CreateNotificationRequest{
-			UserID:      game.GmUserID,
-			GameID:      &application.GameID,
-			Type:        core.NotificationTypeApplicationSubmitted,
-			Title:       title,
-			Content:     &content,
-			RelatedType: &relatedType,
-			RelatedID:   &application.ID,
-			LinkURL:     &linkURL,
-		})
-		if err != nil {
-			// Log error but don't fail the request
-			h.App.ObsLogger.Error(ctx, "Failed to create notification for GM", "error", err, "game_id", gameID, "gm_user_id", game.GmUserID)
+			_, err = notificationService.CreateNotification(ctx, &core.CreateNotificationRequest{
+				UserID:      game.GmUserID,
+				GameID:      &application.GameID,
+				Type:        core.NotificationTypeApplicationSubmitted,
+				Title:       title,
+				Content:     &content,
+				RelatedType: &relatedType,
+				RelatedID:   &application.ID,
+				LinkURL:     &linkURL,
+			})
+			if err != nil {
+				// Log error but don't fail the request
+				h.App.ObsLogger.Error(ctx, "Failed to create notification for GM", "error", err, "game_id", gameID, "gm_user_id", game.GmUserID)
+			}
 		}
 	}
 
