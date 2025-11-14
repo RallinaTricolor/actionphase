@@ -35,6 +35,7 @@ interface GameTabContentProps {
   onLeaveGame?: () => void;
   onRefreshData?: () => Promise<void>;
   actionLoading?: boolean;
+  applicationsRefreshTrigger?: number; // Trigger to refresh applications list
 }
 
 const formatDate = (dateString?: string) => {
@@ -56,16 +57,17 @@ export function GameTabContent({
   onLeaveGame,
   onRefreshData,
   actionLoading = false,
+  applicationsRefreshTrigger,
 }: GameTabContentProps) {
 
   // Applications Tab (Recruitment - GM only)
   if (activeTab === 'applications' && game.state === 'recruitment' && isGM) {
-    return <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} />;
+    return <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} refreshTrigger={applicationsRefreshTrigger} />;
   }
 
   // Applications Tab (Character Creation - GM only, collapsed)
   if (activeTab === 'applications' && game.state === 'character_creation' && isGM) {
-    return <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} />;
+    return <GameApplicationsList gameId={gameId} isGM={isGM} gameState={game.state} refreshTrigger={applicationsRefreshTrigger} />;
   }
 
   // People Tab (combines Characters and Participants) - used for character_creation, in_progress, and completed states

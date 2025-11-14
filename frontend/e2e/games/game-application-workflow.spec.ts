@@ -199,14 +199,12 @@ test.describe('Game Application Workflow', () => {
     );
     await expect(pendingIndicator.locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
-    // Handle confirmation dialog if present
-    page.once('dialog', dialog => {
-      expect(dialog.message()).toMatch(/withdraw|cancel/i);
-      dialog.accept();
-    });
-
     // Withdraw application using POM
     await applicationsPage.withdrawApplication();
+
+    // Wait for confirmation modal and confirm withdrawal
+    await expect(page.getByRole('heading', { name: 'Withdraw Application' })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Withdraw Application' }).last().click();
 
     // Wait for withdrawal to process
     await page.waitForTimeout(1000);

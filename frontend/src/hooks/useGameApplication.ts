@@ -24,6 +24,7 @@ export function useGameApplication({
   const [userApplication, setUserApplication] = useState<GameApplication | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
 
   // Fetch user's application if not GM and not already in the game
   // Note: Users can apply during recruitment (player) or anytime (audience)
@@ -63,9 +64,11 @@ export function useGameApplication({
     await refetchUserApplication();
   };
 
-  const handleWithdrawApplication = async () => {
-    if (!confirm('Are you sure you want to withdraw your application?')) return;
+  const handleWithdrawApplication = () => {
+    setShowWithdrawModal(true);
+  };
 
+  const confirmWithdrawApplication = async () => {
     try {
       setActionLoading(true);
       await apiClient.games.withdrawGameApplication(gameId);
@@ -83,8 +86,11 @@ export function useGameApplication({
     actionLoading,
     showApplyModal,
     setShowApplyModal,
+    showWithdrawModal,
+    setShowWithdrawModal,
     handleApplicationSubmitted,
     handleWithdrawApplication,
+    confirmWithdrawApplication,
     refetchUserApplication,
   };
 }

@@ -9,9 +9,10 @@ interface GameApplicationsListProps {
   gameId: number;
   isGM?: boolean;
   gameState?: GameState;
+  refreshTrigger?: number; // Add trigger to force refresh
 }
 
-export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameApplicationsListProps) => {
+export const GameApplicationsList = ({ gameId, isGM = false, gameState, refreshTrigger }: GameApplicationsListProps) => {
   const { showError } = useToast();
   const [applications, setApplications] = useState<GameApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +22,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState }: GameAp
     if (isGM) {
       fetchApplications();
     }
-  }, [gameId, isGM]);
+  }, [gameId, isGM, refreshTrigger]);
 
   const fetchApplications = async () => {
     try {
