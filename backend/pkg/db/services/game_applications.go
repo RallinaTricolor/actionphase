@@ -349,8 +349,9 @@ func (gas *GameApplicationService) ConvertApprovedApplicationsToParticipants(ctx
 
 	queries := models.New(gas.DB)
 
-	// Create participants for each approved application
+	// Create participants for each approved application and delete the application record
 	for _, app := range approvedApplications {
+		// Create participant
 		_, err := queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
 			GameID: app.GameID,
 			UserID: app.UserID,
@@ -358,6 +359,17 @@ func (gas *GameApplicationService) ConvertApprovedApplicationsToParticipants(ctx
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create participant from application %d: %w", app.ID, err)
+		}
+
+		// Delete the application record now that user is a participant
+		// This prevents confusion - approved applicants should only exist as participants
+		err = queries.DeleteGameApplication(ctx, models.DeleteGameApplicationParams{
+			ID:     app.ID,
+			UserID: app.UserID,
+		})
+		if err != nil {
+			// Log but don't fail - participant is created
+			return fmt.Errorf("failed to delete application %d after creating participant: %w", app.ID, err)
 		}
 	}
 
