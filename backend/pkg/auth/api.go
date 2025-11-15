@@ -225,7 +225,6 @@ func (h *Handler) V1UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 type UserSearchResult struct {
 	ID        int32  `json:"id"`
 	Username  string `json:"username"`
-	Email     string `json:"email"`
 	CreatedAt string `json:"created_at"`
 }
 
@@ -269,7 +268,6 @@ func (h *Handler) V1SearchUsers(w http.ResponseWriter, r *http.Request) {
 		results = append(results, UserSearchResult{
 			ID:        user.ID,
 			Username:  user.Username,
-			Email:     user.Email,
 			CreatedAt: user.CreatedAt.Time.Format("2006-01-02T15:04:05Z07:00"),
 		})
 	}

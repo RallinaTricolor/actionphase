@@ -401,7 +401,7 @@ func (q *Queries) GetGameParticipantCount(ctx context.Context, gameID int32) (in
 }
 
 const getGameParticipants = `-- name: GetGameParticipants :many
-SELECT gp.id, gp.game_id, gp.user_id, gp.role, gp.status, gp.joined_at, gp.removed_at, gp.removed_by_user_id, u.username, u.email
+SELECT gp.id, gp.game_id, gp.user_id, gp.role, gp.status, gp.joined_at, gp.removed_at, gp.removed_by_user_id, u.username, u.avatar_url
 FROM game_participants gp
 JOIN users u ON gp.user_id = u.id
 WHERE gp.game_id = $1 AND gp.status = 'active'
@@ -418,7 +418,7 @@ type GetGameParticipantsRow struct {
 	RemovedAt       pgtype.Timestamptz `json:"removed_at"`
 	RemovedByUserID pgtype.Int4        `json:"removed_by_user_id"`
 	Username        string             `json:"username"`
-	Email           string             `json:"email"`
+	AvatarUrl       pgtype.Text        `json:"avatar_url"`
 }
 
 func (q *Queries) GetGameParticipants(ctx context.Context, gameID int32) ([]GetGameParticipantsRow, error) {
@@ -440,7 +440,7 @@ func (q *Queries) GetGameParticipants(ctx context.Context, gameID int32) ([]GetG
 			&i.RemovedAt,
 			&i.RemovedByUserID,
 			&i.Username,
-			&i.Email,
+			&i.AvatarUrl,
 		); err != nil {
 			return nil, err
 		}

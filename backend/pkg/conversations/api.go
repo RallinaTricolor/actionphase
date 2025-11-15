@@ -9,6 +9,7 @@ import (
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
+	"actionphase/pkg/db/services/phases"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -321,6 +322,30 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	if !core.CanUserControlNPC(ctx, h.App.Pool, data.CharacterID, userID) {
 		h.App.Logger.Warn("User cannot control character", "character_id", data.CharacterID, "user_id", userID)
 		render.Render(w, r, core.ErrForbidden("you cannot send messages as this character"))
+		return
+	}
+
+	// Get character to access game_id for phase validation
+	characterService := &db.CharacterService{DB: h.App.Pool}
+	character, err := characterService.GetCharacter(ctx, data.CharacterID)
+	if err != nil {
+		h.App.Logger.Error("Failed to get character", "error", err, "character_id", data.CharacterID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	// Validate that the game is in a common room phase
+	phaseService := &phases.PhaseService{DB: h.App.Pool}
+	activePhase, err := phaseService.GetActivePhase(ctx, character.GameID)
+	if err != nil {
+		h.App.Logger.Error("Failed to get active phase", "error", err, "game_id", character.GameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if activePhase == nil || activePhase.PhaseType != "common_room" {
+		h.App.Logger.Warn("Cannot send private messages outside common room phase", "game_id", character.GameID, "phase_type", activePhase.PhaseType)
+		render.Render(w, r, core.ErrForbidden("private messages can only be sent during common room phases"))
 		return
 	}
 

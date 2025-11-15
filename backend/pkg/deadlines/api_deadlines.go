@@ -373,6 +373,7 @@ func toDeadlineWithGameResponse(d *core.DeadlineWithGame) *DeadlineWithGameRespo
 
 // Helper function to verify user is GM of a game
 // Returns the game if verification succeeds, or an error response if it fails
+// Uses the unified permission check for GM, Co-GM, and admin mode support
 func (h *Handler) verifyUserIsGM(ctx context.Context, gameID int32, userID int32) (*models.Game, render.Renderer) {
 	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, gameID)
@@ -381,9 +382,18 @@ func (h *Handler) verifyUserIsGM(ctx context.Context, gameID int32, userID int32
 		return nil, core.ErrNotFound("Game not found")
 	}
 
-	if game.GmUserID != userID {
-		h.App.ObsLogger.Warn(ctx, "User is not GM of game", "user_id", userID, "game_id", gameID)
-		return nil, core.ErrUnauthorized("Only GM can manage deadlines")
+	// Get user to check admin status
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	user, err := userService.User(int(userID))
+	if err != nil {
+		h.App.ObsLogger.LogError(ctx, err, "Failed to get user")
+		return nil, core.ErrUnauthorized("User not found")
+	}
+
+	// Check if user is GM, Co-GM, or admin with admin mode enabled
+	if !core.IsUserGameMasterCtx(ctx, userID, user.IsAdmin, *game, h.App.Pool) {
+		h.App.ObsLogger.Warn(ctx, "User is not authorized to manage deadlines", "user_id", userID, "game_id", gameID)
+		return nil, core.ErrUnauthorized("Only GM or Co-GM can manage deadlines")
 	}
 
 	return game, nil

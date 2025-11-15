@@ -419,7 +419,7 @@ export function ThreadedComment({
       className={`${getIndentPadding()} ${depth > 0 ? 'border-l-2 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2' : 'py-2'} border-b border-theme-subtle`}
     >
       {/* Comment Header and Content */}
-      <div className={`${isUnread ? 'border border-semantic-warning rounded-lg p-3 -ml-3' : ''}`}>
+      <div className={`${isUnread ? 'border border-semantic-warning rounded-lg p-3' : ''}`}>
         <div className="flex items-start gap-1.5 md:gap-2 mb-1">
           <CharacterAvatar
             avatarUrl={comment.character_avatar_url}

@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 	"actionphase/pkg/observability"
 )
@@ -286,12 +287,13 @@ func (cs *CharacterService) CanUserEditCharacter(ctx context.Context, characterI
 		return false, err
 	}
 
-	if game.GmUserID == userID {
-		cs.Logger.Debug(ctx, "Authorization granted: game GM",
+	// Check if user is GM or Co-GM
+	if game.GmUserID == userID || core.IsUserCoGM(ctx, cs.DB, character.GameID, userID) {
+		cs.Logger.Debug(ctx, "Authorization granted: game GM or Co-GM",
 			"character_id", characterID,
 			"user_id", userID,
 			"game_id", character.GameID,
-			"reason", "game_gm",
+			"reason", "game_gm_or_co_gm",
 		)
 		return true, nil
 	}

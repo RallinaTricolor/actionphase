@@ -117,7 +117,7 @@ func (s *HandoutService) GetHandout(ctx context.Context, handoutID int32, userID
 	}
 
 	// If handout is draft and user is not GM, deny access
-	if handout.Status == "draft" && game.GmUserID != userID {
+	if handout.Status == "draft" && game.GmUserID != userID && !core.IsUserCoGM(ctx, s.DB, handout.GameID, userID) {
 		return nil, fmt.Errorf("access denied: draft handouts are only visible to GM")
 	}
 

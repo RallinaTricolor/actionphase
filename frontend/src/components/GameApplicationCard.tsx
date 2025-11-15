@@ -4,6 +4,7 @@ import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from '../types/g
 import { Button } from './ui';
 import { ConfirmModal } from './ConfirmModal';
 import { logger } from '@/services/LoggingService';
+import { getInitials, getAvatarColor } from '../utils/avatar';
 
 interface GameApplicationCardProps {
   application: GameApplication;
@@ -67,16 +68,29 @@ export const GameApplicationCard = ({
   return (
     <div className="surface-base border border-theme-default rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow" data-testid="application-card">
       <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-content-primary">
-            {application.username || `User ${application.user_id}`}
-          </h3>
-          <p className="text-sm text-content-secondary capitalize">
-            Applying as <b className={"text-semantic-info"}>{application.role}</b>
-          </p>
-          {application.email && (
-            <p className="text-sm text-content-secondary">{application.email}</p>
+        <div className="flex items-center gap-3">
+          {/* Avatar */}
+          {application.avatar_url ? (
+            <img
+              src={application.avatar_url}
+              alt={`${application.username || 'User'}'s avatar`}
+              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 ${getAvatarColor(application.username || `User ${application.user_id}`)}`}>
+              {getInitials(application.username || `User ${application.user_id}`)}
+            </div>
           )}
+
+          {/* Username and Role */}
+          <div>
+            <h3 className="text-lg font-semibold text-content-primary">
+              {application.username || `User ${application.user_id}`}
+            </h3>
+            <p className="text-sm text-content-secondary capitalize">
+              Applying as <b className={"text-semantic-info"}>{application.role}</b>
+            </p>
+          </div>
         </div>
         <span className={`px-3 py-1 rounded-full text-sm font-medium ${APPLICATION_STATUS_COLORS[application.status]}`} data-testid="application-status-badge">
           {APPLICATION_STATUS_LABELS[application.status]}

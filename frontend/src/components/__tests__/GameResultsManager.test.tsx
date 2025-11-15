@@ -801,7 +801,7 @@ describe('GameResultsManager', () => {
       expect(screen.queryByText(/show full content/i)).not.toBeInTheDocument();
     });
 
-    it('does NOT show collapse button for published results (always expanded)', async () => {
+    it('shows collapse button for long published results', async () => {
       const longContent = 'A'.repeat(350);
       const longPublishedResult: ActionResult = {
         ...mockPublishedResult,
@@ -811,11 +811,25 @@ describe('GameResultsManager', () => {
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
 
+      // Should show truncated content initially
+      await waitFor(() => {
+        expect(screen.getByText(longContent.substring(0, 200) + '...')).toBeInTheDocument();
+      });
+
+      // Should have "Show full content" button
+      const showMoreButton = screen.getByText(/show full content/i);
+      expect(showMoreButton).toBeInTheDocument();
+
+      // Click to expand
+      await userEvent.click(showMoreButton);
+
+      // Now full content should be visible
       await waitFor(() => {
         expect(screen.getByText(longContent)).toBeInTheDocument();
       });
 
-      expect(screen.queryByText(/show full content/i)).not.toBeInTheDocument();
+      // Button text should change to "Show less"
+      expect(screen.getByText(/show less/i)).toBeInTheDocument();
     });
 
     it('shows truncated preview when collapsed', async () => {

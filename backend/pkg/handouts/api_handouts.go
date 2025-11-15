@@ -2,6 +2,7 @@ package handouts
 
 import (
 	"actionphase/pkg/core"
+	models "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
 	"context"
 	"fmt"
@@ -11,6 +12,26 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 )
+
+// verifyUserIsGM checks if a user is the GM or Co-GM of a game
+// Returns the game if verification succeeds, or an error response if it fails
+func (h *Handler) verifyUserIsGM(ctx context.Context, game *models.Game, userID int32) render.Renderer {
+	// Get user to check admin status
+	userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	user, err := userService.User(int(userID))
+	if err != nil {
+		h.App.ObsLogger.LogError(ctx, err, "Failed to get user")
+		return core.ErrUnauthorized("User not found")
+	}
+
+	// Check if user is GM, Co-GM, or admin with admin mode enabled
+	if !core.IsUserGameMasterCtx(ctx, userID, user.IsAdmin, *game, h.App.Pool) {
+		h.App.ObsLogger.Warn(ctx, "User is not authorized to manage handouts", "user_id", userID, "game_id", game.ID)
+		return core.ErrUnauthorized("Only GM or Co-GM can manage handouts")
+	}
+
+	return nil
+}
 
 // CreateHandout creates a new handout for a game
 func (h *Handler) CreateHandout(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +66,7 @@ func (h *Handler) CreateHandout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user is GM of the game
+	// Check if user is GM or Co-GM of the game
 	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, int32(gameID))
 	if err != nil {
@@ -54,9 +75,8 @@ func (h *Handler) CreateHandout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
-		h.App.ObsLogger.Warn(ctx, "User is not GM of game", "user_id", userID, "game_id", gameID)
-		render.Render(w, r, core.ErrUnauthorized("Only GM can manage handouts"))
+	if errResp := h.verifyUserIsGM(ctx, game, userID); errResp != nil {
+		render.Render(w, r, errResp)
 		return
 	}
 
@@ -166,7 +186,8 @@ func (h *Handler) ListHandouts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isGM := game.GmUserID == userID
+	// Check if user is GM or Co-GM (they can see draft handouts)
+	isGM := game.GmUserID == userID || core.IsUserCoGM(ctx, h.App.Pool, int32(gameID), userID)
 
 	// List handouts
 	handoutService := &db.HandoutService{DB: h.App.Pool}
@@ -245,9 +266,8 @@ func (h *Handler) UpdateHandout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
-		h.App.ObsLogger.Warn(ctx, "User is not GM of game", "user_id", userID, "game_id", game.ID)
-		render.Render(w, r, core.ErrUnauthorized("Only GM can manage handouts"))
+	if errResp := h.verifyUserIsGM(ctx, game, userID); errResp != nil {
+		render.Render(w, r, errResp)
 		return
 	}
 
@@ -317,9 +337,8 @@ func (h *Handler) DeleteHandout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
-		h.App.ObsLogger.Warn(ctx, "User is not GM of game", "user_id", userID, "game_id", game.ID)
-		render.Render(w, r, core.ErrUnauthorized("Only GM can manage handouts"))
+	if errResp := h.verifyUserIsGM(ctx, game, userID); errResp != nil {
+		render.Render(w, r, errResp)
 		return
 	}
 
@@ -379,9 +398,8 @@ func (h *Handler) PublishHandout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
-		h.App.ObsLogger.Warn(ctx, "User is not GM of game", "user_id", userID, "game_id", game.ID)
-		render.Render(w, r, core.ErrUnauthorized("Only GM can manage handouts"))
+	if errResp := h.verifyUserIsGM(ctx, game, userID); errResp != nil {
+		render.Render(w, r, errResp)
 		return
 	}
 
@@ -500,9 +518,8 @@ func (h *Handler) UnpublishHandout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
-		h.App.ObsLogger.Warn(ctx, "User is not GM of game", "user_id", userID, "game_id", game.ID)
-		render.Render(w, r, core.ErrUnauthorized("Only GM can manage handouts"))
+	if errResp := h.verifyUserIsGM(ctx, game, userID); errResp != nil {
+		render.Render(w, r, errResp)
 		return
 	}
 

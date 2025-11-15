@@ -7,6 +7,7 @@ import { AudienceMemberBadge } from './AudienceMemberBadge';
 import { Button } from './ui';
 import { apiClient } from '../lib/api';
 import type { GameParticipant, GameApplication } from '../types/games';
+import { getInitials, getAvatarColor } from '../utils/avatar';
 
 interface PeopleViewProps {
   gameId: number;
@@ -157,16 +158,32 @@ export function PeopleView({
                     {pendingAudienceApplications.map((application) => (
                       <div key={application.id} className="border border-theme-default rounded-lg p-4 surface-raised">
                         <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1">
-                            <div className="font-medium text-content-primary">{application.username}</div>
-                            <div className="text-sm text-content-tertiary">
-                              Applied {new Date(application.applied_at).toLocaleDateString()}
-                            </div>
-                            {application.message && (
-                              <div className="text-sm text-content-secondary mt-2 italic">
-                                "{application.message}"
+                          <div className="flex items-start gap-3 flex-1">
+                            {/* Avatar */}
+                            {application.avatar_url ? (
+                              <img
+                                src={application.avatar_url}
+                                alt={`${application.username || 'User'}'s avatar`}
+                                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getAvatarColor(application.username || 'User')}`}>
+                                {getInitials(application.username || 'User')}
                               </div>
                             )}
+
+                            {/* Content */}
+                            <div className="flex-1">
+                              <div className="font-medium text-content-primary">{application.username}</div>
+                              <div className="text-sm text-content-tertiary">
+                                Applied {new Date(application.applied_at).toLocaleDateString()}
+                              </div>
+                              {application.message && (
+                                <div className="text-sm text-content-secondary mt-2 italic">
+                                  "{application.message}"
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <ParticipantActionsMenu
                             gameId={gameId}
@@ -208,26 +225,42 @@ export function PeopleView({
                         return (
                           <div key={participant.id} className="border border-theme-default rounded-lg p-4 surface-raised">
                             <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <div className="font-medium text-content-primary">{participant.username}</div>
-                                  {participant.role === 'audience' && <AudienceMemberBadge />}
-                                  {isCurrentUser && <span className="text-xs text-content-tertiary">(You)</span>}
-                                </div>
-                                <div className="text-sm text-content-tertiary">
-                                  Joined {new Date(participant.joined_at).toLocaleDateString()}
-                                </div>
-                                {canLeaveGame && (
-                                  <Button
-                                    variant="danger"
-                                    size="sm"
-                                    onClick={onLeaveGame}
-                                    disabled={actionLoading}
-                                    className="mt-2 text-content-primary hover:text-semantic-danger"
-                                  >
-                                    Leave Game
-                                  </Button>
+                              <div className="flex items-start gap-3 flex-1">
+                                {/* Avatar */}
+                                {participant.avatar_url ? (
+                                  <img
+                                    src={participant.avatar_url}
+                                    alt={`${participant.username}'s avatar`}
+                                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                                  />
+                                ) : (
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getAvatarColor(participant.username)}`}>
+                                    {getInitials(participant.username)}
+                                  </div>
                                 )}
+
+                                {/* Content */}
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <div className="font-medium text-content-primary">{participant.username}</div>
+                                    {participant.role === 'audience' && <AudienceMemberBadge />}
+                                    {isCurrentUser && <span className="text-xs text-content-tertiary">(You)</span>}
+                                  </div>
+                                  <div className="text-sm text-content-tertiary">
+                                    Joined {new Date(participant.joined_at).toLocaleDateString()}
+                                  </div>
+                                  {canLeaveGame && (
+                                    <Button
+                                      variant="danger"
+                                      size="sm"
+                                      onClick={onLeaveGame}
+                                      disabled={actionLoading}
+                                      className="mt-2 text-content-primary hover:text-semantic-danger"
+                                    >
+                                      Leave Game
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                               {isGM && !isCurrentUser && gameState !== 'completed' && gameState !== 'cancelled' && (
                                 <ParticipantActionsMenu

@@ -18,7 +18,7 @@ WHERE game_id = $1 AND user_id = $2;
 SELECT
     ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
-    u.email
+    u.avatar_url
 FROM game_applications ga
 JOIN users u ON ga.user_id = u.id
 WHERE ga.game_id = $1
@@ -28,7 +28,7 @@ ORDER BY ga.applied_at ASC;
 SELECT
     ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
-    u.email
+    u.avatar_url
 FROM game_applications ga
 JOIN users u ON ga.user_id = u.id
 WHERE ga.game_id = $1 AND ga.status = $2
@@ -64,7 +64,7 @@ WHERE game_id = $1 AND status = 'pending';
 SELECT
     ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
-    u.email
+    u.avatar_url
 FROM game_applications ga
 JOIN users u ON ga.user_id = u.id
 WHERE ga.game_id = $1 AND ga.status = 'approved'
@@ -117,7 +117,8 @@ WHERE game_id = $1;
 -- Returns only username and role, NOT status or review information
 SELECT
     ga.id, ga.game_id, ga.user_id, ga.role, ga.applied_at,
-    u.username
+    u.username,
+    u.avatar_url
 FROM game_applications ga
 JOIN users u ON ga.user_id = u.id
 WHERE ga.game_id = $1

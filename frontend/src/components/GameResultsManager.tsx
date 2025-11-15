@@ -138,8 +138,8 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
   const publishMutation = usePublishActionResult(gameId);
   const { data: draftCount } = useDraftUpdateCount(gameId, result.id);
 
-  // Determine if content should be collapsible (long unpublished results)
-  const isCollapsible = !result.is_published && result.content.length > 200;
+  // Determine if content should be collapsible (long results)
+  const isCollapsible = result.content.length > 200;
   const previewContent = result.content.substring(0, 200) + '...';
 
   const handleSave = async () => {

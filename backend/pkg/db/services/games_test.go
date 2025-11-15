@@ -357,7 +357,7 @@ func TestGameService_DeleteGame(t *testing.T) {
 			gameID:      otherGMGame.ID,
 			userID:      int32(fixtures.TestUser.ID),
 			expectError: true,
-			errorMsg:    "only the game master can delete this game",
+			errorMsg:    "only the game master or co-GM can delete this game",
 		},
 		{
 			name:        "cannot delete non-cancelled game",
