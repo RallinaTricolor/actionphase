@@ -665,6 +665,7 @@ func enrichedGameFromRow(row models.GetFilteredGamesRow) *core.EnrichedGameListI
 		MaxPlayers:           nullInt4ToInt32Ptr(row.MaxPlayers),
 		IsPublic:             boolToBool(row.IsPublic),
 		IsAnonymous:          row.IsAnonymous,
+		AutoAcceptAudience:   row.AutoAcceptAudience,
 		CreatedAt:            timestamptzToTime(row.CreatedAt),
 		UpdatedAt:            timestamptzToTime(row.UpdatedAt),
 		CurrentPlayers:       int32(row.CurrentPlayers),

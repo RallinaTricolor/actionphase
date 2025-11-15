@@ -66,12 +66,6 @@ func (h *Handler) Start() {
 	r.Get("/health", h.App.Observability.HealthHandler())
 	r.Get("/metrics", h.App.Observability.MetricsHandler())
 
-	// Debug endpoint - should be removed in production
-	r.Get("/debug-games", func(w http.ResponseWriter, r *http.Request) {
-		gameHandler := games.Handler{App: h.App}
-		gameHandler.GetAllGamesDebug(w, r)
-	})
-
 	r.Get("/panic", func(w http.ResponseWriter, r *http.Request) {
 		panic("test")
 	})

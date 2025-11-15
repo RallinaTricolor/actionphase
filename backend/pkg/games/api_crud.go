@@ -163,44 +163,6 @@ func (h *Handler) GetGame(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, r, response)
 }
 
-// GetAllGamesDebug performs a direct SQL query for debugging
-func (h *Handler) GetAllGamesDebug(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	defer h.App.ObsLogger.LogOperation(ctx, "api_get_all_games_debug")()
-
-	// Direct SQL query to bypass SQLC
-	rows, err := h.App.Pool.Query(ctx, "SELECT id, title, is_public FROM games WHERE is_public = true ORDER BY id DESC")
-	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Direct query failed", "error", err)
-		render.Render(w, r, core.ErrInternalError(err))
-		return
-	}
-	defer rows.Close()
-
-	var games []map[string]interface{}
-	for rows.Next() {
-		var id int32
-		var title string
-		var isPublic bool
-
-		if err := rows.Scan(&id, &title, &isPublic); err != nil {
-			h.App.ObsLogger.Error(ctx, "Row scan failed", "error", err)
-			continue
-		}
-
-		games = append(games, map[string]interface{}{
-			"id":        id,
-			"title":     title,
-			"is_public": isPublic,
-		})
-	}
-
-	h.App.ObsLogger.Info(ctx, "Direct query returned", "count", len(games))
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(games)
-}
-
 // UpdateGameState updates the state of a game
 func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -681,6 +643,7 @@ func (h *Handler) GetFilteredGames(w http.ResponseWriter, r *http.Request) {
 			MaxPlayers:           game.MaxPlayers,
 			IsPublic:             game.IsPublic,
 			IsAnonymous:          game.IsAnonymous,
+			AutoAcceptAudience:   game.AutoAcceptAudience,
 			CreatedAt:            game.CreatedAt,
 			UpdatedAt:            game.UpdatedAt,
 			CurrentPlayers:       game.CurrentPlayers,
