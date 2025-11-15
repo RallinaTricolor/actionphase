@@ -224,7 +224,12 @@ export function CharactersList({
                     getStatusBadgeVariant={getStatusBadgeVariant}
                     canViewSheet={canViewCharacterSheet(character)}
                     canEditSheet={canEditCharacterSheet(character)}
-                    onViewSheet={() => setSelectedCharacterId(character.id)}
+                    onViewSheet={() => {
+                      // Invalidate queries to ensure fresh data when opening sheet
+                      queryClient.invalidateQueries({ queryKey: ['character', character.id] });
+                      queryClient.invalidateQueries({ queryKey: ['characterData', character.id] });
+                      setSelectedCharacterId(character.id);
+                    }}
                   />
                 ))}
               </div>
@@ -249,7 +254,12 @@ export function CharactersList({
                           getStatusBadgeVariant={getStatusBadgeVariant}
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
-                          onViewSheet={() => setSelectedCharacterId(character.id)}
+                          onViewSheet={() => {
+                      // Invalidate queries to ensure fresh data when opening sheet
+                      queryClient.invalidateQueries({ queryKey: ['character', character.id] });
+                      queryClient.invalidateQueries({ queryKey: ['characterData', character.id] });
+                      setSelectedCharacterId(character.id);
+                    }}
                         />
                       ))}
                     </div>
@@ -274,7 +284,12 @@ export function CharactersList({
                           getStatusBadgeVariant={getStatusBadgeVariant}
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
-                          onViewSheet={() => setSelectedCharacterId(character.id)}
+                          onViewSheet={() => {
+                      // Invalidate queries to ensure fresh data when opening sheet
+                      queryClient.invalidateQueries({ queryKey: ['character', character.id] });
+                      queryClient.invalidateQueries({ queryKey: ['characterData', character.id] });
+                      setSelectedCharacterId(character.id);
+                    }}
                         />
                       ))}
                     </div>

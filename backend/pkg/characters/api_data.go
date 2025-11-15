@@ -74,8 +74,9 @@ func (h *Handler) SetCharacterData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if game.GmUserID != userID {
-			render.Render(w, r, core.ErrForbidden("only GMs can edit character stats (abilities, skills, items, currency)"))
+		// Check if user is GM or Co-GM
+		if game.GmUserID != userID && !core.IsUserCoGM(ctx, h.App.Pool, character.GameID, userID) {
+			render.Render(w, r, core.ErrForbidden("only GMs and Co-GMs can edit character stats (abilities, skills, items, currency)"))
 			return
 		}
 	}

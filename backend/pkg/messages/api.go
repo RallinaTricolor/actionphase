@@ -192,7 +192,7 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isPrimaryGM := game.GmUserID == userID
+	isPrimaryGM := game.GmUserID == userID || core.IsUserCoGM(ctx, h.App.Pool, int32(gameID), userID)
 	isCoGM := core.IsUserCoGM(ctx, h.App.Pool, int32(gameID), userID)
 
 	if !isPrimaryGM && !isCoGM {

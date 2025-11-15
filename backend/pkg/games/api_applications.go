@@ -238,6 +238,9 @@ func (h *Handler) GetGameApplications(w http.ResponseWriter, r *http.Request) {
 			"applied_at": app.AppliedAt.Time,
 		}
 
+		if app.AvatarUrl.Valid {
+			appData["avatar_url"] = app.AvatarUrl.String
+		}
 		if app.Message.Valid {
 			appData["message"] = app.Message.String
 		}
@@ -510,12 +513,16 @@ func (h *Handler) GetPublicGameApplicants(w http.ResponseWriter, r *http.Request
 	// Initialize as empty slice to ensure JSON encodes as [] not null
 	response := make([]map[string]interface{}, 0)
 	for _, applicant := range applicants {
-		response = append(response, map[string]interface{}{
+		applicantData := map[string]interface{}{
 			"id":         applicant.ID,
 			"username":   applicant.Username,
 			"role":       applicant.Role,
 			"applied_at": applicant.AppliedAt.Time,
-		})
+		}
+		if applicant.AvatarUrl.Valid {
+			applicantData["avatar_url"] = applicant.AvatarUrl.String
+		}
+		response = append(response, applicantData)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

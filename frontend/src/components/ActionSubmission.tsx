@@ -17,6 +17,7 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showPreviousActions, setShowPreviousActions] = useState(false);
+  const [isCurrentActionExpanded, setIsCurrentActionExpanded] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -130,37 +131,64 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
         )}
 
         {/* Current Action Display */}
-        {currentAction && !isExpanded && (
-          <div className="mb-6 p-4 bg-semantic-info-subtle border border-semantic-info rounded-lg" data-testid="current-action-display">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h3 className="font-medium text-content-primary mb-2">Your Current Action</h3>
-                <div className="text-sm text-content-primary surface-base p-3 rounded border border-theme-default whitespace-pre-wrap" data-testid="action-content">
-                  {currentAction.content}
-                </div>
-                {currentAction.character_name && (
-                  <p className="text-sm text-content-primary mt-2">
-                    Acting as: <span className="font-medium">{currentAction.character_name}</span>
+        {currentAction && !isExpanded && (() => {
+          const isCollapsible = currentAction.content.length > 200;
+          const previewContent = currentAction.content.substring(0, 200) + '...';
+
+          return (
+            <div className="mb-6 p-4 bg-semantic-info-subtle border border-semantic-info rounded-lg" data-testid="current-action-display">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="font-medium text-content-primary mb-2">Your Current Action</h3>
+                  <div className="text-sm text-content-primary surface-base p-3 rounded border border-theme-default whitespace-pre-wrap" data-testid="action-content">
+                    {isCollapsible && !isCurrentActionExpanded ? previewContent : currentAction.content}
+                  </div>
+                  {isCollapsible && (
+                    <button
+                      onClick={() => setIsCurrentActionExpanded(!isCurrentActionExpanded)}
+                      className="mt-2 text-sm text-interactive-primary hover:text-interactive-primary-hover font-medium flex items-center"
+                    >
+                      {isCurrentActionExpanded ? (
+                        <>
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          </svg>
+                          Show less
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                          Show full content
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {currentAction.character_name && (
+                    <p className="text-sm text-content-primary mt-2">
+                      Acting as: <span className="font-medium">{currentAction.character_name}</span>
+                    </p>
+                  )}
+                  <p className="text-xs text-content-primary mt-1" data-testid="action-status">
+                    Last updated: {new Date(currentAction.updated_at).toLocaleString()}
                   </p>
+                </div>
+                {canSubmitAction && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setIsExpanded(true)}
+                    className="ml-4"
+                    data-testid="edit-action-button"
+                  >
+                    Edit
+                  </Button>
                 )}
-                <p className="text-xs text-content-primary mt-1" data-testid="action-status">
-                  Last updated: {new Date(currentAction.updated_at).toLocaleString()}
-                </p>
               </div>
-              {canSubmitAction && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => setIsExpanded(true)}
-                  className="ml-4"
-                  data-testid="edit-action-button"
-                >
-                  Edit
-                </Button>
-              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Submission Form */}
         {(!currentAction || isExpanded) && canSubmitAction && (
@@ -297,9 +325,21 @@ interface ActionHistoryProps {
 }
 
 function ActionHistory({ actions, currentPhaseId }: ActionHistoryProps) {
+  const [expandedActions, setExpandedActions] = useState<Set<number>>(new Set());
+
   // Filter out the current phase action
   const previousActions = actions.filter(action => action.phase_id !== currentPhaseId);
   const sortedActions = [...previousActions].sort((a, b) => (b.phase_number || 0) - (a.phase_number || 0));
+
+  const toggleExpanded = (actionId: number) => {
+    const newExpanded = new Set(expandedActions);
+    if (newExpanded.has(actionId)) {
+      newExpanded.delete(actionId);
+    } else {
+      newExpanded.add(actionId);
+    }
+    setExpandedActions(newExpanded);
+  };
 
   if (sortedActions.length === 0) {
     return (
@@ -311,28 +351,56 @@ function ActionHistory({ actions, currentPhaseId }: ActionHistoryProps) {
 
   return (
     <div className="space-y-3">
-      {sortedActions.map((action) => (
-        <div key={action.id} className="border border-theme-default rounded-lg p-4">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center space-x-2">
-              <span className="px-2 py-1 surface-raised text-content-secondary text-xs rounded font-medium">
-                Phase {action.phase_number} - {action.phase_type?.replace('_', ' ')}
-              </span>
-              {action.character_name && (
-                <span className="text-sm text-content-secondary">
-                  as {action.character_name}
+      {sortedActions.map((action) => {
+        const isExpanded = expandedActions.has(action.id);
+        const isCollapsible = action.content.length > 200;
+        const previewContent = action.content.substring(0, 200) + '...';
+
+        return (
+          <div key={action.id} className="border border-theme-default rounded-lg p-4">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <span className="px-2 py-1 surface-raised text-content-secondary text-xs rounded font-medium">
+                  Phase {action.phase_number} - {action.phase_type?.replace('_', ' ')}
                 </span>
-              )}
+                {action.character_name && (
+                  <span className="text-sm text-content-secondary">
+                    as {action.character_name}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-content-tertiary">
+                {new Date(action.submitted_at).toLocaleString()}
+              </span>
             </div>
-            <span className="text-xs text-content-tertiary">
-              {new Date(action.submitted_at).toLocaleString()}
-            </span>
+            <div className="text-sm text-content-primary surface-raised p-3 rounded whitespace-pre-wrap">
+              {isCollapsible && !isExpanded ? previewContent : action.content}
+            </div>
+            {isCollapsible && (
+              <button
+                onClick={() => toggleExpanded(action.id)}
+                className="mt-2 text-sm text-interactive-primary hover:text-interactive-primary-hover font-medium flex items-center"
+              >
+                {isExpanded ? (
+                  <>
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                    Show less
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    Show full content
+                  </>
+                )}
+              </button>
+            )}
           </div>
-          <div className="text-sm text-content-primary surface-raised p-3 rounded whitespace-pre-wrap">
-            {action.content}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -577,13 +577,13 @@ func (s *MessageService) CanUserDeleteComment(ctx context.Context, commentID int
 		return false, fmt.Errorf("failed to get comment details: %w", err)
 	}
 
-	// Check if user is the GM of the game
+	// Check if user is the GM or Co-GM of the game
 	game, err := queries.GetGame(ctx, fullComment.GameID)
 	if err != nil {
 		return false, fmt.Errorf("failed to get game: %w", err)
 	}
 
-	if game.GmUserID == userID {
+	if game.GmUserID == userID || core.IsUserCoGM(ctx, s.DB, fullComment.GameID, userID) {
 		return true, nil
 	}
 

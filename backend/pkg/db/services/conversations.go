@@ -557,7 +557,7 @@ func (s *ConversationService) CanUserAccessConversation(ctx context.Context, con
 	// Check if user is GM (includes primary GM, co-GM, and admin mode)
 	// Note: We can't check admin mode here since we don't have the HTTP request
 	// The handler should check this separately or pass admin mode as a parameter
-	if game.GmUserID == userID {
+	if game.GmUserID == userID || core.IsUserCoGM(ctx, s.DB, conv.GameID, userID) {
 		return true, nil
 	}
 

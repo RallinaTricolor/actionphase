@@ -22,7 +22,6 @@ interface AddPlayerModalProps {
 interface SearchResult {
   id: number;
   username: string;
-  email: string;
   created_at: string;
 }
 
@@ -145,7 +144,9 @@ export function AddPlayerModal({ gameId, isOpen, onClose, onSuccess }: AddPlayer
                   className="w-full px-4 py-3 text-left hover:bg-bg-secondary transition-colors border-b border-border-primary last:border-b-0"
                 >
                   <div className="font-medium text-text-heading">{user.username}</div>
-                  <div className="text-sm text-text-secondary">{user.email}</div>
+                  <div className="text-sm text-text-secondary">
+                    Joined {new Date(user.created_at).toLocaleDateString()}
+                  </div>
                 </button>
               ))}
             </div>

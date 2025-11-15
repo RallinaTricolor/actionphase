@@ -40,7 +40,7 @@ RETURNING *;
 DELETE FROM games WHERE id = $1 AND state = 'cancelled';
 
 -- name: GetGameParticipants :many
-SELECT gp.*, u.username, u.email
+SELECT gp.*, u.username, u.avatar_url
 FROM game_participants gp
 JOIN users u ON gp.user_id = u.id
 WHERE gp.game_id = $1 AND gp.status = 'active'

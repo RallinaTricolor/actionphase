@@ -30,7 +30,7 @@ export interface GameParticipant {
   game_id: number;
   user_id: number;
   username: string;
-  email: string;
+  avatar_url?: string | null;
   role: ParticipantRole;
   status: ParticipantStatus;
   joined_at: string;
@@ -76,7 +76,7 @@ export interface GameApplication {
   game_id: number;
   user_id: number;
   username?: string;
-  email?: string;
+  avatar_url?: string | null;
   role: 'player' | 'audience';
   message?: string;
   status: ApplicationStatus;
@@ -90,6 +90,7 @@ export interface GameApplication {
 export interface PublicGameApplicant {
   id: number;
   username: string;
+  avatar_url?: string | null;
   role: 'player' | 'audience';
   applied_at: string;
 }

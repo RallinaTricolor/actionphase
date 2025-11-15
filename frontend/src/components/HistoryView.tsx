@@ -12,9 +12,10 @@ interface HistoryViewProps {
   gameId: number;
   currentPhaseId?: number;
   isGM?: boolean;
+  isAudience?: boolean;
 }
 
-export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryViewProps) {
+export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience = false }: HistoryViewProps) {
   const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'submissions' | 'results' | 'polls'>('submissions');
 
@@ -245,7 +246,7 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false }: HistoryVie
               </>
             ) : (
               // Polls Tab
-              <PhaseHistoryPolls gameId={gameId} phaseId={selectedPhaseId} isGM={isGM} />
+              <PhaseHistoryPolls gameId={gameId} phaseId={selectedPhaseId} isGM={isGM} isAudience={isAudience} />
             )}
           </div>
         )}

@@ -155,7 +155,7 @@ const getApprovedApplicationsForGame = `-- name: GetApprovedApplicationsForGame 
 SELECT
     ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
-    u.email
+    u.avatar_url
 FROM game_applications ga
 JOIN users u ON ga.user_id = u.id
 WHERE ga.game_id = $1 AND ga.status = 'approved'
@@ -174,7 +174,7 @@ type GetApprovedApplicationsForGameRow struct {
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
 	IsPublished      bool               `json:"is_published"`
 	Username         string             `json:"username"`
-	Email            string             `json:"email"`
+	AvatarUrl        pgtype.Text        `json:"avatar_url"`
 }
 
 func (q *Queries) GetApprovedApplicationsForGame(ctx context.Context, gameID int32) ([]GetApprovedApplicationsForGameRow, error) {
@@ -198,7 +198,7 @@ func (q *Queries) GetApprovedApplicationsForGame(ctx context.Context, gameID int
 			&i.AppliedAt,
 			&i.IsPublished,
 			&i.Username,
-			&i.Email,
+			&i.AvatarUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -292,7 +292,7 @@ const getGameApplications = `-- name: GetGameApplications :many
 SELECT
     ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
-    u.email
+    u.avatar_url
 FROM game_applications ga
 JOIN users u ON ga.user_id = u.id
 WHERE ga.game_id = $1
@@ -311,7 +311,7 @@ type GetGameApplicationsRow struct {
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
 	IsPublished      bool               `json:"is_published"`
 	Username         string             `json:"username"`
-	Email            string             `json:"email"`
+	AvatarUrl        pgtype.Text        `json:"avatar_url"`
 }
 
 func (q *Queries) GetGameApplications(ctx context.Context, gameID int32) ([]GetGameApplicationsRow, error) {
@@ -335,7 +335,7 @@ func (q *Queries) GetGameApplications(ctx context.Context, gameID int32) ([]GetG
 			&i.AppliedAt,
 			&i.IsPublished,
 			&i.Username,
-			&i.Email,
+			&i.AvatarUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -351,7 +351,7 @@ const getGameApplicationsByStatus = `-- name: GetGameApplicationsByStatus :many
 SELECT
     ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,
     u.username,
-    u.email
+    u.avatar_url
 FROM game_applications ga
 JOIN users u ON ga.user_id = u.id
 WHERE ga.game_id = $1 AND ga.status = $2
@@ -375,7 +375,7 @@ type GetGameApplicationsByStatusRow struct {
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
 	IsPublished      bool               `json:"is_published"`
 	Username         string             `json:"username"`
-	Email            string             `json:"email"`
+	AvatarUrl        pgtype.Text        `json:"avatar_url"`
 }
 
 func (q *Queries) GetGameApplicationsByStatus(ctx context.Context, arg GetGameApplicationsByStatusParams) ([]GetGameApplicationsByStatusRow, error) {
@@ -399,7 +399,7 @@ func (q *Queries) GetGameApplicationsByStatus(ctx context.Context, arg GetGameAp
 			&i.AppliedAt,
 			&i.IsPublished,
 			&i.Username,
-			&i.Email,
+			&i.AvatarUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -414,7 +414,8 @@ func (q *Queries) GetGameApplicationsByStatus(ctx context.Context, arg GetGameAp
 const getPublicGameApplicants = `-- name: GetPublicGameApplicants :many
 SELECT
     ga.id, ga.game_id, ga.user_id, ga.role, ga.applied_at,
-    u.username
+    u.username,
+    u.avatar_url
 FROM game_applications ga
 JOIN users u ON ga.user_id = u.id
 WHERE ga.game_id = $1
@@ -428,6 +429,7 @@ type GetPublicGameApplicantsRow struct {
 	Role      string             `json:"role"`
 	AppliedAt pgtype.Timestamptz `json:"applied_at"`
 	Username  string             `json:"username"`
+	AvatarUrl pgtype.Text        `json:"avatar_url"`
 }
 
 // Public endpoint: Get list of applicants for a game (no approval/rejection status)
@@ -449,6 +451,7 @@ func (q *Queries) GetPublicGameApplicants(ctx context.Context, gameID int32) ([]
 			&i.Role,
 			&i.AppliedAt,
 			&i.Username,
+			&i.AvatarUrl,
 		); err != nil {
 			return nil, err
 		}

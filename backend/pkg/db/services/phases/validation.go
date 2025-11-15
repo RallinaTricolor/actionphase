@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
 
@@ -37,7 +38,7 @@ func (ps *PhaseService) CanUserManagePhases(ctx context.Context, gameID, userID 
 		return false, fmt.Errorf("failed to get game: %w", err)
 	}
 
-	return game.GmUserID == userID, nil
+	return game.GmUserID == userID || core.IsUserCoGM(ctx, ps.DB, gameID, userID), nil
 }
 
 // CanUserSubmitActions checks if a user has permission to submit actions for a game

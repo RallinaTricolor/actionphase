@@ -202,14 +202,14 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 func (gs *GameService) LeaveGame(ctx context.Context, gameID, userID int32) error {
 	queries := models.New(gs.DB)
 
-	// Check if user is GM (GMs cannot leave their own games)
+	// Check if user is GM or Co-GM (they cannot leave their own games)
 	game, err := queries.GetGame(ctx, gameID)
 	if err != nil {
 		return err
 	}
 
-	if game.GmUserID == userID {
-		return fmt.Errorf("game master cannot leave their own game")
+	if game.GmUserID == userID || core.IsUserCoGM(ctx, gs.DB, gameID, userID) {
+		return fmt.Errorf("game master and co-GMs cannot leave their own game")
 	}
 
 	return queries.RemoveGameParticipant(ctx, models.RemoveGameParticipantParams{
@@ -221,7 +221,7 @@ func (gs *GameService) LeaveGame(ctx context.Context, gameID, userID int32) erro
 func (gs *GameService) GetUserRole(ctx context.Context, gameID, userID int32) (string, error) {
 	queries := models.New(gs.DB)
 
-	// Check if user is GM
+	// Check if user is primary GM
 	game, err := queries.GetGame(ctx, gameID)
 	if err != nil {
 		return "", err
@@ -231,7 +231,7 @@ func (gs *GameService) GetUserRole(ctx context.Context, gameID, userID int32) (s
 		return "gm", nil
 	}
 
-	// Check participant role
+	// Check if user is Co-GM or participant
 	role, err := queries.GetParticipantRole(ctx, models.GetParticipantRoleParams{
 		GameID: gameID,
 		UserID: userID,
@@ -246,7 +246,7 @@ func (gs *GameService) GetUserRole(ctx context.Context, gameID, userID int32) (s
 func (gs *GameService) IsUserInGame(ctx context.Context, gameID, userID int32) (bool, error) {
 	queries := models.New(gs.DB)
 
-	// Check if user is GM
+	// Check if user is primary GM
 	game, err := queries.GetGame(ctx, gameID)
 	if err != nil {
 		return false, err
@@ -256,7 +256,7 @@ func (gs *GameService) IsUserInGame(ctx context.Context, gameID, userID int32) (
 		return true, nil
 	}
 
-	// Check if user is participant
+	// Check if user is Co-GM or participant
 	exists, err := queries.IsUserInGame(ctx, models.IsUserInGameParams{
 		GameID: gameID,
 		UserID: userID,
@@ -360,14 +360,14 @@ func (gs *GameService) DeleteGame(ctx context.Context, gameID, userID int32) err
 		return fmt.Errorf("game not found")
 	}
 
-	// Verify the user is the GM
-	if game.GmUserID != userID {
+	// Verify the user is the GM or Co-GM
+	if game.GmUserID != userID && !core.IsUserCoGM(ctx, gs.DB, gameID, userID) {
 		gs.Logger.Warn(ctx, "Unauthorized game deletion attempt",
 			"game_id", gameID,
 			"user_id", userID,
 			"gm_user_id", game.GmUserID,
 		)
-		return fmt.Errorf("only the game master can delete this game")
+		return fmt.Errorf("only the game master or co-GM can delete this game")
 	}
 
 	// Verify the game is in cancelled state

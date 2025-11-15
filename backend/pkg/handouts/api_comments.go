@@ -62,7 +62,7 @@ func (h *Handler) CreateHandoutComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if game.GmUserID != userID {
+	if game.GmUserID != userID && !core.IsUserCoGM(ctx, h.App.Pool, game.ID, userID) {
 		h.App.ObsLogger.Warn(ctx, "User is not GM of game", "user_id", userID, "game_id", game.ID)
 		render.Render(w, r, core.ErrUnauthorized("Only GM can comment on handouts"))
 		return

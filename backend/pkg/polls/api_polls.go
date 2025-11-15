@@ -140,7 +140,8 @@ func strPtr(s string) *string {
 	return &s
 }
 
-// verifyUserIsGM checks if a user is the GM of a game
+// verifyUserIsGM checks if a user is the GM or Co-GM of a game
+// Uses the unified permission check for GM, Co-GM, and admin mode support
 func (h *Handler) verifyUserIsGM(ctx context.Context, gameID int32, userID int32) error {
 	gameService := &dbservices.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, gameID)
@@ -148,14 +149,22 @@ func (h *Handler) verifyUserIsGM(ctx context.Context, gameID int32, userID int32
 		return fmt.Errorf("failed to get game: %w", err)
 	}
 
-	if game.GmUserID != userID {
-		return fmt.Errorf("only the GM can perform this action")
+	// Get user to check admin status
+	userService := &dbservices.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	user, err := userService.User(int(userID))
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	// Check if user is GM, Co-GM, or admin with admin mode enabled
+	if !core.IsUserGameMasterCtx(ctx, userID, user.IsAdmin, *game, h.App.Pool) {
+		return fmt.Errorf("only GM or Co-GM can perform this action")
 	}
 
 	return nil
 }
 
-// verifyUserInGame checks if a user is a participant in a game (GM or player)
+// verifyUserInGame checks if a user is a participant in a game (GM, Co-GM, or player)
 func (h *Handler) verifyUserInGame(ctx context.Context, gameID int32, userID int32) error {
 	gameService := &dbservices.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	game, err := gameService.GetGame(ctx, gameID)
@@ -163,8 +172,8 @@ func (h *Handler) verifyUserInGame(ctx context.Context, gameID int32, userID int
 		return fmt.Errorf("failed to get game: %w", err)
 	}
 
-	// Check if user is GM
-	if game.GmUserID == userID {
+	// Check if user is GM or Co-GM
+	if game.GmUserID == userID || core.IsUserCoGM(ctx, h.App.Pool, gameID, userID) {
 		return nil
 	}
 
@@ -539,15 +548,15 @@ func (h *Handler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 	// Check if poll has expired
 	pollExpired := results.Poll.Deadline.Time.Before(time.Now())
 
-	// Players (non-GM, non-audience) can only see results after poll expires
-	if !isGM && !isAudience {
+	// Players (non-GM, non-Co-GM, non-audience) can only see results after poll expires
+	if !isGM && !isCoGM && !isAudience {
 		if !pollExpired {
 			h.App.ObsLogger.Error(ctx, "Cannot view results - poll still active")
 			render.Render(w, r, core.ErrForbidden("poll results not available until voting closes"))
 			return
 		}
 	}
-	// GM and audience can always view results
+	// GM, Co-GM, and audience can always view results
 
 	// Convert core.PollResults to API response with flattened structure
 	optionResults := make([]OptionResult, len(results.OptionResults))
@@ -660,10 +669,17 @@ func (h *Handler) SubmitVote(w http.ResponseWriter, r *http.Request) {
 
 	isGM := game.GmUserID == userID
 	isCoGM := core.IsUserCoGM(ctx, h.App.Pool, poll.GameID, userID)
+	isAudience := core.IsUserAudience(ctx, h.App.Pool, poll.GameID, userID)
 
 	if isGM || isCoGM {
 		h.App.ObsLogger.Error(ctx, "GMs and co-GMs cannot vote on polls")
 		render.Render(w, r, core.ErrForbidden("GMs and co-GMs cannot vote on polls"))
+		return
+	}
+
+	if isAudience {
+		h.App.ObsLogger.Error(ctx, "Audience members cannot vote on polls")
+		render.Render(w, r, core.ErrForbidden("Audience members cannot vote on polls"))
 		return
 	}
 
