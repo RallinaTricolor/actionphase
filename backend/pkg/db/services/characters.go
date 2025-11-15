@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -10,6 +11,11 @@ import (
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 	"actionphase/pkg/observability"
+)
+
+const (
+	// MaxCharacterNameLength is the maximum allowed length for character names
+	MaxCharacterNameLength = 255
 )
 
 type CharacterService struct {
@@ -141,6 +147,58 @@ func (cs *CharacterService) CreateGamemasterNPC(ctx context.Context, gameID int3
 	)
 
 	return nil
+}
+
+func (cs *CharacterService) RenameCharacter(ctx context.Context, characterID int32, newName string) (*models.Character, error) {
+	defer cs.Logger.LogOperation(ctx, "rename_character",
+		"character_id", characterID,
+		"new_name", newName)()
+
+	queries := models.New(cs.DB)
+
+	// Trim and validate name
+	newName = strings.TrimSpace(newName)
+	if newName == "" {
+		return nil, fmt.Errorf("character name cannot be empty")
+	}
+	if len(newName) > MaxCharacterNameLength {
+		return nil, fmt.Errorf("character name too long (max %d)", MaxCharacterNameLength)
+	}
+
+	// Get current character to check game_id and current name
+	character, err := queries.GetCharacter(ctx, characterID)
+	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to get character for rename")
+		return nil, err
+	}
+
+	// Check if new name is same as current (no-op)
+	if character.Name == newName {
+		return &character, nil
+	}
+
+	// Use existing UpdateCharacter query
+	updated, err := queries.UpdateCharacter(ctx, models.UpdateCharacterParams{
+		ID:     characterID,
+		Name:   newName,
+		Status: character.Status, // Keep existing status
+	})
+
+	if err != nil {
+		// Handle unique constraint violation specifically
+		if strings.Contains(err.Error(), "characters_game_name_unique") {
+			return nil, fmt.Errorf("a character named '%s' already exists in this game", newName)
+		}
+		cs.Logger.LogError(ctx, err, "Failed to rename character")
+		return nil, err
+	}
+
+	cs.Logger.Info(ctx, "Character renamed successfully",
+		"character_id", characterID,
+		"old_name", character.Name,
+		"new_name", newName)
+
+	return &updated, nil
 }
 
 func (cs *CharacterService) GetCharacter(ctx context.Context, characterID int32) (*models.Character, error) {

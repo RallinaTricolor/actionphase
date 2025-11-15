@@ -39,6 +39,10 @@ export class CharactersApi extends BaseApiClient {
     return this.client.post(`/api/v1/characters/${id}/assign`, data);
   }
 
+  async renameCharacter(id: number, data: { name: string }) {
+    return this.client.put<Character>(`/api/v1/characters/${id}/rename`, data);
+  }
+
   async deleteCharacter(id: number) {
     return this.client.delete(`/api/v1/characters/${id}`);
   }
