@@ -44,7 +44,8 @@ FROM games g
 LEFT JOIN game_participants gp ON g.id = gp.game_id AND gp.user_id = $1 AND gp.status = 'active'
 LEFT JOIN game_phases current_phase ON g.id = current_phase.game_id AND current_phase.is_active = true
 LEFT JOIN users gm_user ON g.gm_user_id = gm_user.id
-WHERE (gp.user_id = $1 AND gp.status = 'active') OR g.gm_user_id = $1
+WHERE ((gp.user_id = $1 AND gp.status = 'active') OR g.gm_user_id = $1)
+  AND g.state != 'completed'
 ORDER BY
   -- Urgent games first: action phases with pending submissions and near deadlines
   CASE
