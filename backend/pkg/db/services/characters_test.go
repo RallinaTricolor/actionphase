@@ -1102,3 +1102,123 @@ func TestCharacterService_CreateGamemasterNPC(t *testing.T) {
 		core.AssertErrorContains(t, err, "failed to create Gamemaster NPC", "Should contain error message")
 	})
 }
+
+func TestCharacterService_RenameCharacter(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Setup: Create a character for testing
+	character, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		UserID:        core.Int32Ptr(int32(fixtures.TestUser.ID)),
+		Name:          "Original Name",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Failed to create test character")
+
+	t.Run("successfully renames character", func(t *testing.T) {
+		updatedChar, err := characterService.RenameCharacter(context.Background(), character.ID, "New Name")
+		core.AssertNoError(t, err, "Should rename character successfully")
+		if updatedChar == nil {
+			t.Fatal("Expected updated character to be returned")
+		}
+		core.AssertEqual(t, "New Name", updatedChar.Name, "Name should be updated")
+		core.AssertEqual(t, character.ID, updatedChar.ID, "Should be same character")
+	})
+
+	t.Run("trims whitespace from new name", func(t *testing.T) {
+		updatedChar, err := characterService.RenameCharacter(context.Background(), character.ID, "  Trimmed Name  ")
+		core.AssertNoError(t, err, "Should rename character successfully")
+		core.AssertEqual(t, "Trimmed Name", updatedChar.Name, "Name should be trimmed")
+	})
+
+	t.Run("returns error for empty name", func(t *testing.T) {
+		_, err := characterService.RenameCharacter(context.Background(), character.ID, "   ")
+		core.AssertError(t, err, "Should fail with empty name")
+		core.AssertErrorContains(t, err, "cannot be empty", "Should contain appropriate error message")
+	})
+
+	t.Run("returns error for name too long", func(t *testing.T) {
+		longName := string(make([]byte, MaxCharacterNameLength+1)) // One more than max
+		for i := range longName {
+			longName = longName[:i] + "a" + longName[i+1:]
+		}
+		_, err := characterService.RenameCharacter(context.Background(), character.ID, longName)
+		core.AssertError(t, err, "Should fail with name too long")
+		core.AssertErrorContains(t, err, "too long", "Should contain appropriate error message")
+	})
+
+	t.Run("no-op when new name is same as current", func(t *testing.T) {
+		// Get current character state
+		currentChar, err := characterService.GetCharacter(context.Background(), character.ID)
+		core.AssertNoError(t, err, "Should get character")
+
+		// Rename to same name
+		updatedChar, err := characterService.RenameCharacter(context.Background(), character.ID, currentChar.Name)
+		core.AssertNoError(t, err, "Should succeed with same name")
+		core.AssertEqual(t, currentChar.Name, updatedChar.Name, "Name should be unchanged")
+	})
+
+	t.Run("fails with duplicate name in same game", func(t *testing.T) {
+		// Create two fresh characters for this test
+		char1, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID:        fixtures.TestGame.ID,
+			UserID:        core.Int32Ptr(int32(fixtures.TestUser.ID)),
+			Name:          "Duplicate Test Char 1",
+			CharacterType: "player_character",
+		})
+		core.AssertNoError(t, err, "Failed to create first character")
+
+		char2, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID:        fixtures.TestGame.ID,
+			UserID:        core.Int32Ptr(int32(fixtures.TestUser.ID)),
+			Name:          "Duplicate Test Char 2",
+			CharacterType: "player_character",
+		})
+		core.AssertNoError(t, err, "Failed to create second character")
+
+		// Try to rename first character to second character's name
+		_, err = characterService.RenameCharacter(context.Background(), char1.ID, "Duplicate Test Char 2")
+		core.AssertError(t, err, "Should fail with duplicate name")
+		core.AssertErrorContains(t, err, "already exists", "Should contain duplicate error message")
+
+		// Verify first character name is unchanged
+		verifyChar, err := characterService.GetCharacter(context.Background(), char1.ID)
+		core.AssertNoError(t, err, "Should get character")
+		core.AssertEqual(t, "Duplicate Test Char 1", verifyChar.Name, "Original character name should be unchanged")
+
+		// Cleanup
+		_ = char2 // Avoid unused variable warning
+	})
+
+	t.Run("allows same name in different games", func(t *testing.T) {
+		// Create a second game and character
+		game2 := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Second Game")
+		character2, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID:        game2.ID,
+			UserID:        core.Int32Ptr(int32(fixtures.TestUser.ID)),
+			Name:          "Unique Name",
+			CharacterType: "player_character",
+		})
+		core.AssertNoError(t, err, "Failed to create character in second game")
+
+		// Rename character in second game to use name from first game (should work)
+		sameName := "Shared Name Across Games"
+		_, err = characterService.RenameCharacter(context.Background(), character.ID, sameName)
+		core.AssertNoError(t, err, "Should rename character in first game")
+
+		updatedChar2, err := characterService.RenameCharacter(context.Background(), character2.ID, sameName)
+		core.AssertNoError(t, err, "Should allow same name in different game")
+		core.AssertEqual(t, sameName, updatedChar2.Name, "Should have same name as character in other game")
+	})
+
+	t.Run("fails with invalid character ID", func(t *testing.T) {
+		_, err := characterService.RenameCharacter(context.Background(), 99999, "New Name")
+		core.AssertError(t, err, "Should fail with invalid character ID")
+	})
+}

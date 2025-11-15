@@ -342,3 +342,79 @@ func (h *Handler) ListInactiveCharacters(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	render.JSON(w, r, response)
 }
+
+// RenameCharacter renames a character (GM or character owner)
+func (h *Handler) RenameCharacter(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_rename_character")()
+
+	characterIDStr := chi.URLParam(r, "id")
+	characterID, err := strconv.ParseInt(characterIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid character ID")))
+		return
+	}
+
+	data := &RenameCharacterRequest{}
+	if err := render.Bind(r, data); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	// Get authenticated user
+	authUser := core.GetAuthenticatedUser(ctx)
+	if authUser == nil {
+		h.App.ObsLogger.Error(ctx, "No authenticated user found")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
+		return
+	}
+
+	// Verify user can edit this character (owner or GM)
+	characterService := &services.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	canEdit, err := characterService.CanUserEditCharacter(ctx, int32(characterID), authUser.ID)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to check character edit permission", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if !canEdit {
+		render.Render(w, r, core.ErrForbidden("you do not have permission to rename this character"))
+		return
+	}
+
+	// Rename the character
+	updatedCharacter, err := characterService.RenameCharacter(ctx, int32(characterID), data.Name)
+	if err != nil {
+		// Check if it's a duplicate name error
+		if err.Error() == fmt.Sprintf("a character named '%s' already exists in this game", data.Name) {
+			render.Render(w, r, core.ErrConflict(err.Error()))
+			return
+		}
+		h.App.ObsLogger.Error(ctx, "Failed to rename character", "error", err)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	h.App.ObsLogger.Info(ctx, "Character renamed successfully",
+		"character_id", characterID,
+		"new_name", data.Name,
+		"renamed_by", authUser.ID)
+
+	// Convert to response format
+	response := &CharacterResponse{
+		ID:            updatedCharacter.ID,
+		GameID:        updatedCharacter.GameID,
+		Name:          updatedCharacter.Name,
+		CharacterType: updatedCharacter.CharacterType,
+		Status:        updatedCharacter.Status.String,
+		CreatedAt:     updatedCharacter.CreatedAt.Time,
+		UpdatedAt:     updatedCharacter.UpdatedAt.Time,
+	}
+
+	if updatedCharacter.UserID.Valid {
+		response.UserID = &updatedCharacter.UserID.Int32
+	}
+
+	render.Render(w, r, response)
+}

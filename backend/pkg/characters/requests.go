@@ -52,3 +52,12 @@ type ReassignCharacterRequest struct {
 func (r *ReassignCharacterRequest) Bind(req *http.Request) error {
 	return nil
 }
+
+// RenameCharacterRequest represents a request to rename a character
+type RenameCharacterRequest struct {
+	Name string `json:"name" validate:"required,min=1,max=255"`
+}
+
+func (r *RenameCharacterRequest) Bind(req *http.Request) error {
+	return nil
+}

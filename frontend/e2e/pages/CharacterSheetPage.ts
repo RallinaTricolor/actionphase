@@ -91,6 +91,73 @@ export class CharacterSheetPage {
     return await this.editButton.isVisible();
   }
 
+  // ========== Character Rename Methods ==========
+
+  /**
+   * Click the rename button to enter rename mode
+   */
+  async startRename() {
+    const renameButton = this.page.locator('button[title="Rename character"]');
+    await renameButton.click();
+    await this.page.waitForTimeout(300); // Wait for edit UI to appear
+  }
+
+  /**
+   * Get the rename input field
+   */
+  getRenameInput(): Locator {
+    return this.page.getByRole('textbox');
+  }
+
+  /**
+   * Check if rename button is visible
+   */
+  async canRename(): Promise<boolean> {
+    const renameButton = this.page.locator('button[title="Rename character"]');
+    return await renameButton.isVisible();
+  }
+
+  /**
+   * Rename character and save
+   * @param newName - New character name
+   */
+  async renameCharacter(newName: string) {
+    await this.startRename();
+    const nameInput = this.getRenameInput();
+    await nameInput.clear();
+    await nameInput.fill(newName);
+
+    const saveButton = this.page.getByRole('button', { name: 'Save' });
+    await saveButton.click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Start rename and then cancel
+   * @param tempName - Temporary name to type before canceling
+   */
+  async startAndCancelRename(tempName?: string) {
+    await this.startRename();
+
+    if (tempName) {
+      const nameInput = this.getRenameInput();
+      await nameInput.clear();
+      await nameInput.fill(tempName);
+    }
+
+    const cancelButton = this.page.getByRole('button', { name: 'Cancel' });
+    await cancelButton.click();
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Check if save button is enabled during rename
+   */
+  async isSaveButtonEnabled(): Promise<boolean> {
+    const saveButton = this.page.getByRole('button', { name: 'Save' });
+    return await saveButton.isEnabled();
+  }
+
   /**
    * Get all abilities
    */

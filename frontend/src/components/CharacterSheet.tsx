@@ -10,7 +10,8 @@ import AvatarUploadModal from './AvatarUploadModal';
 import { Modal } from './Modal';
 import { TabNavigation } from './TabNavigation';
 import type { Tab } from './TabNavigation';
-import { Button, Textarea, Badge } from './ui';
+import { Button, Textarea, Badge, Input } from './ui';
+import { useRenameCharacter } from '../hooks/useCharacters';
 
 interface CharacterSheetProps {
   characterId: number;
@@ -27,8 +28,11 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isDeleteAvatarDialogOpen, setIsDeleteAvatarDialogOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
 
   const queryClient = useQueryClient();
+  const renameMutation = useRenameCharacter();
 
   // If user cannot edit and is not audience and is viewing a restricted module, switch to bio
   useEffect(() => {
@@ -65,6 +69,33 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
       setIsDeleteAvatarDialogOpen(false);
     }
   });
+
+  // Handle character name editing
+  const handleStartEditingName = () => {
+    if (character) {
+      setNewName(character.name);
+      setIsEditingName(true);
+    }
+  };
+
+  const handleCancelEditingName = () => {
+    setIsEditingName(false);
+    setNewName('');
+  };
+
+  const handleSaveName = () => {
+    if (!newName.trim() || !character) return;
+
+    renameMutation.mutate(
+      { characterId, name: newName.trim() },
+      {
+        onSuccess: () => {
+          setIsEditingName(false);
+          setNewName('');
+        }
+      }
+    );
+  };
 
   // Initialize field values from character data
   useEffect(() => {
@@ -198,9 +229,53 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <h2 className="text-lg md:text-2xl font-bold text-content-primary mb-1 truncate">
-                {character?.name || 'Character Sheet'}
-              </h2>
+              {isEditingName ? (
+                <div className="flex items-center gap-2 mb-1">
+                  <Input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveName();
+                      if (e.key === 'Escape') handleCancelEditingName();
+                    }}
+                    className="text-lg md:text-2xl font-bold"
+                    autoFocus
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleSaveName}
+                    disabled={!newName.trim() || renameMutation.isPending}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleCancelEditingName}
+                    disabled={renameMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-lg md:text-2xl font-bold text-content-primary truncate">
+                    {character?.name || 'Character Sheet'}
+                  </h2>
+                  {canEdit && character && (
+                    <button
+                      onClick={handleStartEditingName}
+                      className="text-content-tertiary hover:text-content-primary transition-colors p-1"
+                      title="Rename character"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              )}
               {character && (
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* Hide character type badge only for players in anonymous mode (GMs and audience can see it) */}
