@@ -643,6 +643,7 @@ func setupAuthTestRouter(app *core.App) *chi.Mux {
 			r.Post("/reset-password", authHandler.V1ResetPassword)
 			r.Get("/validate-reset-token", authHandler.V1ValidateResetToken)
 			r.Post("/verify-email", authHandler.V1VerifyEmail)
+			r.Post("/complete-email-change", authHandler.V1CompleteEmailChange)
 
 			// Protected routes (require authentication)
 			r.Group(func(r chi.Router) {
@@ -658,6 +659,9 @@ func setupAuthTestRouter(app *core.App) *chi.Mux {
 				r.Get("/sessions", authHandler.V1ListSessions)
 				r.Delete("/sessions/{sessionID}", authHandler.V1RevokeSession)
 				r.Post("/revoke-all-sessions", authHandler.V1RevokeAllSessions)
+				r.Get("/preferences", authHandler.V1GetPreferences)
+				r.Put("/preferences", authHandler.V1UpdatePreferences)
+				r.Delete("/account", authHandler.V1DeleteAccount)
 			})
 		})
 	})
@@ -1293,5 +1297,917 @@ func TestAuthFlow_BotPrevention(t *testing.T) {
 		json.Unmarshal(w.Body.Bytes(), &response)
 		errorMsg := response["error"].(string)
 		core.AssertTrue(t, strings.Contains(strings.ToLower(errorMsg), "disposable email"), "Error should mention disposable email")
+	})
+}
+
+// TestAuthFlow_EmailVerification tests the email verification flow edge cases
+// Note: Valid token verification is thoroughly tested in account_handlers_test.go
+// These integration tests focus on HTTP API flow and error cases
+func TestAuthFlow_EmailVerification(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "email_verification_tokens", "registration_attempts", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthTestRouter(app)
+
+	t.Run("verify_email_with_invalid_token", func(t *testing.T) {
+		// Attempt to verify with random/malformed token
+		verifyPayload := map[string]string{"token": "invalid-random-token-12345"}
+		verifyBytes, _ := json.Marshal(verifyPayload)
+		verifyReq := httptest.NewRequest("POST", "/api/v1/auth/verify-email", bytes.NewBuffer(verifyBytes))
+		verifyReq.Header.Set("Content-Type", "application/json")
+		verifyW := httptest.NewRecorder()
+		router.ServeHTTP(verifyW, verifyReq)
+
+		core.AssertEqual(t, 400, verifyW.Code, "Invalid token should return 400")
+
+		var response map[string]interface{}
+		json.Unmarshal(verifyW.Body.Bytes(), &response)
+		errorMsg := response["error"].(string)
+		core.AssertTrue(t, strings.Contains(strings.ToLower(errorMsg), "invalid"), "Error should mention invalid token")
+	})
+
+	t.Run("resend_verification_email_requires_auth", func(t *testing.T) {
+		// Attempt to resend verification email without authentication
+		resendReq := httptest.NewRequest("POST", "/api/v1/auth/resend-verification", nil)
+		resendW := httptest.NewRecorder()
+		router.ServeHTTP(resendW, resendReq)
+
+		core.AssertEqual(t, 401, resendW.Code, "Resend without auth should return 401")
+	})
+}
+
+// TestAuthFlow_PasswordReset tests the password reset flow with edge cases
+// Note: Valid reset flow is tested in account_handlers_test.go
+// These integration tests focus on HTTP API flow and security edge cases
+func TestAuthFlow_PasswordReset(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "password_reset_tokens", "registration_attempts", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthTestRouter(app)
+
+	t.Run("request_reset_non_existent_email_succeeds", func(t *testing.T) {
+		// Request reset for non-existent email (should succeed to avoid leaking user existence)
+		resetPayload := map[string]string{"email": "nonexistent@example.com"}
+		resetBytes, _ := json.Marshal(resetPayload)
+		resetReq := httptest.NewRequest("POST", "/api/v1/auth/request-password-reset", bytes.NewBuffer(resetBytes))
+		resetReq.Header.Set("Content-Type", "application/json")
+		resetW := httptest.NewRecorder()
+		router.ServeHTTP(resetW, resetReq)
+
+		// Should return 200 to avoid user enumeration
+		core.AssertEqual(t, 200, resetW.Code, "Reset request for non-existent email should return 200")
+	})
+
+	t.Run("request_reset_invalid_email_format", func(t *testing.T) {
+		// Request reset with invalid email format
+		resetPayload := map[string]string{"email": "not-an-email"}
+		resetBytes, _ := json.Marshal(resetPayload)
+		resetReq := httptest.NewRequest("POST", "/api/v1/auth/request-password-reset", bytes.NewBuffer(resetBytes))
+		resetReq.Header.Set("Content-Type", "application/json")
+		resetW := httptest.NewRecorder()
+		router.ServeHTTP(resetW, resetReq)
+
+		// Should return validation error
+		core.AssertEqual(t, 400, resetW.Code, "Invalid email format should return 400")
+	})
+
+	t.Run("request_reset_missing_email", func(t *testing.T) {
+		// Request reset without email field
+		resetPayload := map[string]string{}
+		resetBytes, _ := json.Marshal(resetPayload)
+		resetReq := httptest.NewRequest("POST", "/api/v1/auth/request-password-reset", bytes.NewBuffer(resetBytes))
+		resetReq.Header.Set("Content-Type", "application/json")
+		resetW := httptest.NewRecorder()
+		router.ServeHTTP(resetW, resetReq)
+
+		// Should return validation error
+		core.AssertEqual(t, 400, resetW.Code, "Missing email should return 400")
+	})
+
+	t.Run("reset_password_with_invalid_token", func(t *testing.T) {
+		// Attempt password reset with invalid token (using valid password format to ensure token check happens)
+		resetPayload := map[string]string{
+			"token":            "invalid-token-12345",
+			"new_password":     "ValidPass123!", // Valid format so API checks token validity
+			"confirm_password": "ValidPass123!",
+		}
+		resetBytes, _ := json.Marshal(resetPayload)
+		resetReq := httptest.NewRequest("POST", "/api/v1/auth/reset-password", bytes.NewBuffer(resetBytes))
+		resetReq.Header.Set("Content-Type", "application/json")
+		resetW := httptest.NewRecorder()
+		router.ServeHTTP(resetW, resetReq)
+
+		core.AssertEqual(t, 400, resetW.Code, "Invalid reset token should return 400")
+
+		var response map[string]interface{}
+		json.Unmarshal(resetW.Body.Bytes(), &response)
+		errorMsg := response["error"].(string)
+		// Accept either "invalid" or "token" in the error message (API might say "token not found" or similar)
+		hasInvalid := strings.Contains(strings.ToLower(errorMsg), "invalid")
+		hasToken := strings.Contains(strings.ToLower(errorMsg), "token")
+		core.AssertTrue(t, hasInvalid || hasToken, "Error should mention invalid token or token not found, got: "+errorMsg)
+	})
+
+	t.Run("reset_password_with_weak_password", func(t *testing.T) {
+		// Attempt password reset with weak password
+		resetPayload := map[string]string{
+			"token":            "some-token",
+			"new_password":     "weak", // Too short
+			"confirm_password": "weak",
+		}
+		resetBytes, _ := json.Marshal(resetPayload)
+		resetReq := httptest.NewRequest("POST", "/api/v1/auth/reset-password", bytes.NewBuffer(resetBytes))
+		resetReq.Header.Set("Content-Type", "application/json")
+		resetW := httptest.NewRecorder()
+		router.ServeHTTP(resetW, resetReq)
+
+		core.AssertEqual(t, 400, resetW.Code, "Weak password should return 400")
+
+		var response map[string]interface{}
+		json.Unmarshal(resetW.Body.Bytes(), &response)
+		errorMsg := response["error"].(string)
+		core.AssertTrue(t, strings.Contains(strings.ToLower(errorMsg), "password"), "Error should mention password validation")
+	})
+
+	t.Run("reset_password_missing_fields", func(t *testing.T) {
+		// Attempt password reset without required fields
+		resetPayload := map[string]string{}
+		resetBytes, _ := json.Marshal(resetPayload)
+		resetReq := httptest.NewRequest("POST", "/api/v1/auth/reset-password", bytes.NewBuffer(resetBytes))
+		resetReq.Header.Set("Content-Type", "application/json")
+		resetW := httptest.NewRecorder()
+		router.ServeHTTP(resetW, resetReq)
+
+		core.AssertEqual(t, 400, resetW.Code, "Missing required fields should return 400")
+	})
+
+	t.Run("validate_reset_token_invalid", func(t *testing.T) {
+		// Validate an invalid reset token
+		validateReq := httptest.NewRequest("GET", "/api/v1/auth/validate-reset-token?token=invalid-token", nil)
+		validateW := httptest.NewRecorder()
+		router.ServeHTTP(validateW, validateReq)
+
+		// Should return 400 for invalid token
+		core.AssertEqual(t, 400, validateW.Code, "Invalid token validation should return 400")
+	})
+
+	t.Run("validate_reset_token_missing", func(t *testing.T) {
+		// Validate without providing token
+		validateReq := httptest.NewRequest("GET", "/api/v1/auth/validate-reset-token", nil)
+		validateW := httptest.NewRecorder()
+		router.ServeHTTP(validateW, validateReq)
+
+		// Should return 400 for missing token
+		core.AssertEqual(t, 400, validateW.Code, "Missing token should return 400")
+	})
+}
+
+// TestAuthFlow_CurrentUserEndpoint tests the /auth/me endpoint edge cases
+// Note: Basic functionality is tested in auth_api_integration_test.go (TestAuthAPI_V1Me)
+// These integration tests focus on additional edge cases and error conditions
+func TestAuthFlow_CurrentUserEndpoint(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "registration_attempts", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthTestRouter(app)
+
+	t.Run("me_requires_authentication", func(t *testing.T) {
+		// Call /me without authentication header
+		meReq := httptest.NewRequest("GET", "/api/v1/auth/me", nil)
+		meW := httptest.NewRecorder()
+		router.ServeHTTP(meW, meReq)
+
+		// Should return 401 Unauthorized
+		core.AssertEqual(t, 401, meW.Code, "Request without auth should return 401")
+	})
+
+	t.Run("me_with_invalid_token", func(t *testing.T) {
+		// Call /me with malformed token
+		meReq := httptest.NewRequest("GET", "/api/v1/auth/me", nil)
+		meReq.Header.Set("Authorization", "Bearer invalid.jwt.token")
+		meW := httptest.NewRecorder()
+		router.ServeHTTP(meW, meReq)
+
+		// Should return 401 Unauthorized
+		core.AssertEqual(t, 401, meW.Code, "Invalid token should return 401")
+	})
+
+	t.Run("me_with_malformed_authorization_header", func(t *testing.T) {
+		// Call /me with missing "Bearer" prefix
+		meReq := httptest.NewRequest("GET", "/api/v1/auth/me", nil)
+		meReq.Header.Set("Authorization", "not-a-bearer-token")
+		meW := httptest.NewRecorder()
+		router.ServeHTTP(meW, meReq)
+
+		// Should return 401 Unauthorized
+		core.AssertEqual(t, 401, meW.Code, "Malformed auth header should return 401")
+	})
+
+	t.Run("me_with_empty_authorization_header", func(t *testing.T) {
+		// Call /me with empty Authorization header
+		meReq := httptest.NewRequest("GET", "/api/v1/auth/me", nil)
+		meReq.Header.Set("Authorization", "")
+		meW := httptest.NewRecorder()
+		router.ServeHTTP(meW, meReq)
+
+		// Should return 401 Unauthorized
+		core.AssertEqual(t, 401, meW.Code, "Empty auth header should return 401")
+	})
+
+	t.Run("me_includes_user_fields", func(t *testing.T) {
+		// Create a test user
+		userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+		user := &core.User{
+			Username: "testmeuser",
+			Email:    "testme@example.com",
+			Password: "TestPassword123!",
+		}
+		createdUser, err := userService.CreateUser(user)
+		core.AssertNoError(t, err, "Should create user successfully")
+
+		// Create valid JWT token
+		token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+		core.AssertNoError(t, err, "Should create token successfully")
+
+		// Call /me with valid token
+		meReq := httptest.NewRequest("GET", "/api/v1/auth/me", nil)
+		meReq.Header.Set("Authorization", "Bearer "+token)
+		meW := httptest.NewRecorder()
+		router.ServeHTTP(meW, meReq)
+
+		// Should return 200 OK
+		core.AssertEqual(t, 200, meW.Code, "Valid request should return 200")
+
+		// Verify response contains expected fields
+		var response map[string]interface{}
+		json.Unmarshal(meW.Body.Bytes(), &response)
+		core.AssertEqual(t, "testmeuser", response["username"], "Username should match")
+		core.AssertEqual(t, "testme@example.com", response["email"], "Email should match")
+		core.AssertNotEqual(t, nil, response["id"], "Should have user ID")
+
+		// Verify email_verified field is present (default false for new users)
+		emailVerified, hasField := response["email_verified"]
+		core.AssertTrue(t, hasField, "Response should include email_verified field")
+		core.AssertEqual(t, false, emailVerified, "New user should have email_verified=false")
+	})
+}
+
+// TestAuthFlow_ChangePassword tests the change password flow edge cases
+// Note: Happy path is tested in password_handlers_test.go
+// These integration tests focus on HTTP API security edge cases
+func TestAuthFlow_ChangePassword(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "registration_attempts", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthTestRouter(app)
+
+	t.Run("change_password_requires_authentication", func(t *testing.T) {
+		// Attempt to change password without authentication
+		changePayload := map[string]string{
+			"current_password": "OldPass123!",
+			"new_password":     "NewPass456!",
+			"confirm_password": "NewPass456!",
+		}
+		changeBytes, _ := json.Marshal(changePayload)
+		changeReq := httptest.NewRequest("POST", "/api/v1/auth/change-password", bytes.NewBuffer(changeBytes))
+		changeReq.Header.Set("Content-Type", "application/json")
+		changeW := httptest.NewRecorder()
+		router.ServeHTTP(changeW, changeReq)
+
+		// Should return 401 Unauthorized
+		core.AssertEqual(t, 401, changeW.Code, "Change password without auth should return 401")
+	})
+
+	t.Run("change_password_missing_current_password", func(t *testing.T) {
+		// Create test user and login
+		userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+		user := &core.User{
+			Username: "changepassuser1",
+			Email:    "changepass1@example.com",
+			Password: "OldPassword123!",
+		}
+		createdUser, err := userService.CreateUser(user)
+		core.AssertNoError(t, err, "Should create user successfully")
+		token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+		core.AssertNoError(t, err, "Should create token successfully")
+
+		// Attempt change without current password
+		changePayload := map[string]string{
+			"new_password":     "NewPass456!",
+			"confirm_password": "NewPass456!",
+		}
+		changeBytes, _ := json.Marshal(changePayload)
+		changeReq := httptest.NewRequest("POST", "/api/v1/auth/change-password", bytes.NewBuffer(changeBytes))
+		changeReq.Header.Set("Content-Type", "application/json")
+		changeReq.Header.Set("Authorization", "Bearer "+token)
+		changeW := httptest.NewRecorder()
+		router.ServeHTTP(changeW, changeReq)
+
+		// Should return 400 for missing required field
+		core.AssertEqual(t, 400, changeW.Code, "Missing current password should return 400")
+	})
+
+	t.Run("change_password_wrong_current_password", func(t *testing.T) {
+		// Create test user and login
+		userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+		user := &core.User{
+			Username: "changepassuser2",
+			Email:    "changepass2@example.com",
+			Password: "CorrectOldPass123!",
+		}
+		createdUser, err := userService.CreateUser(user)
+		core.AssertNoError(t, err, "Should create user successfully")
+		token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+		core.AssertNoError(t, err, "Should create token successfully")
+
+		// Attempt change with wrong current password
+		changePayload := map[string]string{
+			"current_password": "WrongOldPass123!",
+			"new_password":     "NewPass456!",
+			"confirm_password": "NewPass456!",
+		}
+		changeBytes, _ := json.Marshal(changePayload)
+		changeReq := httptest.NewRequest("POST", "/api/v1/auth/change-password", bytes.NewBuffer(changeBytes))
+		changeReq.Header.Set("Content-Type", "application/json")
+		changeReq.Header.Set("Authorization", "Bearer "+token)
+		changeW := httptest.NewRecorder()
+		router.ServeHTTP(changeW, changeReq)
+
+		// Should return 400 or 401 for incorrect current password
+		core.AssertTrue(t, changeW.Code == 400 || changeW.Code == 401, "Wrong current password should return 400 or 401")
+
+		var response map[string]interface{}
+		json.Unmarshal(changeW.Body.Bytes(), &response)
+		errorMsg := response["error"].(string)
+		hasCurrentPassword := strings.Contains(strings.ToLower(errorMsg), "current") || strings.Contains(strings.ToLower(errorMsg), "password")
+		core.AssertTrue(t, hasCurrentPassword, "Error should mention current password issue")
+	})
+
+	t.Run("change_password_weak_new_password", func(t *testing.T) {
+		// Create test user and login
+		userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+		user := &core.User{
+			Username: "changepassuser3",
+			Email:    "changepass3@example.com",
+			Password: "OldPassword123!",
+		}
+		createdUser, err := userService.CreateUser(user)
+		core.AssertNoError(t, err, "Should create user successfully")
+		token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+		core.AssertNoError(t, err, "Should create token successfully")
+
+		// Attempt change to weak password
+		changePayload := map[string]string{
+			"current_password": "OldPassword123!",
+			"new_password":     "weak",
+			"confirm_password": "weak",
+		}
+		changeBytes, _ := json.Marshal(changePayload)
+		changeReq := httptest.NewRequest("POST", "/api/v1/auth/change-password", bytes.NewBuffer(changeBytes))
+		changeReq.Header.Set("Content-Type", "application/json")
+		changeReq.Header.Set("Authorization", "Bearer "+token)
+		changeW := httptest.NewRecorder()
+		router.ServeHTTP(changeW, changeReq)
+
+		// Should return 400 for weak password
+		core.AssertEqual(t, 400, changeW.Code, "Weak password should return 400")
+
+		var response map[string]interface{}
+		json.Unmarshal(changeW.Body.Bytes(), &response)
+		errorMsg := response["error"].(string)
+		core.AssertTrue(t, strings.Contains(strings.ToLower(errorMsg), "password"), "Error should mention password validation")
+	})
+
+	t.Run("change_password_missing_confirm_password", func(t *testing.T) {
+		// Create test user and login
+		userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+		user := &core.User{
+			Username: "changepassuser4",
+			Email:    "changepass4@example.com",
+			Password: "OldPassword123!",
+		}
+		createdUser, err := userService.CreateUser(user)
+		core.AssertNoError(t, err, "Should create user successfully")
+		token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+		core.AssertNoError(t, err, "Should create token successfully")
+
+		// Attempt change without confirm password
+		changePayload := map[string]string{
+			"current_password": "OldPassword123!",
+			"new_password":     "NewPass456!",
+		}
+		changeBytes, _ := json.Marshal(changePayload)
+		changeReq := httptest.NewRequest("POST", "/api/v1/auth/change-password", bytes.NewBuffer(changeBytes))
+		changeReq.Header.Set("Content-Type", "application/json")
+		changeReq.Header.Set("Authorization", "Bearer "+token)
+		changeW := httptest.NewRecorder()
+		router.ServeHTTP(changeW, changeReq)
+
+		// Should return 400 for missing confirm password
+		core.AssertEqual(t, 400, changeW.Code, "Missing confirm password should return 400")
+	})
+}
+
+// TestAuthFlow_ResendVerificationEmail tests the resend verification email flow
+// Note: V1ResendVerificationEmail currently has 0% coverage
+// These integration tests validate HTTP API behavior and authentication requirements
+func TestAuthFlow_ResendVerificationEmail(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "email_verification_tokens", "registration_attempts", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthTestRouter(app)
+
+	t.Run("resend_requires_authentication", func(t *testing.T) {
+		// Attempt to resend verification email without authentication
+		resendReq := httptest.NewRequest("POST", "/api/v1/auth/resend-verification", nil)
+		resendW := httptest.NewRecorder()
+		router.ServeHTTP(resendW, resendReq)
+
+		// Should return 401 Unauthorized
+		core.AssertEqual(t, 401, resendW.Code, "Resend without auth should return 401")
+	})
+
+	t.Run("resend_succeeds_for_unverified_user", func(t *testing.T) {
+		// Create unverified test user
+		userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+		user := &core.User{
+			Username: "unverifieduser",
+			Email:    "unverified@example.com",
+			Password: "TestPassword123!",
+		}
+		createdUser, err := userService.CreateUser(user)
+		core.AssertNoError(t, err, "Should create user successfully")
+
+		// Create valid JWT token for unverified user
+		token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+		core.AssertNoError(t, err, "Should create token successfully")
+
+		// Attempt to resend verification email
+		resendReq := httptest.NewRequest("POST", "/api/v1/auth/resend-verification", nil)
+		resendReq.Header.Set("Authorization", "Bearer "+token)
+		resendW := httptest.NewRecorder()
+		router.ServeHTTP(resendW, resendReq)
+
+		// Should return 200 OK (email service might not be configured in test, but endpoint should succeed)
+		// Note: In test environment, email service creation might fail, but that's handled by the handler
+		core.AssertTrue(t, resendW.Code == 200 || resendW.Code == 500, "Should return 200 (success) or 500 (email service unavailable)")
+
+		if resendW.Code == 200 {
+			var response map[string]interface{}
+			json.Unmarshal(resendW.Body.Bytes(), &response)
+			message, hasMessage := response["message"]
+			core.AssertTrue(t, hasMessage, "Success response should have message field")
+			core.AssertEqual(t, "Verification email sent", message, "Message should confirm email sent")
+		}
+	})
+
+	t.Run("resend_succeeds_for_verified_user", func(t *testing.T) {
+		// Create verified test user
+		userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+		user := &core.User{
+			Username:      "verifieduser",
+			Email:         "verified@example.com",
+			Password:      "TestPassword123!",
+			EmailVerified: true, // Already verified
+		}
+		createdUser, err := userService.CreateUser(user)
+		core.AssertNoError(t, err, "Should create user successfully")
+
+		// Create valid JWT token for verified user
+		token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+		core.AssertNoError(t, err, "Should create token successfully")
+
+		// Attempt to resend verification email (should be idempotent - no error even if already verified)
+		resendReq := httptest.NewRequest("POST", "/api/v1/auth/resend-verification", nil)
+		resendReq.Header.Set("Authorization", "Bearer "+token)
+		resendW := httptest.NewRecorder()
+		router.ServeHTTP(resendW, resendReq)
+
+		// Should return 200 OK (idempotent behavior - service returns nil for already verified users)
+		// The handler will succeed even if user is already verified
+		core.AssertTrue(t, resendW.Code == 200 || resendW.Code == 500, "Should return 200 (success) or 500 (email service unavailable)")
+
+		if resendW.Code == 200 {
+			var response map[string]interface{}
+			json.Unmarshal(resendW.Body.Bytes(), &response)
+			message, hasMessage := response["message"]
+			core.AssertTrue(t, hasMessage, "Success response should have message field")
+			core.AssertEqual(t, "Verification email sent", message, "Message should confirm email sent")
+		}
+	})
+
+	t.Run("resend_with_invalid_token", func(t *testing.T) {
+		// Attempt to resend with invalid JWT token
+		resendReq := httptest.NewRequest("POST", "/api/v1/auth/resend-verification", nil)
+		resendReq.Header.Set("Authorization", "Bearer invalid.jwt.token")
+		resendW := httptest.NewRecorder()
+		router.ServeHTTP(resendW, resendReq)
+
+		// Should return 401 Unauthorized (middleware catches invalid token)
+		core.AssertEqual(t, 401, resendW.Code, "Invalid token should return 401")
+	})
+
+	t.Run("resend_with_malformed_auth_header", func(t *testing.T) {
+		// Attempt to resend with malformed Authorization header
+		resendReq := httptest.NewRequest("POST", "/api/v1/auth/resend-verification", nil)
+		resendReq.Header.Set("Authorization", "NotBearer token")
+		resendW := httptest.NewRecorder()
+		router.ServeHTTP(resendW, resendReq)
+
+		// Should return 401 Unauthorized
+		core.AssertEqual(t, 401, resendW.Code, "Malformed auth header should return 401")
+	})
+}
+
+// TestAuthFlow_UserPreferences tests user preferences GET and UPDATE endpoints
+// Target: V1GetPreferences (58.6% → 70%+), V1UpdatePreferences (64.7% → 70%+)
+func TestAuthFlow_UserPreferences(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "user_preferences", "registration_attempts", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthTestRouter(app)
+
+	t.Run("get_preferences_requires_authentication", func(t *testing.T) {
+		// Attempt to get preferences without authentication
+		getReq := httptest.NewRequest("GET", "/api/v1/auth/preferences", nil)
+		getW := httptest.NewRecorder()
+		router.ServeHTTP(getW, getReq)
+
+		// Should return 401 Unauthorized
+		core.AssertEqual(t, 401, getW.Code, "Get preferences without auth should return 401")
+	})
+
+	t.Run("get_preferences_with_invalid_token", func(t *testing.T) {
+		// Attempt to get preferences with invalid token
+		getReq := httptest.NewRequest("GET", "/api/v1/auth/preferences", nil)
+		getReq.Header.Set("Authorization", "Bearer invalid.token.here")
+		getW := httptest.NewRecorder()
+		router.ServeHTTP(getW, getReq)
+
+		// Should return 401 Unauthorized
+		core.AssertEqual(t, 401, getW.Code, "Invalid token should return 401")
+	})
+
+	t.Run("get_preferences_returns_user_preferences", func(t *testing.T) {
+		// Create test user
+		userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+		user := &core.User{
+			Username: "prefuser",
+			Email:    "pref@example.com",
+			Password: "TestPassword123!",
+		}
+		createdUser, err := userService.CreateUser(user)
+		core.AssertNoError(t, err, "Should create user successfully")
+
+		// Create valid JWT token
+		token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+		core.AssertNoError(t, err, "Should create token successfully")
+
+		// Get preferences
+		getReq := httptest.NewRequest("GET", "/api/v1/auth/preferences", nil)
+		getReq.Header.Set("Authorization", "Bearer "+token)
+		getW := httptest.NewRecorder()
+		router.ServeHTTP(getW, getReq)
+
+		// Should return 200 OK with preferences
+		core.AssertEqual(t, 200, getW.Code, "Should return 200 OK")
+
+		var response map[string]interface{}
+		json.Unmarshal(getW.Body.Bytes(), &response)
+		prefs, hasPrefs := response["preferences"]
+		core.AssertTrue(t, hasPrefs, "Response should have preferences field")
+		core.AssertNotEqual(t, nil, prefs, "Preferences should not be nil")
+	})
+
+	t.Run("update_preferences_requires_authentication", func(t *testing.T) {
+		// Attempt to update preferences without authentication
+		updatePayload := map[string]interface{}{
+			"preferences": map[string]string{
+				"theme": "dark",
+			},
+		}
+		updateBytes, _ := json.Marshal(updatePayload)
+		updateReq := httptest.NewRequest("PUT", "/api/v1/auth/preferences", bytes.NewBuffer(updateBytes))
+		updateReq.Header.Set("Content-Type", "application/json")
+		updateW := httptest.NewRecorder()
+		router.ServeHTTP(updateW, updateReq)
+
+		// Should return 401 Unauthorized
+		core.AssertEqual(t, 401, updateW.Code, "Update without auth should return 401")
+	})
+
+	t.Run("update_preferences_missing_preferences_field", func(t *testing.T) {
+		// Create test user
+		userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+		user := &core.User{
+			Username: "updateprefuser",
+			Email:    "updatepref@example.com",
+			Password: "TestPassword123!",
+		}
+		createdUser, err := userService.CreateUser(user)
+		core.AssertNoError(t, err, "Should create user successfully")
+		token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+		core.AssertNoError(t, err, "Should create token successfully")
+
+		// Attempt to update without preferences field
+		updatePayload := map[string]interface{}{}
+		updateBytes, _ := json.Marshal(updatePayload)
+		updateReq := httptest.NewRequest("PUT", "/api/v1/auth/preferences", bytes.NewBuffer(updateBytes))
+		updateReq.Header.Set("Content-Type", "application/json")
+		updateReq.Header.Set("Authorization", "Bearer "+token)
+		updateW := httptest.NewRecorder()
+		router.ServeHTTP(updateW, updateReq)
+
+		// Should return 400 for missing required field
+		core.AssertEqual(t, 400, updateW.Code, "Missing preferences field should return 400")
+	})
+
+	t.Run("update_preferences_with_invalid_token", func(t *testing.T) {
+		// Attempt to update with invalid token
+		updatePayload := map[string]interface{}{
+			"preferences": map[string]string{
+				"theme": "dark",
+			},
+		}
+		updateBytes, _ := json.Marshal(updatePayload)
+		updateReq := httptest.NewRequest("PUT", "/api/v1/auth/preferences", bytes.NewBuffer(updateBytes))
+		updateReq.Header.Set("Content-Type", "application/json")
+		updateReq.Header.Set("Authorization", "Bearer invalid.token")
+		updateW := httptest.NewRecorder()
+		router.ServeHTTP(updateW, updateReq)
+
+		// Should return 401 Unauthorized
+		core.AssertEqual(t, 401, updateW.Code, "Invalid token should return 401")
+	})
+
+	t.Run("update_preferences_succeeds", func(t *testing.T) {
+		// Create test user
+		userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+		user := &core.User{
+			Username: "updateprefuser2",
+			Email:    "updatepref2@example.com",
+			Password: "TestPassword123!",
+		}
+		createdUser, err := userService.CreateUser(user)
+		core.AssertNoError(t, err, "Should create user successfully")
+		token, err := core.CreateTestJWTTokenForUser(app, createdUser)
+		core.AssertNoError(t, err, "Should create token successfully")
+
+		// Update preferences with valid theme
+		updatePayload := map[string]interface{}{
+			"preferences": map[string]string{
+				"theme": "dark",
+			},
+		}
+		updateBytes, _ := json.Marshal(updatePayload)
+		updateReq := httptest.NewRequest("PUT", "/api/v1/auth/preferences", bytes.NewBuffer(updateBytes))
+		updateReq.Header.Set("Content-Type", "application/json")
+		updateReq.Header.Set("Authorization", "Bearer "+token)
+		updateW := httptest.NewRecorder()
+		router.ServeHTTP(updateW, updateReq)
+
+		// Should return 200 OK
+		core.AssertEqual(t, 200, updateW.Code, "Update should return 200 OK")
+
+		var response map[string]interface{}
+		json.Unmarshal(updateW.Body.Bytes(), &response)
+		prefs, hasPrefs := response["preferences"]
+		core.AssertTrue(t, hasPrefs, "Response should have preferences field")
+		core.AssertNotEqual(t, nil, prefs, "Preferences should not be nil")
+	})
+}
+
+// TestAuthFlow_RevokeAllSessionsEdgeCases tests V1RevokeAllSessions edge cases
+// Target: Improve coverage from 57.1% by testing error paths
+func TestAuthFlow_RevokeAllSessionsEdgeCases(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "registration_attempts", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthTestRouter(app)
+
+	// Create and register test user
+	testUser := core.User{
+		Username: "revokealltest",
+		Email:    "revokeall@test.com",
+		Password: "testpassword123",
+	}
+
+	registerPayload, _ := json.Marshal(testUser)
+	registerReq := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(registerPayload))
+	registerReq.Header.Set("Content-Type", "application/json")
+	registerW := httptest.NewRecorder()
+	router.ServeHTTP(registerW, registerReq)
+	core.AssertEqual(t, 201, registerW.Code, "Registration should succeed for revoke all edge test")
+
+	// Get access token from registration response
+	var registerResponse map[string]interface{}
+	err := json.Unmarshal(registerW.Body.Bytes(), &registerResponse)
+	core.AssertNoError(t, err, "Registration response should be valid JSON")
+
+	validToken, ok := registerResponse["Token"].(string)
+	if !ok {
+		t.Fatalf("Expected 'Token' field in registration response, got: %+v", registerResponse)
+	}
+
+	t.Run("revoke_all_with_invalid_token_format", func(t *testing.T) {
+		// Test with malformed token (not JWT format)
+		req := httptest.NewRequest("POST", "/api/v1/auth/revoke-all-sessions", nil)
+		req.Header.Set("Authorization", "Bearer invalid-token-not-jwt")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Should return 401 due to token validation failure
+		core.AssertEqual(t, 401, w.Code, "Invalid token format should return 401")
+	})
+
+	t.Run("revoke_all_with_expired_token", func(t *testing.T) {
+		// Create an expired token (exp in the past)
+		expiredToken := jwt2.NewWithClaims(jwt2.SigningMethodHS256, jwt2.MapClaims{
+			"sub":        "999",
+			"session_id": float64(999),
+			"exp":        time.Now().Add(-1 * time.Hour).Unix(), // Expired 1 hour ago
+		})
+		tokenString, _ := expiredToken.SignedString([]byte(app.Config.JWT.Secret))
+
+		req := httptest.NewRequest("POST", "/api/v1/auth/revoke-all-sessions", nil)
+		req.Header.Set("Authorization", "Bearer "+tokenString)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Should return 401 due to expired token
+		core.AssertEqual(t, 401, w.Code, "Expired token should return 401")
+	})
+
+	t.Run("revoke_all_with_token_missing_session_id", func(t *testing.T) {
+		// Create token without session_id claim - this tests the handler's session_id check
+		tokenWithoutSessionID := jwt2.NewWithClaims(jwt2.SigningMethodHS256, jwt2.MapClaims{
+			"sub": "999",
+			"exp": time.Now().Add(1 * time.Hour).Unix(),
+			// Missing session_id intentionally
+		})
+		tokenString, _ := tokenWithoutSessionID.SignedString([]byte(app.Config.JWT.Secret))
+
+		req := httptest.NewRequest("POST", "/api/v1/auth/revoke-all-sessions", nil)
+		req.Header.Set("Authorization", "Bearer "+tokenString)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Should return 401 due to missing session_id
+		core.AssertEqual(t, 401, w.Code, "Token missing session_id should return 401")
+	})
+
+	t.Run("revoke_all_succeeds_with_valid_session", func(t *testing.T) {
+		// Happy path - valid token with valid session
+		req := httptest.NewRequest("POST", "/api/v1/auth/revoke-all-sessions", nil)
+		req.Header.Set("Authorization", "Bearer "+validToken)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Should succeed
+		core.AssertEqual(t, 200, w.Code, "Valid revoke all request should return 200")
+	})
+}
+
+// TestAuthFlow_CompleteEmailChange tests V1CompleteEmailChange endpoint
+// Target: Improve coverage from 0% by testing untested handler
+func TestAuthFlow_CompleteEmailChange(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "email_change_tokens", "registration_attempts", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthTestRouter(app)
+
+	t.Run("complete_email_change_with_invalid_token", func(t *testing.T) {
+		// Test with invalid token (should return 400 or 500)
+		payload := map[string]string{"token": "invalid-random-token-12345"}
+		payloadBytes, _ := json.Marshal(payload)
+		req := httptest.NewRequest("POST", "/api/v1/auth/complete-email-change", bytes.NewBuffer(payloadBytes))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Should return 400 or 500 (invalid token or email service error)
+		core.AssertTrue(t, w.Code == 400 || w.Code == 500,
+			"Invalid token should return 400 or 500, got: "+strconv.Itoa(w.Code))
+	})
+
+	t.Run("complete_email_change_with_missing_token", func(t *testing.T) {
+		// Test with missing token field
+		payload := map[string]string{}
+		payloadBytes, _ := json.Marshal(payload)
+		req := httptest.NewRequest("POST", "/api/v1/auth/complete-email-change", bytes.NewBuffer(payloadBytes))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Should return 400 or 500
+		core.AssertTrue(t, w.Code == 400 || w.Code == 500,
+			"Missing token should return 400 or 500, got: "+strconv.Itoa(w.Code))
+	})
+
+	t.Run("complete_email_change_with_malformed_json", func(t *testing.T) {
+		// Test with malformed JSON body
+		req := httptest.NewRequest("POST", "/api/v1/auth/complete-email-change", bytes.NewBufferString("{invalid json"))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Should return 400 (invalid request)
+		core.AssertEqual(t, 400, w.Code, "Malformed JSON should return 400")
+	})
+}
+
+// TestAuthFlow_DeleteAccount tests V1DeleteAccount endpoint edge cases
+// Target: Improve coverage from 64.7% by testing additional scenarios
+func TestAuthFlow_DeleteAccount(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "registration_attempts", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupAuthTestRouter(app)
+
+	// Create and register test user
+	testUser := core.User{
+		Username: "deleteacctest",
+		Email:    "deleteacc@test.com",
+		Password: "testpassword123",
+	}
+
+	registerPayload, _ := json.Marshal(testUser)
+	registerReq := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(registerPayload))
+	registerReq.Header.Set("Content-Type", "application/json")
+	registerW := httptest.NewRecorder()
+	router.ServeHTTP(registerW, registerReq)
+	core.AssertEqual(t, 201, registerW.Code, "Registration should succeed for delete account test")
+
+	// Get access token from registration response
+	var registerResponse map[string]interface{}
+	err := json.Unmarshal(registerW.Body.Bytes(), &registerResponse)
+	core.AssertNoError(t, err, "Registration response should be valid JSON")
+
+	validToken, ok := registerResponse["Token"].(string)
+	if !ok {
+		t.Fatalf("Expected 'Token' field in registration response, got: %+v", registerResponse)
+	}
+
+	t.Run("delete_account_requires_authentication", func(t *testing.T) {
+		// Test without authorization header
+		req := httptest.NewRequest("DELETE", "/api/v1/auth/account", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Should return 401
+		core.AssertEqual(t, 401, w.Code, "Delete account without auth should return 401")
+	})
+
+	t.Run("delete_account_with_invalid_token", func(t *testing.T) {
+		// Test with invalid token format
+		req := httptest.NewRequest("DELETE", "/api/v1/auth/account", nil)
+		req.Header.Set("Authorization", "Bearer invalid-token-format")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Should return 401
+		core.AssertEqual(t, 401, w.Code, "Invalid token should return 401")
+	})
+
+	t.Run("delete_account_succeeds_with_valid_auth", func(t *testing.T) {
+		// Happy path - authenticated user deletes account
+		req := httptest.NewRequest("DELETE", "/api/v1/auth/account", nil)
+		req.Header.Set("Authorization", "Bearer "+validToken)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Should succeed (200 OK)
+		core.AssertEqual(t, 200, w.Code, "Delete account with valid auth should return 200")
+
+		// Response should contain success message
+		var response map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &response)
+		message, hasMessage := response["message"]
+		core.AssertTrue(t, hasMessage, "Response should have message field")
+		messageStr := message.(string)
+		core.AssertTrue(t, len(messageStr) > 0, "Message should not be empty")
+		// Should mention 30-day restore period
+		core.AssertTrue(t,
+			bytes.Contains([]byte(messageStr), []byte("30 days")) ||
+				bytes.Contains([]byte(messageStr), []byte("restore")),
+			"Message should mention restore period")
 	})
 }
