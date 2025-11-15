@@ -92,6 +92,57 @@ func (cs *CharacterService) CreateCharacter(ctx context.Context, req CreateChara
 	return &character, nil
 }
 
+// CreateGamemasterNPC creates the default "Gamemaster" NPC for a game.
+// This is called automatically when a game transitions to character_creation state.
+// The NPC is created with approved status and can be used immediately by the GM.
+//
+// This method is idempotent - if a character named "Gamemaster" already exists in
+// the game, it will skip creation and log an info message.
+func (cs *CharacterService) CreateGamemasterNPC(ctx context.Context, gameID int32) error {
+	defer cs.Logger.LogOperation(ctx, "create_gamemaster_npc", "game_id", gameID)()
+
+	queries := models.New(cs.DB)
+
+	// Check if Gamemaster NPC already exists for this game
+	existingChar, err := queries.GetCharacterByNameAndGame(ctx, models.GetCharacterByNameAndGameParams{
+		Name:   "Gamemaster",
+		GameID: gameID,
+	})
+
+	// If character exists (no error), skip creation
+	if err == nil && existingChar.ID > 0 {
+		cs.Logger.Info(ctx, "Gamemaster NPC already exists, skipping creation",
+			"game_id", gameID,
+			"character_id", existingChar.ID,
+			"character_type", existingChar.CharacterType,
+		)
+		return nil
+	}
+
+	// Create the Gamemaster NPC with approved status
+	character, err := queries.CreateCharacter(ctx, models.CreateCharacterParams{
+		GameID:        gameID,
+		UserID:        pgtype.Int4{Valid: false}, // NULL for GM NPCs
+		Name:          "Gamemaster",
+		CharacterType: "npc",
+		Status:        pgtype.Text{String: "approved", Valid: true}, // Auto-approved
+	})
+
+	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to create Gamemaster NPC", "game_id", gameID)
+		return fmt.Errorf("failed to create Gamemaster NPC: %w", err)
+	}
+
+	cs.Logger.Info(ctx, "Gamemaster NPC created successfully",
+		"game_id", gameID,
+		"character_id", character.ID,
+		"character_name", character.Name,
+		"status", character.Status.String,
+	)
+
+	return nil
+}
+
 func (cs *CharacterService) GetCharacter(ctx context.Context, characterID int32) (*models.Character, error) {
 	queries := models.New(cs.DB)
 	character, err := queries.GetCharacter(ctx, characterID)

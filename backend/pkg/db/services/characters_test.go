@@ -1001,3 +1001,104 @@ func TestCharacterService_DatabaseConstraintViolations(t *testing.T) {
 		core.AssertError(t, err, "Should fail with invalid FK")
 	})
 }
+
+// TestCharacterService_CreateGamemasterNPC tests automatic Gamemaster NPC creation
+func TestCharacterService_CreateGamemasterNPC(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	queries := models.New(testDB.Pool)
+
+	t.Run("creates Gamemaster NPC successfully", func(t *testing.T) {
+		// Create Gamemaster NPC
+		err := characterService.CreateGamemasterNPC(context.Background(), fixtures.TestGame.ID)
+		core.AssertNoError(t, err, "Failed to create Gamemaster NPC")
+
+		// Verify NPC was created
+		character, err := queries.GetCharacterByNameAndGame(context.Background(), models.GetCharacterByNameAndGameParams{
+			Name:   "Gamemaster",
+			GameID: fixtures.TestGame.ID,
+		})
+		core.AssertNoError(t, err, "Failed to get Gamemaster NPC")
+
+		// Verify NPC attributes
+		core.AssertEqual(t, "Gamemaster", character.Name, "Character name should be 'Gamemaster'")
+		core.AssertEqual(t, "npc", character.CharacterType, "Character type should be 'npc'")
+		core.AssertEqual(t, "approved", character.Status.String, "Character status should be 'approved'")
+		core.AssertEqual(t, false, character.UserID.Valid, "User ID should be NULL for GM NPCs")
+		core.AssertEqual(t, fixtures.TestGame.ID, character.GameID, "Game ID should match")
+	})
+
+	t.Run("idempotent - skips creation if Gamemaster already exists", func(t *testing.T) {
+		// Create a new game for this test
+		newGame := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Idempotency Test Game")
+
+		// Create Gamemaster NPC first time
+		err := characterService.CreateGamemasterNPC(context.Background(), newGame.ID)
+		core.AssertNoError(t, err, "Failed to create Gamemaster NPC first time")
+
+		// Get the first NPC ID
+		firstNPC, err := queries.GetCharacterByNameAndGame(context.Background(), models.GetCharacterByNameAndGameParams{
+			Name:   "Gamemaster",
+			GameID: newGame.ID,
+		})
+		core.AssertNoError(t, err, "Failed to get first Gamemaster NPC")
+
+		// Try to create again - should skip
+		err = characterService.CreateGamemasterNPC(context.Background(), newGame.ID)
+		core.AssertNoError(t, err, "Should not error when Gamemaster already exists")
+
+		// Verify no duplicate was created
+		characters, err := queries.GetCharactersByGame(context.Background(), newGame.ID)
+		core.AssertNoError(t, err, "Failed to get characters for game")
+
+		// Count how many "Gamemaster" NPCs exist
+		gamemasterCount := 0
+		for _, char := range characters {
+			if char.Name == "Gamemaster" {
+				gamemasterCount++
+				core.AssertEqual(t, firstNPC.ID, char.ID, "Should be the same Gamemaster NPC, not a duplicate")
+			}
+		}
+		core.AssertEqual(t, 1, gamemasterCount, "Should have exactly 1 Gamemaster NPC")
+	})
+
+	t.Run("skips creation if character named Gamemaster already exists", func(t *testing.T) {
+		// Create a new game for this test
+		anotherGame := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Conflict Test Game")
+
+		// Manually create a player character named "Gamemaster" first
+		userID := int32(fixtures.TestUser.ID)
+		playerChar, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID:        anotherGame.ID,
+			UserID:        &userID,
+			Name:          "Gamemaster",
+			CharacterType: "player_character",
+		})
+		core.AssertNoError(t, err, "Failed to create player character named Gamemaster")
+
+		// Try to create auto NPC - should skip
+		err = characterService.CreateGamemasterNPC(context.Background(), anotherGame.ID)
+		core.AssertNoError(t, err, "Should not error when character named Gamemaster already exists")
+
+		// Verify only the player character exists (no NPC was created)
+		character, err := queries.GetCharacterByNameAndGame(context.Background(), models.GetCharacterByNameAndGameParams{
+			Name:   "Gamemaster",
+			GameID: anotherGame.ID,
+		})
+		core.AssertNoError(t, err, "Failed to get Gamemaster character")
+		core.AssertEqual(t, playerChar.ID, character.ID, "Should be the original player character, not a new NPC")
+		core.AssertEqual(t, "player_character", character.CharacterType, "Should still be a player_character")
+	})
+
+	t.Run("fails gracefully with invalid game ID", func(t *testing.T) {
+		// Try to create NPC for nonexistent game
+		err := characterService.CreateGamemasterNPC(context.Background(), 99999)
+		core.AssertError(t, err, "Should fail with invalid game ID")
+		core.AssertErrorContains(t, err, "failed to create Gamemaster NPC", "Should contain error message")
+	})
+}

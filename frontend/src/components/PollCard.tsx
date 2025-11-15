@@ -160,7 +160,7 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
               <Spinner size="md" label="Loading results..." />
             </div>
           ) : results ? (
-            <PollResults results={results} poll={poll} isGM={isGM} isAudience={isAudience} />
+            <PollResults results={results} poll={poll} isGM={isGM} isAudience={isAudience} isExpired={isExpired} />
           ) : null
         ) : null}
 

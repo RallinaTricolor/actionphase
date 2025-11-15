@@ -5,9 +5,10 @@ interface PollResultsProps {
   poll: Poll;
   isGM?: boolean;
   isAudience?: boolean;
+  isExpired?: boolean;
 }
 
-export function PollResults({ results, poll, isGM = false, isAudience = false }: PollResultsProps) {
+export function PollResults({ results, poll, isGM = false, isAudience = false, isExpired = false }: PollResultsProps) {
   // Use total votes from backend (includes "other" votes)
   const totalVotes = results.total_votes;
 
@@ -16,6 +17,11 @@ export function PollResults({ results, poll, isGM = false, isAudience = false }:
 
   // GMs and audience can see individual votes and other responses even when poll.show_individual_votes is false
   const canSeeDetails = poll.show_individual_votes || isGM || isAudience;
+
+  // Detect ties: count how many options share the highest vote count
+  const highestVoteCount = sortedOptions[0]?.vote_count || 0;
+  const winnersCount = sortedOptions.filter(opt => opt.vote_count === highestVoteCount && highestVoteCount > 0).length;
+  const isTie = winnersCount > 1;
 
   return (
     <div className="space-y-4">
@@ -45,7 +51,19 @@ export function PollResults({ results, poll, isGM = false, isAudience = false }:
                   <span className="text-sm font-medium text-text-primary">
                     {option.option_text || 'Other responses'}
                     {isWinning && sortedOptions[0].vote_count > 0 && (
-                      <span className="ml-2 text-xs font-semibold text-semantic-success">● Leading</span>
+                      isExpired ? (
+                        isTie ? (
+                          <span className="ml-2 px-2 py-0.5 text-xs font-bold text-content-primary bg-semantic-warning-subtle rounded">
+                            TIE
+                          </span>
+                        ) : (
+                          <span className="ml-2 px-2 py-0.5 text-xs font-bold text-content-primary bg-semantic-success-subtle rounded">
+                            WINNER
+                          </span>
+                        )
+                      ) : (
+                        <span className="ml-2 text-xs font-semibold text-semantic-success">● Leading</span>
+                      )
                     )}
                   </span>
                   <span className="text-sm text-text-secondary">
