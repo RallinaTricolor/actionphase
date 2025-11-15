@@ -196,6 +196,20 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 		}
 	}
 
+	// When a game transitions to character_creation, automatically create "Gamemaster" NPC
+	if newState == core.GameStateCharacterCreation {
+		charService := &CharacterService{DB: gs.DB, Logger: gs.Logger}
+		if err := charService.CreateGamemasterNPC(ctx, gameID); err != nil {
+			// Log the error but don't fail the state change
+			// GM can manually create the NPC later if auto-creation fails
+			if gs.Logger != nil {
+				gs.Logger.Warn(ctx, "Failed to create Gamemaster NPC for character creation state",
+					"error", err,
+					"game_id", gameID)
+			}
+		}
+	}
+
 	return &game, nil
 }
 

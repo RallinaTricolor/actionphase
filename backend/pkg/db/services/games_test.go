@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"actionphase/pkg/core"
+	models "actionphase/pkg/db/models"
 )
 
 func TestGameService_CreateGame(t *testing.T) {
@@ -1529,5 +1530,105 @@ func TestGameService_DatabaseConstraintViolations(t *testing.T) {
 
 		_, err := gameService.CreateGame(context.Background(), req)
 		core.AssertError(t, err, "Should fail with invalid FK")
+	})
+}
+
+// TestGameService_UpdateGameState_AutoCreateGamemasterNPC tests Gamemaster NPC creation during state transition
+func TestGameService_UpdateGameState_AutoCreateGamemasterNPC(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	queries := models.New(testDB.Pool)
+
+	t.Run("creates Gamemaster NPC when transitioning to character_creation", func(t *testing.T) {
+		// Create a game in setup state
+		game := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Character Creation Test Game")
+		core.AssertEqual(t, core.GameStateSetup, game.State.String, "Game should start in setup state")
+
+		// Verify no Gamemaster NPC exists yet
+		characters, err := queries.GetCharactersByGame(context.Background(), game.ID)
+		core.AssertNoError(t, err, "Failed to get characters")
+		core.AssertEqual(t, 0, len(characters), "Should have no characters initially")
+
+		// Transition to character_creation state
+		updatedGame, err := gameService.UpdateGameState(context.Background(), game.ID, core.GameStateCharacterCreation)
+		core.AssertNoError(t, err, "Failed to update game state")
+		core.AssertEqual(t, core.GameStateCharacterCreation, updatedGame.State.String, "Game should be in character_creation state")
+
+		// Verify Gamemaster NPC was created
+		gamemasterNPC, err := queries.GetCharacterByNameAndGame(context.Background(), models.GetCharacterByNameAndGameParams{
+			Name:   "Gamemaster",
+			GameID: game.ID,
+		})
+		core.AssertNoError(t, err, "Gamemaster NPC should exist after state transition")
+
+		// Verify NPC attributes
+		core.AssertEqual(t, "Gamemaster", gamemasterNPC.Name, "Character name should be 'Gamemaster'")
+		core.AssertEqual(t, "npc", gamemasterNPC.CharacterType, "Character type should be 'npc'")
+		core.AssertEqual(t, "approved", gamemasterNPC.Status.String, "Character status should be 'approved'")
+		core.AssertEqual(t, false, gamemasterNPC.UserID.Valid, "User ID should be NULL for GM NPCs")
+	})
+
+	t.Run("does not create duplicate if transitioning to character_creation twice", func(t *testing.T) {
+		// Create a game in setup state
+		game := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Multiple Transition Test Game")
+
+		// First transition to character_creation
+		_, err := gameService.UpdateGameState(context.Background(), game.ID, core.GameStateCharacterCreation)
+		core.AssertNoError(t, err, "Failed first state transition")
+
+		// Get characters - should have exactly 1 Gamemaster NPC
+		characters, err := queries.GetCharactersByGame(context.Background(), game.ID)
+		core.AssertNoError(t, err, "Failed to get characters after first transition")
+		gamemasterCount := 0
+		for _, char := range characters {
+			if char.Name == "Gamemaster" {
+				gamemasterCount++
+			}
+		}
+		core.AssertEqual(t, 1, gamemasterCount, "Should have exactly 1 Gamemaster NPC after first transition")
+
+		// Transition to another state (e.g., in_progress)
+		_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateInProgress)
+		core.AssertNoError(t, err, "Failed to transition to in_progress")
+
+		// Transition back to character_creation (edge case)
+		_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateCharacterCreation)
+		core.AssertNoError(t, err, "Failed second state transition to character_creation")
+
+		// Verify still only 1 Gamemaster NPC (no duplicate created)
+		characters, err = queries.GetCharactersByGame(context.Background(), game.ID)
+		core.AssertNoError(t, err, "Failed to get characters after second transition")
+		gamemasterCount = 0
+		for _, char := range characters {
+			if char.Name == "Gamemaster" {
+				gamemasterCount++
+			}
+		}
+		core.AssertEqual(t, 1, gamemasterCount, "Should still have exactly 1 Gamemaster NPC after second transition")
+	})
+
+	t.Run("does not create NPC for other state transitions", func(t *testing.T) {
+		// Create a game in setup state
+		game := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Other State Test Game")
+
+		// Transition to recruitment (not character_creation)
+		_, err := gameService.UpdateGameState(context.Background(), game.ID, core.GameStateRecruitment)
+		core.AssertNoError(t, err, "Failed to transition to recruitment")
+
+		// Verify no Gamemaster NPC was created
+		characters, err := queries.GetCharactersByGame(context.Background(), game.ID)
+		core.AssertNoError(t, err, "Failed to get characters")
+		gamemasterCount := 0
+		for _, char := range characters {
+			if char.Name == "Gamemaster" {
+				gamemasterCount++
+			}
+		}
+		core.AssertEqual(t, 0, gamemasterCount, "Should have no Gamemaster NPC for non-character_creation state")
 	})
 }
