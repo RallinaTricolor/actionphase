@@ -11,9 +11,10 @@ import type { Handout, CreateHandoutRequest, UpdateHandoutRequest } from '../typ
 interface HandoutsListProps {
   gameId: number;
   isGM: boolean;
+  gameState?: string;
 }
 
-export function HandoutsList({ gameId, isGM }: HandoutsListProps) {
+export function HandoutsList({ gameId, isGM, gameState }: HandoutsListProps) {
   const { showError } = useToast();
   const {
     handouts,
@@ -112,7 +113,7 @@ export function HandoutsList({ gameId, isGM }: HandoutsListProps) {
       <Card variant="elevated" padding="lg" data-testid="handouts-list">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-content-primary">Handouts</h2>
-          {isGM && (
+          {isGM && gameState !== 'completed' && gameState !== 'cancelled' && (
             <Button
               variant="primary"
               onClick={() => setShowCreateModal(true)}
@@ -131,18 +132,21 @@ export function HandoutsList({ gameId, isGM }: HandoutsListProps) {
           </Alert>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {visibleHandouts.map(handout => (
-              <HandoutCard
-                key={handout.id}
-                handout={handout}
-                isGM={isGM}
-                onView={setViewingHandout}
-                onEdit={isGM ? setEditingHandout : undefined}
-                onDelete={isGM ? handleDelete : undefined}
-                onPublish={isGM ? handlePublish : undefined}
-                onUnpublish={isGM ? handleUnpublish : undefined}
-              />
-            ))}
+            {visibleHandouts.map(handout => {
+              const canEditHandout = isGM && gameState !== 'completed' && gameState !== 'cancelled';
+              return (
+                <HandoutCard
+                  key={handout.id}
+                  handout={handout}
+                  isGM={isGM}
+                  onView={setViewingHandout}
+                  onEdit={canEditHandout ? setEditingHandout : undefined}
+                  onDelete={canEditHandout ? handleDelete : undefined}
+                  onPublish={canEditHandout ? handlePublish : undefined}
+                  onUnpublish={canEditHandout ? handleUnpublish : undefined}
+                />
+              );
+            })}
           </div>
         )}
       </Card>

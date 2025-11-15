@@ -14,9 +14,10 @@ interface PollsTabProps {
   isGM: boolean;
   isCurrentPhase: boolean;
   isAudience?: boolean;
+  gameState?: string;
 }
 
-export function PollsTab({ gameId, phaseId, isGM, isCurrentPhase, isAudience = false }: PollsTabProps) {
+export function PollsTab({ gameId, phaseId, isGM, isCurrentPhase, isAudience = false, gameState }: PollsTabProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [includeExpired, setIncludeExpired] = useState(false);
   const { currentPhaseId } = useGameContext();
@@ -127,7 +128,7 @@ export function PollsTab({ gameId, phaseId, isGM, isCurrentPhase, isAudience = f
                 Active Polls ({activePolls.length})
               </h4>
               {activePolls.map((poll) => (
-                <PollCard key={poll.id} poll={poll} gameId={gameId} isGM={isGM} isAudience={isAudience} />
+                <PollCard key={poll.id} poll={poll} gameId={gameId} isGM={isGM} isAudience={isAudience} gameState={gameState} />
               ))}
             </div>
           )}
@@ -139,7 +140,7 @@ export function PollsTab({ gameId, phaseId, isGM, isCurrentPhase, isAudience = f
                 Expired Polls ({expiredPolls.length})
               </h4>
               {expiredPolls.map((poll) => (
-                <PollCard key={poll.id} poll={poll} gameId={gameId} isGM={isGM} isAudience={isAudience} />
+                <PollCard key={poll.id} poll={poll} gameId={gameId} isGM={isGM} isAudience={isAudience} gameState={gameState} />
               ))}
             </div>
           )}

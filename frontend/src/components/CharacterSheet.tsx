@@ -164,6 +164,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                   avatarUrl={character.avatar_url}
                   characterName={character.name}
                   size="xl"
+                  className="w-20 h-20 md:w-32 md:h-32"
                 />
                 {canEdit && (
                   <>

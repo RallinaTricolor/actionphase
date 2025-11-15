@@ -12,9 +12,10 @@ interface PollCardProps {
   gameId: number;
   isGM: boolean;
   isAudience?: boolean;
+  gameState?: string;
 }
 
-export function PollCard({ poll, gameId, isGM, isAudience = false }: PollCardProps) {
+export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: PollCardProps) {
   // Fetch user's characters for character-level polls
   const { characters } = useUserCharacters(gameId);
   const [showVotingForm, setShowVotingForm] = useState(false);
@@ -199,8 +200,8 @@ export function PollCard({ poll, gameId, isGM, isAudience = false }: PollCardPro
                 {showResults ? 'Hide Results' : 'Show Results'}
               </Button>
             )}
-            {/* Delete button: GM only */}
-            {isGM && (
+            {/* Delete button: GM only, not in completed/cancelled games */}
+            {isGM && gameState !== 'completed' && gameState !== 'cancelled' && (
               <Button
                 variant="danger"
                 onClick={() => setShowDeleteConfirm(true)}

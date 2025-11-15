@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CharactersList } from './CharactersList';
+import CharacterAvatar from './CharacterAvatar';
 import { ParticipantActionsMenu } from './ParticipantActionsMenu';
 import { AddPlayerModal } from './AddPlayerModal';
 import { InactiveCharactersList } from './InactiveCharactersList';
@@ -7,7 +8,6 @@ import { AudienceMemberBadge } from './AudienceMemberBadge';
 import { Button } from './ui';
 import { apiClient } from '../lib/api';
 import type { GameParticipant, GameApplication } from '../types/games';
-import { getInitials, getAvatarColor } from '../utils/avatar';
 
 interface PeopleViewProps {
   gameId: number;
@@ -160,17 +160,11 @@ export function PeopleView({
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-3 flex-1">
                             {/* Avatar */}
-                            {application.avatar_url ? (
-                              <img
-                                src={application.avatar_url}
-                                alt={`${application.username || 'User'}'s avatar`}
-                                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                              />
-                            ) : (
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getAvatarColor(application.username || 'User')}`}>
-                                {getInitials(application.username || 'User')}
-                              </div>
-                            )}
+                            <CharacterAvatar
+                              avatarUrl={application.avatar_url}
+                              characterName={application.username || 'User'}
+                              size="lg"
+                            />
 
                             {/* Content */}
                             <div className="flex-1">
@@ -227,17 +221,11 @@ export function PeopleView({
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex items-start gap-3 flex-1">
                                 {/* Avatar */}
-                                {participant.avatar_url ? (
-                                  <img
-                                    src={participant.avatar_url}
-                                    alt={`${participant.username}'s avatar`}
-                                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                                  />
-                                ) : (
-                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getAvatarColor(participant.username)}`}>
-                                    {getInitials(participant.username)}
-                                  </div>
-                                )}
+                                <CharacterAvatar
+                                  avatarUrl={participant.avatar_url}
+                                  characterName={participant.username}
+                                  size="lg"
+                                />
 
                                 {/* Content */}
                                 <div className="flex-1">

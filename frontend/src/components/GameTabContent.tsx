@@ -189,6 +189,7 @@ export function GameTabContent({
             isGM={isGM}
             isCurrentPhase={true}
             isAudience={isAudience}
+            gameState={game.state}
           />
         </Suspense>
       );
@@ -266,7 +267,7 @@ export function GameTabContent({
 
   // Handouts Tab (All States - tab is always visible per useGameTabs)
   if (activeTab === 'handouts') {
-    return <HandoutsList gameId={gameId} isGM={isGM} />;
+    return <HandoutsList gameId={gameId} isGM={isGM} gameState={game.state} />;
   }
 
   // Deadlines Tab (Character Creation, In Progress & Completed)
