@@ -434,3 +434,66 @@ func TestDashboardService_GetUserDashboard_SortingOrder(t *testing.T) {
 	core.AssertEqual(t, "Urgent Game", dashboard.PlayerGames[0].Title, "Urgent game should be first")
 	core.AssertEqual(t, true, dashboard.PlayerGames[0].IsUrgent, "First game should be urgent")
 }
+
+func TestDashboardService_GetUserDashboard_ExcludesCompletedGames(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "users")
+
+	factory := core.NewTestDataFactory(testDB, t)
+	service := &DashboardService{DB: testDB.Pool}
+
+	// Create users
+	gm := factory.NewUser().WithUsername("gamemaster").Create()
+	player := factory.NewUser().WithUsername("player").Create()
+
+	// Create an active/in_progress game (should appear on dashboard)
+	activeGame := factory.NewGame().
+		WithTitle("Active Game").
+		WithGM(gm.ID).
+		WithState("in_progress").
+		Create()
+
+	// Create a completed game (should NOT appear on dashboard)
+	completedGame := factory.NewGame().
+		WithTitle("Completed Game").
+		WithGM(gm.ID).
+		WithState("completed").
+		Create()
+
+	// Add player to both games
+	factory.NewGameParticipant().
+		ForGame(activeGame.ID).
+		WithUser(player.ID).
+		WithRole("player").
+		Create()
+
+	factory.NewGameParticipant().
+		ForGame(completedGame.ID).
+		WithUser(player.ID).
+		WithRole("player").
+		Create()
+
+	// Get dashboard for player
+	dashboard, err := service.GetUserDashboard(context.Background(), player.ID)
+	core.AssertNoError(t, err, "Failed to get dashboard")
+
+	// Verify only the active game appears
+	core.AssertEqual(t, true, dashboard.HasGames, "Player should have games")
+	core.AssertEqual(t, 1, len(dashboard.PlayerGames), "Should have exactly 1 game (completed game excluded)")
+
+	// Verify it's the active game, not the completed one
+	playerGame := dashboard.PlayerGames[0]
+	core.AssertEqual(t, activeGame.ID, playerGame.GameID, "Game should be the active game")
+	core.AssertEqual(t, "Active Game", playerGame.Title, "Game title should be 'Active Game'")
+	core.AssertEqual(t, "in_progress", playerGame.State, "Game state should be in_progress")
+
+	// Test GM view as well
+	dashboardGM, err := service.GetUserDashboard(context.Background(), gm.ID)
+	core.AssertNoError(t, err, "Failed to get GM dashboard")
+
+	// GM should also only see active game (completed excluded)
+	core.AssertEqual(t, 1, len(dashboardGM.GMGames), "GM should have exactly 1 game (completed game excluded)")
+	core.AssertEqual(t, activeGame.ID, dashboardGM.GMGames[0].GameID, "GM should see the active game")
+	core.AssertEqual(t, "Active Game", dashboardGM.GMGames[0].Title, "GM should see 'Active Game'")
+}
