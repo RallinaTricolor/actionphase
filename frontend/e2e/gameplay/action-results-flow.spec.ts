@@ -39,6 +39,12 @@ test.describe('Action Results Flow', () => {
     // Should see Player 1's published result
     await expect(page.locator('text=Basement Investigation Results').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
+    // Click "Show full content" button to expand the collapsed text
+    const showFullContentButton = page.getByRole('button', { name: 'Show full content' }).first();
+    if (await showFullContentButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await showFullContentButton.click();
+    }
+
     // Should see result content with markdown
     await expect(page.locator('text=You descend into the basement')).toBeVisible();
 
@@ -58,6 +64,12 @@ test.describe('Action Results Flow', () => {
     // Navigate to History tab and view Phase 1 results using POM
     await resultsPage.goto();
     await resultsPage.viewPhaseResults(1);
+
+    // Click "Show full content" button to expand the collapsed text
+    const showFullContentButton = page.getByRole('button', { name: 'Show full content' }).first();
+    if (await showFullContentButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await showFullContentButton.click();
+    }
 
     // Player 1's result contains a character mention: "@Result Test Char 2"
     await expect(page.locator('text=@Result Test Char 2')).toBeVisible({ timeout: 10000 });
@@ -79,6 +91,12 @@ test.describe('Action Results Flow', () => {
 
     // Should see Player 2's result about library research
     await expect(page.locator('text=Library Research Results').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
+
+    // Click "Show full content" button to expand the collapsed text
+    const showFullContentButton = page.getByRole('button', { name: 'Show full content' }).first();
+    if (await showFullContentButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await showFullContentButton.click();
+    }
 
     // Should see result content
     await expect(page.locator('text=dusty tomes')).toBeVisible();
