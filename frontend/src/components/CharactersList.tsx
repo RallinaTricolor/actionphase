@@ -87,18 +87,17 @@ export function CharactersList({
 
   // Filter characters based on user role, game state, and status
   // GM sees all characters
-  // Players see approved characters + their own characters (with restrictions)
-  // Once game is in_progress, players can't see/use pending characters at all
+  // Players see approved characters + their own characters (regardless of status)
   const visibleCharacters = userRole === 'gm'
     ? characters
     : characters.filter(char => {
-        // If game is in_progress, exclude pending/rejected characters for players
-        if (gameState === 'in_progress' && (char.status === 'pending' || char.status === 'rejected')) {
-          return false;
-        }
-        // Otherwise, show approved characters + their own characters
+        // Always show approved characters
+        if (char.status === 'approved') return true;
+        // Always show user's own characters (even if pending/rejected)
         // Use ownership hook instead of user_id comparison (works in anonymous mode)
-        return char.status === 'approved' || isUserCharacterById(char.id);
+        if (isUserCharacterById(char.id)) return true;
+        // Hide other players' pending/rejected characters
+        return false;
       });
 
   // Group characters by type

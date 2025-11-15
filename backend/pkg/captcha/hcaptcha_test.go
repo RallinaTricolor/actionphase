@@ -218,7 +218,7 @@ type customTransport struct {
 func (t *customTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Redirect request to test server
 	req.URL.Scheme = "http"
-	req.URL.Host = req.URL.Host // Keep original host for now
+	// Host will be set by Parse below
 
 	// Parse server URL to get host
 	req.URL, _ = req.URL.Parse(t.serverURL)

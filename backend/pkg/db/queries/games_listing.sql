@@ -27,7 +27,7 @@ SELECT
       WHEN $1::int IS NULL OR $1 = 0 THEN NULL
       WHEN g.gm_user_id = $1 THEN 'gm'
       WHEN EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1 AND status = 'active') THEN 'participant'
-      WHEN EXISTS(SELECT 1 FROM game_applications WHERE game_id = g.id AND user_id = $1 AND status = 'pending') THEN 'applied'
+      WHEN EXISTS(SELECT 1 FROM game_applications WHERE game_id = g.id AND user_id = $1) THEN 'applied'
       ELSE 'none'
     END,
     ''

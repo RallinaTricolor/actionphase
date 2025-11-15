@@ -27,7 +27,7 @@ export function useRenameCharacter() {
   return useMutation({
     mutationFn: ({ characterId, name }: { characterId: number; name: string; gameId?: number }) =>
       apiClient.characters.renameCharacter(characterId, { name }),
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate character queries to refresh with the new name
       queryClient.invalidateQueries({ queryKey: ['character', variables.characterId] });
       if (variables.gameId) {

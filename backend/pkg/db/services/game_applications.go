@@ -351,7 +351,21 @@ func (gas *GameApplicationService) ConvertApprovedApplicationsToParticipants(ctx
 
 	// Create participants for each approved application and delete the application record
 	for _, app := range approvedApplications {
-		// Create participant
+		// Skip audience applications - they were already converted to participants when approved
+		// (see ApproveGameApplication in this file)
+		if app.Role == core.RoleAudience {
+			// Delete the audience application record since they're already a participant
+			err := queries.DeleteGameApplication(ctx, models.DeleteGameApplicationParams{
+				ID:     app.ID,
+				UserID: app.UserID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to delete audience application %d: %w", app.ID, err)
+			}
+			continue
+		}
+
+		// Create participant for player applications
 		_, err := queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
 			GameID: app.GameID,
 			UserID: app.UserID,
@@ -384,6 +398,19 @@ func (gas *GameApplicationService) PublishApplicationStatuses(ctx context.Contex
 	err := queries.PublishApplicationStatuses(ctx, gameID)
 	if err != nil {
 		return fmt.Errorf("failed to publish application statuses: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteRejectedApplications deletes all rejected applications for a game
+// This is called when transitioning out of recruitment to clean up rejected applications
+func (gas *GameApplicationService) DeleteRejectedApplications(ctx context.Context, gameID int32) error {
+	queries := models.New(gas.DB)
+
+	err := queries.DeleteRejectedApplications(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("failed to delete rejected applications: %w", err)
 	}
 
 	return nil

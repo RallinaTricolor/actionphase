@@ -14,6 +14,9 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
+    env: {
+      NODE_ENV: 'test',
+    },
 
     // Pool configuration to prevent IPC channel crashes
     pool: 'threads',

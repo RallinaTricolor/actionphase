@@ -88,7 +88,7 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 			errorMsg = "Registration not allowed at this time"
 		}
 
-		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf(errorMsg)))
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("%s", errorMsg)))
 		return
 	}
 

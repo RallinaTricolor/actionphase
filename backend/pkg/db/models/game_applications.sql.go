@@ -151,6 +151,18 @@ func (q *Queries) DeleteGameApplication(ctx context.Context, arg DeleteGameAppli
 	return err
 }
 
+const deleteRejectedApplications = `-- name: DeleteRejectedApplications :exec
+DELETE FROM game_applications
+WHERE game_id = $1 AND status = 'rejected'
+`
+
+// Delete all rejected applications for a game
+// This is called when transitioning out of recruitment to clean up rejected applications
+func (q *Queries) DeleteRejectedApplications(ctx context.Context, gameID int32) error {
+	_, err := q.db.Exec(ctx, deleteRejectedApplications, gameID)
+	return err
+}
+
 const getApprovedApplicationsForGame = `-- name: GetApprovedApplicationsForGame :many
 SELECT
     ga.id, ga.game_id, ga.user_id, ga.role, ga.message, ga.status, ga.reviewed_by_user_id, ga.reviewed_at, ga.applied_at, ga.is_published,

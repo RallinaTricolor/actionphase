@@ -248,8 +248,21 @@ func (h *Handler) UpdateGameState(w http.ResponseWriter, r *http.Request) {
 			// Don't fail the state transition, but log the error
 		} else {
 			h.App.ObsLogger.Info(ctx, "Successfully converted approved applications to participants", "game_id", gameID)
+		}
 
-			// Send acceptance notifications to approved applicants
+		// Delete all rejected applications now that recruitment is closed
+		// Rejected applicants cannot join the game, so no need to keep the application records
+		err = applicationService.DeleteRejectedApplications(ctx, int32(gameID))
+		if err != nil {
+			h.App.ObsLogger.Warn(ctx, "Failed to delete rejected applications", "error", err, "game_id", gameID)
+			// Don't fail the state transition, but log the warning
+		} else {
+			h.App.ObsLogger.Info(ctx, "Successfully deleted rejected applications", "game_id", gameID)
+		}
+
+		// Send acceptance notifications to approved applicants (regardless of conversion success)
+		// Do this only if we successfully retrieved the approved applications list
+		if approvedApps != nil && len(approvedApps) > 0 {
 			for _, app := range approvedApps {
 				if err := notificationService.NotifyApplicationStatusChange(ctx, app.UserID, int32(gameID), updatedGame.Title, true); err != nil {
 					h.App.ObsLogger.Warn(ctx, "Failed to create acceptance notification",
