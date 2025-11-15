@@ -93,18 +93,22 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 THEN NOW() ELSE NULL END)
 RETURNING *;
 
 -- name: GetUserResults :many
-SELECT results.*, gp.phase_type, gp.phase_number, u.username as gm_username
+SELECT results.*, gp.phase_type, gp.phase_number, u.username as gm_username,
+       c.name as character_name
 FROM action_results results
 JOIN game_phases gp ON results.phase_id = gp.id
 JOIN users u ON results.gm_user_id = u.id
+LEFT JOIN characters c ON results.character_id = c.id
 WHERE results.game_id = $1 AND results.user_id = $2 AND results.is_published = true
 ORDER BY gp.phase_number DESC;
 
 -- name: GetPhaseResults :many
-SELECT results.*, u.username, gm.username as gm_username
+SELECT results.*, u.username, gm.username as gm_username,
+       c.name as character_name
 FROM action_results results
 JOIN users u ON results.user_id = u.id
 JOIN users gm ON results.gm_user_id = gm.id
+LEFT JOIN characters c ON results.character_id = c.id
 WHERE results.phase_id = $1
 ORDER BY results.sent_at;
 

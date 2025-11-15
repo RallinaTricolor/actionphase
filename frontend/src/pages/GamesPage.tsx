@@ -159,6 +159,8 @@ export const GamesPage = () => {
         <ApplyToGameModal
           gameId={selectedGame.id}
           gameTitle={selectedGame.title}
+          autoAcceptAudience={selectedGame.auto_accept_audience}
+          audienceOnly={selectedGame.state !== 'recruitment'} // Only audience can join after recruitment
           isOpen={showApplyModal}
           onClose={() => setShowApplyModal(false)}
           onApplicationSubmitted={handleApplicationSubmitted}

@@ -132,12 +132,12 @@ func TestGameAPI_AutoAcceptAudience(t *testing.T) {
 
 		core.AssertEqual(t, 201, w.Code, "Application should be created")
 
-		// Verify GM did NOT receive a notification (auto-accepted applications don't notify GM)
+		// Verify GM DID receive a notification (GMs now get notified when audience joins)
 		notificationsAfter, err := notificationService.GetUserNotifications(context.Background(), int32(fixtures.TestUser.ID), 100, 0)
 		core.AssertNoError(t, err, "Should get GM notifications")
 		countAfter := len(notificationsAfter)
 
-		core.AssertEqual(t, countBefore, countAfter, "GM should not receive notification for auto-accepted audience")
+		core.AssertEqual(t, countBefore+1, countAfter, "GM should receive notification for auto-accepted audience")
 	})
 
 	t.Run("auto_accept_disabled_creates_pending_application", func(t *testing.T) {

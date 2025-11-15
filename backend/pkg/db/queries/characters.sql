@@ -127,14 +127,17 @@ WHERE c.game_id = $1
     ((g.gm_user_id = $2 OR gp.user_id IS NOT NULL) AND c.character_type = 'npc')
   )
   AND (
-    -- If game is in_progress and user is not GM/co-GM, exclude pending/rejected characters
-    (g.state = 'in_progress' AND g.gm_user_id != $2 AND gp.user_id IS NULL AND c.status NOT IN ('pending', 'rejected'))
+    -- User's own player characters are always visible regardless of status
+    (c.user_id = $2 AND c.character_type = 'player_character')
     OR
     -- If user is GM or co-GM, include all characters regardless of status
     (g.gm_user_id = $2 OR gp.user_id IS NOT NULL)
     OR
     -- If game is not in_progress, include all characters regardless of status
     (g.state != 'in_progress')
+    OR
+    -- For NPCs and assigned characters during in_progress: exclude pending/rejected (these are GM-controlled)
+    (g.state = 'in_progress' AND c.character_type = 'npc' AND c.status NOT IN ('pending', 'rejected'))
   )
 ORDER BY c.character_type, c.name;
 

@@ -705,10 +705,12 @@ func (q *Queries) GetPhaseActions(ctx context.Context, phaseID int32) ([]GetPhas
 }
 
 const getPhaseResults = `-- name: GetPhaseResults :many
-SELECT results.id, results.game_id, results.user_id, results.phase_id, results.character_id, results.action_submission_id, results.gm_user_id, results.content, results.is_published, results.sent_at, u.username, gm.username as gm_username
+SELECT results.id, results.game_id, results.user_id, results.phase_id, results.character_id, results.action_submission_id, results.gm_user_id, results.content, results.is_published, results.sent_at, u.username, gm.username as gm_username,
+       c.name as character_name
 FROM action_results results
 JOIN users u ON results.user_id = u.id
 JOIN users gm ON results.gm_user_id = gm.id
+LEFT JOIN characters c ON results.character_id = c.id
 WHERE results.phase_id = $1
 ORDER BY results.sent_at
 `
@@ -726,6 +728,7 @@ type GetPhaseResultsRow struct {
 	SentAt             pgtype.Timestamptz `json:"sent_at"`
 	Username           string             `json:"username"`
 	GmUsername         string             `json:"gm_username"`
+	CharacterName      pgtype.Text        `json:"character_name"`
 }
 
 func (q *Queries) GetPhaseResults(ctx context.Context, phaseID int32) ([]GetPhaseResultsRow, error) {
@@ -750,6 +753,7 @@ func (q *Queries) GetPhaseResults(ctx context.Context, phaseID int32) ([]GetPhas
 			&i.SentAt,
 			&i.Username,
 			&i.GmUsername,
+			&i.CharacterName,
 		); err != nil {
 			return nil, err
 		}
@@ -1136,10 +1140,12 @@ func (q *Queries) GetUserPhaseSubmission(ctx context.Context, arg GetUserPhaseSu
 }
 
 const getUserResults = `-- name: GetUserResults :many
-SELECT results.id, results.game_id, results.user_id, results.phase_id, results.character_id, results.action_submission_id, results.gm_user_id, results.content, results.is_published, results.sent_at, gp.phase_type, gp.phase_number, u.username as gm_username
+SELECT results.id, results.game_id, results.user_id, results.phase_id, results.character_id, results.action_submission_id, results.gm_user_id, results.content, results.is_published, results.sent_at, gp.phase_type, gp.phase_number, u.username as gm_username,
+       c.name as character_name
 FROM action_results results
 JOIN game_phases gp ON results.phase_id = gp.id
 JOIN users u ON results.gm_user_id = u.id
+LEFT JOIN characters c ON results.character_id = c.id
 WHERE results.game_id = $1 AND results.user_id = $2 AND results.is_published = true
 ORDER BY gp.phase_number DESC
 `
@@ -1163,6 +1169,7 @@ type GetUserResultsRow struct {
 	PhaseType          string             `json:"phase_type"`
 	PhaseNumber        int32              `json:"phase_number"`
 	GmUsername         string             `json:"gm_username"`
+	CharacterName      pgtype.Text        `json:"character_name"`
 }
 
 func (q *Queries) GetUserResults(ctx context.Context, arg GetUserResultsParams) ([]GetUserResultsRow, error) {
@@ -1188,6 +1195,7 @@ func (q *Queries) GetUserResults(ctx context.Context, arg GetUserResultsParams) 
 			&i.PhaseType,
 			&i.PhaseNumber,
 			&i.GmUsername,
+			&i.CharacterName,
 		); err != nil {
 			return nil, err
 		}

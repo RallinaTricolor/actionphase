@@ -80,7 +80,7 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
   if (allComments.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-text-muted">No comments yet</p>
+        <p className="text-content-secondary">No comments yet</p>
         <p className="text-sm text-text-secondary mt-2">
           Be the first to start a conversation in the Common Room!
         </p>
@@ -143,7 +143,7 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
       <div ref={sentinelRef} className="h-20 flex items-center justify-center">
         {isFetchingNextPage && <Spinner size="md" />}
         {!hasNextPage && allComments.length > 0 && (
-          <p className="text-sm text-text-muted">No more comments to load</p>
+          <p className="text-sm text-content-tertiary">No more comments to load</p>
         )}
       </div>
     </div>

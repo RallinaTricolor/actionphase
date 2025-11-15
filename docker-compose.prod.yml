@@ -131,7 +131,7 @@ services:
       POSTGRES_PASSWORD: example
     entrypoint: |
       sh -c '
-        apk add --no-cache postgresql16-client aws-cli bash tzdata
+        apk add --no-cache postgresql17-client aws-cli bash tzdata
         ln -sf /usr/share/zoneinfo/UTC /etc/localtime
         echo "0 2 * * * /scripts/backup-to-s3.sh >> /var/log/backup.log 2>&1" | crontab -
         crond -f -d 8

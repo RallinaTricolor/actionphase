@@ -185,16 +185,21 @@ func (h *Handler) GetCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user is GM - pending/rejected characters should only be visible to GMs
+	// Check if user is GM - pending/rejected characters should be visible to GMs AND the character owner
 	authUser := core.GetAuthenticatedUser(ctx)
 	var isGM bool
+	var isOwner bool
 	if authUser != nil {
 		isGM = core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool)
+		if character.UserID.Valid {
+			isOwner = character.UserID.Int32 == authUser.ID
+		}
 	}
 
-	// Filter pending/rejected characters for non-GMs in in_progress games
-	// This prevents information disclosure about characters that haven't been approved
-	if game.State.String == "in_progress" && !isGM {
+	// Filter pending/rejected characters for non-GMs AND non-owners in in_progress games
+	// This prevents information disclosure about OTHER players' characters that haven't been approved
+	// But allows players to see their own pending/rejected characters
+	if game.State.String == "in_progress" && !isGM && !isOwner {
 		if character.Status.String == "pending" || character.Status.String == "rejected" {
 			render.Render(w, r, core.ErrNotFound("character not found"))
 			return
@@ -284,14 +289,18 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 	// Filter characters based on game state and user role
 	// When game is in_progress:
 	// - GMs, co-GMs, and audience see ALL characters (including pending/rejected)
-	// - Regular players only see approved/active characters
+	// - Regular players see approved/active characters PLUS their own pending/rejected characters
 	// Frontend will handle additional filtering for recipient selection (all users, including GMs)
 	filteredCharacters := make([]models.GetCharactersByGameRow, 0)
 	for _, char := range characters {
-		// If game is in_progress and user is NOT GM/co-GM/audience, exclude pending/rejected characters
+		// If game is in_progress and user is NOT GM/co-GM/audience, exclude OTHER players' pending/rejected characters
+		// BUT always include the user's own characters regardless of status
 		if game.State.String == "in_progress" && !isGM && userRole != "co_gm" && userRole != "audience" {
 			if char.Status.String == "pending" || char.Status.String == "rejected" {
-				continue // Skip this character for regular players
+				// Skip OTHER players' pending/rejected characters, but show user's own
+				if authUser == nil || !char.UserID.Valid || char.UserID.Int32 != authUser.ID {
+					continue
+				}
 			}
 		}
 

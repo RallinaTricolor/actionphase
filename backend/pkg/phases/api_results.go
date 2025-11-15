@@ -158,6 +158,10 @@ func (h *Handler) GetUserActionResults(w http.ResponseWriter, r *http.Request) {
 			resultResp.SentAt = &result.SentAt.Time
 		}
 
+		if result.CharacterName.Valid {
+			resultResp.CharacterName = result.CharacterName.String
+		}
+
 		response = append(response, resultResp)
 	}
 

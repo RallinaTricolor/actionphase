@@ -111,6 +111,12 @@ UPDATE game_applications
 SET is_published = TRUE
 WHERE game_id = $1;
 
+-- name: DeleteRejectedApplications :exec
+-- Delete all rejected applications for a game
+-- This is called when transitioning out of recruitment to clean up rejected applications
+DELETE FROM game_applications
+WHERE game_id = $1 AND status = 'rejected';
+
 -- name: GetPublicGameApplicants :many
 -- Public endpoint: Get list of applicants for a game (no approval/rejection status)
 -- Available to anyone when game is in recruiting state

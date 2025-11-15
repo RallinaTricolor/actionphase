@@ -246,7 +246,8 @@ func TestCharacterAPI_PlayerCanOnlyCreateOwnCharacter(t *testing.T) {
 }
 
 // TestCharacterAPI_PendingCharacterVisibilityByRole tests that pending characters are visible to appropriate roles
-// Issue 4.2: Audience members and co-GMs should see pending characters, but regular players should not
+// - GM, co-GMs, and audience see ALL pending characters
+// - Regular players see their OWN pending characters plus all approved characters
 func TestCharacterAPI_PendingCharacterVisibilityByRole(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
@@ -336,10 +337,10 @@ func TestCharacterAPI_PendingCharacterVisibilityByRole(t *testing.T) {
 			shouldSeeApproved: true,
 		},
 		{
-			name:              "regular_player_sees_only_approved",
+			name:              "regular_player_sees_own_pending_and_approved",
 			token:             playerToken,
 			role:              "regular player",
-			shouldSeePending:  false,
+			shouldSeePending:  true, // Players can see their OWN pending characters
 			shouldSeeApproved: true,
 		},
 	}
@@ -387,6 +388,152 @@ func TestCharacterAPI_PendingCharacterVisibilityByRole(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestCharacterAPI_PlayerCannotSeeOtherPlayersPendingCharacters verifies security requirement
+// that regular players cannot see pending/rejected characters belonging to other players
+func TestCharacterAPI_PlayerCannotSeeOtherPlayersPendingCharacters(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupCharacterTestRouter(app, testDB)
+	fixtures := testDB.SetupFixtures(t)
+
+	// Create two regular players
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Add both players to the game
+	_, err := gameService.AddGameParticipant(context.Background(), fixtures.TestGame.ID, int32(player1.ID), "player")
+	core.AssertNoError(t, err, "Adding player1 to game should succeed")
+
+	_, err = gameService.AddGameParticipant(context.Background(), fixtures.TestGame.ID, int32(player2.ID), "player")
+	core.AssertNoError(t, err, "Adding player2 to game should succeed")
+
+	// Update game to in_progress state to trigger character filtering
+	_, err = gameService.UpdateGameState(context.Background(), fixtures.TestGame.ID, "in_progress")
+	core.AssertNoError(t, err, "Updating game state should succeed")
+
+	// Player 1 creates a pending character (owned by player1)
+	var player1PendingCharID int32
+	err = testDB.Pool.QueryRow(context.Background(),
+		"INSERT INTO characters (game_id, user_id, name, status, character_type) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		fixtures.TestGame.ID, player1.ID, "Player 1 Pending Character", "pending", "player_character",
+	).Scan(&player1PendingCharID)
+	core.AssertNoError(t, err, "Creating player1's pending character should succeed")
+
+	// Player 1 creates an approved character (owned by player1)
+	var player1ApprovedCharID int32
+	err = testDB.Pool.QueryRow(context.Background(),
+		"INSERT INTO characters (game_id, user_id, name, status, character_type) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		fixtures.TestGame.ID, player1.ID, "Player 1 Approved Character", "active", "player_character",
+	).Scan(&player1ApprovedCharID)
+	core.AssertNoError(t, err, "Creating player1's approved character should succeed")
+
+	// Player 2 creates a pending character (owned by player2)
+	var player2PendingCharID int32
+	err = testDB.Pool.QueryRow(context.Background(),
+		"INSERT INTO characters (game_id, user_id, name, status, character_type) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		fixtures.TestGame.ID, player2.ID, "Player 2 Pending Character", "pending", "player_character",
+	).Scan(&player2PendingCharID)
+	core.AssertNoError(t, err, "Creating player2's pending character should succeed")
+
+	// Create tokens for both players
+	player1Token, err := createTestAuthToken(app, player1)
+	core.AssertNoError(t, err, "Player1 token creation should succeed")
+
+	player2Token, err := createTestAuthToken(app, player2)
+	core.AssertNoError(t, err, "Player2 token creation should succeed")
+
+	// Test: Player 1 should see their own pending + approved characters, but NOT player 2's pending
+	t.Run("player1_sees_own_pending_but_not_player2_pending", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(fixtures.TestGame.ID))+"/characters", nil)
+		req.Header.Set("Authorization", "Bearer "+player1Token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 200, w.Code, "Player1 should successfully get characters")
+
+		var response []CharacterResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		// Check which characters player1 can see
+		seesOwnPending := false
+		seesOwnApproved := false
+		seesPlayer2Pending := false
+
+		for _, char := range response {
+			if char.ID == player1PendingCharID {
+				seesOwnPending = true
+			}
+			if char.ID == player1ApprovedCharID {
+				seesOwnApproved = true
+			}
+			if char.ID == player2PendingCharID {
+				seesPlayer2Pending = true
+			}
+		}
+
+		// Assertions
+		if !seesOwnPending {
+			t.Errorf("Player1 should see their own pending character (ID: %d)", player1PendingCharID)
+		}
+		if !seesOwnApproved {
+			t.Errorf("Player1 should see their own approved character (ID: %d)", player1ApprovedCharID)
+		}
+		if seesPlayer2Pending {
+			t.Errorf("Player1 should NOT see Player2's pending character (ID: %d), but did", player2PendingCharID)
+		}
+	})
+
+	// Test: Player 2 should see their own pending, but NOT player 1's pending
+	t.Run("player2_sees_own_pending_but_not_player1_pending", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(fixtures.TestGame.ID))+"/characters", nil)
+		req.Header.Set("Authorization", "Bearer "+player2Token)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 200, w.Code, "Player2 should successfully get characters")
+
+		var response []CharacterResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		// Check which characters player2 can see
+		seesOwnPending := false
+		seesPlayer1Pending := false
+		seesPlayer1Approved := false
+
+		for _, char := range response {
+			if char.ID == player2PendingCharID {
+				seesOwnPending = true
+			}
+			if char.ID == player1PendingCharID {
+				seesPlayer1Pending = true
+			}
+			if char.ID == player1ApprovedCharID {
+				seesPlayer1Approved = true
+			}
+		}
+
+		// Assertions
+		if !seesOwnPending {
+			t.Errorf("Player2 should see their own pending character (ID: %d)", player2PendingCharID)
+		}
+		if seesPlayer1Pending {
+			t.Errorf("Player2 should NOT see Player1's pending character (ID: %d), but did", player1PendingCharID)
+		}
+		if !seesPlayer1Approved {
+			t.Errorf("Player2 should see Player1's approved character (ID: %d)", player1ApprovedCharID)
+		}
+	})
 }
 
 // TestCharacterAPI_ValidationErrors tests validation error scenarios
