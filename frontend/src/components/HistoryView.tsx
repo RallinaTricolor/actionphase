@@ -6,6 +6,7 @@ import { CommonRoom } from './CommonRoom';
 import { PhaseHistoryPolls } from './PhaseHistoryPolls';
 import { Button, Alert } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
+import CharacterAvatar from './CharacterAvatar';
 import type { ActionWithDetails } from '../types/phases';
 
 interface HistoryViewProps {
@@ -18,6 +19,8 @@ interface HistoryViewProps {
 export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience = false }: HistoryViewProps) {
   const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'submissions' | 'results' | 'polls'>('submissions');
+  const [expandedSubmissions, setExpandedSubmissions] = useState<Set<number>>(new Set());
+  const [expandedResults, setExpandedResults] = useState<Set<number>>(new Set());
 
   const { data: phasesData, isLoading } = useQuery({
     queryKey: ['gamePhases', gameId],
@@ -65,6 +68,26 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience =
 
   // Get the selected phase details
   const selectedPhase = phases.find(p => p.id === selectedPhaseId);
+
+  const toggleSubmissionExpanded = (submissionId: number) => {
+    const newExpanded = new Set(expandedSubmissions);
+    if (newExpanded.has(submissionId)) {
+      newExpanded.delete(submissionId);
+    } else {
+      newExpanded.add(submissionId);
+    }
+    setExpandedSubmissions(newExpanded);
+  };
+
+  const toggleResultExpanded = (resultId: number) => {
+    const newExpanded = new Set(expandedResults);
+    if (newExpanded.has(resultId)) {
+      newExpanded.delete(resultId);
+    } else {
+      newExpanded.add(resultId);
+    }
+    setExpandedResults(newExpanded);
+  };
 
   // Reset to 'submissions' tab when switching to Action phase while 'polls' is selected
   // (Action phases don't have polls)
@@ -167,28 +190,64 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience =
 
                   return (
                     <div className="space-y-4">
-                      {phaseSubmissions.map((submission) => (
-                        <div key={submission.id} className="p-4 surface-raised border border-theme-default rounded shadow-sm">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <span className="font-semibold text-content-primary">{submission.character_name}</span>
-                              {submission.is_draft && (
-                                <span className="inline-block px-2 py-1 text-xs bg-warning-subtle text-warning rounded ml-2">
-                                  Draft
-                                </span>
-                              )}
+                      {phaseSubmissions.map((submission) => {
+                        const isExpanded = expandedSubmissions.has(submission.id);
+                        const isCollapsible = submission.content.length > 200;
+                        const previewContent = submission.content.substring(0, 200) + '...';
+
+                        return (
+                          <div key={submission.id} className="p-4 surface-raised border border-theme-default rounded shadow-sm">
+                            <div className="flex items-start gap-3 mb-3">
+                              <CharacterAvatar
+                                characterName={submission.character_name || 'Unknown'}
+                                size="md"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <span className="font-semibold text-content-primary">{submission.character_name}</span>
+                                    {submission.is_draft && (
+                                      <span className="inline-block px-2 py-1 text-xs bg-warning-subtle text-warning rounded ml-2">
+                                        Draft
+                                      </span>
+                                    )}
+                                  </div>
+                                  {submission.submitted_at && (
+                                    <span className="text-xs text-content-tertiary">
+                                      {new Date(submission.submitted_at).toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            {submission.submitted_at && (
-                              <span className="text-xs text-content-tertiary">
-                                {new Date(submission.submitted_at).toLocaleString()}
-                              </span>
+                            <div className="prose dark:prose-invert max-w-none">
+                              <MarkdownPreview content={isCollapsible && !isExpanded ? previewContent : submission.content} />
+                            </div>
+                            {isCollapsible && (
+                              <button
+                                onClick={() => toggleSubmissionExpanded(submission.id)}
+                                className="mt-2 text-sm text-interactive-primary hover:text-interactive-primary-hover font-medium flex items-center"
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                    </svg>
+                                    Show less
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                    Show full content
+                                  </>
+                                )}
+                              </button>
                             )}
                           </div>
-                          <div className="prose dark:prose-invert max-w-none">
-                            <MarkdownPreview content={submission.content} />
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   );
                 })()}
@@ -216,30 +275,69 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience =
 
                   return (
                     <div className="space-y-4">
-                      {phaseResults.map((result) => (
-                        <div key={result.id} className="p-4 surface-raised border border-theme-default rounded shadow-sm">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              {!result.is_published && (
-                                <span className="inline-block px-2 py-1 text-xs bg-warning-subtle text-warning rounded mr-2">
-                                  Draft (Unpublished)
-                                </span>
-                              )}
-                              {result.sent_at && (
-                                <span className="text-xs text-content-tertiary">
-                                  {new Date(result.sent_at).toLocaleString()}
-                                </span>
-                              )}
+                      {phaseResults.map((result) => {
+                        const isExpanded = expandedResults.has(result.id);
+                        const isCollapsible = result.content.length > 200;
+                        const previewContent = result.content.substring(0, 200) + '...';
+
+                        return (
+                          <div key={result.id} className="p-4 surface-raised border border-theme-default rounded shadow-sm">
+                            <div className="flex items-start gap-3 mb-3">
+                              <CharacterAvatar
+                                characterName={result.character_name || 'Unknown'}
+                                size="md"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start mb-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-semibold text-content-primary">
+                                      {result.character_name || 'Unknown Character'}
+                                    </span>
+                                    {!result.is_published && (
+                                      <span className="inline-block px-2 py-1 text-xs bg-warning-subtle text-warning rounded">
+                                        Draft (Unpublished)
+                                      </span>
+                                    )}
+                                  </div>
+                                  {result.sent_at && (
+                                    <span className="text-xs text-content-tertiary whitespace-nowrap">
+                                      {new Date(result.sent_at).toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                                {result.gm_username && (
+                                  <p className="text-xs text-content-tertiary">From: {result.gm_username}</p>
+                                )}
+                              </div>
                             </div>
+                            <div className="prose dark:prose-invert max-w-none">
+                              <MarkdownPreview content={isCollapsible && !isExpanded ? previewContent : result.content} />
+                            </div>
+                            {isCollapsible && (
+                              <button
+                                onClick={() => toggleResultExpanded(result.id)}
+                                className="mt-2 text-sm text-interactive-primary hover:text-interactive-primary-hover font-medium flex items-center"
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                    </svg>
+                                    Show less
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                    Show full content
+                                  </>
+                                )}
+                              </button>
+                            )}
                           </div>
-                          <div className="prose dark:prose-invert max-w-none">
-                            <MarkdownPreview content={result.content} />
-                          </div>
-                          {result.gm_username && (
-                            <p className="text-xs text-content-tertiary mt-3">From: {result.gm_username}</p>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   );
                 })()}

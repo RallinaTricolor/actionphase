@@ -358,7 +358,8 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
                 <CharacterAvatar
                   avatarUrl={post.character_avatar_url}
                   characterName={post.character_name}
-                  size="md"
+                  size="lg"
+                  className="md:w-16 md:h-16"
                 />
                 <div className="flex-1">
                   <h3 className="font-bold text-xl text-content-primary">{post.character_name}</h3>

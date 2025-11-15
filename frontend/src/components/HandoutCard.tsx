@@ -53,13 +53,15 @@ export function HandoutCard({
 
           {isGM && (
             <>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onEdit?.(handout)}
-              >
-                Edit
-              </Button>
+              {onEdit && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onEdit(handout)}
+                >
+                  Edit
+                </Button>
+              )}
 
               {handout.status === 'draft' && onPublish && (
                 <Button
@@ -81,17 +83,19 @@ export function HandoutCard({
                 </Button>
               )}
 
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => {
-                  if (confirm(`Are you sure you want to delete "${handout.title}"?`)) {
-                    onDelete?.(handout);
-                  }
-                }}
-              >
-                Delete
-              </Button>
+              {onDelete && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm(`Are you sure you want to delete "${handout.title}"?`)) {
+                      onDelete(handout);
+                    }
+                  }}
+                >
+                  Delete
+                </Button>
+              )}
             </>
           )}
         </div>

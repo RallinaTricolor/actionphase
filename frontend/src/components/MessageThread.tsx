@@ -329,7 +329,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                   <CharacterAvatar
                     avatarUrl={message.sender_avatar_url}
                     characterName={message.sender_character_name || message.sender_username}
-                    size="sm"
+                    size="md"
                   />
                   <div className="flex flex-col flex-1">
                     <div className="flex items-baseline gap-2 mb-1">

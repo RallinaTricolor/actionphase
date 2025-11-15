@@ -420,11 +420,12 @@ export function ThreadedComment({
     >
       {/* Comment Header and Content */}
       <div className={`${isUnread ? 'border border-semantic-warning rounded-lg p-3' : ''}`}>
-        <div className="flex items-start gap-1.5 md:gap-2 mb-1">
+        <div className="flex items-center gap-1.5 md:gap-2 mb-1">
           <CharacterAvatar
             avatarUrl={comment.character_avatar_url}
             characterName={comment.character_name}
             size="md"
+            className="md:w-12 md:h-12"
           />
           <div className="flex-1 min-w-0">
             {/* Desktop: horizontal layout */}

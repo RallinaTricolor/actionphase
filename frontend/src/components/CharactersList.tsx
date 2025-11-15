@@ -141,6 +141,8 @@ export function CharactersList({
 
   // Check if user can edit character sheet (bio/notes fields)
   const canEditCharacterSheet = (character: Character) => {
+    // No editing in completed or cancelled games
+    if (gameState === 'completed' || gameState === 'cancelled') return false;
     // GM can edit all character sheets
     if (userRole === 'gm') return true;
     // Users can edit their own characters (regardless of approval status)
@@ -151,6 +153,16 @@ export function CharactersList({
   // Check if user can edit character stats (abilities, skills, items, currency)
   // This is GM-only functionality
   const canEditCharacterStats = () => {
+    // No editing in completed or cancelled games
+    if (gameState === 'completed' || gameState === 'cancelled') return false;
+    return userRole === 'gm';
+  };
+
+  // Check if user can delete characters
+  // This is GM-only functionality
+  const canDeleteCharacter = () => {
+    // No deleting in completed or cancelled games
+    if (gameState === 'completed' || gameState === 'cancelled') return false;
     return userRole === 'gm';
   };
 
@@ -220,7 +232,7 @@ export function CharactersList({
                     isAnonymous={isAnonymous}
                     onApprove={handleApproveCharacter}
                     onAssignNPC={setNpcToAssign}
-                    onDelete={setCharacterToDelete}
+                    onDelete={canDeleteCharacter() ? setCharacterToDelete : undefined}
                     getStatusBadgeVariant={getStatusBadgeVariant}
                     canViewSheet={canViewCharacterSheet(character)}
                     canEditSheet={canEditCharacterSheet(character)}
@@ -250,7 +262,7 @@ export function CharactersList({
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
                           onAssignNPC={setNpcToAssign}
-                          onDelete={setCharacterToDelete}
+                          onDelete={canDeleteCharacter() ? setCharacterToDelete : undefined}
                           getStatusBadgeVariant={getStatusBadgeVariant}
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
@@ -280,7 +292,7 @@ export function CharactersList({
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
                           onAssignNPC={setNpcToAssign}
-                          onDelete={setCharacterToDelete}
+                          onDelete={canDeleteCharacter() ? setCharacterToDelete : undefined}
                           getStatusBadgeVariant={getStatusBadgeVariant}
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
@@ -438,7 +450,7 @@ function CharacterCard({
           <CharacterAvatar
             avatarUrl={character.avatar_url}
             characterName={character.name}
-            size="md"
+            size="xl"
           />
           <div className="flex-grow min-w-0">
             <h4 className="font-semibold text-base text-content-primary mb-1.5" data-testid="character-name">
@@ -524,7 +536,7 @@ function CharacterCard({
           <CharacterAvatar
             avatarUrl={character.avatar_url}
             characterName={character.name}
-            size="md"
+            size="xl"
           />
           <div className="flex-grow">
             <div className="flex items-center space-x-2 mb-1">
