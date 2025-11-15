@@ -148,6 +148,7 @@ SELECT
   g.max_players,
   g.is_public,
   g.is_anonymous,
+  g.auto_accept_audience,
   g.created_at,
   g.updated_at,
 
@@ -274,6 +275,7 @@ type GetFilteredGamesRow struct {
 	MaxPlayers           pgtype.Int4        `json:"max_players"`
 	IsPublic             pgtype.Bool        `json:"is_public"`
 	IsAnonymous          bool               `json:"is_anonymous"`
+	AutoAcceptAudience   bool               `json:"auto_accept_audience"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 	CurrentPlayers       int64              `json:"current_players"`
@@ -320,6 +322,7 @@ func (q *Queries) GetFilteredGames(ctx context.Context, arg GetFilteredGamesPara
 			&i.MaxPlayers,
 			&i.IsPublic,
 			&i.IsAnonymous,
+			&i.AutoAcceptAudience,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CurrentPlayers,
