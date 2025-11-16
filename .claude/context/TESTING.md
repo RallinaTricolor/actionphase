@@ -83,13 +83,75 @@ func TestServiceWithDB(t *testing.T) {
 
 **Run**: `SKIP_DB_TESTS=false just test-integration`
 
-#### 3. API Endpoint Tests
+#### 3. API Endpoint Tests (HTTP Integration Tests)
 **Test complete HTTP request/response cycle**
 
-- Test authentication and authorization
-- Test input validation and error responses
-- Test success paths with proper status codes
-- Test edge cases and boundary conditions
+**When to Write HTTP Handler Tests:**
+
+HTTP handler tests verify the HTTP layer independently of the service layer. Write these tests for:
+- ✅ Complex authorization flows (GM-only operations, character ownership checks)
+- ✅ Request validation and error response formats
+- ✅ HTTP status codes and headers
+- ✅ Multi-step authorization (e.g., user → character → conversation access)
+
+**When NOT to Write HTTP Handler Tests:**
+
+❌ **Handler-only packages** (thin wrappers around services) - Examples:
+  - `pkg/conversations` - Only HTTP handlers, business logic in `pkg/db/services/conversations`
+  - `pkg/handouts` - Only HTTP handlers
+  - `pkg/notifications` - Only HTTP handlers
+  - `pkg/phases` - Only HTTP handlers
+
+**Why this is acceptable:**
+- Business logic is tested in the service layer
+- HTTP integration/E2E tests cover the complete flow
+- Handler code primarily: parses HTTP, validates requests, calls services, formats responses
+
+**Test Pattern (see `pkg/messages/api_test.go` for reference):**
+
+```go
+func TestHandler_Endpoint(t *testing.T) {
+    testDB := core.NewTestDatabase(t)
+    defer testDB.Close()
+    defer testDB.CleanupTables(t, "table1", "table2", "users")
+
+    app := core.NewTestApp(testDB.Pool)
+    router := setupTestRouter(app, testDB)
+
+    // Create test data (users, games, etc.)
+    gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+    player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+    t.Run("authorized request succeeds", func(t *testing.T) {
+        req := httptest.NewRequest("POST", "/api/v1/endpoint", body)
+        req.Header.Set("Content-Type", "application/json")
+        // Set authenticated user in context
+        req = setAuthContext(req, gm)
+
+        rec := httptest.NewRecorder()
+        router.ServeHTTP(rec, req)
+
+        assert.Equal(t, http.StatusOK, rec.Code)
+    })
+
+    t.Run("unauthorized request fails", func(t *testing.T) {
+        req := httptest.NewRequest("POST", "/api/v1/endpoint", body)
+        req = setAuthContext(req, player) // Wrong user
+
+        rec := httptest.NewRecorder()
+        router.ServeHTTP(rec, req)
+
+        assert.Equal(t, http.StatusForbidden, rec.Code)
+    })
+}
+```
+
+**Test HTTP Layer Concerns:**
+- Authentication and authorization
+- Input validation and error responses
+- HTTP status codes
+- Request/response formats
+- Edge cases (empty body, malformed JSON, missing headers)
 
 #### 3. E2E Tests (Playwright)
 **⚠️ CRITICAL: READ BEFORE WRITING E2E TESTS**

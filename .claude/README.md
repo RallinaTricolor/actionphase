@@ -46,7 +46,7 @@ This allows for continuity between AI sessions and provides historical context f
 ## External Documentation References
 
 ### Architecture Decision Records (ADRs)
-**Location**: `/docs/adrs/`
+**Location**: `/docs-site/developer/architecture/adrs/`
 
 Read ADRs for understanding architectural decisions:
 - ADR-001: Technology Stack Selection
@@ -57,53 +57,70 @@ Read ADRs for understanding architectural decisions:
 - ADR-006: Observability Approach
 - ADR-007: Testing Strategy
 
-### System Architecture
-**Location**: `/docs/architecture/`
+**Note**: ADRs are served via VitePress at http://localhost:3000/docs/developer/architecture/adrs/
 
-- SYSTEM_ARCHITECTURE.md - High-level system design
-- COMPONENT_INTERACTIONS.md - How components communicate
-- SEQUENCE_DIAGRAMS.md - Visual process flows
+### System Architecture
+**Location**: `/docs-site/developer/architecture/`
+
+- overview.md - High-level system design
+- components.md - How components communicate
+
+**Note**: Architecture docs are served via VitePress at http://localhost:3000/docs/developer/architecture/
+
+### Testing Documentation
+**Location**: `/docs-site/developer/testing/`
+
+- COVERAGE_STATUS.md - Current test coverage status
+- TEST_COVERAGE_REFERENCE.md - Coverage metrics and recommendations
+- TEST_DATA.md - Test fixtures and data setup
+- E2E_QUICK_START.md - E2E testing quick reference
+- E2E_FIXTURES.md - E2E test fixture documentation
+
+**Note**: Testing docs are served via VitePress at http://localhost:3000/docs/developer/testing/
 
 ### Project Status & Planning
-**Location**: `.claude/planning/` and `/docs/`
+**Location**: `.claude/planning/`
 
-- **MVP_STATUS.md** (`.claude/planning/`) - Current MVP implementation status and development plan
-- **TEST_COVERAGE_ANALYSIS.md** (`/docs/`) - Current test coverage and improvement plan (READ BEFORE WRITING TESTS)
-- **TEST_DATA.md** (`/docs/`) - Test fixtures and data setup
-- **ADR_UPDATE_RECOMMENDATIONS.md** (`/docs/`) - Recent ADR review findings
+- **MVP_STATUS.md** - Current MVP implementation status and development plan
+- **FEATURE_PLAN_TEMPLATE.md** - Template for planning new features
+- **E2E_TESTING_PLAN.md** - E2E testing implementation plan
+- **active/** - Active feature planning docs
+- **completed/** - Historical planning docs (archived)
 
-### Frontend Documentation
-**Location**: `/frontend/docs/`
+### Remaining docs/ Directory
+**Location**: `/docs/`
 
-- STATE_MANAGEMENT.md - Frontend state management details
-- STATE_MANAGEMENT_ARCHITECTURE.md - In-depth architecture
-- STATE_MANAGEMENT_QUICK_REFERENCE.md - Quick lookup guide
+Active documentation files (not in docs-site yet):
+- Development guides (API docs automation, deployment)
+- Operations guides (logging, deployment scripts)
+- Feature implementation summaries
+- State management details
 
 ## Workflow: When to Read What
 
 ### Before Writing Tests
 1. Read `.claude/context/TESTING.md`
-2. Review `/docs/TEST_COVERAGE_ANALYSIS.md`
-3. Reference `/docs/adrs/007-testing-strategy.md`
+2. Review `/docs-site/developer/testing/COVERAGE_STATUS.md`
+3. Reference `/docs-site/developer/architecture/adrs/007-testing-strategy.md`
 4. Check `.claude/reference/TESTING_GUIDE.md` for implementation details
 
 ### Before Implementing Features
 1. Read `.claude/context/ARCHITECTURE.md`
-2. Review relevant ADRs in `/docs/adrs/`
-3. Check `/docs/architecture/` for system design context
+2. Review relevant ADRs in `/docs-site/developer/architecture/adrs/`
+3. Check `/docs-site/developer/architecture/` for system design context
 
 ### Before Frontend State Work
 1. Read `.claude/context/STATE_MANAGEMENT.md`
-2. Review `/docs/adrs/005-frontend-state-management.md`
-3. Reference `/frontend/docs/STATE_MANAGEMENT_QUICK_REFERENCE.md`
+2. Review `/docs-site/developer/architecture/adrs/005-frontend-state-management.md`
+3. Reference `/docs/features/STATE_MANAGEMENT.md`
 
 ### Before Working with Test Data
 1. Read `.claude/context/TEST_DATA.md`
-2. Review `/docs/TEST_DATA.md` for detailed fixture information
+2. Review `/docs-site/developer/testing/TEST_DATA.md` for detailed fixture information
 3. Check `/backend/pkg/db/test_fixtures/` for actual fixtures
 
 ### Before API Changes
-1. Review `/docs/adrs/004-api-design-principles.md`
+1. Review `/docs-site/developer/architecture/adrs/004-api-design-principles.md`
 2. Check `.claude/reference/API_DOCUMENTATION.md`
 3. Review `.claude/reference/ERROR_HANDLING.md`
 
@@ -122,7 +139,7 @@ Read ADRs for understanding architectural decisions:
 - Use `data-testid` selectors
 - Wait for specific conditions, not arbitrary timeouts
 
-**See**: `context/TESTING.md` E2E section and `planning/AI_E2E_TESTING_STRATEGY.md`
+**See**: `.claude/context/TESTING.md` E2E section and `.claude/planning/completed/AI_E2E_TESTING_STRATEGY.md`
 
 ## Quick Start for AI
 
@@ -137,6 +154,17 @@ When starting a coding task:
 
 - Keep context files concise (< 500 lines)
 - Update this README when adding new context files
-- Move detailed implementation guides to `/reference/`
-- Keep ADRs in `/docs/adrs/` (don't duplicate)
+- Move detailed implementation guides to `.claude/reference/`
+- Keep ADRs in `/docs-site/developer/architecture/adrs/` (single source of truth)
+- Archive completed planning docs to `.claude/planning/completed/`
 - Update CLAUDE.md to reference new context files
+
+## Archive Structure
+
+Completed planning and historical documentation is archived in:
+- `.claude/planning/completed/archive-2025-01/` - Recent archival (Jan 2025)
+  - `root/` - Archived root directory docs
+  - `frontend/` - Archived frontend implementation logs
+  - `docs/` - Archived docs/ organizational files
+  - `backend/` - Archived backend testing sessions
+- `.claude/planning/completed/` - Historical feature planning (181 files)
