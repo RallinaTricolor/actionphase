@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { screen, waitFor as _waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse as _HttpResponse } from 'msw';
 import { CurrentPhaseDisplay } from '../CurrentPhaseDisplay';
 import { renderWithProviders } from '../../test-utils/render';
 import { server } from '../../mocks/server';
@@ -9,7 +9,7 @@ import type { GamePhase } from '../../types/phases';
 
 // Mock the CountdownTimer component to avoid time-dependent test complexity
 vi.mock('../CountdownTimer', () => ({
-  CountdownTimer: ({ deadline, onExpired, className }: any) => (
+  CountdownTimer: ({ deadline, onExpired, className }: unknown) => (
     <div className={className} data-testid="countdown-timer">
       Timer: {deadline}
       {onExpired && <button onClick={onExpired}>Trigger Expired</button>}
@@ -358,7 +358,7 @@ describe('CurrentPhaseDisplay', () => {
     });
 
     it('should expand previous phases when clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers(mockCommonRoomPhase, [previousPhase1, previousPhase2]);
 
       renderWithProviders(<CurrentPhaseDisplay gameId={1} isGM={false} />);
@@ -382,7 +382,7 @@ describe('CurrentPhaseDisplay', () => {
     });
 
     it('should collapse previous phases when clicked again', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers(mockCommonRoomPhase, [previousPhase1]);
 
       renderWithProviders(<CurrentPhaseDisplay gameId={1} isGM={false} />);
@@ -403,7 +403,7 @@ describe('CurrentPhaseDisplay', () => {
     });
 
     it('should display phase numbers in previous phases', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers(mockCommonRoomPhase, [previousPhase1, previousPhase2]);
 
       renderWithProviders(<CurrentPhaseDisplay gameId={1} isGM={false} />);
@@ -437,7 +437,7 @@ describe('CurrentPhaseDisplay', () => {
     it('should apply custom className', async () => {
       setupDefaultHandlers(mockCommonRoomPhase);
 
-      const { container } = renderWithProviders(
+      const { container: _container } = renderWithProviders(
         <CurrentPhaseDisplay gameId={1} className="custom-test-class" />
       );
 

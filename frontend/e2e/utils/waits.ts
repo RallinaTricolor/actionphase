@@ -147,7 +147,7 @@ export async function waitForReactQuery(page: Page) {
   // Small delay to allow React Query to update UI
   await page.waitForFunction(() => {
     // Check if there are any pending queries
-    const queryClient = (window as any).__REACT_QUERY_DEVTOOLS__;
+    const queryClient = (window as Record<string, unknown>).__REACT_QUERY_DEVTOOLS__;
     if (queryClient) {
       // If devtools are available, check query state
       return true; // For now, just return true

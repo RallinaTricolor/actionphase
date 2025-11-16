@@ -135,8 +135,8 @@ export function ThreadedComment({
     }
   }, [controllableCharacters, selectedCharacterId, parentComment, comment.character_id]);
 
-  // Define loadReplies as a regular function (not useCallback to avoid dependency issues)
-  const loadReplies = async () => {
+  // Define loadReplies with useCallback to satisfy exhaustive-deps
+  const loadReplies = useCallback(async () => {
     // Skip if we have pre-loaded children (from tree structure)
     if (!isMountedRef.current || hasLoadedRef.current || hasPreloadedChildren) return;
 
@@ -147,21 +147,21 @@ export function ThreadedComment({
         setReplies(response.data);
         hasLoadedRef.current = true; // Only mark as loaded after successful state update
       }
-    } catch (err) {
-      logger.error('Failed to load replies', { error: err, commentId: comment.id, gameId, postId });
+    } catch (_err) {
+      logger.error('Failed to load replies', { error: _err, commentId: comment.id, gameId, postId });
     } finally {
       if (isMountedRef.current) {
         setLoadingReplies(false);
       }
     }
-  };
+  }, [gameId, comment.id, postId, hasPreloadedChildren]);
 
   // Load replies immediately when component mounts if there are replies (and no pre-loaded children)
   useEffect(() => {
     if (hasReplies && !hasLoadedRef.current && !hasPreloadedChildren) {
       loadReplies();
     }
-  }, [hasReplies, hasPreloadedChildren]);
+  }, [hasReplies, hasPreloadedChildren, loadReplies]);
 
   const handleCopyLink = async () => {
     const url = `${window.location.origin}/games/${gameId}?tab=common-room&comment=${comment.id}`;
@@ -199,8 +199,8 @@ export function ThreadedComment({
           }
         }, 2000);
       }
-    } catch (err) {
-      logger.error('Failed to copy link', { error: err, commentId: comment.id });
+    } catch (_err) {
+      logger.error('Failed to copy link', { error: _err, commentId: comment.id });
       // Fallback: show toast with link if both methods fail
       if (isMountedRef.current) {
         showError(`Failed to copy. Link: ${url}`);
@@ -240,8 +240,8 @@ export function ThreadedComment({
       // Update local state immediately with the response from the server
       setComment(updatedComment);
       setIsEditing(false);
-    } catch (err) {
-      logger.error('Failed to update comment', { error: err, commentId: comment.id, gameId, postId });
+    } catch (_err) {
+      logger.error('Failed to update comment', { error: _err, commentId: comment.id, gameId, postId });
       showError('Failed to update comment. Please try again.');
     }
   };
@@ -262,8 +262,8 @@ export function ThreadedComment({
       setShowDeleteConfirm(false);
       // Notify parent to reload its replies
       onCommentDeleted?.();
-    } catch (err) {
-      logger.error('Failed to delete comment', { error: err, commentId: comment.id, gameId, postId });
+    } catch (_err) {
+      logger.error('Failed to delete comment', { error: _err, commentId: comment.id, gameId, postId });
       showError('Failed to delete comment. Please try again.');
     } finally {
       setIsDeleting(false);
@@ -275,7 +275,7 @@ export function ThreadedComment({
     // Reset the loaded flag and reload replies
     hasLoadedRef.current = false;
     loadReplies();
-  }, []);
+  }, [loadReplies]);
 
 
   const handleSubmitReply = async (e: React.FormEvent) => {
@@ -355,8 +355,8 @@ export function ThreadedComment({
       }
 
       logger.debug('Replies loaded after reply creation', { commentId: comment.id, gameId, postId });
-    } catch (err) {
-      logger.error('Failed to submit reply', { error: err, commentId: comment.id, gameId, postId });
+    } catch (_err) {
+      logger.error('Failed to submit reply', { error: _err, commentId: comment.id, gameId, postId });
       // Remove optimistic reply on error
       setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
       // Decrement reply_count to rollback optimistic increment

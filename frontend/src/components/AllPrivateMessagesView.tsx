@@ -15,6 +15,21 @@ interface AllPrivateMessagesViewProps {
   gameId: number;
 }
 
+interface ConversationType {
+  participant_names?: string[];
+  [key: string]: unknown;
+}
+
+interface MessageType {
+  id: number;
+  created_at: string;
+  content: string;
+  sender_character_id?: number;
+  sender_character_name?: string;
+  sender_username: string;
+  sender_avatar_url: string | null;
+}
+
 /**
  * Read-only view of all private message conversations for audience members and GM
  * Features infinite scroll, participant filtering, and conversation browsing
@@ -56,13 +71,16 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Get all conversations and extract unique participants
-  const allConversations = data?.pages.flatMap((page) => page.conversations || []) || [];
+  const allConversations = useMemo(() =>
+    data?.pages.flatMap((page) => page.conversations || []) || [],
+    [data?.pages]
+  );
   const total = data?.pages[0]?.total || 0;
 
   // Extract unique participants across all conversations
   const allParticipants = useMemo(() => {
     const participantsSet = new Set<string>();
-    allConversations.forEach((conv: any) => {
+    allConversations.forEach((conv: ConversationType) => {
       (conv.participant_names || []).forEach((name: string) => {
         participantsSet.add(name);
       });
@@ -75,7 +93,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
     if (selectedParticipants.size === 0) {
       return allConversations;
     }
-    return allConversations.filter((conv: any) => {
+    return allConversations.filter((conv: ConversationType) => {
       const convParticipants = conv.participant_names || [];
       // Show conversation if it includes any of the selected participants
       return convParticipants.some((name: string) => selectedParticipants.has(name));
@@ -270,7 +288,7 @@ function MessageViewer({
   gameId: number;
   conversationId: string;
   conversation?: AudienceConversationListItem;
-  messages: any[] | undefined;
+  messages: MessageType[] | undefined;
   isLoading: boolean;
   error: Error | null;
   onBack: () => void;
@@ -299,13 +317,13 @@ function MessageViewer({
         senderName: string;
         senderUsername: string;
         senderAvatar: string | null;
-        messages: any[];
+        messages: MessageType[];
       }>;
     }> = [];
 
     let currentDate: Date | null = null;
     let currentSenderId: number | undefined = undefined;
-    let currentMessageGroup: any[] = [];
+    let currentMessageGroup: MessageType[] = [];
     let currentSenderName = '';
     let currentSenderUsername = '';
     let currentSenderAvatar: string | null = null;
@@ -482,7 +500,7 @@ function MessageViewer({
 
                         {/* Messages from this sender */}
                         <div className="space-y-2">
-                          {messageGroup.messages.map((message: any, msgIndex: number) => (
+                          {messageGroup.messages.map((message: MessageType, msgIndex: number) => (
                             <div key={message.id}>
                               {/* Show timestamp for subsequent messages if more than 5 minutes apart */}
                               {msgIndex > 0 && (

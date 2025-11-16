@@ -48,7 +48,7 @@ export const CurrencyTab: React.FC<CurrencyTabProps> = (props) => {
               )}
             </>
           );
-        } catch (e) {
+        } catch (_e) {
           // Fallback for old format (plain numbers)
           const amount = parseInt(draft.field_value, 10);
           const isPositive = amount >= 0;

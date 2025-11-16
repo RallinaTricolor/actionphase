@@ -71,7 +71,7 @@ export function ParticipantActionsMenu({
       setShowPromoteConfirm(false);
       setIsOpen(false);
       onSuccess?.();
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to promote to co-GM', { error, gameId, userId: participant.user_id, username: participant.username });
     }
   };
@@ -83,7 +83,7 @@ export function ParticipantActionsMenu({
       setShowDemoteConfirm(false);
       setIsOpen(false);
       onSuccess?.();
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to demote from co-GM', { error, gameId, userId: participant.user_id, username: participant.username });
     }
   };
@@ -95,7 +95,7 @@ export function ParticipantActionsMenu({
       setShowRemoveConfirm(false);
       setIsOpen(false);
       onSuccess?.();
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to remove player', { error, gameId, userId: participant.user_id, username: participant.username });
     }
   };
@@ -109,7 +109,7 @@ export function ParticipantActionsMenu({
       setShowApproveConfirm(false);
       setIsOpen(false);
       onSuccess?.();
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to approve application', { error, gameId, applicationId: application.id });
       setErrorMessage(error instanceof Error ? error.message : 'Failed to approve application');
     } finally {
@@ -126,7 +126,7 @@ export function ParticipantActionsMenu({
       setShowRejectConfirm(false);
       setIsOpen(false);
       onSuccess?.();
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to reject application', { error, gameId, applicationId: application.id });
       setErrorMessage(error instanceof Error ? error.message : 'Failed to reject application');
     } finally {

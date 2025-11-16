@@ -114,7 +114,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   };
 
   // Parse JSON field values for abilities and inventory
-  const parseJsonField = (moduleType: string, fieldName: string): any => {
+  const parseJsonField = (moduleType: string, fieldName: string): unknown => {
     const value = getFieldValue(moduleType, fieldName);
     if (!value) return [];
     try {
@@ -125,7 +125,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   };
 
   // Save JSON field values
-  const saveJsonField = (moduleType: string, fieldName: string, data: any) => {
+  const saveJsonField = (moduleType: string, fieldName: string, data: unknown) => {
     const value = JSON.stringify(data);
     saveCharacterDataMutation.mutate({
       module_type: moduleType,

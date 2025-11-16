@@ -1,11 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThreadedComment } from '../ThreadedComment';
 import type { Message } from '../../types/messages';
-import { ToastProvider } from '../../contexts/ToastContext';
+import { ToastProvider } from '../../contexts/ToastContext'
 import { AdminModeProvider } from '../../contexts/AdminModeContext';
-import { AuthProvider } from '../../contexts/AuthContext';
+import { AuthProvider } from '../../contexts/AuthContext'
 
 // Mock fetch globally
 global.fetch = vi.fn();

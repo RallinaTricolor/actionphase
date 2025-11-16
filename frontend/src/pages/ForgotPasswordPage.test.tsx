@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { screen, fireEvent, waitFor as _waitFor } from '@testing-library/react';
+import { http, HttpResponse as _HttpResponse } from 'msw';
 import { ForgotPasswordPage } from './ForgotPasswordPage';
 import { renderWithProviders } from '../test-utils/render';
 import { server } from '../mocks/server';
@@ -129,7 +129,7 @@ describe('ForgotPasswordPage', () => {
   });
 
   it('trims whitespace from email', async () => {
-    let requestBody: any = null;
+    let requestBody: unknown = null;
 
     server.use(
       http.post('http://localhost:3000/api/v1/auth/request-password-reset', async ({ request }) => {

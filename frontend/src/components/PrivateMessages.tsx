@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ConversationList } from './ConversationList';
 import { MessageThread } from './MessageThread';
 import { NewConversationModal } from './NewConversationModal';
@@ -45,12 +45,7 @@ export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseT
     isCommonRoomPhase
   });
 
-  // Load conversations for read tracking info
-  useEffect(() => {
-    loadConversations();
-  }, [gameId, refreshKey]);
-
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       const response = await apiClient.conversations.getUserConversations(gameId);
       // Deduplicate by ID
@@ -61,10 +56,15 @@ export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseT
         }
       });
       setConversations(Array.from(conversationMap.values()));
-    } catch (err) {
-      logger.error('Failed to load conversations', { error: err, gameId });
+    } catch (_err) {
+      logger.error('Failed to load conversations', { error: _err, gameId });
     }
-  };
+  }, [gameId]);
+
+  // Load conversations for read tracking info
+  useEffect(() => {
+    loadConversations();
+  }, [gameId, refreshKey, loadConversations]);
 
   const handleConversationCreated = (conversationId: number) => {
     logger.debug('Conversation created', { conversationId, gameId });

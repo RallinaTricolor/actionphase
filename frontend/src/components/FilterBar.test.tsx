@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, render, fireEvent, within } from '@testing-library/react';
+import { screen, render, fireEvent, within as _within } from '@testing-library/react';
 import { FilterBar } from './FilterBar';
 import type { GameState, ParticipationFilter, SortBy } from '../types/games';
 
@@ -320,7 +320,7 @@ describe('FilterBar', () => {
     });
 
     it('updates when counts change', () => {
-      const { rerender } = render(<FilterBar {...defaultProps} filteredCount={5} totalCount={10} />);
+      const { rerender: _rerender } = render(<FilterBar {...defaultProps} filteredCount={5} totalCount={10} />);
 
       expect(screen.getByText('5')).toBeInTheDocument();
 
@@ -389,7 +389,7 @@ describe('FilterBar', () => {
     });
 
     it('shows clear button after applying multiple filters', () => {
-      const { rerender } = render(<FilterBar {...defaultProps} />);
+      const { rerender: _rerender } = render(<FilterBar {...defaultProps} />);
 
       expect(screen.queryByRole('button', { name: 'Clear Filters' })).not.toBeInTheDocument();
 

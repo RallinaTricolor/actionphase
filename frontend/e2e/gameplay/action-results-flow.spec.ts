@@ -253,9 +253,8 @@ test.describe('GM Action Results Editing', () => {
     await gamePage.goto(gameId);
     await gamePage.goToActions();
 
-    // Wait for GameResultsManager and capture original content
+    // Wait for GameResultsManager
     await expect(page.getByText('Unpublished Results (Editable)')).toBeVisible({ timeout: 10000 });
-    const originalContent = await page.locator('text=DRAFT: The symbols').textContent();
 
     // Click Edit button
     await page.getByRole('button', { name: 'Edit', exact: true }).click();

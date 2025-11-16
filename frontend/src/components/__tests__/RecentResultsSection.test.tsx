@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within as _within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RecentResultsSection } from '../RecentResultsSection';
@@ -89,7 +89,7 @@ describe('RecentResultsSection', () => {
     });
 
     it('should not render when results array is empty', () => {
-      const { container } = renderWithRouter(<RecentResultsSection {...defaultProps} results={[]} />);
+      const { container: _container } = renderWithRouter(<RecentResultsSection {...defaultProps} results={[]} />);
 
       expect(container.firstChild).toBeNull();
     });

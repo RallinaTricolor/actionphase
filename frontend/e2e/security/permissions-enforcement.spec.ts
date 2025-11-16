@@ -232,6 +232,7 @@ test.describe('Permissions & Access Control', () => {
 
         if (!hasNewConvButton) {
           // Skip test if messaging UI is not available
+          // eslint-disable-next-line no-console
           console.log('Messaging UI not available, skipping test');
           return;
         }
@@ -264,8 +265,9 @@ test.describe('Permissions & Access Control', () => {
         // Player 3 should NOT see the private conversation title
         const privateConversation = player3Page.getByText(conversationTitle);
         await expect(privateConversation).not.toBeVisible({ timeout: 3000 });
-      } catch (error) {
+      } catch {
         // If test times out, log but mark as passed (permissions are enforced, UI may be slow)
+        // eslint-disable-next-line no-console
         console.log('Private message test encountered timeout, but core security is validated');
       } finally {
         await player1Context.close();

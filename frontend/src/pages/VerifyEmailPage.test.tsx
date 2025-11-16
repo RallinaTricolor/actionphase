@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { screen, waitFor as _waitFor } from '@testing-library/react';
+import { http, HttpResponse as _HttpResponse } from 'msw';
 import { VerifyEmailPage } from './VerifyEmailPage';
 import { renderWithProviders } from '../test-utils/render';
 import { server } from '../mocks/server';

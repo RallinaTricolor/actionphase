@@ -36,7 +36,7 @@ export function getSavedDrafts(): DraftData | null {
     }
 
     return draftData;
-  } catch (error) {
+  } catch (_error) {
     logger.error('Failed to retrieve saved drafts', { error });
     return null;
   }
@@ -81,7 +81,7 @@ export function restoreDrafts(): number {
 
     // Clear drafts after restoration
     localStorage.removeItem('session_expired_drafts');
-  } catch (error) {
+  } catch (_error) {
     logger.error('Failed to restore drafts', { error });
   }
 

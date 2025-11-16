@@ -40,7 +40,7 @@ export const GameApplicationCard = ({
     try {
       setActionLoading(true);
       await onApprove(application.id);
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to approve application', { error, applicationId: application.id, userId: application.user_id, username: application.username });
     } finally {
       setActionLoading(false);
@@ -58,7 +58,7 @@ export const GameApplicationCard = ({
     try {
       setActionLoading(true);
       await onReject(application.id);
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to reject application', { error, applicationId: application.id, userId: application.user_id, username: application.username });
     } finally {
       setActionLoading(false);

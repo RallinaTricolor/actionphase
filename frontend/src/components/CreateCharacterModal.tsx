@@ -61,7 +61,7 @@ export function CreateCharacterModal({
   useEffect(() => {
     if (formData.character_type !== 'player_character') {
       setFormData(prev => {
-        const { user_id, ...rest } = prev;
+        const { _user_id, ...rest } = prev;
         return rest;
       });
     }

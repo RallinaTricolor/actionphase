@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
@@ -11,8 +11,8 @@ import {
   useDeleteNotification,
 } from './useNotifications';
 import type { Notification } from '../types/notifications';
-import { AuthProvider } from '../contexts/AuthContext';
-import { ToastProvider } from '../contexts/ToastContext';
+import { AuthProvider } from '../contexts/AuthContext'
+import { ToastProvider } from '../contexts/ToastContext'
 import { MemoryRouter } from 'react-router-dom';
 
 // Setup MSW server
@@ -358,8 +358,8 @@ describe('useNotifications hooks', () => {
       );
 
       // Render both hooks
-      const { result: notificationsResult } = renderHook(() => useNotifications(), { wrapper });
-      const { result: unreadCountResult } = renderHook(() => useUnreadCount(), { wrapper });
+      const { result: _notificationsResult } = renderHook(() => useNotifications(), { wrapper });
+      const { result: _unreadCountResult } = renderHook(() => useUnreadCount(), { wrapper });
 
       // They should use different query keys
       // This ensures they can be invalidated separately
@@ -377,11 +377,11 @@ describe('useNotifications hooks', () => {
       );
 
       // Render with different params
-      const { result: result1 } = renderHook(
+      const { result: _result1 } = renderHook(
         () => useNotifications({ limit: 10 }),
         { wrapper }
       );
-      const { result: result2 } = renderHook(
+      const { result: _result2 } = renderHook(
         () => useNotifications({ limit: 20 }),
         { wrapper }
       );

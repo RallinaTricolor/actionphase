@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../lib/api';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
@@ -36,11 +36,7 @@ export function CommentThread({
     setSelectedCharacterId(characters[0].id);
   }
 
-  useEffect(() => {
-    loadComments();
-  }, [postId]);
-
-  const loadComments = async () => {
+  const loadComments = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -52,7 +48,11 @@ export function CommentThread({
     } finally {
       setLoading(false);
     }
-  };
+  }, [gameId, postId]);
+
+  useEffect(() => {
+    loadComments();
+  }, [loadComments]);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +67,7 @@ export function CommentThread({
       setIsCommenting(false);
       // Reload comments to show the new one
       await loadComments();
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to create comment', { error: err, gameId, postId, characterId: selectedCharacterId });
       setError('Failed to post comment');
     } finally {

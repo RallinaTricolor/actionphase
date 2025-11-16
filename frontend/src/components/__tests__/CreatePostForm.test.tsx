@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor as _waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-utils/render';
 import { CreatePostForm } from '../CreatePostForm';
@@ -199,7 +199,7 @@ describe('CreatePostForm', () => {
     });
 
     it('allows changing selected character', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm
@@ -234,7 +234,7 @@ describe('CreatePostForm', () => {
 
   describe('Form Input', () => {
     it('updates content when user types', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm
@@ -252,7 +252,7 @@ describe('CreatePostForm', () => {
     });
 
     it('updates character count as user types', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm
@@ -272,7 +272,7 @@ describe('CreatePostForm', () => {
     });
 
     it('allows markdown formatting in content', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm
@@ -307,7 +307,7 @@ describe('CreatePostForm', () => {
     });
 
     it('enables submit button when content is provided', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm
@@ -326,7 +326,7 @@ describe('CreatePostForm', () => {
     });
 
     it('disables submit button when content is only whitespace', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm
@@ -345,7 +345,7 @@ describe('CreatePostForm', () => {
     });
 
     it('shows error when submitting without content', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm
@@ -370,7 +370,7 @@ describe('CreatePostForm', () => {
 
   describe('Form Submission', () => {
     it('calls onSubmit with character ID and content', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockOnSubmit.mockResolvedValue(undefined);
 
       renderWithProviders(
@@ -394,7 +394,7 @@ describe('CreatePostForm', () => {
     });
 
     it('trims whitespace from content before submitting', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockOnSubmit.mockResolvedValue(undefined);
 
       renderWithProviders(
@@ -418,7 +418,7 @@ describe('CreatePostForm', () => {
     });
 
     it('clears content after successful submission', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockOnSubmit.mockResolvedValue(undefined);
 
       renderWithProviders(
@@ -442,7 +442,7 @@ describe('CreatePostForm', () => {
     });
 
     it('submits with selected character when multiple available', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockOnSubmit.mockResolvedValue(undefined);
 
       renderWithProviders(
@@ -471,7 +471,7 @@ describe('CreatePostForm', () => {
 
   describe('Error Handling', () => {
     it('displays error message when submission fails', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockOnSubmit.mockRejectedValue(new Error('Failed to create post'));
 
       renderWithProviders(
@@ -495,7 +495,7 @@ describe('CreatePostForm', () => {
     });
 
     it('does not clear content when submission fails', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockOnSubmit.mockRejectedValue(new Error('Network error'));
 
       renderWithProviders(
@@ -521,7 +521,7 @@ describe('CreatePostForm', () => {
     });
 
     it('shows custom error message from Error object', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockOnSubmit.mockRejectedValue(new Error('Custom error message'));
 
       renderWithProviders(
@@ -545,7 +545,7 @@ describe('CreatePostForm', () => {
     });
 
     it('clears previous error on successful submission', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockOnSubmit
         .mockRejectedValueOnce(new Error('First error'))
         .mockResolvedValueOnce(undefined);
@@ -672,7 +672,7 @@ describe('CreatePostForm', () => {
     });
 
     it('expands form when clicking collapsed button', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm
@@ -694,7 +694,7 @@ describe('CreatePostForm', () => {
     });
 
     it('collapses form when clicking collapse button', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm
@@ -716,7 +716,7 @@ describe('CreatePostForm', () => {
     });
 
     it('preserves content when collapsing and expanding', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm
@@ -762,7 +762,7 @@ describe('CreatePostForm', () => {
 
   describe('Integration', () => {
     it('handles complete post creation workflow', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockOnSubmit.mockResolvedValue(undefined);
 
       renderWithProviders(

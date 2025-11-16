@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TabNavigation, type Tab } from '../TabNavigation';
@@ -50,7 +50,7 @@ describe('TabNavigation', () => {
     });
 
     it('displays icons for tabs that have them', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <TabNavigation
           tabs={mockTabs}
           activeTab="tab1"
@@ -64,7 +64,7 @@ describe('TabNavigation', () => {
     });
 
     it('applies active styling to the current tab', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <TabNavigation
           tabs={mockTabs}
           activeTab="tab2"
@@ -104,7 +104,7 @@ describe('TabNavigation', () => {
     });
 
     it('calls onTabChange when a tab is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <TabNavigation
@@ -200,7 +200,7 @@ describe('TabNavigation', () => {
     });
 
     it('calls onTabChange when dropdown selection changes', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <TabNavigation
@@ -236,7 +236,7 @@ describe('TabNavigation', () => {
 
   describe('Responsive Behavior', () => {
     it('applies correct responsive classes for mobile dropdown', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <TabNavigation
           tabs={mockTabs}
           activeTab="tab1"
@@ -250,7 +250,7 @@ describe('TabNavigation', () => {
     });
 
     it('applies correct responsive classes for desktop tabs', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <TabNavigation
           tabs={mockTabs}
           activeTab="tab1"

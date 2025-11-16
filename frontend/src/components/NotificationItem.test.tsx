@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, waitFor as _waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse as _HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import NotificationItem from './NotificationItem';
 import type { Notification } from '../types/notifications';
@@ -101,7 +101,7 @@ describe('NotificationItem', () => {
   it('displays title with bold text when unread', () => {
     const notification = createMockNotification({ is_read: false, title: 'Unread message' });
 
-    const { container } = renderWithProviders(<NotificationItem notification={notification} />);
+    const { container: _container } = renderWithProviders(<NotificationItem notification={notification} />);
 
     const titleElement = screen.getByText('Unread message');
     expect(titleElement.className).toContain('font-semibold');
@@ -126,7 +126,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockNavigate} />
     );
@@ -151,7 +151,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockNavigate} />
     );
@@ -172,7 +172,7 @@ describe('NotificationItem', () => {
     });
     const mockNavigate = vi.fn();
 
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockNavigate} />
     );
@@ -190,7 +190,7 @@ describe('NotificationItem', () => {
     });
     const mockNavigate = vi.fn();
 
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockNavigate} />
     );
@@ -216,7 +216,7 @@ describe('NotificationItem', () => {
     // Mock window.confirm
     window.confirm = vi.fn(() => true);
 
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     renderWithProviders(<NotificationItem notification={notification} />);
 
     const deleteButton = screen.getByTitle('Delete notification');
@@ -245,7 +245,7 @@ describe('NotificationItem', () => {
     // Mock window.confirm to return false
     window.confirm = vi.fn(() => false);
 
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     renderWithProviders(<NotificationItem notification={notification} />);
 
     const deleteButton = screen.getByTitle('Delete notification');
@@ -283,7 +283,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockNavigate} />
     );

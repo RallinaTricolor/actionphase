@@ -1,13 +1,11 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { CommonRoomPage } from '../pages/CommonRoomPage';
-import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { MessagingPage } from '../pages/MessagingPage';
 import { PhaseManagementPage } from '../pages/PhaseManagementPage';
 import { navigateToGame } from '../utils/navigation';
 import { assertTextVisible } from '../utils/assertions';
-import { waitForModal } from '../utils/waits';
 
 /**
  * E2E Tests for Notification System

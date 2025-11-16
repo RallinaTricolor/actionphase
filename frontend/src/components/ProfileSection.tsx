@@ -29,7 +29,7 @@ export function ProfileSection() {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       showToast('Bio updated successfully', 'success');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const message = error.response?.data?.message || 'Failed to update bio';
       showToast(message, 'danger');
     },
@@ -46,7 +46,7 @@ export function ProfileSection() {
       setAvatarPreview(null);
       showToast('Avatar uploaded successfully', 'success');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const message = error.response?.data?.message || 'Failed to upload avatar';
       showToast(message, 'danger');
     },
@@ -61,7 +61,7 @@ export function ProfileSection() {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       showToast('Avatar deleted successfully', 'success');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const message = error.response?.data?.message || 'Failed to delete avatar';
       showToast(message, 'danger');
     },

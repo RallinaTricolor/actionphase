@@ -76,7 +76,7 @@ export function PeopleView({
           (app: GameApplication) => app.role === 'audience' && app.status === 'pending'
         );
         setPendingAudienceApplications(audienceApps);
-      } catch (err) {
+      } catch (_err) {
         // Silently fail - not critical for UI
         // Error is intentionally swallowed as audience applications are optional data
       }

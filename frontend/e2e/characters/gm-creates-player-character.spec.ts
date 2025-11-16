@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
-import { getFixtureGameId, FIXTURE_GAMES } from '../fixtures/game-helpers';
+import { getFixtureGameId } from '../fixtures/game-helpers';
 import { CharacterWorkflowPage } from '../pages/CharacterWorkflowPage';
 
 /**

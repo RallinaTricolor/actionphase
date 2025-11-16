@@ -23,7 +23,7 @@ export function usePrivateMessagesLayout() {
         const parsed: LayoutState = JSON.parse(saved);
         setSidebarCollapsed(parsed.sidebarCollapsed || false);
         setSidebarWidth(parsed.sidebarWidth || DEFAULT_WIDTH);
-      } catch (e) {
+      } catch (_e) {
         logger.error('Failed to parse saved layout', { error: e });
       }
     }

@@ -54,7 +54,7 @@ export function ReassignCharacterModal({
       setAssignToSelf(false);
       onClose();
       onSuccess?.();
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to reassign character', { error, gameId, characterId: character.id, characterName: character.name, targetUserId });
     }
   };

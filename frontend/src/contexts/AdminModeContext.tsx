@@ -9,7 +9,7 @@ export interface UseAdminModeReturn {
   toggleAdminMode: () => void;
 }
 
-interface AdminModeContextValue extends UseAdminModeReturn {}
+type AdminModeContextValue = UseAdminModeReturn;
 
 const AdminModeContext = createContext<AdminModeContextValue | undefined>(undefined);
 
@@ -75,6 +75,7 @@ export function AdminModeProvider({ children }: AdminModeProviderProps) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAdminMode(): AdminModeContextValue {
   const context = useContext(AdminModeContext);
   if (!context) {

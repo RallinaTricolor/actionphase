@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { screen, fireEvent, waitFor as _waitFor } from '@testing-library/react';
+import { http, HttpResponse as _HttpResponse } from 'msw';
 import { ChangeEmailForm } from './ChangeEmailForm';
 import { renderWithProviders } from '../test-utils/render';
 import { server } from '../mocks/server';
@@ -144,7 +144,7 @@ describe('ChangeEmailForm', () => {
   });
 
   it('trims whitespace from new email', async () => {
-    let requestBody: any = null;
+    let requestBody: unknown = null;
 
     server.use(
       http.post('http://localhost:3000/api/v1/auth/request-email-change', async ({ request }) => {

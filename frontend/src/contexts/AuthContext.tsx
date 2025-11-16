@@ -53,7 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const response = await apiClient.auth.getCurrentUser();
         logger.debug('Authentication successful', { userId: response.data.id, username: response.data.username });
         return response.data;
-      } catch (error) {
+      } catch (_error) {
         logger.debug('Not authenticated');
         throw error;
       }
@@ -166,7 +166,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Call backend to invalidate session/clear cookie
       await apiClient.auth.logout();
       logger.debug('Backend logout successful');
-    } catch (error) {
+    } catch (_error) {
       // Log error but continue with frontend logout
       logger.error('Backend logout failed', { error });
     } finally {
@@ -234,6 +234,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within as _within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse as _HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils';
 import { ActionsList } from '../ActionsList';
@@ -9,7 +9,7 @@ import type { GamePhase, ActionWithDetails } from '../../types/phases';
 
 // Mock CreateActionResultForm component
 vi.mock('../CreateActionResultForm', () => ({
-  CreateActionResultForm: ({ gameId, userId, userName, onSuccess }: any) => (
+  CreateActionResultForm: ({ gameId, userId, userName, onSuccess }: unknown) => (
     <div data-testid="create-action-result-form">
       <div>Create Action Result Form</div>
       <div>Game ID: {gameId}</div>
@@ -167,7 +167,7 @@ describe('ActionsList', () => {
         })
       );
 
-      const { container } = renderWithProviders(<ActionsList gameId={1} />);
+      const { container: _container } = renderWithProviders(<ActionsList gameId={1} />);
 
       const skeleton = container.querySelector('.animate-pulse');
       expect(skeleton).toBeInTheDocument();
@@ -182,7 +182,7 @@ describe('ActionsList', () => {
     it('returns null when there are no action phases', async () => {
       setupDefaultHandlers([], [mockCommonRoomPhase]);
 
-      const { container } = renderWithProviders(<ActionsList gameId={1} />);
+      const { container: _container } = renderWithProviders(<ActionsList gameId={1} />);
 
       await waitFor(() => {
         expect(container.firstChild).toBeNull();
@@ -192,7 +192,7 @@ describe('ActionsList', () => {
     it('does not render component when only common room phases exist', async () => {
       setupDefaultHandlers(mockActions, [mockCommonRoomPhase]);
 
-      const { container } = renderWithProviders(<ActionsList gameId={1} />);
+      const { container: _container } = renderWithProviders(<ActionsList gameId={1} />);
 
       await waitFor(() => {
         expect(container.firstChild).toBeNull();
@@ -222,7 +222,7 @@ describe('ActionsList', () => {
     });
 
     it('shows phase-specific empty state when filtering', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers([mockActions[0]]);
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -299,7 +299,7 @@ describe('ActionsList', () => {
     it('applies custom className', () => {
       setupDefaultHandlers();
 
-      const { container } = renderWithProviders(
+      const { container: _container } = renderWithProviders(
         <ActionsList gameId={1} className="custom-test-class" />
       );
 
@@ -356,7 +356,7 @@ describe('ActionsList', () => {
     });
 
     it('filters actions by selected phase', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -377,7 +377,7 @@ describe('ActionsList', () => {
     });
 
     it('updates action count when filtering by phase', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -395,7 +395,7 @@ describe('ActionsList', () => {
     });
 
     it('shows all actions when "All Action Phases" is selected', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -500,7 +500,7 @@ describe('ActionsList', () => {
     });
 
     it('expands action card on click', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -516,7 +516,7 @@ describe('ActionsList', () => {
     });
 
     it('collapses action card when clicked again', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -540,7 +540,7 @@ describe('ActionsList', () => {
     });
 
     it('shows action content when expanded', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -556,7 +556,7 @@ describe('ActionsList', () => {
     });
 
     it('shows updated timestamp when expanded', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -570,7 +570,7 @@ describe('ActionsList', () => {
     });
 
     it('shows "Send Result" button when expanded', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -586,7 +586,7 @@ describe('ActionsList', () => {
     });
 
     it('toggles CreateActionResultForm when "Send Result" clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -605,7 +605,7 @@ describe('ActionsList', () => {
     });
 
     it('passes correct props to CreateActionResultForm', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -626,7 +626,7 @@ describe('ActionsList', () => {
     });
 
     it('shows cancel button when result form is open', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -645,7 +645,7 @@ describe('ActionsList', () => {
     });
 
     it('hides result form when cancel clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -673,7 +673,7 @@ describe('ActionsList', () => {
     });
 
     it('hides result form on successful submission', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -699,7 +699,7 @@ describe('ActionsList', () => {
     });
 
     it('only expands one action at a time', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />);
@@ -796,7 +796,7 @@ describe('ActionsList', () => {
     });
 
     it('opens confirmation dialog when publish button clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
@@ -814,7 +814,7 @@ describe('ActionsList', () => {
     });
 
     it('shows count in confirmation dialog', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
@@ -834,7 +834,7 @@ describe('ActionsList', () => {
     });
 
     it('shows warning about irreversibility in confirmation dialog', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
@@ -854,7 +854,7 @@ describe('ActionsList', () => {
     });
 
     it('closes dialog when cancel clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
@@ -881,7 +881,7 @@ describe('ActionsList', () => {
     });
 
     it('publishes results when confirmed', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       let publishCalled = false;
 
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
@@ -912,7 +912,7 @@ describe('ActionsList', () => {
     });
 
     it('shows loading state while publishing', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       let resolvePublish: () => void;
       const publishPromise = new Promise<void>((resolve) => {
         resolvePublish = resolve;
@@ -949,7 +949,7 @@ describe('ActionsList', () => {
     });
 
     it('disables buttons while publishing', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       let resolvePublish: () => void;
       const publishPromise = new Promise<void>((resolve) => {
         resolvePublish = resolve;
@@ -990,7 +990,7 @@ describe('ActionsList', () => {
     });
 
     it('closes dialog after successful publish', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
@@ -1015,7 +1015,7 @@ describe('ActionsList', () => {
     });
 
     it('updates unpublished count for selected phase', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       setupDefaultHandlers(mockActions, [mockActionPhase1, mockActionPhase2], 2);
 
       renderWithProviders(<ActionsList gameId={1} />);

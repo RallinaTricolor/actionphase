@@ -52,7 +52,7 @@ test.describe('Deep Linking in Common Room', () => {
 
       return {
         totalComments: comments.length,
-        duplicates: Array.from(idCounts.entries()).filter(([_, count]) => count > 1),
+        duplicates: Array.from(idCounts.entries()).filter(([, count]) => count > 1),
         allIds: Array.from(idCounts.keys())
       };
     });
@@ -89,7 +89,7 @@ test.describe('Deep Linking in Common Room', () => {
 
       return {
         totalComments: comments.length,
-        duplicates: Array.from(idCounts.entries()).filter(([_, count]) => count > 1),
+        duplicates: Array.from(idCounts.entries()).filter(([, count]) => count > 1),
         allIds: Array.from(idCounts.keys())
       };
     });

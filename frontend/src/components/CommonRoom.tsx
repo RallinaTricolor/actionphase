@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -66,7 +66,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
 
   useEffect(() => {
     loadData();
-  }, [gameId, phaseId]);
+  }, [loadData]);
 
   // Sync activeTab state with URL parameter
   useEffect(() => {
@@ -77,7 +77,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       // Default to 'posts' if no view parameter
       setActiveTab('posts');
     }
-  }, [searchParams]);
+  }, [searchParams, activeTab]);
 
   // Auto-scroll to comment from URL parameter
   useEffect(() => {
@@ -97,7 +97,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     const timer = setTimeout(async () => {
       // Try to find comment with various ID patterns (base, -desktop, -mobile)
       // Root comments use base ID, nested comments may have -desktop/-mobile suffix
-      let element = document.getElementById(`comment-${commentIdParam}`) ||
+      const element = document.getElementById(`comment-${commentIdParam}`) ||
                     document.getElementById(`comment-${commentIdParam}-desktop`) ||
                     document.getElementById(`comment-${commentIdParam}-mobile`);
 
@@ -151,7 +151,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
             const newParams = new URLSearchParams(searchParams);
             newParams.delete('comment');
             setSearchParams(newParams, { replace: true });
-          } catch (err) {
+          } catch (_err) {
             logger.error('Failed to fetch comment for modal', { error: err, commentId: commentIdParam, gameId });
             // If fetch fails, clear the comment parameter and show error
             const newParams = new URLSearchParams(searchParams);
@@ -168,7 +168,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     return () => clearTimeout(timer);
   }, [commentIdParam, loading, searchParams, setSearchParams, gameId, navigate, activeTab]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -189,7 +189,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     } finally {
       setLoading(false);
     }
-  };
+  }, [gameId, phaseId]);
 
   const handleCreatePost = async (characterId: number, content: string) => {
     try {
@@ -201,7 +201,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       });
       // Reload posts to show the new one
       await loadData();
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to create post', { error: err, gameId, characterId, phaseId });
       throw new Error('Failed to create post. Please try again.');
     } finally {
@@ -217,7 +217,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       });
       // Don't reload all posts - let the individual PostCard/ThreadedComment handle the update
       // This prevents jarring full-page reloads when commenting deep in a thread
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to create comment', { error: err, gameId, postId, characterId });
       throw new Error('Failed to create comment. Please try again.');
     }

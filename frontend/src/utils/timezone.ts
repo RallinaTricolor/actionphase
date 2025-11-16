@@ -9,8 +9,8 @@
  * Uses date-fns-tz for robust timezone handling
  */
 
-import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
-import { format, parseISO } from 'date-fns';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
+import { parseISO } from 'date-fns';
 
 /**
  * Get the user's current timezone

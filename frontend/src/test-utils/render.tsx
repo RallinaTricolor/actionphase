@@ -46,7 +46,9 @@ export function createTestQueryClient(): QueryClient {
     },
     // Suppress error logs during tests
     logger: {
+      // eslint-disable-next-line no-console
       log: console.log,
+      // eslint-disable-next-line no-console
       warn: console.warn,
       error: () => {}, // Suppress error logs in tests
     },
@@ -129,4 +131,5 @@ export function renderWithQueryClient(
 }
 
 // Re-export everything from @testing-library/react
+// eslint-disable-next-line react-refresh/only-export-components
 export * from '@testing-library/react'

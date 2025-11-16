@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent as _fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AddCurrencyModal } from '../AddCurrencyModal';
 
@@ -44,7 +44,7 @@ describe('AddCurrencyModal', () => {
 
   describe('Form Input', () => {
     it('allows entering currency type', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<AddCurrencyModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const typeInput = screen.getByLabelText(/Currency Type/);
@@ -63,7 +63,7 @@ describe('AddCurrencyModal', () => {
     });
 
     it('allows entering description', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<AddCurrencyModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const descInput = screen.getByLabelText(/Description/);
@@ -76,7 +76,7 @@ describe('AddCurrencyModal', () => {
   describe('Form Submission', () => {
     it('calls onAdd with complete currency data', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<AddCurrencyModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Currency Type/), 'Gold');
@@ -94,7 +94,7 @@ describe('AddCurrencyModal', () => {
 
     it('calls onAdd with only required fields', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<AddCurrencyModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Currency Type/), 'Silver');
@@ -110,7 +110,7 @@ describe('AddCurrencyModal', () => {
 
     it('trims whitespace from type', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<AddCurrencyModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Currency Type/), '  Gold  ');
@@ -123,7 +123,7 @@ describe('AddCurrencyModal', () => {
 
     it('trims whitespace from description', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<AddCurrencyModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Currency Type/), 'Credits');
@@ -137,7 +137,7 @@ describe('AddCurrencyModal', () => {
 
     it('sets empty description to undefined', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<AddCurrencyModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Currency Type/), 'Gold');
@@ -151,7 +151,7 @@ describe('AddCurrencyModal', () => {
 
     it('does not call onAdd when type is empty', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<AddCurrencyModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.click(screen.getByText('Add Currency'));
@@ -161,7 +161,7 @@ describe('AddCurrencyModal', () => {
 
     it('does not call onAdd when type is only whitespace', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<AddCurrencyModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Currency Type/), '   ');
@@ -174,7 +174,7 @@ describe('AddCurrencyModal', () => {
   describe('Cancel Functionality', () => {
     it('calls onCancel when cancel button clicked', async () => {
       const onCancel = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<AddCurrencyModal onAdd={vi.fn()} onCancel={onCancel} />);
 
       await user.click(screen.getByText('Cancel'));
@@ -184,7 +184,7 @@ describe('AddCurrencyModal', () => {
 
     it('does not call onAdd when cancelled', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<AddCurrencyModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Currency Type/), 'Gold');

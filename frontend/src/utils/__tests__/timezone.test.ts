@@ -12,8 +12,8 @@ import {
 } from '../timezone';
 
 describe('timezone utilities', () => {
-  // Store original timezone
-  const originalTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // Store original timezone (unused but kept for reference)
+  const _originalTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   beforeEach(() => {
     // Mock Date.now() to return a consistent timestamp for tests
@@ -59,7 +59,7 @@ describe('timezone utilities', () => {
     });
 
     it('should throw error for undefined input', () => {
-      expect(() => localDateTimeToUTC(undefined as any)).toThrow('localDateTimeString is required');
+      expect(() => localDateTimeToUTC(undefined as unknown as string)).toThrow('localDateTimeString is required');
     });
 
     it('should handle midnight correctly', () => {
@@ -95,7 +95,7 @@ describe('timezone utilities', () => {
     });
 
     it('should return empty string for undefined', () => {
-      expect(utcToLocalDateTime(undefined as any)).toBe('');
+      expect(utcToLocalDateTime(undefined as unknown as string)).toBe('');
     });
 
     it('should handle midnight UTC correctly', () => {

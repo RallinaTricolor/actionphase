@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { render, screen, waitFor as _waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { UserProfilePage } from './UserProfilePage';
 import { server } from '../mocks/server';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse as _HttpResponse } from 'msw';
 
 // Helper to render component with all required providers
 const renderWithProviders = (username: string = 'testuser') => {

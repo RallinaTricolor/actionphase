@@ -59,7 +59,7 @@ export function ReadingModeProvider({ children }: { children: React.ReactNode })
           },
         };
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to load reading mode preferences', { error });
     }
 
@@ -82,7 +82,7 @@ export function ReadingModeProvider({ children }: { children: React.ReactNode })
         theme: state.theme,
         fontSize: state.fontSize,
       }));
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to save reading mode preferences', { error });
     }
   }, [state.theme, state.fontSize]);
@@ -165,6 +165,7 @@ export function ReadingModeProvider({ children }: { children: React.ReactNode })
  * @example
  * const { isActive, toggleReadingMode } = useReadingMode();
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useReadingMode() {
   const context = useContext(ReadingModeContext);
   if (context === undefined) {

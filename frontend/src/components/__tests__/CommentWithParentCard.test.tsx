@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CommentWithParentCard } from '../CommentWithParentCard';
@@ -113,7 +113,7 @@ describe('CommentWithParentCard', () => {
   });
 
   it('calls onNavigateToComment when "View in thread" button is clicked', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     const mockNavigate = vi.fn();
 
     render(
@@ -130,7 +130,7 @@ describe('CommentWithParentCard', () => {
   });
 
   it('passes onNavigateToParent to ParentCommentPreview', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     const mockNavigate = vi.fn();
 
     render(
@@ -170,7 +170,7 @@ describe('CommentWithParentCard', () => {
   });
 
   it('applies hover shadow effect class', () => {
-    const { container } = render(<CommentWithParentCard comment={mockComment} />);
+    const { container: _container } = render(<CommentWithParentCard comment={mockComment} />);
 
     const card = container.querySelector('.hover\\:shadow-md');
     expect(card).toBeInTheDocument();

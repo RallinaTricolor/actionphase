@@ -76,7 +76,7 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
     try {
       await deletePollMutation.mutateAsync(poll.id);
       setShowDeleteConfirm(false);
-    } catch (error) {
+    } catch (_error) {
       // Error is handled by React Query mutation error state
       // User feedback is shown via the mutation's onError handler
     }

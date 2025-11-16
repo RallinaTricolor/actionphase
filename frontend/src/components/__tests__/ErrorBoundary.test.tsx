@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor as _waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   ErrorBoundary,
@@ -20,18 +20,24 @@ const ThrowError = ({ shouldThrow = false, error }: { shouldThrow?: boolean; err
 };
 
 // Mock console methods to avoid test output pollution
+// eslint-disable-next-line no-console
 const originalConsoleError = console.error;
+// eslint-disable-next-line no-console
 const originalConsoleWarn = console.warn;
 
 describe('ErrorBoundary', () => {
   beforeEach(() => {
     // Suppress React error boundary warnings in tests
+    // eslint-disable-next-line no-console
     console.error = vi.fn();
+    // eslint-disable-next-line no-console
     console.warn = vi.fn();
   });
 
   afterEach(() => {
+    // eslint-disable-next-line no-console
     console.error = originalConsoleError;
+    // eslint-disable-next-line no-console
     console.warn = originalConsoleWarn;
   });
 
@@ -143,7 +149,7 @@ describe('ErrorBoundary', () => {
 
   describe('Reset Functionality', () => {
     it('calls resetError when try again button is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const resetCallback = vi.fn();
 
       const CustomFallback = ({ resetError, error }: ErrorBoundaryFallbackProps) => {
@@ -175,7 +181,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('reload page button triggers window.location.reload', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       // Mock location.reload using Object.defineProperty
       const reloadMock = vi.fn();
@@ -539,7 +545,7 @@ describe('ErrorBoundary', () => {
         <div data-testid="error-message">{error.message}</div>
       );
 
-      const { rerender } = render(
+      const { rerender: _rerender } = render(
         <ErrorBoundary fallback={CustomFallback}>
           <ThrowError shouldThrow={true} error={new Error('First error')} />
         </ErrorBoundary>
@@ -555,7 +561,7 @@ describe('ErrorBoundary', () => {
       expect(screen.queryByTestId('error-message')).not.toBeInTheDocument();
 
       // Render a new error boundary instance
-      const { container } = render(
+      const { container: _container } = render(
         <ErrorBoundary fallback={CustomFallback}>
           <ThrowError shouldThrow={true} error={new Error('Second error')} />
         </ErrorBoundary>
@@ -567,10 +573,10 @@ describe('ErrorBoundary', () => {
     });
 
     it('generates unique error IDs for each error', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const onError = vi.fn();
 
-      const { rerender } = render(
+      const { rerender: _rerender } = render(
         <ErrorBoundary onError={onError}>
           <ThrowError shouldThrow={true} error={new Error('First error')} />
         </ErrorBoundary>

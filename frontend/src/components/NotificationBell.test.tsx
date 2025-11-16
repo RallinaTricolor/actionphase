@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
+import { screen, waitFor as _waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse as _HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { renderWithProviders, createTestQueryClient } from '../test-utils/render';
+import { renderWithProviders, createTestQueryClient as _createTestQueryClient } from '../test-utils/render';
 import NotificationBell from './NotificationBell';
 
 // Setup MSW server
@@ -92,7 +92,7 @@ describe('NotificationBell', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     renderWithProviders(<NotificationBell />);
 
     // Wait for component to load
@@ -122,7 +122,7 @@ describe('NotificationBell', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     renderWithProviders(<NotificationBell />);
 
     await waitFor(() => {

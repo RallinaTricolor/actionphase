@@ -32,7 +32,7 @@ export function VerifyEmailPage() {
         setTimeout(() => {
           navigate('/dashboard');
         }, 3000);
-      } catch (err: any) {
+      } catch (err: unknown) {
         setError(err.response?.data?.error || 'This verification link is invalid or has expired');
       } finally {
         setIsValidating(false);

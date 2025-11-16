@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 import { navigateToGameAndTab } from '../utils/navigation';
 import { waitForVisible } from '../utils/waits';
 

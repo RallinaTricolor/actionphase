@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import type { UseInfiniteQueryResult } from '@tanstack/react-query';
 import { NewCommentsView } from '../NewCommentsView';
 import * as useRecentCommentsModule from '../../hooks/useRecentComments';
 import type { CommentWithParent } from '../../types/messages';
@@ -50,7 +51,7 @@ mockIntersectionObserver.mockReturnValue({
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 });
-window.IntersectionObserver = mockIntersectionObserver as any;
+window.IntersectionObserver = mockIntersectionObserver as unknown as typeof IntersectionObserver;
 
 describe('NewCommentsView', () => {
   const mockComment: CommentWithParent = {
@@ -95,7 +96,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as any);
+    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -113,7 +114,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as any);
+    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -131,7 +132,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as any);
+    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -157,7 +158,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as any);
+    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -191,7 +192,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as any);
+    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -213,7 +214,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as any);
+    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -232,7 +233,7 @@ describe('NewCommentsView', () => {
       hasNextPage: true,
       isFetchingNextPage: true,
       refetch: vi.fn(),
-    } as any);
+    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -260,7 +261,7 @@ describe('NewCommentsView', () => {
       hasNextPage: true,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as any);
+    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -289,7 +290,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as any);
+    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -307,7 +308,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as any);
+    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -332,7 +333,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch: vi.fn(),
-      } as any);
+      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -356,7 +357,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch: vi.fn(),
-      } as any);
+      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -381,7 +382,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch: vi.fn(),
-      } as any);
+      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -410,7 +411,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch: vi.fn(),
-      } as any);
+      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -440,7 +441,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch,
-      } as any);
+      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -460,7 +461,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch,
-      } as any);
+      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -487,7 +488,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch,
-      } as any);
+      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -520,7 +521,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch,
-      } as any);
+      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -549,7 +550,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch,
-      } as any);
+      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 

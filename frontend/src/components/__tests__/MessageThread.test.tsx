@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
+import type { useAuth } from '../../contexts/AuthContext';
 import { MessageThread } from '../MessageThread';
 import type { Character } from '../../types/characters';
 
@@ -13,7 +14,7 @@ vi.mock('../../contexts/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext'
 
 describe('MessageThread', () => {
   const mockCharacters: Character[] = [
@@ -84,7 +85,7 @@ describe('MessageThread', () => {
       register: vi.fn(),
       logout: vi.fn(),
       error: null,
-    } as any);
+    } as Partial<ReturnType<typeof useAuth>>);
 
     // Setup default mocks
     server.use(
@@ -343,7 +344,7 @@ describe('MessageThread', () => {
 
   describe('Sending Messages', () => {
     it('allows typing in message input', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
@@ -360,8 +361,8 @@ describe('MessageThread', () => {
     });
 
     it('sends message when form is submitted', async () => {
-      const user = userEvent.setup();
-      let sentMessage: any;
+      const _user = userEvent.setup();
+      let sentMessage: unknown;
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
@@ -393,7 +394,7 @@ describe('MessageThread', () => {
     });
 
     it('clears input after sending message', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
@@ -419,7 +420,7 @@ describe('MessageThread', () => {
     });
 
     it('shows sending state while message is being sent', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async () => {
@@ -458,7 +459,7 @@ describe('MessageThread', () => {
     });
 
     it('disables send button when message is only whitespace', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(
         <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
@@ -476,8 +477,8 @@ describe('MessageThread', () => {
     });
 
     it('trims whitespace from message before sending', async () => {
-      const user = userEvent.setup();
-      let sentMessage: any;
+      const _user = userEvent.setup();
+      let sentMessage: unknown;
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
@@ -503,8 +504,8 @@ describe('MessageThread', () => {
     });
 
     it('sends message with selected character ID', async () => {
-      const user = userEvent.setup();
-      let sentMessage: any;
+      const _user = userEvent.setup();
+      let sentMessage: unknown;
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
@@ -530,8 +531,8 @@ describe('MessageThread', () => {
     });
 
     it('allows switching character before sending', async () => {
-      const user = userEvent.setup();
-      let sentMessage: any;
+      const _user = userEvent.setup();
+      let sentMessage: unknown;
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
@@ -692,7 +693,7 @@ describe('MessageThread', () => {
     });
 
     it('shows confirmation modal when delete button is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const messagesWithUserId = mockMessages.map(msg => ({
         ...msg,
         sender_user_id: 100,
@@ -722,7 +723,7 @@ describe('MessageThread', () => {
     });
 
     it('closes modal when cancel is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const messagesWithUserId = mockMessages.map(msg => ({
         ...msg,
         sender_user_id: 100,
@@ -760,7 +761,7 @@ describe('MessageThread', () => {
     });
 
     it('deletes message when confirmed', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       let deletedMessageId: number | null = null;
 
       const messagesWithUserId = mockMessages.map(msg => ({
@@ -865,7 +866,7 @@ describe('MessageThread', () => {
     });
 
     it('shows loading state while deleting', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const messagesWithUserId = mockMessages.map(msg => ({
         ...msg,
         sender_user_id: 100,
@@ -907,7 +908,7 @@ describe('MessageThread', () => {
     });
 
     it('reloads messages after successful deletion', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       let messagesFetchCount = 0;
 
       const messagesWithUserId = mockMessages.map(msg => ({

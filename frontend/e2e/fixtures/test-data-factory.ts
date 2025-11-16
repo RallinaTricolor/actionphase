@@ -198,8 +198,8 @@ export interface TestCharacterData {
   game_id: number;
   name: string;
   character_type: 'player_character' | 'npc_gm' | 'npc_player';
-  public_data?: Record<string, any>;
-  private_data?: Record<string, any>;
+  public_data?: Record<string, unknown>;
+  private_data?: Record<string, unknown>;
 }
 
 /**
@@ -328,7 +328,7 @@ export async function retryWithBackoff<T>(
 /**
  * Validate that a game has expected properties
  */
-export function validateGameData(game: any, expectedProps: Partial<typeof FIXTURE_GAMES[keyof typeof FIXTURE_GAMES]>) {
+export function validateGameData(game: { state?: string; phases?: unknown[] }, expectedProps: Partial<typeof FIXTURE_GAMES[keyof typeof FIXTURE_GAMES]>) {
   const errors: string[] = [];
 
   if (expectedProps.expectedState && game.state !== expectedProps.expectedState) {

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { AxiosResponse } from 'axios';
 import { AdminPage } from './AdminPage';
 import { apiClient } from '../lib/api';
 import { ToastProvider } from '../contexts/ToastContext';
@@ -73,7 +74,7 @@ describe('AdminPage', () => {
 
   describe('Banned Users Tab', () => {
     it('shows loading state initially', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       vi.mocked(apiClient.admin.listBannedUsers).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
@@ -87,10 +88,10 @@ describe('AdminPage', () => {
     });
 
     it('displays empty state when no banned users exist', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
       renderAdminPage();
 
@@ -103,7 +104,7 @@ describe('AdminPage', () => {
     });
 
     it('displays list of banned users', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const bannedUsers = [
         {
           id: 1,
@@ -127,7 +128,7 @@ describe('AdminPage', () => {
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: bannedUsers,
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
       renderAdminPage();
 
@@ -151,7 +152,7 @@ describe('AdminPage', () => {
     });
 
     it('displays error state when API fails', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       vi.mocked(apiClient.admin.listBannedUsers).mockRejectedValue(
         new Error('API Error')
       );
@@ -182,9 +183,9 @@ describe('AdminPage', () => {
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [bannedUser],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
-      vi.mocked(apiClient.admin.unbanUser).mockResolvedValue({} as any);
+      vi.mocked(apiClient.admin.unbanUser).mockResolvedValue({} as Partial<AxiosResponse<unknown>>);
 
       renderAdminPage();
 
@@ -230,7 +231,7 @@ describe('AdminPage', () => {
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [bannedUser],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
       renderAdminPage();
 
@@ -262,7 +263,7 @@ describe('AdminPage', () => {
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [bannedUser],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
       vi.mocked(apiClient.admin.unbanUser).mockRejectedValue(
         new Error('API Error')
@@ -291,10 +292,10 @@ describe('AdminPage', () => {
     it('switches to admins tab when clicked', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
       renderAdminPage();
 
@@ -324,10 +325,10 @@ describe('AdminPage', () => {
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
         data: admins,
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
       renderAdminPage();
 
@@ -349,10 +350,10 @@ describe('AdminPage', () => {
     it('displays empty state when no admins exist', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
       renderAdminPage();
 
@@ -367,7 +368,7 @@ describe('AdminPage', () => {
     it('displays error state when API fails', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.listAdmins).mockRejectedValue(
         new Error('API Error')
       );
@@ -389,7 +390,7 @@ describe('AdminPage', () => {
     it('shows Admin Mode tab by default', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
       renderAdminPage();
 
@@ -401,10 +402,10 @@ describe('AdminPage', () => {
     it('switches between tabs correctly', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
       renderAdminPage();
 
@@ -444,11 +445,11 @@ describe('AdminPage', () => {
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
         data: admins,
-      } as any);
-      vi.mocked(apiClient.admin.grantAdminStatus).mockResolvedValue({} as any);
+      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.grantAdminStatus).mockResolvedValue({} as Partial<AxiosResponse<unknown>>);
 
       renderAdminPage();
 
@@ -470,7 +471,7 @@ describe('AdminPage', () => {
           is_banned: false,
           createdAt: '2025-01-02T00:00:00Z',
         },
-      } as any);
+      } as Partial<AxiosResponse<unknown>>);
 
       // Search for user
       const searchInput = screen.getByPlaceholderText(/enter username/i);
@@ -509,10 +510,10 @@ describe('AdminPage', () => {
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.getUserByUsername).mockResolvedValue({
         data: {
           id: 2,
@@ -522,7 +523,7 @@ describe('AdminPage', () => {
           is_banned: false,
           createdAt: '2025-01-02T00:00:00Z',
         },
-      } as any);
+      } as Partial<AxiosResponse<unknown>>);
 
       renderAdminPage();
 
@@ -566,10 +567,10 @@ describe('AdminPage', () => {
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
         data: admins,
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
       renderAdminPage();
 
@@ -607,11 +608,11 @@ describe('AdminPage', () => {
 
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
         data: admins,
-      } as any);
-      vi.mocked(apiClient.admin.revokeAdminStatus).mockResolvedValue({} as any);
+      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.revokeAdminStatus).mockResolvedValue({} as Partial<AxiosResponse<unknown>>);
 
       renderAdminPage();
 
@@ -646,7 +647,7 @@ describe('AdminPage', () => {
     it('shows user lookup tab when clicked', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
 
       renderAdminPage();
 
@@ -662,7 +663,7 @@ describe('AdminPage', () => {
     it('searches for user and displays results', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.getUserByUsername).mockResolvedValue({
         data: {
           id: 2,
@@ -672,7 +673,7 @@ describe('AdminPage', () => {
           is_banned: false,
           createdAt: '2025-01-02T00:00:00Z',
         },
-      } as any);
+      } as Partial<AxiosResponse<unknown>>);
 
       renderAdminPage();
 
@@ -699,7 +700,7 @@ describe('AdminPage', () => {
     it('displays error message when user not found', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.getUserByUsername).mockRejectedValue({
         response: { data: { error: 'user not found' } },
       });
@@ -723,7 +724,7 @@ describe('AdminPage', () => {
     it('shows appropriate buttons for admin users', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.getUserByUsername).mockResolvedValue({
         data: {
           id: 2,
@@ -733,7 +734,7 @@ describe('AdminPage', () => {
           is_banned: false,
           createdAt: '2025-01-02T00:00:00Z',
         },
-      } as any);
+      } as Partial<AxiosResponse<unknown>>);
 
       renderAdminPage();
 
@@ -761,7 +762,7 @@ describe('AdminPage', () => {
     it('hides action buttons for banned users', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.getUserByUsername).mockResolvedValue({
         data: {
           id: 2,
@@ -771,7 +772,7 @@ describe('AdminPage', () => {
           is_banned: true,
           createdAt: '2025-01-02T00:00:00Z',
         },
-      } as any);
+      } as Partial<AxiosResponse<unknown>>);
 
       renderAdminPage();
 
@@ -797,7 +798,7 @@ describe('AdminPage', () => {
     it('hides all action buttons for current user', async () => {
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
-      } as any);
+      } as Partial<AxiosResponse<unknown[]>>);
       vi.mocked(apiClient.admin.getUserByUsername).mockResolvedValue({
         data: {
           id: 1, // Same as mocked currentUser.id
@@ -807,7 +808,7 @@ describe('AdminPage', () => {
           is_banned: false,
           createdAt: '2025-01-01T00:00:00Z',
         },
-      } as any);
+      } as Partial<AxiosResponse<unknown>>);
 
       renderAdminPage();
 

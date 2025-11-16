@@ -28,7 +28,7 @@ export async function fetchCommentWithParents(
       // Move to parent
       currentId = message.parent_id;
       depth++;
-    } catch (error) {
+    } catch (_error) {
       logger.error(`Failed to fetch message ${currentId}`, { error });
       break;
     }

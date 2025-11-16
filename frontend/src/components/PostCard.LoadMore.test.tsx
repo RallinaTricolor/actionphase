@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { AxiosResponse } from 'axios';
 import { PostCard } from './PostCard';
 import { ToastProvider } from '../contexts/ToastContext';
 import type { Message, CommentWithDepth, PaginatedCommentsResponse } from '@/types/messages';
@@ -163,7 +164,7 @@ describe('PostCard - Load More Comments', () => {
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads).mockResolvedValue({
       data: mockResponse,
-    } as any);
+    } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
 
     // Act
     renderPostCard(mockPost);
@@ -192,7 +193,7 @@ describe('PostCard - Load More Comments', () => {
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads).mockResolvedValue({
       data: mockResponse,
-    } as any);
+    } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
 
     // Act
     renderPostCard(mockPost);
@@ -204,7 +205,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should load more comments when "Load More" button is clicked', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
 
     // Arrange: Initial load returns 200 comments
     const initialComments = Array.from({ length: 200 }, (_, i) => createMockComment(i + 1));
@@ -231,8 +232,8 @@ describe('PostCard - Load More Comments', () => {
     };
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: initialResponse } as any)
-      .mockResolvedValueOnce({ data: secondResponse } as any);
+      .mockResolvedValueOnce({ data: initialResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
+      .mockResolvedValueOnce({ data: secondResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
 
     // Act
     renderPostCard(mockPost);
@@ -265,7 +266,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should show loading state while loading more comments', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
 
     // Arrange: Initial load
     const initialComments = Array.from({ length: 200 }, (_, i) => createMockComment(i + 1));
@@ -292,9 +293,9 @@ describe('PostCard - Load More Comments', () => {
     };
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: initialResponse } as any)
+      .mockResolvedValueOnce({ data: initialResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
       .mockImplementationOnce(() =>
-        new Promise(resolve => setTimeout(() => resolve({ data: secondResponse } as any), 100))
+        new Promise(resolve => setTimeout(() => resolve({ data: secondResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>), 100))
       );
 
     // Act
@@ -325,7 +326,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should append new comments to existing tree when loading more', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
 
     // Arrange: Initial 3 comments
     const initialComments = [
@@ -359,8 +360,8 @@ describe('PostCard - Load More Comments', () => {
     };
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: initialResponse } as any)
-      .mockResolvedValueOnce({ data: secondResponse } as any);
+      .mockResolvedValueOnce({ data: initialResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
+      .mockResolvedValueOnce({ data: secondResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
 
     // Act
     renderPostCard(mockPost);
@@ -388,7 +389,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should preserve nested comment structure when loading more', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
 
     // Arrange: Top-level comment with nested replies
     const initialComments = [
@@ -422,8 +423,8 @@ describe('PostCard - Load More Comments', () => {
     };
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: initialResponse } as any)
-      .mockResolvedValueOnce({ data: secondResponse } as any);
+      .mockResolvedValueOnce({ data: initialResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
+      .mockResolvedValueOnce({ data: secondResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
 
     // Act
     renderPostCard(mockPost);

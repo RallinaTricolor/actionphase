@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AbilityCard } from '../AbilityCard';
@@ -251,7 +251,7 @@ describe('AbilityCard', () => {
 
   describe('Edit Mode', () => {
     it('enters edit mode when edit button clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(
         <AbilityCard
           ability={mockAbility}
@@ -268,7 +268,7 @@ describe('AbilityCard', () => {
     });
 
     it('shows save and cancel buttons in edit mode', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(
         <AbilityCard
           ability={mockAbility}
@@ -285,7 +285,7 @@ describe('AbilityCard', () => {
     });
 
     it('allows editing ability name', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(
         <AbilityCard
           ability={mockAbility}
@@ -304,7 +304,7 @@ describe('AbilityCard', () => {
     });
 
     it('allows editing description', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(
         <AbilityCard
           ability={mockAbility}
@@ -326,7 +326,7 @@ describe('AbilityCard', () => {
   describe('Save Functionality', () => {
     it('calls onUpdate with modified values when saved', async () => {
       const onUpdate = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(
         <AbilityCard
           ability={mockAbility}
@@ -355,7 +355,7 @@ describe('AbilityCard', () => {
     });
 
     it('exits edit mode after save', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(
         <AbilityCard
           ability={mockAbility}
@@ -374,7 +374,7 @@ describe('AbilityCard', () => {
 
     it('sets description to undefined when empty', async () => {
       const onUpdate = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(
         <AbilityCard
           ability={mockAbility}
@@ -400,7 +400,7 @@ describe('AbilityCard', () => {
 
   describe('Cancel Functionality', () => {
     it('reverts changes when cancelled', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(
         <AbilityCard
           ability={mockAbility}
@@ -424,7 +424,7 @@ describe('AbilityCard', () => {
 
     it('does not call onUpdate when cancelled', async () => {
       const onUpdate = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(
         <AbilityCard
           ability={mockAbility}
@@ -446,7 +446,7 @@ describe('AbilityCard', () => {
     });
 
     it('exits edit mode when cancelled', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(
         <AbilityCard
           ability={mockAbility}
@@ -467,7 +467,7 @@ describe('AbilityCard', () => {
   describe('Remove Functionality', () => {
     it('calls onRemove when delete button clicked', async () => {
       const onRemove = vi.fn();
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(
         <AbilityCard
           ability={mockAbility}

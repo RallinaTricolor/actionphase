@@ -115,7 +115,8 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
   };
 
   const handleDelete = () => {
-    if (!confirm('Are you sure you want to remove this avatar?')) {
+    // eslint-disable-next-line no-alert
+    if (!confirm('Are you sure you want to delete this avatar?')) {
       return;
     }
 

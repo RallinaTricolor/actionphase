@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAllActionSubmissions } from '../hooks/useAudience';
 import { Card, CardHeader, CardBody } from './ui/Card';
@@ -11,6 +11,23 @@ import { logger } from '@/services/LoggingService';
 
 interface AllActionSubmissionsViewProps {
   gameId: number;
+}
+
+interface ActionSubmissionType {
+  id: number;
+  status: string;
+  action_result_id?: number;
+  character_name: string;
+  submission_number: number;
+  created_at: string;
+  last_updated: string;
+  content: string;
+}
+
+interface ActionResultType {
+  id: number;
+  action_submission_id: number;
+  content: string;
 }
 
 /**
@@ -27,7 +44,7 @@ export function AllActionSubmissionsView({ gameId }: AllActionSubmissionsViewPro
     enabled: !!gameId,
   });
 
-  const phases = phasesData || [];
+  const phases = useMemo(() => phasesData || [], [phasesData]);
 
   // Set initial phase to the most recent action phase (highest phase number)
   useEffect(() => {
@@ -166,7 +183,7 @@ export function AllActionSubmissionsView({ gameId }: AllActionSubmissionsViewPro
         </Card>
       ) : (
         <div className="space-y-4">
-          {allSubmissions.map((submission: any) => (
+          {allSubmissions.map((submission: ActionSubmissionType) => (
             <ActionSubmissionCard
               key={submission.id}
               gameId={gameId}
@@ -195,9 +212,9 @@ export function AllActionSubmissionsView({ gameId }: AllActionSubmissionsViewPro
 /**
  * Individual action submission card component with collapsible content and result display
  */
-function ActionSubmissionCard({ gameId, submission }: { gameId: number; submission: any }) {
+function ActionSubmissionCard({ gameId, submission }: { gameId: number; submission: ActionSubmissionType }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [actionResult, setActionResult] = useState<any>(null);
+  const [actionResult, setActionResult] = useState<ActionResultType | null>(null);
   const [loadingResult, setLoadingResult] = useState(false);
 
   // Fetch action result if the submission has a result posted
@@ -205,9 +222,9 @@ function ActionSubmissionCard({ gameId, submission }: { gameId: number; submissi
     if (isExpanded && submission.status === 'result_posted' && submission.action_result_id && !actionResult && !loadingResult) {
       setLoadingResult(true);
       apiClient.phases.getGameResults(gameId)
-        .then((res: { data: any[] }) => {
-          const result = res.data.find((r: any) => r.action_submission_id === submission.id);
-          setActionResult(result);
+        .then((res: { data: ActionResultType[] }) => {
+          const result = res.data.find((r: ActionResultType) => r.action_submission_id === submission.id);
+          setActionResult(result || null);
         })
         .catch((err: Error) => {
           logger.error('Failed to load action result', { error: err, gameId, submissionId: submission.id, actionResultId: submission.action_result_id });

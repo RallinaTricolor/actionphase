@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PhaseHistoryPolls } from './PhaseHistoryPolls';
 import * as hooks from '../hooks';
@@ -160,7 +160,7 @@ describe('PhaseHistoryPolls', () => {
       error: null,
     });
 
-    const { rerender } = render(<PhaseHistoryPolls {...defaultProps} isGM={true} />);
+    const { rerender: _rerender } = render(<PhaseHistoryPolls {...defaultProps} isGM={true} />);
 
     // PollCard should be rendered (we can't directly test props passed to it,
     // but we can verify the component renders with different prop combinations)

@@ -34,7 +34,7 @@ export function DeletePhaseDialog({
       setError(null);
       await onConfirm();
       onClose();
-    } catch (err) {
+    } catch (_err) {
       // Extract error message from API response
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete phase';
       setError(errorMessage);

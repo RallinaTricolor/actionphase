@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
 import { server } from './mocks/server'
-import { vi, beforeAll, afterEach, afterAll, beforeEach } from 'vitest'
+import { beforeAll, afterEach, afterAll, beforeEach } from 'vitest'
 
 // Mock ResizeObserver and IntersectionObserver globally before each test
 // These are needed by react-datepicker and infinite scroll components
@@ -10,14 +10,14 @@ beforeEach(() => {
     observe() {}
     unobserve() {}
     disconnect() {}
-  } as any
+  } as unknown as typeof ResizeObserver
 
   // Mock IntersectionObserver
   global.IntersectionObserver = class IntersectionObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
-  } as any
+  } as unknown as typeof IntersectionObserver
 })
 
 // Establish API mocking before all tests

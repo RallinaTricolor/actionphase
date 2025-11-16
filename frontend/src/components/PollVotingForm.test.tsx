@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { Character } from '../types/characters';
 import { PollVotingForm } from './PollVotingForm';
 import type { PollWithOptions } from '../types/polls';
-import userEvent from '@testing-library/user-event';
 
 // Mock the useSubmitVote and useUserCharacters hooks
 vi.mock('../hooks', () => ({
@@ -68,9 +68,9 @@ describe('PollVotingForm', () => {
       const { useUserCharacters } = await import('../hooks');
       vi.mocked(useUserCharacters).mockReturnValue({
         characters: [
-          { id: 1, name: 'Character 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as any,
-          { id: 2, name: 'Character 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as any,
-          { id: 3, name: 'Character 3', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as any,
+          { id: 1, name: 'Character 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as Partial<Character>,
+          { id: 2, name: 'Character 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as Partial<Character>,
+          { id: 3, name: 'Character 3', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as Partial<Character>,
         ],
         isLoading: false,
         error: null,
@@ -108,8 +108,8 @@ describe('PollVotingForm', () => {
       const { useUserCharacters } = await import('../hooks');
       vi.mocked(useUserCharacters).mockReturnValue({
         characters: [
-          { id: 1, name: 'Character 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as any,
-          { id: 2, name: 'Character 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as any,
+          { id: 1, name: 'Character 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as Partial<Character>,
+          { id: 2, name: 'Character 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as Partial<Character>,
         ],
         isLoading: false,
         error: null,
@@ -140,8 +140,8 @@ describe('PollVotingForm', () => {
       const { useUserCharacters } = await import('../hooks');
       vi.mocked(useUserCharacters).mockReturnValue({
         characters: [
-          { id: 1, name: 'Character 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as any,
-          { id: 2, name: 'Character 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as any,
+          { id: 1, name: 'Character 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as Partial<Character>,
+          { id: 2, name: 'Character 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as Partial<Character>,
         ],
         isLoading: false,
         error: null,
@@ -170,9 +170,9 @@ describe('PollVotingForm', () => {
       const { useUserCharacters } = await import('../hooks');
       vi.mocked(useUserCharacters).mockReturnValue({
         characters: [
-          { id: 1, name: 'Character 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as any,
-          { id: 2, name: 'Character 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as any,
-          { id: 3, name: 'Character 3', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as any,
+          { id: 1, name: 'Character 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as Partial<Character>,
+          { id: 2, name: 'Character 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as Partial<Character>,
+          { id: 3, name: 'Character 3', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as Partial<Character>,
         ],
         isLoading: false,
         error: null,
@@ -208,7 +208,7 @@ describe('PollVotingForm', () => {
       const { useUserCharacters } = await import('../hooks');
       vi.mocked(useUserCharacters).mockReturnValue({
         characters: [
-          { id: 1, name: 'Character 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as any,
+          { id: 1, name: 'Character 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' } as Partial<Character>,
         ],
         isLoading: false,
         error: null,
