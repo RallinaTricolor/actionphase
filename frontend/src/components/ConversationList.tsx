@@ -98,7 +98,7 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
   }
 
   return (
-    <div>
+    <div className="space-y-1">
       {conversations.map((conversation) => (
         <Button
           key={conversation.id}
@@ -107,7 +107,7 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
             logger.debug('Conversation clicked', { conversationId: conversation.id, gameId, title: conversation.title });
             onSelectConversation(conversation.id);
           }}
-          className={`w-full justify-start text-left hover:bg-surface-raised transition-colors rounded-none border-l-4 px-4 py-3 my-2 border-b border-theme-subtle ${
+          className={`w-full justify-start text-left hover:bg-surface-raised transition-colors rounded-none border-l-4 px-4 py-3 border-b border-theme-subtle ${
             selectedConversationId === conversation.id
               ? 'bg-interactive-primary-subtle border-l-interactive-primary'
               : 'border-l-transparent hover:border-l-border-primary'

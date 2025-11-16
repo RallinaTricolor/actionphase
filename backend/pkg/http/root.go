@@ -461,9 +461,17 @@ func (h *Handler) Start() {
 	})
 	apiV1Router.Mount("/admin", adminRouter)
 
-	// API Documentation routes (public)
+	// API Documentation routes (public) - register on apiV1Router BEFORE mounting
 	docsHandler := &docs.Handler{}
 	docsHandler.RegisterRoutes(apiV1Router)
+
+	// Debug routes (development only) - exposed via /api/v1/debug/*
+	if h.App.Config.App.Environment == "development" {
+		debugHandler := &DebugHandler{}
+		apiV1Router.Route("/debug", func(r chi.Router) {
+			debugHandler.RegisterRoutes(r)
+		})
+	}
 
 	r.Mount("/api/v1", apiV1Router)
 
