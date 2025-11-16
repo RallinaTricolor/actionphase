@@ -295,7 +295,7 @@ func (h *Handler) GetGameCharacters(w http.ResponseWriter, r *http.Request) {
 	for _, char := range characters {
 		// If game is in_progress and user is NOT GM/co-GM/audience, exclude OTHER players' pending/rejected characters
 		// BUT always include the user's own characters regardless of status
-		if game.State.String == "in_progress" && !isGM && userRole != "co_gm" && userRole != "audience" {
+		if !isGM && userRole != "co_gm" && userRole != "audience" {
 			if char.Status.String == "pending" || char.Status.String == "rejected" {
 				// Skip OTHER players' pending/rejected characters, but show user's own
 				if authUser == nil || !char.UserID.Valid || char.UserID.Int32 != authUser.ID {
