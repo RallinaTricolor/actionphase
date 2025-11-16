@@ -77,8 +77,8 @@ export function PeopleView({
         );
         setPendingAudienceApplications(audienceApps);
       } catch (err) {
-        // Silently fail - not critical
-        console.error('Failed to fetch audience applications:', err);
+        // Silently fail - not critical for UI
+        // Error is intentionally swallowed as audience applications are optional data
       }
     };
 
