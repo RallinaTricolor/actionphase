@@ -279,7 +279,7 @@ test.describe('Character Mentions', () => {
     await commonRoom.selectCharacterFromAutocomplete('Test Player 1 Character');
 
     // Verify the mention was inserted
-    let textareaValue = await commonRoom.postTextarea.inputValue();
+    const textareaValue = await commonRoom.postTextarea.inputValue();
     expect(textareaValue).toContain('@Test Player 1 Character');
 
     // Complete the post

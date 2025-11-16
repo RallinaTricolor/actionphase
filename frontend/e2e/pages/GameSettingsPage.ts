@@ -84,7 +84,7 @@ export class GameSettingsPage {
 
     // Try to find the date - if not found, navigate months
     const datePattern = new RegExp(`Choose.*${monthName} ${ordinalDay}, ${year}`, 'i');
-    let dateCell = this.page.getByRole('gridcell', { name: datePattern });
+    const dateCell = this.page.getByRole('gridcell', { name: datePattern });
 
     // Check if date is visible, if not, navigate to correct month
     let attempts = 0;

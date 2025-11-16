@@ -44,8 +44,8 @@ test.describe('Unread Comment Tracking', () => {
 
     // Expand comments section to mark this post as "visited"
     const postCard = commonRoom.getPostCard(postContent);
-    let commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
-    let buttonText = await commentsButton.textContent();
+    const commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
+    const buttonText = await commentsButton.textContent();
 
     if (buttonText?.includes('Show Comments')) {
       await commentsButton.click();
@@ -133,9 +133,9 @@ test.describe('Unread Comment Tracking', () => {
     await commonRoom.verifyPostExists(postContent);
 
     // Mark as visited
-    let postCard = commonRoom.getPostCard(postContent);
-    let commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
-    let buttonText = await commentsButton.textContent();
+    const postCard = commonRoom.getPostCard(postContent);
+    const commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
+    const buttonText = await commentsButton.textContent();
 
     if (buttonText?.includes('Show Comments')) {
       await commentsButton.click();
