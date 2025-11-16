@@ -651,6 +651,18 @@ func NewTestApp(pool *pgxpool.Pool) *App {
 	}
 }
 
+// WithAuthenticatedUser adds an authenticated user to the request context for testing
+// This mimics what the RequireAuthenticationMiddleware does in production
+func WithAuthenticatedUser(ctx context.Context, user *User) context.Context {
+	authUser := &AuthenticatedUser{
+		ID:       int32(user.ID),
+		Username: user.Username,
+		Email:    user.Email,
+		IsAdmin:  false, // Default to non-admin; set explicitly if needed
+	}
+	return context.WithValue(ctx, UserContextKey, authUser)
+}
+
 // ========================================
 // Phase 4: Cleanup Presets
 // ========================================

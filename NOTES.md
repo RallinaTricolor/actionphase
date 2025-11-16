@@ -1,7 +1,0 @@
-- Maps/locations
-- Chatroom style games
-- Talent trees
-- Multiple GMs per game
-- OpenAPI docs in CI
-- Polls for Voting
-- Web sockets / web notifications

@@ -1,0 +1,556 @@
+package phases
+
+import (
+	"actionphase/pkg/core"
+	db "actionphase/pkg/db/services"
+	phasesvc "actionphase/pkg/db/services/phases"
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/jwtauth/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// Helper function for creating int32 pointers
+func int32Ptr(i int32) *int32 {
+	return &i
+}
+
+// setupPhaseAPITestRouter creates a test router with phase routes
+func setupPhaseAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	r := chi.NewRouter()
+
+	// API v1 routes
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Route("/games", func(r chi.Router) {
+			phaseHandler := Handler{App: app}
+
+			r.Group(func(r chi.Router) {
+				r.Use(jwtauth.Verifier(tokenAuth))
+				r.Use(jwtauth.Authenticator(tokenAuth))
+				r.Use(core.RequireAuthenticationMiddleware(userService))
+
+				// Phase routes (mirroring root.go)
+				r.Post("/{gameId}/phases", phaseHandler.CreatePhase)
+				r.Get("/{gameId}/current-phase", phaseHandler.GetCurrentPhase)
+				r.Get("/{gameId}/phases", phaseHandler.GetGamePhases)
+			})
+		})
+
+		// Phases API (for phase-specific operations like update/delete)
+		r.Route("/phases", func(r chi.Router) {
+			phaseHandler := Handler{App: app}
+
+			r.Group(func(r chi.Router) {
+				r.Use(jwtauth.Verifier(tokenAuth))
+				r.Use(jwtauth.Authenticator(tokenAuth))
+				r.Use(core.RequireAuthenticationMiddleware(userService))
+
+				r.Put("/{phaseId}", phaseHandler.UpdatePhase)
+				r.Delete("/{phaseId}", phaseHandler.DeletePhase)
+				r.Post("/{phaseId}/activate", phaseHandler.ActivatePhase)
+			})
+		})
+	})
+
+	return r
+}
+
+// TestPhaseAPI_CreatePhase tests POST /games/{gameId}/phases
+func TestPhaseAPI_CreatePhase(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "phases", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupPhaseAPITestRouter(app, testDB)
+
+	// Create test users
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	// Create test game
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	// Add player as participant
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	core.AssertNoError(t, err, "Should add player as participant")
+
+	t.Run("GM successfully creates phase", func(t *testing.T) {
+		reqBody := CreatePhaseRequest{
+			PhaseType: "common_room",
+			Title:     "Common Room 1",
+		}
+		reqJSON, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases", game.ID), bytes.NewBuffer(reqJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusCreated, rec.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(rec.Body.Bytes(), &response)
+		require.NoError(t, err)
+		assert.Equal(t, "common_room", response["phase_type"])
+		assert.Equal(t, "Common Room 1", response["title"])
+	})
+
+	t.Run("non-GM player cannot create phase", func(t *testing.T) {
+		reqBody := CreatePhaseRequest{
+			PhaseType: "action",
+			Title:     "Action Phase 1",
+		}
+		reqJSON, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases", game.ID), bytes.NewBuffer(reqJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player)) // Non-GM user
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Contains(t, rec.Body.String(), "GM")
+	})
+
+	t.Run("rejects invalid phase type", func(t *testing.T) {
+		reqBody := CreatePhaseRequest{
+			PhaseType: "invalid_type",
+			Title:     "Invalid Phase",
+		}
+		reqJSON, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases", game.ID), bytes.NewBuffer(reqJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("rejects empty phase title", func(t *testing.T) {
+		reqBody := CreatePhaseRequest{
+			PhaseType: "action",
+			Title:     "", // Empty title
+		}
+		reqJSON, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases", game.ID), bytes.NewBuffer(reqJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), "title")
+	})
+}
+
+// TestPhaseAPI_ActivatePhase tests POST /games/{gameId}/phases/{phaseId}/activate
+func TestPhaseAPI_ActivatePhase(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "phases", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupPhaseAPITestRouter(app, testDB)
+
+	// Create test users
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	// Create test game
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	// Add player as participant
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	core.AssertNoError(t, err, "Should add player as participant")
+
+	// Create phases
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
+	phase1, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+		GameID:    game.ID,
+		PhaseType: "common_room",
+		Title:     "Common Room 1",
+	})
+	core.AssertNoError(t, err, "Should create phase 1")
+
+	phase2, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+		GameID:    game.ID,
+		PhaseType: "action",
+		Title:     "Action Phase 1",
+	})
+	core.AssertNoError(t, err, "Should create phase 2")
+
+	t.Run("GM successfully activates phase", func(t *testing.T) {
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/%d/activate", game.ID, phase1.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(rec.Body.Bytes(), &response)
+		require.NoError(t, err)
+		assert.True(t, response["is_active"].(bool))
+	})
+
+	t.Run("non-GM player cannot activate phase", func(t *testing.T) {
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/%d/activate", game.ID, phase2.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player)) // Non-GM user
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Contains(t, rec.Body.String(), "GM")
+	})
+
+	t.Run("activating a phase deactivates other phases", func(t *testing.T) {
+		// Activate phase2
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/%d/activate", game.ID, phase2.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		// Verify phase1 is no longer active
+		activePhase, err := phaseService.GetActivePhase(context.Background(), game.ID)
+		core.AssertNoError(t, err, "Should get active phase")
+		assert.Equal(t, phase2.ID, activePhase.ID)
+	})
+
+	t.Run("returns 404 for non-existent phase", func(t *testing.T) {
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/99999/activate", game.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+}
+
+// TestPhaseAPI_UpdatePhase tests PUT /games/{gameId}/phases/{phaseId}
+func TestPhaseAPI_UpdatePhase(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "phases", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupPhaseAPITestRouter(app, testDB)
+
+	// Create test users
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	// Create test game
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	// Add player as participant
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	core.AssertNoError(t, err, "Should add player as participant")
+
+	// Create phase
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
+	phase, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+		GameID:    game.ID,
+		PhaseType: "common_room",
+		Title:     "Common Room 1",
+	})
+	core.AssertNoError(t, err, "Should create phase")
+
+	t.Run("GM successfully updates phase", func(t *testing.T) {
+		titleStr := "Updated Common Room"
+		descStr := "Updated description"
+		reqBody := UpdatePhaseRequest{
+			Title:       &titleStr,
+			Description: &descStr,
+		}
+		reqJSON, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/phases/%d", phase.ID), bytes.NewBuffer(reqJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(rec.Body.Bytes(), &response)
+		require.NoError(t, err)
+		assert.Equal(t, "Updated Common Room", response["title"])
+	})
+
+	t.Run("non-GM player cannot update phase", func(t *testing.T) {
+		titleStr := "Unauthorized Update"
+		reqBody := UpdatePhaseRequest{
+			Title: &titleStr,
+		}
+		reqJSON, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/games/%d/phases/%d", game.ID, phase.ID), bytes.NewBuffer(reqJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player)) // Non-GM user
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Contains(t, rec.Body.String(), "GM")
+	})
+}
+
+// TestPhaseAPI_DeletePhase tests DELETE /games/{gameId}/phases/{phaseId}
+func TestPhaseAPI_DeletePhase(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "phases", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupPhaseAPITestRouter(app, testDB)
+
+	// Create test users
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	// Create test game
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	// Add player as participant
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	core.AssertNoError(t, err, "Should add player as participant")
+
+	// Create phase
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
+	phase, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+		GameID:    game.ID,
+		PhaseType: "common_room",
+		Title:     "Common Room to Delete",
+	})
+	core.AssertNoError(t, err, "Should create phase")
+
+	t.Run("GM successfully deletes phase", func(t *testing.T) {
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/phases/%d", game.ID, phase.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("non-GM player cannot delete phase", func(t *testing.T) {
+		// Create another phase to delete
+		phase2, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+			GameID:    game.ID,
+			PhaseType: "action",
+			Title:     "Action Phase to Delete",
+		})
+		core.AssertNoError(t, err, "Should create phase 2")
+
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/phases/%d", game.ID, phase2.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player)) // Non-GM user
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Contains(t, rec.Body.String(), "GM")
+	})
+
+	t.Run("cannot delete active phase", func(t *testing.T) {
+		// Create and activate a phase
+		phase3, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+			GameID:      game.ID,
+			PhaseType:   "common_room",
+			PhaseNumber: 3,
+			Title:       "Active Common Room",
+			Description: "Test common room phase",
+		})
+		core.AssertNoError(t, err, "Should create phase 3")
+
+		err = phaseService.ActivatePhase(context.Background(), phase3.ID, int32(gm.ID))
+		core.AssertNoError(t, err, "Should activate phase")
+
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/phases/%d", game.ID, phase3.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), "active")
+	})
+
+	t.Run("returns 404 for non-existent phase", func(t *testing.T) {
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/phases/99999", game.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+}
+
+// TestPhaseAPI_GetPhases tests GET /games/{gameId}/phases
+func TestPhaseAPI_GetPhases(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "phases", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupPhaseAPITestRouter(app, testDB)
+
+	// Create test users
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	// Create test game
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	// Add player as participant
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	core.AssertNoError(t, err, "Should add player as participant")
+
+	// Create multiple phases
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
+	_, err = phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+		GameID:    game.ID,
+		PhaseType: "common_room",
+		Title:     "Common Room 1",
+	})
+	core.AssertNoError(t, err, "Should create phase 1")
+
+	_, err = phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+		GameID:    game.ID,
+		PhaseType: "action",
+		Title:     "Action Phase 1",
+	})
+	core.AssertNoError(t, err, "Should create phase 2")
+
+	t.Run("successfully retrieves all phases for game", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/phases", game.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(rec.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		phases := response["phases"].([]interface{})
+		assert.Len(t, phases, 2)
+	})
+
+	t.Run("returns empty array when no phases", func(t *testing.T) {
+		// Create game with no phases
+		emptyGame := testDB.CreateTestGame(t, int32(gm.ID), "Empty Game")
+
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/phases", emptyGame.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(rec.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		phases := response["phases"].([]interface{})
+		assert.Len(t, phases, 0)
+	})
+}
+
+// TestPhaseAPI_AuthorizationEdgeCases tests edge cases in phase authorization
+func TestPhaseAPI_AuthorizationEdgeCases(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "phases", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupPhaseAPITestRouter(app, testDB)
+
+	// Create test users
+	gm1 := testDB.CreateTestUser(t, "gm1", "gm1@example.com")
+	gm2 := testDB.CreateTestUser(t, "gm2", "gm2@example.com")
+
+	// Create test games
+	game1 := testDB.CreateTestGame(t, int32(gm1.ID), "Game 1")
+	game2 := testDB.CreateTestGame(t, int32(gm2.ID), "Game 2")
+
+	// Create phases
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
+	phase1, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+		GameID:    game1.ID,
+		PhaseType: "common_room",
+		Title:     "Phase in Game 1",
+	})
+	core.AssertNoError(t, err, "Should create phase 1")
+
+	t.Run("GM cannot activate phases in another GM's game", func(t *testing.T) {
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/%d/activate", game1.ID, phase1.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm2)) // GM2 trying to activate phase in GM1's game
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+
+	t.Run("GM cannot delete phases in another GM's game", func(t *testing.T) {
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/phases/%d", game1.ID, phase1.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm2)) // GM2 trying to delete phase in GM1's game
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+
+	t.Run("returns 404 for phase in different game", func(t *testing.T) {
+		// Try to activate phase1 using game2's ID
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/%d/activate", game2.ID, phase1.ID), nil)
+		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm2))
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		// Should fail because phase1 belongs to game1, not game2
+		assert.NotEqual(t, http.StatusOK, rec.Code)
+	})
+}
