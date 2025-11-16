@@ -188,14 +188,15 @@ The Common Room is still available, just quieter:
 3. Handle any quick character moments
 4. Generally, focus on writing your action!
 
-### Results Phase
+### Waiting for Results
 
-Brief period while GM writes results:
+Brief period after Action Phase deadline while GM writes results:
 
 - **Usually very short** (hours to a day)
-- Common Room typically quiet
+- Common Room typically quiet during this time
 - Players waiting for results before discussing
 - Good time to catch up on reading old posts
+- Common Room is still available for posting if needed
 
 ## Advanced Features
 

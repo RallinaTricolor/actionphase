@@ -249,11 +249,11 @@ Setting up for future phases, gathering resources
 **Example:**
 > "I spend the day preparing: I buy a good flashlight, a lock pick set, and a portable scanner. I print out maps of the mansion property. I text @Chen to make sure we're still on for tomorrow night. I also research the security company that monitors the mansion."
 
-## The Results Phase
+## Receiving Your Results
 
 ### What to Expect
 
-After you submit your action, you wait for results. The GM will:
+After the Action Phase deadline passes and you submit your action, the GM will:
 - Read all player actions
 - Determine what happens
 - Write individual results for each player
