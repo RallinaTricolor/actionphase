@@ -18,14 +18,17 @@ Learn how to play:
 - **[Common Room](/user/game-guide/common-room)** - Interact with other players
 - **[Action Phase](/user/game-guide/action-phase)** - Submit your actions
 - **[Character Management](/user/game-guide/character-management)** - Manage your character
+- **[Private Messages](/user/game-guide/private-messages)** - Communicate privately with other players
 
 ## Game Master Guide
 
 Want to run your own game?
 
-- **[Creating a Game](/user/gm-guide/creating-game)** - Set up your game
-- **[Managing Players](/user/gm-guide/managing-players)** - Handle applications and participants
-- **[Running Phases](/user/gm-guide/running-phases)** - Manage game phases and publish results
+- **[Getting Started](/user/gm-guide/getting-started)** - Your first game from start to finish
+- **[Running Games](/user/gm-guide/running-games)** - The ongoing work of GMing
+- **[Phase Management](/user/gm-guide/phase-management)** - Create and advance phases effectively
+- **[Character Approval](/user/gm-guide/character-approval)** - Review and approve characters
+- **[Best Practices](/user/gm-guide/best-practices)** - Tips and techniques for great GMing
 
 ## Need Help?
 
