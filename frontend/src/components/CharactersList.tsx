@@ -88,7 +88,7 @@ export function CharactersList({
   // Filter characters based on user role, game state, and status
   // GM sees all characters
   // Players see approved characters + their own characters (regardless of status)
-  const visibleCharacters = userRole === 'gm'
+  const visibleCharacters = userRole === 'gm' || userRole === 'audience'
     ? characters
     : characters.filter(char => {
         // Always show approved characters
@@ -130,7 +130,7 @@ export function CharactersList({
   // Check if user can view character sheet
   const canViewCharacterSheet = (character: Character) => {
     // GM can view all character sheets
-    if (userRole === 'gm') return true;
+    if (userRole === 'gm' || userRole === 'audience') return true;
     // Users can view their own characters
     if (isUserCharacter(character)) return true;
     // Anyone can view approved characters (they'll only see public information)

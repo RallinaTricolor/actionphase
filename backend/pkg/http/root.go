@@ -467,6 +467,9 @@ func (h *Handler) Start() {
 
 	r.Mount("/api/v1", apiV1Router)
 
+	// Serve static documentation at /docs
+	docs.RegisterStaticDocs(r, h.App.ObsLogger)
+
 	// Serve static files for local storage (only when using LocalStorage backend)
 	// S3 storage serves files directly from S3, so we only need this for local development
 	if h.App.Config.Storage.Backend == "local" {

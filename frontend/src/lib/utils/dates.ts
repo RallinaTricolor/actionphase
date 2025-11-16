@@ -2,50 +2,48 @@
  * Date utility functions for consistent date formatting across the application
  */
 
+import { localDateTimeToUTC, utcToLocalDateTime } from '../../utils/timezone';
+
 /**
- * Converts a datetime-local string to ISO 8601 format (RFC3339)
+ * Converts a datetime-local string to ISO 8601 format (RFC3339) with proper timezone handling
  *
- * The DateTimeInput component returns dates in YYYY-MM-DDTHH:mm format,
- * but the backend expects full ISO 8601/RFC3339 format with seconds and timezone.
+ * The DateTimeInput component returns dates in YYYY-MM-DDTHH:mm format in the user's local time.
+ * This function converts that local time to UTC for storage in the backend.
  *
  * @param dateTimeLocal - Date string in YYYY-MM-DDTHH:mm format (e.g., "2025-11-10T14:30")
- * @returns ISO 8601 formatted string (e.g., "2025-11-10T14:30:00Z") or empty string if input is falsy
+ * @returns ISO 8601 formatted string in UTC (e.g., "2025-11-10T22:30:00.000Z") or empty string if input is falsy
  *
  * @example
  * ```typescript
- * convertToISO8601("2025-11-10T14:30") // "2025-11-10T14:30:00Z"
+ * // User in PST (UTC-8) enters 2:30 PM
+ * convertToISO8601("2025-11-10T14:30") // "2025-11-10T22:30:00.000Z" (stored in UTC)
  * convertToISO8601("") // ""
  * convertToISO8601(undefined) // ""
  * ```
  */
 export function convertToISO8601(dateTimeLocal: string | undefined): string {
   if (!dateTimeLocal) return '';
-  // dateTimeLocal format: "YYYY-MM-DDTHH:mm"
-  // ISO 8601 format needed: "YYYY-MM-DDTHH:mm:ssZ"
-  // Add seconds and UTC timezone indicator
-  return `${dateTimeLocal}:00Z`;
+  // Convert from user's local time to UTC using timezone utilities
+  return localDateTimeToUTC(dateTimeLocal);
 }
 
 /**
- * Formats a date string or Date object for datetime-local input
+ * Formats a UTC date string or Date object for datetime-local input in the user's timezone
  *
- * @param date - ISO 8601 date string or Date object
- * @returns String in YYYY-MM-DDTHH:mm format for datetime-local inputs
+ * @param date - ISO 8601 UTC date string or Date object
+ * @returns String in YYYY-MM-DDTHH:mm format for datetime-local inputs, converted to user's local timezone
  *
  * @example
  * ```typescript
- * formatDateTimeLocal("2025-11-10T14:30:00Z") // "2025-11-10T14:30"
- * formatDateTimeLocal(new Date("2025-11-10T14:30:00Z")) // "2025-11-10T14:30"
+ * // User in PST (UTC-8) viewing a UTC time
+ * formatDateTimeLocal("2025-11-10T22:30:00Z") // "2025-11-10T14:30" (displayed in PST)
+ * formatDateTimeLocal(new Date("2025-11-10T22:30:00Z")) // "2025-11-10T14:30"
  * ```
  */
 export function formatDateTimeLocal(date: string | Date): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  // Convert to ISO string if it's a Date object
+  const isoString = typeof date === 'string' ? date : date.toISOString();
 
-  const year = dateObj.getFullYear();
-  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-  const day = String(dateObj.getDate()).padStart(2, '0');
-  const hours = String(dateObj.getHours()).padStart(2, '0');
-  const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  // Convert UTC to local datetime-local format using timezone utilities
+  return utcToLocalDateTime(isoString);
 }

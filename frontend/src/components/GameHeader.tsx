@@ -123,9 +123,9 @@ export function GameHeader({
           {/* Row 3: Dates */}
           {(game.start_date || game.end_date) && (
             <div className="flex items-center gap-2 flex-wrap">
-              {game.start_date && <span>Started: {format(new Date(game.start_date), 'MMM d, yyyy')}</span>}
+              {game.start_date && <span>Start: {format(new Date(game.start_date), 'MMM d, yyyy')}</span>}
               {game.start_date && game.end_date && <span className="text-content-tertiary">•</span>}
-              {game.end_date && <span>Ended: {format(new Date(game.end_date), 'MMM d, yyyy')}</span>}
+              {game.end_date && <span>End: {format(new Date(game.end_date), 'MMM d, yyyy')}</span>}
             </div>
           )}
         </div>
@@ -154,13 +154,13 @@ export function GameHeader({
           {game.start_date && (
             <>
               <span className="text-content-tertiary">•</span>
-              <span>Started: {format(new Date(game.start_date), 'MMM d, yyyy')}</span>
+              <span>Start: {format(new Date(game.start_date), 'MMM d, yyyy')}</span>
             </>
           )}
           {game.end_date && (
             <>
               <span className="text-content-tertiary">•</span>
-              <span>Ended: {format(new Date(game.end_date), 'MMM d, yyyy')}</span>
+              <span>End: {format(new Date(game.end_date), 'MMM d, yyyy')}</span>
             </>
           )}
         </div>

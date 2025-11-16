@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Input, Textarea, DateTimeInput, Button, Alert } from './ui';
 import type { UnifiedDeadline, UpdateDeadlineRequest } from '../types/deadlines';
+import { localDateTimeToUTC, utcToLocalDateTime } from '../utils/timezone';
 
 export interface EditDeadlineModalProps {
   isOpen: boolean;
@@ -52,15 +53,9 @@ export function EditDeadlineModal({
       setTitle(deadline.title || '');
       setDescription(deadline.description || '');
 
-      // Convert ISO deadline to datetime-local format if it exists
+      // Convert UTC deadline to local datetime-local format using timezone utilities
       if (deadline.deadline) {
-        const date = new Date(deadline.deadline);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        setDeadlineValue(`${year}-${month}-${day}T${hours}:${minutes}`);
+        setDeadlineValue(utcToLocalDateTime(deadline.deadline));
       } else {
         setDeadlineValue('');
       }
@@ -111,9 +106,9 @@ export function EditDeadlineModal({
       return;
     }
 
-    // Convert local datetime to ISO 8601 format for backend
-    const deadlineDate = new Date(deadlineValue);
-    const isoDeadline = deadlineDate.toISOString();
+    // The datetime-local input gives us a string in local time
+    // Convert to UTC for storage using timezone utilities
+    const isoDeadline = localDateTimeToUTC(deadlineValue);
 
     onSubmit(deadline.source_id, {
       title: title.trim(),

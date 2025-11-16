@@ -3,6 +3,7 @@ import { PHASE_TYPE_LABELS, PHASE_TYPE_DESCRIPTIONS } from '../types/phases';
 import type { GamePhase, UpdatePhaseRequest } from '../types/phases';
 import { Button, Input, Textarea, DateTimeInput } from './ui';
 import { Modal } from './Modal';
+import { localDateTimeToUTC, utcToLocalDateTime } from '../utils/timezone';
 
 interface EditPhaseModalProps {
   phase: GamePhase;
@@ -15,7 +16,7 @@ export function EditPhaseModal({ phase, onClose, onSubmit, isSubmitting }: EditP
   const [formData, setFormData] = useState<UpdatePhaseRequest>({
     title: phase.title || '',
     description: phase.description || '',
-    deadline: phase.deadline ? new Date(phase.deadline).toISOString().slice(0, 16) : ''
+    deadline: phase.deadline ? utcToLocalDateTime(phase.deadline) : ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -23,7 +24,7 @@ export function EditPhaseModal({ phase, onClose, onSubmit, isSubmitting }: EditP
     onSubmit({
       title: formData.title || undefined,
       description: formData.description || undefined,
-      deadline: formData.deadline || undefined
+      deadline: formData.deadline ? localDateTimeToUTC(formData.deadline) : undefined
     });
   };
 

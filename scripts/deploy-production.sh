@@ -97,6 +97,27 @@ else
     echo -e "${YELLOW}⚠️  Database container not running, skipping backup${NC}"
 fi
 
+# Build documentation before Docker images
+echo -e "${BLUE}📚 Building documentation...${NC}"
+if [ -d "docs-site" ]; then
+    cd docs-site
+    if [ ! -d "node_modules" ]; then
+        echo "Installing documentation dependencies..."
+        npm install
+    fi
+    echo "Building VitePress documentation..."
+    npm run docs:build
+    cd ..
+
+    # Embed documentation in backend
+    echo "Embedding documentation in backend..."
+    rm -rf backend/pkg/docs/dist
+    cp -r docs-site/.vitepress/dist backend/pkg/docs/dist
+    echo -e "${GREEN}✓ Documentation built and embedded${NC}"
+else
+    echo -e "${YELLOW}⚠️  docs-site directory not found, skipping documentation build${NC}"
+fi
+
 # Build new images
 echo -e "${BLUE}🔨 Building Docker images...${NC}"
 docker-compose ${COMPOSE_FILES} build --no-cache
@@ -244,6 +265,10 @@ echo ""
 echo "Deployment timestamp: ${TIMESTAMP}"
 echo "Git commit: $(git rev-parse --short HEAD)"
 echo "Branch: ${CURRENT_BRANCH}"
+if [ -d "backend/pkg/docs/dist" ]; then
+    DOC_FILES=$(find backend/pkg/docs/dist -type f | wc -l)
+    echo "Documentation: ${DOC_FILES} files embedded"
+fi
 echo ""
 echo -e "${BLUE}Useful commands:${NC}"
 echo "  Container logs:   docker-compose ${COMPOSE_FILES} logs -f"

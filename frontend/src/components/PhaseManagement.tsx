@@ -7,6 +7,7 @@ import { usePhaseManagement } from '../hooks/usePhaseManagement';
 import { Button } from './ui';
 import { PHASE_TYPE_LABELS } from '../types/phases';
 import type { GamePhase } from '../types/phases';
+import { localDateTimeToUTC } from '../utils/timezone';
 
 interface PhaseManagementProps {
   gameId: number;
@@ -110,7 +111,7 @@ export function PhaseManagement({ gameId, className = '' }: PhaseManagementProps
                 onUpdateDeadline={(deadline) =>
                   updateDeadlineMutation.mutate({
                     phaseId: phase.id,
-                    data: { deadline }
+                    data: { deadline: localDateTimeToUTC(deadline) }
                   })
                 }
                 onCancelEditDeadline={() => setIsEditingDeadline(null)}

@@ -28,7 +28,7 @@ services:
       ENVIRONMENT: production
       LOG_LEVEL: info
       # CORS for production domain
-      CORS_ORIGINS: "https://${DOMAIN:-actionphase.com},http://localhost"
+      CORS_ORIGINS: "https://${DOMAIN:-action-phase.com},http://localhost"
     deploy:
       resources:
         limits:
