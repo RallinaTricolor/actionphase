@@ -69,7 +69,7 @@ export function CharactersList({
       queryClient.invalidateQueries({ queryKey: ['userControllableCharacters', gameId] });
       setCharacterToDelete(null);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       // Error will be displayed in the confirmation modal
       logger.error('Failed to delete character', { error, gameId, characterId: characterToDelete?.id, characterName: characterToDelete?.name });
     }
@@ -375,7 +375,7 @@ export function CharactersList({
             {deleteCharacterMutation.isError && (
               <div className="p-3 bg-danger/10 border border-danger rounded-md">
                 <p className="text-sm text-danger">
-                  {(deleteCharacterMutation.error as any)?.response?.data?.error ||
+                  {(deleteCharacterMutation.error as Error & { response?: { data?: { error?: string } } })?.response?.data?.error ||
                    'Failed to delete character. The character may have existing activity.'}
                 </p>
               </div>

@@ -48,7 +48,7 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     try {
       await register(formData);
       onSuccess?.();
-    } catch (err) {
+    } catch (_err) {
       // Store the error for display
       setRegistrationError(err);
     }

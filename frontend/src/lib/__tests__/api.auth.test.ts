@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import axios from 'axios'
-import type { AxiosResponse } from 'axios'
+import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import type { AuthResponse, LoginRequest, RegisterRequest } from '../../types/auth'
 
 // Mock axios with proper setup
@@ -49,7 +48,6 @@ vi.mock('axios', () => {
   }
 })
 
-import axios from 'axios'
 import { apiClient } from '../api'
 
 // Mock localStorage
@@ -108,7 +106,7 @@ describe('ApiClient - Authentication', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       }
 
       mockPost.mockResolvedValue(expectedResponse)
@@ -161,7 +159,7 @@ describe('ApiClient - Authentication', () => {
         status: 201,
         statusText: 'Created',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       }
 
       mockPost.mockResolvedValue(expectedResponse)
@@ -210,7 +208,7 @@ describe('ApiClient - Authentication', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       }
 
       mockGet.mockResolvedValue(expectedResponse)
@@ -234,7 +232,7 @@ describe('ApiClient - Authentication', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       }
 
       mockGet.mockResolvedValue(expectedResponse)
@@ -359,7 +357,7 @@ describe('ApiClient - Authentication', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       }
 
       mockGet.mockResolvedValue(expectedResponse)
@@ -437,7 +435,7 @@ describe('ApiClient - Authentication', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       })
 
       await apiClient.login(loginData)

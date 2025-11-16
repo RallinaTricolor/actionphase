@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import type { Character } from '../types/characters';
 import { PollCard } from './PollCard';
 import type { Poll } from '../types/polls';
 
@@ -199,7 +199,7 @@ describe('PollCard', () => {
           { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
           { id: 2, name: 'Char 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
           { id: 3, name: 'Char 3', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as any,
+        ] as Partial<Character>[],
         isLoading: false,
         error: null,
       });
@@ -224,7 +224,7 @@ describe('PollCard', () => {
           { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
           { id: 2, name: 'Char 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
           { id: 3, name: 'Char 3', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as any,
+        ] as Partial<Character>[],
         isLoading: false,
         error: null,
       });
@@ -248,7 +248,7 @@ describe('PollCard', () => {
         characters: [
           { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
           { id: 2, name: 'Char 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as any,
+        ] as Partial<Character>[],
         isLoading: false,
         error: null,
       });
@@ -274,7 +274,7 @@ describe('PollCard', () => {
           { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
           { id: 2, name: 'Char 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
           { id: 3, name: 'Char 3', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as any,
+        ] as Partial<Character>[],
         isLoading: false,
         error: null,
       });
@@ -298,7 +298,7 @@ describe('PollCard', () => {
         characters: [
           { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
           { id: 2, name: 'Char 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as any,
+        ] as Partial<Character>[],
         isLoading: false,
         error: null,
       });
@@ -321,7 +321,7 @@ describe('PollCard', () => {
       vi.mocked(useUserCharacters).mockReturnValue({
         characters: [
           { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as any,
+        ] as Partial<Character>[],
         isLoading: false,
         error: null,
       });

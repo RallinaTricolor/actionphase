@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
@@ -67,7 +67,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
   useEffect(() => {
     loadConversation();
     loadMessages();
-  }, [gameId, conversationId]);
+  }, [gameId, conversationId, loadConversation, loadMessages]);
 
   // Scroll to first unread message or bottom
   useEffect(() => {
@@ -101,7 +101,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
         markAsRead();
       }, delay);
     }
-  }, [messages, hasScrolledToUnread, conversationInfo]);
+  }, [messages, hasScrolledToUnread, conversationInfo, conversationId, markAsRead, scrollToBottom, scrollToFirstUnread]);
 
   // Reset scroll state when conversation changes
   useEffect(() => {
@@ -121,7 +121,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
     }
   }, [newMessage]);
 
-  const markAsRead = async () => {
+  const markAsRead = useCallback(async () => {
     try {
       await apiClient.conversations.markConversationAsRead(gameId, conversationId);
       logger.debug('Marked conversation as read', { conversationId, gameId });
@@ -129,13 +129,13 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       if (onMarkedAsRead) {
         onMarkedAsRead();
       }
-    } catch (err) {
-      logger.error('Failed to mark conversation as read', { error: err, conversationId, gameId });
+    } catch (_err) {
+      logger.error('Failed to mark conversation as read', { error: _err, conversationId, gameId });
       // Don't show error to user - this is a background operation
     }
-  };
+  }, [gameId, conversationId, onMarkedAsRead]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     logger.debug('scrollToBottom called', { conversationId, refExists: !!messagesEndRef.current });
     if (typeof messagesEndRef.current?.scrollIntoView === 'function') {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -143,9 +143,9 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
     } else {
       logger.warn('messagesEndRef not available for scrolling', { conversationId });
     }
-  };
+  }, [conversationId]);
 
-  const scrollToFirstUnread = () => {
+  const scrollToFirstUnread = useCallback(() => {
     if (typeof firstUnreadRef.current?.scrollIntoView === 'function') {
       firstUnreadRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       logger.debug('Scrolled to first unread message', { conversationId });
@@ -153,7 +153,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       // Fallback to bottom if ref not set
       scrollToBottom();
     }
-  };
+  }, [conversationId, scrollToBottom]);
 
   // Find the first unread message based on last_read_at timestamp
   const getFirstUnreadIndex = () => {
@@ -180,20 +180,20 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
     return firstUnreadIndex;
   };
 
-  const loadConversation = async () => {
+  const loadConversation = useCallback(async () => {
     try {
       setLoadingConversation(true);
       const response = await apiClient.conversations.getConversation(gameId, conversationId);
       setConversation(response.data);
-    } catch (err) {
-      logger.error('Failed to load conversation', { error: err, gameId, conversationId });
+    } catch (_err) {
+      logger.error('Failed to load conversation', { error: _err, gameId, conversationId });
       setError('Failed to load conversation');
     } finally {
       setLoadingConversation(false);
     }
-  };
+  }, [gameId, conversationId]);
 
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     try {
       setLoadingMessages(true);
       // Don't clear error if conversation loading failed
@@ -204,13 +204,13 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       setMessages(response.data.messages || []);
 
       // DON'T mark as read here - we'll do it after scrolling in the effect
-    } catch (err) {
-      logger.error('Failed to load messages', { error: err, gameId, conversationId });
+    } catch (_err) {
+      logger.error('Failed to load messages', { error: _err, gameId, conversationId });
       setError('Failed to load messages');
     } finally {
       setLoadingMessages(false);
     }
-  };
+  }, [gameId, conversationId, error]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,8 +231,8 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
 
       // Scroll to bottom after sending (use setTimeout to ensure messages are rendered)
       setTimeout(() => scrollToBottom(), 100);
-    } catch (err) {
-      logger.error('Failed to send message', { error: err, gameId, conversationId, characterId: selectedCharacterId });
+    } catch (_err) {
+      logger.error('Failed to send message', { error: _err, gameId, conversationId, characterId: selectedCharacterId });
       showError('Failed to send message. Please try again.');
     } finally {
       setSending(false);
@@ -249,8 +249,8 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       // Reload messages to show "[Message deleted]"
       await loadMessages();
       setDeleteMessageId(null);
-    } catch (err) {
-      logger.error('Failed to delete message', { error: err, gameId, conversationId, messageId: deleteMessageId });
+    } catch (_err) {
+      logger.error('Failed to delete message', { error: _err, gameId, conversationId, messageId: deleteMessageId });
       showError('Failed to delete message. Please try again.');
     } finally {
       setDeleting(false);

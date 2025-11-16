@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AudienceConversationHeader } from './AudienceConversationHeader';
@@ -77,7 +77,7 @@ describe('AudienceConversationHeader', () => {
   });
 
   it('calls onBack when back button is clicked', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     const handleBack = vi.fn();
 
     render(
@@ -196,7 +196,7 @@ describe('AudienceConversationHeader', () => {
   });
 
   it('has sticky positioning', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <AudienceConversationHeader
         conversation={mockConversation}
         messageCount={15}
@@ -209,7 +209,7 @@ describe('AudienceConversationHeader', () => {
   });
 
   it('renders both mobile and desktop layouts', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <AudienceConversationHeader
         conversation={mockConversation}
         messageCount={15}

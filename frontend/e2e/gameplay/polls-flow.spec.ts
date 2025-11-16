@@ -25,17 +25,17 @@ import { PollsPage } from '../pages/PollsPage';
 /**
  * Helper: Monitor console errors and API calls
  */
-function setupMonitoring(page: any) {
+function setupMonitoring(page: { on: (event: string, handler: (arg: { type: () => string; text: () => string } | { url: () => string }) => void) => void }) {
   const consoleErrors: string[] = [];
   const apiCalls: string[] = [];
 
-  page.on('console', (msg: any) => {
+  page.on('console', (msg: { type: () => string; text: () => string }) => {
     if (msg.type() === 'error') {
       consoleErrors.push(msg.text());
     }
   });
 
-  page.on('request', (req: any) => {
+  page.on('request', (req: { url: () => string }) => {
     apiCalls.push(req.url());
   });
 
@@ -60,18 +60,6 @@ function checkPollErrors(consoleErrors: string[], testName: string) {
   }
 }
 
-/**
- * Helper: Check for unauthorized API calls
- */
-function checkUnauthorizedCalls(apiCalls: string[], endpoint: string, testName: string) {
-  const unauthorizedCalls = apiCalls.filter(url => url.includes(endpoint));
-
-  if (unauthorizedCalls.length > 0) {
-    throw new Error(
-      `[${testName}] Made ${unauthorizedCalls.length} unauthorized calls to ${endpoint}`
-    );
-  }
-}
 
 // ============================================================================
 // ALL POLL TESTS (SERIAL)

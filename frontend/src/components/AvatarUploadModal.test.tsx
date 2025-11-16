@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor as _waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AvatarUploadModal from './AvatarUploadModal';
@@ -39,18 +39,18 @@ describe('AvatarUploadModal', () => {
       isPending: false,
       isError: false,
       error: null,
-    } as any);
+    } as unknown as ReturnType<typeof useUploadCharacterAvatar>);
 
     vi.mocked(useDeleteCharacterAvatar).mockReturnValue({
       mutate: mockDeleteMutate,
       isPending: false,
       isError: false,
       error: null,
-    } as any);
+    } as unknown as ReturnType<typeof useDeleteCharacterAvatar>);
   });
 
   it('does not render when isOpen is false', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <AvatarUploadModal
         isOpen={false}
         onClose={mockOnClose}
@@ -196,7 +196,7 @@ describe('AvatarUploadModal', () => {
       isPending: false,
       isError: false,
       error: null,
-    } as any);
+    } as unknown as ReturnType<typeof useUploadCharacterAvatar>);
 
     render(
       <AvatarUploadModal
@@ -338,7 +338,7 @@ describe('AvatarUploadModal', () => {
       isPending: true,
       isError: false,
       error: null,
-    } as any);
+    } as unknown as ReturnType<typeof useUploadCharacterAvatar>);
 
     render(
       <AvatarUploadModal

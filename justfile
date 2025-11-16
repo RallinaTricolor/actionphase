@@ -221,7 +221,10 @@ fmt:
 
 # Run Go vet
 vet:
-  cd backend && go vet ./...
+  #!/usr/bin/env bash
+  cd backend
+  # Exclude pkg/docs/dist (embedded frontend assets)
+  go vet $(go list ./... | grep -v '/pkg/docs/dist')
 
 # Run backend linters (fmt + vet)
 lint: fmt vet

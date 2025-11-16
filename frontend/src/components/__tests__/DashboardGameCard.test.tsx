@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test-utils';
 import { DashboardGameCard } from '../DashboardGameCard';
@@ -9,7 +9,7 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
-    Link: ({ to, children, className }: any) => (
+    Link: ({ to, children, className }: unknown) => (
       <a href={to} className={className}>{children}</a>
     ),
   };
@@ -53,7 +53,7 @@ describe('DashboardGameCard', () => {
       current_phase_type: 'action',
     };
 
-    const { container } = renderWithProviders(<DashboardGameCard game={urgentGame} />);
+    const { container: _container } = renderWithProviders(<DashboardGameCard game={urgentGame} />);
 
     expect(screen.getByText('Urgent')).toBeInTheDocument();
 
@@ -165,7 +165,7 @@ describe('DashboardGameCard', () => {
       current_phase_deadline: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
     };
 
-    const { container } = renderWithProviders(<DashboardGameCard game={warningGame} />);
+    const { container: _container } = renderWithProviders(<DashboardGameCard game={warningGame} />);
 
     // Check for semantic warning styling in the deadline badge
     expect(container.innerHTML).toContain('bg-semantic-warning-subtle');
@@ -181,7 +181,7 @@ describe('DashboardGameCard', () => {
       current_phase_deadline: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
     };
 
-    const { container } = renderWithProviders(<DashboardGameCard game={criticalGame} />);
+    const { container: _container } = renderWithProviders(<DashboardGameCard game={criticalGame} />);
 
     // Check for semantic danger/critical styling in the deadline badge
     expect(container.innerHTML).toContain('bg-semantic-danger-subtle');
@@ -197,7 +197,7 @@ describe('DashboardGameCard', () => {
       current_phase_deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
     };
 
-    const { container } = renderWithProviders(<DashboardGameCard game={normalGame} />);
+    const { container: _container } = renderWithProviders(<DashboardGameCard game={normalGame} />);
 
     // Check for semantic success/normal styling in the deadline badge
     expect(container.innerHTML).toContain('bg-semantic-success-subtle');

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { DeadlineStrip } from './DeadlineStrip';
 import type { Deadline } from '../types/deadlines';
@@ -41,14 +41,14 @@ describe('DeadlineStrip', () => {
 
   describe('Game State Visibility', () => {
     it('should NOT render for "setup" state', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <DeadlineStrip {...defaultProps} gameState="setup" />
       );
       expect(container.firstChild).toBeNull();
     });
 
     it('should NOT render for "recruitment" state', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <DeadlineStrip {...defaultProps} gameState="recruitment" />
       );
       expect(container.firstChild).toBeNull();
@@ -65,14 +65,14 @@ describe('DeadlineStrip', () => {
     });
 
     it('should NOT render for "completed" state', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <DeadlineStrip {...defaultProps} gameState="completed" />
       );
       expect(container.firstChild).toBeNull();
     });
 
     it('should NOT render for "cancelled" state', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <DeadlineStrip {...defaultProps} gameState="cancelled" />
       );
       expect(container.firstChild).toBeNull();
@@ -83,7 +83,7 @@ describe('DeadlineStrip', () => {
       // When gameState is undefined, it should default to showing (for backward compatibility)
       // Actually, looking at the code, undefined will fail the check and return null
       // Let me verify this behavior...
-      const { container } = render(
+      const { container: _container } = render(
         <DeadlineStrip {...defaultProps} gameState={undefined} />
       );
       expect(container.firstChild).toBeNull();
@@ -92,7 +92,7 @@ describe('DeadlineStrip', () => {
 
   describe('Empty State Visibility', () => {
     it('should NOT render when no deadlines and user is not GM (in allowed game state)', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <DeadlineStrip
           {...defaultProps}
           deadlines={[]}
@@ -119,7 +119,7 @@ describe('DeadlineStrip', () => {
 
   describe('Loading State', () => {
     it('should hide component when isLoading is true (in allowed game state)', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <DeadlineStrip
           {...defaultProps}
           isLoading={true}
@@ -131,7 +131,7 @@ describe('DeadlineStrip', () => {
     });
 
     it('should NOT show loading state in disallowed game states', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <DeadlineStrip
           {...defaultProps}
           isLoading={true}

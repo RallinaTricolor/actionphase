@@ -28,7 +28,7 @@ describe('AdminBanner', () => {
         toggleAdminMode: vi.fn(),
       });
 
-      const { container } = render(<AdminBanner />);
+      const { container: _container } = render(<AdminBanner />);
 
       expect(container.firstChild).toBeNull();
     });
@@ -90,7 +90,7 @@ describe('AdminBanner', () => {
 
   describe('exit button', () => {
     it('calls toggleAdminMode when exit button is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const mockToggle = vi.fn();
 
       vi.mocked(useAdminModeHook.useAdminMode).mockReturnValue({
@@ -129,7 +129,7 @@ describe('AdminBanner', () => {
         toggleAdminMode: vi.fn(),
       });
 
-      const { container } = render(<AdminBanner />);
+      const { container: _container } = render(<AdminBanner />);
 
       const banner = container.firstChild as HTMLElement;
       expect(banner).toHaveAttribute('role', 'alert');
@@ -160,7 +160,7 @@ describe('AdminBanner', () => {
         toggleAdminMode: vi.fn(),
       });
 
-      const { container } = render(<AdminBanner />);
+      const { container: _container } = render(<AdminBanner />);
 
       const banner = container.firstChild as HTMLElement;
       expect(banner.className).toContain('bg-semantic-warning/20');

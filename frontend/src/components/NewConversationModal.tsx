@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 import { Button, Input, Select, Checkbox, Alert } from './ui';
@@ -32,7 +32,7 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
 
   useEffect(() => {
     loadAllCharacters();
-  }, [gameId]);
+  }, [gameId, loadAllCharacters]);
 
   useEffect(() => {
     // Auto-select if user only has one character
@@ -41,18 +41,18 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
     }
   }, [characters, yourCharacterId]);
 
-  const loadAllCharacters = async () => {
+  const loadAllCharacters = useCallback(async () => {
     try {
       setLoadingCharacters(true);
       const response = await apiClient.characters.getGameCharacters(gameId);
       setAllCharacters(response.data);
-    } catch (err) {
-      logger.error('Failed to load characters', { error: err, gameId });
+    } catch (_err) {
+      logger.error('Failed to load characters', { error: _err, gameId });
       setError('Failed to load characters');
     } finally {
       setLoadingCharacters(false);
     }
-  };
+  }, [gameId]);
 
   const handleToggleParticipant = (characterId: number) => {
     const newSelected = new Set(selectedParticipants);
@@ -106,8 +106,8 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
 
       onConversationCreated(response.data.id);
       onClose();
-    } catch (err) {
-      logger.error('Failed to create conversation', { error: err, gameId, title, participantCount: selectedParticipants.size + 1 });
+    } catch (_err) {
+      logger.error('Failed to create conversation', { error: _err, gameId, title, participantCount: selectedParticipants.size + 1 });
       setError(err instanceof Error ? err.message : 'Failed to create conversation');
     } finally {
       setCreating(false);

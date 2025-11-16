@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import type { PluggableList } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
@@ -160,11 +161,11 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     <div className={`markdown-preview prose dark:prose-invert ${fullWidth ? 'max-w-none' : 'max-w-prose'} text-content-primary dark:text-white ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw as any, [rehypeSanitize as any, sanitizeSchema]]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]] as PluggableList}
         components={{
           // Custom code block renderer with syntax highlighting
-          code({ node, inline, className, children, ...props }: {
-            node?: any;
+          code({ _node, inline, className, children, ...props }: {
+            node?: Record<string, unknown>;
             inline?: boolean;
             className?: string;
             children?: React.ReactNode;
@@ -189,7 +190,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           },
 
           // Secure link handling - open in new tab with security attributes
-          a({ node, children, href, ...props }) {
+          a({ _node, children, href, ...props }) {
             return (
               <a
                 href={href}
@@ -204,8 +205,8 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           },
 
           // Custom mark element for character mentions
-          mark({ node, children, ...props }) {
-            const mentionId = (props as any)['data-mention-id'];
+          mark({ _node, children, ...props }) {
+            const mentionId = (props as Record<string, unknown>)['data-mention-id'] as number | undefined;
 
             const handleMouseEnter = (e: React.MouseEvent<HTMLElement>) => {
               if (mentionId) {
@@ -237,24 +238,24 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           },
 
           // Style headers
-          h1: ({ node, children, ...props }) => (
+          h1: ({ _node, children, ...props }) => (
             <h1 className="text-2xl font-bold mt-4 mb-2 !text-content-primary" {...props}>
               {children}
             </h1>
           ),
-          h2: ({ node, children, ...props }) => (
+          h2: ({ _node, children, ...props }) => (
             <h2 className="text-xl font-bold mt-3 mb-2 !text-content-primary" {...props}>
               {children}
             </h2>
           ),
-          h3: ({ node, children, ...props }) => (
+          h3: ({ _node, children, ...props }) => (
             <h3 className="text-lg font-bold mt-2 mb-1 !text-content-primary" {...props}>
               {children}
             </h3>
           ),
 
           // Style blockquotes
-          blockquote: ({ node, children, ...props }) => (
+          blockquote: ({ _node, children, ...props }) => (
             <blockquote
               className="border-l-4 border-theme-default pl-4 py-2 my-2 italic text-content-secondary"
               {...props}
@@ -264,41 +265,41 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           ),
 
           // Style horizontal rules
-          hr: ({ node, ...props }) => (
+          hr: ({ _node, ...props }) => (
             <hr className="my-4 border-t-2 border-theme-default" {...props} />
           ),
 
           // Style lists
-          ul: ({ node, children, ...props }) => (
+          ul: ({ _node, children, ...props }) => (
             <ul className="list-disc list-inside my-2" {...props}>
               {children}
             </ul>
           ),
-          ol: ({ node, children, ...props }) => (
+          ol: ({ _node, children, ...props }) => (
             <ol className="list-decimal list-inside my-2" {...props}>
               {children}
             </ol>
           ),
-          li: ({ node, children, ...props }) => (
+          li: ({ _node, children, ...props }) => (
             <li className="ml-4 !text-content-primary" {...props}>
               {children}
             </li>
           ),
 
           // Style paragraphs
-          p: ({ node, children, ...props }) => (
+          p: ({ _node, children, ...props }) => (
             <p className="my-2 !text-content-primary" {...props}>
               {children}
             </p>
           ),
 
           // Style inline elements
-          strong: ({ node, children, ...props }) => (
+          strong: ({ _node, children, ...props }) => (
             <strong className="!text-content-primary" {...props}>
               {children}
             </strong>
           ),
-          em: ({ node, children, ...props }) => (
+          em: ({ _node, children, ...props }) => (
             <em className="!text-content-primary" {...props}>
               {children}
             </em>

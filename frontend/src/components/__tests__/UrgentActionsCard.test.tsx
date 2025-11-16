@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test-utils';
 import { UrgentActionsCard } from '../UrgentActionsCard';
@@ -9,7 +9,7 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
-    Link: ({ to, children, className }: any) => (
+    Link: ({ to, children, className }: unknown) => (
       <a href={to} className={className}>{children}</a>
     ),
   };
@@ -39,13 +39,13 @@ describe('UrgentActionsCard', () => {
       { ...baseGame, game_id: 2, is_urgent: false },
     ];
 
-    const { container } = renderWithProviders(<UrgentActionsCard games={nonUrgentGames} />);
+    const { container: _container } = renderWithProviders(<UrgentActionsCard games={nonUrgentGames} />);
 
     expect(container.firstChild).toBeNull();
   });
 
   it('returns null when games array is empty', () => {
-    const { container } = renderWithProviders(<UrgentActionsCard games={[]} />);
+    const { container: _container } = renderWithProviders(<UrgentActionsCard games={[]} />);
 
     expect(container.firstChild).toBeNull();
   });
@@ -286,7 +286,7 @@ describe('UrgentActionsCard', () => {
       },
     ];
 
-    const { container } = renderWithProviders(<UrgentActionsCard games={urgentGames} />);
+    const { container: _container } = renderWithProviders(<UrgentActionsCard games={urgentGames} />);
 
     // Clock icon should not be present
     expect(container.innerHTML).not.toContain('Clock');

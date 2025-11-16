@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../lib/api';
 import type { ConversationListItem } from '../types/conversations';
 import { Button } from './ui';
@@ -15,11 +15,7 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadConversations();
-  }, [gameId]);
-
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -48,7 +44,11 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
     } finally {
       setLoading(false);
     }
-  };
+  }, [gameId]);
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

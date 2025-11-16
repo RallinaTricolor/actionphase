@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { screen, waitFor as _waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse as _HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { EditGameModal } from '../EditGameModal';
@@ -84,7 +84,7 @@ describe('EditGameModal', () => {
     });
 
     it('displays backdrop and modal container', () => {
-      const { container } = renderWithProviders(
+      const { container: _container } = renderWithProviders(
         <EditGameModal
           game={mockGame}
           isOpen={true}
@@ -263,7 +263,7 @@ describe('EditGameModal', () => {
     });
 
     it('resets form when modal is reopened', () => {
-      const { rerender } = renderWithProviders(
+      const { rerender: _rerender } = renderWithProviders(
         <EditGameModal
           game={mockGame}
           isOpen={false}
@@ -288,7 +288,7 @@ describe('EditGameModal', () => {
 
   describe('Form Interactions', () => {
     it('allows user to type in title field', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -306,7 +306,7 @@ describe('EditGameModal', () => {
     });
 
     it('allows user to type in description field', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -324,7 +324,7 @@ describe('EditGameModal', () => {
     });
 
     it('allows user to change genre', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -342,7 +342,7 @@ describe('EditGameModal', () => {
     });
 
     it('allows user to change max players', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -360,7 +360,7 @@ describe('EditGameModal', () => {
     });
 
     it('allows user to change datetime fields', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -380,7 +380,7 @@ describe('EditGameModal', () => {
     });
 
     it('allows user to toggle anonymous mode checkbox', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -401,7 +401,7 @@ describe('EditGameModal', () => {
     });
 
     it('allows user to toggle auto-accept audience checkbox', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -422,7 +422,7 @@ describe('EditGameModal', () => {
     });
 
     it('allows clearing max players field', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -441,7 +441,7 @@ describe('EditGameModal', () => {
 
   describe('Validation', () => {
     it('shows error when title contains only whitespace', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -464,7 +464,7 @@ describe('EditGameModal', () => {
     });
 
     it('shows error when description contains only whitespace', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -489,7 +489,7 @@ describe('EditGameModal', () => {
 
   describe('Form Submission', () => {
     it('successfully updates game with valid data', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -513,8 +513,8 @@ describe('EditGameModal', () => {
     });
 
     it('sends correct data to API', async () => {
-      const user = userEvent.setup();
-      let requestBody: any = null;
+      const _user = userEvent.setup();
+      let requestBody: unknown = null;
 
       server.use(
         http.put('/api/v1/games/:id', async ({ request }) => {
@@ -570,8 +570,8 @@ describe('EditGameModal', () => {
     });
 
     it('trims whitespace from title and description', async () => {
-      const user = userEvent.setup();
-      let requestBody: any = null;
+      const _user = userEvent.setup();
+      let requestBody: unknown = null;
 
       server.use(
         http.put('/api/v1/games/:id', async ({ request }) => {
@@ -607,8 +607,8 @@ describe('EditGameModal', () => {
     });
 
     it('sends undefined for empty optional fields', async () => {
-      const user = userEvent.setup();
-      let requestBody: any = null;
+      const _user = userEvent.setup();
+      let requestBody: unknown = null;
 
       server.use(
         http.put('/api/v1/games/:id', async ({ request }) => {
@@ -642,8 +642,8 @@ describe('EditGameModal', () => {
     });
 
     it('handles empty genre by trimming and sending undefined', async () => {
-      const user = userEvent.setup();
-      let requestBody: any = null;
+      const _user = userEvent.setup();
+      let requestBody: unknown = null;
 
       server.use(
         http.put('/api/v1/games/:id', async ({ request }) => {
@@ -676,7 +676,7 @@ describe('EditGameModal', () => {
 
   describe('Loading States', () => {
     it('shows loading state while submitting', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       server.use(
         http.put('/api/v1/games/:id', async () => {
@@ -707,7 +707,7 @@ describe('EditGameModal', () => {
     });
 
     it('disables submit button while loading', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       server.use(
         http.put('/api/v1/games/:id', async () => {
@@ -736,7 +736,7 @@ describe('EditGameModal', () => {
     });
 
     it('disables cancel button while loading', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       server.use(
         http.put('/api/v1/games/:id', async () => {
@@ -768,7 +768,7 @@ describe('EditGameModal', () => {
 
   describe('Close Behavior', () => {
     it('calls onClose when cancel button is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -785,7 +785,7 @@ describe('EditGameModal', () => {
     });
 
     it('does not submit form when cancel is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -806,7 +806,7 @@ describe('EditGameModal', () => {
     });
 
     it('closes modal and clears error after successful update', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}
@@ -827,7 +827,7 @@ describe('EditGameModal', () => {
 
   describe('Form Reset', () => {
     it('resets form to initial values when reopened', () => {
-      const { rerender } = renderWithProviders(
+      const { rerender: _rerender } = renderWithProviders(
         <EditGameModal
           game={mockGame}
           isOpen={true}
@@ -861,7 +861,7 @@ describe('EditGameModal', () => {
     });
 
     it('clears errors when modal is reopened', () => {
-      const { rerender } = renderWithProviders(
+      const { rerender: _rerender } = renderWithProviders(
         <EditGameModal
           game={mockGame}
           isOpen={true}
@@ -893,7 +893,7 @@ describe('EditGameModal', () => {
     });
 
     it('updates form when game prop changes', () => {
-      const { rerender } = renderWithProviders(
+      const { rerender: _rerender } = renderWithProviders(
         <EditGameModal
           game={mockGame}
           isOpen={true}
@@ -974,7 +974,7 @@ describe('EditGameModal', () => {
 
   describe('Integration', () => {
     it('handles complete update workflow', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(
         <EditGameModal
           game={mockGame}

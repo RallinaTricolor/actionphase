@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, render, fireEvent } from '@testing-library/react'
+import { screen, render, fireEvent as _fireEvent } from '@testing-library/react'
 import { Modal } from '../Modal'
 
 describe('Modal', () => {
@@ -11,7 +11,7 @@ describe('Modal', () => {
 
   describe('Visibility', () => {
     it('should render nothing when isOpen is false', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <Modal isOpen={false} onClose={mockOnClose}>
           <div data-testid="modal-content">Content</div>
         </Modal>
@@ -32,7 +32,7 @@ describe('Modal', () => {
     })
 
     it('should change visibility when isOpen prop changes', () => {
-      const { rerender } = render(
+      const { rerender: _rerender } = render(
         <Modal isOpen={false} onClose={mockOnClose}>
           <div data-testid="modal-content">Content</div>
         </Modal>
@@ -190,7 +190,7 @@ describe('Modal', () => {
 
   describe('Styling and classes', () => {
     it('should have fixed positioning for overlay', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <Modal isOpen={true} onClose={mockOnClose}>
           <div>Content</div>
         </Modal>
@@ -201,7 +201,7 @@ describe('Modal', () => {
     })
 
     it('should have proper modal container styling', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <Modal isOpen={true} onClose={mockOnClose}>
           <div>Content</div>
         </Modal>
@@ -213,7 +213,7 @@ describe('Modal', () => {
     })
 
     it('should have backdrop with opacity', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <Modal isOpen={true} onClose={mockOnClose}>
           <div>Content</div>
         </Modal>
@@ -224,7 +224,7 @@ describe('Modal', () => {
     })
 
     it('should have title section with border when title is provided', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <Modal isOpen={true} onClose={mockOnClose} title="Test">
           <div>Content</div>
         </Modal>
@@ -235,7 +235,7 @@ describe('Modal', () => {
     })
 
     it('should have content padding', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <Modal isOpen={true} onClose={mockOnClose}>
           <div data-testid="modal-content">Content</div>
         </Modal>
@@ -248,7 +248,7 @@ describe('Modal', () => {
 
   describe('Edge cases', () => {
     it('should handle empty children', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <Modal isOpen={true} onClose={mockOnClose}>
           <></>
         </Modal>
@@ -258,7 +258,7 @@ describe('Modal', () => {
     })
 
     it('should handle null children', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <Modal isOpen={true} onClose={mockOnClose}>
           {null}
         </Modal>

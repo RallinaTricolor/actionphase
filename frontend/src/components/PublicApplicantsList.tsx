@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../lib/api';
 import type { PublicGameApplicant } from '../types/games';
 import { Spinner, Alert, Badge } from './ui';
@@ -30,19 +30,15 @@ export function PublicApplicantsList({ gameId }: PublicApplicantsListProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchApplicants();
-  }, [gameId]);
-
-  const fetchApplicants = async () => {
+  const fetchApplicants = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiClient.games.getPublicGameApplicants(gameId);
       setApplicants(response.data);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // If forbidden, game is probably not in recruitment anymore
-      if (err?.response?.status === 403) {
+      if ((err as { response?: { status?: number } })?.response?.status === 403) {
         setError('Applicant list is only visible during recruitment');
       } else {
         setError(err instanceof Error ? err.message : 'Failed to load applicants');
@@ -50,7 +46,11 @@ export function PublicApplicantsList({ gameId }: PublicApplicantsListProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [gameId]);
+
+  useEffect(() => {
+    fetchApplicants();
+  }, [fetchApplicants]);
 
   if (loading) {
     return (

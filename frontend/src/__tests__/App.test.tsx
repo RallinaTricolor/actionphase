@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
-import App from '../App'
 
 // Mock the auth hook
 vi.mock('../hooks/useAuth', () => ({
@@ -45,6 +44,15 @@ vi.mock('../components/ErrorBoundary', () => ({
 
 import { useAuth } from '../hooks/useAuth'
 
+// Type for mocked useAuth return value
+type MockedUseAuthReturn = Partial<ReturnType<typeof useAuth>> & {
+  isAuthenticated: boolean;
+  user: { id: number; username: string } | null;
+  login: ReturnType<typeof vi.fn>;
+  logout: ReturnType<typeof vi.fn>;
+  isLoading: boolean;
+};
+
 // We'll test the AppRoutes component directly since App already includes BrowserRouter
 const TestAppRoutes = ({ initialEntries }: { initialEntries: string[] }) => (
   <MemoryRouter initialEntries={initialEntries}>
@@ -54,8 +62,6 @@ const TestAppRoutes = ({ initialEntries }: { initialEntries: string[] }) => (
   </MemoryRouter>
 )
 
-// Import AppRoutes for testing
-import AppDefault from '../App'
 // We need to create a separate component for testing that doesn't include BrowserRouter
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -138,7 +144,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
     })
 
     it('renders home page at root route', () => {
@@ -187,7 +193,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
     })
 
     it('renders home page at root route even when authenticated', () => {
@@ -241,7 +247,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
     })
 
     it('renders game details with numeric game ID', () => {
@@ -289,7 +295,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       render(<TestAppRoutes initialEntries={['/']} />)
 
@@ -305,7 +311,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       // The QueryClientProvider is used internally
       // We verify this by checking that the app renders without QueryClient errors
@@ -325,7 +331,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       render(<TestAppRoutes initialEntries={['/dashboard']} />)
 
@@ -340,7 +346,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       render(<TestAppRoutes initialEntries={['/games']} />)
 
@@ -355,7 +361,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       render(<TestAppRoutes initialEntries={['/games/123']} />)
 
@@ -370,7 +376,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       render(<TestAppRoutes initialEntries={['/']} />)
 
@@ -385,7 +391,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       render(<TestAppRoutes initialEntries={['/login']} />)
 
@@ -402,7 +408,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       // Test dashboard route
       const { unmount: unmount1 } = render(<TestAppRoutes initialEntries={['/dashboard']} />)
@@ -429,7 +435,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       const { rerender } = render(<TestAppRoutes initialEntries={['/dashboard']} />)
       expect(screen.getByTestId('login-page')).toBeInTheDocument()
@@ -441,7 +447,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       rerender(<TestAppRoutes initialEntries={['/dashboard']} />)
       expect(screen.getByTestId('dashboard-page')).toBeInTheDocument()
@@ -455,7 +461,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       const { rerender } = render(<TestAppRoutes initialEntries={['/dashboard']} />)
       expect(screen.getByTestId('dashboard-page')).toBeInTheDocument()
@@ -467,7 +473,7 @@ describe('App', () => {
         login: vi.fn(),
         logout: vi.fn(),
         isLoading: false,
-      } as any)
+      } as MockedUseAuthReturn)
 
       rerender(<TestAppRoutes initialEntries={['/dashboard']} />)
       expect(screen.getByTestId('login-page')).toBeInTheDocument()

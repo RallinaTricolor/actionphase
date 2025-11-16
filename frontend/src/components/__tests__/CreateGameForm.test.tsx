@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor as _waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse as _HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { CreateGameForm } from '../CreateGameForm';
@@ -69,7 +69,7 @@ describe('CreateGameForm', () => {
 
   describe('Form Input', () => {
     it('updates title field when user types', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(<CreateGameForm />);
 
       const titleInput = screen.getByLabelText(/game title/i);
@@ -79,7 +79,7 @@ describe('CreateGameForm', () => {
     });
 
     it('updates description field when user types', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(<CreateGameForm />);
 
       const descInput = screen.getByLabelText(/description/i);
@@ -89,7 +89,7 @@ describe('CreateGameForm', () => {
     });
 
     it('updates genre field when user types', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(<CreateGameForm />);
 
       const genreInput = screen.getByLabelText(/genre/i);
@@ -99,7 +99,7 @@ describe('CreateGameForm', () => {
     });
 
     it('updates max players field when user enters number', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(<CreateGameForm />);
 
       const maxPlayersInput = screen.getByLabelText(/maximum players/i);
@@ -126,7 +126,7 @@ describe('CreateGameForm', () => {
     });
 
     it('shows error when title is only whitespace', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(<CreateGameForm />);
 
       const submitButton = screen.getByRole('button', { name: /create game/i });
@@ -143,7 +143,7 @@ describe('CreateGameForm', () => {
     });
 
     it('shows error when description is only whitespace', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(<CreateGameForm />);
 
       const submitButton = screen.getByRole('button', { name: /create game/i });
@@ -200,7 +200,7 @@ describe('CreateGameForm', () => {
     });
 
     it('submits form with required fields only', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const onSuccess = vi.fn();
       renderWithProviders(<CreateGameForm onSuccess={onSuccess} />);
 
@@ -217,7 +217,7 @@ describe('CreateGameForm', () => {
     });
 
     it('submits form with all fields filled', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const onSuccess = vi.fn();
       renderWithProviders(<CreateGameForm onSuccess={onSuccess} />);
 
@@ -243,8 +243,8 @@ describe('CreateGameForm', () => {
     });
 
     it('trims whitespace from title and description', async () => {
-      const user = userEvent.setup();
-      let submittedData: any = null;
+      const _user = userEvent.setup();
+      let submittedData: unknown = null;
       const onSuccess = vi.fn();
 
       server.use(
@@ -270,8 +270,8 @@ describe('CreateGameForm', () => {
     });
 
     it('converts empty date strings to undefined', async () => {
-      const user = userEvent.setup();
-      let submittedData: any = null;
+      const _user = userEvent.setup();
+      let submittedData: unknown = null;
       const onSuccess = vi.fn();
 
       server.use(
@@ -299,8 +299,8 @@ describe('CreateGameForm', () => {
     });
 
     it('converts empty genre to undefined', async () => {
-      const user = userEvent.setup();
-      let submittedData: any = null;
+      const _user = userEvent.setup();
+      let submittedData: unknown = null;
       const onSuccess = vi.fn();
 
       server.use(
@@ -326,7 +326,7 @@ describe('CreateGameForm', () => {
     });
 
     it('shows loading state while submitting', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       // Delay the response to see loading state
       server.use(
@@ -357,7 +357,7 @@ describe('CreateGameForm', () => {
     });
 
     it('disables submit button while submitting', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       renderWithProviders(<CreateGameForm onSuccess={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/game title/i), 'Test Game');
@@ -376,7 +376,7 @@ describe('CreateGameForm', () => {
 
   describe('Error Handling', () => {
     it('displays API error message', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/games', () => {
@@ -399,7 +399,7 @@ describe('CreateGameForm', () => {
     });
 
     it('displays generic error for network failures', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/games', () => {
@@ -419,7 +419,7 @@ describe('CreateGameForm', () => {
     });
 
     it('clears error when form is resubmitted', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       // First submission fails
       server.use(
@@ -459,7 +459,7 @@ describe('CreateGameForm', () => {
     });
 
     it('re-enables submit button after error', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/games', () => {
@@ -490,7 +490,7 @@ describe('CreateGameForm', () => {
 
   describe('Callbacks', () => {
     it('calls onSuccess with game ID when creation succeeds', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const onSuccess = vi.fn();
 
       server.use(
@@ -512,7 +512,7 @@ describe('CreateGameForm', () => {
     });
 
     it('does not call onSuccess when onSuccess is not provided', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/games', () => {
@@ -535,7 +535,7 @@ describe('CreateGameForm', () => {
     });
 
     it('calls onCancel when cancel button is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const onCancel = vi.fn();
 
       renderWithProviders(<CreateGameForm onCancel={onCancel} />);
@@ -547,7 +547,7 @@ describe('CreateGameForm', () => {
     });
 
     it('does not submit form when cancel is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const onCancel = vi.fn();
       const onSuccess = vi.fn();
 

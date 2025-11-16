@@ -28,7 +28,7 @@ export function LeaveGameConfirmationDialog({
     try {
       await onConfirm();
       onClose();
-    } catch (error) {
+    } catch (_error) {
       // Error handling is done by the parent component
       logger.error('Failed to leave game', { error, gameTitle });
     }

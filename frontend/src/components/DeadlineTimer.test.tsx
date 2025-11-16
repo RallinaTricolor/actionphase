@@ -31,7 +31,7 @@ describe('DeadlineTimer', () => {
       const urgentDate = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour from now
       const isoDate = urgentDate.toISOString();
 
-      const { container } = render(<DeadlineTimer deadline={isoDate} />);
+      const { container: _container } = render(<DeadlineTimer deadline={isoDate} />);
 
       // Should show time remaining
       expect(container.textContent).toMatch(/⏱️\s+in (about )?1 hour/i);
@@ -45,7 +45,7 @@ describe('DeadlineTimer', () => {
       const soonDate = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours from now
       const isoDate = soonDate.toISOString();
 
-      const { container } = render(<DeadlineTimer deadline={isoDate} />);
+      const { container: _container } = render(<DeadlineTimer deadline={isoDate} />);
 
       // Should show time remaining (use textContent to handle emoji)
       expect(container.textContent).toMatch(/⏱️\s+in (about )?\d+ hours?/i);
@@ -73,7 +73,7 @@ describe('DeadlineTimer', () => {
       const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
       const isoDate = futureDate.toISOString();
 
-      const { container } = render(<DeadlineTimer deadline={isoDate} />);
+      const { container: _container } = render(<DeadlineTimer deadline={isoDate} />);
 
       // Should show timer emoji
       expect(container.textContent).toContain('⏱️');
@@ -84,7 +84,7 @@ describe('DeadlineTimer', () => {
       const pastDate = new Date(Date.now() - 2 * 60 * 60 * 1000);
       const isoDate = pastDate.toISOString();
 
-      const { container } = render(<DeadlineTimer deadline={isoDate} />);
+      const { container: _container } = render(<DeadlineTimer deadline={isoDate} />);
 
       // Should show alarm emoji
       expect(container.textContent).toContain('⏰');
@@ -96,7 +96,7 @@ describe('DeadlineTimer', () => {
     it('should handle invalid date string gracefully', () => {
       const invalidDate = 'not-a-date';
 
-      const { container } = render(<DeadlineTimer deadline={invalidDate} />);
+      const { container: _container } = render(<DeadlineTimer deadline={invalidDate} />);
 
       expect(container.textContent).toContain('Invalid date');
 
@@ -106,7 +106,7 @@ describe('DeadlineTimer', () => {
     });
 
     it('should handle empty string gracefully', () => {
-      const { container } = render(<DeadlineTimer deadline="" />);
+      const { container: _container } = render(<DeadlineTimer deadline="" />);
 
       expect(container.textContent).toContain('Invalid date');
     });
@@ -114,7 +114,7 @@ describe('DeadlineTimer', () => {
     it('should handle malformed ISO string gracefully', () => {
       const malformedDate = '2024-13-45T99:99:99Z'; // Invalid month/day/time
 
-      const { container } = render(<DeadlineTimer deadline={malformedDate} />);
+      const { container: _container } = render(<DeadlineTimer deadline={malformedDate} />);
 
       expect(container.textContent).toContain('Invalid date');
     });
@@ -152,7 +152,7 @@ describe('DeadlineTimer', () => {
       const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
       const isoDate = futureDate.toISOString();
 
-      const { container } = render(
+      const { container: _container } = render(
         <DeadlineTimer deadline={isoDate} className="custom-class" />
       );
 
@@ -211,7 +211,7 @@ describe('DeadlineTimer', () => {
     it('should transition from warning to danger when deadline passes', () => {
       // Start with deadline 12 hours in future
       const initialDate = new Date(Date.now() + 12 * 60 * 60 * 1000);
-      const { rerender, container } = render(<DeadlineTimer deadline={initialDate.toISOString()} />);
+      const { rerender: _rerender, container } = render(<DeadlineTimer deadline={initialDate.toISOString()} />);
 
       // Should be warning
       let badge = container.querySelector('span');
@@ -229,7 +229,7 @@ describe('DeadlineTimer', () => {
     it('should transition from success to warning when deadline approaches', () => {
       // Start with deadline 48 hours in future
       const initialDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
-      const { rerender, container } = render(<DeadlineTimer deadline={initialDate.toISOString()} />);
+      const { rerender: _rerender, container } = render(<DeadlineTimer deadline={initialDate.toISOString()} />);
 
       // Should be primary (blue)
       let badge = container.querySelector('span');
@@ -250,7 +250,7 @@ describe('DeadlineTimer', () => {
       const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
       const isoDate = futureDate.toISOString();
 
-      const { container } = render(<DeadlineTimer deadline={isoDate} />);
+      const { container: _container } = render(<DeadlineTimer deadline={isoDate} />);
 
       // Badge should be a span
       const badge = screen.getByText(/in \d+ (hour|day)s?/i).closest('span');

@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test-utils';
 import { DashboardPage } from '../DashboardPage';
+import type { UseQueryResult } from '@tanstack/react-query';
+import type { DashboardData } from '../../hooks/useDashboard';
 
 // Mock the useDashboard hook
 vi.mock('../../hooks/useDashboard', () => ({
@@ -10,21 +12,21 @@ vi.mock('../../hooks/useDashboard', () => ({
 
 // Mock dashboard child components
 vi.mock('../../components/DashboardGameCard', () => ({
-  DashboardGameCard: ({ game }: any) => (
+  DashboardGameCard: ({ game }: unknown) => (
     <div data-testid="dashboard-game-card">{game.title}</div>
   ),
 }));
 
 vi.mock('../../components/UrgentActionsCard', () => ({
-  UrgentActionsCard: ({ games }: any) => (
+  UrgentActionsCard: ({ games }: unknown) => (
     <div data-testid="urgent-actions-card">
-      Urgent games: {games.filter((g: any) => g.is_urgent).length}
+      Urgent games: {games.filter((g: unknown) => g.is_urgent).length}
     </div>
   ),
 }));
 
 vi.mock('../../components/RecentActivityCard', () => ({
-  RecentActivityCard: ({ messages }: any) => (
+  RecentActivityCard: ({ messages }: unknown) => (
     <div data-testid="recent-activity-card">
       Messages: {messages.length}
     </div>
@@ -32,7 +34,7 @@ vi.mock('../../components/RecentActivityCard', () => ({
 }));
 
 vi.mock('../../components/UpcomingDeadlinesCard', () => ({
-  UpcomingDeadlinesCard: ({ deadlines }: any) => (
+  UpcomingDeadlinesCard: ({ deadlines }: unknown) => (
     <div data-testid="upcoming-deadlines-card">
       Deadlines: {deadlines.length}
     </div>
@@ -40,7 +42,7 @@ vi.mock('../../components/UpcomingDeadlinesCard', () => ({
 }));
 
 vi.mock('../../components/Dashboard/ActivityTabs', () => ({
-  ActivityTabs: ({ deadlines, messages }: any) => (
+  ActivityTabs: ({ deadlines, messages }: unknown) => (
     <div data-testid="activity-tabs">
       Deadlines: {deadlines.length}, Messages: {messages.length}
     </div>
@@ -59,7 +61,7 @@ describe('DashboardPage', () => {
       data: undefined,
       isLoading: true,
       error: null,
-    } as any);
+    } as Partial<UseQueryResult<DashboardData>>);
 
     renderWithProviders(<DashboardPage />);
 
@@ -71,7 +73,7 @@ describe('DashboardPage', () => {
       data: undefined,
       isLoading: false,
       error: new Error('Failed to load'),
-    } as any);
+    } as Partial<UseQueryResult<DashboardData>>);
 
     renderWithProviders(<DashboardPage />);
 
@@ -93,7 +95,7 @@ describe('DashboardPage', () => {
       },
       isLoading: false,
       error: null,
-    } as any);
+    } as Partial<UseQueryResult<DashboardData>>);
 
     renderWithProviders(<DashboardPage />);
 
@@ -162,7 +164,7 @@ describe('DashboardPage', () => {
       },
       isLoading: false,
       error: null,
-    } as any);
+    } as Partial<UseQueryResult<DashboardData>>);
 
     renderWithProviders(<DashboardPage />);
 
@@ -200,7 +202,7 @@ describe('DashboardPage', () => {
       },
       isLoading: false,
       error: null,
-    } as any);
+    } as Partial<UseQueryResult<DashboardData>>);
 
     renderWithProviders(<DashboardPage />);
 
@@ -264,7 +266,7 @@ describe('DashboardPage', () => {
       },
       isLoading: false,
       error: null,
-    } as any);
+    } as Partial<UseQueryResult<DashboardData>>);
 
     renderWithProviders(<DashboardPage />);
 
@@ -302,7 +304,7 @@ describe('DashboardPage', () => {
       },
       isLoading: false,
       error: null,
-    } as any);
+    } as Partial<UseQueryResult<DashboardData>>);
 
     renderWithProviders(<DashboardPage />);
 
@@ -315,9 +317,9 @@ describe('DashboardPage', () => {
       data: undefined,
       isLoading: false,
       error: null,
-    } as any);
+    } as Partial<UseQueryResult<DashboardData>>);
 
-    const { container } = renderWithProviders(<DashboardPage />);
+    const { container: _container } = renderWithProviders(<DashboardPage />);
 
     expect(container.firstChild).toBeNull();
   });

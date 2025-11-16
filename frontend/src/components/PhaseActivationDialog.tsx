@@ -6,7 +6,7 @@ interface PhaseActivationDialogProps {
   currentPhaseId: number | undefined;
   unpublishedCount: number;
   isActivating: boolean;
-  publishAllMutation: UseMutationResult<any, Error, void, unknown>;
+  publishAllMutation: UseMutationResult<unknown, Error, void, unknown>;
   onActivate: () => void;
   onClose: () => void;
 }

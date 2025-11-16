@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test-utils';
 import { UpcomingDeadlinesCard } from '../UpcomingDeadlinesCard';
@@ -9,7 +9,7 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
-    Link: ({ to, children, className }: any) => (
+    Link: ({ to, children, className }: unknown) => (
       <a href={to} className={className}>{children}</a>
     ),
   };
@@ -29,7 +29,7 @@ describe('UpcomingDeadlinesCard', () => {
   };
 
   it('returns null when deadlines array is empty', () => {
-    const { container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[]} />);
+    const { container: _container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[]} />);
 
     expect(container.firstChild).toBeNull();
   });
@@ -130,7 +130,7 @@ describe('UpcomingDeadlinesCard', () => {
       end_time: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
     };
 
-    const { container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
+    const { container: _container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
 
     expect(container.innerHTML).toContain('text-semantic-danger');
   });
@@ -142,7 +142,7 @@ describe('UpcomingDeadlinesCard', () => {
       end_time: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
     };
 
-    const { container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
+    const { container: _container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
 
     expect(container.innerHTML).toContain('text-semantic-warning');
   });
@@ -154,7 +154,7 @@ describe('UpcomingDeadlinesCard', () => {
       end_time: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
     };
 
-    const { container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
+    const { container: _container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
 
     expect(container.innerHTML).toContain('text-semantic-success');
   });
@@ -166,7 +166,7 @@ describe('UpcomingDeadlinesCard', () => {
       end_time: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
     };
 
-    const { container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
+    const { container: _container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
 
     // AlertCircle component should be present in HTML
     const svgElements = container.querySelectorAll('svg');
@@ -180,7 +180,7 @@ describe('UpcomingDeadlinesCard', () => {
       end_time: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
     };
 
-    const { container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
+    const { container: _container } = renderWithProviders(<UpcomingDeadlinesCard deadlines={[deadline]} />);
 
     // Should only have Calendar + Clock icons (2 SVGs), no AlertCircle
     const svgElements = container.querySelectorAll('svg');

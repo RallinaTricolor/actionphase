@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AudienceConversationCard } from './AudienceConversationCard';
@@ -55,10 +55,10 @@ describe('AudienceConversationCard', () => {
   });
 
   it('calls onClick when card is clicked', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     const handleClick = vi.fn();
 
-    const { container } = render(
+    const { container: _container } = render(
       <AudienceConversationCard
         conversation={mockConversation}
         onClick={handleClick}
@@ -75,7 +75,7 @@ describe('AudienceConversationCard', () => {
   });
 
   it('shows activity badge based on message count', () => {
-    const { rerender } = render(
+    const { rerender: _rerender } = render(
       <AudienceConversationCard
         conversation={{ ...mockConversation, message_count: 3 }}
         onClick={vi.fn()}
@@ -161,7 +161,7 @@ describe('AudienceConversationCard', () => {
   });
 
   it('applies selected styling when isSelected is true', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <AudienceConversationCard
         conversation={mockConversation}
         onClick={vi.fn()}

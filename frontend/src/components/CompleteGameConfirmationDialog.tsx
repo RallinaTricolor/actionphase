@@ -37,7 +37,7 @@ export function CompleteGameConfirmationDialog({
       setIsSubmitting(true);
       await onConfirm();
       onClose();
-    } catch (error) {
+    } catch (_error) {
       // Error handling is done by the parent component
       logger.error('Failed to complete game', { error, gameTitle });
     } finally {

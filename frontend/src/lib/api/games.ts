@@ -18,6 +18,7 @@ import type {
   AudienceConversationListItem,
   AudienceConversationMessage
 } from '../../types/conversations';
+import type { ActionSubmission } from '../../types/phases';
 
 /**
  * Games API client
@@ -183,6 +184,6 @@ export class GamesApi extends BaseApiClient {
       ? `/api/v1/games/${gameId}/action-submissions/all?${queryString}`
       : `/api/v1/games/${gameId}/action-submissions/all`;
 
-    return this.client.get<{ action_submissions: any[]; total: number }>(url);
+    return this.client.get<{ action_submissions: ActionSubmission[]; total: number }>(url);
   }
 }

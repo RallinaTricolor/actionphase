@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { GameTabContent } from '../GameTabContent';
 import type { GameWithDetails, GameParticipant } from '../../types/games';
@@ -154,7 +154,7 @@ describe('GameTabContent - Actions Tab with GameResultsManager', () => {
   it('only shows GameResultsManager on actions tab when game state is in_progress', () => {
     const recruitmentGame = { ...mockGame, state: 'recruitment' as const };
 
-    const { rerender } = render(
+    const { rerender: _rerender } = render(
       <GameTabContent
         activeTab="actions"
         gameId={326}
@@ -193,7 +193,7 @@ describe('GameTabContent - Actions Tab with GameResultsManager', () => {
   });
 
   it('only shows GameResultsManager when actions tab is active', () => {
-    const { rerender } = render(
+    const { rerender: _rerender } = render(
       <GameTabContent
         activeTab="people"
         gameId={326}

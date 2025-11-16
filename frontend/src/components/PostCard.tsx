@@ -107,7 +107,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
             setHasMore(response.data.has_more);
             setOffset(COMMENTS_PER_PAGE); // Next page starts here
           }
-        } catch (err) {
+        } catch (_err) {
           if (isMounted) {
             logger.error('Failed to load comments', { error: err, gameId, postId: post.id });
           }
@@ -162,7 +162,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       setReturnedTopLevel(response.data.returned_top_level);
       setHasMore(response.data.has_more);
       setOffset(COMMENTS_PER_PAGE);
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to reload comments', { error: err, gameId, postId: post.id });
     } finally {
       setLoadingComments(false);
@@ -185,7 +185,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       setReturnedTopLevel(prev => prev + response.data.returned_top_level);
       setHasMore(response.data.has_more);
       setOffset(prev => prev + COMMENTS_PER_PAGE);
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to load more comments', { error: err, gameId, postId: post.id, offset });
     } finally {
       setLoadingMore(false);
@@ -212,7 +212,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       // Ensure comments are shown and reload to display the new one
       setShowComments(true);
       await loadComments();
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to submit comment', { error: err, gameId, postId: post.id, characterId: selectedCharacterId });
     } finally {
       setIsSubmitting(false);
@@ -263,7 +263,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       setIsEditing(false);
       // Notify parent component of the update so it can update its local state
       onPostUpdated?.(updatedPost);
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to update post', { error: err, gameId, postId: post.id });
     }
   };

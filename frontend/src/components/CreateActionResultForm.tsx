@@ -46,7 +46,7 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
 
       setContent('');
       onSuccess?.();
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to create action result', { error, gameId, userId, userName, characterId, characterName, actionSubmissionId });
     }
   };

@@ -55,7 +55,7 @@ export function AssignNPCModal({
       setAssignToSelf(false);
       onClose();
       onSuccess?.();
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to assign NPC', { error, gameId, characterId: character.id, characterName: character.name, targetUserId });
     }
   };

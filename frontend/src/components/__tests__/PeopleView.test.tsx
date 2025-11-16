@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PeopleView } from '../PeopleView';
@@ -62,7 +62,7 @@ describe('PeopleView - Leave Game Button', () => {
   describe('Bug #9: Audience members cannot leave games', () => {
     it('should show Leave Game button for audience members', async () => {
       // Arrange: User is an audience member
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <PeopleView
@@ -86,7 +86,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should not show Leave Game button for non-participants', async () => {
       // Arrange: User has no role in the game
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <PeopleView
@@ -110,7 +110,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should call onLeaveGame when audience member clicks Leave Game', async () => {
       // Arrange
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const onLeaveGame = vi.fn();
 
       render(
@@ -138,7 +138,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should show Leave Game button for regular participants', async () => {
       // Arrange: User is a regular player participant
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <PeopleView
@@ -162,7 +162,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should not show Leave Game button in completed games', async () => {
       // Arrange
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <PeopleView
@@ -186,7 +186,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should not show Leave Game button in cancelled games', async () => {
       // Arrange
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <PeopleView
@@ -210,7 +210,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should not show Leave Game button when onLeaveGame is not provided', async () => {
       // Arrange: onLeaveGame callback is undefined
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <PeopleView
@@ -234,7 +234,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should not show Leave Game button for GM', async () => {
       // Arrange: Current user is the GM
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <PeopleView
@@ -258,7 +258,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should disable Leave Game button when actionLoading is true', async () => {
       // Arrange
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <PeopleView

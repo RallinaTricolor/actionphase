@@ -58,7 +58,7 @@ describe('ApplicationTypeSelector', () => {
     });
 
     it('calls onTypeChange with player when player radio is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const mockOnTypeChange = vi.fn();
 
       render(
@@ -76,7 +76,7 @@ describe('ApplicationTypeSelector', () => {
     });
 
     it('calls onTypeChange with audience when audience radio is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const mockOnTypeChange = vi.fn();
 
       render(

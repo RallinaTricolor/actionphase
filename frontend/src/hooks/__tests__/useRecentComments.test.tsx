@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { AxiosResponse } from 'axios';
 import { useRecentComments, useTotalCommentCount } from '../useRecentComments';
 import { apiClient } from '../../lib/api';
 import type { RecentCommentsResponse, CommentWithParent } from '../../types/messages';
@@ -68,7 +69,7 @@ describe('useRecentComments', () => {
   it('fetches recent comments successfully', async () => {
     vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue({
       data: mockResponse,
-    } as any);
+    } as Partial<AxiosResponse<RecentCommentsResponse>>);
 
     const { result } = renderHook(() => useRecentComments(1), { wrapper });
 
@@ -120,7 +121,7 @@ describe('useRecentComments', () => {
 
     vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue({
       data: fullPageResponse,
-    } as any);
+    } as Partial<AxiosResponse<RecentCommentsResponse>>);
 
     const { result } = renderHook(() => useRecentComments(1), { wrapper });
 
@@ -142,7 +143,7 @@ describe('useRecentComments', () => {
 
     vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue({
       data: partialPageResponse,
-    } as any);
+    } as Partial<AxiosResponse<RecentCommentsResponse>>);
 
     const { result } = renderHook(() => useRecentComments(1), { wrapper });
 
@@ -170,8 +171,8 @@ describe('useRecentComments', () => {
     };
 
     vi.mocked(apiClient.messages.getRecentComments)
-      .mockResolvedValueOnce({ data: firstPageResponse } as any)
-      .mockResolvedValueOnce({ data: secondPageResponse } as any);
+      .mockResolvedValueOnce({ data: firstPageResponse } as Partial<AxiosResponse<RecentCommentsResponse>>)
+      .mockResolvedValueOnce({ data: secondPageResponse } as Partial<AxiosResponse<RecentCommentsResponse>>);
 
     const { result } = renderHook(() => useRecentComments(1), { wrapper });
 
@@ -198,7 +199,7 @@ describe('useRecentComments', () => {
   it('uses correct query key', async () => {
     vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue({
       data: mockResponse,
-    } as any);
+    } as Partial<AxiosResponse<RecentCommentsResponse>>);
 
     renderHook(() => useRecentComments(1), { wrapper });
 

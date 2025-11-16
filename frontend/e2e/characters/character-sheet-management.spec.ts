@@ -1,10 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
-import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { CharacterWorkflowPage } from '../pages/CharacterWorkflowPage';
 import { CharacterSheetPage } from '../pages/CharacterSheetPage';
-import { navigateToGame } from '../utils/navigation';
 
 /**
  * E2E Tests for Character Sheet Management

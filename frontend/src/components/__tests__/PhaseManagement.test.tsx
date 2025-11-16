@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { screen, waitFor, fireEvent } from '@testing-library/react'
-import { http, HttpResponse } from 'msw'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { screen, waitFor, fireEvent as _fireEvent } from '@testing-library/react'
+import { http, HttpResponse as _HttpResponse } from 'msw'
 import { PhaseManagement } from '../PhaseManagement'
 import { renderWithProviders } from '../../test-utils/render'
 import { server } from '../../mocks/server'
@@ -393,7 +393,7 @@ describe('PhaseManagement', () => {
     it('should apply custom className', () => {
       setupDefaultHandlers()
 
-      const { container } = renderWithProviders(
+      const { container: _container } = renderWithProviders(
         <PhaseManagement gameId={1} className="custom-class" />
       )
 

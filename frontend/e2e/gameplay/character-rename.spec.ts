@@ -195,7 +195,7 @@ test.describe('Character Rename', () => {
     // Find a character owned by a different player
     // PLAYER_1 owns "E2E Test Char 1", so we want a different character
     // Fixture has: Char 1 (Player1), Char 2 (Player2), Char 3 (Player3), Char 4 (Player4)
-    const otherPlayerChar = characters.find((c: any) =>
+    const otherPlayerChar = characters.find((c: { character_type: string; name: string }) =>
       c.character_type === 'player_character' && c.name === 'E2E Test Char 2'
     );
 

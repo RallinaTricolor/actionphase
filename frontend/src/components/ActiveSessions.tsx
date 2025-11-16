@@ -30,8 +30,8 @@ export function ActiveSessions() {
       showToast('Session revoked successfully', 'success');
       setRevokeSessionId(null);
     },
-    onError: (error: any) => {
-      const message = error.response?.data?.error || 'Failed to revoke session';
+    onError: (error: unknown) => {
+      const message = (error as { response?: { data?: { error?: string } } }).response?.data?.error || 'Failed to revoke session';
       showToast(message, 'danger');
       setRevokeSessionId(null);
     },
@@ -47,8 +47,8 @@ export function ActiveSessions() {
       showToast('All other sessions revoked successfully', 'success');
       setShowRevokeAllConfirmation(false);
     },
-    onError: (error: any) => {
-      const message = error.response?.data?.error || 'Failed to revoke all sessions';
+    onError: (error: unknown) => {
+      const message = (error as { response?: { data?: { error?: string } } }).response?.data?.error || 'Failed to revoke all sessions';
       showToast(message, 'danger');
       setShowRevokeAllConfirmation(false);
     },

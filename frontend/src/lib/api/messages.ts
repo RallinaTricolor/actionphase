@@ -9,7 +9,9 @@ import type {
   PostUnreadInfo,
   MarkPostReadRequest,
   PostUnreadComments,
-  PaginatedCommentsResponse
+  PaginatedCommentsResponse,
+  RecentCommentsResponse,
+  CommentWithParent
 } from '../../types/messages';
 import { COMMENT_MAX_DEPTH } from '@/config/comments';
 
@@ -104,13 +106,13 @@ export class MessagesApi extends BaseApiClient {
     queryParams.append('offset', offset.toString());
 
     const url = `/api/v1/games/${gameId}/comments/recent?${queryParams.toString()}`;
-    const response = await this.client.get<any>(url);
+    const response = await this.client.get<RecentCommentsResponse>(url);
 
     // Transform the response to flatten the parent object
     return {
       data: {
         ...response.data,
-        comments: response.data.comments.map((comment: any) => ({
+        comments: response.data.comments.map((comment: CommentWithParent) => ({
           ...comment,
           parent_content: comment.parent?.content,
           parent_created_at: comment.parent?.created_at,

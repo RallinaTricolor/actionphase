@@ -69,7 +69,7 @@ export function useGameStateManagement({
         gameId,
         newState,
       });
-    } catch (err) {
+    } catch (_err) {
       logger.error('Game state change failed', {
         gameId,
         targetState: newState,
@@ -93,7 +93,7 @@ export function useGameStateManagement({
       logger.info('Game completed successfully', {
         gameId,
       });
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to complete game', {
         gameId,
         error: err,
@@ -117,7 +117,7 @@ export function useGameStateManagement({
       logger.info('Game paused successfully', {
         gameId,
       });
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to pause game', {
         gameId,
         error: err,
@@ -141,7 +141,7 @@ export function useGameStateManagement({
       logger.info('Game cancelled successfully', {
         gameId,
       });
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to cancel game', {
         gameId,
         error: err,
@@ -171,7 +171,7 @@ export function useGameStateManagement({
       logger.info('Left game successfully', {
         gameId,
       });
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to leave game', {
         gameId,
         error: err,

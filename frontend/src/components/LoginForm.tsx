@@ -25,7 +25,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     try {
       await login(formData);
       onSuccess?.();
-    } catch (err) {
+    } catch (_err) {
       handleError(err);
     }
   };
@@ -69,7 +69,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
         <ErrorDisplay
           error={error}
-          onRetry={() => handleSubmit(new Event('submit') as any)}
+          onRetry={() => handleSubmit(new Event('submit') as React.FormEvent<HTMLFormElement>)}
           onDismiss={clearError}
           compact
         />

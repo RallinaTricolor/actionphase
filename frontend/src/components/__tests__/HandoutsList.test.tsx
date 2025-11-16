@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { UseQueryResult } from '@tanstack/react-query';
+import type { AxiosResponse } from 'axios';
 import { renderWithProviders } from '../../test-utils/render';
 import { HandoutsList } from '../HandoutsList';
 import * as useHandoutsModule from '../../hooks/useHandouts';
@@ -68,7 +70,7 @@ describe('HandoutsList', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue(mockUseHandouts as any);
+    vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue(mockUseHandouts as UseQueryResult<AxiosResponse<Handout[]>, Error>);
     // Mock window.alert and window.confirm
     vi.spyOn(window, 'alert').mockImplementation(() => {});
     vi.spyOn(window, 'confirm').mockReturnValue(true);
@@ -79,7 +81,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         isLoading: true,
-      } as any);
+      } as Partial<AxiosResponse<Handout[]>>);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -91,7 +93,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         isLoading: true,
-      } as any);
+      } as Partial<AxiosResponse<Handout[]>>);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -104,7 +106,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         handouts: [],
-      } as any);
+      } as Partial<AxiosResponse<Handout[]>>);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -115,7 +117,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         handouts: [],
-      } as any);
+      } as Partial<AxiosResponse<Handout[]>>);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={false} />);
 
@@ -126,7 +128,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         handouts: [mockHandouts[2]], // Only draft handout
-      } as any);
+      } as Partial<AxiosResponse<Handout[]>>);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={false} />);
 
@@ -181,7 +183,7 @@ describe('HandoutsList', () => {
 
   describe('Create Handout Modal', () => {
     it('opens create modal when Create Handout button clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -193,7 +195,7 @@ describe('HandoutsList', () => {
     });
 
     it('closes create modal when onClose called', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -211,7 +213,7 @@ describe('HandoutsList', () => {
     });
 
     it('calls createHandoutMutation when handout created', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({ id: 4 });
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -242,7 +244,7 @@ describe('HandoutsList', () => {
     });
 
     it('closes modal after successful creation', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({ id: 4 });
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -268,7 +270,7 @@ describe('HandoutsList', () => {
     });
 
     it('shows error alert when creation fails', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockRejectedValue(new Error('Failed to create'));
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -297,7 +299,7 @@ describe('HandoutsList', () => {
 
   describe('Edit Handout Modal', () => {
     it('opens edit modal when handout edited', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -311,7 +313,7 @@ describe('HandoutsList', () => {
     });
 
     it('calls updateHandoutMutation when handout updated', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({});
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -340,7 +342,7 @@ describe('HandoutsList', () => {
     });
 
     it('closes modal after successful update', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({});
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -361,7 +363,7 @@ describe('HandoutsList', () => {
 
   describe('View Handout', () => {
     it('switches to view mode when handout viewed', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -375,7 +377,7 @@ describe('HandoutsList', () => {
     });
 
     it('returns to list view when back button clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -394,7 +396,7 @@ describe('HandoutsList', () => {
     });
 
     it('switches from view to edit mode when edit clicked in view', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -416,7 +418,7 @@ describe('HandoutsList', () => {
 
   describe('Delete Handout', () => {
     it('calls deleteHandoutMutation when delete clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({});
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -431,7 +433,7 @@ describe('HandoutsList', () => {
     });
 
     it('shows error alert when deletion fails', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockRejectedValue(new Error('Failed to delete'));
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -449,7 +451,7 @@ describe('HandoutsList', () => {
 
   describe('Publish/Unpublish Handout', () => {
     it('calls publishHandoutMutation when publish clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({});
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -464,7 +466,7 @@ describe('HandoutsList', () => {
     });
 
     it('calls unpublishHandoutMutation when unpublish clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({});
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -479,7 +481,7 @@ describe('HandoutsList', () => {
     });
 
     it('shows error alert when publish fails', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockRejectedValue(new Error('Failed to publish'));
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -495,7 +497,7 @@ describe('HandoutsList', () => {
     });
 
     it('shows error alert when unpublish fails', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockRejectedValue(new Error('Failed to unpublish'));
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -513,7 +515,7 @@ describe('HandoutsList', () => {
 
   describe('Integration', () => {
     it('handles complete handout management workflow', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({ id: 4 });
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);

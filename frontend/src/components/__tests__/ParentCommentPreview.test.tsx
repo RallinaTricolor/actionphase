@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ParentCommentPreview } from '../ParentCommentPreview';
@@ -77,7 +77,7 @@ describe('ParentCommentPreview', () => {
   });
 
   it('calls onNavigateToParent when navigation button is clicked', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     render(
       <ParentCommentPreview
         content="Parent content"
@@ -95,7 +95,7 @@ describe('ParentCommentPreview', () => {
   it('truncates long content with line-clamp-2', () => {
     const longContent = 'This is a very long content that should be truncated. '.repeat(10);
 
-    const { container } = render(
+    const { container: _container } = render(
       <ParentCommentPreview
         content={longContent}
         isDeleted={false}
@@ -109,7 +109,7 @@ describe('ParentCommentPreview', () => {
   });
 
   it('returns null when no content and not deleted', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <ParentCommentPreview
         content={null}
         isDeleted={false}
@@ -170,7 +170,7 @@ describe('ParentCommentPreview', () => {
   });
 
   it('expands when expand button is clicked', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     render(
       <ParentCommentPreview
         content="Parent content that should be expanded"
@@ -185,7 +185,7 @@ describe('ParentCommentPreview', () => {
   });
 
   it('collapses when collapse button is clicked', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     render(
       <ParentCommentPreview
         content="Parent content"

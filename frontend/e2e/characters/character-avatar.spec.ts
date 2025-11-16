@@ -45,7 +45,7 @@ test.describe('Character Avatar Feature', () => {
           await fs.unlink(filePath).catch(() => {});
         }
       }
-    } catch (err) {
+    } catch {
       // Directory might not exist, ignore
     }
   });

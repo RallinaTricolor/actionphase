@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import type { AxiosResponse } from 'axios';
 import { useGameListing } from './useGameListing';
 import { apiClient } from '../lib/api';
 import type { GameListingResponse, EnrichedGameListItem, GameState } from '../types/games';
@@ -89,7 +90,7 @@ describe('useGameListing', () => {
     it('fetches games with default filters', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -137,7 +138,7 @@ describe('useGameListing', () => {
             available_states: [],
           },
         },
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -156,7 +157,7 @@ describe('useGameListing', () => {
     it('parses states from URL', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper('/games?states=recruitment,in_progress'),
@@ -177,7 +178,7 @@ describe('useGameListing', () => {
     it('parses participation filter from URL', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper('/games?participation=my_games'),
@@ -198,7 +199,7 @@ describe('useGameListing', () => {
     it('parses has_open_spots from URL', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper('/games?has_open_spots=true'),
@@ -219,7 +220,7 @@ describe('useGameListing', () => {
     it('parses sort_by from URL', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper('/games?sort_by=alphabetical'),
@@ -240,7 +241,7 @@ describe('useGameListing', () => {
     it('parses multiple filters from URL', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const url = '/games?states=recruitment&participation=my_games&has_open_spots=true&sort_by=created';
       const { result } = renderHook(() => useGameListing(), {
@@ -268,7 +269,7 @@ describe('useGameListing', () => {
     it('updates states and triggers refetch', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -298,7 +299,7 @@ describe('useGameListing', () => {
     it('updates participation filter and triggers refetch', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -328,7 +329,7 @@ describe('useGameListing', () => {
     it('updates has_open_spots and triggers refetch', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -358,7 +359,7 @@ describe('useGameListing', () => {
     it('updates sort_by and triggers refetch', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -388,7 +389,7 @@ describe('useGameListing', () => {
     it('clears all filters', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const url = '/games?states=recruitment&participation=my_games';
       const { result } = renderHook(() => useGameListing(), {
@@ -424,7 +425,7 @@ describe('useGameListing', () => {
     it('removes filters when set to empty array', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper('/games?states=recruitment'),
@@ -448,7 +449,7 @@ describe('useGameListing', () => {
     it('uses correct query key', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper('/games?states=recruitment'),
@@ -476,7 +477,7 @@ describe('useGameListing', () => {
     it('caches data correctly', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -503,7 +504,7 @@ describe('useGameListing', () => {
     it('provides refetch function', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -527,7 +528,7 @@ describe('useGameListing', () => {
     it('handles undefined/null filter values', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -550,7 +551,7 @@ describe('useGameListing', () => {
     it('handles malformed URL parameters gracefully', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       // URL with empty values
       const { result } = renderHook(() => useGameListing(), {
@@ -568,7 +569,7 @@ describe('useGameListing', () => {
     it('handles boolean string conversion correctly', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper('/games?has_open_spots=false'),
@@ -586,7 +587,7 @@ describe('useGameListing', () => {
     it('parses page and page_size from URL', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper('/games?page=3&page_size=50'),
@@ -603,7 +604,7 @@ describe('useGameListing', () => {
     it('uses default pagination values when not in URL', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -620,7 +621,7 @@ describe('useGameListing', () => {
     it('provides setPage function', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -636,7 +637,7 @@ describe('useGameListing', () => {
     it('provides setPageSize function', async () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),
@@ -664,7 +665,7 @@ describe('useGameListing', () => {
 
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: paginatedResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper('/games?page=2'),
@@ -684,7 +685,7 @@ describe('useGameListing', () => {
     it('provides default metadata when no data', () => {
       vi.mocked(apiClient.games.getFilteredGames).mockResolvedValue({
         data: mockResponse,
-      } as any);
+      } as Partial<AxiosResponse<GameListingResponse>>);
 
       const { result } = renderHook(() => useGameListing(), {
         wrapper: createWrapper(),

@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
+import type { CommentWithParent } from '@/types/messages';
 
 const COMMENTS_PER_PAGE = 20;
 
@@ -23,7 +24,7 @@ export function useRecentComments(gameId: number | undefined) {
       return response.data;
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage: { comments: any[]; offset: number }) => {
+    getNextPageParam: (lastPage: { comments: CommentWithParent[]; offset: number }) => {
       // If the last page had fewer items than the page size, we're at the end
       if (lastPage.comments.length < COMMENTS_PER_PAGE) {
         return undefined;

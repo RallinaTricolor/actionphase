@@ -26,7 +26,8 @@ export default function NotificationItem({ notification, onNavigate }: Notificat
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Delete this notification?')) {
+    // eslint-disable-next-line no-alert
+    if (window.confirm('Delete this notification?')) {
       deleteNotification.mutate(notification.id);
     }
   };

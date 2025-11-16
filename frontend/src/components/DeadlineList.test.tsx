@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, render, fireEvent, within } from '@testing-library/react';
+import { screen, render, within as _within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DeadlineList } from './DeadlineList';
 import type { UnifiedDeadline } from '../types/deadlines';
@@ -188,7 +188,7 @@ describe('DeadlineList', () => {
     });
 
     it('should call onEdit with correct deadline when edit is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <DeadlineList
@@ -210,7 +210,7 @@ describe('DeadlineList', () => {
 
   describe('Delete functionality', () => {
     it('should show confirmation dialog when delete is clicked', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <DeadlineList
@@ -231,7 +231,7 @@ describe('DeadlineList', () => {
     });
 
     it('should call onDelete when deletion is confirmed', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <DeadlineList
@@ -255,7 +255,7 @@ describe('DeadlineList', () => {
     });
 
     it('should not call onDelete when deletion is cancelled', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <DeadlineList
@@ -278,9 +278,9 @@ describe('DeadlineList', () => {
     });
 
     it('should disable delete button for deadline being deleted', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
-      const { rerender } = render(
+      const { rerender: _rerender } = render(
         <DeadlineList
           deadlines={sampleDeadlines}
           isLoading={false}
@@ -303,7 +303,7 @@ describe('DeadlineList', () => {
     });
 
     it('should disable edit button for deadline being deleted', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
 
       render(
         <DeadlineList
