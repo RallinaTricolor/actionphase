@@ -111,7 +111,7 @@ export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseT
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border-primary scrollbar-track-transparent hover:scrollbar-thumb-border-secondary">
             <ConversationList
               key={refreshKey}
               gameId={gameId}

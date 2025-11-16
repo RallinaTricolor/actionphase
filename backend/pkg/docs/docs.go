@@ -18,17 +18,18 @@ var specFiles embed.FS
 type Handler struct{}
 
 // RegisterRoutes adds documentation routes to the chi router
+// Routes are registered with relative paths and will be mounted at /api/v1
 func (h *Handler) RegisterRoutes(r chi.Router) {
-	// Serve Swagger UI static files first
+	// Redirect /docs to /docs/
 	r.Get("/docs", h.redirectToSwaggerUI)
+
+	// Serve Swagger UI at /docs/
 	r.Get("/docs/", h.serveSwaggerUI)
 
-	// Serve OpenAPI spec file at docs level (must come before wildcard)
-	r.Get("/docs/openapi.yaml", h.serveOpenAPISpec)
-	r.Get("/docs/openapi.json", h.serveOpenAPIJSON)
-
-	// Wildcard handler for other static files (comes last)
-	r.Handle("/docs/*", h.serveStaticFiles())
+	// Serve OpenAPI spec
+	// NOTE: Chi router strips file extensions, so route "/docs/openapi" matches requests to "/docs/openapi.yaml"
+	// This is why we register without the .yaml extension
+	r.Get("/docs/openapi", h.serveOpenAPISpec)
 }
 
 // serveOpenAPISpec serves the OpenAPI specification as YAML

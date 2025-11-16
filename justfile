@@ -745,3 +745,15 @@ docs-embed: docs-build
   cp -r docs-site/.vitepress/dist backend/pkg/docs/dist
   @echo "✅ Documentation embedded at backend/pkg/docs/dist"
   @echo "🔧 Rebuild backend to include updated docs: just build or go run backend/main.go"
+
+# Validate API documentation completeness
+api-docs-validate:
+  #!/usr/bin/env bash
+  cd backend
+  go run scripts/validate-api-docs.go
+
+# Generate skeleton documentation for undocumented routes
+api-docs-generate:
+  #!/usr/bin/env bash
+  cd backend
+  go run scripts/generate-doc-skeleton.go

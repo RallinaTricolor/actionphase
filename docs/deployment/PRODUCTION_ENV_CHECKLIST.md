@@ -1,0 +1,339 @@
+# Production Environment Variables Checklist
+
+**Last Updated**: 2025-11-15
+
+This document lists all environment variables that need to be set manually in your production `.env` file after deployment.
+
+## Critical Variables (Must Set Before Going Live)
+
+### 1. Frontend URL
+**Required for**: Email verification links, password reset links
+
+```bash
+FRONTEND_URL=https://action-phase.com
+```
+
+**Impact if missing**: Email links will point to `localhost:5173` instead of your production domain.
+
+**Set in**: `/opt/actionphase/.env` on your EC2 instance
+
+---
+
+### 2. Email Configuration
+**Required for**: Sending emails (registration, password reset, notifications)
+
+```bash
+# Email provider
+EMAIL_PROVIDER=resend
+
+# Sender information
+EMAIL_FROM=noreply@action-phase.com
+EMAIL_FROM_NAME=ActionPhase
+
+# Resend API key (get from https://resend.com/api-keys)
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
+```
+
+**Impact if missing**: No emails will be sent. Users cannot verify emails or reset passwords.
+
+**How to get**:
+1. Sign up at https://resend.com (free tier: 3,000 emails/month)
+2. Add and verify your domain
+3. Create an API key
+4. Copy the key to `RESEND_API_KEY`
+
+---
+
+### 3. hCaptcha Configuration
+**Required for**: Bot prevention on registration and login
+
+#### Backend Configuration
+```bash
+# Get from https://dashboard.hcaptcha.com/sites
+HCAPTCHA_SITE_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+HCAPTCHA_SECRET=0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+HCAPTCHA_ENABLED=true
+```
+
+#### Frontend Configuration
+**IMPORTANT**: These MUST match the backend values above
+```bash
+VITE_HCAPTCHA_SITE_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+VITE_HCAPTCHA_ENABLED=true
+```
+
+**Impact if missing**: No bot protection. Registration form will fail or allow bots.
+
+**How to get**:
+1. Sign up at https://www.hcaptcha.com (free tier: unlimited requests)
+2. Create a new site
+3. Copy the Site Key and Secret
+4. Add to both backend and frontend variables
+
+**Important**: The `VITE_` prefixed variables are bundled into the frontend build, so you need to rebuild the frontend after changing them.
+
+---
+
+## Optional Variables (Recommended for Production)
+
+### 4. Monitoring & Alerts
+```bash
+# Slack webhook for monitoring alerts (optional but recommended)
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzz
+```
+
+**How to get**:
+1. Go to https://api.slack.com/messaging/webhooks
+2. Create a new webhook
+3. Copy the URL
+
+---
+
+### 5. CORS Origins
+**Auto-configured** by user-data.sh, but verify:
+```bash
+CORS_ORIGINS=https://action-phase.com
+```
+
+If you have multiple domains (www, api subdomain), list them:
+```bash
+CORS_ORIGINS=https://action-phase.com,https://www.action-phase.com,https://api.action-phase.com
+```
+
+---
+
+## Variables Already Set by user-data.sh
+
+These are automatically configured during EC2 initialization and generally don't need changes:
+
+```bash
+# JWT Secret (auto-generated)
+JWT_SECRET=<randomly-generated-32-byte-secret>
+
+# Domain (from Terraform)
+DOMAIN=action-phase.com
+
+# Admin Email (from Terraform)
+ADMIN_EMAIL=admin@action-phase.com
+
+# Database (Docker Compose service name)
+DATABASE_URL=postgres://postgres:example@db:5432/actionphase?sslmode=disable
+
+# Environment
+ENVIRONMENT=production
+
+# Storage (S3)
+STORAGE_BACKEND=s3
+STORAGE_S3_BUCKET=actionphase-avatars
+STORAGE_S3_REGION=us-east-1
+
+# AWS Backup
+AWS_REGION=us-east-1
+S3_BACKUP_BUCKET=actionphase-backups
+```
+
+---
+
+## Deployment Workflow
+
+### Initial Deployment
+
+1. **Deploy infrastructure** with Terraform:
+   ```bash
+   cd terraform
+   terraform apply
+   ```
+
+2. **SSH to EC2 instance**:
+   ```bash
+   ssh ubuntu@<your-ec2-ip>
+   ```
+
+3. **Navigate to application directory**:
+   ```bash
+   cd /opt/actionphase
+   ```
+
+4. **Edit `.env` file** and add the critical variables:
+   ```bash
+   nano .env
+   ```
+
+5. **Add these lines** (or update if they exist):
+   ```bash
+   # Frontend URL
+   FRONTEND_URL=https://action-phase.com
+
+   # Email configuration
+   RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
+
+   # hCaptcha configuration
+   HCAPTCHA_SITE_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+   HCAPTCHA_SECRET=0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   VITE_HCAPTCHA_SITE_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+   ```
+
+6. **Run deployment script**:
+   ```bash
+   ./docker-setup.sh
+   ```
+
+7. **Set up SSL**:
+   ```bash
+   ./scripts/setup-ssl.sh action-phase.com
+   ```
+
+---
+
+### Updating Environment Variables
+
+If you need to change environment variables after initial deployment:
+
+1. **SSH to server**:
+   ```bash
+   ssh ubuntu@<your-ec2-ip>
+   cd /opt/actionphase
+   ```
+
+2. **Edit `.env` file**:
+   ```bash
+   nano .env
+   ```
+
+3. **Restart services**:
+   ```bash
+   docker-compose restart backend
+   ```
+
+4. **If you changed VITE_ variables**, rebuild frontend:
+   ```bash
+   docker-compose build frontend
+   docker-compose restart frontend
+   ```
+
+---
+
+## Verification
+
+After setting all variables, verify they're working:
+
+### 1. Check Email Links
+- Register a new account
+- Check the verification email
+- Verify the link points to `https://action-phase.com/verify-email?token=...`
+- **NOT** `http://localhost:5173/verify-email?token=...`
+
+### 2. Check Password Reset
+- Click "Forgot Password"
+- Check the reset email
+- Verify the link points to `https://action-phase.com/reset-password?token=...`
+
+### 3. Check hCaptcha
+- Go to registration page
+- Verify hCaptcha widget appears
+- Complete captcha and register
+
+### 4. Check Backend Logs
+```bash
+docker-compose logs backend | grep -i "frontend_url\|hcaptcha\|email"
+```
+
+Should show:
+- `FRONTEND_URL=https://action-phase.com`
+- `HCAPTCHA_ENABLED=true`
+- Email sending attempts (if Resend key is set)
+
+---
+
+## Common Issues
+
+### Issue: Email links still point to localhost
+
+**Cause**: `FRONTEND_URL` not set or backend not restarted
+
+**Fix**:
+```bash
+# Verify variable is set
+grep FRONTEND_URL /opt/actionphase/.env
+
+# If missing, add it
+echo "FRONTEND_URL=https://action-phase.com" >> /opt/actionphase/.env
+
+# Restart backend
+docker-compose restart backend
+```
+
+---
+
+### Issue: hCaptcha not showing on registration
+
+**Cause**: `VITE_HCAPTCHA_SITE_KEY` not set or frontend not rebuilt
+
+**Fix**:
+```bash
+# Verify variables are set
+grep VITE_HCAPTCHA /opt/actionphase/.env
+
+# If missing, add them
+echo "VITE_HCAPTCHA_SITE_KEY=your-site-key" >> /opt/actionphase/.env
+echo "VITE_HCAPTCHA_ENABLED=true" >> /opt/actionphase/.env
+
+# Rebuild frontend
+docker-compose build frontend
+docker-compose restart frontend
+```
+
+---
+
+### Issue: Emails not sending
+
+**Cause**: `RESEND_API_KEY` not set or invalid
+
+**Fix**:
+```bash
+# Verify key is set
+grep RESEND_API_KEY /opt/actionphase/.env
+
+# If missing, add it
+echo "RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx" >> /opt/actionphase/.env
+
+# Restart backend
+docker-compose restart backend
+
+# Check logs for email sending
+docker-compose logs backend | grep -i "email\|resend"
+```
+
+---
+
+## Security Best Practices
+
+1. **Never commit `.env` to version control**
+   - The production `.env` file should only exist on the server
+
+2. **Rotate secrets periodically**
+   - JWT_SECRET: Every 90 days
+   - RESEND_API_KEY: If compromised
+   - HCAPTCHA_SECRET: If compromised
+
+3. **Use strong passwords**
+   - Database password should be 20+ characters
+   - JWT secret should be 32+ bytes (generated with `openssl rand -base64 32`)
+
+4. **Limit access**
+   - Only allow SSH from known IP addresses
+   - Use SSH keys, not passwords
+   - Rotate SSH keys regularly
+
+---
+
+## Reference Files
+
+- **Template**: `.env.docker` (in repository)
+- **Example**: `.env.example` (in repository)
+- **Production location**: `/opt/actionphase/.env` (on EC2 instance)
+- **User-data script**: `terraform/user-data.sh`
+
+---
+
+**Need help?** See `/docs/deployment/` for more deployment guides.
