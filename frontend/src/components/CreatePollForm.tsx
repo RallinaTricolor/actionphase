@@ -3,6 +3,7 @@ import { usePolls } from '../hooks';
 import { Button, Input, Textarea, Card, CardBody, Alert, Checkbox, DateTimeInput } from './ui';
 import type { CreatePollRequest } from '../types/polls';
 import { logger } from '@/services/LoggingService';
+import { localDateTimeToUTC } from '../utils/timezone';
 
 interface CreatePollFormProps {
   gameId: number;
@@ -61,8 +62,8 @@ export function CreatePollForm({ gameId, currentPhaseId, onSuccess, onCancel }: 
     }
 
     // Build request
-    // Convert datetime-local format (YYYY-MM-DDTHH:mm) to RFC3339 format (YYYY-MM-DDTHH:mm:ssZ)
-    const deadlineISO = new Date(deadline).toISOString();
+    // Convert datetime-local format from user's local time to UTC
+    const deadlineISO = localDateTimeToUTC(deadline);
 
     const request: CreatePollRequest = {
       question: question.trim(),

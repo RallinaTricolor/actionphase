@@ -716,3 +716,32 @@ lint-frontend:
 # Preview frontend build
 preview-frontend:
   cd frontend && npm run preview
+
+# ═══════════════════════════════════════════════════════════════════════════
+# DOCUMENTATION
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Start documentation development server
+docs-dev:
+  cd docs-site && npm run docs:dev
+
+# Build documentation site
+docs-build:
+  cd docs-site && npm install && npm run docs:build
+  @echo "✅ Documentation built to docs-site/.vitepress/dist"
+
+# Preview built documentation
+docs-preview:
+  cd docs-site && npm run docs:preview
+
+# Install documentation dependencies
+docs-install:
+  cd docs-site && npm install
+
+# Build and embed documentation in backend
+docs-embed: docs-build
+  @echo "📦 Embedding documentation in backend..."
+  rm -rf backend/pkg/docs/dist
+  cp -r docs-site/.vitepress/dist backend/pkg/docs/dist
+  @echo "✅ Documentation embedded at backend/pkg/docs/dist"
+  @echo "🔧 Rebuild backend to include updated docs: just build or go run backend/main.go"

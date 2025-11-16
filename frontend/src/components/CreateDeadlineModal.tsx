@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Input, Textarea, DateTimeInput, Button, Alert } from './ui';
 import type { CreateDeadlineRequest } from '../types/deadlines';
+import { localDateTimeToUTC } from '../utils/timezone';
 
 export interface CreateDeadlineModalProps {
   isOpen: boolean;
@@ -95,9 +96,9 @@ export function CreateDeadlineModal({
       return;
     }
 
-    // Convert local datetime to ISO 8601 format for backend
-    const deadlineDate = new Date(deadline);
-    const isoDeadline = deadlineDate.toISOString();
+    // The datetime-local input gives us a string in local time (e.g., "2024-11-15T18:00")
+    // Convert to UTC for storage using timezone utilities
+    const isoDeadline = localDateTimeToUTC(deadline);
 
     onSubmit({
       title: title.trim(),

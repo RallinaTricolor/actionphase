@@ -525,7 +525,7 @@ Welcome to ActionPhase, a turn-based narrative gaming platform where players sub
 
 ## Creating Your Account
 
-1. Navigate to [actionphase.com](https://actionphase.com)
+1. Navigate to [action-phase.com](https://action-phase.com)
 2. Click **Sign Up** in the top right
 3. Enter your email and choose a username
 4. Verify your email address

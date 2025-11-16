@@ -3,6 +3,7 @@ import { PHASE_TYPE_DESCRIPTIONS } from '../types/phases';
 import type { CreatePhaseRequest } from '../types/phases';
 import { Button, Select, Input, Textarea, DateTimeInput } from './ui';
 import { Modal } from './Modal';
+import { localDateTimeToUTC } from '../utils/timezone';
 
 interface CreatePhaseModalProps {
   onClose: () => void;
@@ -18,7 +19,10 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      deadline: formData.deadline ? localDateTimeToUTC(formData.deadline) : undefined
+    });
   };
 
   return (
