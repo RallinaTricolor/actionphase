@@ -11,8 +11,9 @@ import (
 )
 
 // Embed the dist directory from VitePress build
+// Uses 'all:dist' to include all files and subdirectories
 //
-//go:embed dist/*
+//go:embed all:dist
 var staticDocsFS embed.FS
 
 // RegisterStaticDocs registers the static documentation routes
