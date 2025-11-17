@@ -183,10 +183,10 @@ func (h *Handler) GetGamePhases(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert to response format
-	phasesList := make([]PhaseResponse, 0)
+	var response []PhaseResponse
 	for _, phase := range phases {
 		phaseResp := phaseService.ConvertPhaseToResponse(&phase)
-		phasesList = append(phasesList, PhaseResponse{
+		response = append(response, PhaseResponse{
 			ID:          phaseResp.ID,
 			GameID:      phaseResp.GameID,
 			PhaseType:   phaseResp.PhaseType,
@@ -202,7 +202,7 @@ func (h *Handler) GetGamePhases(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"phases": phasesList})
+	json.NewEncoder(w).Encode(response)
 }
 
 // UpdatePhaseDeadline extends or changes phase deadline (GM only)
