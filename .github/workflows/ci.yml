@@ -100,8 +100,43 @@ jobs:
           psql -h localhost -U postgres -c "CREATE DATABASE actionphase_test;"
 
       - name: Run migrations
+        env:
+          PGPASSWORD: example
         run: |
-          migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" up
+          echo "Current directory: $(pwd)"
+          echo "Checking migrations directory..."
+          ls -la backend/pkg/db/migrations/ | head -10
+
+          echo "Running migrations..."
+          migrate -source "file://$(pwd)/backend/pkg/db/migrations" \
+                  -database "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" \
+                  up
+
+          MIGRATE_EXIT=$?
+          if [ $MIGRATE_EXIT -ne 0 ]; then
+            echo "ERROR: Migration command failed with exit code $MIGRATE_EXIT"
+            exit 1
+          fi
+
+          echo "Verifying migrations..."
+          # Check migration version
+          MIGRATION_VERSION=$(migrate -source "file://$(pwd)/backend/pkg/db/migrations" \
+                                      -database "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" \
+                                      version 2>&1)
+          echo "Migration version: $MIGRATION_VERSION"
+
+          # Check that tables exist
+          TABLES=$(psql -h localhost -U postgres -d actionphase_test -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
+          echo "Found $TABLES tables in database"
+
+          if [ "$TABLES" -lt "10" ]; then
+            echo "ERROR: Expected at least 10 tables but found $TABLES"
+            echo "Listing tables:"
+            psql -h localhost -U postgres -d actionphase_test -c "\dt"
+            exit 1
+          fi
+
+          echo "Migrations applied successfully!"
 
       - name: Run mock tests (fast)
         run: |
