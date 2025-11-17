@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 )
 
@@ -13,10 +14,19 @@ import (
 
 // ListAllPrivateConversations lists all private conversations in a game (for audience/GM)
 // Returns conversation metadata including message counts and latest activity
-func (ms *MessageService) ListAllPrivateConversations(ctx context.Context, gameID int32) ([]models.ListAllPrivateConversationsRow, error) {
+// Supports pagination and filtering by participant names
+func (ms *MessageService) ListAllPrivateConversations(ctx context.Context, params core.ListAllPrivateConversationsParams) ([]models.ListAllPrivateConversationsRow, error) {
 	queries := models.New(ms.DB)
 
-	conversations, err := queries.ListAllPrivateConversations(ctx, gameID)
+	// Convert to sqlc params
+	sqlcParams := models.ListAllPrivateConversationsParams{
+		GameID:           params.GameID,
+		ParticipantNames: params.ParticipantNames,
+		ResultLimit:      params.Limit,
+		ResultOffset:     params.Offset,
+	}
+
+	conversations, err := queries.ListAllPrivateConversations(ctx, sqlcParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list all private conversations: %w", err)
 	}

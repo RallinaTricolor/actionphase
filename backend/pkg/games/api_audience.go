@@ -204,15 +204,54 @@ func (h *Handler) ListAllPrivateConversations(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Get all private conversations
+	// Parse query parameters
+	limitStr := r.URL.Query().Get("limit")
+	limit := int32(20) // default
+	if limitStr != "" {
+		limitParsed, err := strconv.ParseInt(limitStr, 10, 32)
+		if err == nil && limitParsed > 0 {
+			limit = int32(limitParsed)
+		}
+	}
+
+	offsetStr := r.URL.Query().Get("offset")
+	offset := int32(0) // default
+	if offsetStr != "" {
+		offsetParsed, err := strconv.ParseInt(offsetStr, 10, 32)
+		if err == nil && offsetParsed >= 0 {
+			offset = int32(offsetParsed)
+		}
+	}
+
+	// Parse participant_names filter (comma-separated)
+	var participantNames []string
+	participantNamesStr := r.URL.Query().Get("participant_names")
+	if participantNamesStr != "" {
+		// Split by comma and trim spaces
+		for _, name := range r.URL.Query()["participant_names"] {
+			if name != "" {
+				participantNames = append(participantNames, name)
+			}
+		}
+	}
+
+	// Get all private conversations with filters
 	messageService := &messagesvc.MessageService{DB: h.App.Pool}
-	conversations, err := messageService.ListAllPrivateConversations(ctx, int32(gameID))
+	conversations, err := messageService.ListAllPrivateConversations(ctx, core.ListAllPrivateConversationsParams{
+		GameID:           int32(gameID),
+		ParticipantNames: participantNames,
+		Limit:            limit,
+		Offset:           offset,
+	})
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to list private conversations", "error", err, "game_id", gameID)
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
+	// Note: We're returning len(conversations) as total for now
+	// To get accurate total count, we'd need a separate COUNT query
+	// For pagination, the frontend can detect end when len(conversations) < limit
 	render.JSON(w, r, map[string]interface{}{
 		"conversations": conversations,
 		"total":         len(conversations),
