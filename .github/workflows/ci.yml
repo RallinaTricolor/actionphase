@@ -34,7 +34,12 @@ jobs:
         run: |
           cd backend
           # Vet all packages except pkg/docs/dist (embedded frontend assets)
-          go vet $(go list ./... | grep -v '/pkg/docs/dist')
+          packages=$(go list ./... | grep -v '/pkg/docs/dist')
+          if [ -n "$packages" ]; then
+            go vet $packages
+          else
+            echo "No packages to vet"
+          fi
 
   backend-test:
     name: Backend Tests
@@ -85,7 +90,12 @@ jobs:
         run: |
           cd backend
           # Exclude pkg/docs/dist (embedded frontend assets)
-          SKIP_DB_TESTS=true go test $(go list ./... | grep -v '/pkg/docs/dist')
+          packages=$(go list ./... | grep -v '/pkg/docs/dist')
+          if [ -n "$packages" ]; then
+            SKIP_DB_TESTS=true go test $packages
+          else
+            echo "No packages to test"
+          fi
 
       - name: Run integration tests (with database)
         env:
@@ -93,7 +103,12 @@ jobs:
         run: |
           cd backend
           # Exclude pkg/docs/dist (embedded frontend assets)
-          SKIP_DB_TESTS=false go test -p=1 $(go list ./... | grep -v '/pkg/docs/dist')
+          packages=$(go list ./... | grep -v '/pkg/docs/dist')
+          if [ -n "$packages" ]; then
+            SKIP_DB_TESTS=false go test -p=1 $packages
+          else
+            echo "No packages to test"
+          fi
 
       - name: Run tests with race detector
         env:
@@ -101,7 +116,12 @@ jobs:
         run: |
           cd backend
           # Exclude pkg/docs/dist (embedded frontend assets)
-          SKIP_DB_TESTS=false go test -p=1 -race $(go list ./... | grep -v '/pkg/docs/dist')
+          packages=$(go list ./... | grep -v '/pkg/docs/dist')
+          if [ -n "$packages" ]; then
+            SKIP_DB_TESTS=false go test -p=1 -race $packages
+          else
+            echo "No packages to test"
+          fi
 
   frontend-lint:
     name: Frontend Linting
