@@ -484,6 +484,7 @@ ORDER BY posts.created_at DESC;
 -- name: ListAllPrivateConversations :many
 -- List all private message conversations in a game (for audience/GM)
 -- Returns all conversations with metadata, participant information, and last message preview
+-- Supports pagination and filtering by participant names
 WITH conversation_messages AS (
   SELECT
     c.id as conversation_id,
@@ -539,7 +540,17 @@ SELECT
 FROM conversation_messages cm
 LEFT JOIN participants_agg pa ON cm.conversation_id = pa.conversation_id
 LEFT JOIN last_messages lm ON cm.conversation_id = lm.conversation_id
-ORDER BY cm.latest_message_at DESC NULLS LAST;
+WHERE (
+  -- If participant_names filter is provided (not empty array), filter by it
+  -- Otherwise, show all conversations
+  CASE
+    WHEN sqlc.arg(participant_names)::text[] IS NULL OR array_length(sqlc.arg(participant_names)::text[], 1) IS NULL THEN true
+    ELSE pa.participant_names::text[] && sqlc.arg(participant_names)::text[]
+  END
+)
+ORDER BY cm.latest_message_at DESC NULLS LAST
+LIMIT sqlc.arg(result_limit)
+OFFSET sqlc.arg(result_offset);
 
 -- name: GetAudienceConversationMessages :many
 -- Get all messages in a specific conversation (for audience/GM)

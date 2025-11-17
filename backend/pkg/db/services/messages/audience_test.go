@@ -63,7 +63,12 @@ func TestListAllPrivateConversations(t *testing.T) {
 	core.AssertNoError(t, err, "Failed to send private message")
 
 	t.Run("list_all_private_conversations_success", func(t *testing.T) {
-		conversations, err := msgService.ListAllPrivateConversations(context.Background(), gameID)
+		conversations, err := msgService.ListAllPrivateConversations(context.Background(), core.ListAllPrivateConversationsParams{
+			GameID:           gameID,
+			ParticipantNames: []string{},
+			Limit:            20,
+			Offset:           0,
+		})
 		core.AssertNoError(t, err, "Should list conversations successfully")
 
 		// Even if no conversations exist, should return empty array, not error
@@ -71,7 +76,12 @@ func TestListAllPrivateConversations(t *testing.T) {
 	})
 
 	t.Run("list_all_private_conversations_nonexistent_game", func(t *testing.T) {
-		conversations, err := msgService.ListAllPrivateConversations(context.Background(), 99999)
+		conversations, err := msgService.ListAllPrivateConversations(context.Background(), core.ListAllPrivateConversationsParams{
+			GameID:           99999,
+			ParticipantNames: []string{},
+			Limit:            20,
+			Offset:           0,
+		})
 
 		// Should succeed but return empty list for nonexistent game
 		core.AssertNoError(t, err, "Should not error on nonexistent game")

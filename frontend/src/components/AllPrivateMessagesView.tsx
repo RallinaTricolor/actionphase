@@ -44,6 +44,8 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
     error: messagesError
   } = useAudienceConversationMessages(gameId, selectedConversationId);
 
+  // Fetch conversations with server-side filtering
+  const participantNamesArray = Array.from(selectedParticipants);
   const {
     data,
     fetchNextPage,
@@ -51,7 +53,9 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
     isFetchingNextPage,
     isLoading,
     error,
-  } = useAllPrivateConversations(gameId);
+  } = useAllPrivateConversations(gameId, {
+    participantNames: participantNamesArray.length > 0 ? participantNamesArray : undefined
+  });
 
   // Infinite scroll handler
   useEffect(() => {
@@ -69,14 +73,14 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
     return () => window.removeEventListener('scroll', handleScroll);
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Get all conversations and extract unique participants
+  // Get all conversations (already filtered by backend)
   const allConversations = useMemo(() =>
     data?.pages.flatMap((page) => page.conversations || []) || [],
     [data?.pages]
   );
-  const total = data?.pages[0]?.total || 0;
 
-  // Extract unique participants across all conversations
+  // Extract unique participants across all conversations FOR DISPLAY ONLY
+  // We still need this to show the filter options
   const allParticipants = useMemo(() => {
     const participantsSet = new Set<string>();
     (allConversations as ConversationType[]).forEach((conv) => {
@@ -86,18 +90,6 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
     });
     return Array.from(participantsSet).sort();
   }, [allConversations]);
-
-  // Filter conversations based on selected participants
-  const filteredConversations = useMemo(() => {
-    if (selectedParticipants.size === 0) {
-      return allConversations;
-    }
-    return (allConversations as ConversationType[]).filter((conv) => {
-      const convParticipants = conv.participant_names || [];
-      // Show conversation if it includes any of the selected participants
-      return convParticipants.some((name: string) => selectedParticipants.has(name));
-    });
-  }, [allConversations, selectedParticipants]);
 
   const toggleParticipant = (participant: string) => {
     setSelectedParticipants(prev => {
@@ -164,7 +156,8 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
           </Badge>
         </div>
         <div className="text-sm text-content-secondary">
-          {filteredConversations.length} of {total} conversation{total !== 1 ? 's' : ''}
+          {allConversations.length} conversation{allConversations.length !== 1 ? 's' : ''}
+          {selectedParticipants.size > 0 && ' (filtered)'}
         </div>
       </div>
       {/* Desktop: Horizontal layout */}
@@ -178,7 +171,8 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
           </Badge>
         </div>
         <div className="text-sm text-content-secondary">
-          {filteredConversations.length} of {total} conversation{total !== 1 ? 's' : ''}
+          {allConversations.length} conversation{allConversations.length !== 1 ? 's' : ''}
+          {selectedParticipants.size > 0 && ' (filtered)'}
         </div>
       </div>
 
@@ -228,7 +222,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
       )}
 
       {/* Conversations List */}
-      {filteredConversations.length === 0 ? (
+      {allConversations.length === 0 ? (
         <div className="text-center py-12 text-content-secondary">
           {selectedParticipants.size > 0 ? (
             <>
@@ -244,7 +238,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredConversations.map((conversation: AudienceConversationListItem) => (
+          {allConversations.map((conversation: AudienceConversationListItem) => (
             <AudienceConversationCard
               key={conversation.conversation_id}
               conversation={conversation}
@@ -260,7 +254,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
             </div>
           )}
 
-          {!hasNextPage && filteredConversations.length > 0 && (
+          {!hasNextPage && allConversations.length > 0 && (
             <div className="text-center py-4 text-sm text-content-secondary">
               End of conversations
             </div>

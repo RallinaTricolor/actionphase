@@ -155,11 +155,16 @@ export class GamesApi extends BaseApiClient {
     });
   }
 
-  async listAllPrivateConversations(gameId: number, options?: { limit?: number; offset?: number; characterId?: number }) {
+  async listAllPrivateConversations(gameId: number, options?: { limit?: number; offset?: number; participantNames?: string[] }) {
     const params = new URLSearchParams();
     if (options?.limit) params.append('limit', options.limit.toString());
     if (options?.offset) params.append('offset', options.offset.toString());
-    if (options?.characterId) params.append('character_id', options.characterId.toString());
+    // Add each participant name as a separate parameter
+    if (options?.participantNames && options.participantNames.length > 0) {
+      options.participantNames.forEach(name => {
+        params.append('participant_names', name);
+      });
+    }
 
     const queryString = params.toString();
     const url = queryString
