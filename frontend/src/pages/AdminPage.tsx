@@ -136,7 +136,7 @@ export function AdminPage() {
       const response = await apiClient.admin.getUserByUsername(lookupUsername.trim());
       setLookupResult(response.data);
     } catch (error: unknown) {
-      setLookupError(error.response?.data?.error || 'User not found');
+      setLookupError((error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'User not found');
     }
   };
 

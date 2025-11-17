@@ -18,15 +18,17 @@ interface ActionSubmissionType {
   status: string;
   action_result_id?: number;
   character_name: string;
+  username: string;
   submission_number: number;
   created_at: string;
+  submitted_at: string;
   last_updated: string;
   content: string;
 }
 
 interface ActionResultType {
   id: number;
-  action_submission_id: number;
+  action_submission_id?: number;
   content: string;
 }
 
@@ -183,7 +185,7 @@ export function AllActionSubmissionsView({ gameId }: AllActionSubmissionsViewPro
         </Card>
       ) : (
         <div className="space-y-4">
-          {allSubmissions.map((submission: ActionSubmissionType) => (
+          {(allSubmissions as unknown as ActionSubmissionType[]).map((submission) => (
             <ActionSubmissionCard
               key={submission.id}
               gameId={gameId}

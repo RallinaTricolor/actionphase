@@ -36,9 +36,9 @@ export function DeletePhaseDialog({
       onClose();
     } catch (_err) {
       // Extract error message from API response
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete phase';
+      const errorMessage = _err instanceof Error ? _err.message : 'Failed to delete phase';
       setError(errorMessage);
-      logger.error('Failed to delete phase', { error: err, phaseId: phase.id, phaseNumber: phase.phase_number, phaseTitle: phase.title });
+      logger.error('Failed to delete phase', { error: _err, phaseId: phase.id, phaseNumber: phase.phase_number, phaseTitle: phase.title });
     } finally {
       setIsSubmitting(false);
     }

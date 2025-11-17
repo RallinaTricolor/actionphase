@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, render } from '@testing-library/react'
+import { screen, render, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -230,21 +230,21 @@ describe('Layout', () => {
     })
 
     it('should have proper layout structure', () => {
-      const { container: _container } = renderLayout(<div>Content</div>, '/dashboard')
+      const { container } = renderLayout(<div>Content</div>, '/dashboard')
 
       const layout = container.querySelector('.min-h-screen.surface-sunken')
       expect(layout).toBeInTheDocument()
     })
 
     it('should have navigation with proper styling', () => {
-      const { container: _container } = renderLayout(<div>Content</div>, '/dashboard')
+      const { container } = renderLayout(<div>Content</div>, '/dashboard')
 
       const nav = container.querySelector('.bg-interactive-primary.shadow-lg')
       expect(nav).toBeInTheDocument()
     })
 
     it('should have main content wrapper', () => {
-      const { container: _container } = renderLayout(<div data-testid="content">Content</div>, '/dashboard')
+      renderLayout(<div data-testid="content">Content</div>, '/dashboard')
 
       const main = screen.getByTestId('content').closest('main')
       expect(main).toBeInTheDocument()
@@ -252,7 +252,7 @@ describe('Layout', () => {
     })
 
     it('should have footer with border', () => {
-      const { container: _container } = renderLayout(<div>Content</div>, '/dashboard')
+      const { container } = renderLayout(<div>Content</div>, '/dashboard')
 
       const footer = container.querySelector('footer.border-t.border-theme-default')
       expect(footer).toBeInTheDocument()
@@ -274,7 +274,7 @@ describe('Layout', () => {
     })
 
     it('should handle empty children', () => {
-      const { container: _container } = renderLayout(<></>, '/dashboard')
+      const { container } = renderLayout(<></>, '/dashboard')
 
       expect(container.querySelector('main')).toBeInTheDocument()
     })

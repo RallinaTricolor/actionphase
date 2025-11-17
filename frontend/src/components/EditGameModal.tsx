@@ -84,7 +84,7 @@ export function EditGameModal({ game, isOpen, onClose, onGameUpdated }: EditGame
       onGameUpdated();
       onClose();
     } catch (_err) {
-      setError(err instanceof Error ? err.message : 'Failed to update game');
+      setError(_err instanceof Error ? _err.message : 'Failed to update game');
     } finally {
       setLoading(false);
     }

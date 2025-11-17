@@ -73,7 +73,7 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
       });
       setIsAddingNew(false);
     } catch (_err) {
-      logger.error('Failed to create draft character update', { error: err, gameId, resultId, characterId });
+      logger.error('Failed to create draft character update', { error: _err, gameId, resultId, characterId });
     }
   };
 
@@ -88,7 +88,7 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
       setEditingDraftId(null);
       setEditValue('');
     } catch (_err) {
-      logger.error('Failed to update draft character update', { error: err, gameId, resultId, draftId });
+      logger.error('Failed to update draft character update', { error: _err, gameId, resultId, draftId });
     }
   };
 

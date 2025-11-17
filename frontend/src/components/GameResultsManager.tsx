@@ -154,7 +154,7 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
         content: editedContent.trim(),
       });
       onCancelEdit();
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to update result', { error, resultId: result.id, gameId });
     }
   };
@@ -172,7 +172,7 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
 
       // Hide success message after 5 seconds
       setTimeout(() => setPublishSuccess(false), 5000);
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to publish result', { error, resultId: result.id, gameId });
     }
   };

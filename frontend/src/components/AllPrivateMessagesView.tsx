@@ -15,8 +15,7 @@ interface AllPrivateMessagesViewProps {
   gameId: number;
 }
 
-interface ConversationType {
-  participant_names?: string[];
+interface ConversationType extends AudienceConversationListItem {
   [key: string]: unknown;
 }
 
@@ -25,9 +24,9 @@ interface MessageType {
   created_at: string;
   content: string;
   sender_character_id?: number;
-  sender_character_name?: string;
+  sender_character_name?: string | null;
   sender_username: string;
-  sender_avatar_url: string | null;
+  sender_avatar_url?: string | null;
 }
 
 /**
@@ -80,7 +79,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
   // Extract unique participants across all conversations
   const allParticipants = useMemo(() => {
     const participantsSet = new Set<string>();
-    allConversations.forEach((conv: ConversationType) => {
+    (allConversations as ConversationType[]).forEach((conv) => {
       (conv.participant_names || []).forEach((name: string) => {
         participantsSet.add(name);
       });
@@ -93,7 +92,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
     if (selectedParticipants.size === 0) {
       return allConversations;
     }
-    return allConversations.filter((conv: ConversationType) => {
+    return (allConversations as ConversationType[]).filter((conv) => {
       const convParticipants = conv.participant_names || [];
       // Show conversation if it includes any of the selected participants
       return convParticipants.some((name: string) => selectedParticipants.has(name));
@@ -359,7 +358,7 @@ function MessageViewer({
         currentSenderId = message.sender_character_id;
         currentSenderName = message.sender_character_name || 'Unknown Character';
         currentSenderUsername = message.sender_username;
-        currentSenderAvatar = message.sender_avatar_url;
+        currentSenderAvatar = message.sender_avatar_url ?? null;
       }
       // Start new sender group within same date
       else if (isNewSender) {
@@ -378,7 +377,7 @@ function MessageViewer({
         currentSenderId = message.sender_character_id;
         currentSenderName = message.sender_character_name || 'Unknown Character';
         currentSenderUsername = message.sender_username;
-        currentSenderAvatar = message.sender_avatar_url;
+        currentSenderAvatar = message.sender_avatar_url ?? null;
       }
       // Same sender, same date - add to current group
       else {

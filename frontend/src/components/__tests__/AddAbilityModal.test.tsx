@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent as _fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AddAbilityModal } from '../AddAbilityModal';
 
@@ -50,7 +50,7 @@ describe('AddAbilityModal', () => {
 
   describe('Form Input', () => {
     it('allows entering ability name', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const nameInput = screen.getByLabelText(/Ability Name/);
@@ -60,7 +60,7 @@ describe('AddAbilityModal', () => {
     });
 
     it('allows selecting "innate" type', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const typeSelect = screen.getByLabelText(/Type/);
@@ -70,7 +70,7 @@ describe('AddAbilityModal', () => {
     });
 
     it('allows selecting "learned" type', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const typeSelect = screen.getByLabelText(/Type/);
@@ -82,7 +82,7 @@ describe('AddAbilityModal', () => {
     });
 
     it('allows entering description', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const descInput = screen.getByLabelText(/Description/);
@@ -95,7 +95,7 @@ describe('AddAbilityModal', () => {
   describe('Form Submission', () => {
     it('calls onAdd with complete ability data', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Ability Name/), 'Fireball');
@@ -114,7 +114,7 @@ describe('AddAbilityModal', () => {
 
     it('calls onAdd with innate type', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Ability Name/), 'Dragon Breath');
@@ -133,7 +133,7 @@ describe('AddAbilityModal', () => {
 
     it('calls onAdd with only required fields', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Ability Name/), 'Simple Ability');
@@ -150,7 +150,7 @@ describe('AddAbilityModal', () => {
 
     it('trims whitespace from name', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Ability Name/), '  Fireball  ');
@@ -163,7 +163,7 @@ describe('AddAbilityModal', () => {
 
     it('trims whitespace from description', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Ability Name/), 'Ability');
@@ -177,7 +177,7 @@ describe('AddAbilityModal', () => {
 
     it('sets empty description to undefined', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Ability Name/), 'Ability');
@@ -191,7 +191,7 @@ describe('AddAbilityModal', () => {
 
     it('does not call onAdd when name is empty', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.click(screen.getByText('Add Ability'));
@@ -201,7 +201,7 @@ describe('AddAbilityModal', () => {
 
     it('does not call onAdd when name is only whitespace', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Ability Name/), '   ');
@@ -212,7 +212,7 @@ describe('AddAbilityModal', () => {
 
     it('sets active to true by default', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Ability Name/), 'Ability');
@@ -227,7 +227,7 @@ describe('AddAbilityModal', () => {
   describe('Cancel Functionality', () => {
     it('calls onCancel when cancel button clicked', async () => {
       const onCancel = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={vi.fn()} onCancel={onCancel} />);
 
       await user.click(screen.getByText('Cancel'));
@@ -237,7 +237,7 @@ describe('AddAbilityModal', () => {
 
     it('does not call onAdd when cancelled', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddAbilityModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Ability Name/), 'Ability');

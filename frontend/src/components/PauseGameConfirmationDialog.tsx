@@ -31,7 +31,7 @@ export function PauseGameConfirmationDialog({
       setIsSubmitting(true);
       await onConfirm();
       onClose();
-    } catch (_error) {
+    } catch (error) {
       // Error handling is done by the parent component
       logger.error('Failed to pause game', { error, gameTitle });
     } finally {

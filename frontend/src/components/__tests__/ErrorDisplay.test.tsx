@@ -28,7 +28,7 @@ describe('ErrorDisplay', () => {
   })
 
   it('renders nothing when error is null', () => {
-    const { container: _container } = render(<ErrorDisplay error={null} />)
+    const { container } = render(<ErrorDisplay error={null} />)
     expect(container).toBeEmptyDOMElement()
   })
 
@@ -253,7 +253,7 @@ describe('ErrorDisplay', () => {
         context: {},
       }
 
-      const { container: _container } = render(<ErrorDisplay error={error} className="my-custom-class" />)
+      render(<ErrorDisplay error={error} className="my-custom-class" />)
 
       // Alert component handles styling internally via variant prop
     })
@@ -262,12 +262,12 @@ describe('ErrorDisplay', () => {
 
 describe('InlineError', () => {
   it('renders nothing when error is null', () => {
-    const { container: _container } = render(<InlineError error={null} />)
+    const { container } = render(<InlineError error={null} />)
     expect(container).toBeEmptyDOMElement()
   })
 
   it('renders nothing when error is undefined', () => {
-    const { container: _container } = render(<InlineError />)
+    const { container } = render(<InlineError />)
     expect(container).toBeEmptyDOMElement()
   })
 
@@ -302,7 +302,7 @@ describe('ErrorToast', () => {
   })
 
   it('renders nothing when error is null', () => {
-    const { container: _container} = render(<ErrorToast error={null} onClose={mockOnClose} />)
+    const { container } = render(<ErrorToast error={null} onClose={mockOnClose} />)
     expect(container).toBeEmptyDOMElement()
   })
 
@@ -384,7 +384,7 @@ describe('ErrorToast', () => {
       context: { severity: ErrorSeverity.LOW },
     }
 
-    const { container: _container } = render(<ErrorToast error={error} onClose={mockOnClose} />)
+    const { container } = render(<ErrorToast error={error} onClose={mockOnClose} />)
 
     const toastContainer = container.querySelector('.bg-semantic-warning')
     expect(toastContainer).toBeInTheDocument()
@@ -397,7 +397,7 @@ describe('ErrorToast', () => {
       context: { severity: ErrorSeverity.CRITICAL },
     }
 
-    const { container: _container } = render(<ErrorToast error={error} onClose={mockOnClose} />)
+    const { container } = render(<ErrorToast error={error} onClose={mockOnClose} />)
 
     const toastContainer = container.querySelector('.bg-semantic-danger')
     expect(toastContainer).toBeInTheDocument()

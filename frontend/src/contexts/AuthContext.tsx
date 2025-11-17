@@ -53,7 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const response = await apiClient.auth.getCurrentUser();
         logger.debug('Authentication successful', { userId: response.data.id, username: response.data.username });
         return response.data;
-      } catch (_error) {
+      } catch (error) {
         logger.debug('Not authenticated');
         throw error;
       }
@@ -166,7 +166,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Call backend to invalidate session/clear cookie
       await apiClient.auth.logout();
       logger.debug('Backend logout successful');
-    } catch (_error) {
+    } catch (error) {
       // Log error but continue with frontend logout
       logger.error('Backend logout failed', { error });
     } finally {

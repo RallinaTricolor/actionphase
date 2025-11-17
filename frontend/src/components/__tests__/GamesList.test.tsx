@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import { renderWithProviders } from '../../test-utils'
 import type { useAuth } from '../../contexts/AuthContext'
 import { GamesList } from '../GamesList'

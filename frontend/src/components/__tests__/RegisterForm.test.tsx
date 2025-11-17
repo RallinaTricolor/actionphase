@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor as _waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse as _HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { RegisterForm } from '../RegisterForm';
@@ -78,7 +78,7 @@ describe('RegisterForm', () => {
 
   describe('Form Input', () => {
     it('updates username field when user types', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       renderWithProviders(<RegisterForm />);
 
       const usernameInput = screen.getByLabelText(/username/i);
@@ -88,7 +88,7 @@ describe('RegisterForm', () => {
     });
 
     it('updates email field when user types', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       renderWithProviders(<RegisterForm />);
 
       const emailInput = screen.getByLabelText(/email/i);
@@ -98,7 +98,7 @@ describe('RegisterForm', () => {
     });
 
     it('updates password field when user types', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       renderWithProviders(<RegisterForm />);
 
       const passwordInput = screen.getByLabelText(/^password$/i);
@@ -108,7 +108,7 @@ describe('RegisterForm', () => {
     });
 
     it('updates all fields independently', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       renderWithProviders(<RegisterForm />);
 
       await user.type(screen.getByLabelText(/username/i), 'john');
@@ -140,7 +140,7 @@ describe('RegisterForm', () => {
     });
 
     it('submits form with all fields filled', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onSuccess = vi.fn();
 
       renderWithProviders(<RegisterForm onSuccess={onSuccess} />);
@@ -158,7 +158,7 @@ describe('RegisterForm', () => {
     });
 
     it('shows loading state while submitting', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       // Delay the response to see loading state
       server.use(
@@ -196,7 +196,7 @@ describe('RegisterForm', () => {
     });
 
     it('disables submit button while submitting', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(<RegisterForm />);
 
@@ -216,7 +216,7 @@ describe('RegisterForm', () => {
     });
 
     it('calls onSuccess callback when registration succeeds', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onSuccess = vi.fn();
 
       renderWithProviders(<RegisterForm onSuccess={onSuccess} />);
@@ -234,7 +234,7 @@ describe('RegisterForm', () => {
     });
 
     it('does not call onSuccess when callback is not provided', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(<RegisterForm />);
 
@@ -266,7 +266,7 @@ describe('RegisterForm', () => {
     });
 
     it('only shows errors after form submission', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/auth/register', () => {
@@ -297,7 +297,7 @@ describe('RegisterForm', () => {
     });
 
     it('displays error message when registration fails', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/auth/register', () => {
@@ -324,7 +324,7 @@ describe('RegisterForm', () => {
     });
 
     it('displays generic error for network failures', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/auth/register', () => {
@@ -348,7 +348,7 @@ describe('RegisterForm', () => {
     });
 
     it('re-enables submit button after error', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/auth/register', () => {
@@ -379,7 +379,7 @@ describe('RegisterForm', () => {
     });
 
     it('does not call onSuccess when registration fails', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onSuccess = vi.fn();
 
       server.use(
@@ -412,7 +412,7 @@ describe('RegisterForm', () => {
 
   describe('Password Confirmation', () => {
     it('shows error when passwords do not match', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(<RegisterForm />);
 
@@ -431,7 +431,7 @@ describe('RegisterForm', () => {
     });
 
     it('does not show error when passwords match', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(<RegisterForm />);
 
@@ -448,7 +448,7 @@ describe('RegisterForm', () => {
     });
 
     it('shows inline error on confirm password field when typing mismatched password', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(<RegisterForm />);
 
@@ -471,7 +471,7 @@ describe('RegisterForm', () => {
     });
 
     it('prevents form submission when passwords do not match', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onSuccess = vi.fn();
 
       renderWithProviders(<RegisterForm onSuccess={onSuccess} />);

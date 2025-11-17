@@ -30,7 +30,7 @@ export function ProfileSection() {
       showToast('Bio updated successfully', 'success');
     },
     onError: (error: unknown) => {
-      const message = error.response?.data?.message || 'Failed to update bio';
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to update bio';
       showToast(message, 'danger');
     },
   });
@@ -47,7 +47,7 @@ export function ProfileSection() {
       showToast('Avatar uploaded successfully', 'success');
     },
     onError: (error: unknown) => {
-      const message = error.response?.data?.message || 'Failed to upload avatar';
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to upload avatar';
       showToast(message, 'danger');
     },
   });
@@ -62,7 +62,7 @@ export function ProfileSection() {
       showToast('Avatar deleted successfully', 'success');
     },
     onError: (error: unknown) => {
-      const message = error.response?.data?.message || 'Failed to delete avatar';
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete avatar';
       showToast(message, 'danger');
     },
   });

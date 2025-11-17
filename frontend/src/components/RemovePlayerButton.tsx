@@ -27,7 +27,7 @@ export function RemovePlayerButton({ gameId, participant, onSuccess }: RemovePla
       await removePlayer.mutateAsync(participant.user_id);
       setShowConfirm(false);
       onSuccess?.();
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to remove player', { error, gameId, userId: participant.user_id, username: participant.username });
     }
   };

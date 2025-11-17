@@ -106,7 +106,7 @@ describe('ActivityTabs', () => {
     });
 
     it('switches to activity tab when clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
 
@@ -120,7 +120,7 @@ describe('ActivityTabs', () => {
     });
 
     it('applies active styling to activity tab when clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
 
@@ -139,7 +139,7 @@ describe('ActivityTabs', () => {
     });
 
     it('can toggle between tabs multiple times', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
 
@@ -200,7 +200,7 @@ describe('ActivityTabs', () => {
 
   describe('with no deadlines or messages', () => {
     it('renders nothing when both are empty', () => {
-      const { container: _container } = render(<ActivityTabs deadlines={[]} messages={[]} />);
+      const { container } = render(<ActivityTabs deadlines={[]} messages={[]} />);
 
       // Component should render null
       expect(container.firstChild).toBeNull();
@@ -209,7 +209,7 @@ describe('ActivityTabs', () => {
 
   describe('UI structure', () => {
     it('has correct card container styling', () => {
-      const { container: _container } = render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
+      const { container } = render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
 
       // Check for card container classes
       const cardContainer = container.querySelector('.surface-base');
@@ -219,7 +219,7 @@ describe('ActivityTabs', () => {
     });
 
     it('has border between tab headers and content', () => {
-      const { container: _container } = render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
+      const { container } = render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
 
       // Check for border classes on tab header container
       const tabHeaderContainer = container.querySelector('.border-b');
@@ -228,7 +228,7 @@ describe('ActivityTabs', () => {
     });
 
     it('wraps tab content in padding container', () => {
-      const { container: _container } = render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
+      const { container } = render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
 
       // Check for padding on content wrapper
       const contentWrapper = container.querySelector('.p-6');
@@ -282,7 +282,7 @@ describe('ActivityTabs', () => {
 
   describe('responsive behavior', () => {
     it('maintains tab state when switching between tabs', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
 

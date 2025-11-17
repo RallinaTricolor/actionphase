@@ -208,7 +208,7 @@ describe('ProtectedRoute', () => {
     })
 
     it('should handle empty children', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <MemoryRouter initialEntries={['/dashboard']}>
           <ProtectedRoute>
             <></>
@@ -221,7 +221,7 @@ describe('ProtectedRoute', () => {
     })
 
     it('should handle null children gracefully', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <MemoryRouter initialEntries={['/dashboard']}>
           <ProtectedRoute>
             {null}

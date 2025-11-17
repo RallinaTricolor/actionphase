@@ -26,7 +26,7 @@ export function ChangeUsernameForm() {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
     },
     onError: (error: unknown) => {
-      const message = error.response?.data?.error || 'Failed to change username';
+      const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to change username';
       setError(message);
       showToast(message, 'danger');
     },

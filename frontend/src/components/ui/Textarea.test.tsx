@@ -120,7 +120,7 @@ describe('Textarea Component', () => {
     });
 
     it('prevents typing beyond maxLength', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const handleChange = vi.fn();
 
       render(

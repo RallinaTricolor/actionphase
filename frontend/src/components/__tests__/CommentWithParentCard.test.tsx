@@ -113,7 +113,7 @@ describe('CommentWithParentCard', () => {
   });
 
   it('calls onNavigateToComment when "View in thread" button is clicked', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     const mockNavigate = vi.fn();
 
     render(
@@ -130,7 +130,7 @@ describe('CommentWithParentCard', () => {
   });
 
   it('passes onNavigateToParent to ParentCommentPreview', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     const mockNavigate = vi.fn();
 
     render(
@@ -170,7 +170,7 @@ describe('CommentWithParentCard', () => {
   });
 
   it('applies hover shadow effect class', () => {
-    const { container: _container } = render(<CommentWithParentCard comment={mockComment} />);
+    const { container } = render(<CommentWithParentCard comment={mockComment} />);
 
     const card = container.querySelector('.hover\\:shadow-md');
     expect(card).toBeInTheDocument();

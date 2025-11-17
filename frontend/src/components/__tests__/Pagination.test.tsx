@@ -49,7 +49,7 @@ describe('Pagination', () => {
   });
 
   it('calls onPageChange when clicking Next button', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     const onPageChange = vi.fn();
     render(<Pagination {...defaultProps} onPageChange={onPageChange} />);
 
@@ -60,7 +60,7 @@ describe('Pagination', () => {
   });
 
   it('calls onPageChange when clicking Previous button', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     const onPageChange = vi.fn();
     render(<Pagination {...defaultProps} currentPage={3} hasPreviousPage={true} onPageChange={onPageChange} />);
 
@@ -87,7 +87,7 @@ describe('Pagination', () => {
   });
 
   it('calls onPageChange when clicking a page number', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     const onPageChange = vi.fn();
     render(<Pagination {...defaultProps} onPageChange={onPageChange} />);
 
@@ -104,7 +104,7 @@ describe('Pagination', () => {
   });
 
   it('calls onPageSizeChange when changing page size', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     const onPageSizeChange = vi.fn();
     render(<Pagination {...defaultProps} onPageSizeChange={onPageSizeChange} />);
 

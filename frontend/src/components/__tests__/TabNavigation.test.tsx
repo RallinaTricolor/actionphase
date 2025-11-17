@@ -50,7 +50,7 @@ describe('TabNavigation', () => {
     });
 
     it('displays icons for tabs that have them', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <TabNavigation
           tabs={mockTabs}
           activeTab="tab1"
@@ -64,7 +64,7 @@ describe('TabNavigation', () => {
     });
 
     it('applies active styling to the current tab', () => {
-      const { container: _container } = render(
+      render(
         <TabNavigation
           tabs={mockTabs}
           activeTab="tab2"
@@ -104,7 +104,7 @@ describe('TabNavigation', () => {
     });
 
     it('calls onTabChange when a tab is clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <TabNavigation
@@ -200,7 +200,7 @@ describe('TabNavigation', () => {
     });
 
     it('calls onTabChange when dropdown selection changes', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <TabNavigation
@@ -236,7 +236,7 @@ describe('TabNavigation', () => {
 
   describe('Responsive Behavior', () => {
     it('applies correct responsive classes for mobile dropdown', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <TabNavigation
           tabs={mockTabs}
           activeTab="tab1"
@@ -250,7 +250,7 @@ describe('TabNavigation', () => {
     });
 
     it('applies correct responsive classes for desktop tabs', () => {
-      const { container: _container } = render(
+      render(
         <TabNavigation
           tabs={mockTabs}
           activeTab="tab1"

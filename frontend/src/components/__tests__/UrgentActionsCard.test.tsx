@@ -39,13 +39,13 @@ describe('UrgentActionsCard', () => {
       { ...baseGame, game_id: 2, is_urgent: false },
     ];
 
-    const { container: _container } = renderWithProviders(<UrgentActionsCard games={nonUrgentGames} />);
+    const { container } = renderWithProviders(<UrgentActionsCard games={nonUrgentGames} />);
 
     expect(container.firstChild).toBeNull();
   });
 
   it('returns null when games array is empty', () => {
-    const { container: _container } = renderWithProviders(<UrgentActionsCard games={[]} />);
+    const { container } = renderWithProviders(<UrgentActionsCard games={[]} />);
 
     expect(container.firstChild).toBeNull();
   });
@@ -286,7 +286,7 @@ describe('UrgentActionsCard', () => {
       },
     ];
 
-    const { container: _container } = renderWithProviders(<UrgentActionsCard games={urgentGames} />);
+    const { container } = renderWithProviders(<UrgentActionsCard games={urgentGames} />);
 
     // Clock icon should not be present
     expect(container.innerHTML).not.toContain('Clock');

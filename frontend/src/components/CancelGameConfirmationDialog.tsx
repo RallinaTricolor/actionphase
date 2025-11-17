@@ -31,7 +31,7 @@ export function CancelGameConfirmationDialog({
       setIsSubmitting(true);
       await onConfirm();
       onClose();
-    } catch (_error) {
+    } catch (error) {
       // Error handling is done by the parent component
       logger.error('Failed to cancel game', { error, gameTitle });
     } finally {

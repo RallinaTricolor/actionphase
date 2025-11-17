@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, fireEvent as _fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils/render';
 import { CreatePhaseModal } from './CreatePhaseModal';
 import * as timezoneUtils from '../utils/timezone';

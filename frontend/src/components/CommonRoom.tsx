@@ -64,10 +64,6 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
   // Fetch previous phase results (if applicable)
   const previousPhaseResults = usePreviousPhaseResults(gameId, currentPhase, isGM);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
   // Sync activeTab state with URL parameter
   useEffect(() => {
     const currentView = searchParams.get('view') as 'posts' | 'newComments' | 'polls' | null;
@@ -152,7 +148,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
             newParams.delete('comment');
             setSearchParams(newParams, { replace: true });
           } catch (_err) {
-            logger.error('Failed to fetch comment for modal', { error: err, commentId: commentIdParam, gameId });
+            logger.error('Failed to fetch comment for modal', { error: _err, commentId: commentIdParam, gameId });
             // If fetch fails, clear the comment parameter and show error
             const newParams = new URLSearchParams(searchParams);
             newParams.delete('comment');
@@ -191,6 +187,11 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     }
   }, [gameId, phaseId]);
 
+  // Load data when component mounts or dependencies change
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   const handleCreatePost = async (characterId: number, content: string) => {
     try {
       setIsCreatingPost(true);
@@ -202,7 +203,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       // Reload posts to show the new one
       await loadData();
     } catch (_err) {
-      logger.error('Failed to create post', { error: err, gameId, characterId, phaseId });
+      logger.error('Failed to create post', { error: _err, gameId, characterId, phaseId });
       throw new Error('Failed to create post. Please try again.');
     } finally {
       setIsCreatingPost(false);
@@ -218,7 +219,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       // Don't reload all posts - let the individual PostCard/ThreadedComment handle the update
       // This prevents jarring full-page reloads when commenting deep in a thread
     } catch (_err) {
-      logger.error('Failed to create comment', { error: err, gameId, postId, characterId });
+      logger.error('Failed to create comment', { error: _err, gameId, postId, characterId });
       throw new Error('Failed to create comment. Please try again.');
     }
   };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent as _fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DeadlineCard } from './DeadlineCard';
 import type { UnifiedDeadline } from '../types/deadlines';
@@ -33,14 +33,14 @@ describe('DeadlineCard', () => {
     it('shows full title in tooltip via title attribute', () => {
       const longTitle = 'This is a very long title that should be truncated';
       const deadline = { ...mockDeadline, title: longTitle };
-      const { container: _container } = render(<DeadlineCard deadline={deadline} isGM={false} />);
+      const { container } = render(<DeadlineCard deadline={deadline} isGM={false} />);
 
       const titleElement = container.querySelector('[title]');
       expect(titleElement).toHaveAttribute('title', longTitle);
     });
 
     it('does not display emoji icon', () => {
-      const { container: _container } = render(<DeadlineCard deadline={mockDeadline} isGM={false} />);
+      const { container } = render(<DeadlineCard deadline={mockDeadline} isGM={false} />);
 
       // Check that there's no large emoji (text-xl class)
       const emojiElements = container.querySelectorAll('.text-xl');
@@ -81,7 +81,7 @@ describe('DeadlineCard', () => {
     });
 
     it('shows description in tooltip on hover', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<DeadlineCard deadline={mockDeadline} isGM={false} />);
 
       const infoIcon = screen.getByLabelText('View description');
@@ -94,7 +94,7 @@ describe('DeadlineCard', () => {
     });
 
     it('preserves line breaks in description', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const multilineDescription = 'Line 1\nLine 2\nLine 3';
       const deadline = { ...mockDeadline, description: multilineDescription };
       render(<DeadlineCard deadline={deadline} isGM={false} />);
@@ -110,7 +110,7 @@ describe('DeadlineCard', () => {
 
   describe('Card Dimensions', () => {
     it('has correct width classes (220px max)', () => {
-      const { container: _container } = render(<DeadlineCard deadline={mockDeadline} isGM={false} />);
+      const { container } = render(<DeadlineCard deadline={mockDeadline} isGM={false} />);
 
       const card = container.firstChild as HTMLElement;
       expect(card).toHaveClass('max-w-[220px]');
@@ -122,7 +122,7 @@ describe('DeadlineCard', () => {
     it('shows critical urgency for deadlines < 24 hours away', () => {
       const soon = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(); // 12 hours
       const deadline = { ...mockDeadline, deadline: soon };
-      const { container: _container } = render(<DeadlineCard deadline={deadline} isGM={false} />);
+      const { container } = render(<DeadlineCard deadline={deadline} isGM={false} />);
 
       const card = container.firstChild as HTMLElement;
       expect(card).toHaveClass('border-semantic-danger');
@@ -131,7 +131,7 @@ describe('DeadlineCard', () => {
     it('shows warning urgency for deadlines 24-48 hours away', () => {
       const warning = new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(); // 36 hours
       const deadline = { ...mockDeadline, deadline: warning };
-      const { container: _container } = render(<DeadlineCard deadline={deadline} isGM={false} />);
+      const { container } = render(<DeadlineCard deadline={deadline} isGM={false} />);
 
       const card = container.firstChild as HTMLElement;
       expect(card).toHaveClass('border-semantic-warning');
@@ -140,7 +140,7 @@ describe('DeadlineCard', () => {
     it('shows normal urgency for deadlines > 48 hours away', () => {
       const normal = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(); // 72 hours
       const deadline = { ...mockDeadline, deadline: normal };
-      const { container: _container } = render(<DeadlineCard deadline={deadline} isGM={false} />);
+      const { container } = render(<DeadlineCard deadline={deadline} isGM={false} />);
 
       const card = container.firstChild as HTMLElement;
       expect(card).toHaveClass('border-interactive-primary');
@@ -149,7 +149,7 @@ describe('DeadlineCard', () => {
     it('shows expired urgency for past deadlines', () => {
       const expired = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(); // 24 hours ago
       const deadline = { ...mockDeadline, deadline: expired };
-      const { container: _container } = render(<DeadlineCard deadline={deadline} isGM={false} />);
+      const { container } = render(<DeadlineCard deadline={deadline} isGM={false} />);
 
       const card = container.firstChild as HTMLElement;
       expect(card).toHaveClass('border-border-secondary');
@@ -158,9 +158,9 @@ describe('DeadlineCard', () => {
 
   describe('GM Actions', () => {
     it('shows edit button on hover for GM', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onEdit = vi.fn();
-      const { container: _container } = render(
+      const { container } = render(
         <DeadlineCard deadline={mockDeadline} isGM={true} onEdit={onEdit} />
       );
 
@@ -172,9 +172,9 @@ describe('DeadlineCard', () => {
     });
 
     it('does not show GM actions for non-GM users', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onEdit = vi.fn();
-      const { container: _container } = render(
+      const { container } = render(
         <DeadlineCard deadline={mockDeadline} isGM={false} onEdit={onEdit} />
       );
 
@@ -186,9 +186,9 @@ describe('DeadlineCard', () => {
     });
 
     it('calls onEdit when edit button clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onEdit = vi.fn();
-      const { container: _container } = render(
+      const { container } = render(
         <DeadlineCard deadline={mockDeadline} isGM={true} onEdit={onEdit} />
       );
 
@@ -206,9 +206,9 @@ describe('DeadlineCard', () => {
     });
 
     it('calls onDelete when delete button clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onDelete = vi.fn();
-      const { container: _container } = render(
+      const { container } = render(
         <DeadlineCard deadline={mockDeadline} isGM={true} onDelete={onDelete} />
       );
 
@@ -247,9 +247,9 @@ describe('DeadlineCard', () => {
 
   describe('Clickable Behavior', () => {
     it('calls onClick when card is clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onClick = vi.fn();
-      const { container: _container } = render(
+      const { container } = render(
         <DeadlineCard deadline={mockDeadline} isGM={false} onClick={onClick} />
       );
 
@@ -261,7 +261,7 @@ describe('DeadlineCard', () => {
 
     it('has cursor-pointer class when onClick is provided', () => {
       const onClick = vi.fn();
-      const { container: _container } = render(
+      const { container } = render(
         <DeadlineCard deadline={mockDeadline} isGM={false} onClick={onClick} />
       );
 
@@ -270,7 +270,7 @@ describe('DeadlineCard', () => {
     });
 
     it('does not have cursor-pointer class when onClick is not provided', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <DeadlineCard deadline={mockDeadline} isGM={false} />
       );
 

@@ -127,7 +127,7 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
       setIsAdding(false);
       setError(null);
     } catch (_err) {
-      logger.error(`Failed to add ${getSingularModuleType(moduleType)}`, { error: err, gameId, actionResultId, characterId, moduleType });
+      logger.error(`Failed to add ${getSingularModuleType(moduleType)}`, { error: _err, gameId, actionResultId, characterId, moduleType });
       setError(`Failed to add ${getSingularModuleType(moduleType)}. Please try again.`);
     }
   };
@@ -170,7 +170,7 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
       setIsAdding(false);
       setError(null);
     } catch (_err) {
-      logger.error(`Failed to add ${getSingularModuleType(moduleType)}`, { error: err, gameId, actionResultId, characterId, moduleType, fieldName: formData.fieldName });
+      logger.error(`Failed to add ${getSingularModuleType(moduleType)}`, { error: _err, gameId, actionResultId, characterId, moduleType, fieldName: formData.fieldName });
       setError(`Failed to add ${getSingularModuleType(moduleType)}. Please try again.`);
     }
   };
@@ -186,7 +186,8 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
   };
 
   const renderFormField = (field: FormField) => {
-    const value = formData[field.name] || '';
+    const fieldValue = formData[field.name];
+    const value = (typeof fieldValue === 'string' || typeof fieldValue === 'number') ? fieldValue : '';
     const commonProps = {
       label: field.label,
       placeholder: field.placeholder,

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor as _waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse as _HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import type { Character, CharacterData } from '../../types/characters';
@@ -138,7 +138,7 @@ describe('CharacterSheet', () => {
     });
 
     it('enters edit mode', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       renderWithProviders(<CharacterSheet characterId={1} canEdit={true} />);
 
       await waitFor(() => {
@@ -150,7 +150,7 @@ describe('CharacterSheet', () => {
     });
 
     it('saves field data', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       let savedData: unknown;
 
       server.use(

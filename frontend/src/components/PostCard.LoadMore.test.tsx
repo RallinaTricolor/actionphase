@@ -205,7 +205,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should load more comments when "Load More" button is clicked', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
 
     // Arrange: Initial load returns 200 comments
     const initialComments = Array.from({ length: 200 }, (_, i) => createMockComment(i + 1));
@@ -266,7 +266,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should show loading state while loading more comments', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
 
     // Arrange: Initial load
     const initialComments = Array.from({ length: 200 }, (_, i) => createMockComment(i + 1));
@@ -326,7 +326,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should append new comments to existing tree when loading more', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
 
     // Arrange: Initial 3 comments
     const initialComments = [
@@ -389,7 +389,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should preserve nested comment structure when loading more', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
 
     // Arrange: Top-level comment with nested replies
     const initialComments = [

@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
-import { screen, waitFor as _waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse as _HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { renderWithProviders, createTestQueryClient as _createTestQueryClient } from '../test-utils';
+import { renderWithProviders, createTestQueryClient } from '../test-utils';
 import NotificationDropdown from './NotificationDropdown';
 import type { Notification } from '../types/notifications';
 import type { QueryClient } from '@tanstack/react-query';
@@ -205,7 +205,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
@@ -236,7 +236,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
@@ -266,7 +266,7 @@ describe('NotificationDropdown', () => {
     );
 
     const mockOnClose = vi.fn();
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
 
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={mockOnClose} />);
 
@@ -294,7 +294,7 @@ describe('NotificationDropdown', () => {
     );
 
     const mockOnClose = vi.fn();
-    const { container: _container } = renderWithProviders(
+    renderWithProviders(
       <div>
         <div data-testid="outside-element">Outside</div>
         <NotificationDropdown isOpen={true} onClose={mockOnClose} />
@@ -365,7 +365,7 @@ describe('NotificationDropdown', () => {
     );
 
     const mockOnClose = vi.fn();
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
 
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={mockOnClose} />);
 

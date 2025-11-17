@@ -48,7 +48,7 @@ export function AddPlayerModal({ gameId, isOpen, onClose, onSuccess }: AddPlayer
         const response = await apiClient.auth.searchUsers(searchQuery);
         setSearchResults(response.data.users);
         setShowDropdown(true);
-      } catch (_error) {
+      } catch (error) {
         logger.error('Failed to search users', { error, searchQuery });
         setSearchResults([]);
       } finally {
@@ -90,7 +90,7 @@ export function AddPlayerModal({ gameId, isOpen, onClose, onSuccess }: AddPlayer
       setSelectedUser(null);
       onClose();
       onSuccess?.();
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to add player', { error, gameId, userId: selectedUser.id, username: selectedUser.username });
     }
   };

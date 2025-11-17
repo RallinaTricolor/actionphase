@@ -4,6 +4,7 @@ import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { GamesListPage } from '../pages/GamesListPage';
 import { GameSettingsPage } from '../pages/GameSettingsPage';
 import { navigateToGamesList } from '../utils/navigation';
+import { assertTextVisible } from '../utils/assertions';
 
 /**
  * Journey 2: GM Creates Game & Recruits Players

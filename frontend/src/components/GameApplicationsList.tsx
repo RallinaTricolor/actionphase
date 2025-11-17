@@ -41,7 +41,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState, refreshT
     try {
       await apiClient.games.reviewGameApplication(gameId, applicationId, { action: 'approve' });
       await fetchApplications(); // Refresh the list
-    } catch (_error) {
+    } catch (error) {
       showError(error instanceof Error ? error.message : 'Failed to approve application');
     }
   };
@@ -50,7 +50,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState, refreshT
     try {
       await apiClient.games.reviewGameApplication(gameId, applicationId, { action: 'reject' });
       await fetchApplications(); // Refresh the list
-    } catch (_error) {
+    } catch (error) {
       showError(error instanceof Error ? error.message : 'Failed to reject application');
     }
   };

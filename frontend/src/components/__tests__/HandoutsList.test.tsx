@@ -183,7 +183,7 @@ describe('HandoutsList', () => {
 
   describe('Create Handout Modal', () => {
     it('opens create modal when Create Handout button clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -195,7 +195,7 @@ describe('HandoutsList', () => {
     });
 
     it('closes create modal when onClose called', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -213,7 +213,7 @@ describe('HandoutsList', () => {
     });
 
     it('calls createHandoutMutation when handout created', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({ id: 4 });
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -244,7 +244,7 @@ describe('HandoutsList', () => {
     });
 
     it('closes modal after successful creation', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({ id: 4 });
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -270,7 +270,7 @@ describe('HandoutsList', () => {
     });
 
     it('shows error alert when creation fails', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockRejectedValue(new Error('Failed to create'));
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -299,7 +299,7 @@ describe('HandoutsList', () => {
 
   describe('Edit Handout Modal', () => {
     it('opens edit modal when handout edited', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -313,7 +313,7 @@ describe('HandoutsList', () => {
     });
 
     it('calls updateHandoutMutation when handout updated', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({});
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -342,7 +342,7 @@ describe('HandoutsList', () => {
     });
 
     it('closes modal after successful update', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({});
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -363,7 +363,7 @@ describe('HandoutsList', () => {
 
   describe('View Handout', () => {
     it('switches to view mode when handout viewed', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -377,7 +377,7 @@ describe('HandoutsList', () => {
     });
 
     it('returns to list view when back button clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -396,7 +396,7 @@ describe('HandoutsList', () => {
     });
 
     it('switches from view to edit mode when edit clicked in view', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -418,7 +418,7 @@ describe('HandoutsList', () => {
 
   describe('Delete Handout', () => {
     it('calls deleteHandoutMutation when delete clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({});
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -433,7 +433,7 @@ describe('HandoutsList', () => {
     });
 
     it('shows error alert when deletion fails', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockRejectedValue(new Error('Failed to delete'));
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -451,7 +451,7 @@ describe('HandoutsList', () => {
 
   describe('Publish/Unpublish Handout', () => {
     it('calls publishHandoutMutation when publish clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({});
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -466,7 +466,7 @@ describe('HandoutsList', () => {
     });
 
     it('calls unpublishHandoutMutation when unpublish clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({});
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -481,7 +481,7 @@ describe('HandoutsList', () => {
     });
 
     it('shows error alert when publish fails', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockRejectedValue(new Error('Failed to publish'));
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -497,7 +497,7 @@ describe('HandoutsList', () => {
     });
 
     it('shows error alert when unpublish fails', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockRejectedValue(new Error('Failed to unpublish'));
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
@@ -515,7 +515,7 @@ describe('HandoutsList', () => {
 
   describe('Integration', () => {
     it('handles complete handout management workflow', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       mockMutateAsync.mockResolvedValue({ id: 4 });
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);

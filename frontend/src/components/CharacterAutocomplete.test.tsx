@@ -32,7 +32,7 @@ describe('CharacterAutocomplete', () => {
     });
 
     it('renders at specified position', () => {
-      const { container: _container } = render(<CharacterAutocomplete {...defaultProps} />);
+      const { container } = render(<CharacterAutocomplete {...defaultProps} />);
       const listbox = container.querySelector('[role="listbox"]');
 
       expect(listbox).toHaveStyle({ top: '100px', left: '50px' });
@@ -99,7 +99,7 @@ describe('CharacterAutocomplete', () => {
 
   describe('Selection', () => {
     it('highlights selected item', () => {
-      const { rerender: _rerender } = render(<CharacterAutocomplete {...defaultProps} selectedIndex={0} />);
+      const { rerender } = render(<CharacterAutocomplete {...defaultProps} selectedIndex={0} />);
 
       const aragornOption = screen.getByRole('option', { name: /Aragorn/i });
       expect(aragornOption).toHaveClass('bg-interactive-primary-subtle');
@@ -113,7 +113,7 @@ describe('CharacterAutocomplete', () => {
     });
 
     it('calls onSelect when character is clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onSelect = vi.fn();
       render(<CharacterAutocomplete {...defaultProps} onSelect={onSelect} />);
 
@@ -124,7 +124,7 @@ describe('CharacterAutocomplete', () => {
     });
 
     it('calls onSelect with correct character', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onSelect = vi.fn();
       render(<CharacterAutocomplete {...defaultProps} onSelect={onSelect} />);
 
@@ -195,7 +195,7 @@ describe('CharacterAutocomplete', () => {
         name: `Character ${i}`,
       }));
 
-      const { rerender: _rerender } = render(
+      const { rerender } = render(
         <CharacterAutocomplete {...defaultProps} characters={manyCharacters} selectedIndex={0} />
       );
 
@@ -227,14 +227,14 @@ describe('CharacterAutocomplete', () => {
     });
 
     it('renders with minimum width', () => {
-      const { container: _container } = render(<CharacterAutocomplete {...defaultProps} />);
+      const { container } = render(<CharacterAutocomplete {...defaultProps} />);
       const listbox = container.querySelector('[role="listbox"]');
 
       expect(listbox).toHaveStyle({ minWidth: '200px' });
     });
 
     it('renders with scrollable container', () => {
-      const { container: _container } = render(<CharacterAutocomplete {...defaultProps} />);
+      const { container } = render(<CharacterAutocomplete {...defaultProps} />);
       const listbox = container.querySelector('[role="listbox"]');
 
       expect(listbox).toHaveClass('overflow-y-auto');

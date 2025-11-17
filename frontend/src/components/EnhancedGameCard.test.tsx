@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent as _fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { EnhancedGameCard } from './EnhancedGameCard';
 import type { EnrichedGameListItem } from '../types/games';
@@ -162,7 +162,7 @@ describe('EnhancedGameCard', () => {
   describe('Visual Styling', () => {
     it('should have blue border for participant games', () => {
       const participantGame = { ...mockGame, user_relationship: 'participant' as const };
-      const { container: _container } = render(<EnhancedGameCard game={participantGame} />, { wrapper });
+      const { container } = render(<EnhancedGameCard game={participantGame} />, { wrapper });
 
       const card = container.firstChild as HTMLElement;
       expect(card.className).toContain('border-interactive-primary');
@@ -171,7 +171,7 @@ describe('EnhancedGameCard', () => {
 
     it('should have yellow border for applied games', () => {
       const appliedGame = { ...mockGame, user_relationship: 'applied' as const };
-      const { container: _container } = render(<EnhancedGameCard game={appliedGame} />, { wrapper });
+      const { container } = render(<EnhancedGameCard game={appliedGame} />, { wrapper });
 
       const card = container.firstChild as HTMLElement;
       expect(card.className).toContain('border-semantic-warning');
@@ -179,14 +179,14 @@ describe('EnhancedGameCard', () => {
     });
 
     it('should have gray border for non-user games', () => {
-      const { container: _container } = render(<EnhancedGameCard game={mockGame} />, { wrapper });
+      const { container } = render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       const card = container.firstChild as HTMLElement;
       expect(card.className).toContain('border-theme-default');
     });
 
     it('should be clickable when onClick is provided', () => {
-      const { container: _container } = render(<EnhancedGameCard game={mockGame} onClick={vi.fn()} />, { wrapper });
+      const { container } = render(<EnhancedGameCard game={mockGame} onClick={vi.fn()} />, { wrapper });
 
       const card = container.firstChild as HTMLElement;
       // Link elements are always clickable, no need for cursor-pointer class
@@ -341,7 +341,7 @@ describe('EnhancedGameCard', () => {
   describe('Click Interaction', () => {
     it('should call onClick when card is clicked', () => {
       const handleClick = vi.fn();
-      const { container: _container } = render(
+      const { container } = render(
         <EnhancedGameCard game={mockGame} onClick={handleClick} />,
         { wrapper }
       );
@@ -353,7 +353,7 @@ describe('EnhancedGameCard', () => {
     });
 
     it('should not be clickable when onClick is not provided', () => {
-      const { container: _container } = render(<EnhancedGameCard game={mockGame} />, { wrapper });
+      const { container } = render(<EnhancedGameCard game={mockGame} />, { wrapper });
 
       const card = container.firstChild as HTMLElement;
       // Link elements are always clickable by nature

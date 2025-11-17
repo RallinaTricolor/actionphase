@@ -80,8 +80,8 @@ export function CreatePollForm({ gameId, currentPhaseId, onSuccess, onCancel }: 
       await createPollMutation.mutateAsync(request);
       onSuccess();
     } catch (_err) {
-      logger.error('Failed to create poll', { error: err, gameId, question, voteAsType });
-      setError(err instanceof Error ? err.message : 'Failed to create poll');
+      logger.error('Failed to create poll', { error: _err, gameId, question, voteAsType });
+      setError(_err instanceof Error ? _err.message : 'Failed to create poll');
     }
   };
 

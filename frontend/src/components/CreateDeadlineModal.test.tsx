@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, render, fireEvent, waitFor as _waitFor } from '@testing-library/react';
+import { screen, render, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CreateDeadlineModal } from './CreateDeadlineModal';
 
@@ -25,7 +25,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should not render when isOpen is false', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <CreateDeadlineModal
           isOpen={false}
           onClose={mockOnClose}
@@ -88,7 +88,7 @@ describe('CreateDeadlineModal', () => {
 
   describe('User interactions', () => {
     it('should allow typing in title field', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -105,7 +105,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should allow typing in description field', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -146,7 +146,7 @@ describe('CreateDeadlineModal', () => {
 
   describe('Form validation', () => {
     it('should show error when title is empty', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -167,7 +167,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should show error when description is empty', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -191,7 +191,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should show error when deadline is empty', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -218,7 +218,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should show error when title exceeds 200 characters', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -245,7 +245,7 @@ describe('CreateDeadlineModal', () => {
     // Skipped: react-datepicker interactions are complex to test in unit tests
     // This validation is covered by E2E tests
     it.skip('should show error when deadline is in the past', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -279,7 +279,7 @@ describe('CreateDeadlineModal', () => {
     // Skipped: react-datepicker interactions are complex to test in unit tests
     // This validation is covered by E2E tests
     it.skip('should accept title of exactly 200 characters', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -314,7 +314,7 @@ describe('CreateDeadlineModal', () => {
     // Skipped: react-datepicker interactions are complex to test in unit tests
     // This validation is covered by E2E tests
     it.skip('should call onSubmit with correct data when form is valid', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -350,7 +350,7 @@ describe('CreateDeadlineModal', () => {
     // Skipped: react-datepicker interactions are complex to test in unit tests
     // This validation is covered by E2E tests
     it.skip('should trim whitespace from title and description', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -386,7 +386,7 @@ describe('CreateDeadlineModal', () => {
     // Skipped: react-datepicker interactions are complex to test in unit tests
     // This validation is covered by E2E tests
     it.skip('should convert datetime-local to ISO 8601 format', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -430,7 +430,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should call onClose when cancel is clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       render(
         <CreateDeadlineModal
@@ -447,9 +447,9 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should reset form when modal closes', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
-      const { rerender: _rerender } = render(
+      const { rerender } = render(
         <CreateDeadlineModal
           isOpen={true}
           onClose={mockOnClose}

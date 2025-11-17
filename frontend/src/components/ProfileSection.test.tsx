@@ -115,7 +115,7 @@ describe('ProfileSection', () => {
   });
 
   it('allows editing bio text', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     renderWithProviders();
 
     const textarea = screen.getByPlaceholderText(/Tell us about yourself/i);
@@ -134,7 +134,7 @@ describe('ProfileSection', () => {
   });
 
   it('shows Save Bio button when bio is modified', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     renderWithProviders();
 
     const textarea = screen.getByPlaceholderText(/Tell us about yourself/i);

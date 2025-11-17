@@ -24,7 +24,7 @@ export function usePrivateMessagesLayout() {
         setSidebarCollapsed(parsed.sidebarCollapsed || false);
         setSidebarWidth(parsed.sidebarWidth || DEFAULT_WIDTH);
       } catch (_e) {
-        logger.error('Failed to parse saved layout', { error: e });
+        logger.error('Failed to parse saved layout', { error: _e });
       }
     }
   }, []);
