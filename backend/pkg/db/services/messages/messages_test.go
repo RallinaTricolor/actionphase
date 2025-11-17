@@ -798,7 +798,7 @@ func TestMessageService_GetPhasePosts(t *testing.T) {
 	app := core.NewTestApp(testDB.Pool)
 
 	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
-	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 

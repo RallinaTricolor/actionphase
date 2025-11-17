@@ -63,16 +63,21 @@ func TestConversationAPI_CreateConversation(t *testing.T) {
 	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
 
+	// Generate JWT tokens for test users
+	player1Token, err := core.CreateTestJWTTokenForUser(app, player1)
+	core.AssertNoError(t, err, "Should create player1 token")
+	_ = player2 // player2 not needed for auth in this test
+
 	// Create test game
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
 	// Setup services
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
-	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Add players as participants
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
 	core.AssertNoError(t, err, "Should add player1 as participant")
 	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
 	core.AssertNoError(t, err, "Should add player2 as participant")
@@ -117,7 +122,7 @@ func TestConversationAPI_CreateConversation(t *testing.T) {
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations", game.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1))
+		req.Header.Set("Authorization", "Bearer "+player1Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -140,7 +145,7 @@ func TestConversationAPI_CreateConversation(t *testing.T) {
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations", game.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1))
+		req.Header.Set("Authorization", "Bearer "+player1Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -158,7 +163,7 @@ func TestConversationAPI_CreateConversation(t *testing.T) {
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations", game.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1))
+		req.Header.Set("Authorization", "Bearer "+player1Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -200,6 +205,15 @@ func TestConversationAPI_SendMessage(t *testing.T) {
 	player3 := testDB.CreateTestUser(t, "player3", "player3@example.com") // Non-participant
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
 
+	// Generate JWT tokens for test users
+	player1Token, err := core.CreateTestJWTTokenForUser(app, player1)
+	core.AssertNoError(t, err, "Should create player1 token")
+	player2Token, err := core.CreateTestJWTTokenForUser(app, player2)
+	core.AssertNoError(t, err, "Should create player2 token")
+	player3Token, err := core.CreateTestJWTTokenForUser(app, player3)
+	core.AssertNoError(t, err, "Should create player3 token")
+	_ = player2Token // player2Token not needed in this test
+
 	// Create test game
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
@@ -207,10 +221,10 @@ func TestConversationAPI_SendMessage(t *testing.T) {
 	conversationService := db.NewConversationService(testDB.Pool)
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
-	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Add players as participants
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
 	core.AssertNoError(t, err, "Should add player1")
 	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
 	core.AssertNoError(t, err, "Should add player2")
@@ -274,7 +288,7 @@ func TestConversationAPI_SendMessage(t *testing.T) {
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages", game.ID, conversation.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1))
+		req.Header.Set("Authorization", "Bearer "+player1Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -296,7 +310,7 @@ func TestConversationAPI_SendMessage(t *testing.T) {
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages", game.ID, conversation.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player3))
+		req.Header.Set("Authorization", "Bearer "+player3Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -314,7 +328,7 @@ func TestConversationAPI_SendMessage(t *testing.T) {
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages", game.ID, conversation.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1)) // Player 1 trying to use Player 2's character
+		req.Header.Set("Authorization", "Bearer "+player1Token) // Player 1 trying to use Player 2's character
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -332,7 +346,7 @@ func TestConversationAPI_SendMessage(t *testing.T) {
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages", game.ID, conversation.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1))
+		req.Header.Set("Authorization", "Bearer "+player1Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -363,7 +377,7 @@ func TestConversationAPI_SendMessage(t *testing.T) {
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages", game.ID, conversation.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1))
+		req.Header.Set("Authorization", "Bearer "+player1Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -392,6 +406,13 @@ func TestConversationAPI_GetConversationMessages(t *testing.T) {
 	player3 := testDB.CreateTestUser(t, "player3", "player3@example.com") // Non-participant
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
 
+	// Generate JWT tokens for test users
+	player1Token, err := core.CreateTestJWTTokenForUser(app, player1)
+	core.AssertNoError(t, err, "Should create player1 token")
+	player3Token, err := core.CreateTestJWTTokenForUser(app, player3)
+	core.AssertNoError(t, err, "Should create player3 token")
+	_ = player2 // player2 not needed for auth in this test
+
 	// Create test game
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
@@ -401,7 +422,7 @@ func TestConversationAPI_GetConversationMessages(t *testing.T) {
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Add players as participants
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
 	core.AssertNoError(t, err, "Should add player1")
 	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
 	core.AssertNoError(t, err, "Should add player2")
@@ -453,7 +474,7 @@ func TestConversationAPI_GetConversationMessages(t *testing.T) {
 
 	t.Run("successfully retrieves messages as participant", func(t *testing.T) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages", game.ID, conversation.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1))
+		req.Header.Set("Authorization", "Bearer "+player1Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -470,7 +491,7 @@ func TestConversationAPI_GetConversationMessages(t *testing.T) {
 
 	t.Run("rejects non-participant from viewing messages", func(t *testing.T) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages", game.ID, conversation.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player3)) // Player 3 not in conversation
+		req.Header.Set("Authorization", "Bearer "+player3Token) // Player 3 not in conversation
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -490,7 +511,7 @@ func TestConversationAPI_GetConversationMessages(t *testing.T) {
 		core.AssertNoError(t, err, "Should create empty conversation")
 
 		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages", game.ID, emptyConv.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1))
+		req.Header.Set("Authorization", "Bearer "+player1Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -520,6 +541,11 @@ func TestConversationAPI_DeleteMessage(t *testing.T) {
 	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
 
+	// Generate JWT tokens for test users
+	player1Token, err := core.CreateTestJWTTokenForUser(app, player1)
+	core.AssertNoError(t, err, "Should create player1 token")
+	_ = player2 // player2 not needed for auth in this test
+
 	// Create test game
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
@@ -529,7 +555,7 @@ func TestConversationAPI_DeleteMessage(t *testing.T) {
 	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
 
 	// Add players as participants
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
 	core.AssertNoError(t, err, "Should add player1")
 	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
 	core.AssertNoError(t, err, "Should add player2")
@@ -579,7 +605,7 @@ func TestConversationAPI_DeleteMessage(t *testing.T) {
 
 	t.Run("successfully deletes own message", func(t *testing.T) {
 		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages/%d", game.ID, conversation.ID, msg1.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1))
+		req.Header.Set("Authorization", "Bearer "+player1Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -590,7 +616,7 @@ func TestConversationAPI_DeleteMessage(t *testing.T) {
 
 	t.Run("rejects deleting another player's message", func(t *testing.T) {
 		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages/%d", game.ID, conversation.ID, msg2.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1)) // Player 1 trying to delete Player 2's message
+		req.Header.Set("Authorization", "Bearer "+player1Token) // Player 1 trying to delete Player 2's message
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -601,7 +627,7 @@ func TestConversationAPI_DeleteMessage(t *testing.T) {
 
 	t.Run("returns 404 for non-existent message", func(t *testing.T) {
 		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages/99999", game.ID, conversation.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player1))
+		req.Header.Set("Authorization", "Bearer "+player1Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
