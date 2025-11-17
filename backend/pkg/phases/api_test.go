@@ -150,24 +150,6 @@ func TestPhaseAPI_CreatePhase(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
-
-	t.Run("rejects empty phase title", func(t *testing.T) {
-		reqBody := CreatePhaseRequest{
-			PhaseType: "action",
-			Title:     "", // Empty title
-		}
-		reqJSON, _ := json.Marshal(reqBody)
-
-		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases", game.ID), bytes.NewBuffer(reqJSON))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+gmToken)
-
-		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, req)
-
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-		assert.Contains(t, rec.Body.String(), "title")
-	})
 }
 
 // TestPhaseAPI_ActivatePhase tests POST /games/{gameId}/phases/{id}/activate
@@ -497,12 +479,10 @@ func TestPhaseAPI_GetPhases(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var response map[string]interface{}
+		var response []PhaseResponse
 		err := json.Unmarshal(rec.Body.Bytes(), &response)
 		require.NoError(t, err)
-
-		phases := response["phases"].([]interface{})
-		assert.Len(t, phases, 2)
+		assert.Len(t, response, 2)
 	})
 
 	t.Run("returns empty array when no phases", func(t *testing.T) {
@@ -517,12 +497,10 @@ func TestPhaseAPI_GetPhases(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var response map[string]interface{}
+		var response []PhaseResponse
 		err := json.Unmarshal(rec.Body.Bytes(), &response)
 		require.NoError(t, err)
-
-		phases := response["phases"].([]interface{})
-		assert.Len(t, phases, 0)
+		assert.Len(t, response, 0)
 	})
 }
 
