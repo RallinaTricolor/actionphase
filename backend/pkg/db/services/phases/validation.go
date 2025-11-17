@@ -63,6 +63,15 @@ func (ps *PhaseService) CanUserSubmitActions(ctx context.Context, gameID, userID
 func (ps *PhaseService) CanDeletePhase(ctx context.Context, phaseID int32) error {
 	queries := models.New(ps.DB)
 
+	// Check if phase is active
+	phase, err := queries.GetPhase(ctx, phaseID)
+	if err != nil {
+		return fmt.Errorf("failed to get phase: %w", err)
+	}
+	if phase.IsActive.Valid && phase.IsActive.Bool {
+		return fmt.Errorf("cannot delete active phase")
+	}
+
 	// Check for action submissions
 	submissionsCount, err := queries.CountActionSubmissionsByPhase(ctx, phaseID)
 	if err != nil {

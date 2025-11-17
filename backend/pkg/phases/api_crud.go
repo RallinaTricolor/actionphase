@@ -46,6 +46,12 @@ func (h *Handler) CreatePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate title is not empty
+	if data.Title == "" {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("phase title is required")))
+		return
+	}
+
 	// Get authenticated user
 	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
@@ -177,10 +183,10 @@ func (h *Handler) GetGamePhases(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert to response format
-	var response []PhaseResponse
+	phasesList := make([]PhaseResponse, 0)
 	for _, phase := range phases {
 		phaseResp := phaseService.ConvertPhaseToResponse(&phase)
-		response = append(response, PhaseResponse{
+		phasesList = append(phasesList, PhaseResponse{
 			ID:          phaseResp.ID,
 			GameID:      phaseResp.GameID,
 			PhaseType:   phaseResp.PhaseType,
@@ -196,7 +202,7 @@ func (h *Handler) GetGamePhases(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(map[string]interface{}{"phases": phasesList})
 }
 
 // UpdatePhaseDeadline extends or changes phase deadline (GM only)
