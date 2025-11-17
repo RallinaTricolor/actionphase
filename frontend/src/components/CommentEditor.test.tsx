@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent as _fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CommentEditor } from './CommentEditor';
 
@@ -32,7 +32,7 @@ describe('CommentEditor', () => {
     });
 
     it('updates character counter when value changes', () => {
-      const { rerender: _rerender } = render(<CommentEditor {...defaultProps} value="Hello" />);
+      const { rerender } = render(<CommentEditor {...defaultProps} value="Hello" />);
       expect(screen.getByText('5 characters')).toBeInTheDocument();
 
       rerender(<CommentEditor {...defaultProps} value="Hello World!" />);
@@ -52,7 +52,7 @@ describe('CommentEditor', () => {
     });
 
     it('shows preview when toggle is clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="" />);
 
       const toggleButton = screen.getByText(/Show Preview/);
@@ -63,7 +63,7 @@ describe('CommentEditor', () => {
     });
 
     it('hides preview when toggle is clicked again', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="" showPreviewByDefault />);
 
       // Preview should be visible initially
@@ -85,7 +85,7 @@ describe('CommentEditor', () => {
 
   describe('Live Preview', () => {
     it('renders markdown in preview', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="**bold text**" />);
 
       await user.click(screen.getByText(/Show Preview/));
@@ -96,7 +96,7 @@ describe('CommentEditor', () => {
 
     it('updates preview as value changes', async () => {
       const _user = userEvent.setup();
-      const { rerender: _rerender, container } = render(<CommentEditor {...defaultProps} value="Hello" showPreviewByDefault />);
+      const { rerender, container } = render(<CommentEditor {...defaultProps} value="Hello" showPreviewByDefault />);
 
       // Check that "Hello" appears in the preview div
       const previewDiv = container.querySelector('.markdown-preview');
@@ -109,7 +109,7 @@ describe('CommentEditor', () => {
     });
 
     it('shows placeholder message when preview is empty', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="" />);
 
       await user.click(screen.getByText(/Show Preview/));
@@ -118,7 +118,7 @@ describe('CommentEditor', () => {
     });
 
     it('shows placeholder message for whitespace-only content', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="   " />);
 
       await user.click(screen.getByText(/Show Preview/));
@@ -139,7 +139,7 @@ describe('CommentEditor', () => {
     });
 
     it('shows help panel when help button is clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} />);
 
       await user.click(screen.getByText(/Markdown Help/));
@@ -148,7 +148,7 @@ describe('CommentEditor', () => {
     });
 
     it('hides help panel when help button is clicked again', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} />);
 
       // Open help
@@ -161,7 +161,7 @@ describe('CommentEditor', () => {
     });
 
     it('displays markdown syntax examples', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} />);
 
       await user.click(screen.getByText(/Markdown Help/));
@@ -180,7 +180,7 @@ describe('CommentEditor', () => {
 
   describe('User Input', () => {
     it('calls onChange when user types', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onChange = vi.fn();
       render(<CommentEditor {...defaultProps} onChange={onChange} />);
 
@@ -249,14 +249,14 @@ describe('CommentEditor', () => {
 
   describe('Split View Layout', () => {
     it('shows single column when preview is hidden', () => {
-      const { container: _container } = render(<CommentEditor {...defaultProps} value="Test" />);
+      const { container } = render(<CommentEditor {...defaultProps} value="Test" />);
       const grid = container.querySelector('.grid');
       expect(grid).toHaveClass('grid-cols-1');
     });
 
     it('shows two columns when preview is shown', async () => {
-      const _user = userEvent.setup();
-      const { container: _container } = render(<CommentEditor {...defaultProps} value="Test" />);
+      const user = userEvent.setup();
+      const { container } = render(<CommentEditor {...defaultProps} value="Test" />);
 
       await user.click(screen.getByText(/Show Preview/));
 
@@ -318,7 +318,7 @@ describe('CommentEditor', () => {
       render(<CommentEditor {...defaultProps} value={specialChars} showPreviewByDefault />);
 
       // XSS should be prevented by MarkdownPreview
-      const { container: _container } = render(<CommentEditor {...defaultProps} value={specialChars} showPreviewByDefault />);
+      const { container } = render(<CommentEditor {...defaultProps} value={specialChars} showPreviewByDefault />);
       expect(container.querySelectorAll('script')).toHaveLength(0);
     });
   });
@@ -384,7 +384,7 @@ describe('CommentEditor', () => {
     });
 
     it('inserts character name when selected from autocomplete', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onChange = vi.fn();
       render(<CommentEditor {...defaultProps} characters={mockCharacters} onChange={onChange} value="" />);
 

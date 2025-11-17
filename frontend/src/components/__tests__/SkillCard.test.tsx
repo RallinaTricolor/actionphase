@@ -157,7 +157,7 @@ describe('SkillCard', () => {
 
   describe('Edit Mode', () => {
     it('enters edit mode when edit button clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -175,7 +175,7 @@ describe('SkillCard', () => {
     });
 
     it('shows save and cancel buttons in edit mode', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -192,7 +192,7 @@ describe('SkillCard', () => {
     });
 
     it('allows editing skill name', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -211,7 +211,7 @@ describe('SkillCard', () => {
     });
 
     it('allows editing level', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -230,7 +230,7 @@ describe('SkillCard', () => {
     });
 
     it('allows editing description', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -250,7 +250,7 @@ describe('SkillCard', () => {
 
     it('shows level placeholder text', async () => {
       const skillWithoutLevel = { ...mockSkill, level: undefined };
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={skillWithoutLevel}
@@ -269,7 +269,7 @@ describe('SkillCard', () => {
   describe('Save Functionality', () => {
     it('calls onUpdate with modified values when saved', async () => {
       const onUpdate = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -299,7 +299,7 @@ describe('SkillCard', () => {
     });
 
     it('exits edit mode after save', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -318,7 +318,7 @@ describe('SkillCard', () => {
 
     it('sets level to undefined when empty', async () => {
       const onUpdate = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -344,7 +344,7 @@ describe('SkillCard', () => {
 
     it('sets description to undefined when empty', async () => {
       const onUpdate = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -371,7 +371,7 @@ describe('SkillCard', () => {
 
   describe('Cancel Functionality', () => {
     it('reverts changes when cancelled', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -395,7 +395,7 @@ describe('SkillCard', () => {
 
     it('does not call onUpdate when cancelled', async () => {
       const onUpdate = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -417,7 +417,7 @@ describe('SkillCard', () => {
     });
 
     it('exits edit mode when cancelled', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}
@@ -438,7 +438,7 @@ describe('SkillCard', () => {
   describe('Remove Functionality', () => {
     it('calls onRemove when delete button clicked', async () => {
       const onRemove = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <SkillCard
           skill={mockSkill}

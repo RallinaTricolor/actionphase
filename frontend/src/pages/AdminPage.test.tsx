@@ -74,7 +74,7 @@ describe('AdminPage', () => {
 
   describe('Banned Users Tab', () => {
     it('shows loading state initially', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       vi.mocked(apiClient.admin.listBannedUsers).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
@@ -88,7 +88,7 @@ describe('AdminPage', () => {
     });
 
     it('displays empty state when no banned users exist', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
         data: [],
       } as Partial<AxiosResponse<unknown[]>>);
@@ -104,7 +104,7 @@ describe('AdminPage', () => {
     });
 
     it('displays list of banned users', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const bannedUsers = [
         {
           id: 1,
@@ -152,7 +152,7 @@ describe('AdminPage', () => {
     });
 
     it('displays error state when API fails', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       vi.mocked(apiClient.admin.listBannedUsers).mockRejectedValue(
         new Error('API Error')
       );
@@ -201,7 +201,7 @@ describe('AdminPage', () => {
 
       // Verify confirmation dialog was shown
       expect(mockConfirm).toHaveBeenCalledWith(
-        'Are you sure you want to unban user "banneduser"?'
+        'Are you sure you want to unban user banneduser?'
       );
 
       // Verify API was called
@@ -491,7 +491,7 @@ describe('AdminPage', () => {
 
       // Verify confirmation dialog
       expect(mockConfirm).toHaveBeenCalledWith(
-        'Are you sure you want to grant admin status to "regularuser"?'
+        'Are you sure you want to grant admin access to regularuser?'
       );
 
       // Verify API was called
@@ -628,7 +628,7 @@ describe('AdminPage', () => {
 
       // Verify confirmation dialog
       expect(mockConfirm).toHaveBeenCalledWith(
-        'Are you sure you want to revoke admin status from "anotheradmin"?'
+        'Are you sure you want to revoke admin status from anotheradmin?'
       );
 
       // Verify API was called

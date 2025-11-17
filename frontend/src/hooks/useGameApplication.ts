@@ -75,7 +75,7 @@ export function useGameApplication({
       await refetchGameData();
       await refetchUserApplication();
     } catch (_err) {
-      showError(err instanceof Error ? err.message : 'Failed to withdraw application');
+      showError(_err instanceof Error ? _err.message : 'Failed to withdraw application');
     } finally {
       setActionLoading(false);
     }

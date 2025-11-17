@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor as _waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AvatarUploadModal from './AvatarUploadModal';
@@ -50,7 +50,7 @@ describe('AvatarUploadModal', () => {
   });
 
   it('does not render when isOpen is false', () => {
-    const { container: _container } = render(
+    const { container } = render(
       <AvatarUploadModal
         isOpen={false}
         onClose={mockOnClose}
@@ -271,7 +271,7 @@ describe('AvatarUploadModal', () => {
     fireEvent.click(deleteButton);
 
     expect(mockConfirm).toHaveBeenCalledWith(
-      'Are you sure you want to remove this avatar?'
+      'Are you sure you want to delete this avatar?'
     );
     expect(mockDeleteMutate).toHaveBeenCalledWith(456, expect.any(Object));
 

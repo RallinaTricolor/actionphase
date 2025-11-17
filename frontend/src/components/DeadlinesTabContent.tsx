@@ -43,7 +43,7 @@ export function DeadlinesTabContent({ gameId, isGM }: DeadlinesTabContentProps) 
     try {
       await createDeadlineMutation.mutateAsync(data);
       setShowCreateModal(false);
-    } catch (_error) {
+    } catch (error) {
       // Error is handled by the mutation
       logger.error('Failed to create deadline', { error, gameId, title: data.title });
     }
@@ -59,7 +59,7 @@ export function DeadlinesTabContent({ gameId, isGM }: DeadlinesTabContentProps) 
       await updateDeadlineMutation.mutateAsync({ deadlineId, data });
       setShowEditModal(false);
       setSelectedDeadline(null);
-    } catch (_error) {
+    } catch (error) {
       // Error is handled by the mutation
       logger.error('Failed to update deadline', { error, gameId, deadlineId, title: data.title });
     }
@@ -68,7 +68,7 @@ export function DeadlinesTabContent({ gameId, isGM }: DeadlinesTabContentProps) 
   const handleDelete = async (deadlineId: number) => {
     try {
       await deleteDeadlineMutation.mutateAsync(deadlineId);
-    } catch (_error) {
+    } catch (error) {
       // Error is handled by the mutation
       logger.error('Failed to delete deadline', { error, gameId, deadlineId });
     }
@@ -91,7 +91,7 @@ export function DeadlinesTabContent({ gameId, isGM }: DeadlinesTabContentProps) 
           deadline: newDate.toISOString(),
         },
       });
-    } catch (_error) {
+    } catch (error) {
       // Error is handled by the mutation
       logger.error('Failed to extend deadline', { error, gameId, deadlineId, hours });
     }

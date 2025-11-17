@@ -113,7 +113,18 @@ export interface CommentWithParent {
   character_name?: string | null;
   character_avatar_url?: string | null;
 
-  // Parent context
+  // Parent context (nested object from backend)
+  parent?: {
+    content?: string | null;
+    created_at?: string | null;
+    deleted_at?: string | null;
+    is_deleted?: boolean | null;
+    message_type?: string | null;
+    author_username?: string | null;
+    character_name?: string | null;
+  } | null;
+
+  // Parent context (flattened fields)
   parent_content?: string | null;
   parent_created_at?: string | null;
   parent_deleted_at?: string | null;

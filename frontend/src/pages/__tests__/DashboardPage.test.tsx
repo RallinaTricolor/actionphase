@@ -319,7 +319,7 @@ describe('DashboardPage', () => {
       error: null,
     } as Partial<UseQueryResult<DashboardData>>);
 
-    const { container: _container } = renderWithProviders(<DashboardPage />);
+    const { container } = renderWithProviders(<DashboardPage />);
 
     expect(container.firstChild).toBeNull();
   });

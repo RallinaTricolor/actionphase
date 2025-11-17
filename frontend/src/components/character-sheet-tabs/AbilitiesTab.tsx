@@ -11,6 +11,18 @@ interface AbilitiesTabProps {
   onDeleteDraft: (draftId: number) => void;
 }
 
+// Wrapper component to adapt AbilityForm to CustomFormComponentProps
+const AbilityFormWrapper: React.FC<{
+  onSubmit: (data: Record<string, unknown>) => void;
+  onCancel: () => void;
+  submitButtonTestId?: string;
+}> = ({ onSubmit, ...props }) => (
+  <AbilityForm
+    {...props}
+    onSubmit={(data) => onSubmit(data as unknown as Record<string, unknown>)}
+  />
+);
+
 export const AbilitiesTab: React.FC<AbilitiesTabProps> = (props) => {
   return (
     <CharacterSheetTab
@@ -19,17 +31,18 @@ export const AbilitiesTab: React.FC<AbilitiesTabProps> = (props) => {
       title="Abilities"
       addButtonLabel="+ Add Ability"
       emptyMessage="No pending ability changes"
-      customFormComponent={AbilityForm}
-      transformCustomData={(data: AbilityFormData) => {
+      customFormComponent={AbilityFormWrapper}
+      transformCustomData={(data: Record<string, unknown>) => {
+        const typedData = data as unknown as AbilityFormData;
         const abilityData = {
           id: crypto.randomUUID(), // Generate unique ID
-          name: data.name,
-          type: data.type,
-          description: data.description,
+          name: typedData.name,
+          type: typedData.type,
+          description: typedData.description,
           active: true, // New abilities are active by default
         };
         return {
-          fieldName: data.name,
+          fieldName: typedData.name,
           fieldValue: JSON.stringify(abilityData),
           fieldType: 'json' as const,
         };

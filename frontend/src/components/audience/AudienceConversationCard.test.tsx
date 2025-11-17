@@ -55,10 +55,10 @@ describe('AudienceConversationCard', () => {
   });
 
   it('calls onClick when card is clicked', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     const handleClick = vi.fn();
 
-    const { container: _container } = render(
+    const { container } = render(
       <AudienceConversationCard
         conversation={mockConversation}
         onClick={handleClick}
@@ -75,7 +75,7 @@ describe('AudienceConversationCard', () => {
   });
 
   it('shows activity badge based on message count', () => {
-    const { rerender: _rerender } = render(
+    const { rerender } = render(
       <AudienceConversationCard
         conversation={{ ...mockConversation, message_count: 3 }}
         onClick={vi.fn()}
@@ -161,7 +161,7 @@ describe('AudienceConversationCard', () => {
   });
 
   it('applies selected styling when isSelected is true', () => {
-    const { container: _container } = render(
+    const { container } = render(
       <AudienceConversationCard
         conversation={mockConversation}
         onClick={vi.fn()}

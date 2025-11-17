@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor as _waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import CharacterAvatar from './CharacterAvatar';
 
@@ -89,7 +89,7 @@ describe('CharacterAvatar', () => {
 
   describe('size variants', () => {
     it('applies xs size class', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <CharacterAvatar
           avatarUrl={null}
           characterName="Test"
@@ -102,7 +102,7 @@ describe('CharacterAvatar', () => {
     });
 
     it('applies sm size class', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <CharacterAvatar
           avatarUrl={null}
           characterName="Test"
@@ -115,7 +115,7 @@ describe('CharacterAvatar', () => {
     });
 
     it('applies md size class by default', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <CharacterAvatar
           avatarUrl={null}
           characterName="Test"
@@ -127,7 +127,7 @@ describe('CharacterAvatar', () => {
     });
 
     it('applies lg size class', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <CharacterAvatar
           avatarUrl={null}
           characterName="Test"
@@ -140,7 +140,7 @@ describe('CharacterAvatar', () => {
     });
 
     it('applies xl size class', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <CharacterAvatar
           avatarUrl={null}
           characterName="Test"
@@ -154,7 +154,7 @@ describe('CharacterAvatar', () => {
   });
 
   it('applies custom className', () => {
-    const { container: _container } = render(
+    const { container } = render(
       <CharacterAvatar
         avatarUrl={null}
         characterName="Test"

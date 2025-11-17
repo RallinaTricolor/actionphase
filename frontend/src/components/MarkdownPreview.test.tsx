@@ -17,7 +17,7 @@ describe('MarkdownPreview', () => {
     });
 
     it('renders headers correctly', () => {
-      const { rerender: _rerender } = render(<MarkdownPreview content="# Heading 1" />);
+      const { rerender } = render(<MarkdownPreview content="# Heading 1" />);
       expect(screen.getByText('Heading 1').tagName).toBe('H1');
 
       rerender(<MarkdownPreview content="## Heading 2" />);
@@ -28,7 +28,7 @@ describe('MarkdownPreview', () => {
     });
 
     it('renders unordered lists correctly', () => {
-      const { container: _container } = render(<MarkdownPreview content="- Item 1\n- Item 2\n- Item 3" />);
+      const { container } = render(<MarkdownPreview content="- Item 1\n- Item 2\n- Item 3" />);
 
       // Check that a list is rendered
       const ul = container.querySelector('ul');
@@ -41,7 +41,7 @@ describe('MarkdownPreview', () => {
     });
 
     it('renders ordered lists correctly', () => {
-      const { container: _container } = render(<MarkdownPreview content="1. First\n2. Second\n3. Third" />);
+      const { container } = render(<MarkdownPreview content="1. First\n2. Second\n3. Third" />);
 
       // Check that a list is rendered
       const ol = container.querySelector('ol');
@@ -67,7 +67,7 @@ describe('MarkdownPreview', () => {
     });
 
     it('renders horizontal rules correctly', () => {
-      const { container: _container } = render(<MarkdownPreview content="---" />);
+      const { container } = render(<MarkdownPreview content="---" />);
       const hr = container.querySelector('hr');
       expect(hr).toBeInTheDocument();
       if (hr) {
@@ -96,7 +96,7 @@ describe('MarkdownPreview', () => {
   describe('Code Block Rendering', () => {
     it('renders code blocks with syntax highlighting', () => {
       const code = '```javascript\nconst x = 42;\n```';
-      const { container: _container } = render(<MarkdownPreview content={code} />);
+      const { container } = render(<MarkdownPreview content={code} />);
 
       // Check that syntax highlighter is used
       const codeBlock = container.querySelector('[class*="language-"]');
@@ -236,7 +236,7 @@ describe('MarkdownPreview', () => {
 
     it('escapes mention markup inside fenced code blocks', () => {
       const content = '```\n@Alice in code block\n```';
-      const { container: _container } = render(
+      const { container } = render(
         <MarkdownPreview
           content={content}
           mentionedCharacters={mentionedCharacters}
@@ -261,7 +261,7 @@ describe('MarkdownPreview', () => {
   describe('XSS Protection', () => {
     it('prevents script injection via content', () => {
       const maliciousContent = '<script>alert("XSS")</script>Hello';
-      const { container: _container } = render(<MarkdownPreview content={maliciousContent} />);
+      const { container } = render(<MarkdownPreview content={maliciousContent} />);
 
       // Script tag should be sanitized (removed by rehype-sanitize)
       const scripts = container.querySelectorAll('script');
@@ -273,7 +273,7 @@ describe('MarkdownPreview', () => {
 
     it('prevents HTML injection via content', () => {
       const maliciousContent = '<div onclick="alert(1)">Click me</div>';
-      const { container: _container } = render(<MarkdownPreview content={maliciousContent} />);
+      const { container } = render(<MarkdownPreview content={maliciousContent} />);
 
       // HTML should be rendered as text, not executed
       expect(container.querySelector('div[onclick]')).not.toBeInTheDocument();
@@ -281,7 +281,7 @@ describe('MarkdownPreview', () => {
 
     it('prevents XSS via malicious links', () => {
       const maliciousLink = '[Click](javascript:alert("XSS"))';
-      const { container: _container } = render(<MarkdownPreview content={maliciousLink} />);
+      const { container } = render(<MarkdownPreview content={maliciousLink} />);
 
       // rehype-sanitize should remove javascript: URLs entirely
       const link = container.querySelector('a');
@@ -297,7 +297,7 @@ describe('MarkdownPreview', () => {
     });
 
     it('allows safe HTML entities', () => {
-      const { container: _container } = render(<MarkdownPreview content="&lt;div&gt; &amp; &quot;quotes&quot;" />);
+      const { container } = render(<MarkdownPreview content="&lt;div&gt; &amp; &quot;quotes&quot;" />);
       // HTML entities should be decoded and rendered safely
       expect(container.textContent).toContain('&');
       expect(container.textContent).toContain('"quotes"');
@@ -344,7 +344,7 @@ describe('MarkdownPreview', () => {
 
   describe('Custom className', () => {
     it('applies custom className to container', () => {
-      const { container: _container } = render(
+      const { container } = render(
         <MarkdownPreview content="Test" className="custom-class" />
       );
 
@@ -355,19 +355,19 @@ describe('MarkdownPreview', () => {
 
   describe('Edge Cases', () => {
     it('handles empty content', () => {
-      const { container: _container } = render(<MarkdownPreview content="" />);
+      const { container } = render(<MarkdownPreview content="" />);
       expect(container.querySelector('.markdown-preview')).toBeInTheDocument();
     });
 
     it('handles whitespace-only content', () => {
-      const { container: _container } = render(<MarkdownPreview content="   \n\n   " />);
+      const { container } = render(<MarkdownPreview content="   \n\n   " />);
       // Markdown might render whitespace as empty paragraphs, which is acceptable
       expect(container.querySelector('.markdown-preview')).toBeInTheDocument();
     });
 
     it('handles malformed markdown gracefully', () => {
       const malformed = '**bold without closing\n# Header without newline## Another header';
-      const { container: _container } = render(<MarkdownPreview content={malformed} />);
+      const { container } = render(<MarkdownPreview content={malformed} />);
 
       // Should render something without crashing
       expect(container.querySelector('.markdown-preview')).toBeInTheDocument();

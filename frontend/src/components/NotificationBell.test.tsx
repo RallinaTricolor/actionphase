@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
-import { screen, waitFor as _waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse as _HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { renderWithProviders, createTestQueryClient as _createTestQueryClient } from '../test-utils/render';
 import NotificationBell from './NotificationBell';
@@ -92,7 +92,7 @@ describe('NotificationBell', () => {
       })
     );
 
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     renderWithProviders(<NotificationBell />);
 
     // Wait for component to load
@@ -122,7 +122,7 @@ describe('NotificationBell', () => {
       })
     );
 
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     renderWithProviders(<NotificationBell />);
 
     await waitFor(() => {

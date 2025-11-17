@@ -344,7 +344,7 @@ describe('MessageThread', () => {
 
   describe('Sending Messages', () => {
     it('allows typing in message input', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(
         <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
@@ -361,7 +361,7 @@ describe('MessageThread', () => {
     });
 
     it('sends message when form is submitted', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       let sentMessage: unknown;
 
       server.use(
@@ -394,7 +394,7 @@ describe('MessageThread', () => {
     });
 
     it('clears input after sending message', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
@@ -420,7 +420,7 @@ describe('MessageThread', () => {
     });
 
     it('shows sending state while message is being sent', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async () => {
@@ -459,7 +459,7 @@ describe('MessageThread', () => {
     });
 
     it('disables send button when message is only whitespace', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
 
       renderWithProviders(
         <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
@@ -477,7 +477,7 @@ describe('MessageThread', () => {
     });
 
     it('trims whitespace from message before sending', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       let sentMessage: unknown;
 
       server.use(
@@ -504,7 +504,7 @@ describe('MessageThread', () => {
     });
 
     it('sends message with selected character ID', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       let sentMessage: unknown;
 
       server.use(
@@ -531,7 +531,7 @@ describe('MessageThread', () => {
     });
 
     it('allows switching character before sending', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       let sentMessage: unknown;
 
       server.use(
@@ -693,7 +693,7 @@ describe('MessageThread', () => {
     });
 
     it('shows confirmation modal when delete button is clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const messagesWithUserId = mockMessages.map(msg => ({
         ...msg,
         sender_user_id: 100,
@@ -723,7 +723,7 @@ describe('MessageThread', () => {
     });
 
     it('closes modal when cancel is clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const messagesWithUserId = mockMessages.map(msg => ({
         ...msg,
         sender_user_id: 100,
@@ -761,7 +761,7 @@ describe('MessageThread', () => {
     });
 
     it('deletes message when confirmed', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       let deletedMessageId: number | null = null;
 
       const messagesWithUserId = mockMessages.map(msg => ({
@@ -866,7 +866,7 @@ describe('MessageThread', () => {
     });
 
     it('shows loading state while deleting', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const messagesWithUserId = mockMessages.map(msg => ({
         ...msg,
         sender_user_id: 100,
@@ -908,7 +908,7 @@ describe('MessageThread', () => {
     });
 
     it('reloads messages after successful deletion', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       let messagesFetchCount = 0;
 
       const messagesWithUserId = mockMessages.map(msg => ({

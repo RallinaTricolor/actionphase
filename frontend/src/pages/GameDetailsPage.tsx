@@ -223,7 +223,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
       await apiClient.games.deleteGame(gameId);
       // Redirect to games list after successful deletion
       window.location.href = '/games';
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to delete game', { error });
       // Error will be shown by the API client
     }

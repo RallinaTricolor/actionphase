@@ -28,7 +28,7 @@ export function WithdrawApplicationConfirmationDialog({
     try {
       await onConfirm();
       onClose();
-    } catch (_error) {
+    } catch (error) {
       // Error handling is done by the parent component
       logger.error('Failed to withdraw application', { error, gameTitle, role });
     }

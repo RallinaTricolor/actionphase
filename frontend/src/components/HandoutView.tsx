@@ -33,7 +33,7 @@ export function HandoutView({ gameId, handout, isGM, onClose, onEdit }: HandoutV
     try {
       await createCommentMutation.mutateAsync({ content: newNoteContent });
       setNewNoteContent(''); // Clear the form on success
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to create GM note', { error, gameId, handoutId: handout.id, handoutTitle: handout.title });
     } finally {
       setIsSubmitting(false);

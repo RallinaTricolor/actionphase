@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import type { PluggableList } from 'react-markdown';
+import type { Components } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
@@ -161,36 +161,32 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     <div className={`markdown-preview prose dark:prose-invert ${fullWidth ? 'max-w-none' : 'max-w-prose'} text-content-primary dark:text-white ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]] as PluggableList}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
         components={{
           // Custom code block renderer with syntax highlighting
-          code({ _node, inline, className, children, ...props }: {
-            node?: Record<string, unknown>;
-            inline?: boolean;
-            className?: string;
-            children?: React.ReactNode;
-          }) {
+          code(props) {
+            const { className, children, ...rest } = props;
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
+            const inline = !match;
 
             return !inline && language ? (
               <SyntaxHighlighter
                 style={vscDarkPlus as { [key: string]: React.CSSProperties }}
                 language={language}
                 PreTag="div"
-                {...props}
               >
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
             ) : (
-              <code className={className} {...props}>
+              <code className={className} {...rest}>
                 {children}
               </code>
             );
           },
 
           // Secure link handling - open in new tab with security attributes
-          a({ _node, children, href, ...props }) {
+          a({ children, href, ...props }) {
             return (
               <a
                 href={href}
@@ -205,13 +201,13 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           },
 
           // Custom mark element for character mentions
-          mark({ _node, children, ...props }) {
+          mark({ children, ...props }) {
             const mentionId = (props as Record<string, unknown>)['data-mention-id'] as number | undefined;
 
             const handleMouseEnter = (e: React.MouseEvent<HTMLElement>) => {
               if (mentionId) {
                 const rect = e.currentTarget.getBoundingClientRect();
-                setHoveredMentionId(parseInt(mentionId));
+                setHoveredMentionId(Number(mentionId));
                 setTooltipPosition({
                   top: rect.bottom + 4, // 4px below the mention (viewport-relative for fixed positioning)
                   left: rect.left,
@@ -238,24 +234,24 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           },
 
           // Style headers
-          h1: ({ _node, children, ...props }) => (
+          h1: ({ children, ...props }) => (
             <h1 className="text-2xl font-bold mt-4 mb-2 !text-content-primary" {...props}>
               {children}
             </h1>
           ),
-          h2: ({ _node, children, ...props }) => (
+          h2: ({ children, ...props }) => (
             <h2 className="text-xl font-bold mt-3 mb-2 !text-content-primary" {...props}>
               {children}
             </h2>
           ),
-          h3: ({ _node, children, ...props }) => (
+          h3: ({ children, ...props }) => (
             <h3 className="text-lg font-bold mt-2 mb-1 !text-content-primary" {...props}>
               {children}
             </h3>
           ),
 
           // Style blockquotes
-          blockquote: ({ _node, children, ...props }) => (
+          blockquote: ({ children, ...props }) => (
             <blockquote
               className="border-l-4 border-theme-default pl-4 py-2 my-2 italic text-content-secondary"
               {...props}
@@ -265,46 +261,46 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           ),
 
           // Style horizontal rules
-          hr: ({ _node, ...props }) => (
+          hr: ({ ...props }) => (
             <hr className="my-4 border-t-2 border-theme-default" {...props} />
           ),
 
           // Style lists
-          ul: ({ _node, children, ...props }) => (
+          ul: ({ children, ...props }) => (
             <ul className="list-disc list-inside my-2" {...props}>
               {children}
             </ul>
           ),
-          ol: ({ _node, children, ...props }) => (
+          ol: ({ children, ...props }) => (
             <ol className="list-decimal list-inside my-2" {...props}>
               {children}
             </ol>
           ),
-          li: ({ _node, children, ...props }) => (
+          li: ({ children, ...props }) => (
             <li className="ml-4 !text-content-primary" {...props}>
               {children}
             </li>
           ),
 
           // Style paragraphs
-          p: ({ _node, children, ...props }) => (
+          p: ({ children, ...props }) => (
             <p className="my-2 !text-content-primary" {...props}>
               {children}
             </p>
           ),
 
           // Style inline elements
-          strong: ({ _node, children, ...props }) => (
+          strong: ({ children, ...props }) => (
             <strong className="!text-content-primary" {...props}>
               {children}
             </strong>
           ),
-          em: ({ _node, children, ...props }) => (
+          em: ({ children, ...props }) => (
             <em className="!text-content-primary" {...props}>
               {children}
             </em>
           ),
-        }}
+        } as Components}
         // react-markdown automatically sanitizes HTML to prevent XSS
         // It only allows safe markdown and doesn't execute scripts
       >

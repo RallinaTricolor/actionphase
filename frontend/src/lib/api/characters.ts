@@ -92,8 +92,8 @@ export class CharactersApi extends BaseApiClient {
     } catch (error: unknown) {
       logger.error('Avatar upload failed', {
         characterId,
-        message: error.message,
-        status: error.response?.status,
+        message: (error as Error)?.message,
+        status: (error as { response?: { status?: number } })?.response?.status,
       });
       throw error;
     }

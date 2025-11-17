@@ -23,7 +23,7 @@ export function ChangeEmailForm() {
       setError(null);
     },
     onError: (error: unknown) => {
-      const message = error.response?.data?.error || 'Failed to request email change';
+      const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to request email change';
       setError(message);
       showToast(message, 'danger');
     },

@@ -10,6 +10,18 @@ interface CurrencyTabProps {
   onDeleteDraft: (draftId: number) => void;
 }
 
+// Wrapper component to adapt CurrencyForm to CustomFormComponentProps
+const CurrencyFormWrapper: React.FC<{
+  onSubmit: (data: Record<string, unknown>) => void;
+  onCancel: () => void;
+  submitButtonTestId?: string;
+}> = ({ onSubmit, ...props }) => (
+  <CurrencyForm
+    {...props}
+    onSubmit={(data) => onSubmit(data as unknown as Record<string, unknown>)}
+  />
+);
+
 export const CurrencyTab: React.FC<CurrencyTabProps> = (props) => {
   return (
     <CharacterSheetTab
@@ -18,15 +30,16 @@ export const CurrencyTab: React.FC<CurrencyTabProps> = (props) => {
       title="Currency Adjustments"
       addButtonLabel="Apply Change"
       emptyMessage="No pending currency changes"
-      customFormComponent={CurrencyForm}
-      transformCustomData={(data: CurrencyFormData) => {
+      customFormComponent={CurrencyFormWrapper}
+      transformCustomData={(data: Record<string, unknown>) => {
+        const typedData = data as unknown as CurrencyFormData;
         const currencyEntry = {
-          type: data.type,
-          amount: data.amount,
-          description: data.description,
+          type: typedData.type,
+          amount: typedData.amount,
+          description: typedData.description,
         };
         return {
-          fieldName: data.type,
+          fieldName: typedData.type,
           fieldValue: JSON.stringify(currencyEntry),
           fieldType: 'json' as const,
         };

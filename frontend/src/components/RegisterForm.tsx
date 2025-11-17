@@ -50,7 +50,7 @@ export const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       onSuccess?.();
     } catch (_err) {
       // Store the error for display
-      setRegistrationError(err);
+      setRegistrationError(_err);
     }
   };
 

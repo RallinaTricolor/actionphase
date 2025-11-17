@@ -11,6 +11,18 @@ interface SkillsTabProps {
   onDeleteDraft: (draftId: number) => void;
 }
 
+// Wrapper component to adapt SkillForm to CustomFormComponentProps
+const SkillFormWrapper: React.FC<{
+  onSubmit: (data: Record<string, unknown>) => void;
+  onCancel: () => void;
+  submitButtonTestId?: string;
+}> = ({ onSubmit, ...props }) => (
+  <SkillForm
+    {...props}
+    onSubmit={(data) => onSubmit(data as unknown as Record<string, unknown>)}
+  />
+);
+
 export const SkillsTab: React.FC<SkillsTabProps> = (props) => {
   return (
     <CharacterSheetTab
@@ -19,17 +31,18 @@ export const SkillsTab: React.FC<SkillsTabProps> = (props) => {
       title="Skills"
       addButtonLabel="+ Add Skill"
       emptyMessage="No pending skill changes"
-      customFormComponent={SkillForm}
-      transformCustomData={(data: SkillFormData) => {
+      customFormComponent={SkillFormWrapper}
+      transformCustomData={(data: Record<string, unknown>) => {
+        const typedData = data as unknown as SkillFormData;
         const skillData = {
           id: crypto.randomUUID(), // Generate unique ID
-          name: data.name,
-          level: data.level,
-          description: data.description,
-          category: data.category,
+          name: typedData.name,
+          level: typedData.level,
+          description: typedData.description,
+          category: typedData.category,
         };
         return {
-          fieldName: data.name,
+          fieldName: typedData.name,
           fieldValue: JSON.stringify(skillData),
           fieldType: 'json' as const,
         };

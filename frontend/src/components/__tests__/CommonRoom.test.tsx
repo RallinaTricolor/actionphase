@@ -148,7 +148,7 @@ describe('CommonRoom', () => {
     });
 
     it('retries loading when try again is clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       let callCount = 0;
 
       server.use(
@@ -406,7 +406,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      const { rerender: _rerender } = renderWithProviders(<CommonRoom gameId={1} />);
+      const { rerender } = renderWithProviders(<CommonRoom gameId={1} />);
 
       await waitFor(() => {
         expect(loadCount).toBe(1);
@@ -429,7 +429,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      const { rerender: _rerender } = renderWithProviders(<CommonRoom gameId={1} phaseId={1} />);
+      const { rerender } = renderWithProviders(<CommonRoom gameId={1} phaseId={1} />);
 
       await waitFor(() => {
         expect(loadCount).toBe(1);

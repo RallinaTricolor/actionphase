@@ -68,7 +68,7 @@ export function CommentThread({
       // Reload comments to show the new one
       await loadComments();
     } catch (_err) {
-      logger.error('Failed to create comment', { error: err, gameId, postId, characterId: selectedCharacterId });
+      logger.error('Failed to create comment', { error: _err, gameId, postId, characterId: selectedCharacterId });
       setError('Failed to post comment');
     } finally {
       setIsSubmitting(false);

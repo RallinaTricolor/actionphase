@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { screen, waitFor as _waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse as _HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { CommentThread } from '../CommentThread';
 import { renderWithProviders } from '../../test-utils/render';
 import { server } from '../../mocks/server';
@@ -271,7 +271,7 @@ describe('CommentThread', () => {
     });
 
     it('should allow selecting different character', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<CommentThread {...defaultProps} isCommenting={true} />);
@@ -301,7 +301,7 @@ describe('CommentThread', () => {
 
   describe('Comment Form - Input', () => {
     it('should allow typing in textarea', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<CommentThread {...defaultProps} isCommenting={true} />);
@@ -344,7 +344,7 @@ describe('CommentThread', () => {
     });
 
     it('should enable submit button when content is entered', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<CommentThread {...defaultProps} isCommenting={true} />);
@@ -361,7 +361,7 @@ describe('CommentThread', () => {
 
   describe('Comment Form - Submission', () => {
     it('should call onCreateComment when form is submitted', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onCreateComment = vi.fn().mockResolvedValue(undefined);
       setupDefaultHandlers();
 
@@ -381,7 +381,7 @@ describe('CommentThread', () => {
     });
 
     it('should trim whitespace from content', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onCreateComment = vi.fn().mockResolvedValue(undefined);
       setupDefaultHandlers();
 
@@ -401,7 +401,7 @@ describe('CommentThread', () => {
     });
 
     it('should clear textarea after successful submission', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onCreateComment = vi.fn().mockResolvedValue(undefined);
       setupDefaultHandlers();
 
@@ -421,7 +421,7 @@ describe('CommentThread', () => {
     });
 
     it('should call setIsCommenting(false) after successful submission', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onCreateComment = vi.fn().mockResolvedValue(undefined);
       const setIsCommenting = vi.fn();
       setupDefaultHandlers();
@@ -447,7 +447,7 @@ describe('CommentThread', () => {
     });
 
     it('should reload comments after successful submission', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onCreateComment = vi.fn().mockResolvedValue(undefined);
       setupDefaultHandlers();
 
@@ -468,7 +468,7 @@ describe('CommentThread', () => {
     });
 
     it('should show loading state while submitting', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onCreateComment = vi.fn().mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 100))
       );
@@ -493,7 +493,7 @@ describe('CommentThread', () => {
     });
 
     it('should disable textarea while submitting', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onCreateComment = vi.fn().mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 50))
       );
@@ -516,7 +516,7 @@ describe('CommentThread', () => {
     });
 
     it('should not submit when content is only whitespace', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onCreateComment = vi.fn();
       setupDefaultHandlers();
 
@@ -536,7 +536,7 @@ describe('CommentThread', () => {
 
   describe('Comment Form - Cancellation', () => {
     it('should call setIsCommenting(false) when cancel clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const setIsCommenting = vi.fn();
       setupDefaultHandlers();
 
@@ -559,7 +559,7 @@ describe('CommentThread', () => {
     });
 
     it('should clear textarea when cancel clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       setupDefaultHandlers();
 
       renderWithProviders(<CommentThread {...defaultProps} isCommenting={true} />);
@@ -596,7 +596,7 @@ describe('CommentThread', () => {
     });
 
     it('should display error when comment submission fails', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onCreateComment = vi.fn().mockRejectedValue(new Error('Submission failed'));
       setupDefaultHandlers();
 
@@ -616,7 +616,7 @@ describe('CommentThread', () => {
     });
 
     it('should not clear textarea after failed submission', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onCreateComment = vi.fn().mockRejectedValue(new Error('Failed'));
       setupDefaultHandlers();
 
@@ -639,7 +639,7 @@ describe('CommentThread', () => {
     });
 
     it('should clear error when cancel clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const onCreateComment = vi.fn().mockRejectedValue(new Error('Failed'));
       setupDefaultHandlers();
 

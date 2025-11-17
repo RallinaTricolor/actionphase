@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor as _waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '../../test-utils'
 import { CharactersList } from '../CharactersList'
-import { http, HttpResponse as _HttpResponse } from 'msw'
+import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import type { Character } from '../../types/characters'
 

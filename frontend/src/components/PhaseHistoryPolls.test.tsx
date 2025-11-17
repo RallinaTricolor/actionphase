@@ -160,7 +160,7 @@ describe('PhaseHistoryPolls', () => {
       error: null,
     });
 
-    const { rerender: _rerender } = render(<PhaseHistoryPolls {...defaultProps} isGM={true} />);
+    const { rerender } = render(<PhaseHistoryPolls {...defaultProps} isGM={true} />);
 
     // PollCard should be rendered (we can't directly test props passed to it,
     // but we can verify the component renders with different prop combinations)

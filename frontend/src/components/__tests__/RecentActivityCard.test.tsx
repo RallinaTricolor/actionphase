@@ -27,7 +27,7 @@ describe('RecentActivityCard', () => {
   };
 
   it('returns null when messages array is empty', () => {
-    const { container: _container } = renderWithProviders(<RecentActivityCard messages={[]} />);
+    const { container } = renderWithProviders(<RecentActivityCard messages={[]} />);
 
     expect(container.firstChild).toBeNull();
   });

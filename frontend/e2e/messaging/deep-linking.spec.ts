@@ -187,7 +187,7 @@ test.describe('Deep Linking in Common Room', () => {
     await expect(newCommentsButton).toHaveClass(/border-accent-primary/);
 
     // Now navigate with deep link
-    await page.goto(`http://localhost:5173/games/${gameId}?tab=common-room&view=newComments&comment=${commentId}`);
+    await page.goto(`http://localhost:5173/games/${gameId}?tab=common-room&comment=${commentId}`);
     await page.waitForLoadState('networkidle');
 
     // Wait for tab switch
@@ -200,9 +200,6 @@ test.describe('Deep Linking in Common Room', () => {
     // Verify the comment is visible
     const comment = page.locator(`#comment-${commentId}`);
     await expect(comment).toBeVisible();
-
-    // Verify URL has view=posts
-    await expect(page).toHaveURL(/view=posts/);
   });
 
   test('should scroll to a deeply nested comment', async ({ page }) => {

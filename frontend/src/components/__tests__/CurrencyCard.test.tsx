@@ -87,7 +87,7 @@ describe('CurrencyCard', () => {
 
   describe('Edit Mode', () => {
     it('enters edit mode when edit button clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}
@@ -105,7 +105,7 @@ describe('CurrencyCard', () => {
     });
 
     it('shows save and cancel buttons in edit mode', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}
@@ -122,7 +122,7 @@ describe('CurrencyCard', () => {
     });
 
     it('allows editing currency type', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}
@@ -141,7 +141,7 @@ describe('CurrencyCard', () => {
     });
 
     it('allows editing amount', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}
@@ -160,7 +160,7 @@ describe('CurrencyCard', () => {
     });
 
     it('allows editing description', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}
@@ -182,7 +182,7 @@ describe('CurrencyCard', () => {
   describe('Save Functionality', () => {
     it('calls onUpdate with modified values when saved', async () => {
       const onUpdate = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}
@@ -212,7 +212,7 @@ describe('CurrencyCard', () => {
     });
 
     it('exits edit mode after save', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}
@@ -231,7 +231,7 @@ describe('CurrencyCard', () => {
 
     it('sets description to undefined when empty', async () => {
       const onUpdate = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}
@@ -258,7 +258,7 @@ describe('CurrencyCard', () => {
 
   describe('Cancel Functionality', () => {
     it('reverts changes when cancelled', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}
@@ -283,7 +283,7 @@ describe('CurrencyCard', () => {
 
     it('does not call onUpdate when cancelled', async () => {
       const onUpdate = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}
@@ -305,7 +305,7 @@ describe('CurrencyCard', () => {
     });
 
     it('exits edit mode when cancelled', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}
@@ -326,7 +326,7 @@ describe('CurrencyCard', () => {
   describe('Remove Functionality', () => {
     it('calls onRemove when delete button clicked', async () => {
       const onRemove = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(
         <CurrencyCard
           currency={mockCurrency}

@@ -30,17 +30,6 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
     yourCharacterId,
   });
 
-  useEffect(() => {
-    loadAllCharacters();
-  }, [gameId, loadAllCharacters]);
-
-  useEffect(() => {
-    // Auto-select if user only has one character
-    if (characters.length === 1 && !yourCharacterId) {
-      setYourCharacterId(characters[0].id);
-    }
-  }, [characters, yourCharacterId]);
-
   const loadAllCharacters = useCallback(async () => {
     try {
       setLoadingCharacters(true);
@@ -53,6 +42,17 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
       setLoadingCharacters(false);
     }
   }, [gameId]);
+
+  useEffect(() => {
+    loadAllCharacters();
+  }, [loadAllCharacters]);
+
+  useEffect(() => {
+    // Auto-select if user only has one character
+    if (characters.length === 1 && !yourCharacterId) {
+      setYourCharacterId(characters[0].id);
+    }
+  }, [characters, yourCharacterId]);
 
   const handleToggleParticipant = (characterId: number) => {
     const newSelected = new Set(selectedParticipants);
@@ -108,7 +108,7 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
       onClose();
     } catch (_err) {
       logger.error('Failed to create conversation', { error: _err, gameId, title, participantCount: selectedParticipants.size + 1 });
-      setError(err instanceof Error ? err.message : 'Failed to create conversation');
+      setError(_err instanceof Error ? _err.message : 'Failed to create conversation');
     } finally {
       setCreating(false);
     }

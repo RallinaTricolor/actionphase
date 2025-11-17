@@ -66,8 +66,8 @@ export function PollVotingForm({ poll, onSuccess, onCancel, isChangingVote = fal
       await submitVoteMutation.mutateAsync(voteData);
       onSuccess();
     } catch (_err) {
-      logger.error('Failed to submit vote', { error: err, pollId: poll.id, gameId: poll.game_id, characterId: selectedCharacterId });
-      setError(err instanceof Error ? err.message : 'Failed to submit vote');
+      logger.error('Failed to submit vote', { error: _err, pollId: poll.id, gameId: poll.game_id, characterId: selectedCharacterId });
+      setError(_err instanceof Error ? _err.message : 'Failed to submit vote');
     }
   };
 

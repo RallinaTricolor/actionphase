@@ -22,7 +22,7 @@ describe('AdminModeToggle', () => {
         toggleAdminMode: vi.fn(),
       });
 
-      const { container: _container } = render(<AdminModeToggle />);
+      const { container } = render(<AdminModeToggle />);
 
       expect(container.firstChild).toBeNull();
     });
@@ -71,7 +71,7 @@ describe('AdminModeToggle', () => {
     });
 
     it('calls toggleAdminMode when clicked', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       const mockToggle = vi.fn();
 
       vi.mocked(useAdminModeHook.useAdminMode).mockReturnValue({

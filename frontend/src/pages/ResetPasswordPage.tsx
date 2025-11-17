@@ -96,7 +96,7 @@ export function ResetPasswordPage() {
         navigate('/login');
       }, 3000);
     } catch (err: unknown) {
-      setError(err.response?.data?.error || 'Failed to reset password. Please try again.');
+      setError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to reset password. Please try again.');
     } finally {
       setIsLoading(false);
     }

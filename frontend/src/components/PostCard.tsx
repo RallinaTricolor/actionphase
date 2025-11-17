@@ -109,7 +109,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
           }
         } catch (_err) {
           if (isMounted) {
-            logger.error('Failed to load comments', { error: err, gameId, postId: post.id });
+            logger.error('Failed to load comments', { error: _err, gameId, postId: post.id });
           }
         } finally {
           if (isMounted) setLoadingComments(false);
@@ -163,7 +163,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       setHasMore(response.data.has_more);
       setOffset(COMMENTS_PER_PAGE);
     } catch (_err) {
-      logger.error('Failed to reload comments', { error: err, gameId, postId: post.id });
+      logger.error('Failed to reload comments', { error: _err, gameId, postId: post.id });
     } finally {
       setLoadingComments(false);
     }
@@ -186,7 +186,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       setHasMore(response.data.has_more);
       setOffset(prev => prev + COMMENTS_PER_PAGE);
     } catch (_err) {
-      logger.error('Failed to load more comments', { error: err, gameId, postId: post.id, offset });
+      logger.error('Failed to load more comments', { error: _err, gameId, postId: post.id, offset });
     } finally {
       setLoadingMore(false);
     }
@@ -213,7 +213,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       setShowComments(true);
       await loadComments();
     } catch (_err) {
-      logger.error('Failed to submit comment', { error: err, gameId, postId: post.id, characterId: selectedCharacterId });
+      logger.error('Failed to submit comment', { error: _err, gameId, postId: post.id, characterId: selectedCharacterId });
     } finally {
       setIsSubmitting(false);
     }
@@ -264,7 +264,7 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       // Notify parent component of the update so it can update its local state
       onPostUpdated?.(updatedPost);
     } catch (_err) {
-      logger.error('Failed to update post', { error: err, gameId, postId: post.id });
+      logger.error('Failed to update post', { error: _err, gameId, postId: post.id });
     }
   };
 

@@ -37,7 +37,7 @@ describe('AddSkillModal', () => {
 
   describe('Form Input', () => {
     it('allows entering skill name', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const nameInput = screen.getByLabelText(/Skill Name/);
@@ -47,7 +47,7 @@ describe('AddSkillModal', () => {
     });
 
     it('allows entering level as text', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const levelInput = screen.getByLabelText(/Level/);
@@ -57,7 +57,7 @@ describe('AddSkillModal', () => {
     });
 
     it('allows entering level as number', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const levelInput = screen.getByLabelText(/Level/);
@@ -67,7 +67,7 @@ describe('AddSkillModal', () => {
     });
 
     it('allows entering category', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const categoryInput = screen.getByLabelText(/Category/);
@@ -77,7 +77,7 @@ describe('AddSkillModal', () => {
     });
 
     it('allows entering description', async () => {
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const descInput = screen.getByLabelText(/Description/);
@@ -90,7 +90,7 @@ describe('AddSkillModal', () => {
   describe('Form Submission', () => {
     it('calls onAdd with complete skill data', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), 'Swordsmanship');
@@ -110,7 +110,7 @@ describe('AddSkillModal', () => {
 
     it('calls onAdd with numeric level', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), 'Archery');
@@ -128,7 +128,7 @@ describe('AddSkillModal', () => {
 
     it('calls onAdd with only required fields', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), 'Simple Skill');
@@ -145,7 +145,7 @@ describe('AddSkillModal', () => {
 
     it('trims whitespace from name', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), '  Swordsmanship  ');
@@ -158,7 +158,7 @@ describe('AddSkillModal', () => {
 
     it('trims whitespace from level', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), 'Skill');
@@ -172,7 +172,7 @@ describe('AddSkillModal', () => {
 
     it('trims whitespace from category', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), 'Skill');
@@ -186,7 +186,7 @@ describe('AddSkillModal', () => {
 
     it('trims whitespace from description', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), 'Skill');
@@ -200,7 +200,7 @@ describe('AddSkillModal', () => {
 
     it('sets empty level to undefined', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), 'Skill');
@@ -214,7 +214,7 @@ describe('AddSkillModal', () => {
 
     it('sets empty category to undefined', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), 'Skill');
@@ -228,7 +228,7 @@ describe('AddSkillModal', () => {
 
     it('sets empty description to undefined', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), 'Skill');
@@ -242,7 +242,7 @@ describe('AddSkillModal', () => {
 
     it('does not call onAdd when name is empty', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.click(screen.getByText('Add Skill'));
@@ -252,7 +252,7 @@ describe('AddSkillModal', () => {
 
     it('does not call onAdd when name is only whitespace', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), '   ');
@@ -265,7 +265,7 @@ describe('AddSkillModal', () => {
   describe('Cancel Functionality', () => {
     it('calls onCancel when cancel button clicked', async () => {
       const onCancel = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={vi.fn()} onCancel={onCancel} />);
 
       await user.click(screen.getByText('Cancel'));
@@ -275,7 +275,7 @@ describe('AddSkillModal', () => {
 
     it('does not call onAdd when cancelled', async () => {
       const onAdd = vi.fn();
-      const _user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddSkillModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/Skill Name/), 'Skill');

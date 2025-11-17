@@ -34,7 +34,7 @@ export function HandoutsList({ gameId, isGM, gameState }: HandoutsListProps) {
     try {
       await createHandoutMutation.mutateAsync(data);
       setShowCreateModal(false);
-    } catch (_error) {
+    } catch (error) {
       showError(error instanceof Error ? error.message : 'Failed to create handout');
     }
   };
@@ -48,7 +48,7 @@ export function HandoutsList({ gameId, isGM, gameState }: HandoutsListProps) {
         data
       });
       setEditingHandout(null);
-    } catch (_error) {
+    } catch (error) {
       showError(error instanceof Error ? error.message : 'Failed to update handout');
     }
   };
@@ -56,7 +56,7 @@ export function HandoutsList({ gameId, isGM, gameState }: HandoutsListProps) {
   const handleDelete = async (handout: Handout) => {
     try {
       await deleteHandoutMutation.mutateAsync(handout.id);
-    } catch (_error) {
+    } catch (error) {
       showError(error instanceof Error ? error.message : 'Failed to delete handout');
     }
   };
@@ -64,7 +64,7 @@ export function HandoutsList({ gameId, isGM, gameState }: HandoutsListProps) {
   const handlePublish = async (handout: Handout) => {
     try {
       await publishHandoutMutation.mutateAsync(handout.id);
-    } catch (_error) {
+    } catch (error) {
       showError(error instanceof Error ? error.message : 'Failed to publish handout');
     }
   };
@@ -72,7 +72,7 @@ export function HandoutsList({ gameId, isGM, gameState }: HandoutsListProps) {
   const handleUnpublish = async (handout: Handout) => {
     try {
       await unpublishHandoutMutation.mutateAsync(handout.id);
-    } catch (_error) {
+    } catch (error) {
       showError(error instanceof Error ? error.message : 'Failed to unpublish handout');
     }
   };

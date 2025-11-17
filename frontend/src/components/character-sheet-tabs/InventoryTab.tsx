@@ -11,6 +11,18 @@ interface InventoryTabProps {
   onDeleteDraft: (draftId: number) => void;
 }
 
+// Wrapper component to adapt ItemForm to CustomFormComponentProps
+const ItemFormWrapper: React.FC<{
+  onSubmit: (data: Record<string, unknown>) => void;
+  onCancel: () => void;
+  submitButtonTestId?: string;
+}> = ({ onSubmit, ...props }) => (
+  <ItemForm
+    {...props}
+    onSubmit={(data) => onSubmit(data as unknown as Record<string, unknown>)}
+  />
+);
+
 export const InventoryTab: React.FC<InventoryTabProps> = (props) => {
   return (
     <CharacterSheetTab
@@ -19,20 +31,21 @@ export const InventoryTab: React.FC<InventoryTabProps> = (props) => {
       title="Inventory"
       addButtonLabel="+ Add Item"
       emptyMessage="No pending inventory changes"
-      customFormComponent={ItemForm}
-      transformCustomData={(data: ItemFormData) => {
+      customFormComponent={ItemFormWrapper}
+      transformCustomData={(data: Record<string, unknown>) => {
+        const typedData = data as unknown as ItemFormData;
         const itemData = {
           id: crypto.randomUUID(), // Generate unique ID
-          name: data.name,
-          description: data.description,
-          quantity: data.quantity,
-          category: data.category,
-          value: data.value,
-          weight: data.weight,
+          name: typedData.name,
+          description: typedData.description,
+          quantity: typedData.quantity,
+          category: typedData.category,
+          value: typedData.value,
+          weight: typedData.weight,
           equipped: false, // Default for new items
         };
         return {
-          fieldName: data.name,
+          fieldName: typedData.name,
           fieldValue: JSON.stringify(itemData),
           fieldType: 'json' as const,
         };

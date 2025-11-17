@@ -59,7 +59,7 @@ export function ReadingModeProvider({ children }: { children: React.ReactNode })
           },
         };
       }
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to load reading mode preferences', { error });
     }
 
@@ -82,7 +82,7 @@ export function ReadingModeProvider({ children }: { children: React.ReactNode })
         theme: state.theme,
         fontSize: state.fontSize,
       }));
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to save reading mode preferences', { error });
     }
   }, [state.theme, state.fontSize]);

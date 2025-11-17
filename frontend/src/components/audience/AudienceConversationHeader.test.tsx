@@ -77,7 +77,7 @@ describe('AudienceConversationHeader', () => {
   });
 
   it('calls onBack when back button is clicked', async () => {
-    const _user = userEvent.setup();
+    const user = userEvent.setup();
     const handleBack = vi.fn();
 
     render(
@@ -196,7 +196,7 @@ describe('AudienceConversationHeader', () => {
   });
 
   it('has sticky positioning', () => {
-    const { container: _container } = render(
+    const { container } = render(
       <AudienceConversationHeader
         conversation={mockConversation}
         messageCount={15}
@@ -209,7 +209,7 @@ describe('AudienceConversationHeader', () => {
   });
 
   it('renders both mobile and desktop layouts', () => {
-    const { container: _container } = render(
+    const { container } = render(
       <AudienceConversationHeader
         conversation={mockConversation}
         messageCount={15}

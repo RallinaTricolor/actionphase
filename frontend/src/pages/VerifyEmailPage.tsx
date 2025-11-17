@@ -33,7 +33,7 @@ export function VerifyEmailPage() {
           navigate('/dashboard');
         }, 3000);
       } catch (err: unknown) {
-        setError(err.response?.data?.error || 'This verification link is invalid or has expired');
+        setError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'This verification link is invalid or has expired');
       } finally {
         setIsValidating(false);
       }
