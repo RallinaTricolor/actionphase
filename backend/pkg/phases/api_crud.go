@@ -46,12 +46,6 @@ func (h *Handler) CreatePhase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate title is not empty
-	if data.Title == "" {
-		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("phase title is required")))
-		return
-	}
-
 	// Get authenticated user
 	authUser := core.GetAuthenticatedUser(ctx)
 	if authUser == nil {
