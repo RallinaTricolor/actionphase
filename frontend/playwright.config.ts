@@ -21,7 +21,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
 
   /* Use 6 workers for parallel execution with worker-specific test users */
-  workers: process.env.CI ? 1 : 6,
+  workers: 6,
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
