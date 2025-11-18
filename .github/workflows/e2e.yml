@@ -147,33 +147,7 @@ jobs:
         id: e2e_tests
         run: |
           cd frontend
-
-          # Determine which test suite to run
-          TEST_SUITE="${{ github.event.inputs.test_suite || 'all' }}"
-
-          case "$TEST_SUITE" in
-            smoke)
-              npx playwright test --grep @smoke --reporter=html
-              ;;
-            critical)
-              npx playwright test --grep @critical --reporter=html
-              ;;
-            auth)
-              npx playwright test --grep @auth --reporter=html
-              ;;
-            game)
-              npx playwright test --grep @game --reporter=html
-              ;;
-            character)
-              npx playwright test --grep @character --reporter=html
-              ;;
-            message)
-              npx playwright test --grep @message --reporter=html
-              ;;
-            all|*)
-              npx playwright test --reporter=html
-              ;;
-          esac
+          npm run test:e2e
 
       # Capture logs and artifacts on failure
       - name: Upload backend logs
