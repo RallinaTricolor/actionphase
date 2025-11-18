@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAdminMode } from '../useAdminMode';
-import * as AuthContext from '../../contexts/AuthContext';
+import * as AuthContext from '../../contexts/AuthContext'
 import type { User } from '../../types/auth';
 import { AdminModeProvider } from '../../contexts/AdminModeContext';
 import { ReactNode } from 'react';

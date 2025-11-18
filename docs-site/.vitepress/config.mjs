@@ -31,15 +31,19 @@ export default defineConfig({
             { text: 'Game Phases', link: '/user/game-guide/game-phases' },
             { text: 'Common Room', link: '/user/game-guide/common-room' },
             { text: 'Action Phase', link: '/user/game-guide/action-phase' },
-            { text: 'Character Management', link: '/user/game-guide/character-management' }
+            { text: 'Character Management', link: '/user/game-guide/character-management' },
+            { text: 'Private Messages', link: '/user/game-guide/private-messages' }
           ]
         },
         {
           text: 'GM Guide',
           items: [
-            { text: 'Creating a Game', link: '/user/gm-guide/creating-game' },
+            { text: 'Getting Started', link: '/user/gm-guide/getting-started' },
             { text: 'Managing Players', link: '/user/gm-guide/managing-players' },
-            { text: 'Running Phases', link: '/user/gm-guide/running-phases' }
+            { text: 'Character Approval', link: '/user/gm-guide/character-approval' },
+            { text: 'Phase Management', link: '/user/gm-guide/phase-management' },
+            { text: 'Running Games', link: '/user/gm-guide/running-games' },
+            { text: 'Best Practices', link: '/user/gm-guide/best-practices' }
           ]
         },
         {

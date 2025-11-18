@@ -15,8 +15,8 @@ export function EmailVerificationBanner() {
     onSuccess: () => {
       showToast('Verification email sent! Please check your inbox.', 'success');
     },
-    onError: (error: any) => {
-      const message = error.response?.data?.error || 'Failed to send verification email';
+    onError: (error: unknown) => {
+      const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to send verification email';
       showToast(message, 'danger');
     },
   });

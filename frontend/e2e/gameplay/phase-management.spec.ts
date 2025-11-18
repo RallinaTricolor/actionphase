@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { PhaseManagementPage } from '../pages/PhaseManagementPage';
-import { waitForModal } from '../utils/waits';
 
 /**
  * Journey 4: GM Manages Phases

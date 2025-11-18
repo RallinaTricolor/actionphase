@@ -250,7 +250,7 @@ describe('DeadlineTimer', () => {
       const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
       const isoDate = futureDate.toISOString();
 
-      const { container } = render(<DeadlineTimer deadline={isoDate} />);
+      render(<DeadlineTimer deadline={isoDate} />);
 
       // Badge should be a span
       const badge = screen.getByText(/in \d+ (hour|day)s?/i).closest('span');

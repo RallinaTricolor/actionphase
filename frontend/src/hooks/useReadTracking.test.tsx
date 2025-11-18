@@ -222,7 +222,7 @@ describe('useReadTracking hooks', () => {
         })
       );
 
-      const { result, rerender } = renderHook(() => usePostUnreadCommentIDs(10, 1), { wrapper });
+      const { result } = renderHook(() => usePostUnreadCommentIDs(10, 1), { wrapper });
 
       await waitFor(() => {
         expect(result.current).toEqual([101, 102]);

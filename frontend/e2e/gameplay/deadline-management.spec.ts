@@ -29,9 +29,6 @@ async function setDeadlineDateTime(page: Page, futureDate: Date) {
   // Wait for the date picker dialog to appear
   await expect(page.getByRole('dialog', { name: 'Choose Date and Time' })).toBeVisible();
 
-  // Get the month/year we need
-  const targetMonth = futureDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-
   // The calendar should already be on the correct month for near-future dates
   // Click the appropriate date cell
   const dayOfMonth = futureDate.getDate();

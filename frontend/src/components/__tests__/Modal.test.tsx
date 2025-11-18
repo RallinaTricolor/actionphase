@@ -235,7 +235,7 @@ describe('Modal', () => {
     })
 
     it('should have content padding', () => {
-      const { container } = render(
+      render(
         <Modal isOpen={true} onClose={mockOnClose}>
           <div data-testid="modal-content">Content</div>
         </Modal>

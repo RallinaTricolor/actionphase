@@ -47,7 +47,7 @@ export function CreatePostForm({ gameId: _gameId, characters, allCharacters, onS
     try {
       await onSubmit(selectedCharacterId, content.trim());
       setContent('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Use fallback message for generic errors like "Network error"
       const errorMessage = err instanceof Error && err.message !== 'Network error'
         ? err.message

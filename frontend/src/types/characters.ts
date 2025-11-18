@@ -66,7 +66,7 @@ export interface CharacterAbility {
   type: 'innate' | 'learned' | 'gm_assigned';
   source?: string; // Who assigned it (GM name, class, etc.)
   active: boolean;
-  metadata?: Record<string, any>; // For game-specific stats
+  metadata?: Record<string, unknown>; // For game-specific stats
 }
 
 export interface CharacterSkill {
@@ -75,7 +75,7 @@ export interface CharacterSkill {
   level?: number | string; // Could be numeric or descriptive like "Expert"
   description?: string;
   category?: string; // e.g., "Combat", "Social", "Academic"
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Individual inventory item structures for JSON fields
@@ -89,7 +89,7 @@ export interface InventoryItem {
   value?: number;
   weight?: number;
   equipped?: boolean; // For equipment/weapons
-  metadata?: Record<string, any>; // Game-specific properties
+  metadata?: Record<string, unknown>; // Game-specific properties
 }
 
 export interface CurrencyEntry {

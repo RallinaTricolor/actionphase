@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test-utils';
 import { UpcomingDeadlinesCard } from '../UpcomingDeadlinesCard';
@@ -9,7 +9,7 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
-    Link: ({ to, children, className }: any) => (
+    Link: ({ to, children, className }: unknown) => (
       <a href={to} className={className}>{children}</a>
     ),
   };

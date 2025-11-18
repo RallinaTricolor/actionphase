@@ -314,11 +314,10 @@ export default function ThemeTestPage() {
 
             <div className={cn(
               'p-4 rounded-lg border',
-              true && 'surface-base',
-              false && 'bg-semantic-danger',
+              'surface-base',
               'border-theme-default text-content-primary'
             )}>
-              Conditional classes (shows surface-base, hides danger)
+              Conditional classes (shows surface-base)
             </div>
           </div>
         </div>

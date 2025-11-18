@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs, logout, isAuthenticated, login } from '../fixtures/auth-helpers';
-import { assertUrl, assertTextVisible, assertElementExists } from '../utils/assertions';
+import { assertUrl } from '../utils/assertions';
 
 /**
  * Journey 1: User Authentication Flow

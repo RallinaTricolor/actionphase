@@ -1,0 +1,291 @@
+name: CI
+
+on:
+  push:
+    branches: [master, go_rewrite]
+  pull_request:
+    branches: [master, go_rewrite]
+
+jobs:
+  backend-lint:
+    name: Backend Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+
+      - name: Set up Node.js for docs
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Build documentation
+        run: |
+          cd docs-site
+          npm ci
+          npm run docs:build
+          # Copy built docs to backend embed location
+          rm -rf ../backend/pkg/docs/dist
+          mkdir -p ../backend/pkg/docs/dist
+          cp -r .vitepress/dist/* ../backend/pkg/docs/dist/
+
+      - name: Format check
+        run: |
+          cd backend
+          gofmt_output=$(gofmt -l .)
+          if [ -n "$gofmt_output" ]; then
+            echo "The following files need formatting:"
+            echo "$gofmt_output"
+            exit 1
+          fi
+
+      - name: Go vet
+        run: |
+          cd backend
+          # Vet all packages except pkg/docs/dist (embedded frontend assets)
+          packages=$(go list ./... | grep -v '/pkg/docs/dist')
+          if [ -n "$packages" ]; then
+            go vet $packages
+          else
+            echo "No packages to vet"
+          fi
+
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: example
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Install golang-migrate
+        run: |
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz
+          sudo mv migrate /usr/local/bin/migrate
+          migrate -version
+
+      - name: Create test database
+        env:
+          PGPASSWORD: example
+        run: |
+          psql -h localhost -U postgres -c "CREATE DATABASE actionphase_test;"
+
+      - name: Run migrations
+        env:
+          PGPASSWORD: example
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Checking migrations directory..."
+          ls -la backend/pkg/db/migrations/ | head -10
+
+          echo "Running migrations..."
+          migrate -source "file://$(pwd)/backend/pkg/db/migrations" \
+                  -database "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" \
+                  up
+
+          MIGRATE_EXIT=$?
+          if [ $MIGRATE_EXIT -ne 0 ]; then
+            echo "ERROR: Migration command failed with exit code $MIGRATE_EXIT"
+            exit 1
+          fi
+
+          echo "Verifying migrations..."
+          # Check migration version
+          MIGRATION_VERSION=$(migrate -source "file://$(pwd)/backend/pkg/db/migrations" \
+                                      -database "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" \
+                                      version 2>&1)
+          echo "Migration version: $MIGRATION_VERSION"
+
+          # Check that tables exist
+          TABLES=$(psql -h localhost -U postgres -d actionphase_test -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
+          echo "Found $TABLES tables in database"
+
+          if [ "$TABLES" -lt "10" ]; then
+            echo "ERROR: Expected at least 10 tables but found $TABLES"
+            echo "Listing tables:"
+            psql -h localhost -U postgres -d actionphase_test -c "\dt"
+            exit 1
+          fi
+
+          echo "Migrations applied successfully!"
+
+      - name: Run mock tests (fast)
+        run: |
+          cd backend
+          # Exclude pkg/docs/dist (embedded frontend assets)
+          packages=$(go list ./... | grep -v '/pkg/docs/dist')
+          if [ -n "$packages" ]; then
+            SKIP_DB_TESTS=true go test $packages
+          else
+            echo "No packages to test"
+          fi
+
+      - name: Run integration tests (with database)
+        env:
+          TEST_DATABASE_URL: postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable
+        run: |
+          cd backend
+          # Exclude pkg/docs/dist (embedded frontend assets)
+          packages=$(go list ./... | grep -v '/pkg/docs/dist')
+          if [ -n "$packages" ]; then
+            SKIP_DB_TESTS=false go test -p=1 -coverprofile=coverage.out -covermode=atomic $packages
+          else
+            echo "No packages to test"
+          fi
+
+      - name: Upload backend coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage.out
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Run tests with race detector
+        env:
+          TEST_DATABASE_URL: postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable
+        run: |
+          PGPASSWORD=example psql -h localhost -p 5432 -U postgres -d actionphase_test -q -c "
+          DO \$\$
+          DECLARE
+          r RECORD;
+          BEGIN
+          FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+          EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' RESTART IDENTITY CASCADE';
+          END LOOP;
+          END \$\$;
+          " 2>&1 | grep -v "NOTICE" || true
+          cd backend
+          # Exclude pkg/docs/dist (embedded frontend assets)
+          packages=$(go list ./... | grep -v '/pkg/docs/dist')
+          if [ -n "$packages" ]; then
+            SKIP_DB_TESTS=false go test -p=1 -race $packages
+          else
+            echo "No packages to test"
+          fi
+
+  frontend-lint:
+    name: Frontend Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Run ESLint
+        run: cd frontend && npm run lint
+
+      - name: TypeScript type check
+        run: cd frontend && npx tsc --noEmit
+
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Run unit tests
+        run: cd frontend && npm test -- --coverage --run
+
+      - name: Upload frontend coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  build-check:
+    name: Build Check
+    runs-on: ubuntu-latest
+    needs: [backend-lint, backend-test, frontend-lint, frontend-test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build documentation for embedding
+        run: |
+          cd docs-site
+          npm ci
+          npm run docs:build
+          # Copy built docs to backend embed location
+          rm -rf ../backend/pkg/docs/dist
+          mkdir -p ../backend/pkg/docs/dist
+          cp -r .vitepress/dist/* ../backend/pkg/docs/dist/
+
+      - name: Build backend
+        run: cd backend && go build ./...
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Build frontend
+        run: cd frontend && npm run build

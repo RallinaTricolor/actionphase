@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor, act, cleanup } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import { renderWithProviders } from '../../test-utils'
 import { GamesPage } from '../GamesPage'
 
@@ -40,7 +40,7 @@ vi.mock('../../components/GamesList', () => ({
     loading,
     error,
     onApplyToGame,
-  }: any) => (
+  }: unknown) => (
     <div data-testid="games-list">
       <div>Games Count: {games?.length || 0}</div>
       <div>Loading: {String(loading)}</div>
@@ -53,7 +53,7 @@ vi.mock('../../components/GamesList', () => ({
 }))
 
 vi.mock('../../components/CreateGameForm', () => ({
-  CreateGameForm: ({ onSuccess, onCancel }: any) => (
+  CreateGameForm: ({ onSuccess, onCancel }: unknown) => (
     <div data-testid="create-game-form">
       <button onClick={() => onSuccess(789)}>Create Success</button>
       <button onClick={onCancel}>Cancel</button>
@@ -62,7 +62,7 @@ vi.mock('../../components/CreateGameForm', () => ({
 }))
 
 vi.mock('../../components/Modal', () => ({
-  Modal: ({ isOpen, onClose, title, children }: any) => (
+  Modal: ({ isOpen, onClose, title, children }: unknown) => (
     isOpen ? (
       <div data-testid="modal">
         <h2>{title}</h2>
@@ -74,7 +74,7 @@ vi.mock('../../components/Modal', () => ({
 }))
 
 vi.mock('../../components/ApplyToGameModal', () => ({
-  ApplyToGameModal: ({ gameId, gameTitle, isOpen, onClose, onApplicationSubmitted }: any) => (
+  ApplyToGameModal: ({ gameId, gameTitle, isOpen, onClose, onApplicationSubmitted }: unknown) => (
     isOpen ? (
       <div data-testid="apply-modal">
         <h2>Apply to {gameTitle}</h2>
@@ -89,6 +89,15 @@ vi.mock('../../components/ApplyToGameModal', () => ({
 import { apiClient } from '../../lib/api'
 import { useAuth } from '../../contexts/AuthContext'
 
+// Type for mocked useAuth return value
+type MockedAuthReturn = Partial<ReturnType<typeof useAuth>> & {
+  isAuthenticated: boolean;
+  user: { id: number; username: string } | null;
+  login: ReturnType<typeof vi.fn>;
+  logout: ReturnType<typeof vi.fn>;
+  isLoading: boolean;
+};
+
 describe('GamesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -100,7 +109,7 @@ describe('GamesPage', () => {
       login: vi.fn(),
       logout: vi.fn(),
       isLoading: false,
-    } as any)
+    } as MockedAuthReturn)
 
     vi.mocked(apiClient.getAuthToken).mockReturnValue('valid-token')
 

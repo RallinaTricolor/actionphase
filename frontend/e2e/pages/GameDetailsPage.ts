@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 import { navigateToGame, navigateToGameTab } from '../utils/navigation';
 import { waitForVisible } from '../utils/waits';
 import { assertTextVisible, assertUrl } from '../utils/assertions';

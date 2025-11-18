@@ -143,7 +143,7 @@ export async function getGameIdByTitle(page: Page, title: string): Promise<numbe
   const games = responseData.games || [];
 
   // Filter to only this worker's games (by ID range) and match title
-  const game = games.find((g: any) =>
+  const game = games.find((g: { title: string; id: number }) =>
     g.title === title &&
     g.id >= minId &&
     g.id <= maxId

@@ -2,9 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
-import { GameApplicationsPage } from '../pages/GameApplicationsPage';
 import { CharacterWorkflowPage } from '../pages/CharacterWorkflowPage';
-import { navigateToGame } from '../utils/navigation';
 
 /**
  * E2E Tests for Character Approval Workflow
@@ -25,76 +23,6 @@ import { navigateToGame } from '../utils/navigation';
 
 test.describe('Character Approval Workflow', () => {
 
-  /**
-   * Helper: Create game and get player approved (DEPRECATED - use E2E_CHARACTER_APPROVAL fixture instead)
-   * Returns gameId for the recruiting game with an approved player
-   * @deprecated Use E2E_CHARACTER_APPROVAL fixture with getFixtureGameId instead
-   */
-  async function setupGameWithApprovedPlayer_DEPRECATED(gmPage: any, playerPage: any): Promise<number> {
-    // GM creates game
-    await gmPage.getByRole('link', { name: 'Games' }).click();
-    await gmPage.waitForLoadState('networkidle');
-    await gmPage.getByRole('button', { name: 'Create Game' }).click();
-    await gmPage.waitForSelector('#title', { timeout: 5000 });
-
-    const timestamp = Date.now();
-    const gameTitle = `E2E Char Approval ${timestamp}`;
-
-    await gmPage.fill('#title', gameTitle);
-    await gmPage.fill('#description', 'Test game for character approval');
-    await gmPage.fill('#genre', 'Test');
-    await gmPage.fill('#max_players', '4');
-    await gmPage.getByTestId('create-game-submit').click();
-    await gmPage.waitForURL(/\/games\/\d+/);
-    await gmPage.waitForLoadState('networkidle');
-
-    const gameUrl = gmPage.url();
-    const gameId = parseInt(gameUrl.match(/\/games\/(\d+)/)?.[1] || '0');
-
-    // Start recruitment using POM
-    const gmGamePage = new GameDetailsPage(gmPage);
-    await gmGamePage.startRecruitment();
-
-    // Player applies using POM
-    const playerApplicationsPage = new GameApplicationsPage(playerPage, gameId);
-    await navigateToGame(playerPage, gameId);
-    await playerPage.waitForLoadState('networkidle');
-
-    // Verify Apply button is visible
-    expect(await playerApplicationsPage.hasApplyButton()).toBe(true);
-
-    // Submit application using POM
-    await playerApplicationsPage.submitApplication('I would like to join this game.', 'player');
-
-    // Wait for submission to process
-    await playerPage.waitForTimeout(1000);
-
-    // Verify application was submitted by checking Apply button is gone
-    await navigateToGame(playerPage, gameId);
-    await playerPage.waitForLoadState('networkidle');
-    expect(await playerApplicationsPage.hasApplyButton()).toBe(false);
-
-    // GM approves player using POM
-    const gmApplicationsPage = new GameApplicationsPage(gmPage, gameId);
-    await gmApplicationsPage.goto();
-
-    // Get the player's username (TestPlayer1, TestPlayer2, etc.) from the pending applications
-    const pendingApplications = await gmApplicationsPage.getPendingApplications();
-    expect(pendingApplications.length).toBeGreaterThan(0);
-
-    // Approve the first pending application
-    await gmApplicationsPage.approveApplication(pendingApplications[0]);
-
-    return gameId;
-  }
-
-  /**
-   * Helper: Transition game to character_creation state
-   */
-  async function transitionToCharacterCreation(gmPage: any) {
-    await gmPage.getByRole('button', { name: 'Start Character Creation' }).click();
-    await gmPage.waitForLoadState('networkidle');
-  }
 
   test('character starts in pending state after creation', async ({ browser }) => {
     const gmContext = await browser.newContext();

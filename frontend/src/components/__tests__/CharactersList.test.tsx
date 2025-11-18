@@ -532,7 +532,7 @@ describe('CharactersList', () => {
 
   describe('Character actions', () => {
     it('should call approve mutation when publish button is clicked', async () => {
-      let approvePayload: any = null
+      let approvePayload: unknown = null
 
       server.use(
         http.post('http://localhost:3000/api/v1/characters/:id/approve', async ({ request }) => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -294,7 +294,7 @@ describe('NotificationDropdown', () => {
     );
 
     const mockOnClose = vi.fn();
-    const { container } = renderWithProviders(
+    renderWithProviders(
       <div>
         <div data-testid="outside-element">Outside</div>
         <NotificationDropdown isOpen={true} onClose={mockOnClose} />

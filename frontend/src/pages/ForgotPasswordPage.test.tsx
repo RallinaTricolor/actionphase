@@ -129,7 +129,7 @@ describe('ForgotPasswordPage', () => {
   });
 
   it('trims whitespace from email', async () => {
-    let requestBody: any = null;
+    let requestBody: unknown = null;
 
     server.use(
       http.post('http://localhost:3000/api/v1/auth/request-password-reset', async ({ request }) => {

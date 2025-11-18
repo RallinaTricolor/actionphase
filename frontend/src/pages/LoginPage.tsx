@@ -10,7 +10,7 @@ export const LoginPage = () => {
 
   const handleSuccess = () => {
     // Redirect to the page they were trying to access, or dashboard if none
-    const from = (location.state as any)?.from?.pathname || '/dashboard';
+    const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/dashboard';
     navigate(from, { replace: true });
   };
 

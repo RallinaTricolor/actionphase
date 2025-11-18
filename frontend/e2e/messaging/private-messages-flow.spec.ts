@@ -1,11 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId, getWorkerGameId } from '../fixtures/game-helpers';
-import { navigateToGame } from '../utils/navigation';
-import { assertTextVisible } from '../utils/assertions';
-import { waitForModal } from '../utils/waits';
 import { MessagingPage } from '../pages/MessagingPage';
-import { GameDetailsPage } from '../pages/GameDetailsPage';
 
 /**
  * Journey 5: Players Exchange Private Messages

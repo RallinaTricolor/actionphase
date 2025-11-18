@@ -20,18 +20,24 @@ const ThrowError = ({ shouldThrow = false, error }: { shouldThrow?: boolean; err
 };
 
 // Mock console methods to avoid test output pollution
+// eslint-disable-next-line no-console
 const originalConsoleError = console.error;
+// eslint-disable-next-line no-console
 const originalConsoleWarn = console.warn;
 
 describe('ErrorBoundary', () => {
   beforeEach(() => {
     // Suppress React error boundary warnings in tests
+    // eslint-disable-next-line no-console
     console.error = vi.fn();
+    // eslint-disable-next-line no-console
     console.warn = vi.fn();
   });
 
   afterEach(() => {
+    // eslint-disable-next-line no-console
     console.error = originalConsoleError;
+    // eslint-disable-next-line no-console
     console.warn = originalConsoleWarn;
   });
 

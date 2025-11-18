@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
@@ -457,7 +457,7 @@ describe('ActionSubmission', () => {
 
     it('trims whitespace from content before submitting', async () => {
       const user = userEvent.setup();
-      let submittedData: any = null;
+      let submittedData: unknown = null;
 
       setupDefaultHandlers();
       server.use(
@@ -486,7 +486,7 @@ describe('ActionSubmission', () => {
 
     it('submits with selected character', async () => {
       const user = userEvent.setup();
-      let submittedData: any = null;
+      let submittedData: unknown = null;
 
       setupDefaultHandlers();
       server.use(

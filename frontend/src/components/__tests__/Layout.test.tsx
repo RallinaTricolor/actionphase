@@ -3,6 +3,7 @@ import { screen, render, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { useAuth } from '../../contexts/AuthContext'
 import { Layout } from '../Layout'
 import { AdminModeProvider } from '../../contexts/AdminModeContext'
 import { ToastProvider } from '../../contexts/ToastContext'
@@ -52,7 +53,7 @@ describe('Layout', () => {
         register: vi.fn(),
         logout: mockLogout,
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
     })
 
     it('should render navigation bar', () => {
@@ -177,7 +178,7 @@ describe('Layout', () => {
         register: vi.fn(),
         logout: mockLogout,
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
     })
 
     it('should NOT render navigation bar', () => {
@@ -225,7 +226,7 @@ describe('Layout', () => {
         register: vi.fn(),
         logout: mockLogout,
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
     })
 
     it('should have proper layout structure', () => {
@@ -243,7 +244,7 @@ describe('Layout', () => {
     })
 
     it('should have main content wrapper', () => {
-      const { container } = renderLayout(<div data-testid="content">Content</div>, '/dashboard')
+      renderLayout(<div data-testid="content">Content</div>, '/dashboard')
 
       const main = screen.getByTestId('content').closest('main')
       expect(main).toBeInTheDocument()
@@ -269,7 +270,7 @@ describe('Layout', () => {
         register: vi.fn(),
         logout: mockLogout,
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
     })
 
     it('should handle empty children', () => {
@@ -279,7 +280,7 @@ describe('Layout', () => {
     })
 
     it('should handle null children', () => {
-      const { container } = renderLayout(null as any, '/dashboard')
+      const { container } = renderLayout(null as unknown as React.ReactNode, '/dashboard')
 
       expect(container.querySelector('main')).toBeInTheDocument()
     })
@@ -309,7 +310,7 @@ describe('Layout', () => {
         register: vi.fn(),
         logout: mockLogout,
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
     })
 
     it('should have semantic nav element', () => {

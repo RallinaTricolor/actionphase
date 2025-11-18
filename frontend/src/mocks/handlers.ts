@@ -315,6 +315,213 @@ export const handlers = [
     return HttpResponse.json({ results: [] })
   }),
 
+  // Character endpoints
+  http.get('/api/v1/games/:gameId/characters/controllable', () => {
+    return HttpResponse.json([
+      {
+        id: 1,
+        game_id: 1,
+        user_id: 1,
+        name: 'Test Character',
+        character_type: 'player_character',
+        character_data: {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ])
+  }),
+
+  http.get('/api/v1/characters/:id', ({ params }) => {
+    return HttpResponse.json({
+      id: Number(params.id),
+      game_id: 1,
+      user_id: 1,
+      name: 'Test Character',
+      character_type: 'player_character',
+      character_data: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+  }),
+
+  http.post('/api/v1/characters/:id/approve', ({ params }) => {
+    return HttpResponse.json({
+      id: Number(params.id),
+      game_id: 1,
+      user_id: 1,
+      name: 'Test Character',
+      character_type: 'player_character',
+      character_data: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+  }),
+
+  http.get('/api/v1/games/:gameId/characters/inactive', () => {
+    return HttpResponse.json([])
+  }),
+
+  http.get('/api/v1/games/:gameId/characters/audience-npcs', () => {
+    return HttpResponse.json({ npcs: [] })
+  }),
+
+  // Actions endpoints
+  http.post('/api/v1/games/:gameId/actions', () => {
+    return HttpResponse.json({
+      id: 1,
+      game_id: 1,
+      phase_id: 1,
+      character_id: 1,
+      content: 'Test action',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { status: 201 })
+  }),
+
+  http.get('/api/v1/games/:gameId/actions/mine', () => {
+    return HttpResponse.json([])
+  }),
+
+  http.get('/api/v1/games/:gameId/actions', () => {
+    return HttpResponse.json([])
+  }),
+
+  // Results endpoints
+  http.get('/api/v1/games/:gameId/results/mine', () => {
+    return HttpResponse.json([])
+  }),
+
+  http.get('/api/v1/games/:gameId/results', () => {
+    return HttpResponse.json([])
+  }),
+
+  http.post('/api/v1/games/:gameId/results', () => {
+    return HttpResponse.json({
+      id: 1,
+      game_id: 1,
+      phase_id: 1,
+      character_id: 1,
+      content: 'Test result',
+      is_published: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { status: 201 })
+  }),
+
+  // Comments endpoints
+  http.get('/api/v1/games/:gameId/posts/:postId/comments', () => {
+    return HttpResponse.json([])
+  }),
+
+  http.post('/api/v1/games/:gameId/posts/:postId/comments', () => {
+    return HttpResponse.json({
+      id: 1,
+      game_id: 1,
+      author_character_id: 1,
+      parent_message_id: 1,
+      message_type: 'comment',
+      content: 'Test comment',
+      is_deleted: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { status: 201 })
+  }),
+
+  http.get('/api/v1/games/:gameId/handouts/:handoutId/comments', () => {
+    return HttpResponse.json([])
+  }),
+
+  http.get('/api/v1/games/:gameId/unread-comment-ids', () => {
+    return HttpResponse.json([])
+  }),
+
+  http.get('/api/v1/games/:gameId/read-markers', () => {
+    return HttpResponse.json([])
+  }),
+
+  http.get('/api/v1/games/:gameId/posts-unread-info', () => {
+    return HttpResponse.json([])
+  }),
+
+  // Game application endpoints
+  http.get('/api/v1/games/:gameId/application/mine', () => {
+    return HttpResponse.json(null, { status: 404 })
+  }),
+
+  http.get('/api/v1/games/:gameId/applicants', () => {
+    return HttpResponse.json([])
+  }),
+
+  // Handouts endpoints
+  http.get('/api/v1/games/:gameId/handouts', () => {
+    return HttpResponse.json([])
+  }),
+
+  http.get('/api/v1/games/:gameId/handouts/:handoutId', ({ params }) => {
+    return HttpResponse.json({
+      id: Number(params.handoutId),
+      game_id: Number(params.gameId),
+      title: 'Test Handout',
+      content: 'Test content',
+      is_published: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+  }),
+
+  http.post('/api/v1/games/:gameId/handouts', () => {
+    return HttpResponse.json({
+      id: 1,
+      game_id: 1,
+      title: 'New Handout',
+      content: 'New content',
+      is_published: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { status: 201 })
+  }),
+
+  // User profile endpoints
+  http.get('/api/v1/users/me/profile', () => {
+    return HttpResponse.json({
+      id: 1,
+      username: 'testuser',
+      email: 'test@example.com',
+      bio: '',
+      avatar_url: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+  }),
+
+  http.get('/api/v1/users/:username/profile', ({ params }) => {
+    return HttpResponse.json({
+      id: 1,
+      username: params.username,
+      email: 'test@example.com',
+      bio: '',
+      avatar_url: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+  }),
+
+  // Deadlines endpoints
+  http.post('/api/v1/games/:gameId/deadlines', () => {
+    return HttpResponse.json({
+      id: 1,
+      game_id: 1,
+      title: 'Test Deadline',
+      deadline_date: new Date(Date.now() + 86400000).toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { status: 201 })
+  }),
+
+  http.get('/api/v1/deadlines/upcoming', () => {
+    return HttpResponse.json([])
+  }),
+
   // Health check
   http.get('/ping', () => {
     return HttpResponse.json({ message: 'pong' })

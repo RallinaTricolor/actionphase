@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { logger, setCorrelationId } from '@/services/LoggingService';
+import type { CreateGameRequest } from '@/types/games';
 
 // Simple API client without complex typing
 const api = axios.create({
@@ -107,7 +108,7 @@ export const simpleApi = {
     return api.get(`/api/v1/games/${gameId}`);
   },
 
-  async createGame(gameData: any) {
+  async createGame(gameData: CreateGameRequest) {
     return api.post('/api/v1/games', gameData);
   },
 

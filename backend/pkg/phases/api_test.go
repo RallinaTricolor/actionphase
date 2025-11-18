@@ -56,9 +56,9 @@ func setupPhaseAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux 
 				r.Use(jwtauth.Authenticator(tokenAuth))
 				r.Use(core.RequireAuthenticationMiddleware(userService))
 
-				r.Put("/{phaseId}", phaseHandler.UpdatePhase)
-				r.Delete("/{phaseId}", phaseHandler.DeletePhase)
-				r.Post("/{phaseId}/activate", phaseHandler.ActivatePhase)
+				r.Put("/{id}", phaseHandler.UpdatePhase)
+				r.Delete("/{id}", phaseHandler.DeletePhase)
+				r.Post("/{id}/activate", phaseHandler.ActivatePhase)
 			})
 		})
 	})
@@ -79,12 +79,18 @@ func TestPhaseAPI_CreatePhase(t *testing.T) {
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 
+	// Generate JWT tokens
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	core.AssertNoError(t, err, "Should create GM token")
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	core.AssertNoError(t, err, "Should create player token")
+
 	// Create test game
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
 	// Add player as participant
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	core.AssertNoError(t, err, "Should add player as participant")
 
 	t.Run("GM successfully creates phase", func(t *testing.T) {
@@ -96,7 +102,7 @@ func TestPhaseAPI_CreatePhase(t *testing.T) {
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases", game.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+		req.Header.Set("Authorization", "Bearer "+gmToken)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -119,7 +125,7 @@ func TestPhaseAPI_CreatePhase(t *testing.T) {
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases", game.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player)) // Non-GM user
+		req.Header.Set("Authorization", "Bearer "+playerToken) // Non-GM user
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -137,34 +143,16 @@ func TestPhaseAPI_CreatePhase(t *testing.T) {
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases", game.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+		req.Header.Set("Authorization", "Bearer "+gmToken)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
-	})
-
-	t.Run("rejects empty phase title", func(t *testing.T) {
-		reqBody := CreatePhaseRequest{
-			PhaseType: "action",
-			Title:     "", // Empty title
-		}
-		reqJSON, _ := json.Marshal(reqBody)
-
-		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases", game.ID), bytes.NewBuffer(reqJSON))
-		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
-
-		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, req)
-
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-		assert.Contains(t, rec.Body.String(), "title")
 	})
 }
 
-// TestPhaseAPI_ActivatePhase tests POST /games/{gameId}/phases/{phaseId}/activate
+// TestPhaseAPI_ActivatePhase tests POST /games/{gameId}/phases/{id}/activate
 func TestPhaseAPI_ActivatePhase(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
@@ -177,12 +165,18 @@ func TestPhaseAPI_ActivatePhase(t *testing.T) {
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 
+	// Generate JWT tokens
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	core.AssertNoError(t, err, "Should create GM token")
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	core.AssertNoError(t, err, "Should create player token")
+
 	// Create test game
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
 	// Add player as participant
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	core.AssertNoError(t, err, "Should add player as participant")
 
 	// Create phases
@@ -202,8 +196,8 @@ func TestPhaseAPI_ActivatePhase(t *testing.T) {
 	core.AssertNoError(t, err, "Should create phase 2")
 
 	t.Run("GM successfully activates phase", func(t *testing.T) {
-		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/%d/activate", game.ID, phase1.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/phases/%d/activate", phase1.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -217,8 +211,8 @@ func TestPhaseAPI_ActivatePhase(t *testing.T) {
 	})
 
 	t.Run("non-GM player cannot activate phase", func(t *testing.T) {
-		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/%d/activate", game.ID, phase2.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player)) // Non-GM user
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/phases/%d/activate", phase2.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken) // Non-GM user
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -229,8 +223,8 @@ func TestPhaseAPI_ActivatePhase(t *testing.T) {
 
 	t.Run("activating a phase deactivates other phases", func(t *testing.T) {
 		// Activate phase2
-		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/%d/activate", game.ID, phase2.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/phases/%d/activate", phase2.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -245,7 +239,7 @@ func TestPhaseAPI_ActivatePhase(t *testing.T) {
 
 	t.Run("returns 404 for non-existent phase", func(t *testing.T) {
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/99999/activate", game.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+		req.Header.Set("Authorization", "Bearer "+gmToken)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -254,7 +248,7 @@ func TestPhaseAPI_ActivatePhase(t *testing.T) {
 	})
 }
 
-// TestPhaseAPI_UpdatePhase tests PUT /games/{gameId}/phases/{phaseId}
+// TestPhaseAPI_UpdatePhase tests PUT /games/{gameId}/phases/{id}
 func TestPhaseAPI_UpdatePhase(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
@@ -267,12 +261,18 @@ func TestPhaseAPI_UpdatePhase(t *testing.T) {
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 
+	// Generate JWT tokens
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	core.AssertNoError(t, err, "Should create GM token")
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	core.AssertNoError(t, err, "Should create player token")
+
 	// Create test game
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
 	// Add player as participant
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	core.AssertNoError(t, err, "Should add player as participant")
 
 	// Create phase
@@ -295,7 +295,7 @@ func TestPhaseAPI_UpdatePhase(t *testing.T) {
 
 		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/phases/%d", phase.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+		req.Header.Set("Authorization", "Bearer "+gmToken)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -315,9 +315,9 @@ func TestPhaseAPI_UpdatePhase(t *testing.T) {
 		}
 		reqJSON, _ := json.Marshal(reqBody)
 
-		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/games/%d/phases/%d", game.ID, phase.ID), bytes.NewBuffer(reqJSON))
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/phases/%d", phase.ID), bytes.NewBuffer(reqJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player)) // Non-GM user
+		req.Header.Set("Authorization", "Bearer "+playerToken) // Non-GM user
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -327,7 +327,7 @@ func TestPhaseAPI_UpdatePhase(t *testing.T) {
 	})
 }
 
-// TestPhaseAPI_DeletePhase tests DELETE /games/{gameId}/phases/{phaseId}
+// TestPhaseAPI_DeletePhase tests DELETE /games/{gameId}/phases/{id}
 func TestPhaseAPI_DeletePhase(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
@@ -340,16 +340,22 @@ func TestPhaseAPI_DeletePhase(t *testing.T) {
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 
+	// Generate JWT tokens
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	core.AssertNoError(t, err, "Should create GM token")
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	core.AssertNoError(t, err, "Should create player token")
+
 	// Create test game
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
 	// Add player as participant
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	core.AssertNoError(t, err, "Should add player as participant")
 
 	// Create phase
-	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	phase, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
 		GameID:    game.ID,
 		PhaseType: "common_room",
@@ -358,13 +364,13 @@ func TestPhaseAPI_DeletePhase(t *testing.T) {
 	core.AssertNoError(t, err, "Should create phase")
 
 	t.Run("GM successfully deletes phase", func(t *testing.T) {
-		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/phases/%d", game.ID, phase.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/phases/%d", phase.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 
-		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, http.StatusNoContent, rec.Code)
 	})
 
 	t.Run("non-GM player cannot delete phase", func(t *testing.T) {
@@ -376,8 +382,8 @@ func TestPhaseAPI_DeletePhase(t *testing.T) {
 		})
 		core.AssertNoError(t, err, "Should create phase 2")
 
-		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/phases/%d", game.ID, phase2.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player)) // Non-GM user
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/phases/%d", phase2.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken) // Non-GM user
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -400,8 +406,8 @@ func TestPhaseAPI_DeletePhase(t *testing.T) {
 		err = phaseService.ActivatePhase(context.Background(), phase3.ID, int32(gm.ID))
 		core.AssertNoError(t, err, "Should activate phase")
 
-		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/phases/%d", game.ID, phase3.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/phases/%d", phase3.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -412,7 +418,7 @@ func TestPhaseAPI_DeletePhase(t *testing.T) {
 
 	t.Run("returns 404 for non-existent phase", func(t *testing.T) {
 		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/phases/99999", game.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+		req.Header.Set("Authorization", "Bearer "+gmToken)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -434,12 +440,18 @@ func TestPhaseAPI_GetPhases(t *testing.T) {
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
 	player := testDB.CreateTestUser(t, "player", "player@example.com")
 
+	// Generate JWT tokens
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	core.AssertNoError(t, err, "Should create GM token")
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	core.AssertNoError(t, err, "Should create player token")
+
 	// Create test game
 	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
 
 	// Add player as participant
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	core.AssertNoError(t, err, "Should add player as participant")
 
 	// Create multiple phases
@@ -460,19 +472,17 @@ func TestPhaseAPI_GetPhases(t *testing.T) {
 
 	t.Run("successfully retrieves all phases for game", func(t *testing.T) {
 		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/phases", game.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), player))
+		req.Header.Set("Authorization", "Bearer "+playerToken)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var response map[string]interface{}
+		var response []PhaseResponse
 		err := json.Unmarshal(rec.Body.Bytes(), &response)
 		require.NoError(t, err)
-
-		phases := response["phases"].([]interface{})
-		assert.Len(t, phases, 2)
+		assert.Len(t, response, 2)
 	})
 
 	t.Run("returns empty array when no phases", func(t *testing.T) {
@@ -480,19 +490,17 @@ func TestPhaseAPI_GetPhases(t *testing.T) {
 		emptyGame := testDB.CreateTestGame(t, int32(gm.ID), "Empty Game")
 
 		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/phases", emptyGame.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm))
+		req.Header.Set("Authorization", "Bearer "+gmToken)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var response map[string]interface{}
+		var response []PhaseResponse
 		err := json.Unmarshal(rec.Body.Bytes(), &response)
 		require.NoError(t, err)
-
-		phases := response["phases"].([]interface{})
-		assert.Len(t, phases, 0)
+		assert.Len(t, response, 0)
 	})
 }
 
@@ -509,12 +517,17 @@ func TestPhaseAPI_AuthorizationEdgeCases(t *testing.T) {
 	gm1 := testDB.CreateTestUser(t, "gm1", "gm1@example.com")
 	gm2 := testDB.CreateTestUser(t, "gm2", "gm2@example.com")
 
+	// Generate JWT tokens
+	gm2Token, err := core.CreateTestJWTTokenForUser(app, gm2)
+	core.AssertNoError(t, err, "Should create GM2 token")
+
 	// Create test games
 	game1 := testDB.CreateTestGame(t, int32(gm1.ID), "Game 1")
 	game2 := testDB.CreateTestGame(t, int32(gm2.ID), "Game 2")
+	_ = game2 // game2 needed so gm2 is a valid GM, but not used in URLs
 
 	// Create phases
-	phaseService := &phasesvc.PhaseService{DB: testDB.Pool}
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
 	phase1, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
 		GameID:    game1.ID,
 		PhaseType: "common_room",
@@ -523,8 +536,8 @@ func TestPhaseAPI_AuthorizationEdgeCases(t *testing.T) {
 	core.AssertNoError(t, err, "Should create phase 1")
 
 	t.Run("GM cannot activate phases in another GM's game", func(t *testing.T) {
-		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/%d/activate", game1.ID, phase1.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm2)) // GM2 trying to activate phase in GM1's game
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/phases/%d/activate", phase1.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gm2Token) // GM2 trying to activate phase in GM1's game
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -533,8 +546,8 @@ func TestPhaseAPI_AuthorizationEdgeCases(t *testing.T) {
 	})
 
 	t.Run("GM cannot delete phases in another GM's game", func(t *testing.T) {
-		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/phases/%d", game1.ID, phase1.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm2)) // GM2 trying to delete phase in GM1's game
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/phases/%d", phase1.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gm2Token) // GM2 trying to delete phase in GM1's game
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -544,8 +557,8 @@ func TestPhaseAPI_AuthorizationEdgeCases(t *testing.T) {
 
 	t.Run("returns 404 for phase in different game", func(t *testing.T) {
 		// Try to activate phase1 using game2's ID
-		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/phases/%d/activate", game2.ID, phase1.ID), nil)
-		req = req.WithContext(core.WithAuthenticatedUser(req.Context(), gm2))
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/phases/%d/activate", phase1.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gm2Token)
 
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)

@@ -67,7 +67,11 @@ export function CommentEditor({
       'paddingTop', 'paddingBottom', 'lineHeight',
     ];
     styles.forEach(style => {
-      div.style[style as any] = computed[style as any];
+      const styleProp = style as keyof CSSStyleDeclaration;
+      const value = computed[styleProp];
+      if (typeof value === 'string') {
+        (div.style as unknown as Record<string, string>)[style] = value;
+      }
     });
 
     // Position the mirror div at the same place as textarea

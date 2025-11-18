@@ -69,13 +69,13 @@ export function useGameStateManagement({
         gameId,
         newState,
       });
-    } catch (err) {
+    } catch (_err) {
       logger.error('Game state change failed', {
         gameId,
         targetState: newState,
-        error: err,
+        error: _err,
       });
-      showError(err instanceof Error ? err.message : 'Failed to update game state');
+      showError(_err instanceof Error ? _err.message : 'Failed to update game state');
     } finally {
       setActionLoading(false);
     }
@@ -93,13 +93,13 @@ export function useGameStateManagement({
       logger.info('Game completed successfully', {
         gameId,
       });
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to complete game', {
         gameId,
-        error: err,
+        error: _err,
       });
-      showError(err instanceof Error ? err.message : 'Failed to complete game');
-      throw err; // Re-throw so dialog can handle it
+      showError(_err instanceof Error ? _err.message : 'Failed to complete game');
+      throw _err; // Re-throw so dialog can handle it
     } finally {
       setActionLoading(false);
     }
@@ -117,13 +117,13 @@ export function useGameStateManagement({
       logger.info('Game paused successfully', {
         gameId,
       });
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to pause game', {
         gameId,
-        error: err,
+        error: _err,
       });
-      showError(err instanceof Error ? err.message : 'Failed to pause game');
-      throw err; // Re-throw so dialog can handle it
+      showError(_err instanceof Error ? _err.message : 'Failed to pause game');
+      throw _err; // Re-throw so dialog can handle it
     } finally {
       setActionLoading(false);
     }
@@ -141,13 +141,13 @@ export function useGameStateManagement({
       logger.info('Game cancelled successfully', {
         gameId,
       });
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to cancel game', {
         gameId,
-        error: err,
+        error: _err,
       });
-      showError(err instanceof Error ? err.message : 'Failed to cancel game');
-      throw err; // Re-throw so dialog can handle it
+      showError(_err instanceof Error ? _err.message : 'Failed to cancel game');
+      throw _err; // Re-throw so dialog can handle it
     } finally {
       setActionLoading(false);
     }
@@ -171,13 +171,13 @@ export function useGameStateManagement({
       logger.info('Left game successfully', {
         gameId,
       });
-    } catch (err) {
+    } catch (_err) {
       logger.error('Failed to leave game', {
         gameId,
-        error: err,
+        error: _err,
       });
-      showError(err instanceof Error ? err.message : 'Failed to leave game');
-      throw err; // Re-throw so dialog can handle it
+      showError(_err instanceof Error ? _err.message : 'Failed to leave game');
+      throw _err; // Re-throw so dialog can handle it
     } finally {
       setActionLoading(false);
     }

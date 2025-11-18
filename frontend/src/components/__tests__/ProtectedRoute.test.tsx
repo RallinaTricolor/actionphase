@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, render } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import type { useAuth } from '../../contexts/AuthContext'
 import { ProtectedRoute } from '../ProtectedRoute'
 
 // Mock the useAuth hook
@@ -26,7 +27,7 @@ describe('ProtectedRoute', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
     })
 
     it('should render children when user is authenticated', () => {
@@ -88,7 +89,7 @@ describe('ProtectedRoute', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
     })
 
     it('should redirect to /login when user is not authenticated', () => {
@@ -114,11 +115,11 @@ describe('ProtectedRoute', () => {
 
     it('should save the original location in state when redirecting', () => {
       // This test verifies the state={{ from: location }} functionality
-      let capturedState: any = null
+      let _capturedState: unknown = null
 
       const LoginPage = () => {
-        const location = window.location as any
-        capturedState = location.state
+        const location = window.location as Record<string, unknown>
+        _capturedState = location.state
         return <div data-testid="login-page">Login Page</div>
       }
 
@@ -203,7 +204,7 @@ describe('ProtectedRoute', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
     })
 
     it('should handle empty children', () => {
@@ -244,7 +245,7 @@ describe('ProtectedRoute', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
 
       const { unmount } = render(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -268,7 +269,7 @@ describe('ProtectedRoute', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
 
       render(
         <MemoryRouter initialEntries={['/dashboard']}>

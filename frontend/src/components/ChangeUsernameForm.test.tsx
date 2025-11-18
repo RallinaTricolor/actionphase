@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { ChangeUsernameForm } from './ChangeUsernameForm';
@@ -35,8 +35,8 @@ describe('ChangeUsernameForm', () => {
   beforeEach(() => {
     server.resetHandlers();
     // Mock window.location.reload
-    delete (window as any).location;
-    (window as any).location = { reload: vi.fn() };
+    delete (window as Record<string, unknown>).location;
+    (window as Record<string, unknown>).location = { reload: vi.fn() };
   });
 
   it('renders change username form with current username', () => {

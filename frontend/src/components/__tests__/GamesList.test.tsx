@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent } from '@testing-library/react'
 import { renderWithProviders } from '../../test-utils'
+import type { useAuth } from '../../contexts/AuthContext'
 import { GamesList } from '../GamesList'
 import type { EnrichedGameListItem } from '../../types/games'
 
@@ -20,7 +21,7 @@ import { useAuth } from '../../contexts/AuthContext'
 
 describe('GamesList', () => {
   const mockOnGameClick = vi.fn()
-  const mockOnCreateClick = vi.fn()
+  const _mockOnCreateClick = vi.fn()
   const mockOnApplyToGame = vi.fn()
 
   beforeEach(() => {
@@ -78,7 +79,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
 
       renderWithProviders(
         <GamesList
@@ -107,7 +108,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
 
       renderWithProviders(
         <GamesList
@@ -135,7 +136,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
 
       renderWithProviders(
         <GamesList
@@ -165,7 +166,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
 
       renderWithProviders(
         <GamesList
@@ -197,7 +198,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
 
       renderWithProviders(
         <GamesList
@@ -230,7 +231,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
 
       renderWithProviders(
         <GamesList
@@ -259,7 +260,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as any)
+      } as Partial<ReturnType<typeof useAuth>>)
     })
 
     it('renders loading state initially', () => {

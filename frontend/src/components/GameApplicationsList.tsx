@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import type { GameApplication, GameState } from '../types/games';
@@ -18,13 +18,7 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState, refreshT
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isGM) {
-      fetchApplications();
-    }
-  }, [gameId, isGM, refreshTrigger]);
-
-  const fetchApplications = async () => {
+  const fetchApplications = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiClient.games.getGameApplications(gameId);
@@ -35,7 +29,13 @@ export const GameApplicationsList = ({ gameId, isGM = false, gameState, refreshT
     } finally {
       setLoading(false);
     }
-  };
+  }, [gameId]);
+
+  useEffect(() => {
+    if (isGM) {
+      fetchApplications();
+    }
+  }, [isGM, fetchApplications, refreshTrigger]);
 
   const handleApprove = async (applicationId: number) => {
     try {

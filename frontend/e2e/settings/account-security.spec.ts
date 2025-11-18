@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { loginAs, logout } from '../fixtures/auth-helpers';
-import { assertUrl, assertTextVisible, assertElementExists } from '../utils/assertions';
+import { loginAs } from '../fixtures/auth-helpers';
+import { assertUrl } from '../utils/assertions';
 import { SettingsPage } from '../pages/SettingsPage';
 import { DEFAULT_TIMEOUT } from '../config/test-timeouts';
 

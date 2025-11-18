@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAs, logout } from '../fixtures/auth-helpers';
-import { getFixtureGameId } from '../fixtures/game-helpers';
+import { loginAs } from '../fixtures/auth-helpers';
 
 /**
  * E2E Tests for Admin Mode
@@ -117,7 +116,7 @@ test.describe('Admin Mode', () => {
     expect(toggleVisible).toBe(false);
   });
 
-  test('admin mode affects game listing visibility', async ({ page, context }) => {
+  test('admin mode affects game listing visibility', async ({ page }) => {
     // First, create a private game (or use existing test data)
     // For this test, we'll verify that admin mode shows different games
 
