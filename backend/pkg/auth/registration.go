@@ -3,6 +3,7 @@ package auth
 import (
 	"actionphase/pkg/core"
 	db "actionphase/pkg/db/services"
+	"actionphase/pkg/email"
 	"fmt"
 	"github.com/go-chi/render"
 	"net/http"
@@ -109,6 +110,24 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
+
+	// Send verification email
+	// Create account service
+	emailService, err := email.NewEmailServiceFromEnv()
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to create email service", "error", err)
+	} else {
+		accountService := &AccountService{
+			DB:           h.App.Pool,
+			EmailService: emailService,
+			Logger:       h.App.ObsLogger,
+		}
+		_ = accountService.SendVerificationEmail(ctx, &SendVerificationEmailRequest{
+			UserID: returnUser.ID,
+			Email:  returnUser.Email,
+		})
+	}
+
 	render.Status(r, http.StatusCreated)
 	render.Render(w, r, NewRegistrationResponse(returnUser, token))
 }
