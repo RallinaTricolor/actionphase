@@ -68,7 +68,7 @@ export function useAllPrivateConversations(
         0
       );
       // If we got fewer results than the limit, we've reached the end
-      return lastPage.conversations.length >= 20 ? loadedCount : undefined;
+      return lastPage.conversations?.length >= 20 ? loadedCount : undefined;
     },
     initialPageParam: 0,
     enabled: !!gameId,
