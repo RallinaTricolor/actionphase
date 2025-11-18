@@ -25,7 +25,6 @@ Visit [https://action-phase.com](https://action-phase.com) in your web browser.
 Once verified, you can:
 - Upload an avatar (optional)
 - Update your profile settings
-- Set your notification preferences
 
 ## Next Steps
 
@@ -39,8 +38,7 @@ Now that you have an account:
 
 **Didn't receive verification email?**
 - Check your spam folder
-- Wait a few minutes and try again
-- Contact support if the issue persists
+- Click the "Resend Verification Email" button
 
 **Forgot your password?**
 - Click "Forgot Password" on the login page

@@ -8,8 +8,7 @@ After your application is approved, you'll go through these steps:
 
 1. **Initial Creation** - Fill out the character sheet
 2. **GM Review** - Your GM reviews and may request changes
-3. **Final Approval** - Character is approved and ready to play
-4. **Join Game** - Enter the game in the next appropriate phase
+3. **Final Approval** - Character is published and ready to play
 
 ## The Character Sheet
 
@@ -17,17 +16,7 @@ Your character sheet is the central hub for everything about your character. It 
 
 ### Basic Information
 
-**Required Fields:**
-- **Character Name** - Your character's full name
-- **Pronouns** - How your character should be referred to
-- **Brief Description** - A one-line summary (shows in character lists)
-
-**Optional Fields:**
-- **Nickname/Alias** - Other names your character goes by
-- **Age** - Your character's age
-- **Occupation/Role** - What your character does
-
-### Avatar/Appearance
+**Character Name** - Your character's full name
 
 **Avatar Upload:**
 - Supported formats: JPG, PNG, GIF
@@ -35,38 +24,23 @@ Your character sheet is the central hub for everything about your character. It 
 - Recommended dimensions: 400x400px (will be resized)
 - Will be displayed next to your posts
 
-**Appearance Description:**
-Write a paragraph describing:
-- Physical appearance (height, build, distinguishing features)
-- Typical clothing/style
-- How they carry themselves
-- First impressions they give
+
 
 **Example:**
 > "Standing at 5'10" with an athletic build, Marcus carries himself with military precision. His dark hair is kept short, and a thin scar runs through his left eyebrow. He typically wears practical clothing - sturdy boots, dark pants, and a worn leather jacket. His green eyes are alert and watchful, constantly scanning his surroundings."
 
-### Background/History
+### Bio/Background
 
-This is your character's story before the game starts. Include:
+This is your character's public information before the game starts. Include:
 
 **Key Elements:**
-- Where they're from
-- Important life events
-- How they got their skills/abilities
-- What brought them to the game's starting point
-- Relationships (family, friends, enemies)
+- Appearance
+- Immediately noticeable personality traits or quirks (crooked grin all the time, signature look of superiority)
+- Any public information you want to share with other players
 
-**Length:** 2-5 paragraphs is typical, but check with your GM
+### Private Notes
 
-**Writing Tips:**
-- Leave some mysteries to reveal during play
-- Include hooks for the GM to use
-- Connect to the game's setting
-- Be consistent with the game's tone
-
-### Personality
-
-Describe how your character thinks and acts:
+This is the private information for the GM, audience, and other players (after the game is over). During play, this section is hidden from other players.
 
 **Include:**
 - Core personality traits (brave, cautious, curious, etc.)
@@ -74,6 +48,7 @@ Describe how your character thinks and acts:
 - Fears and weaknesses
 - Goals and motivations
 - Quirks and habits
+- Secrets (if any)
 
 **Format:** Can be paragraph form or bullet points
 
@@ -86,80 +61,23 @@ Describe how your character thinks and acts:
 
 ### Abilities/Skills
 
-How you list abilities depends on your game system:
+**This section is controlled by the Game Master.**
 
-**System-Specific Games:**
-- Follow the game's rules for stats/skills
-- Use the format your GM specifies
-- Include all required mechanical information
+Any abilities, talents, or skills your character possesses will be listed here. Check back after getting an action result to see if anything has changed!
 
-**Freeform Games:**
-- List key skills and talents
-- Describe proficiency level
-- Note any special training
-- Include relevant equipment
+The specifics of this section depend on the game.
 
-**Example (Freeform):**
-```
-SKILLS:
-• Investigation (Professional) - Former detective
-• Firearms (Competent) - Police training
-• Psychology (Amateur) - Self-taught through books
-• Driving (Professional) - Pursuit trained
+### Inventory
 
-EQUIPMENT:
-• Revolver (6 shots)
-• Notebook and pen
-• Flashlight
-• Old badge (no longer valid)
-```
+**This section is controlled by the Game Master.**
 
-### Additional Sections
+Any items your character possesses will be listed here. Check back after getting an action result to see if anything has changed!
 
-Depending on your game, you might also need:
+#### Currency Sub-Tab
 
-**Inventory:**
-- Starting equipment
-- Money/resources
-- Important possessions
+**This section is controlled by the Game Master.**
 
-**Relationships:**
-- Connections to other characters (if pre-established)
-- NPCs you know
-- Organizations you're part of
-
-**Notes:**
-- Additional information
-- Secrets (mark as "GM Only" if private)
-- Character development ideas
-
-## Character Data (JSON)
-
-Some games use structured data for game mechanics. Your GM will provide a template if needed.
-
-**Common Fields:**
-```json
-{
-  "stats": {
-    "strength": 3,
-    "intelligence": 5,
-    "charisma": 4
-  },
-  "inventory": [
-    {"item": "Rope", "quantity": 50},
-    {"item": "Torch", "quantity": 3}
-  ],
-  "conditions": {
-    "health": "Healthy",
-    "status": []
-  }
-}
-```
-
-**Important:**
-- Follow your GM's exact format
-- Use proper JSON syntax (check with a validator)
-- Update after each game phase if required
+Any currency your character holds will be listed here. This section is also commonly used for numerical statistics like Experience Points, reputation, or score.
 
 ## Tips for Great Characters
 
@@ -175,7 +93,7 @@ Some games use structured data for game mechanics. Your GM will provide a templa
 - Copy characters from movies/books exactly
 - Make them too powerful/perfect
 - Ignore the GM's guidelines
-- Create lone wolves who won't interact
+- Create lone wolves who won't interact (unless you really know what you're doing)
 
 ### Give Them Depth
 
@@ -185,6 +103,26 @@ Some games use structured data for game mechanics. Your GM will provide a templa
 - **Goals** - What drives them forward
 - **Fears** - What they avoid
 - **History** - What shaped them
+
+#### Emotional Spectrum
+
+A common tool that has been used by Game Masters is to ask your character for their responses to the following questions:
+
+- What does your character hate?
+- What does your character want?
+- What is your character afraid of?
+- What drives your character?
+- What gives your character hope?
+- What does your character love?
+- What is your character sympathetic towards?
+
+- Who does your character love?
+- Who gives your character hope?
+- Who drives your character?
+- Who is your character afraid of?
+- Who does your character want?
+- Who does your character hate?
+- Who is your character sympathetic towards?
 
 ### Make Them Playable
 
@@ -220,7 +158,7 @@ Some games use structured data for game mechanics. Your GM will provide a templa
 When you submit your character:
 1. Make sure all required fields are complete
 2. Double-check for typos and formatting
-3. Click "Submit for Review"
+3. Reach out to your GM directly (likely via Discord)
 4. Wait for GM feedback
 
 ### Responding to Feedback
@@ -232,12 +170,6 @@ If your GM requests changes:
 - **Edit promptly** - Don't hold up the game
 - **Resubmit** - Click submit again after changes
 
-**Common Feedback:**
-- "Too powerful for starting character"
-- "Doesn't fit the setting's technology level"
-- "Needs more connection to the plot"
-- "Please add more personality details"
-
 ### After Approval
 
 Once approved:
@@ -245,16 +177,9 @@ Once approved:
 - You can still edit some sections (like notes)
 - Major changes need GM approval
 - Character development happens through play
+- Your character is published to the public (Bio/Background tab only)
 
 ## Your First Phase
-
-### Joining Mid-Game
-
-If joining a game in progress:
-- Read recent Common Room posts for context
-- Check the current phase status
-- Wait for appropriate entry point
-- Introduce your character naturally
 
 ### Common Room Introduction
 
@@ -266,21 +191,6 @@ Your first post is important! Consider:
 
 **Example First Post:**
 > Marcus pushes through the tavern door, shaking rain from his coat. He pauses, eyes adjusting to the dim light as he scans the room's occupants. Spotting an empty stool at the bar, he makes his way over, boots leaving wet prints on the worn floor. "Whiskey," he tells the bartender, his voice carrying a hint of weariness. "And information, if you have it. I'm looking for someone."
-
-## Quick Checklist
-
-Before submitting your character:
-
-- [ ] Name and pronouns filled in
-- [ ] Appearance described (text or image)
-- [ ] Background explains who they are
-- [ ] Personality is clear
-- [ ] Abilities match game system
-- [ ] Fits the game's setting/tone
-- [ ] Has reasons to engage with others
-- [ ] Follows GM's specific requirements
-- [ ] JSON data formatted correctly (if needed)
-- [ ] Proofread for errors
 
 ## Getting Help
 
@@ -306,8 +216,6 @@ A: Yes! Mark them as "GM Only" in your notes section.
 **Q: What if my character concept doesn't work?**
 A: Work with your GM to adjust it. They want you to have fun too!
 
-**Q: Can I use AI-generated art for my avatar?**
-A: Check with your GM. Policies vary by game.
 
 ## Next Steps
 

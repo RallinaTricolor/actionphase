@@ -8,25 +8,13 @@ Ready to join your first ActionPhase game? This guide will walk you through find
 
 Navigate to the **Games** page from the main menu. You'll see a list of all games on the platform.
 
-**Game Status Icons:**
-- 🟢 **Recruiting** - Accepting new players
-- 🔵 **Active** - Game in progress (may have open spots)
-- 🔴 **Full** - Not accepting players
-- ⏸️ **Paused** - Temporarily on hold
-- ✅ **Completed** - Game has ended
-
-### Using Filters
-
-Find games that match your interests:
-
-**Filter Options:**
-- **Status** - Show only recruiting games
-- **Genre** - Fantasy, Sci-Fi, Modern, Historical, etc.
-- **Player Count** - Find games with specific group sizes
-- **GM** - Search for games by specific Game Masters
-- **Tags** - Custom tags like "beginner-friendly" or "roleplay-heavy"
-
-**Pro tip:** Start by filtering for "Recruiting" status and "beginner-friendly" tag if you're new!
+**Game Statuses:**
+- **Setup** - Game is being set up and will allow recruitment soon
+- **Recruiting** - Accepting new players
+- **Character Creation** - Characters are being created before the game officially starts
+- **In Progress** - The game is currently running
+- **Paused** - Temporarily on hold
+- **Completed** - Game has ended
 
 ## Understanding Game Listings
 
@@ -43,66 +31,40 @@ Click on a game to see:
 - **Full Description** - The game's story and setting
 - **GM Information** - Who's running the game
 - **Game Style** - Combat-heavy, roleplay-focused, etc.
-- **Posting Frequency** - How often players are expected to participate
-- **House Rules** - Any special rules for this game
+- **Handouts Tab** - Any information the GM has shared about the game
 
 ### Application Requirements
 Before applying, check:
-- **Character Requirements** - Level, class restrictions, etc.
-- **Experience Level** - Whether beginners are welcome
+- **Handouts Tab** - A recruitment post may be shared there
 - **Time Commitment** - Expected posting frequency
-- **Application Questions** - What the GM wants to know
 
 ## Applying to Join
 
 ### Step 1: Read Everything
 Before applying:
 - ✅ Read the full game description
-- ✅ Check the posting frequency expectations
-- ✅ Review any house rules
-- ✅ Understand the current game phase
-- ✅ Look at recent Common Room posts (if visible)
+- ✅ Check the dates and times of game sessions
 
 ### Step 2: Click "Apply to Join"
 You'll see the application form with:
-- **Character Concept** (required) - Your character idea
-- **Experience Level** - Your familiarity with the system
-- **Availability** - How often you can post
-- **Additional Questions** - GM-specific questions
+- **Application Type** (required) - Player or Audience
+- **Message to the GM** - Any information you'd like to share
 
-### Step 3: Write Your Application
-
-**Character Concept Tips:**
-- Be specific but flexible - GMs may ask for adjustments
-- Show how your character fits the game's theme
-- Mention potential story hooks or goals
-- Keep it concise - 2-3 paragraphs is usually perfect
-
-**Example Character Concept:**
-> "I'd like to play Elena, a former city guard turned private investigator. She left the force after witnessing corruption she couldn't fight from within. Now she takes cases helping those the system has failed. She's observant and determined, but her idealism often puts her at odds with the city's harsh realities. I envision her getting involved through investigating something that connects to the main plot."
-
-### Step 4: Submit and Wait
+### Step 3: Submit and Wait
 
 After submitting:
 - You'll receive a confirmation message
 - The GM will review your application
-- Check back regularly for updates
-- You may receive questions from the GM
-- Applications typically get reviewed within 24-48 hours
+- Application status will be published when the game moves to Character Creation
+- You can withdraw your application at any time
 
 ## Application Status
 
 Your application can be:
 
 ### 🟡 Pending
-- GM hasn't reviewed yet
-- You can edit your application
+- The game is still in Recruiting phase
 - Be patient - GMs review on their schedule
-
-### 💬 Questions
-- GM has asked for more information
-- Respond promptly to keep your spot
-- Click "View Questions" to see and respond
 
 ### ✅ Approved
 - Congratulations! You're in!
@@ -113,7 +75,6 @@ Your application can be:
 - Don't take it personally
 - Common reasons:
   - Game is full
-  - Character doesn't fit the setting
   - Availability doesn't match game needs
 - Try applying to other games!
 
@@ -128,8 +89,7 @@ Your application can be:
 
 2. **Join the Game**
    - Once your character is approved, you're officially in!
-   - You'll gain access to the game's Common Room
-   - Wait for the current phase to end before participating
+   - You'll gain access to the game's phases and various systems
 
 3. **Your First Phase**
    - Usually starts with Common Room phase
@@ -163,35 +123,24 @@ A: There's no limit, but start with 1-2 to learn the platform's rhythm.
 A: Yes, but be prepared to handle the time commitment if multiple applications are approved.
 
 **Q: How long do GMs take to review applications?**
-A: Usually 24-48 hours, but it varies. Some GMs check daily, others weekly.
-
-**Q: Can I reapply if declined?**
-A: Yes, especially if the GM provides feedback. Adjust your application based on their comments.
+A: Depends on the game schedule. The GM will set a recuirment deadline, after which they will publish your application status.
 
 **Q: What if I need to leave a game after joining?**
 A: Life happens! Notify the GM as soon as possible so they can adjust.
 
 **Q: Can I join a game that's already in progress?**
-A: If it shows "Recruiting" or the GM indicates open spots, yes! Your character will join in the next appropriate phase.
+A: If the GM indicates open spots and allows it, yes! Your character will join in the next appropriate phase.
 
 ## Troubleshooting
 
 ### "No games are recruiting"
-- Check back regularly - new games appear frequently
+- Check back or join the Discord - new games appear infrequently
 - Consider starting your own game once you're familiar with the platform
-- Join the waiting list for popular GMs
 
 ### "My applications keep getting declined"
 - Review your character concepts - are they too complex?
 - Check if you're meeting the game's specific requirements
 - Ask for feedback from GMs
-- Consider applying to "beginner-friendly" games first
-
-### "I was approved but can't access the game"
-- Make sure you've completed character creation
-- Check if your character has been approved by the GM
-- Refresh the page or log out and back in
-- Contact support if issues persist
 
 ## Next Steps
 
