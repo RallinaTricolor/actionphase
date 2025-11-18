@@ -122,37 +122,11 @@ fi
 echo -e "${BLUE}🔨 Building Docker images...${NC}"
 docker-compose ${COMPOSE_FILES} build --no-cache
 
-# Health check function
-health_check() {
-    local service=$1
-    local max_attempts=30
-    local attempt=1
-
-    echo -n "Waiting for ${service} to be healthy..."
-    while [ $attempt -le $max_attempts ]; do
-        if docker-compose ${COMPOSE_FILES} ps | grep -E "${service}.*healthy|${service}.*running" > /dev/null 2>&1; then
-            echo -e " ${GREEN}✓${NC}"
-            return 0
-        fi
-        echo -n "."
-        sleep 2
-        attempt=$((attempt + 1))
-    done
-    echo -e " ${RED}✗${NC}"
-    return 1
-}
-
 # Deploy with minimal downtime
 echo -e "${BLUE}🚀 Starting deployment...${NC}"
 
-# Update database first (if migrations needed)
-echo -e "${BLUE}📊 Updating database...${NC}"
 docker-compose ${COMPOSE_FILES} down
 docker-compose ${COMPOSE_FILES} up -d
-health_check "db"
-health_check "backend"
-health_check "frontend"
-health_check "nginx"
 
 # Clean up old images
 echo -e "${BLUE}🧹 Cleaning up old Docker images...${NC}"
