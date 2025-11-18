@@ -112,40 +112,6 @@ services:
     networks:
       - actionphase-network
 
-  # Backup Service (runs cron jobs)
-  backup:
-    image: alpine:latest
-    container_name: actionphase-backup
-    restart: unless-stopped
-    volumes:
-      - ./backups:/backups
-      - ./scripts:/scripts:ro
-    environment:
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
-      S3_BUCKET: ${S3_BACKUP_BUCKET:-actionphase-backups}
-      POSTGRES_HOST: db
-      POSTGRES_DB: actionphase
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: example
-    entrypoint: |
-      sh -c '
-        apk add --no-cache postgresql17-client aws-cli bash tzdata
-        ln -sf /usr/share/zoneinfo/UTC /etc/localtime
-        echo "0 2 * * * /scripts/backup-to-s3.sh >> /var/log/backup.log 2>&1" | crontab -
-        crond -f -d 8
-      '
-    depends_on:
-      - db
-    networks:
-      - actionphase-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
 volumes:
   letsencrypt:
     driver: local

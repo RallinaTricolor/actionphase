@@ -171,3 +171,11 @@ backend/pkg/users/test_uploads/
 # Ignore working/completed plans, but keep templates and documentation
 .claude/planning/active/
 .claude/planning/completed/
+
+# Prod Things
+.domain
+backups/
+logs/
+nginx/conf.d/
+scripts/renew-ssl.sh
+ssl/
