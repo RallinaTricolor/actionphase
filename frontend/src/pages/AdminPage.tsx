@@ -95,25 +95,29 @@ export function AdminPage() {
   });
 
   const handleBanUser = (userId: number, username: string) => {
-    if (window.confirm(`Are you sure you want to ban user "${username}"?`)) {
+    // eslint-disable-next-line no-alert
+    if (confirm(`Are you sure you want to ban user ${username}?`)) {
       banMutation.mutate(userId);
     }
   };
 
   const handleUnbanUser = (userId: number, username: string) => {
-    if (window.confirm(`Are you sure you want to unban user "${username}"?`)) {
+    // eslint-disable-next-line no-alert
+    if (confirm(`Are you sure you want to unban user ${username}?`)) {
       unbanMutation.mutate(userId);
     }
   };
 
   const handleRevokeAdmin = (userId: number, username: string) => {
-    if (window.confirm(`Are you sure you want to revoke admin status from "${username}"?`)) {
+    // eslint-disable-next-line no-alert
+    if (confirm(`Are you sure you want to revoke admin status from ${username}?`)) {
       revokeAdminMutation.mutate(userId);
     }
   };
 
   const handleGrantAdmin = (userId: number, username: string) => {
-    if (window.confirm(`Are you sure you want to grant admin status to "${username}"?`)) {
+    // eslint-disable-next-line no-alert
+    if (confirm(`Are you sure you want to grant admin access to ${username}?`)) {
       grantAdminMutation.mutate(userId);
     }
   };
@@ -131,8 +135,8 @@ export function AdminPage() {
     try {
       const response = await apiClient.admin.getUserByUsername(lookupUsername.trim());
       setLookupResult(response.data);
-    } catch (error: any) {
-      setLookupError(error.response?.data?.error || 'User not found');
+    } catch (error: unknown) {
+      setLookupError((error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'User not found');
     }
   };
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import axios from 'axios'
-import type { AxiosResponse } from 'axios'
+import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import type {
   Game,
   GameWithDetails,
@@ -112,7 +112,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockGet.mockResolvedValue(expectedResponse)
@@ -131,7 +131,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockGet.mockResolvedValue(expectedResponse)
@@ -180,7 +180,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockGet.mockResolvedValue(expectedResponse)
@@ -219,7 +219,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockGet.mockResolvedValue(expectedResponse)
@@ -274,7 +274,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockGet.mockResolvedValue(expectedResponse)
@@ -310,7 +310,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockGet.mockResolvedValue(expectedResponse)
@@ -352,7 +352,7 @@ describe('ApiClient - Games', () => {
           status: 201,
           statusText: 'Created',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockPost.mockResolvedValue(expectedResponse)
@@ -422,7 +422,7 @@ describe('ApiClient - Games', () => {
           status: 201,
           statusText: 'Created',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockPost.mockResolvedValue(expectedResponse)
@@ -470,7 +470,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockPut.mockResolvedValue(expectedResponse)
@@ -530,7 +530,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockPut.mockResolvedValue(expectedResponse)
@@ -557,7 +557,7 @@ describe('ApiClient - Games', () => {
           status: 204,
           statusText: 'No Content',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockDelete.mockResolvedValue(expectedResponse)
@@ -612,7 +612,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockPut.mockResolvedValue(expectedResponse)
@@ -626,9 +626,9 @@ describe('ApiClient - Games', () => {
 
       it('should handle invalid state transitions', async () => {
         const gameId = 444
-        const invalidStateData: UpdateGameStateRequest = {
-          state: 'invalid_state' as any
-        }
+        const invalidStateData = {
+          state: 'invalid_state'
+        } as UpdateGameStateRequest
 
         const validationError = {
           response: {
@@ -652,7 +652,7 @@ describe('ApiClient - Games', () => {
           status: 204,
           statusText: 'No Content',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockDelete.mockResolvedValue(expectedResponse)
@@ -707,7 +707,7 @@ describe('ApiClient - Games', () => {
           status: 201,
           statusText: 'Created',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockPost.mockResolvedValue(expectedResponse)
@@ -773,7 +773,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockGet.mockResolvedValue(expectedResponse)
@@ -828,7 +828,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockPut.mockResolvedValue(expectedResponse)
@@ -870,7 +870,7 @@ describe('ApiClient - Games', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockPut.mockResolvedValue(expectedResponse)
@@ -890,7 +890,7 @@ describe('ApiClient - Games', () => {
           status: 204,
           statusText: 'No Content',
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
 
         mockDelete.mockResolvedValue(expectedResponse)

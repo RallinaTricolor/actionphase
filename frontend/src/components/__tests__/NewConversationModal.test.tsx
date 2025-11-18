@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -94,7 +94,7 @@ describe('NewConversationModal', () => {
 
   describe('Rendering', () => {
     it('renders modal with title and close button', () => {
-      const { container } = renderWithProviders(
+      renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
@@ -559,7 +559,7 @@ describe('NewConversationModal', () => {
 
     it('sends correct data to API including your character and participants', async () => {
       const user = userEvent.setup()
-      let requestBody: any = null
+      let requestBody: unknown = null
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations', async ({ request }) => {
@@ -614,7 +614,7 @@ describe('NewConversationModal', () => {
 
     it('handles multiple participants correctly', async () => {
       const user = userEvent.setup()
-      let requestBody: any = null
+      let requestBody: unknown = null
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations', async ({ request }) => {

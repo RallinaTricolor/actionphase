@@ -32,7 +32,7 @@ export function ResetPasswordPage() {
       try {
         await apiClient.auth.validateResetToken(token);
         setIsTokenValid(true);
-      } catch (err) {
+      } catch (_err) {
         setIsTokenValid(false);
         setError('This password reset link is invalid or has expired');
       } finally {
@@ -95,8 +95,8 @@ export function ResetPasswordPage() {
       setTimeout(() => {
         navigate('/login');
       }, 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to reset password. Please try again.');
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to reset password. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -151,7 +151,7 @@ describe('CharacterSheet', () => {
 
     it('saves field data', async () => {
       const user = userEvent.setup();
-      let savedData: any;
+      let savedData: unknown;
 
       server.use(
         http.post('/api/v1/characters/:characterId/data', async ({ request }) => {

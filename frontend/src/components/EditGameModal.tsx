@@ -83,8 +83,8 @@ export function EditGameModal({ game, isOpen, onClose, onGameUpdated }: EditGame
       await apiClient.games.updateGame(game.id, updateData);
       onGameUpdated();
       onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update game');
+    } catch (_err) {
+      setError(_err instanceof Error ? _err.message : 'Failed to update game');
     } finally {
       setLoading(false);
     }

@@ -72,8 +72,8 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
         operation: 'upsert',
       });
       setIsAddingNew(false);
-    } catch (err) {
-      logger.error('Failed to create draft character update', { error: err, gameId, resultId, characterId });
+    } catch (_err) {
+      logger.error('Failed to create draft character update', { error: _err, gameId, resultId, characterId });
     }
   };
 
@@ -87,8 +87,8 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
       await updateDraft.mutateAsync({ draftId, fieldValue: editValue });
       setEditingDraftId(null);
       setEditValue('');
-    } catch (err) {
-      logger.error('Failed to update draft character update', { error: err, gameId, resultId, draftId });
+    } catch (_err) {
+      logger.error('Failed to update draft character update', { error: _err, gameId, resultId, draftId });
     }
   };
 
@@ -98,6 +98,7 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
   };
 
   const handleDelete = async (draftId: number) => {
+    // eslint-disable-next-line no-alert
     if (!window.confirm('Are you sure you want to delete this draft update?')) {
       return;
     }
@@ -158,7 +159,7 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
               <Select
                 label="Module Type"
                 value={newDraft.module_type}
-                onChange={(e) => setNewDraft({ ...newDraft, module_type: e.target.value as any })}
+                onChange={(e) => setNewDraft({ ...newDraft, module_type: e.target.value as 'abilities' | 'skills' | 'inventory' | 'currency' })}
                 required
               >
                 {MODULE_TYPES.map((type) => (
@@ -187,7 +188,7 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
               <Select
                 label="Field Type"
                 value={newDraft.field_type}
-                onChange={(e) => setNewDraft({ ...newDraft, field_type: e.target.value as any })}
+                onChange={(e) => setNewDraft({ ...newDraft, field_type: e.target.value as 'text' | 'number' | 'boolean' | 'json' })}
                 required
               >
                 {FIELD_TYPES.map((type) => (
@@ -200,7 +201,7 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
               <Select
                 label="Operation"
                 value={newDraft.operation}
-                onChange={(e) => setNewDraft({ ...newDraft, operation: e.target.value as any })}
+                onChange={(e) => setNewDraft({ ...newDraft, operation: e.target.value as 'upsert' | 'delete' })}
                 required
                 className="col-span-2"
               >

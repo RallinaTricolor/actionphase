@@ -13,12 +13,14 @@ const __dirname = path.dirname(__filename);
  * It resets and reapplies all test fixtures.
  */
 async function globalSetup() {
+  // eslint-disable-next-line no-console
   console.log('\n🧹 Resetting E2E test fixtures...');
 
   try {
     const projectRoot = path.resolve(__dirname, '../..');
 
     // Apply common fixtures first
+    // eslint-disable-next-line no-console
     console.log('📦 Applying common fixtures...');
     execSync('env DB_NAME=actionphase ./backend/pkg/db/test_fixtures/apply_common.sh', {
       stdio: 'inherit',
@@ -26,8 +28,10 @@ async function globalSetup() {
     });
 
     // Apply worker-specific fixtures for all 6 workers (matches Playwright workers config)
+    // eslint-disable-next-line no-console
     console.log('🔧 Applying worker-specific E2E fixtures for 6 parallel workers...');
     for (let workerIndex = 0; workerIndex <= 5; workerIndex++) {
+      // eslint-disable-next-line no-console
       console.log(`  Worker ${workerIndex}...`);
       execSync(`env DB_NAME=actionphase ./backend/pkg/db/test_fixtures/apply_e2e_worker.sh ${workerIndex}`, {
         stdio: workerIndex === 0 ? 'inherit' : 'ignore', // Show output for Worker 0, hide for others
@@ -35,8 +39,10 @@ async function globalSetup() {
       });
     }
 
+    // eslint-disable-next-line no-console
     console.log('✅ E2E test fixtures applied successfully for all workers!\n');
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('❌ Failed to apply E2E test fixtures:', error);
     throw error;
   }

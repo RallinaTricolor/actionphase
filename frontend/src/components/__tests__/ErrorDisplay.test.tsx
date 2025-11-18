@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { screen, fireEvent, waitFor, render } from '@testing-library/react'
+import { screen, fireEvent, render } from '@testing-library/react'
 import { ErrorDisplay, InlineError, ErrorToast } from '../ErrorDisplay'
 import { ErrorSeverity } from '../../types/errors'
 import type { AppError } from '../../types/errors'
@@ -17,7 +17,7 @@ vi.mock('../../lib/errors', () => ({
   },
 }))
 
-import { getErrorMessage, getRecoveryActions, isRecoverable } from '../../lib/errors'
+import { getRecoveryActions, isRecoverable } from '../../lib/errors'
 
 describe('ErrorDisplay', () => {
   const mockOnRetry = vi.fn()
@@ -253,7 +253,7 @@ describe('ErrorDisplay', () => {
         context: {},
       }
 
-      const { container } = render(<ErrorDisplay error={error} className="my-custom-class" />)
+      render(<ErrorDisplay error={error} className="my-custom-class" />)
 
       // Alert component handles styling internally via variant prop
     })
@@ -302,7 +302,7 @@ describe('ErrorToast', () => {
   })
 
   it('renders nothing when error is null', () => {
-    const { container} = render(<ErrorToast error={null} onClose={mockOnClose} />)
+    const { container } = render(<ErrorToast error={null} onClose={mockOnClose} />)
     expect(container).toBeEmptyDOMElement()
   })
 

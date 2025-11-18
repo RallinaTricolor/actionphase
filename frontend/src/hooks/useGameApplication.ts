@@ -35,7 +35,7 @@ export function useGameApplication({
         try {
           const applicationResponse = await apiClient.games.getMyGameApplication(gameId);
           setUserApplication(applicationResponse.data);
-        } catch (appErr) {
+        } catch (_appErr) {
           // User has no application - that's fine
           setUserApplication(null);
         }
@@ -52,7 +52,7 @@ export function useGameApplication({
       try {
         const applicationResponse = await apiClient.games.getMyGameApplication(gameId);
         setUserApplication(applicationResponse.data);
-      } catch (appErr) {
+      } catch (_appErr) {
         // User has no application - that's fine
         setUserApplication(null);
       }
@@ -74,8 +74,8 @@ export function useGameApplication({
       await apiClient.games.withdrawGameApplication(gameId);
       await refetchGameData();
       await refetchUserApplication();
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to withdraw application');
+    } catch (_err) {
+      showError(_err instanceof Error ? _err.message : 'Failed to withdraw application');
     } finally {
       setActionLoading(false);
     }

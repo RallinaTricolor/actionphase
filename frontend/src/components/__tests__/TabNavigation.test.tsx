@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TabNavigation, type Tab } from '../TabNavigation';
@@ -64,7 +64,7 @@ describe('TabNavigation', () => {
     });
 
     it('applies active styling to the current tab', () => {
-      const { container } = render(
+      render(
         <TabNavigation
           tabs={mockTabs}
           activeTab="tab2"
@@ -250,7 +250,7 @@ describe('TabNavigation', () => {
     });
 
     it('applies correct responsive classes for desktop tabs', () => {
-      const { container } = render(
+      render(
         <TabNavigation
           tabs={mockTabs}
           activeTab="tab1"

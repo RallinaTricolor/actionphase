@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
+import type { useAuth } from '../../contexts/AuthContext';
 import { MessageThread } from '../MessageThread';
 import type { Character } from '../../types/characters';
 
@@ -13,7 +14,7 @@ vi.mock('../../contexts/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext'
 
 describe('MessageThread', () => {
   const mockCharacters: Character[] = [
@@ -84,7 +85,7 @@ describe('MessageThread', () => {
       register: vi.fn(),
       logout: vi.fn(),
       error: null,
-    } as any);
+    } as Partial<ReturnType<typeof useAuth>>);
 
     // Setup default mocks
     server.use(
@@ -361,7 +362,7 @@ describe('MessageThread', () => {
 
     it('sends message when form is submitted', async () => {
       const user = userEvent.setup();
-      let sentMessage: any;
+      let sentMessage: unknown;
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
@@ -477,7 +478,7 @@ describe('MessageThread', () => {
 
     it('trims whitespace from message before sending', async () => {
       const user = userEvent.setup();
-      let sentMessage: any;
+      let sentMessage: unknown;
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
@@ -504,7 +505,7 @@ describe('MessageThread', () => {
 
     it('sends message with selected character ID', async () => {
       const user = userEvent.setup();
-      let sentMessage: any;
+      let sentMessage: unknown;
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
@@ -531,7 +532,7 @@ describe('MessageThread', () => {
 
     it('allows switching character before sending', async () => {
       const user = userEvent.setup();
-      let sentMessage: any;
+      let sentMessage: unknown;
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {

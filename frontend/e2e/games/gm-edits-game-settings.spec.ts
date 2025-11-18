@@ -3,7 +3,6 @@ import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { GameSettingsPage } from '../pages/GameSettingsPage';
-import { waitForModal } from '../utils/waits';
 
 /**
  * Journey 6: GM Edits Game Settings

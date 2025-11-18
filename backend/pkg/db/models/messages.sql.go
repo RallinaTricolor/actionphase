@@ -1522,8 +1522,25 @@ SELECT
 FROM conversation_messages cm
 LEFT JOIN participants_agg pa ON cm.conversation_id = pa.conversation_id
 LEFT JOIN last_messages lm ON cm.conversation_id = lm.conversation_id
+WHERE (
+  -- If participant_names filter is provided (not empty array), filter by it
+  -- Otherwise, show all conversations
+  CASE
+    WHEN $2::text[] IS NULL OR array_length($2::text[], 1) IS NULL THEN true
+    ELSE pa.participant_names::text[] && $2::text[]
+  END
+)
 ORDER BY cm.latest_message_at DESC NULLS LAST
+LIMIT $4
+OFFSET $3
 `
+
+type ListAllPrivateConversationsParams struct {
+	GameID           int32    `json:"game_id"`
+	ParticipantNames []string `json:"participant_names"`
+	ResultOffset     int32    `json:"result_offset"`
+	ResultLimit      int32    `json:"result_limit"`
+}
 
 type ListAllPrivateConversationsRow struct {
 	ConversationID       int32              `json:"conversation_id"`
@@ -1545,8 +1562,14 @@ type ListAllPrivateConversationsRow struct {
 // ============================================================================
 // List all private message conversations in a game (for audience/GM)
 // Returns all conversations with metadata, participant information, and last message preview
-func (q *Queries) ListAllPrivateConversations(ctx context.Context, gameID int32) ([]ListAllPrivateConversationsRow, error) {
-	rows, err := q.db.Query(ctx, listAllPrivateConversations, gameID)
+// Supports pagination and filtering by participant names
+func (q *Queries) ListAllPrivateConversations(ctx context.Context, arg ListAllPrivateConversationsParams) ([]ListAllPrivateConversationsRow, error) {
+	rows, err := q.db.Query(ctx, listAllPrivateConversations,
+		arg.GameID,
+		arg.ParticipantNames,
+		arg.ResultOffset,
+		arg.ResultLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

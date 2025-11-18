@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page } from '@playwright/test';
 
 /**
  * Page Object for Game Handouts
@@ -152,6 +152,7 @@ export class GameHandoutsPage {
     // Set up dialog handler BEFORE clicking Delete (HandoutCard uses window.confirm)
     // Use once() to handle only this specific dialog
     this.page.once('dialog', dialog => {
+      // eslint-disable-next-line no-console
       console.log('Dialog message:', dialog.message());
       dialog.accept();
     });

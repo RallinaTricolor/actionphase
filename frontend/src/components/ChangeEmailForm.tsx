@@ -22,8 +22,8 @@ export function ChangeEmailForm() {
       setCurrentPassword('');
       setError(null);
     },
-    onError: (error: any) => {
-      const message = error.response?.data?.error || 'Failed to request email change';
+    onError: (error: unknown) => {
+      const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to request email change';
       setError(message);
       showToast(message, 'danger');
     },

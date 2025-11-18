@@ -1,6 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { navigateToGameAndTab } from '../utils/navigation';
-import { waitForVisible, waitForText } from '../utils/waits';
+import { waitForVisible } from '../utils/waits';
 import { assertTextVisible } from '../utils/assertions';
 
 /**

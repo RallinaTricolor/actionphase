@@ -88,7 +88,8 @@ export function HandoutCard({
                   variant="danger"
                   size="sm"
                   onClick={() => {
-                    if (confirm(`Are you sure you want to delete "${handout.title}"?`)) {
+                    // eslint-disable-next-line no-alert
+                    if (window.confirm(`Are you sure you want to delete "${handout.title}"?`)) {
                       onDelete(handout);
                     }
                   }}

@@ -12,7 +12,7 @@ vi.mock('../../contexts/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext'
 
 describe('PrivateMessages', () => {
   const mockCharacters: Character[] = [

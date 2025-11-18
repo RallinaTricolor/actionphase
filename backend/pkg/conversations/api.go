@@ -96,8 +96,8 @@ func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 
 	h.App.Logger.Info("Conversation created successfully", "conversation_id", conv.ID, "game_id", gameID, "user_id", userID)
 
-	render.Status(r, http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(conv)
 }
 
@@ -363,8 +363,8 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 
 	h.App.Logger.Info("Message sent successfully", "message_id", message.ID, "conversation_id", conversationID, "author", authUser.Username)
 
-	render.Status(r, http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(message)
 }
 

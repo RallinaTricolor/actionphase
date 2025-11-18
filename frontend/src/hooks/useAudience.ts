@@ -50,7 +50,7 @@ export function useAudienceNPCs(gameId: number) {
  */
 export function useAllPrivateConversations(
   gameId: number,
-  options?: { characterId?: number }
+  options?: { participantNames?: string[] }
 ) {
   return useInfiniteQuery({
     queryKey: ['all-private-conversations', gameId, options],
@@ -67,7 +67,8 @@ export function useAllPrivateConversations(
         (sum, page) => sum + (page.conversations?.length || 0),
         0
       );
-      return loadedCount < lastPage.total ? loadedCount : undefined;
+      // If we got fewer results than the limit, we've reached the end
+      return lastPage.conversations.length >= 20 ? loadedCount : undefined;
     },
     initialPageParam: 0,
     enabled: !!gameId,

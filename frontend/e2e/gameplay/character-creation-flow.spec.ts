@@ -5,9 +5,7 @@ import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { GameApplicationsPage } from '../pages/GameApplicationsPage';
 import { GamesListPage } from '../pages/GamesListPage';
 import { CharacterWorkflowPage } from '../pages/CharacterWorkflowPage';
-import { navigateToGame } from '../utils/navigation';
 import { assertTextVisible } from '../utils/assertions';
-import { waitForModal } from '../utils/waits';
 
 /**
  * Journey 3: Player Creates Character & Joins Game

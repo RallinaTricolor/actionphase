@@ -35,7 +35,7 @@ export function validatePasswordRequirements(password: string): PasswordRequirem
     {
       key: 'special',
       text: 'One special character (!@#$%^&*)',
-      met: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+      met: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
     },
   ];
 }

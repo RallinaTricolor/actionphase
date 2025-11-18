@@ -17,8 +17,8 @@ export function ForgotPasswordPage() {
     try {
       await apiClient.auth.requestPasswordReset(email);
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to request password reset. Please try again.');
+    } catch (err: unknown) {
+      setError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to request password reset. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CommentEditor } from './CommentEditor';
@@ -95,7 +95,7 @@ describe('CommentEditor', () => {
     });
 
     it('updates preview as value changes', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const { rerender, container } = render(<CommentEditor {...defaultProps} value="Hello" showPreviewByDefault />);
 
       // Check that "Hello" appears in the preview div
@@ -267,7 +267,7 @@ describe('CommentEditor', () => {
 
   describe('Integration with MarkdownPreview', () => {
     it('passes content to MarkdownPreview', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="# Heading" showPreviewByDefault />);
 
       const heading = screen.getByText('Heading');
@@ -275,7 +275,7 @@ describe('CommentEditor', () => {
     });
 
     it('renders complex markdown correctly in preview', async () => {
-      const user = userEvent.setup();
+      const _user = userEvent.setup();
       const content = `# Title\n\n**Bold** and *italic*\n\n- Item 1\n- Item 2`;
       render(<CommentEditor {...defaultProps} value={content} showPreviewByDefault />);
 

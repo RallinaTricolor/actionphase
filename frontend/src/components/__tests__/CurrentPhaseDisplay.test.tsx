@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -9,7 +9,7 @@ import type { GamePhase } from '../../types/phases';
 
 // Mock the CountdownTimer component to avoid time-dependent test complexity
 vi.mock('../CountdownTimer', () => ({
-  CountdownTimer: ({ deadline, onExpired, className }: any) => (
+  CountdownTimer: ({ deadline, onExpired, className }: unknown) => (
     <div className={className} data-testid="countdown-timer">
       Timer: {deadline}
       {onExpired && <button onClick={onExpired}>Trigger Expired</button>}

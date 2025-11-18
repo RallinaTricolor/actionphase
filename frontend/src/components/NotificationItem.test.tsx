@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -101,7 +101,7 @@ describe('NotificationItem', () => {
   it('displays title with bold text when unread', () => {
     const notification = createMockNotification({ is_read: false, title: 'Unread message' });
 
-    const { container } = renderWithProviders(<NotificationItem notification={notification} />);
+    renderWithProviders(<NotificationItem notification={notification} />);
 
     const titleElement = screen.getByText('Unread message');
     expect(titleElement.className).toContain('font-semibold');

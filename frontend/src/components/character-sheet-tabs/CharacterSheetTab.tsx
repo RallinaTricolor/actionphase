@@ -20,7 +20,7 @@ interface FormField {
 }
 
 interface CustomFormComponentProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
   onCancel: () => void;
   submitButtonTestId?: string;
 }
@@ -43,18 +43,18 @@ interface CharacterSheetTabProps {
   customFormComponent?: React.ComponentType<CustomFormComponentProps>;
 
   // Value transformation functions (required when using formFields)
-  buildFieldValue?: (formData: Record<string, any>) => string;
-  buildFieldName?: (formData: Record<string, any>) => string;
+  buildFieldValue?: (formData: Record<string, unknown>) => string;
+  buildFieldName?: (formData: Record<string, unknown>) => string;
   getFieldType?: () => FieldType;
 
   // For custom form component: transform submitted data to field value
-  transformCustomData?: (data: any) => { fieldName: string; fieldValue: string; fieldType: FieldType };
+  transformCustomData?: (data: Record<string, unknown>) => { fieldName: string; fieldValue: string; fieldType: FieldType };
 
   // Render functions for draft display
   renderDraftContent: (draft: DraftCharacterUpdate) => ReactNode;
 
   // Optional: Custom validation
-  validateForm?: (formData: Record<string, any>) => string | null;
+  validateForm?: (formData: Record<string, unknown>) => string | null;
 }
 
 /**
@@ -90,21 +90,21 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
   validateForm,
 }) => {
   const [isAdding, setIsAdding] = useState(false);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [error, setError] = useState<string | null>(null);
 
   const createDraft = useCreateDraftCharacterUpdate(gameId, actionResultId);
 
   // Initialize form data with default values (only for dynamic forms)
   const initializeForm = () => {
-    const initialData: Record<string, any> = {};
+    const initialData: Record<string, unknown> = {};
     formFields?.forEach(field => {
       initialData[field.name] = field.type === 'number' ? '0' : '';
     });
     setFormData(initialData);
   };
 
-  const handleCustomSubmit = async (data: any) => {
+  const handleCustomSubmit = async (data: Record<string, unknown>) => {
     if (!transformCustomData) {
       logger.error('transformCustomData is required when using custom form component', { gameId, actionResultId, characterId, moduleType });
       setError('Configuration error. Please contact support.');
@@ -126,8 +126,8 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
       // Reset form
       setIsAdding(false);
       setError(null);
-    } catch (err) {
-      logger.error(`Failed to add ${getSingularModuleType(moduleType)}`, { error: err, gameId, actionResultId, characterId, moduleType });
+    } catch (_err) {
+      logger.error(`Failed to add ${getSingularModuleType(moduleType)}`, { error: _err, gameId, actionResultId, characterId, moduleType });
       setError(`Failed to add ${getSingularModuleType(moduleType)}. Please try again.`);
     }
   };
@@ -169,8 +169,8 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
       initializeForm();
       setIsAdding(false);
       setError(null);
-    } catch (err) {
-      logger.error(`Failed to add ${getSingularModuleType(moduleType)}`, { error: err, gameId, actionResultId, characterId, moduleType, fieldName: formData.fieldName });
+    } catch (_err) {
+      logger.error(`Failed to add ${getSingularModuleType(moduleType)}`, { error: _err, gameId, actionResultId, characterId, moduleType, fieldName: formData.fieldName });
       setError(`Failed to add ${getSingularModuleType(moduleType)}. Please try again.`);
     }
   };
@@ -181,12 +181,13 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
     setError(null);
   };
 
-  const handleFieldChange = (fieldName: string, value: any) => {
+  const handleFieldChange = (fieldName: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [fieldName]: value }));
   };
 
   const renderFormField = (field: FormField) => {
-    const value = formData[field.name] || '';
+    const fieldValue = formData[field.name];
+    const value = (typeof fieldValue === 'string' || typeof fieldValue === 'number') ? fieldValue : '';
     const commonProps = {
       label: field.label,
       placeholder: field.placeholder,

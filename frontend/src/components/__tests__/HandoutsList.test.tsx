@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { UseQueryResult } from '@tanstack/react-query';
+import type { AxiosResponse } from 'axios';
 import { renderWithProviders } from '../../test-utils/render';
 import { HandoutsList } from '../HandoutsList';
 import * as useHandoutsModule from '../../hooks/useHandouts';
@@ -68,7 +70,7 @@ describe('HandoutsList', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue(mockUseHandouts as any);
+    vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue(mockUseHandouts as UseQueryResult<AxiosResponse<Handout[]>, Error>);
     // Mock window.alert and window.confirm
     vi.spyOn(window, 'alert').mockImplementation(() => {});
     vi.spyOn(window, 'confirm').mockReturnValue(true);
@@ -79,7 +81,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         isLoading: true,
-      } as any);
+      } as Partial<AxiosResponse<Handout[]>>);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -91,7 +93,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         isLoading: true,
-      } as any);
+      } as Partial<AxiosResponse<Handout[]>>);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -104,7 +106,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         handouts: [],
-      } as any);
+      } as Partial<AxiosResponse<Handout[]>>);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -115,7 +117,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         handouts: [],
-      } as any);
+      } as Partial<AxiosResponse<Handout[]>>);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={false} />);
 
@@ -126,7 +128,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         handouts: [mockHandouts[2]], // Only draft handout
-      } as any);
+      } as Partial<AxiosResponse<Handout[]>>);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={false} />);
 

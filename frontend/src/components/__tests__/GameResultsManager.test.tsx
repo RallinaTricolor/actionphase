@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
@@ -444,7 +444,7 @@ describe('GameResultsManager', () => {
 
     it('trims whitespace from content before saving', async () => {
       const user = userEvent.setup();
-      let requestBody: any = null;
+      let requestBody: unknown = null;
 
       server.use(
         http.get('/api/v1/games/:gameId/results', () => {

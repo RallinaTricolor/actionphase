@@ -15,6 +15,20 @@ interface AllPrivateMessagesViewProps {
   gameId: number;
 }
 
+interface ConversationType extends AudienceConversationListItem {
+  [key: string]: unknown;
+}
+
+interface MessageType {
+  id: number;
+  created_at: string;
+  content: string;
+  sender_character_id?: number;
+  sender_character_name?: string | null;
+  sender_username: string;
+  sender_avatar_url?: string | null;
+}
+
 /**
  * Read-only view of all private message conversations for audience members and GM
  * Features infinite scroll, participant filtering, and conversation browsing
@@ -30,6 +44,8 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
     error: messagesError
   } = useAudienceConversationMessages(gameId, selectedConversationId);
 
+  // Fetch conversations with server-side filtering
+  const participantNamesArray = Array.from(selectedParticipants);
   const {
     data,
     fetchNextPage,
@@ -37,7 +53,9 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
     isFetchingNextPage,
     isLoading,
     error,
-  } = useAllPrivateConversations(gameId);
+  } = useAllPrivateConversations(gameId, {
+    participantNames: participantNamesArray.length > 0 ? participantNamesArray : undefined
+  });
 
   // Infinite scroll handler
   useEffect(() => {
@@ -55,32 +73,23 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
     return () => window.removeEventListener('scroll', handleScroll);
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Get all conversations and extract unique participants
-  const allConversations = data?.pages.flatMap((page) => page.conversations || []) || [];
-  const total = data?.pages[0]?.total || 0;
+  // Get all conversations (already filtered by backend)
+  const allConversations = useMemo(() =>
+    data?.pages.flatMap((page) => page.conversations || []) || [],
+    [data?.pages]
+  );
 
-  // Extract unique participants across all conversations
+  // Extract unique participants across all conversations FOR DISPLAY ONLY
+  // We still need this to show the filter options
   const allParticipants = useMemo(() => {
     const participantsSet = new Set<string>();
-    allConversations.forEach((conv: any) => {
+    (allConversations as ConversationType[]).forEach((conv) => {
       (conv.participant_names || []).forEach((name: string) => {
         participantsSet.add(name);
       });
     });
     return Array.from(participantsSet).sort();
   }, [allConversations]);
-
-  // Filter conversations based on selected participants
-  const filteredConversations = useMemo(() => {
-    if (selectedParticipants.size === 0) {
-      return allConversations;
-    }
-    return allConversations.filter((conv: any) => {
-      const convParticipants = conv.participant_names || [];
-      // Show conversation if it includes any of the selected participants
-      return convParticipants.some((name: string) => selectedParticipants.has(name));
-    });
-  }, [allConversations, selectedParticipants]);
 
   const toggleParticipant = (participant: string) => {
     setSelectedParticipants(prev => {
@@ -147,7 +156,8 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
           </Badge>
         </div>
         <div className="text-sm text-content-secondary">
-          {filteredConversations.length} of {total} conversation{total !== 1 ? 's' : ''}
+          {allConversations.length} conversation{allConversations.length !== 1 ? 's' : ''}
+          {selectedParticipants.size > 0 && ' (filtered)'}
         </div>
       </div>
       {/* Desktop: Horizontal layout */}
@@ -161,7 +171,8 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
           </Badge>
         </div>
         <div className="text-sm text-content-secondary">
-          {filteredConversations.length} of {total} conversation{total !== 1 ? 's' : ''}
+          {allConversations.length} conversation{allConversations.length !== 1 ? 's' : ''}
+          {selectedParticipants.size > 0 && ' (filtered)'}
         </div>
       </div>
 
@@ -211,7 +222,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
       )}
 
       {/* Conversations List */}
-      {filteredConversations.length === 0 ? (
+      {allConversations.length === 0 ? (
         <div className="text-center py-12 text-content-secondary">
           {selectedParticipants.size > 0 ? (
             <>
@@ -227,7 +238,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredConversations.map((conversation: AudienceConversationListItem) => (
+          {allConversations.map((conversation: AudienceConversationListItem) => (
             <AudienceConversationCard
               key={conversation.conversation_id}
               conversation={conversation}
@@ -243,7 +254,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
             </div>
           )}
 
-          {!hasNextPage && filteredConversations.length > 0 && (
+          {!hasNextPage && allConversations.length > 0 && (
             <div className="text-center py-4 text-sm text-content-secondary">
               End of conversations
             </div>
@@ -270,7 +281,7 @@ function MessageViewer({
   gameId: number;
   conversationId: string;
   conversation?: AudienceConversationListItem;
-  messages: any[] | undefined;
+  messages: MessageType[] | undefined;
   isLoading: boolean;
   error: Error | null;
   onBack: () => void;
@@ -299,13 +310,13 @@ function MessageViewer({
         senderName: string;
         senderUsername: string;
         senderAvatar: string | null;
-        messages: any[];
+        messages: MessageType[];
       }>;
     }> = [];
 
     let currentDate: Date | null = null;
     let currentSenderId: number | undefined = undefined;
-    let currentMessageGroup: any[] = [];
+    let currentMessageGroup: MessageType[] = [];
     let currentSenderName = '';
     let currentSenderUsername = '';
     let currentSenderAvatar: string | null = null;
@@ -341,7 +352,7 @@ function MessageViewer({
         currentSenderId = message.sender_character_id;
         currentSenderName = message.sender_character_name || 'Unknown Character';
         currentSenderUsername = message.sender_username;
-        currentSenderAvatar = message.sender_avatar_url;
+        currentSenderAvatar = message.sender_avatar_url ?? null;
       }
       // Start new sender group within same date
       else if (isNewSender) {
@@ -360,7 +371,7 @@ function MessageViewer({
         currentSenderId = message.sender_character_id;
         currentSenderName = message.sender_character_name || 'Unknown Character';
         currentSenderUsername = message.sender_username;
-        currentSenderAvatar = message.sender_avatar_url;
+        currentSenderAvatar = message.sender_avatar_url ?? null;
       }
       // Same sender, same date - add to current group
       else {
@@ -482,7 +493,7 @@ function MessageViewer({
 
                         {/* Messages from this sender */}
                         <div className="space-y-2">
-                          {messageGroup.messages.map((message: any, msgIndex: number) => (
+                          {messageGroup.messages.map((message: MessageType, msgIndex: number) => (
                             <div key={message.id}>
                               {/* Show timestamp for subsequent messages if more than 5 minutes apart */}
                               {msgIndex > 0 && (

@@ -57,8 +57,8 @@ export const ApplyToGameModal = ({
         role: 'player',
         message: ''
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to submit application';
+    } catch (err: unknown) {
+      const errorMessage = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (err as Error)?.message || 'Failed to submit application';
       setError(errorMessage);
     } finally {
       setSubmitting(false);

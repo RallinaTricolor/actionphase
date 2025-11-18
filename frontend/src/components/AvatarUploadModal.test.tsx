@@ -39,14 +39,14 @@ describe('AvatarUploadModal', () => {
       isPending: false,
       isError: false,
       error: null,
-    } as any);
+    } as unknown as ReturnType<typeof useUploadCharacterAvatar>);
 
     vi.mocked(useDeleteCharacterAvatar).mockReturnValue({
       mutate: mockDeleteMutate,
       isPending: false,
       isError: false,
       error: null,
-    } as any);
+    } as unknown as ReturnType<typeof useDeleteCharacterAvatar>);
   });
 
   it('does not render when isOpen is false', () => {
@@ -196,7 +196,7 @@ describe('AvatarUploadModal', () => {
       isPending: false,
       isError: false,
       error: null,
-    } as any);
+    } as unknown as ReturnType<typeof useUploadCharacterAvatar>);
 
     render(
       <AvatarUploadModal
@@ -271,7 +271,7 @@ describe('AvatarUploadModal', () => {
     fireEvent.click(deleteButton);
 
     expect(mockConfirm).toHaveBeenCalledWith(
-      'Are you sure you want to remove this avatar?'
+      'Are you sure you want to delete this avatar?'
     );
     expect(mockDeleteMutate).toHaveBeenCalledWith(456, expect.any(Object));
 
@@ -338,7 +338,7 @@ describe('AvatarUploadModal', () => {
       isPending: true,
       isError: false,
       error: null,
-    } as any);
+    } as unknown as ReturnType<typeof useUploadCharacterAvatar>);
 
     render(
       <AvatarUploadModal

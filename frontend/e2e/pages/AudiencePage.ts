@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { waitForVisible } from '../utils/waits';
 import { assertTextVisible } from '../utils/assertions';
 

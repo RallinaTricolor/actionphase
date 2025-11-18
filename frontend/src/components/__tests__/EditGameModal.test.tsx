@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -514,7 +514,7 @@ describe('EditGameModal', () => {
 
     it('sends correct data to API', async () => {
       const user = userEvent.setup();
-      let requestBody: any = null;
+      let requestBody: unknown = null;
 
       server.use(
         http.put('/api/v1/games/:id', async ({ request }) => {
@@ -571,7 +571,7 @@ describe('EditGameModal', () => {
 
     it('trims whitespace from title and description', async () => {
       const user = userEvent.setup();
-      let requestBody: any = null;
+      let requestBody: unknown = null;
 
       server.use(
         http.put('/api/v1/games/:id', async ({ request }) => {
@@ -608,7 +608,7 @@ describe('EditGameModal', () => {
 
     it('sends undefined for empty optional fields', async () => {
       const user = userEvent.setup();
-      let requestBody: any = null;
+      let requestBody: unknown = null;
 
       server.use(
         http.put('/api/v1/games/:id', async ({ request }) => {
@@ -643,7 +643,7 @@ describe('EditGameModal', () => {
 
     it('handles empty genre by trimming and sending undefined', async () => {
       const user = userEvent.setup();
-      let requestBody: any = null;
+      let requestBody: unknown = null;
 
       server.use(
         http.put('/api/v1/games/:id', async ({ request }) => {

@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { ProfileSection } from './ProfileSection';
-import * as AuthContextModule from '../contexts/AuthContext';
-import * as ToastContextModule from '../contexts/ToastContext';
+import * as AuthContextModule from '../contexts/AuthContext' // eslint-disable-line
+import * as ToastContextModule from '../contexts/ToastContext' // eslint-disable-line
 import type { User } from '../types/auth';
 
 const mockUser: User = {

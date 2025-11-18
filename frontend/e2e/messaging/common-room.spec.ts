@@ -371,6 +371,7 @@ test.describe('Common Room Flow', () => {
         const replyButton = commentContainer.getByRole('button', { name: 'Reply' });
         const replyButtonCount = await replyButton.count();
 
+        // eslint-disable-next-line no-console
         console.log(`Depth ${depth}: Found ${replyButtonCount} Reply button(s)`);
 
         if (replyButtonCount === 0) {
@@ -378,6 +379,7 @@ test.describe('Common Room Flow', () => {
           const continueButton = currentPage.getByRole('button', { name: /Continue this thread/ });
           await expect(continueButton).toBeVisible({ timeout: 5000 });
 
+          // eslint-disable-next-line no-console
           console.log(`Max depth reached at level ${depth}. "Continue this thread" button is visible.`);
 
           // === Test: Click the "Continue this thread" button ===
@@ -387,10 +389,12 @@ test.describe('Common Room Flow', () => {
           // === Test: Verify modal opens ===
           const modal = currentPage.locator('[role="dialog"]');
           await expect(modal).toBeVisible({ timeout: 5000 });
+          // eslint-disable-next-line no-console
           console.log('✓ Modal opened successfully');
 
           // === Test: Verify deep comment is visible in modal ===
           await expect(modal.getByText(previousComment)).toBeVisible({ timeout: 5000 });
+          // eslint-disable-next-line no-console
           console.log(`✓ Deep comment "${previousComment}" visible in modal`);
 
           // === Test: Reply to a comment in the modal ===
@@ -411,12 +415,14 @@ test.describe('Common Room Flow', () => {
 
           // Verify the modal reply appears
           await expect(modal.getByText(modalReply)).toBeVisible({ timeout: 10000 });
+          // eslint-disable-next-line no-console
           console.log(`✓ Reply "${modalReply}" created successfully in modal`);
 
           // === Test: Close modal ===
           await currentPage.keyboard.press('Escape');
           await currentPage.waitForTimeout(500);
           await expect(modal).not.toBeVisible();
+          // eslint-disable-next-line no-console
           console.log('✓ Modal closed successfully');
 
           break;

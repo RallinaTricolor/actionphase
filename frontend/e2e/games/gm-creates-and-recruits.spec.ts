@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { GamesListPage } from '../pages/GamesListPage';
@@ -20,7 +20,7 @@ test.describe('GM Creates Game & Recruits Players', () => {
   test.describe.configure({ mode: 'serial' });
 
   // Helper function to create a game using POM
-  async function createTestGame(page: any) {
+  async function createTestGame(page: Page) {
     const timestamp = Date.now();
     const gameTitle = `E2E Test Game ${timestamp}`;
     const gameDescription = `Test game created by E2E tests`;

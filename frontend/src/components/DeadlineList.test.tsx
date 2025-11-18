@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, render, fireEvent, within } from '@testing-library/react';
+import { screen, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DeadlineList } from './DeadlineList';
 import type { UnifiedDeadline } from '../types/deadlines';
@@ -280,7 +280,7 @@ describe('DeadlineList', () => {
     it('should disable delete button for deadline being deleted', async () => {
       const user = userEvent.setup();
 
-      const { rerender } = render(
+      render(
         <DeadlineList
           deadlines={sampleDeadlines}
           isLoading={false}

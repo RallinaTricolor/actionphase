@@ -165,6 +165,7 @@ export function ReadingModeProvider({ children }: { children: React.ReactNode })
  * @example
  * const { isActive, toggleReadingMode } = useReadingMode();
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useReadingMode() {
   const context = useContext(ReadingModeContext);
   if (context === undefined) {

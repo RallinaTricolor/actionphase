@@ -1,0 +1,236 @@
+name: E2E Tests
+
+on:
+  # Run on push to main/master branches
+  push:
+    branches: [master, main]
+
+  # Allow manual triggering for any branch
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - smoke
+          - critical
+          - auth
+          - game
+          - character
+          - message
+
+jobs:
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: example
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Backend Setup
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Install golang-migrate
+        run: |
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz
+          sudo mv migrate /usr/local/bin/migrate
+
+      - name: Create databases
+        env:
+          PGPASSWORD: example
+        run: |
+          psql -h localhost -U postgres -c "CREATE DATABASE actionphase;"
+
+      - name: Run migrations
+        run: |
+          migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable" up
+
+      - name: Load E2E test fixtures
+        env:
+          PGPASSWORD: example
+        run: |
+          cd backend
+          # Apply common fixtures
+          bash ./pkg/db/test_fixtures/apply_common.sh
+          # Apply E2E worker fixtures for 6 parallel workers
+          for i in 0 1 2 3 4 5; do
+            DB_NAME=actionphase ./pkg/db/test_fixtures/apply_e2e_worker.sh $i
+          done
+
+      - name: Build backend
+        run: cd backend && go build -o actionphase main.go
+
+      - name: Start backend server
+        env:
+          DATABASE_URL: postgres://postgres:example@localhost:5432/actionphase?sslmode=disable
+          JWT_SECRET: test-secret-for-ci
+          ENVIRONMENT: test
+        run: |
+          cd backend
+          ./actionphase > /tmp/backend.log 2>&1 &
+          echo $! > /tmp/backend.pid
+          # Wait for backend to be ready
+          timeout 30 bash -c 'until curl -sf http://localhost:3000/health > /dev/null; do sleep 1; done'
+
+      # Frontend Setup
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Install Playwright browsers
+        run: cd frontend && npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Start frontend server
+        run: |
+          cd frontend
+          npm run preview > /tmp/frontend.log 2>&1 &
+          echo $! > /tmp/frontend.pid
+          # Wait for frontend to be ready
+          timeout 30 bash -c 'until curl -sf http://localhost:4173 > /dev/null; do sleep 1; done'
+
+      # Run E2E Tests
+      - name: Run E2E tests
+        id: e2e_tests
+        run: |
+          cd frontend
+
+          # Determine which test suite to run
+          TEST_SUITE="${{ github.event.inputs.test_suite || 'all' }}"
+
+          case "$TEST_SUITE" in
+            smoke)
+              npx playwright test --grep @smoke --reporter=html
+              ;;
+            critical)
+              npx playwright test --grep @critical --reporter=html
+              ;;
+            auth)
+              npx playwright test --grep @auth --reporter=html
+              ;;
+            game)
+              npx playwright test --grep @game --reporter=html
+              ;;
+            character)
+              npx playwright test --grep @character --reporter=html
+              ;;
+            message)
+              npx playwright test --grep @message --reporter=html
+              ;;
+            all|*)
+              npx playwright test --reporter=html
+              ;;
+          esac
+
+      # Capture logs and artifacts on failure
+      - name: Upload backend logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-logs
+          path: /tmp/backend.log
+          retention-days: 7
+
+      - name: Upload frontend logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-logs
+          path: /tmp/frontend.log
+          retention-days: 7
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: frontend/test-results/
+          retention-days: 7
+
+      # Cleanup
+      - name: Stop servers
+        if: always()
+        run: |
+          if [ -f /tmp/backend.pid ]; then kill $(cat /tmp/backend.pid) || true; fi
+          if [ -f /tmp/frontend.pid ]; then kill $(cat /tmp/frontend.pid) || true; fi
+
+  # Optional: Create issue on failure (only for push events, not manual triggers)
+  notify-on-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: failure() && github.event_name == 'push'
+
+    steps:
+      - name: Create issue on failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🚨 E2E Tests Failed on Main';
+            const body = `
+            The E2E test suite has failed after merge to ${context.ref}.
+
+            **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            **Commit:** ${context.sha}
+            **Date:** ${new Date().toISOString()}
+
+            Please investigate the failure and review the test artifacts.
+            `;
+
+            // Check if similar issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'e2e-failure,automated'
+            });
+
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['e2e-failure', 'automated', 'needs-triage']
+              });
+            }

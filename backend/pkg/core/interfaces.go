@@ -578,7 +578,8 @@ type MessageServiceInterface interface {
 	// Audience Participation methods (Private Conversation Viewing)
 
 	// ListAllPrivateConversations lists all private conversations in a game (for audience/GM)
-	ListAllPrivateConversations(ctx context.Context, gameID int32) ([]models.ListAllPrivateConversationsRow, error)
+	// Supports pagination (limit/offset) and filtering by participant names
+	ListAllPrivateConversations(ctx context.Context, params ListAllPrivateConversationsParams) ([]models.ListAllPrivateConversationsRow, error)
 
 	// GetAudienceConversationMessages retrieves all messages in a conversation (for audience/GM)
 	GetAudienceConversationMessages(ctx context.Context, conversationID int32) ([]models.GetAudienceConversationMessagesRow, error)
@@ -766,6 +767,14 @@ type CommentWithParent struct {
 	ParentMessageType    *string // "post" or "comment"
 	ParentAuthorUsername *string
 	ParentCharacterName  *string
+}
+
+// ListAllPrivateConversationsParams represents parameters for listing private conversations
+type ListAllPrivateConversationsParams struct {
+	GameID           int32
+	ParticipantNames []string // Filter by participant names (character names or usernames)
+	Limit            int32    // Number of results to return
+	Offset           int32    // Number of results to skip
 }
 
 // ReadMarker tracks which comments a user has read in a common room post

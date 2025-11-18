@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 import { Button, Input, Select, Checkbox, Alert } from './ui';
@@ -30,9 +30,22 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
     yourCharacterId,
   });
 
+  const loadAllCharacters = useCallback(async () => {
+    try {
+      setLoadingCharacters(true);
+      const response = await apiClient.characters.getGameCharacters(gameId);
+      setAllCharacters(response.data);
+    } catch (_err) {
+      logger.error('Failed to load characters', { error: _err, gameId });
+      setError('Failed to load characters');
+    } finally {
+      setLoadingCharacters(false);
+    }
+  }, [gameId]);
+
   useEffect(() => {
     loadAllCharacters();
-  }, [gameId]);
+  }, [loadAllCharacters]);
 
   useEffect(() => {
     // Auto-select if user only has one character
@@ -40,19 +53,6 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
       setYourCharacterId(characters[0].id);
     }
   }, [characters, yourCharacterId]);
-
-  const loadAllCharacters = async () => {
-    try {
-      setLoadingCharacters(true);
-      const response = await apiClient.characters.getGameCharacters(gameId);
-      setAllCharacters(response.data);
-    } catch (err) {
-      logger.error('Failed to load characters', { error: err, gameId });
-      setError('Failed to load characters');
-    } finally {
-      setLoadingCharacters(false);
-    }
-  };
 
   const handleToggleParticipant = (characterId: number) => {
     const newSelected = new Set(selectedParticipants);
@@ -106,9 +106,9 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
 
       onConversationCreated(response.data.id);
       onClose();
-    } catch (err) {
-      logger.error('Failed to create conversation', { error: err, gameId, title, participantCount: selectedParticipants.size + 1 });
-      setError(err instanceof Error ? err.message : 'Failed to create conversation');
+    } catch (_err) {
+      logger.error('Failed to create conversation', { error: _err, gameId, title, participantCount: selectedParticipants.size + 1 });
+      setError(_err instanceof Error ? _err.message : 'Failed to create conversation');
     } finally {
       setCreating(false);
     }

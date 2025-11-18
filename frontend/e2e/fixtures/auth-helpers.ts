@@ -1,5 +1,5 @@
-import { Page, expect, test } from '@playwright/test';
-import { TEST_USERS, TestUser } from './test-users';
+import { Page } from '@playwright/test';
+import { TEST_USERS } from './test-users';
 import { LoginPage } from '../pages/LoginPage';
 
 /**
@@ -33,9 +33,8 @@ function getWorkerSpecificUsername(baseUsername: string): string {
 export async function loginAs(page: Page, userKey: keyof typeof TEST_USERS) {
   const user = TEST_USERS[userKey];
 
-  // Get worker-specific username and email
+  // Get worker-specific username
   const workerUsername = getWorkerSpecificUsername(user.username);
-  const workerEmail = workerUsername.toLowerCase().replace('test', 'test_') + '@example.com';
 
   // Check if already logged in by checking for JWT cookie - if so, logout first
   const isLoggedIn = await isAuthenticated(page);
@@ -139,9 +138,8 @@ export async function isAuthenticated(page: Page): Promise<boolean> {
 /**
  * Get the current user's token from localStorage
  * @deprecated Authentication now uses HTTP-only cookies. This function always returns null.
- * @param page - Playwright page object
  */
-export async function getAuthToken(page: Page): Promise<string | null> {
+export async function getAuthToken(): Promise<string | null> {
   // Authentication is now cookie-based, no token in localStorage
   return null;
 }
@@ -149,9 +147,8 @@ export async function getAuthToken(page: Page): Promise<string | null> {
 /**
  * Clear authentication state (logout without UI interaction)
  * @deprecated Use the logout() function instead. HTTP-only cookies cannot be cleared from JavaScript.
- * @param page - Playwright page object
  */
-export async function clearAuth(page: Page) {
+export async function clearAuth() {
   // HTTP-only cookies cannot be cleared from JavaScript
   // Use the logout() function instead for proper logout
   // This function is kept for backwards compatibility but does nothing

@@ -197,6 +197,7 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useGameContext() {
   const context = useContext(GameContext);
   if (context === undefined) {
@@ -206,6 +207,7 @@ export function useGameContext() {
 }
 
 // Optional hook that returns null if not in a GameContext
+// eslint-disable-next-line react-refresh/only-export-components
 export function useOptionalGameContext() {
   return useContext(GameContext) || null;
 }

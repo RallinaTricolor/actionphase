@@ -244,7 +244,7 @@ describe('CreateGameForm', () => {
 
     it('trims whitespace from title and description', async () => {
       const user = userEvent.setup();
-      let submittedData: any = null;
+      let submittedData: unknown = null;
       const onSuccess = vi.fn();
 
       server.use(
@@ -271,7 +271,7 @@ describe('CreateGameForm', () => {
 
     it('converts empty date strings to undefined', async () => {
       const user = userEvent.setup();
-      let submittedData: any = null;
+      let submittedData: unknown = null;
       const onSuccess = vi.fn();
 
       server.use(
@@ -300,7 +300,7 @@ describe('CreateGameForm', () => {
 
     it('converts empty genre to undefined', async () => {
       const user = userEvent.setup();
-      let submittedData: any = null;
+      let submittedData: unknown = null;
       const onSuccess = vi.fn();
 
       server.use(

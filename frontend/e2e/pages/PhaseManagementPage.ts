@@ -1,7 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { navigateToGameAndTab } from '../utils/navigation';
 import { waitForVisible, waitForModal } from '../utils/waits';
-import { assertTextVisible } from '../utils/assertions';
 
 /**
  * Page Object Model for Phase Management

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -445,7 +445,7 @@ describe('CommonRoom', () => {
 
   describe('Post Creation', () => {
     it('creates post when handleCreatePost is called', async () => {
-      let createdPost: any;
+      let createdPost: unknown;
 
       server.use(
         http.post('/api/v1/games/:gameId/posts', async ({ request }) => {
@@ -472,11 +472,11 @@ describe('CommonRoom', () => {
 
   describe('Comment Creation', () => {
     it('handles comment creation without full reload', async () => {
-      let commentCreated = false;
+      let _commentCreated = false;
 
       server.use(
         http.post('/api/v1/games/:gameId/posts/:postId/comments', () => {
-          commentCreated = true;
+          _commentCreated = true;
           return HttpResponse.json({
             id: 1,
             content: 'Test comment',

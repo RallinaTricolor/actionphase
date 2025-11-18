@@ -44,7 +44,7 @@ export function DeadlineTimer({ deadline, className }: DeadlineTimerProps) {
 
         const relativeTime = formatDistanceToNow(deadlineDate, { addSuffix: true });
         setTimeString(relativeTime);
-      } catch (error) {
+      } catch (_error) {
         setTimeString('Invalid date');
       }
     };

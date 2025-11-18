@@ -66,8 +66,8 @@ export function ChangePasswordForm() {
         new_password: '',
         confirm_password: '',
       });
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || 'Failed to change password. Please try again.';
+    } catch (error: unknown) {
+      const errorMessage = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to change password. Please try again.';
       showToast(errorMessage, 'danger');
     } finally {
       setIsLoading(false);

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DeadlineCard } from './DeadlineCard';
@@ -73,7 +73,7 @@ describe('DeadlineCard', () => {
     });
 
     it('does not show info icon when description is undefined', () => {
-      const deadline = { ...mockDeadline, description: undefined as any };
+      const deadline = { ...mockDeadline, description: undefined as unknown as string };
       render(<DeadlineCard deadline={deadline} isGM={false} />);
 
       const infoIcon = screen.queryByLabelText('View description');

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
@@ -9,7 +9,7 @@ import type { GamePhase, ActionWithDetails } from '../../types/phases';
 
 // Mock CreateActionResultForm component
 vi.mock('../CreateActionResultForm', () => ({
-  CreateActionResultForm: ({ gameId, userId, userName, onSuccess }: any) => (
+  CreateActionResultForm: ({ gameId, userId, userName, onSuccess }: unknown) => (
     <div data-testid="create-action-result-form">
       <div>Create Action Result Form</div>
       <div>Game ID: {gameId}</div>
