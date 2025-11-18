@@ -88,7 +88,7 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:example@localhost:5432/actionphase?sslmode=disable
           JWT_SECRET: test-secret-for-ci
-          ENVIRONMENT: test
+          ENVIRONMENT: development
         run: |
           cd backend
           # Export environment variables for the background process
