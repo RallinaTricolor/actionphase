@@ -91,10 +91,24 @@ jobs:
           ENVIRONMENT: test
         run: |
           cd backend
+          # Export environment variables for the background process
+          export DATABASE_URL="postgres://postgres:example@localhost:5432/actionphase?sslmode=disable"
+          export JWT_SECRET="test-secret-for-ci"
+          export ENVIRONMENT="test"
+          export LOG_LEVEL="debug"
+
+          # Start backend server
           ./actionphase > /tmp/backend.log 2>&1 &
           echo $! > /tmp/backend.pid
+
           # Wait for backend to be ready
-          timeout 30 bash -c 'until curl -sf http://localhost:3000/health > /dev/null; do sleep 1; done'
+          echo "Waiting for backend to start..."
+          timeout 30 bash -c 'until curl -sf http://localhost:3000/health > /dev/null; do echo "Waiting..."; sleep 1; done' || {
+            echo "Backend failed to start. Logs:"
+            cat /tmp/backend.log
+            exit 1
+          }
+          echo "Backend is ready!"
 
       # Frontend Setup
       - name: Set up Node.js
@@ -118,8 +132,15 @@ jobs:
           cd frontend
           npm run preview > /tmp/frontend.log 2>&1 &
           echo $! > /tmp/frontend.pid
+
           # Wait for frontend to be ready
-          timeout 30 bash -c 'until curl -sf http://localhost:4173 > /dev/null; do sleep 1; done'
+          echo "Waiting for frontend to start..."
+          timeout 30 bash -c 'until curl -sf http://localhost:4173 > /dev/null; do echo "Waiting..."; sleep 1; done' || {
+            echo "Frontend failed to start. Logs:"
+            cat /tmp/frontend.log
+            exit 1
+          }
+          echo "Frontend is ready!"
 
       # Run E2E Tests
       - name: Run E2E tests
