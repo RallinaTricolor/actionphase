@@ -147,41 +147,12 @@ echo -e "${BLUE}🚀 Starting deployment...${NC}"
 
 # Update database first (if migrations needed)
 echo -e "${BLUE}📊 Updating database...${NC}"
-docker-compose ${COMPOSE_FILES} up -d db
-health_check "db"
-
-# Update backend
-echo -e "${BLUE}🔧 Updating backend service...${NC}"
-docker-compose ${COMPOSE_FILES} up -d --no-deps backend
-health_check "backend"
-
-# Test backend health endpoint
-if curl -f http://localhost:3000/ping > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ Backend API is responding${NC}"
-else
-    echo -e "${RED}✗ Backend API health check failed${NC}"
-    echo "Check logs with: docker-compose logs backend"
-fi
-
-# Update frontend
-echo -e "${BLUE}🎨 Updating frontend service...${NC}"
-docker-compose ${COMPOSE_FILES} up -d --no-deps frontend
-health_check "frontend"
-
-# Update nginx (if using production config)
-if grep -q "nginx:" docker-compose.prod.yml 2>/dev/null; then
-    echo -e "${BLUE}🔒 Updating nginx service...${NC}"
-    docker-compose ${COMPOSE_FILES} up -d --no-deps nginx
-    health_check "nginx"
-fi
-
-# Update supporting services (certbot, backup, etc.)
-echo -e "${BLUE}📦 Updating supporting services...${NC}"
-docker-compose ${COMPOSE_FILES} up -d certbot backup
-
-# Ensure all services are running
-echo -e "${BLUE}🔄 Ensuring all services are running...${NC}"
+docker-compose ${COMPOSE_FILES} down
 docker-compose ${COMPOSE_FILES} up -d
+health_check "db"
+health_check "backend"
+health_check "frontend"
+health_check "nginx"
 
 # Clean up old images
 echo -e "${BLUE}🧹 Cleaning up old Docker images...${NC}"
@@ -205,9 +176,6 @@ if grep -q "nginx:" docker-compose.prod.yml 2>/dev/null; then
 fi
 if grep -q "certbot:" docker-compose.prod.yml 2>/dev/null; then
     SERVICES+=("certbot")
-fi
-if grep -q "backup:" docker-compose.prod.yml 2>/dev/null; then
-    SERVICES+=("backup")
 fi
 
 ALL_HEALTHY=true
