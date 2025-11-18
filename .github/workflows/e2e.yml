@@ -94,7 +94,7 @@ jobs:
           # Export environment variables for the background process
           export DATABASE_URL="postgres://postgres:example@localhost:5432/actionphase?sslmode=disable"
           export JWT_SECRET="test-secret-for-ci"
-          export ENVIRONMENT="test"
+          export ENVIRONMENT="development"
           export LOG_LEVEL="debug"
 
           # Start backend server
