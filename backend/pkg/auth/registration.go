@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/go-chi/render"
 	"net/http"
-	"strings"
 )
 
 func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
@@ -40,11 +39,8 @@ func (h *Handler) V1Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract IP address and user agent for bot prevention
-	ipAddress := r.RemoteAddr
-	// Strip port from IP if present
-	if idx := strings.LastIndex(ipAddress, ":"); idx != -1 {
-		ipAddress = ipAddress[:idx]
-	}
+	// Use GetClientIP to handle proxied requests correctly
+	ipAddress := core.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
 
 	// Perform bot prevention checks

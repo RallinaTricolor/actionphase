@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/go-chi/jwtauth/v5"
@@ -422,6 +423,198 @@ func TestValidateStringLength(t *testing.T) {
 					errResponse := errResp.(*ErrResponse)
 					t.Errorf("Expected no error, got: %s", errResponse.ErrorText)
 				}
+			}
+		})
+	}
+}
+
+// TestGetClientIP tests client IP extraction from various request headers
+func TestGetClientIP(t *testing.T) {
+	tests := []struct {
+		name          string
+		remoteAddr    string
+		xRealIP       string
+		xForwardedFor string
+		expectedIP    string
+		description   string
+	}{
+		{
+			name:          "X-Real-IP header takes priority",
+			remoteAddr:    "10.0.0.1:8080",
+			xRealIP:       "203.0.113.1",
+			xForwardedFor: "198.51.100.1, 203.0.113.1",
+			expectedIP:    "203.0.113.1",
+			description:   "X-Real-IP should be used when present",
+		},
+		{
+			name:          "X-Forwarded-For used when X-Real-IP absent",
+			remoteAddr:    "10.0.0.1:8080",
+			xRealIP:       "",
+			xForwardedFor: "203.0.113.1, 198.51.100.1, 192.0.2.1",
+			expectedIP:    "203.0.113.1",
+			description:   "Leftmost IP in X-Forwarded-For is the client",
+		},
+		{
+			name:          "X-Forwarded-For with single IP",
+			remoteAddr:    "10.0.0.1:8080",
+			xRealIP:       "",
+			xForwardedFor: "203.0.113.1",
+			expectedIP:    "203.0.113.1",
+			description:   "Single IP in X-Forwarded-For should work",
+		},
+		{
+			name:          "X-Forwarded-For with spaces",
+			remoteAddr:    "10.0.0.1:8080",
+			xRealIP:       "",
+			xForwardedFor: "  203.0.113.1  ,  198.51.100.1  ",
+			expectedIP:    "203.0.113.1",
+			description:   "Should trim spaces from X-Forwarded-For",
+		},
+		{
+			name:          "Fallback to RemoteAddr",
+			remoteAddr:    "203.0.113.1:8080",
+			xRealIP:       "",
+			xForwardedFor: "",
+			expectedIP:    "203.0.113.1",
+			description:   "Should use RemoteAddr when no headers present",
+		},
+		{
+			name:          "RemoteAddr without port",
+			remoteAddr:    "203.0.113.1",
+			xRealIP:       "",
+			xForwardedFor: "",
+			expectedIP:    "203.0.113.1",
+			description:   "Should handle RemoteAddr without port",
+		},
+		{
+			name:          "IPv6 address in RemoteAddr",
+			remoteAddr:    "[2001:db8::1]:8080",
+			xRealIP:       "",
+			xForwardedFor: "",
+			expectedIP:    "[2001:db8::1]",
+			description:   "Should handle IPv6 addresses with port",
+		},
+		{
+			name:          "IPv6 address without port",
+			remoteAddr:    "[2001:db8::1]",
+			xRealIP:       "",
+			xForwardedFor: "",
+			expectedIP:    "[2001:db8::1]",
+			description:   "Should handle IPv6 addresses without port",
+		},
+		{
+			name:          "X-Real-IP with port (shouldn't happen but handle it)",
+			remoteAddr:    "10.0.0.1:8080",
+			xRealIP:       "203.0.113.1:443",
+			xForwardedFor: "",
+			expectedIP:    "203.0.113.1",
+			description:   "Should strip port from X-Real-IP if present",
+		},
+		{
+			name:          "Docker container scenario",
+			remoteAddr:    "172.17.0.1:54321",
+			xRealIP:       "203.0.113.1",
+			xForwardedFor: "",
+			expectedIP:    "203.0.113.1",
+			description:   "Should get real IP when proxied through container",
+		},
+		{
+			name:          "nginx reverse proxy scenario",
+			remoteAddr:    "127.0.0.1:54321",
+			xRealIP:       "203.0.113.1",
+			xForwardedFor: "203.0.113.1",
+			expectedIP:    "203.0.113.1",
+			description:   "nginx sets both X-Real-IP and X-Forwarded-For",
+		},
+		{
+			name:          "Multiple proxies in X-Forwarded-For",
+			remoteAddr:    "10.0.0.1:8080",
+			xRealIP:       "",
+			xForwardedFor: "203.0.113.1, 198.51.100.1, 192.0.2.1, 172.17.0.1",
+			expectedIP:    "203.0.113.1",
+			description:   "Should extract client IP from multi-proxy chain",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a test request
+			req := httptest.NewRequest("GET", "/test", nil)
+			req.RemoteAddr = tt.remoteAddr
+
+			// Set headers if provided
+			if tt.xRealIP != "" {
+				req.Header.Set("X-Real-IP", tt.xRealIP)
+			}
+			if tt.xForwardedFor != "" {
+				req.Header.Set("X-Forwarded-For", tt.xForwardedFor)
+			}
+
+			// Extract IP
+			gotIP := GetClientIP(req)
+
+			// Verify result
+			if gotIP != tt.expectedIP {
+				t.Errorf("Expected IP '%s', got '%s'. %s", tt.expectedIP, gotIP, tt.description)
+			}
+		})
+	}
+}
+
+// TestStripPort tests the port stripping functionality
+func TestStripPort(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		expectedIP string
+	}{
+		{
+			name:       "IPv4 with port",
+			input:      "192.168.1.1:8080",
+			expectedIP: "192.168.1.1",
+		},
+		{
+			name:       "IPv4 without port",
+			input:      "192.168.1.1",
+			expectedIP: "192.168.1.1",
+		},
+		{
+			name:       "IPv6 with port",
+			input:      "[2001:db8::1]:8080",
+			expectedIP: "[2001:db8::1]",
+		},
+		{
+			name:       "IPv6 without port",
+			input:      "[2001:db8::1]",
+			expectedIP: "[2001:db8::1]",
+		},
+		{
+			name:       "IPv6 with multiple colons",
+			input:      "[::1]:8080",
+			expectedIP: "[::1]",
+		},
+		{
+			name:       "localhost with port",
+			input:      "127.0.0.1:3000",
+			expectedIP: "127.0.0.1",
+		},
+		{
+			name:       "Empty string",
+			input:      "",
+			expectedIP: "",
+		},
+		{
+			name:       "IPv4 with multiple colons (malformed)",
+			input:      "192.168.1.1:8080:9090",
+			expectedIP: "192.168.1.1:8080", // LastIndex behavior
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := stripPort(tt.input)
+			if result != tt.expectedIP {
+				t.Errorf("stripPort(%s) = %s, want %s", tt.input, result, tt.expectedIP)
 			}
 		})
 	}
