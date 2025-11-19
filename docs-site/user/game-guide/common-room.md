@@ -15,7 +15,7 @@ The Common Room is a **public discussion space** where all active characters can
 - Everyone in the game can see Common Room posts (including the GM)
 - Posts are written as your character (not as yourself)
 - It's the primary way to interact with other players between action phases
-- Available during both Common Room phases AND Action phases
+- Only available during Common Room phases
 
 ## Common Room Phases
 
@@ -26,15 +26,13 @@ Games alternate between Common Room phases and Action phases. During a **Common 
 - ✅ Great for planning before the next Action phase
 - ✅ No action submissions yet - just talk and coordinate
 
-**But you can also post during Action phases!** The Common Room never closes - it's just less active since players are busy writing their actions.
-
 ## Making Your First Post
 
 ### Writing a Post
 
 1. Navigate to your game page
 2. Click the **Common Room** tab
-3. Click **New Post** or **Create Post**
+3. Click **Add Comment** or **Reply**
 4. Write your post as your character
 5. Click **Post** to publish
 
@@ -53,7 +51,7 @@ Games alternate between Common Room phases and Action phases. During a **Common 
 - ✅ Move the conversation forward
 
 **Don't:**
-- ❌ Post out-of-character chat (save that for private messages)
+- ❌ Post out-of-character chat (save that for Discord)
 - ❌ Write a novel - keep it digestible
 - ❌ Ignore what others have posted
 - ❌ Make decisions for other characters
@@ -90,22 +88,16 @@ You can reference other characters using `@charactername`:
 
 > "I agree with @Marcus - we need to act. But @Elena has a point about legality. What if we approach it during the day, claim we're concerned neighbors?"
 
-Some games support automatic notifications when you mention a character.
+Gmes support automatic notifications when you mention a character.
 
 ## Common Room Etiquette
 
 ### Be a Good Player
 
 **Engage Actively:**
-- Respond to others' posts within a reasonable time
-- Don't leave people hanging in conversations
+- Make at least a few posts every Common Room phase
 - Create hooks for others to interact with
 - Read what others have posted before jumping in
-
-**Respect the Tone:**
-- Match the game's style (serious, comedic, dramatic, etc.)
-- Don't derail serious moments with jokes (unless that's your character)
-- Respect when the GM is setting up something important
 
 **Share the Spotlight:**
 - Don't dominate every conversation
@@ -143,12 +135,6 @@ Revealing personality, backstory, or relationships:
 
 > *Serena stares into her drink, unusually quiet.* "You know, I used to live near here. Before... everything." *She shakes her head.* "Doesn't matter. That life's gone."
 
-### Reactions to Events
-
-Responding to GM updates or phase results:
-
-> "Did you all see what the GM posted? The mansion is *owned* by the mayor? This changes everything. We can't just break in - he could have us arrested."
-
 ### Social Interaction
 
 Just characters being themselves:
@@ -158,8 +144,6 @@ Just characters being themselves:
 ## During Different Phases
 
 ### Common Room Phase
-
-This is prime time for the Common Room:
 
 - **Main Activity**: Planning, discussing, coordinating
 - **Goal**: Prepare for the next Action phase
@@ -172,31 +156,6 @@ This is prime time for the Common Room:
 3. Debate strategies and options
 4. Make plans for the upcoming Action phase
 5. Develop character relationships
-
-### Action Phase
-
-The Common Room is still available, just quieter:
-
-- **Main Activity**: Players are writing their action submissions
-- **Purpose**: Last-minute coordination or quick questions
-- **Pacing**: Slower than Common Room phase
-- **Posts**: Usually shorter and more focused
-
-**What to do:**
-1. Clarify any final questions
-2. Coordinate timing if actions involve multiple characters
-3. Handle any quick character moments
-4. Generally, focus on writing your action!
-
-### Waiting for Results
-
-Brief period after Action Phase deadline while GM writes results:
-
-- **Usually very short** (hours to a day)
-- Common Room typically quiet during this time
-- Players waiting for results before discussing
-- Good time to catch up on reading old posts
-- Common Room is still available for posting if needed
 
 ## Advanced Features
 
@@ -240,7 +199,6 @@ Horizontal rule for scene breaks
 If you need to talk to just one or two characters:
 - Use **Private Messages** instead of the Common Room
 - See: [Private Messaging Guide](./private-messages.md)
-- The GM cannot see private messages (by design)
 
 ## Common Mistakes to Avoid
 

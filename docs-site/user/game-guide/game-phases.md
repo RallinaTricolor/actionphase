@@ -52,7 +52,6 @@ The Common Room is the social hub of your game. Think of it as the tavern, space
 - Submit what your character does
 - Edit your action submission before the deadline
 - View the action prompt from your GM
-- Continue posting in the Common Room (but most players focus on writing actions)
 
 The Action Phase is when you decide what your character actually does. Your GM will provide a prompt or situation, and you respond with your character's actions.
 
@@ -158,16 +157,6 @@ Your GM controls when phases advance. They might:
 - Email notifications remind you of upcoming deadlines (if enabled)
 - The game page always shows the current phase and time remaining
 
-## Common Room Availability
-
-**Important:** The Common Room is always available, even during Action Phases!
-
-You can post in the Common Room during both phase types:
-- **During Common Room Phase**: Primary discussion time, most active
-- **During Action Phase**: Still available for quick coordination, though most players focus on writing their actions
-
-The Common Room never closes - it just becomes less active during Action Phases as players work on their submissions.
-
 ## Making the Most of Each Phase
 
 ### Common Room Strategy
@@ -198,13 +187,6 @@ A: Yes! You can edit your action as many times as you want before the deadline. 
 A: It varies by game and GM preference:
 - Common Room: 1-3 days typically
 - Action Phase: 2-5 days typically
-- Results are usually published within 1-3 days after the Action deadline
-
-**Q: Can I post in Common Room during Action Phase?**
-A: Yes! The Common Room is available during both phase types. However, most players focus on writing their action submissions during Action Phases, so the Common Room is usually quieter.
-
-**Q: What happens if everyone submits early?**
-A: Many GMs advance the phase early if all players have submitted, but some wait for the deadline regardless. Ask your GM about their preference.
 
 **Q: Can I see other players' action submissions?**
 A: No. Action submissions are completely private between each player and the GM. You only see what others tell you in the Common Room or private messages.

@@ -6,7 +6,7 @@ Action Phases are where the real gameplay happens - this is when you tell the GM
 
 An Action Phase is a **private submission period** where:
 - Each player writes what their character does
-- Submissions are private (only you and the GM see them)
+- Submissions are private (only you, the audience, and the GM see them)
 - You have until the deadline to submit or revise
 - The GM reads all actions, then writes individualized results
 - After results, the game moves to the next Common Room phase
@@ -34,12 +34,13 @@ Common Room → ACTION PHASE → Results → (new Common Room) → ACTION PHASE 
 ### Accessing the Action Phase
 
 1. Go to your game page
-2. Click the **Actions** tab or **Current Phase** section
-3. Look for **Submit Action** or **Your Action**
-4. Write your action in the text box
-5. Click **Submit** or **Save**
+2. Click the **Submit Action** tab
+3. Write your action in the text box
+4. Click **Submit**
 
 ### What to Include
+
+There's a lot of ways to write Action PMs. Here are some tips, but this list is not exhaustive.
 
 Your action should describe:
 
@@ -55,6 +56,19 @@ Your action should describe:
 **Any special resources or skills:**
 > "I'm using my Research skill and my knowledge of mythology. I also have that old journal from my mentor that might have relevant notes."
 
+A list of goals and priorities is also helpful:
+> **Goals:**
+> 1. Don't die
+> 2. Find the symbol's meaning
+> 3. Complete objectives
+> 4. Help my allies complete objectives
+>
+> ** Outline:**
+> 1. First, I'll head to the library to try to find information about the symbol
+> 2. Check indexes, cross-referencing anything promising
+> 3. If nothing comes up, try the special collections room
+> 4. If that doesn't work, I'll try the town hall
+
 ### Example Action Submission
 
 **Good Example:**
@@ -69,6 +83,10 @@ Your action should describe:
 > I'll spend about two hours searching, then leave the same way I came in before the night security does their midnight rounds.
 >
 > **Goal:** Find historical information about the mansion and its previous occupants.
+
+**Note:** There are a wealth of example Action Submissions in the House of Fun wiki on reddit. Find a game [here](https://old.reddit.com/r/MyLittleHouseOfFun/wiki/index).
+
+Once you've found a game, look for conversations with the Gamemaster account and then find the Action PMs.
 
 ### Action Writing Tips
 
@@ -88,27 +106,21 @@ Your action should describe:
 - ❌ "I search the room"
 - ✅ "I use my detective training to search methodically - checking for hidden compartments, disturbed dust, anything out of place"
 
+**Include Thoughts on Other Characters:**
+- ❌ "I will fight anyone who seems suspicious."
+- ✅ "Kael: Ally. If he asks for help, I will help him. Selene: Enemy. I don't want to start fights, but I will try to beat her to objectives."
+
 ## Privacy and Visibility
 
 ### Who Sees What
 
 **Your Action Submission:**
 - ✅ You can see it
-- ✅ The GM can see it (after deadline)
+- ✅ The audience can see it
+- ✅ The GM can see it
 - ❌ Other players CANNOT see it
-- ❌ GM cannot see it BEFORE the deadline
 
 **Important:** Your action is completely private. Other players don't know what you're doing unless you told them in the Common Room or via Private Message.
-
-### GM Visibility
-
-The GM **cannot see actions during the submission period**. This is by design:
-- Prevents the GM from being influenced by early submissions
-- Ensures all players have equal time to revise
-- Keeps everyone on a level playing field
-- GM sees all actions at once after the deadline
-
-**After the deadline**, the GM sees all actions and can start writing results.
 
 ## Editing Your Action
 
@@ -117,13 +129,12 @@ The GM **cannot see actions during the submission period**. This is by design:
 You can edit your action as many times as you want:
 
 1. Go to your action submission
-2. Click **Edit** or **Revise**
+2. Click **Edit**
 3. Make your changes
-4. Click **Save** or **Update**
+4. Click **Save**
 
 **Common reasons to edit:**
 - You thought of a better approach
-- Another player's Common Room post changed your plans
 - You realized you forgot to mention something important
 - You want to add more detail
 
@@ -144,29 +155,27 @@ If you absolutely need to change something:
 Every Action Phase has a deadline displayed:
 - In your timezone (automatically converted)
 - Shows countdown timer
-- Usually several days away
+- Usually 24 hours away
 - Set by the GM
 
 **Example:**
 ```
 Deadline: November 18, 2024 at 11:59 PM PST
-Time Remaining: 3 days, 5 hours
+Time Remaining: 19 hours
 ```
 
 ### What Happens at Deadline
 
 When the deadline hits:
 - ✅ All actions lock (no more edits)
-- ✅ GM can now see all submissions
 - ✅ Late submissions are not accepted
-- ✅ If you didn't submit, your character does nothing
+- ✅ If you didn't submit, your character does nothing--reach out to your GM in this scenario
 
 ### Missing the Deadline
 
 If you don't submit an action:
-- Your character takes no action this phase
-- The story continues without you
-- You miss that phase's events and information
+- Your character takes no action this phase, or your character may lose time
+- You miss some or all of that phase's events and information
 - You can still participate in the next phase
 
 **Avoid this by:**
@@ -194,7 +203,6 @@ The GM might:
 Before the Action Phase:
 - Discuss plans in the Common Room
 - Agree on who does what
-- Set meeting points or timing
 - Share important information
 
 **Example Common Room Discussion:**
@@ -212,42 +220,10 @@ Reference the plan:
 ### When Plans Change
 
 If your action differs from the plan:
-- The GM will handle it
+- The GM will handle it (they may ask you questions for clarification)
 - Maybe you arrive early, or take a different approach
 - Other players won't know until results
 - This can create interesting drama!
-
-## Types of Actions
-
-### Investigation
-Searching, researching, gathering information
-
-**Example:**
-> "I spend the day at the town hall, going through property records for the Hillcrest mansion. I'll look for: previous owners, sales history, any liens or legal issues, and building permits. I'll take photos of anything relevant."
-
-### Social Interaction
-Talking to NPCs, interrogating, persuading
-
-**Example:**
-> "I approach the mayor at the town fundraiser, casual and friendly. After some small talk, I mention that I've been researching local history and ask if he knows anything about the Hillcrest mansion. I'll watch his body language carefully - does he seem nervous? Evasive?"
-
-### Stealth/Infiltration
-Sneaking, breaking in, avoiding detection
-
-**Example:**
-> "I wait until 2 AM, then approach the mansion from the back, staying in the shadows. I'll check the back door first - if it's locked, I'll try the basement window. I move slowly and pause often to listen. If I hear anything, I'll freeze and wait."
-
-### Combat/Confrontation
-Direct action, forcing an issue
-
-**Example:**
-> "I confront the mayor directly. I show him the symbol and tell him I know he's involved. I'm not threatening, but I'm firm - I want answers, and I'm not leaving without them. My hand is near my pepper spray, just in case."
-
-### Preparation
-Setting up for future phases, gathering resources
-
-**Example:**
-> "I spend the day preparing: I buy a good flashlight, a lock pick set, and a portable scanner. I print out maps of the mansion property. I text @Chen to make sure we're still on for tomorrow night. I also research the security company that monitors the mansion."
 
 ## Receiving Your Results
 
@@ -271,8 +247,9 @@ After the Action Phase deadline passes and you submit your action, the GM will:
 When results arrive:
 1. You'll get a notification
 2. Go to your game page
-3. Click **Results** or **GM Messages**
+3. Click **Submit Action** or **History**
 4. Read your private result
+5. You can also see your results at the top of the Common Room tab once the new phase starts
 
 **Your results are private** - other players don't see them unless you share.
 
@@ -311,10 +288,6 @@ The GM cannot force you to share results with other players.
 ### The Novel
 ❌ 3000 words of backstory and internal monologue
 ✅ Focus on what you DO, with enough detail for the GM to adjudicate
-
-### The Multi-Action
-❌ "I search the library, then the town hall, then interview the mayor, then break into the mansion..."
-✅ Pick ONE main thing to focus on. You can't do everything in one phase.
 
 ### The Assumption
 ❌ "After I successfully pick the lock..."
@@ -453,15 +426,6 @@ Before submitting:
 - [ ] State what you hope to learn/accomplish
 - [ ] Check spelling and clarity
 - [ ] Submit early (can edit later)
-
-### Typical Timeline
-
-- **Day 1**: Phase starts, players begin planning
-- **Days 2-5**: Common Room discussion, action writing
-- **Day 6**: Deadline approaches, final edits
-- **Day 7**: Deadline, GM starts writing results
-- **Days 8-10**: Results delivered
-- **Next phase**: Common Room to discuss results
 
 ## Next Steps
 

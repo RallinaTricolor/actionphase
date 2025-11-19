@@ -5,22 +5,21 @@ Private Messages let you communicate secretly with other characters - planning c
 ## What Are Private Messages?
 
 Private Messages are **character-to-character communications** that:
-- Are completely private (only you and the recipient see them)
-- **The GM CANNOT see them** (by design)
+- Are completely private to other players
+- The GM and audience can see them
 - Can be sent to one or multiple characters
 - Persist throughout the game
-- Are available during all game phases
-
-**Key Point**: Private messages are truly private. The GM has no access to them, which allows authentic secret planning and character development.
+- Are available only during common room
+- Are publicly visible after the game ends
 
 ## Why Use Private Messages?
 
 ### Secret Planning
-Coordinate actions without tipping off the GM or other players:
+Coordinate actions without tipping off other players:
 
 > **To: Marcus**
 >
-> Don't mention this in the Common Room, but I found something weird in the library records. The mansion's ownership changed hands three times in the last year, always for exactly $1. That's not normal.
+> Don't mention this in the publicly, but I found something weird in the library records. The mansion's ownership changed hands three times in the last year, always for exactly $1. That's not normal.
 >
 > I'm going to investigate the property office tomorrow. Want to come with?
 
@@ -38,7 +37,7 @@ Share information selectively:
 
 > **To: Chen**
 >
-> The GM just gave me results saying I saw the mayor leaving the mansion at 3 AM. I'm not sharing this in the Common Room yet - if the mayor is involved, we need to be careful about who knows what.
+> Last night I saw the mayor leaving the mansion at 3 AM. I'm not sharing this publicly yet - if the mayor is involved, we need to be careful about who knows what.
 >
 > What did your investigation turn up?
 
@@ -56,40 +55,29 @@ Create dramatic moments (use responsibly!):
 ### Basic Steps
 
 1. Navigate to your game page
-2. Click **Messages** or **Private Messages** tab
-3. Click **New Message** or **Compose**
+2. Click **Messages** tab
+3. Click **New Message**
 4. Select recipient(s)
 5. Write your message
 6. Click **Send**
-
-**Most platforms also allow:**
-- Sending messages directly from a character's profile
-- Clicking a character's name and selecting "Send Message"
-- Using @mentions to quickly select recipients
 
 ### Message Components
 
 **Recipients (Required)**:
 - Select one or more characters
 - Only active characters in the game can receive messages
-- The GM is NOT an option (by design)
+- NPCs are valid choices, whether they are GM or Audience controlled
 
-**Subject (Optional)**:
+**Title (Required)**:
 - Brief summary of the message topic
 - Helps organize message threads
 - Example: "Tonight's plan", "What I found", "We need to talk"
-
-**Message Body (Required)**:
-- Write as your character
-- Can include formatting (bold, italics, etc.)
-- No length limits (but be reasonable)
 
 ## Reading and Replying
 
 ### When You Receive a Message
 
 You'll typically get:
-- Email notification (if enabled)
 - In-game notification badge
 - Alert on the Messages page
 
@@ -100,51 +88,15 @@ You'll typically get:
 
 ### Replying to Messages
 
-Messages are organized in **threads** (conversations):
+Messages are organized in **chat-style conversations**:
 
 1. Open the message thread
 2. Type your reply at the bottom
-3. Click **Reply** or **Send**
+3. Click **Send**
 
 Your reply stays in the same thread, creating a conversation history.
 
-**Example Thread:**
-
-> **Marcus → Kira**: "I found a way into the mansion's basement. Meet me at midnight?"
->
-> **Kira → Marcus**: "Midnight works. What's the entry point?"
->
-> **Marcus → Kira**: "Service entrance on the east side. Bring your lockpicks - the door has a deadbolt."
->
-> **Kira → Marcus**: "Done. I'll wear dark clothes and bring my tools. See you there."
-
-## Privacy and Security
-
-### Who Can See What
-
-**Your Private Messages:**
-- ✅ You can always see them
-- ✅ Recipients can see them
-- ❌ Other players CANNOT see them
-- ❌ **The GM CANNOT see them**
-
-This is different from:
-- **Common Room posts** - Everyone sees (including GM)
-- **Action submissions** - Only you and GM see
-- **Results** - Only you see (unless you share)
-
-### Why GMs Don't Have Access
-
-This is a deliberate design choice:
-- Allows authentic secret plotting
-- Prevents GM from being influenced by your plans
-- Creates genuine surprises
-- Lets characters betray each other dramatically
-- Enables real information asymmetry
-
-**The GM discovers your secrets the same way they discover player actions - through the results of those actions in the game world.**
-
-### Group Messages
+## Group Messages
 
 You can send messages to multiple characters:
 
@@ -164,14 +116,14 @@ All recipients can see all replies. It's like a group chat.
 - ✅ "Meet me at the docks at midnight. Don't tell anyone."
 
 **Sensitive Information:**
-- ✅ "The GM told me I saw you leaving the crime scene"
+- ✅ "I saw you leaving the crime scene"
 - ✅ "I found evidence that incriminates your character"
 - ✅ "I know your character's secret backstory"
 
 **Personal Relationships:**
 - ✅ "I don't trust Marcus. Do you?"
 - ✅ "My character has feelings for your character"
-- ✅ "Can we talk about what happened last phase?"
+- ✅ "Can we talk about what happened last night?"
 
 **Selective Sharing:**
 - ✅ "Here's what I learned, but don't share this with Kira"
@@ -196,7 +148,6 @@ All recipients can see all replies. It's like a group chat.
 
 **Transparency:**
 - ✅ When you want everyone to know
-- ✅ When hiding information would hurt the game
 - ✅ When coordination requires full group buy-in
 
 ## Message Etiquette
@@ -218,8 +169,8 @@ All recipients can see all replies. It's like a group chat.
 ### Respond Reasonably
 
 **Good Response Time:**
-- Check messages once a day during active phases
-- Respond within 24-48 hours when possible
+- Check messages during active phases
+- Respond within a few hours when possible
 - Communicate if you'll be away
 
 **Don't Ghost:**
@@ -291,14 +242,6 @@ Use messages to develop one-on-one relationships:
 >
 > You're green, but you're smart. Stick with me and you might survive this.
 
-**Example: Romantic Tension**
-
-> **To: Elena**
->
-> I know this isn't the time, but I can't stop thinking about what you said last phase. When this is over - if we both make it through - I'd like to talk. Really talk.
->
-> Stay safe.
-
 **Example: Rivalry**
 
 > **To: Kira**
@@ -349,78 +292,6 @@ If your character plans to betray the group, private messages set it up:
 ❌ Never trusting anyone, making every plan secret
 ✅ Balance secret plotting with group coordination - games need both
 
-## Advanced Techniques
-
-### The Double-Cross Setup
-
-**Week 1 - Public in Common Room:**
-> **You**: "I think we should all work together on this. Trust is important."
-
-**Week 2 - Private to Marcus:**
-> **You**: "Just between us - I'm planning to betray the group when we find the artifact."
-
-**Week 3 - Private to Elena:**
-> **You**: "I need to warn you - Marcus is planning to betray us all."
-
-**Result**: Maximum chaos and drama (use responsibly!)
-
-### The Information Broker
-
-Position yourself as the person who knows everything:
-
-**To: Marcus** - "I heard from Elena that Chen found something at the mansion"
-**To: Elena** - "Marcus told me he's suspicious of your research"
-**To: Chen** - "Kira mentioned you found evidence - what is it?"
-
-**Strategy**: Control information flow to gain influence
-
-### The Reliable Partner
-
-Build trust through consistent communication:
-
-**Example Pattern:**
-- Always respond quickly
-- Share information honestly
-- Follow through on commitments
-- Warn partner of dangers
-
-**Result**: When you need help, they trust you enough to say yes
-
-### The Secret Agenda
-
-Run a hidden objective through private coordination:
-
-**Your Character's Secret Goal**: Protect the mayor at all costs
-
-**Public Common Room**: Participate in planning to investigate the mayor
-**Private Messages**: Warn the mayor, sabotage investigations, misdirect the group
-**Action Submissions**: Actually protecting the mayor while pretending to investigate
-
-## Organizing Your Messages
-
-### Thread Management
-
-Most platforms organize messages in threads. Use this to your advantage:
-
-**Good Organization:**
-- **Thread 1**: "Mansion Break-In Plan" (with Marcus, Elena)
-- **Thread 2**: "What I Found at the Library" (with Chen)
-- **Thread 3**: "Mayor Investigation" (with Kira)
-
-**Bad Organization:**
-- One giant thread mixing 5 different topics
-- Hard to find information later
-
-### Archiving and Reference
-
-Keep track of important information:
-- Screenshot or copy important revelations
-- Reference earlier messages when needed
-- Build a personal timeline of who knows what
-
-**Example:**
-> Remember what you told me three phases ago about seeing the symbol at the mansion? I just found the same symbol in the library archives. They're connected.
-
 ## Coordinating with Action Submissions
 
 ### The Dance of Secret Planning
@@ -457,72 +328,6 @@ Keep track of important information:
 
 Sometimes plans fail - that's part of the drama!
 
-## Privacy Reminder
-
-### What the GM Knows
-
-**The GM Knows:**
-- ✅ Your action submissions
-- ✅ Common Room posts
-- ✅ Your character sheet and backstory
-- ✅ Results they've given you
-
-**The GM Does NOT Know:**
-- ❌ Your private messages
-- ❌ What you've planned with other players in private
-- ❌ Secret alliances or betrayals until they happen
-
-### How the GM Finds Out
-
-The GM discovers your secret plans through:
-- **Actions you submit** - "I'm betraying Marcus and taking the artifact"
-- **Consequences** - Marcus notices you acting suspicious
-- **Other players** - Someone else witnesses your actions
-- **NPCs** - Guards see you, witnesses report you
-
-The GM does NOT discover them by reading your private messages.
-
-## Tips for Success
-
-### Communication Hygiene
-
-**Do:**
-- ✅ Respond to messages within 24-48 hours
-- ✅ Be clear about what you're asking
-- ✅ Confirm plans before deadlines
-- ✅ Let people know if you'll be away
-
-**Don't:**
-- ❌ Leave people hanging during critical phases
-- ❌ Send vague messages and expect others to guess
-- ❌ Make plans and disappear
-
-### Building Trust (or Betraying It)
-
-**To Build Trust:**
-- Share information honestly
-- Follow through on commitments
-- Respond quickly to requests
-- Warn partners of dangers
-
-**To Set Up Betrayal:**
-- Build trust first (makes betrayal more impactful)
-- Leave yourself plausible deniability
-- Set up alternative explanations
-- Time the betrayal for maximum drama
-
-### Balance
-
-**Good Balance:**
-- Some secrets, some public cooperation
-- Some private plotting, some Common Room participation
-- Some betrayals, some genuine alliances
-
-**Bad Balance:**
-- Everything secret, no public interaction → Isolates you
-- Everything public, no secrets → Boring, no drama
-- Constant betrayal → No one will trust you
-
 ## Troubleshooting
 
 ### "No One Responds to My Messages"
@@ -531,19 +336,19 @@ The GM does NOT discover them by reading your private messages.
 - Messages are too vague or don't require responses
 - You're messaging inactive players
 - You're messaging people whose characters have no reason to trust you
-- Timing - people are busy with action submissions
+- Timing - people are often spread across time zones
 
 **Solutions:**
 - Ask specific questions that require answers
 - Choose active players to coordinate with
 - Build relationships in Common Room first
-- Give people time to respond (24-48 hours)
+- Give people time to respond
 
 ### "Someone is Harassing Me via Messages"
 
 **What to Do:**
 - Document the messages (screenshot)
-- Contact the GM immediately (via email or platform message)
+- Contact the GM immediately (via Discord)
 - If serious, contact platform moderators/admins
 - Remember: Player conflict ≠ Character conflict
 
@@ -568,54 +373,8 @@ The GM does NOT discover them by reading your private messages.
 **If you need to correct:**
 - Send a follow-up clarifying
 - If it's a major mistake, contact the GM
-- Accept that messages are permanent
+- You can delete the message after it was sent
 
-## Examples in Practice
-
-### Example 1: Planning a Heist
-
-**Common Room (Public):**
-> **Marcus**: "We should investigate the mansion sometime soon."
-> **Elena**: "Agreed. Maybe this weekend?"
-
-**Private Messages:**
-> **Marcus → Kira**: "Tonight. Midnight. We're breaking in through the east window."
->
-> **Kira → Marcus**: "What about Elena and Chen?"
->
-> **Marcus → Kira**: "They're not ready for this. We go alone."
-
-**The Next Day in Common Room:**
-> **Marcus**: "Kira and I did some scouting last night. The mansion looks abandoned."
-
-### Example 2: Sharing Evidence Selectively
-
-**You found critical evidence in your results:**
-> **GM Result**: "You discover a letter proving the mayor is involved in the disappearances."
-
-**Private to Your Ally:**
-> **To: Elena**: "I found proof the mayor is behind everything. A signed letter from him ordering the kidnappings."
-
-**Common Room (Public):**
-> "I found some interesting documents at the town hall, but nothing conclusive yet."
-
-**Private to the Mayor's Spy:**
-> **To: Chen**: "I didn't find anything. Looks like the mayor is clean."
-
-**Result**: Different people have different information, creating drama when they compare notes.
-
-### Example 3: Romantic Subplot
-
-**After a tense Common Room scene:**
-> **To: Elena**: "I'm sorry I snapped at you in front of everyone. This case is getting to me. You're right to be cautious - I'm being reckless."
->
-> **Elena → You**: "It's okay. I know you're under pressure. We all are."
->
-> **To: Elena**: "Can we talk privately sometime? Not about the case. Just... talk?"
->
-> **Elena → You**: "I'd like that."
-
-**Develops relationship without cluttering Common Room.**
 
 ## Quick Reference
 
@@ -625,20 +384,6 @@ The GM does NOT discover them by reading your private messages.
 - ✅ Sharing information selectively
 - ✅ Character relationship development
 - ✅ Coordinating with specific people
-- ✅ Anything the GM shouldn't know yet
-
-### Privacy Guarantee
-
-- ✅ You and recipients can see
-- ❌ GM cannot see
-- ❌ Other players cannot see
-- ❌ Cannot be made public (platform-dependent)
-
-### Response Expectations
-
-- Aim for 24-48 hour response time
-- Faster during critical phases
-- Communicate if you'll be delayed
 
 ### Best Practices
 
