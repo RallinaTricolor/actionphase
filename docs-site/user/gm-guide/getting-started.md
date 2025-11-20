@@ -45,7 +45,7 @@ Before creating the game in ActionPhase, decide on:
 ### Step 2: Create Your Game
 
 1. Log into ActionPhase
-2. Click **Create Game** or **New Game**
+2. Click **Create Game**
 3. Fill out the game creation form:
 
 **Game Title:**
@@ -73,14 +73,10 @@ Include:
 >
 > **Content Warnings:** Horror themes, violence, body horror, paranoia, potential character death
 
-**Player Count:**
-- 3-5 players recommended for your first game
-- Fewer players = faster, more focused
-- More players = richer interactions, slower pace
-
 **Phases:**
-- Start in **Recruitment** phase to gather players
-- You'll advance to Setup → Common Room once recruitment closes
+- Start in **Setup** and will need to advance to **Recruitment** phase to gather players
+- You'll advance to **Character Creation** once recruitment closes
+- **In Progress** is the meat of the game, where the Common Rooms and Action Phases take place
 
 ### Step 3: Write Character Guidelines
 
@@ -133,11 +129,6 @@ Once your game is live in Recruitment phase:
 - Approve players who seem like a good fit
 - If declining, be polite and brief
 - You can suggest they apply to a different game
-
-**How Many Players?**
-- Wait until you have 3-5 good applications
-- Don't feel pressured to fill all slots
-- Quality > quantity
 
 ### Step 5: Review and Approve Characters
 
@@ -256,15 +247,13 @@ After players submit actions, you write what happens:
 ### Setting Deadlines
 
 **Action Phase Deadlines:**
-- 2-4 days is typical
+- -1-2 days is typical
 - Announce deadline clearly
 - Stick to it (don't wait for stragglers forever)
 - Consider auto-advancing after deadline + grace period
 
 **Common Room Phases:**
 - 1-3 days typically
-- Shorter if everyone's engaged
-- Can be flexible based on discussion flow
 
 **Your Schedule:**
 - Be realistic about your time

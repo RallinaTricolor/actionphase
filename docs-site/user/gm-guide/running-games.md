@@ -144,8 +144,6 @@ For each player, write a personalized result:
 > **You've photographed:** The guard, the open door, the vehicle headlights (too dark to see the car itself), and the east wing activity.
 >
 > **Your phone buzzes:** It's a text from [another player] who's watching from the south side: "Someone just came out. Heading your way. Hide."
->
-> You have maybe 30 seconds before whoever it is reaches the north side. What do you do?
 
 ### Step 4: Coordinate Interconnected Actions
 
@@ -170,8 +168,6 @@ If players' actions intersect:
 > You make a split-second decision: create a distraction or warn [Player A] directly? You choose to warn them. You sprint toward their position, staying low, trying to reach them before the guards do.
 >
 > You make it. [Player A] sees you coming and looks relieved, then alarmed when you tell them about the guards.
->
-> Where do you both hide?
 
 ## Managing NPCs
 
@@ -233,24 +229,6 @@ When NPCs appear in your results:
 
 ## Pacing Your Game
 
-### Phase Length
-
-**Common Room Phases:**
-- **1-2 days:** Fast-paced, urgent discussions
-- **2-3 days:** Standard, allows deeper planning
-- **3-5 days:** Slow burn, character development focus
-
-**Action Phases:**
-- **2-3 days:** Quick turnaround
-- **3-5 days:** Standard, gives players time to craft good actions
-- **5-7 days:** Generous, good for busy players
-
-**Adjust based on:**
-- Your schedule for writing results
-- Player engagement levels
-- Story urgency
-- Real-world calendars (holidays, etc.)
-
 ### Story Pacing
 
 **Act Structure:**
@@ -299,23 +277,6 @@ When NPCs appear in your results:
 - **Offer clear options:** "You could do A, B, or C..."
 - **Have an NPC suggest something:** "Maybe we should..."
 
-### Players Split the Party
-
-**Players want to do different things:**
-
-This is fine! Write individual results showing different perspectives:
-- Player A investigates the library
-- Player B interviews the mayor
-- Player C stakes out the estate
-
-Each gets their own result. Maybe they reconvene in the next Common Room to share findings.
-
-**Benefits:**
-- More story threads
-- Different types of scenes
-- Players get individual spotlight
-- Creates information asymmetry (good for mysteries!)
-
 ### A Player Is Inactive
 
 **If a player isn't engaging:**
@@ -345,9 +306,8 @@ Each gets their own result. Maybe they reconvene in the next Common Room to shar
 
 **Results take time.** For 5 players:
 - Reading actions: 30 minutes
-- Planning responses: 30 minutes
-- Writing results: 1-2 hours
-- Total: 2-3 hours per phase
+- Planning responses: 3-4 hours
+- Writing results: 2-3 days
 
 **Efficiency tips:**
 - Read all actions first (don't write sequentially)
@@ -391,7 +351,6 @@ Each gets their own result. Maybe they reconvene in the next Common Room to shar
 
 **Good enough is good enough:**
 - You don't need to write a masterpiece
-- 200-300 words per result is plenty
 - Clear > beautiful
 - Specific > vague
 - Actionable > philosophical
@@ -409,22 +368,9 @@ Each gets their own result. Maybe they reconvene in the next Common Room to shar
 **Prevention:**
 - Set realistic phase lengths
 - Take breaks between games
-- Don't run multiple games simultaneously (at first)
+- Don't run multiple games simultaneously
 - Communicate when you need time
 - Remember why you're doing this (fun!)
-
-### Taking Breaks
-
-**It's okay to:**
-- Pause the game for a week
-- Announce you need extra time for results
-- Run shorter phases if you're busy
-- End a game early if it's not working
-
-**Communicate:**
-> "Hey everyone, work got crazy. I need an extra couple days to write results. Thanks for your patience!"
-
-> "I'm going on vacation next week. The game will be paused until the 15th."
 
 ## Quick Reference: GM Workflow
 

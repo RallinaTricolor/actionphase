@@ -27,6 +27,7 @@ ActionPhase supports three participant roles:
 - Can see all phases and posts
 - Cannot create characters or submit actions
 - Cannot post in Common Room (read-only)
+  - Can be assigned NPCs which allow Common Room and Private Message access
 - **Does NOT count toward player limit**
 - Useful for spectators or future players learning the game
 
@@ -39,39 +40,13 @@ When your game is in "Recruitment" state, players can apply:
 **Application includes:**
 - Username and account creation date
 - Application text (optional - you can require this)
-- Character concept (if they started one)
 
 **To review applications:**
 1. Go to your game page
 2. Click the "Applications" tab or notification
 3. Read each application
 4. Click "Approve" or "Decline"
-
-### Accepting Applications
-
-**When you approve an application:**
-- Player becomes a participant (role: "player")
-- They can create a character
-- They appear in the "People" tab
-- They receive a notification
-
-**Character creation still required:**
-- Approval grants access, not a character
-- They must create and submit a character
-- You must approve the character separately
-- See [Character Approval](./character-approval.md) guide
-
-### Declining Applications
-
-**Be respectful:**
-- Optional: Include a brief decline reason
-- Common reasons: "Game is full", "Not a good fit for this concept", "Experience level mismatch"
-- Not required to provide detailed justification
-
-**They can see your reason:**
-- Keep it professional and brief
-- Don't be personal or harsh
-- "Thanks for applying! I've filled all slots" is perfectly fine
+5. Application status is not published until you transition the game to "Character Creation"
 
 ### Application Auto-Accept (Audience)
 
@@ -117,7 +92,7 @@ The "People" tab shows all participants:
 You can promote or demote participants:
 
 **Promoting to Co-GM:**
-1. Find the player in the Participants list
+1. Find the Audience Member in the Participants list
 2. Click the menu icon (⋮)
 3. Select "Promote to Co-GM"
 4. Confirm the action
@@ -126,7 +101,6 @@ You can promote or demote participants:
 - They gain GM privileges immediately
 - They can see all player actions
 - They can manage phases and characters
-- Their character (if any) remains active
 
 **Demoting a Co-GM:**
 1. Find the Co-GM in the Participants list
@@ -135,8 +109,7 @@ You can promote or demote participants:
 
 **Effects:**
 - They lose GM privileges
-- If they have a character, it becomes a normal player character
-- They can no longer see other players' actions
+- They retain Audience access
 
 ### Removing Participants
 
@@ -150,15 +123,13 @@ You can promote or demote participants:
 1. Find them in the Participants list
 2. Click the menu icon (⋮)
 3. Select "Remove from Game"
-4. Optionally provide a reason (they'll see this)
-5. Confirm
+4. Confirm
 
 **What happens:**
 - They lose all access to the game
 - Their character becomes inactive (not deleted)
 - Their posts and actions remain visible (for continuity)
 - They receive a notification
-- The action is logged with your username and timestamp
 
 **Their data is preserved:**
 - Character sheets remain (inactive)
@@ -166,6 +137,7 @@ You can promote or demote participants:
 - Action submissions stay
 - Private messages are preserved
 - Nothing is deleted
+- You can re-assign the Character
 
 ### Handling Player Character Removal
 
@@ -181,7 +153,6 @@ When a player is removed or leaves:
 **1. Reassign to audience/NPC**
 - Character becomes GM-controlled NPC
 - Useful if character is central to plot
-- Under development
 
 **2. Write them out**
 - Common Room post explaining their departure
@@ -229,6 +200,7 @@ When a player is removed or leaves:
 - Potential future players can learn
 - Friends want to follow along
 - Creates community around your game
+- Some people may not have the time to play, but still want to be involved
 
 **Why restrict audience?**
 - Private/intimate games
@@ -291,9 +263,8 @@ When a player is removed or leaves:
 
 1. Remove them immediately if serious (harassment, abuse)
 2. Document the reason for your records
-3. Use removal reason field for transparency
-4. Don't discuss publicly - handle privately
-5. Report to admins if it violates platform rules
+3. Don't discuss publicly - handle privately
+4. Report to admins if it violates platform rules
 
 ### "Game is full but someone great applied"
 

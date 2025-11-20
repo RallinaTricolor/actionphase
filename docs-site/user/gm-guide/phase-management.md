@@ -39,7 +39,6 @@ ActionPhase games use two primary phase types during active gameplay:
 **What happens:**
 - GM posts action prompt
 - Players write and submit actions
-- Common Room is still available (but usually quiet)
 - Actions lock at deadline
 - GM writes results
 
@@ -131,36 +130,18 @@ During the action phase:
 
 ## Phase Advancement
 
-### When to Advance
-
-**From Common Room to Action:**
-- When planning seems complete
-- When conversation is circular/slowing
-- After 1-3 days of discussion
-- When you have a good action situation ready
-
-**From Action to Results:**
-- When deadline passes
-- When all players have submitted (you can advance early)
-- After grace period for stragglers
-
-**From Results to Common Room:**
-- Immediately after publishing results
-- Players need space to react and discuss
-
 ### How to Advance
 
 **Technical steps:**
 1. Complete any final tasks in current phase
-2. Click "Advance Phase" or "Create New Phase"
+2. Click "Create New Phase"
 3. Select phase type
 4. Write phase description
 5. Set deadline (if applicable)
-6. Publish
+6. Activate
 
 **Timing considerations:**
 - Advance during active hours (not 3 AM your players' time)
-- Give players notice if advancing early
 - Be consistent with your schedule
 
 ### Grace Periods
@@ -178,123 +159,6 @@ During the action phase:
 
 **Best practice:** Set expectations early and stick to them.
 
-## Pacing Strategies
-
-### Fast-Paced Games
-
-**Structure:**
-- Short Common Room phases (1-2 days)
-- Short Action phases (2-3 days)
-- Quick turnaround on results
-- Frequent phase changes
-
-**Best for:**
-- Thriller/action genres
-- Engaged, available players
-- GMs with time to write quickly
-- Shorter overall campaigns
-
-**Example schedule:**
-```
-Monday: Action phase starts
-Wednesday: Deadline, GM writes results
-Thursday: Results + new Common Room
-Saturday: New Action phase
-Monday: Deadline
-Tuesday: Results + Common Room
-...
-```
-
-### Standard Pace
-
-**Structure:**
-- Medium Common Room phases (2-3 days)
-- Medium Action phases (3-5 days)
-- Results within 1-2 days of deadline
-- One full cycle per week
-
-**Best for:**
-- Most games
-- Players with normal schedules
-- Balanced gameplay
-- Standard campaigns
-
-**Example schedule:**
-```
-Monday: Common Room starts
-Wednesday: Action phase starts
-Sunday: Deadline
-Monday-Tuesday: GM writes results
-Tuesday: Results + new Common Room
-...
-```
-
-### Slow-Burn Games
-
-**Structure:**
-- Long Common Room phases (3-5 days)
-- Long Action phases (5-7 days)
-- Focus on character development
-- Leisurely pace
-
-**Best for:**
-- Character-focused games
-- Busy players
-- Complex political/social games
-- GMs who need time for detailed results
-
-**Example schedule:**
-```
-Monday: Common Room starts
-Friday: Action phase starts
-Next Friday: Deadline
-Following Monday: Results + Common Room
-...
-```
-
-## Special Phase Situations
-
-### Split Phases
-
-**When players are in different locations:**
-
-You can create separate action phases:
-- **Group A:** Investigating the library
-- **Group B:** Staking out the estate
-
-Each group gets their own prompt and deadline. Results may converge in the next Common Room.
-
-### Emergency Phases
-
-**When something urgent happens in-story:**
-
-Create a short, focused action phase:
-> **URGENT - Monday Night**
->
-> The estate is on fire. You can see it from town. Emergency vehicles are heading that way.
->
-> **What does your character do RIGHT NOW?**
->
-> Deadline: 24 hours
-
-### Montage Phases
-
-**When you need to cover time quickly:**
-
-Use an action phase to skip ahead:
-> **The Next Two Weeks**
->
-> While the police investigate the estate fire, life goes on. Classes continue, exams approach, and you all try to act normal.
->
-> **What does your character do during these two weeks?**
->
-> - Continuing investigation?
-> - Lying low?
-> - Preparing for something?
-> - Following up on leads?
-
-Results can be brief summaries, moving the story forward efficiently.
-
 ## Managing Results Delivery
 
 ### Writing Timeline
@@ -303,11 +167,11 @@ Results can be brief summaries, moving the story forward efficiently.
 - Deadline Sunday night
 - Read actions Monday morning (30 min)
 - Outline results Monday afternoon (1 hour)
-- Write results Monday evening (2-3 hours)
-- Publish Tuesday morning
+- Write results throughout the week
+- Publish before next Common Room
 
 **Communicate your process:**
-> "Action deadline is Sunday at 11 PM. I'll publish results by Tuesday morning."
+> "Action deadline is Sunday at 11 PM. I'll publish results by Friday morning."
 
 ### Batch vs. Sequential Publishing
 
@@ -326,12 +190,7 @@ Results can be brief summaries, moving the story forward efficiently.
 ### When Results Take Longer
 
 **Be honest:**
-> "Hey everyone, results are taking longer than expected. I need until Thursday. Thanks for your patience!"
-
-**It's okay to:**
-- Take an extra day
-- Ask players to be patient
-- Admit you're behind
+> "Hey everyone, results are taking longer than expected. I need until the start of Common Room. Thanks for your patience!"
 
 **It's NOT okay to:**
 - Ghost without communication
@@ -346,14 +205,14 @@ Results can be brief summaries, moving the story forward efficiently.
 Phase 1: Common Room (2 days)
 - Set scene and situation
 - Let players plan
-- Advance when discussion peaks or time runs out
+- Advance when time runs out
 
-Phase 2: Action (4 days)
+Phase 2: Action (1 days)
 - Present specific challenge
 - Set clear deadline
 - Monitor submissions
 
-Results: (2 days for writing)
+Results: (4 days for writing)
 - Read all actions
 - Write personalized results
 - Publish all at once
@@ -363,31 +222,7 @@ Phase 3: Common Room (2 days)
 - Discuss discoveries
 - Plan next move
 
-Phase 4: Action (4 days)
-...
-```
-
-### Investigation Game Pattern
-
-```
-Week 1:
-- Common Room: Characters meet, share information
-- Action: First investigation
-- Results: Clues and complications
-
-Week 2:
-- Common Room: Analyze clues
-- Action: Follow up on leads
-- Results: More information, new questions
-
-Week 3:
-- Common Room: Piece together the puzzle
-- Action: Confront or dig deeper
-- Results: Major revelation
-
-Week 4:
-- Common Room: React to revelation
-- Action: Deal with consequences
+Phase 4: Action (1 days)
 ...
 ```
 
@@ -401,7 +236,6 @@ Week 4:
 - Set firm deadlines and stick to them
 - Advance phase even if discussion isn't "done"
 - Post as an NPC to create urgency
-- Ask directly: "Are you ready to move to actions?"
 
 ### Phases Too Short
 
