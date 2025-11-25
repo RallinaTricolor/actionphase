@@ -1,6 +1,6 @@
-# API Documentation Automation
+# Scripts
 
-This directory contains tools for automating OpenAPI documentation maintenance.
+This directory contains utility scripts for API documentation, testing, and maintenance operations.
 
 ## Overview
 
@@ -8,7 +8,72 @@ The hybrid automation approach ensures API documentation stays in sync with the 
 
 ## Tools
 
-### 1. Route Validator (`validate-api-docs.go`)
+### Infrastructure & Maintenance
+
+#### S3 Cache-Control Migration (`migrate-s3-cache-control.sh`)
+
+Migrates existing S3 objects to have proper Cache-Control headers for optimal browser and CDN caching.
+
+**When to use:**
+- After upgrading to the new caching implementation
+- To apply cache headers to existing avatar uploads
+
+**Requirements:**
+- AWS CLI (`aws` command)
+- `jq` for JSON parsing
+- S3 bucket credentials configured
+
+**Usage:**
+```bash
+./scripts/migrate-s3-cache-control.sh
+```
+
+**Environment variables:**
+- `S3_BUCKET`: S3 bucket name (required)
+- `S3_REGION`: AWS region (optional, defaults to us-east-1)
+- `S3_ENDPOINT`: S3-compatible endpoint URL (optional, for DigitalOcean Spaces/MinIO)
+
+**What it does:**
+1. Lists all objects with `avatars/` prefix
+2. For each object, checks current Cache-Control header
+3. Skips objects that already have correct headers
+4. Copies objects in-place with new metadata (no re-upload)
+5. Prints progress and summary
+
+**Output example:**
+```
+================================
+S3 Cache-Control Migration
+================================
+
+Bucket:        my-bucket
+Region:        us-east-1
+Prefix:        avatars/
+Cache-Control: public, max-age=31536000, immutable
+
+✓ Updated: avatars/users/1/1234567890.jpg (Content-Type: image/jpeg)
+✓ Skipped (already correct): avatars/users/2/1234567891.jpg
+Progress: 100 objects processed...
+
+================================
+✅ Migration complete!
+================================
+
+Total objects processed: 150
+Updated:                 120
+Skipped (already set):   30
+Duration:                45s
+```
+
+**Notes:**
+- Safe to run multiple times (idempotent)
+- No data is lost (copy operation)
+- Updates metadata only, doesn't re-upload files
+- Can be interrupted and resumed safely
+
+### API Documentation
+
+#### 1. Route Validator (`validate-api-docs.go`)
 
 Compares registered routes in the Chi router against documented routes in `openapi.yaml`.
 
@@ -222,4 +287,4 @@ just dev  # Start the backend
 
 ---
 
-**Last Updated**: 2025-11-15
+**Last Updated**: 2025-11-24

@@ -72,6 +72,11 @@ func NewS3Storage(bucket, region, publicURL, endpoint string) (*S3Storage, error
 //   - Files are publicly accessible via bucket policy (not ACL)
 //   - Content-Type is set based on provided contentType parameter
 //   - Overwrites existing objects at the same key
+//
+// Caching strategy:
+//   - Sets Cache-Control: public, max-age=31536000, immutable
+//   - Avatar paths include timestamps, so new uploads get new URLs
+//   - Browser caches are automatically invalidated when URLs change
 func (s *S3Storage) Upload(ctx context.Context, path string, file io.Reader, contentType string) (string, error) {
 	// Read file content into memory
 	// Note: For large files, consider multipart upload
@@ -80,13 +85,19 @@ func (s *S3Storage) Upload(ctx context.Context, path string, file io.Reader, con
 		return "", fmt.Errorf("failed to read file: %w", err)
 	}
 
-	// Upload to S3
+	// Upload to S3 with cache control
 	// Note: ACL removed - public access is controlled by bucket policy
+	//
+	// Cache-Control explanation:
+	// - public: Can be cached by browsers and CDNs
+	// - max-age=31536000: Cache for 1 year (in seconds)
+	// - immutable: File never changes at this URL (timestamp in path ensures this)
 	_, err := s.client.PutObjectWithContext(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(s.bucket),
-		Key:         aws.String(path),
-		Body:        bytes.NewReader(buf.Bytes()),
-		ContentType: aws.String(contentType),
+		Bucket:       aws.String(s.bucket),
+		Key:          aws.String(path),
+		Body:         bytes.NewReader(buf.Bytes()),
+		ContentType:  aws.String(contentType),
+		CacheControl: aws.String("public, max-age=31536000, immutable"),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to upload to S3: %w", err)
