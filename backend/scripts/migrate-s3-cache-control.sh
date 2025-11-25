@@ -38,7 +38,8 @@ OBJECT_PREFIX="avatars/"
 # Load .env file if it exists
 if [ -f .env ]; then
     echo -e "${BLUE}Loading configuration from .env file...${NC}"
-    export $(grep -v '^#' .env | xargs)
+    # Filter out comment lines and inline comments, then export
+    export $(grep -v '^#' .env | sed 's/#.*$//' | xargs)
 fi
 
 # Check required environment variables
