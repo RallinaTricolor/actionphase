@@ -43,7 +43,7 @@ if [ -f .env ]; then
 fi
 
 # Check required environment variables
-if [ -z "${S3_BUCKET:-}" ]; then
+if [ -z "${STORAGE_S3_BUCKET:-}" ]; then
     echo -e "${RED}Error: S3_BUCKET environment variable is required${NC}"
     exit 1
 fi
@@ -73,7 +73,7 @@ echo -e "${BLUE}================================${NC}"
 echo -e "${BLUE}S3 Cache-Control Migration${NC}"
 echo -e "${BLUE}================================${NC}"
 echo ""
-echo "Bucket:        $S3_BUCKET"
+echo "Bucket:        $STORAGE_S3_BUCKET"
 echo "Region:        $S3_REGION"
 if [ -n "${S3_ENDPOINT:-}" ]; then
     echo "Endpoint:      $S3_ENDPOINT"
@@ -111,7 +111,7 @@ has_more=true
 
 while [ "$has_more" = true ]; do
     # Build list command
-    list_cmd="aws s3api list-objects-v2 $AWS_OPTS --bucket $S3_BUCKET --prefix $OBJECT_PREFIX"
+    list_cmd="aws s3api list-objects-v2 $AWS_OPTS --bucket $STORAGE_S3_BUCKET --prefix $OBJECT_PREFIX"
 
     if [ -n "$continuation_token" ]; then
         list_cmd="$list_cmd --continuation-token $continuation_token"
@@ -137,7 +137,7 @@ while [ "$has_more" = true ]; do
         total_count=$((total_count + 1))
 
         # Get current metadata
-        metadata=$(aws s3api head-object $AWS_OPTS --bucket "$S3_BUCKET" --key "$key" 2>/dev/null || echo "{}")
+        metadata=$(aws s3api head-object $AWS_OPTS --bucket "$STORAGE_S3_BUCKET" --key "$key" 2>/dev/null || echo "{}")
         current_cache_control=$(echo "$metadata" | jq -r '.CacheControl // ""')
         content_type=$(echo "$metadata" | jq -r '.ContentType // "application/octet-stream"')
 
@@ -151,9 +151,9 @@ while [ "$has_more" = true ]; do
         # Copy object in-place with new metadata
         # This updates metadata without re-uploading the file
         if aws s3api copy-object $AWS_OPTS \
-            --bucket "$S3_BUCKET" \
+            --bucket "$STORAGE_S3_BUCKET" \
             --key "$key" \
-            --copy-source "$S3_BUCKET/$key" \
+            --copy-source "$STORAGE_S3_BUCKET/$key" \
             --cache-control "$CACHE_CONTROL" \
             --content-type "$content_type" \
             --metadata-directive REPLACE \
