@@ -106,6 +106,14 @@ func (h *Handler) GetGameParticipants(w http.ResponseWriter, r *http.Request) {
 			"status":    participant.Status,
 			"joined_at": participant.JoinedAt.Time,
 		}
+
+		// Include avatar_url if present
+		if participant.AvatarUrl.Valid {
+			participantData["avatar_url"] = participant.AvatarUrl.String
+		} else {
+			participantData["avatar_url"] = nil
+		}
+
 		response = append(response, participantData)
 	}
 

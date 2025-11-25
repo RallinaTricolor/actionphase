@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, Button, Badge, Alert, Spinner } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
+import { ConfirmModal } from './ConfirmModal';
 import { useHandoutComments } from '../hooks/useHandoutComments';
 import type { Handout } from '../types/handouts';
 import { logger } from '@/services/LoggingService';
@@ -19,10 +20,15 @@ export function HandoutView({ gameId, handout, isGM, onClose, onEdit }: HandoutV
     comments,
     isLoading: commentsLoading,
     createCommentMutation,
+    updateCommentMutation,
+    deleteCommentMutation,
   } = useHandoutComments(gameId, handout.id);
 
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
 
   const statusBadgeVariant = handout.status === 'published' ? 'success' : 'warning';
 
@@ -39,6 +45,45 @@ export function HandoutView({ gameId, handout, isGM, onClose, onEdit }: HandoutV
       setIsSubmitting(false);
     }
   };
+
+  const handleStartEdit = (commentId: number, currentContent: string) => {
+    setEditingCommentId(commentId);
+    setEditContent(currentContent);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditContent('');
+  };
+
+  const handleSaveEdit = async (commentId: number) => {
+    if (!editContent.trim()) return;
+
+    try {
+      await updateCommentMutation.mutateAsync({
+        commentId,
+        data: { content: editContent }
+      });
+      setEditingCommentId(null);
+      setEditContent('');
+    } catch (error) {
+      logger.error('Failed to update comment', { error, gameId, handoutId: handout.id, commentId });
+    }
+  };
+
+  const handleDeleteComment = async () => {
+    if (!deleteCommentId) return;
+
+    try {
+      await deleteCommentMutation.mutateAsync(deleteCommentId);
+      setDeleteCommentId(null);
+    } catch (error) {
+      logger.error('Failed to delete comment', { error, gameId, handoutId: handout.id, commentId: deleteCommentId });
+    }
+  };
+
+  // Filter out deleted comments
+  const visibleComments = comments.filter(comment => !comment.deleted_at);
 
   return (
     <div className="space-y-6">
@@ -137,24 +182,100 @@ export function HandoutView({ gameId, handout, isGM, onClose, onEdit }: HandoutV
             <div className="flex justify-center py-8">
               <Spinner size="md" label="Loading updates..." />
             </div>
-          ) : comments.length === 0 ? (
+          ) : visibleComments.length === 0 ? (
             <Alert variant="info">
               {isGM ? "No updates posted yet." : "No additional information available for this handout."}
             </Alert>
           ) : (
             <div className="space-y-4">
-              {comments.map(comment => (
+              {visibleComments.map(comment => (
                 <div key={comment.id} className="border border-border-primary rounded-lg p-4 bg-bg-secondary">
-                  <MarkdownPreview content={comment.content} />
-                  <p className="text-sm text-content-tertiary mt-2">
-                    {new Date(comment.created_at || '').toLocaleString()}
-                  </p>
+                  {/* Edit Mode */}
+                  {editingCommentId === comment.id ? (
+                    <div className="space-y-3">
+                      <CommentEditor
+                        value={editContent}
+                        onChange={setEditContent}
+                        placeholder="Edit your update..."
+                        disabled={updateCommentMutation.isPending}
+                        rows={4}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={handleCancelEdit}
+                          disabled={updateCommentMutation.isPending}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleSaveEdit(comment.id)}
+                          disabled={!editContent.trim() || updateCommentMutation.isPending}
+                          loading={updateCommentMutation.isPending}
+                        >
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* View Mode */}
+                      <MarkdownPreview content={comment.content} />
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-content-tertiary">
+                            {new Date(comment.created_at || '').toLocaleString()}
+                          </p>
+                          {comment.edit_count > 0 && (
+                            <Badge variant="neutral" size="sm">
+                              Edited {comment.edit_count} {comment.edit_count === 1 ? 'time' : 'times'}
+                            </Badge>
+                          )}
+                        </div>
+                        {/* Edit/Delete Buttons - GM Only */}
+                        {isGM && (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleStartEdit(comment.id, comment.content)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeleteCommentId(comment.id)}
+                              className="text-danger hover:text-danger"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
       </Card>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteCommentId !== null}
+        onClose={() => setDeleteCommentId(null)}
+        onConfirm={handleDeleteComment}
+        title="Delete Update"
+        message="Are you sure you want to delete this update? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+        isLoading={deleteCommentMutation.isPending}
+      />
     </div>
   );
 }

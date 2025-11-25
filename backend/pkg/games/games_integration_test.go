@@ -1349,3 +1349,138 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 		core.AssertEqual(t, "audience", response.Role, "Role should be audience")
 	})
 }
+
+// TestGetGameParticipants_IncludesAvatarUrl verifies that the GetGameParticipants
+// endpoint includes the avatar_url field in its response for both users with
+// and without avatars. This is a regression test for a bug where avatar_url
+// was being fetched from the database but not included in the API response.
+func TestGetGameParticipants_IncludesAvatarUrl(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	// Clean up before and after
+	testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupGameTestRouter(app, testDB)
+
+	// Create GM user
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gmUser, err := userService.CreateUser(&core.User{
+		Username: "testgm",
+		Password: "testpass123",
+		Email:    "testgm@example.com",
+	})
+	core.AssertNoError(t, err, "GM user creation should succeed")
+
+	// Create user WITH avatar
+	userWithAvatar, err := userService.CreateUser(&core.User{
+		Username: "userwithavatar",
+		Password: "testpass123",
+		Email:    "withavatar@example.com",
+	})
+	core.AssertNoError(t, err, "User with avatar creation should succeed")
+
+	// Update user to have an avatar URL
+	_, err = testDB.Pool.Exec(context.Background(),
+		"UPDATE users SET avatar_url = $1 WHERE id = $2",
+		"https://example.com/avatars/user123.jpg", userWithAvatar.ID)
+	core.AssertNoError(t, err, "Avatar URL update should succeed")
+
+	// Create user WITHOUT avatar
+	userWithoutAvatar, err := userService.CreateUser(&core.User{
+		Username: "usernoavatar",
+		Password: "testpass123",
+		Email:    "noavatar@example.com",
+	})
+	core.AssertNoError(t, err, "User without avatar creation should succeed")
+
+	// Create a game
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Avatar Test Game",
+		Description: "Testing avatar URLs in participants",
+		GMUserID:    int32(gmUser.ID),
+	})
+	core.AssertNoError(t, err, "Game creation should succeed")
+
+	// Add both users as participants using AddPlayerDirectly
+	_, err = gameService.AddPlayerDirectly(context.Background(), game.ID, int32(userWithAvatar.ID))
+	core.AssertNoError(t, err, "Adding user with avatar should succeed")
+
+	_, err = gameService.AddPlayerDirectly(context.Background(), game.ID, int32(userWithoutAvatar.ID))
+	core.AssertNoError(t, err, "Adding user without avatar should succeed")
+
+	// Create auth token for GM
+	accessToken, err := core.CreateTestJWTTokenForUser(app, gmUser)
+	core.AssertNoError(t, err, "Test token creation should succeed")
+
+	// Make API request to get game participants
+	req := httptest.NewRequest("GET", "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/participants", nil)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	core.AssertEqual(t, 200, w.Code, "Get game participants should succeed")
+
+	// Parse response
+	var participants []map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &participants)
+	core.AssertNoError(t, err, "Response should be valid JSON")
+
+	// Verify we have participants (should be 3: GM + 2 players)
+	if len(participants) < 2 {
+		t.Fatalf("Should have at least 2 participants, got %d", len(participants))
+	}
+
+	// Find and verify user with avatar
+	foundWithAvatar := false
+	for _, p := range participants {
+		userID, ok := p["user_id"].(float64)
+		if !ok {
+			continue
+		}
+		if int32(userID) == int32(userWithAvatar.ID) {
+			foundWithAvatar = true
+
+			// CRITICAL: Verify avatar_url field exists and has correct value
+			avatarURL, exists := p["avatar_url"]
+			if !exists {
+				t.Errorf("avatar_url field should exist in response")
+			}
+			core.AssertEqual(t, "https://example.com/avatars/user123.jpg", avatarURL,
+				"avatar_url should match the value in database")
+			break
+		}
+	}
+	if !foundWithAvatar {
+		t.Errorf("User with avatar should be in participants list")
+	}
+
+	// Find and verify user without avatar
+	foundWithoutAvatar := false
+	for _, p := range participants {
+		userID, ok := p["user_id"].(float64)
+		if !ok {
+			continue
+		}
+		if int32(userID) == int32(userWithoutAvatar.ID) {
+			foundWithoutAvatar = true
+
+			// CRITICAL: Verify avatar_url field exists and is nil
+			avatarURL, exists := p["avatar_url"]
+			if !exists {
+				t.Errorf("avatar_url field should exist in response even when nil")
+			}
+			if avatarURL != nil {
+				t.Errorf("avatar_url should be nil for users without avatars, got %v", avatarURL)
+			}
+			break
+		}
+	}
+	if !foundWithoutAvatar {
+		t.Errorf("User without avatar should be in participants list")
+	}
+}
