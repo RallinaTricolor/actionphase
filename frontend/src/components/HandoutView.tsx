@@ -249,7 +249,7 @@ export function HandoutView({ gameId, handout, isGM, onClose, onEdit }: HandoutV
                               variant="ghost"
                               size="sm"
                               onClick={() => setDeleteCommentId(comment.id)}
-                              className="text-danger hover:text-danger"
+                              className="text-semantic-danger"
                             >
                               Delete
                             </Button>
