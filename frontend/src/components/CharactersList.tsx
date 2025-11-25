@@ -413,6 +413,19 @@ const canSeePlayerNames = (isAnonymous: boolean, userRole: string): boolean => {
   return userRole === 'gm' || userRole === 'co_gm' || userRole === 'audience';
 };
 
+// Helper to format character type for display
+// Handles special case of "NPC" being fully capitalized
+const formatCharacterType = (characterType: string): string => {
+  if (characterType === 'npc') {
+    return 'NPC';
+  }
+  // Convert snake_case to Title Case (e.g., "player_character" -> "Player Character")
+  return characterType
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 interface CharacterCardProps {
   character: Character;
   isOwner: boolean;
@@ -474,7 +487,7 @@ function CharacterCard({
         <div className="text-sm text-content-primary space-y-1">
           {canSeePlayerNames(isAnonymous || false, userRole) && (
             <div>
-              Type: <span className="capitalize">{character.character_type.replace('_', ' ')}</span>
+              Type: {formatCharacterType(character.character_type)}
             </div>
           )}
           {character.character_type === 'npc' && character.assigned_username && canSeePlayerNames(isAnonymous || false, userRole) && (
@@ -557,7 +570,7 @@ function CharacterCard({
               {/* Show character type if not anonymous mode OR if user can see player names (GM/co-GM/audience) */}
               {canSeePlayerNames(isAnonymous || false, userRole) && (
                 <div>
-                  Type: <span className="capitalize">{character.character_type.replace('_', ' ')}</span>
+                  Type: {formatCharacterType(character.character_type)}
                 </div>
               )}
               {/* For NPCs, show assignment info */}
