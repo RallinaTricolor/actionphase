@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { InventoryItem } from '../types/characters';
-import { Button, Input, Textarea, Badge } from './ui';
+import { Button, Input, Badge } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
 

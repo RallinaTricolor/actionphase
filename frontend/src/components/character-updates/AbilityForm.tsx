@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterAbility } from '../../types/characters';
-import { Button, Input, Select, Textarea } from '../ui';
+import { Button, Input, Select } from '../ui';
 import { CommentEditor } from '../CommentEditor';
 
 export interface AbilityFormData {

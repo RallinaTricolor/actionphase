@@ -10,7 +10,7 @@ import AvatarUploadModal from './AvatarUploadModal';
 import { Modal } from './Modal';
 import { TabNavigation } from './TabNavigation';
 import type { Tab } from './TabNavigation';
-import { Button, Textarea, Badge, Input } from './ui';
+import { Button, Badge, Input } from './ui';
 import { useRenameCharacter } from '../hooks/useCharacters';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
