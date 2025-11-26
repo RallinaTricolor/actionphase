@@ -80,7 +80,7 @@ Games follow a cyclical pattern:
 Character sheets use a modular system where GMs can enable/disable components:
 
 #### MVP Modules
-- **Bio/Background**: Rich text character backstory and personality
+- **Public Profile**: Rich text character backstory and personality
 - **Notes**: Player-private rich text notes about game and character
 - **Abilities**: Character skills, powers, or special actions
 - **Inventory**: Items and equipment management

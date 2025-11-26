@@ -120,8 +120,8 @@ export interface CharacterModuleField {
 export const CHARACTER_MODULES: CharacterModule[] = [
   {
     type: 'bio',
-    name: 'Bio/Background',
-    description: 'Character background and biography',
+    name: 'Public Profile',
+    description: 'Public character details',
     fields: [
       {
         name: 'background',
@@ -135,7 +135,7 @@ export const CHARACTER_MODULES: CharacterModule[] = [
   {
     type: 'notes',
     name: 'Private Notes',
-    description: 'Private notes only visible to you and the GM',
+    description: 'Private notes only visible to you, the audience, and the GM',
     fields: [
       {
         name: 'private_notes',

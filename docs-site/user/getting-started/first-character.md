@@ -29,7 +29,7 @@ Your character sheet is the central hub for everything about your character. It 
 **Example:**
 > "Standing at 5'10" with an athletic build, Marcus carries himself with military precision. His dark hair is kept short, and a thin scar runs through his left eyebrow. He typically wears practical clothing - sturdy boots, dark pants, and a worn leather jacket. His green eyes are alert and watchful, constantly scanning his surroundings."
 
-### Bio/Background
+### Public Profile
 
 This is your character's public information before the game starts. Include:
 
@@ -177,7 +177,7 @@ Once approved:
 - You can still edit some sections (like notes)
 - Major changes need GM approval
 - Character development happens through play
-- Your character is published to the public (Bio/Background tab only)
+- Your character is published to the public (Public Profile tab only)
 
 ## Your First Phase
 

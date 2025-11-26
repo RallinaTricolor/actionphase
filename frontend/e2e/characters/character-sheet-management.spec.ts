@@ -148,9 +148,10 @@ test.describe('Character Sheet Management', () => {
     const sheetPage = new CharacterSheetPage(page);
 
     // Should see Bio/Background module (public)
-    expect(await sheetPage.isModuleVisible('Bio/Background')).toBe(true);
+    expect(await sheetPage.isModuleVisible('Public Profile')).toBe(true);
 
-    // Should NOT see Abilities & Skills or Inventory modules (private - owner/GM only)
+    // Should NOT see Private Notes, Abilities & Skills or Inventory modules (private - owner/GM only)
+    expect(await sheetPage.isModuleVisible('Private Notes')).toBe(false);
     expect(await sheetPage.isModuleVisible('Abilities & Skills')).toBe(false);
     expect(await sheetPage.isModuleVisible('Inventory')).toBe(false);
 

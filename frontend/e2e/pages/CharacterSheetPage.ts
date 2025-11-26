@@ -193,7 +193,7 @@ export class CharacterSheetPage {
       await mobileSelect.selectOption('bio');
     } else {
       // Desktop tab
-      await this.page.getByRole('tab', { name: 'Bio/Background' }).click();
+      await this.page.getByRole('tab', { name: 'Public Profile' }).click();
     }
     await this.page.waitForLoadState('networkidle');
   }
@@ -344,10 +344,11 @@ export class CharacterSheetPage {
    * Used to verify permission boundaries (e.g., players shouldn't see Inventory)
    * Works with both mobile dropdown and desktop tabs
    */
-  async isModuleVisible(moduleName: 'Bio/Background' | 'Abilities & Skills' | 'Inventory'): Promise<boolean> {
+  async isModuleVisible(moduleName: 'Public Profile' | 'Private Notes' | 'Abilities & Skills' | 'Inventory'): Promise<boolean> {
     // Map display name to module ID
     const moduleIdMap: Record<string, string> = {
-      'Bio/Background': 'bio',
+      'Public Profile': 'bio',
+      'Private Notes': 'notes',
       'Abilities & Skills': 'abilities',
       'Inventory': 'inventory'
     };
