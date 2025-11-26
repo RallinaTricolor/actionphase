@@ -222,7 +222,9 @@ export function CharactersList({
           {/* Anonymous mode: Show all characters in one unified list */}
           {isAnonymous && userRole !== 'gm' ? (
               <div className="space-y-3">
-                {visibleCharacters.map((character) => (
+                {[...visibleCharacters]
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((character) => (
                   <CharacterCard
                     key={character.id}
                     character={character}
