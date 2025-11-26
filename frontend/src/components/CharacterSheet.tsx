@@ -12,6 +12,8 @@ import { TabNavigation } from './TabNavigation';
 import type { Tab } from './TabNavigation';
 import { Button, Textarea, Badge, Input } from './ui';
 import { useRenameCharacter } from '../hooks/useCharacters';
+import { MarkdownPreview } from './MarkdownPreview';
+import { CommentEditor } from './CommentEditor';
 
 interface CharacterSheetProps {
   characterId: number;
@@ -373,6 +375,9 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                           <label className="block text-sm md:text-base font-semibold text-content-primary mb-1">
                             {field.label}
                             {field.required && <span className="text-semantic-danger ml-1">*</span>}
+                            <span className="text-xs text-content-tertiary font-normal ml-2">
+                              (Markdown supported)
+                            </span>
                           </label>
                           {fieldData && (
                             <div className="flex items-center flex-wrap gap-2 md:gap-3 mt-2">
@@ -403,12 +408,12 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
 
                       {isEditing ? (
                         <div className="space-y-4">
-                          <Textarea
+                          <CommentEditor
                             value={value}
-                            onChange={(e) => handleFieldChange(key, e.target.value)}
+                            onChange={(newValue) => handleFieldChange(key, newValue)}
                             placeholder={field.placeholder}
                             rows={8}
-                            className="min-h-[200px] text-base"
+                            showPreviewByDefault={false}
                           />
                           <div className="flex justify-end space-x-3">
                             <Button
@@ -438,9 +443,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                       ) : (
                         <div className="mt-3">
                           {value ? (
-                            <div className="text-base text-content-primary whitespace-pre-wrap leading-relaxed">
-                              {value}
-                            </div>
+                            <MarkdownPreview content={value} />
                           ) : (
                             <div className="text-base text-content-tertiary italic py-8 text-center">
                               {canEdit ? field.placeholder || 'Click "Edit" to add content...' : 'No content yet...'}

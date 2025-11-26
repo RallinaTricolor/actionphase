@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CharacterAbility } from '../../types/characters';
 import { Button, Input, Select, Textarea } from '../ui';
+import { CommentEditor } from '../CommentEditor';
 
 export interface AbilityFormData {
   name: string;
@@ -66,14 +67,19 @@ export const AbilityForm: React.FC<AbilityFormProps> = ({
         <option value="innate">Innate</option>
       </Select>
 
-      <Textarea
-        id="ability-description"
-        label="Description"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="Describe this ability..."
-        rows={3}
-      />
+      <div>
+        <label htmlFor="ability-description" className="block text-sm font-medium text-content-primary mb-2">
+          Description <span className="text-xs text-content-tertiary font-normal">(Markdown supported)</span>
+        </label>
+        <CommentEditor
+          id="ability-description"
+          value={description}
+          onChange={setDescription}
+          placeholder="Describe this ability..."
+          rows={3}
+          showPreviewByDefault={false}
+        />
+      </div>
 
       <div className={`flex justify-end gap-3 ${variant === 'modal' ? 'pt-4' : 'pt-2'}`}>
         <Button

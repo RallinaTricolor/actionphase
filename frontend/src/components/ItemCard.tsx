@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { InventoryItem } from '../types/characters';
 import { Button, Input, Textarea, Badge } from './ui';
+import { MarkdownPreview } from './MarkdownPreview';
+import { CommentEditor } from './CommentEditor';
 
 interface ItemCardProps {
   item: InventoryItem;
@@ -147,14 +149,17 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
       {(item.description || isEditing) && (
         <div className="mb-3">
           {isEditing ? (
-            <Textarea
+            <CommentEditor
               value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              placeholder="Describe this item..."
+              onChange={setEditDescription}
+              placeholder="Describe this item... (Markdown supported)"
               rows={3}
+              showPreviewByDefault={false}
             />
           ) : (
-            <p className="text-sm text-content-primary leading-relaxed whitespace-pre-line">{item.description}</p>
+            <div className="text-sm">
+              <MarkdownPreview content={item.description || ''} />
+            </div>
           )}
         </div>
       )}

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { CharacterSkill } from '../types/characters';
 import { Button, Input, Textarea, Badge } from './ui';
+import { MarkdownPreview } from './MarkdownPreview';
+import { CommentEditor } from './CommentEditor';
 
 interface SkillCardProps {
   skill: CharacterSkill;
@@ -110,14 +112,17 @@ export const SkillCard: React.FC<SkillCardProps> = ({ skill, canEdit, onUpdate, 
       {(skill.description || isEditing) && (
         <div className="mb-3">
           {isEditing ? (
-            <Textarea
+            <CommentEditor
               value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              placeholder="Describe this skill..."
+              onChange={setEditDescription}
+              placeholder="Describe this skill... (Markdown supported)"
               rows={3}
+              showPreviewByDefault={false}
             />
           ) : (
-            <p className="text-sm text-content-primary leading-relaxed whitespace-pre-line">{skill.description}</p>
+            <div className="text-sm">
+              <MarkdownPreview content={skill.description || ''} />
+            </div>
           )}
         </div>
       )}

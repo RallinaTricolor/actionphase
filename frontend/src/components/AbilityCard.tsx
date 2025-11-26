@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { CharacterAbility } from '../types/characters';
 import { Button, Input, Textarea, Badge } from './ui';
+import { MarkdownPreview } from './MarkdownPreview';
+import { CommentEditor } from './CommentEditor';
 
 interface AbilityCardProps {
   ability: CharacterAbility;
@@ -112,14 +114,17 @@ export const AbilityCard: React.FC<AbilityCardProps> = ({ ability, canEdit, onUp
       {(ability.description || isEditing) && (
         <div className="mb-3">
           {isEditing ? (
-            <Textarea
+            <CommentEditor
               value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              placeholder="Describe this ability..."
+              onChange={setEditDescription}
+              placeholder="Describe this ability... (Markdown supported)"
               rows={3}
+              showPreviewByDefault={false}
             />
           ) : (
-            <p className="text-sm text-content-primary leading-relaxed whitespace-pre-line">{ability.description}</p>
+            <div className="text-sm">
+              <MarkdownPreview content={ability.description || ''} />
+            </div>
           )}
         </div>
       )}
