@@ -188,7 +188,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   return (
     <div className="surface-base rounded-lg shadow-lg min-h-[600px] flex flex-col max-w-full overflow-hidden">
       <div className="border-b border-theme-default">
-        <div className="flex justify-between items-start p-4 md:p-8 gap-3">
+        <div className="flex justify-between items-start p-2 sm:p-4 md:p-8 gap-2 sm:gap-3">
           <div className="flex items-start gap-3 md:gap-6 min-w-0 flex-1">
             {/* Character Avatar */}
             {character && (
@@ -323,7 +323,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-8">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-8">
         {CHARACTER_MODULES.filter(module => {
           // Only render modules the user has permission to view
           if (module.type === 'bio') return true;
@@ -369,7 +369,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                   }
 
                   return (
-                    <div key={field.name} className="border border-theme-default rounded-lg p-4 md:p-6 bg-surface-raised shadow-sm">
+                    <div key={field.name} className="border border-theme-default rounded-lg p-3 sm:p-4 md:p-6 bg-surface-raised shadow-sm">
                       <div className="flex justify-between items-start mb-3 md:mb-4 gap-2">
                         <div className="flex-1 min-w-0">
                           <label className="block text-sm md:text-base font-semibold text-content-primary mb-1">
