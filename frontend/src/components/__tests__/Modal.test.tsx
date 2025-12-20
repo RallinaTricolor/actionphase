@@ -242,7 +242,8 @@ describe('Modal', () => {
       )
 
       const contentWrapper = screen.getByTestId('modal-content').parentElement
-      expect(contentWrapper).toHaveClass('p-6')
+      expect(contentWrapper).toHaveClass('p-3')
+      expect(contentWrapper).toHaveClass('sm:p-6')
     })
   })
 
@@ -254,7 +255,7 @@ describe('Modal', () => {
         </Modal>
       )
 
-      expect(container.querySelector('.p-6')).toBeInTheDocument()
+      expect(container.querySelector('.p-3')).toBeInTheDocument()
     })
 
     it('should handle null children', () => {
@@ -264,7 +265,7 @@ describe('Modal', () => {
         </Modal>
       )
 
-      expect(container.querySelector('.p-6')).toBeInTheDocument()
+      expect(container.querySelector('.p-3')).toBeInTheDocument()
     })
 
     it('should handle empty string title', () => {
