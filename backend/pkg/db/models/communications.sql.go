@@ -192,7 +192,8 @@ SELECT pm.id,
        pm.deleted_at,
        pm.is_deleted,
        u.username as sender_username,
-       c.name as sender_character_name
+       c.name as sender_character_name,
+       c.avatar_url as sender_avatar_url
 FROM private_messages pm
 JOIN users u ON pm.sender_user_id = u.id
 LEFT JOIN characters c ON pm.sender_character_id = c.id
@@ -212,6 +213,7 @@ type GetConversationMessagesRow struct {
 	IsDeleted           pgtype.Bool        `json:"is_deleted"`
 	SenderUsername      string             `json:"sender_username"`
 	SenderCharacterName pgtype.Text        `json:"sender_character_name"`
+	SenderAvatarUrl     pgtype.Text        `json:"sender_avatar_url"`
 }
 
 func (q *Queries) GetConversationMessages(ctx context.Context, conversationID int32) ([]GetConversationMessagesRow, error) {
@@ -235,6 +237,7 @@ func (q *Queries) GetConversationMessages(ctx context.Context, conversationID in
 			&i.IsDeleted,
 			&i.SenderUsername,
 			&i.SenderCharacterName,
+			&i.SenderAvatarUrl,
 		); err != nil {
 			return nil, err
 		}

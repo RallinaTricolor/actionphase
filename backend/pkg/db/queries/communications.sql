@@ -177,7 +177,8 @@ SELECT pm.id,
        pm.deleted_at,
        pm.is_deleted,
        u.username as sender_username,
-       c.name as sender_character_name
+       c.name as sender_character_name,
+       c.avatar_url as sender_avatar_url
 FROM private_messages pm
 JOIN users u ON pm.sender_user_id = u.id
 LEFT JOIN characters c ON pm.sender_character_id = c.id
