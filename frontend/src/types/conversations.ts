@@ -88,6 +88,7 @@ export interface AudienceConversationListItem {
   last_message_at?: string | null;
   participant_names: string[];
   participant_usernames: string[];
+  participant_avatar_urls?: (string | null)[];
   last_message_content?: string | null;
   last_sender_name?: string | null;
   last_sender_username?: string | null;

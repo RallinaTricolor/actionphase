@@ -502,7 +502,8 @@ participants_agg AS (
   SELECT
     cp.conversation_id,
     array_agg(COALESCE(ch.name, u.username) ORDER BY cp.id) as participant_names,
-    array_agg(u.username ORDER BY cp.id) as participant_usernames
+    array_agg(u.username ORDER BY cp.id) as participant_usernames,
+    array_agg(ch.avatar_url ORDER BY cp.id) as participant_avatar_urls
   FROM conversation_participants cp
   JOIN users u ON cp.user_id = u.id
   LEFT JOIN characters ch ON cp.character_id = ch.id
@@ -533,6 +534,7 @@ SELECT
   cm.latest_message_at as last_message_at,
   pa.participant_names,
   pa.participant_usernames,
+  pa.participant_avatar_urls,
   lm.last_message_content,
   lm.last_sender_name,
   lm.last_sender_username,

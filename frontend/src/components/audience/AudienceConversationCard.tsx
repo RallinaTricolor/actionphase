@@ -83,6 +83,7 @@ export const AudienceConversationCard: React.FC<AudienceConversationCardProps> =
                 >
                   <CharacterAvatar
                     characterName={name}
+                    avatarUrl={conversation.participant_avatar_urls?.[index]}
                     size="md"
                   />
                 </div>
