@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { ConversationList } from './ConversationList';
 import { MessageThread } from './MessageThread';
 import { NewConversationModal } from './NewConversationModal';
@@ -33,6 +34,7 @@ export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseT
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
+  const [isRefreshingList, setIsRefreshingList] = useState(false);
 
   // Check if we're in a common room phase (when messaging is allowed)
   const isCommonRoomPhase = currentPhaseType === 'common_room';
@@ -60,6 +62,17 @@ export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseT
       logger.error('Failed to load conversations', { error: _err, gameId });
     }
   }, [gameId]);
+
+  const handleRefreshConversations = useCallback(async () => {
+    setIsRefreshingList(true);
+    try {
+      setRefreshKey(prev => prev + 1);  // Force ConversationList to remount and fetch fresh data
+      await loadConversations();  // Update local state for read tracking
+      logger.debug('Refreshed conversation list', { gameId });
+    } finally {
+      setIsRefreshingList(false);
+    }
+  }, [loadConversations, gameId]);
 
   // Load conversations for read tracking info
   useEffect(() => {
@@ -94,15 +107,27 @@ export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseT
           <div className="p-4 border-b border-theme-default surface-raised">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-lg font-bold text-content-primary">Private Messages</h2>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setShowNewConversationModal(true)}
-                disabled={!isCommonRoomPhase}
-                title={!isCommonRoomPhase ? 'New conversations can only be started during Common Room phases' : 'Start a new private conversation'}
-              >
-                + New
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefreshConversations}
+                  disabled={isRefreshingList}
+                  className="flex items-center gap-2"
+                  aria-label="Refresh conversation list"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshingList ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setShowNewConversationModal(true)}
+                  disabled={!isCommonRoomPhase}
+                  title={!isCommonRoomPhase ? 'New conversations can only be started during Common Room phases' : 'Start a new private conversation'}
+                >
+                  + New
+                </Button>
+              </div>
             </div>
             {!isCommonRoomPhase && (
               <Alert variant="info" className="mt-2">

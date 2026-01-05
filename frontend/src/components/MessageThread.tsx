@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
-import { Trash2 } from 'lucide-react';
+import { Trash2, RefreshCw } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -34,6 +34,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
   const [newMessage, setNewMessage] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firstUnreadRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -120,6 +121,20 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       setLoadingMessages(false);
     }
   }, [gameId, conversationId, error]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await loadMessages();
+      await loadConversation();
+      logger.debug('Refreshed conversation and messages', { conversationId, gameId });
+    } catch (_err) {
+      logger.error('Failed to refresh conversation', { error: _err, conversationId, gameId });
+      showError('Failed to refresh messages. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [loadMessages, loadConversation, conversationId, gameId, showError]);
 
   // Auto-select first character from participants, and reset if current selection is not a participant
   useEffect(() => {
@@ -291,12 +306,29 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       {/* Conversation Header */}
       {conversation && conversation.conversation && (
         <div className="surface-base border-b border-theme-default p-4">
-          <h2 className="text-xl font-bold text-content-primary">
-            {conversation.conversation.title || 'Untitled Conversation'}
-          </h2>
-          <p className="text-sm text-content-secondary mt-1">
-            Participants: {conversation.participants?.map(p => p.character_name || p.username).join(', ') || 'None'}
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-content-primary">
+                {conversation.conversation.title || 'Untitled Conversation'}
+              </h2>
+              <p className="text-sm text-content-secondary mt-1">
+                Participants: {conversation.participants?.map(p => p.character_name || p.username).join(', ') || 'None'}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing || loading}
+              className="flex items-center gap-2 flex-shrink-0"
+              aria-label="Refresh messages"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </span>
+            </Button>
+          </div>
         </div>
       )}
 

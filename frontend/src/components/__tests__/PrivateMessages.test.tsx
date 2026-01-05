@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
@@ -48,7 +49,7 @@ describe('PrivateMessages', () => {
 
     // Mock the conversations API
     server.use(
-      http.get('/api/v1/games/:gameId/messages/conversations', () => {
+      http.get('/api/v1/games/:gameId/conversations', () => {
         return HttpResponse.json({
           conversations: [],
         });
@@ -155,6 +156,254 @@ describe('PrivateMessages', () => {
         const newButton = screen.getByRole('button', { name: /\+ new/i });
         expect(newButton).toBeDisabled();
         expect(screen.getByText(/you can read message history/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Refresh Functionality', () => {
+    it('renders refresh button in conversation list', async () => {
+      renderWithProviders(
+        <PrivateMessages
+          gameId={1}
+          characters={mockCharacters}
+          isAnonymous={false}
+          currentPhaseType="common_room"
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/refresh conversation list/i)).toBeInTheDocument();
+      });
+    });
+
+    it('refresh button shows only icon (no text)', async () => {
+      renderWithProviders(
+        <PrivateMessages
+          gameId={1}
+          characters={mockCharacters}
+          isAnonymous={false}
+          currentPhaseType="common_room"
+        />
+      );
+
+      await waitFor(() => {
+        const refreshButton = screen.getByLabelText(/refresh conversation list/i);
+        expect(refreshButton).toBeInTheDocument();
+        // Button should not contain "Refresh" text (icon only to save space)
+        expect(refreshButton.textContent).toBe('');
+      });
+    });
+
+    it('refreshes conversation list when refresh button is clicked', async () => {
+      const user = userEvent.setup();
+      let conversationsFetchCount = 0;
+
+      const mockConversations = [
+        {
+          id: 1,
+          game_id: 1,
+          title: 'Test Conversation',
+          last_message_content: 'Hello!',
+          last_message_sent_at: '2024-01-01T10:00:00Z',
+          unread_count: 0,
+        },
+      ];
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations', () => {
+          conversationsFetchCount++;
+          return HttpResponse.json({ conversations: mockConversations });
+        })
+      );
+
+      renderWithProviders(
+        <PrivateMessages
+          gameId={1}
+          characters={mockCharacters}
+          isAnonymous={false}
+          currentPhaseType="common_room"
+        />
+      );
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(conversationsFetchCount).toBeGreaterThan(0);
+      });
+
+      const initialFetchCount = conversationsFetchCount;
+
+      // Click refresh button
+      const refreshButton = screen.getByLabelText(/refresh conversation list/i);
+      await user.click(refreshButton);
+
+      // Verify conversations endpoint was called again
+      await waitFor(() => {
+        expect(conversationsFetchCount).toBeGreaterThan(initialFetchCount);
+      });
+    });
+
+    it('disables refresh button while refreshing', async () => {
+      const user = userEvent.setup();
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations', async () => {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          return HttpResponse.json({ conversations: [] });
+        })
+      );
+
+      renderWithProviders(
+        <PrivateMessages
+          gameId={1}
+          characters={mockCharacters}
+          isAnonymous={false}
+          currentPhaseType="common_room"
+        />
+      );
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.getByLabelText(/refresh conversation list/i)).toBeInTheDocument();
+      });
+
+      // Click refresh button
+      const refreshButton = screen.getByLabelText(/refresh conversation list/i);
+      await user.click(refreshButton);
+
+      // Button should be disabled during refresh
+      expect(refreshButton).toBeDisabled();
+
+      // Wait for refresh to complete
+      await waitFor(() => {
+        expect(refreshButton).not.toBeDisabled();
+      });
+    });
+
+    it('fetches updated conversation data after refresh', async () => {
+      const user = userEvent.setup();
+      let conversationCount = 1;
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations', () => {
+          const conversations = Array.from({ length: conversationCount }, (_, i) => ({
+            id: i + 1,
+            game_id: 1,
+            title: `Conversation ${i + 1}`,
+            last_message_content: 'Test message',
+            last_message_sent_at: '2024-01-01T10:00:00Z',
+            unread_count: 0,
+            participants: [{ character_id: 1, character_name: 'Test', username: 'test' }],
+            created_at: '2024-01-01T00:00:00Z',
+          }));
+          return HttpResponse.json({ conversations });
+        })
+      );
+
+      renderWithProviders(
+        <PrivateMessages
+          gameId={1}
+          characters={mockCharacters}
+          isAnonymous={false}
+          currentPhaseType="common_room"
+        />
+      );
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.getByLabelText(/refresh conversation list/i)).toBeInTheDocument();
+      });
+
+      // Update conversation count (simulates new conversation being created elsewhere)
+      conversationCount = 2;
+
+      // Click refresh button
+      const refreshButton = screen.getByLabelText(/refresh conversation list/i);
+      await user.click(refreshButton);
+
+      // Verify refresh completed (button is enabled again)
+      await waitFor(() => {
+        expect(refreshButton).not.toBeDisabled();
+      });
+    });
+
+    it('handles refresh errors gracefully', async () => {
+      const user = userEvent.setup();
+
+      // Start with successful response
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations', () => {
+          return HttpResponse.json({ conversations: [] });
+        })
+      );
+
+      renderWithProviders(
+        <PrivateMessages
+          gameId={1}
+          characters={mockCharacters}
+          isAnonymous={false}
+          currentPhaseType="common_room"
+        />
+      );
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.getByLabelText(/refresh conversation list/i)).toBeInTheDocument();
+      });
+
+      // Make refresh fail
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations', () => {
+          return HttpResponse.error();
+        })
+      );
+
+      // Click refresh button
+      const refreshButton = screen.getByLabelText(/refresh conversation list/i);
+      await user.click(refreshButton);
+
+      // Wait for error handling to complete - button should be re-enabled
+      await waitFor(() => {
+        expect(refreshButton).not.toBeDisabled();
+      });
+    });
+
+    it('increments refresh key to force ConversationList remount', async () => {
+      const user = userEvent.setup();
+
+      // We can't directly test the refreshKey state, but we can verify
+      // that ConversationList remounts by checking that it fetches data again
+      let conversationsFetchCount = 0;
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations', () => {
+          conversationsFetchCount++;
+          return HttpResponse.json({ conversations: [] });
+        })
+      );
+
+      renderWithProviders(
+        <PrivateMessages
+          gameId={1}
+          characters={mockCharacters}
+          isAnonymous={false}
+          currentPhaseType="common_room"
+        />
+      );
+
+      // Wait for initial ConversationList mount and fetch
+      await waitFor(() => {
+        expect(conversationsFetchCount).toBeGreaterThan(0);
+      });
+
+      const fetchCountBeforeRefresh = conversationsFetchCount;
+
+      // Click refresh button
+      const refreshButton = screen.getByLabelText(/refresh conversation list/i);
+      await user.click(refreshButton);
+
+      // ConversationList should remount and fetch again
+      await waitFor(() => {
+        expect(conversationsFetchCount).toBeGreaterThan(fetchCountBeforeRefresh);
       });
     });
   });

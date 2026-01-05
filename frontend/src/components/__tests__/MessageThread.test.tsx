@@ -953,6 +953,153 @@ describe('MessageThread', () => {
     });
   });
 
+  describe('Refresh Functionality', () => {
+    it('renders refresh button', async () => {
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/refresh messages/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows refresh text on desktop', async () => {
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Refresh')).toBeInTheDocument();
+      });
+    });
+
+    it('enables refresh button after messages load', async () => {
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
+      );
+
+      await waitFor(() => {
+        const refreshButton = screen.getByLabelText(/refresh messages/i);
+        expect(refreshButton).not.toBeDisabled();
+      });
+    });
+
+    it('refreshes messages when refresh button is clicked', async () => {
+      const user = userEvent.setup();
+      let messagesFetchCount = 0;
+      let conversationFetchCount = 0;
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId', () => {
+          conversationFetchCount++;
+          return HttpResponse.json(mockConversation);
+        }),
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          messagesFetchCount++;
+          return HttpResponse.json({ messages: mockMessages });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
+      );
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.getByText('Test Conversation')).toBeInTheDocument();
+      });
+
+      const initialMessagesFetch = messagesFetchCount;
+      const initialConversationFetch = conversationFetchCount;
+
+      // Click refresh button
+      const refreshButton = screen.getByLabelText(/refresh messages/i);
+      await user.click(refreshButton);
+
+      // Verify both endpoints were called again
+      await waitFor(() => {
+        expect(messagesFetchCount).toBeGreaterThan(initialMessagesFetch);
+        expect(conversationFetchCount).toBeGreaterThan(initialConversationFetch);
+      });
+    });
+
+    it('handles refresh errors gracefully', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
+      );
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.getByText('Test Conversation')).toBeInTheDocument();
+      });
+
+      // Make refresh fail
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          return HttpResponse.error();
+        })
+      );
+
+      // Click refresh button
+      const refreshButton = screen.getByLabelText(/refresh messages/i);
+      await user.click(refreshButton);
+
+      // Wait for error handling to complete
+      await waitFor(() => {
+        expect(refreshButton).not.toBeDisabled();
+      });
+    });
+
+    it('displays new messages after refresh', async () => {
+      const user = userEvent.setup();
+      let returnNewMessage = false;
+
+      const newMessage = {
+        id: 3,
+        conversation_id: 1,
+        sender_character_id: 1,
+        sender_character_name: 'Hero Character',
+        sender_username: 'player1',
+        content: 'This is a brand new message!',
+        created_at: '2024-01-01T10:10:00Z',
+      };
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId/messages', () => {
+          const messages = returnNewMessage ? [...mockMessages, newMessage] : mockMessages;
+          return HttpResponse.json({ messages });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
+      );
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.getByText(/hello! this is the first message/i)).toBeInTheDocument();
+      });
+
+      // Verify new message is not present
+      expect(screen.queryByText(/this is a brand new message!/i)).not.toBeInTheDocument();
+
+      // Add new message for next fetch
+      returnNewMessage = true;
+
+      // Click refresh button
+      const refreshButton = screen.getByLabelText(/refresh messages/i);
+      await user.click(refreshButton);
+
+      // Verify new message appears
+      await waitFor(() => {
+        expect(screen.getByText(/this is a brand new message!/i)).toBeInTheDocument();
+      });
+    });
+  });
+
   describe('Phase Restrictions', () => {
     it('disables messaging during action phase', async () => {
       renderWithProviders(
