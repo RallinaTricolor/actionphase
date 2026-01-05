@@ -130,9 +130,9 @@ test.describe.serial('GM Edits Game Settings', () => {
     // Update all date fields
     // Using datetime-local format: YYYY-MM-DDTHH:mm
     // NOTE: Times must be on 15-minute intervals (datepicker uses 15-minute intervals)
-    const recruitmentDeadline = '2025-12-01T15:45';
-    const startDate = '2025-12-05T10:00';
-    const endDate = '2025-12-20T18:00';
+    const recruitmentDeadline = '2026-12-01T15:45';
+    const startDate = '2026-12-05T10:00';
+    const endDate = '2026-12-20T18:00';
 
     await settingsPage.openEditModal();
     await settingsPage.updateRecruitmentDeadline(recruitmentDeadline);
@@ -142,16 +142,16 @@ test.describe.serial('GM Edits Game Settings', () => {
 
     // Verify changes by opening edit modal again
     // NOTE: DateTimeInput displays formatted dates, not datetime-local format
-    // Format is "MMMM d, yyyy h:mm aa" (e.g., "December 1, 2025 3:45 PM")
+    // Format is "MMMM d, yyyy h:mm aa" (e.g., "December 1, 2026 3:45 PM")
     await settingsPage.openEditModal();
     const recruitmentValue = await settingsPage.getRecruitmentDeadline();
     const startValue = await settingsPage.getStartDate();
     const endValue = await settingsPage.getEndDate();
 
     // Verify dates were set (just check they contain the month/day we set)
-    expect(recruitmentValue).toContain('December 1, 2025');
-    expect(startValue).toContain('December 5, 2025');
-    expect(endValue).toContain('December 20, 2025');
+    expect(recruitmentValue).toContain('December 1, 2026');
+    expect(startValue).toContain('December 5, 2026');
+    expect(endValue).toContain('December 20, 2026');
 
     await settingsPage.cancel();
   });

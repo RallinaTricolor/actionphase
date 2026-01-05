@@ -62,8 +62,17 @@ test.describe('Character Sheet Management', () => {
 
     // Verify existing abilities are displayed
     await expect(page.locator('text=Keen Eye')).toBeVisible();
+
+    // Expand description for Keen Eye (descriptions are collapsed by default)
+    const keenEyeCard = page.locator('div.border.rounded-lg').filter({ has: page.locator('text=Keen Eye') });
+    await keenEyeCard.getByRole('button', { name: /expand description/i }).first().click();
     await expect(page.locator('text=Can spot hidden details')).toBeVisible();
+
     await expect(page.locator('text=Quick Draw')).toBeVisible();
+
+    // Expand description for Quick Draw
+    const quickDrawCard = page.locator('div.border.rounded-lg').filter({ has: page.locator('text=Quick Draw') });
+    await quickDrawCard.getByRole('button', { name: /expand description/i }).first().click();
     await expect(page.locator('text=Fast weapon draw')).toBeVisible();
 
     // ===== Test Skills =====
@@ -72,8 +81,17 @@ test.describe('Character Sheet Management', () => {
 
     // Verify existing skills are displayed (proficiency levels may not be shown as text)
     await expect(page.locator('text=Archery')).toBeVisible();
+
+    // Expand description for Archery (descriptions are collapsed by default)
+    const archeryCard = page.locator('div.border.rounded-lg').filter({ has: page.locator('text=Archery') });
+    await archeryCard.getByRole('button', { name: /expand description/i }).first().click();
     await expect(page.locator('text=Master archer')).toBeVisible();
+
     await expect(page.locator('text=Tracking')).toBeVisible();
+
+    // Expand description for Tracking
+    const trackingCard = page.locator('div.border.rounded-lg').filter({ has: page.locator('text=Tracking') });
+    await trackingCard.getByRole('button', { name: /expand description/i }).first().click();
     await expect(page.locator('text=Can track creatures')).toBeVisible();
 
     // ===== Test Inventory (Items & Currency) =====
@@ -82,8 +100,17 @@ test.describe('Character Sheet Management', () => {
 
     // Verify existing items are displayed (Items tab should be selected by default)
     await expect(page.getByRole('heading', { name: 'Longbow' })).toBeVisible();
+
+    // Expand description for Longbow (descriptions are collapsed by default)
+    const longbowCard = page.locator('div.border.rounded-lg').filter({ has: page.getByRole('heading', { name: 'Longbow' }) });
+    await longbowCard.getByRole('button', { name: /expand description/i }).first().click();
     await expect(page.locator('text=Masterwork longbow')).toBeVisible();
+
     await expect(page.getByRole('heading', { name: 'Arrows' })).toBeVisible();
+
+    // Expand description for Arrows
+    const arrowsCard = page.locator('div.border.rounded-lg').filter({ has: page.getByRole('heading', { name: 'Arrows' }) });
+    await arrowsCard.getByRole('button', { name: /expand description/i }).first().click();
     await expect(page.locator('text=Steel-tipped arrows')).toBeVisible();
 
     // Navigate to Currency tab
