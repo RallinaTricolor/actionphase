@@ -31,7 +31,7 @@ describe('ItemCard', () => {
       expect(screen.getByText('Iron Sword')).toBeInTheDocument();
     });
 
-    it('displays description when provided', () => {
+    it('shows description button when description provided', () => {
       render(
         <ItemCard
           item={mockItem}
@@ -41,10 +41,11 @@ describe('ItemCard', () => {
         />
       );
 
-      expect(screen.getByText('A sturdy iron blade')).toBeInTheDocument();
+      // Description button shown (but description is collapsed by default)
+      expect(screen.getByText('Description')).toBeInTheDocument();
     });
 
-    it('hides description when not provided', () => {
+    it('hides description button when not provided', () => {
       const itemWithoutDesc = { ...mockItem, description: undefined };
       render(
         <ItemCard
@@ -55,6 +56,8 @@ describe('ItemCard', () => {
         />
       );
 
+      // No description button shown when no description
+      expect(screen.queryByText('Description')).not.toBeInTheDocument();
       expect(screen.queryByText('A sturdy iron blade')).not.toBeInTheDocument();
     });
   });
@@ -587,6 +590,184 @@ describe('ItemCard', () => {
       await user.click(screen.getByText('🗑'));
 
       expect(onRemove).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Collapsible Description', () => {
+    it('shows description button when description exists', () => {
+      render(
+        <ItemCard
+          item={mockItem}
+          canEdit={false}
+          onUpdate={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      );
+
+      expect(screen.getByLabelText('Expand description')).toBeInTheDocument();
+      expect(screen.getByText('Description')).toBeInTheDocument();
+    });
+
+    it('hides description button when no description', () => {
+      const itemWithoutDesc = { ...mockItem, description: undefined };
+      render(
+        <ItemCard
+          item={itemWithoutDesc}
+          canEdit={false}
+          onUpdate={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByLabelText('Expand description')).not.toBeInTheDocument();
+      expect(screen.queryByText('Description')).not.toBeInTheDocument();
+    });
+
+    it('hides description by default (collapsed state)', () => {
+      render(
+        <ItemCard
+          item={mockItem}
+          canEdit={false}
+          onUpdate={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      );
+
+      // Button exists but description is hidden
+      expect(screen.getByLabelText('Expand description')).toBeInTheDocument();
+      expect(screen.queryByText('A sturdy iron blade')).not.toBeInTheDocument();
+    });
+
+    it('expands description when button clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <ItemCard
+          item={mockItem}
+          canEdit={false}
+          onUpdate={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      );
+
+      // Initially hidden
+      expect(screen.queryByText('A sturdy iron blade')).not.toBeInTheDocument();
+
+      // Click expand button
+      await user.click(screen.getByLabelText('Expand description'));
+
+      // Now visible
+      expect(screen.getByText('A sturdy iron blade')).toBeInTheDocument();
+    });
+
+    it('collapses description when button clicked again', async () => {
+      const user = userEvent.setup();
+      render(
+        <ItemCard
+          item={mockItem}
+          canEdit={false}
+          onUpdate={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      );
+
+      // Expand
+      await user.click(screen.getByLabelText('Expand description'));
+      expect(screen.getByText('A sturdy iron blade')).toBeInTheDocument();
+
+      // Collapse
+      await user.click(screen.getByLabelText('Collapse description'));
+      expect(screen.queryByText('A sturdy iron blade')).not.toBeInTheDocument();
+    });
+
+    it('changes aria-label when expanded/collapsed', async () => {
+      const user = userEvent.setup();
+      render(
+        <ItemCard
+          item={mockItem}
+          canEdit={false}
+          onUpdate={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      );
+
+      // Initially collapsed
+      const button = screen.getByLabelText('Expand description');
+      expect(button).toBeInTheDocument();
+
+      // Click to expand
+      await user.click(button);
+
+      // Aria-label changes
+      expect(screen.getByLabelText('Collapse description')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Expand description')).not.toBeInTheDocument();
+    });
+
+    it('hides description button in edit mode', async () => {
+      const user = userEvent.setup();
+      render(
+        <ItemCard
+          item={mockItem}
+          canEdit={true}
+          onUpdate={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      );
+
+      // Button visible initially
+      expect(screen.getByLabelText('Expand description')).toBeInTheDocument();
+
+      // Enter edit mode
+      await user.click(screen.getByText('✎'));
+
+      // Button hidden in edit mode
+      expect(screen.queryByLabelText('Expand description')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Collapse description')).not.toBeInTheDocument();
+    });
+
+    it('always shows description in edit mode regardless of collapse state', async () => {
+      const user = userEvent.setup();
+      render(
+        <ItemCard
+          item={mockItem}
+          canEdit={true}
+          onUpdate={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      );
+
+      // Description hidden initially (collapsed)
+      expect(screen.queryByText('A sturdy iron blade')).not.toBeInTheDocument();
+
+      // Enter edit mode
+      await user.click(screen.getByText('✎'));
+
+      // Description now visible (in editor)
+      expect(screen.getByDisplayValue('A sturdy iron blade')).toBeInTheDocument();
+    });
+
+    it('maintains collapse state when exiting edit mode', async () => {
+      const user = userEvent.setup();
+      render(
+        <ItemCard
+          item={mockItem}
+          canEdit={true}
+          onUpdate={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      );
+
+      // Expand description first
+      await user.click(screen.getByLabelText('Expand description'));
+      expect(screen.getByText('A sturdy iron blade')).toBeInTheDocument();
+
+      // Enter edit mode
+      await user.click(screen.getByText('✎'));
+
+      // Exit edit mode (cancel)
+      await user.click(screen.getByText('✕'));
+
+      // Description still expanded
+      expect(screen.getByText('A sturdy iron blade')).toBeInTheDocument();
     });
   });
 });

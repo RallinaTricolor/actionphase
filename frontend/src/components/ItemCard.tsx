@@ -16,6 +16,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
   const [editName, setEditName] = useState(item.name);
   const [editQuantity, setEditQuantity] = useState(item.quantity);
   const [editDescription, setEditDescription] = useState(item.description || '');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleSave = () => {
     onUpdate({
@@ -146,7 +147,29 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, canEdit, onUpdate, onR
         </div>
       </div>
 
-      {(item.description || isEditing) && (
+      {item.description && !isEditing && (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-1 px-2 py-1 mb-3 text-sm text-content-secondary hover:text-content-primary transition-colors rounded hover:bg-surface-secondary"
+          aria-label={isExpanded ? "Collapse description" : "Expand description"}
+        >
+          <svg
+            className="w-4 h-4 transition-transform"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            {isExpanded ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            )}
+          </svg>
+          <span>Description</span>
+        </button>
+      )}
+
+      {(item.description || isEditing) && (isExpanded || isEditing) && (
         <div className="mb-3">
           {isEditing ? (
             <CommentEditor

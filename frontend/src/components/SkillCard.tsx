@@ -16,6 +16,7 @@ export const SkillCard: React.FC<SkillCardProps> = ({ skill, canEdit, onUpdate, 
   const [editName, setEditName] = useState(skill.name);
   const [editLevel, setEditLevel] = useState(skill.level?.toString() || '');
   const [editDescription, setEditDescription] = useState(skill.description || '');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleSave = () => {
     onUpdate({
@@ -109,7 +110,29 @@ export const SkillCard: React.FC<SkillCardProps> = ({ skill, canEdit, onUpdate, 
         )}
       </div>
 
-      {(skill.description || isEditing) && (
+      {skill.description && !isEditing && (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-1 px-2 py-1 mb-3 text-sm text-content-secondary hover:text-content-primary transition-colors rounded hover:bg-surface-secondary"
+          aria-label={isExpanded ? "Collapse description" : "Expand description"}
+        >
+          <svg
+            className="w-4 h-4 transition-transform"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            {isExpanded ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            )}
+          </svg>
+          <span>Description</span>
+        </button>
+      )}
+
+      {(skill.description || isEditing) && (isExpanded || isEditing) && (
         <div className="mb-3">
           {isEditing ? (
             <CommentEditor
