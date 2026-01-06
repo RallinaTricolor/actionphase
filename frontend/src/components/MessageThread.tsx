@@ -190,18 +190,8 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
     setHasScrolledToUnread(false);
   }, [conversationId]);
 
-  // Auto-resize textarea as user types
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      // Reset height to auto to get the correct scrollHeight
-      textarea.style.height = 'auto';
-      // Set height to scrollHeight (content height)
-      // Max height of 200px (about 8 lines at 24px line height)
-      const newHeight = Math.min(textarea.scrollHeight, 200);
-      textarea.style.height = `${newHeight}px`;
-    }
-  }, [newMessage]);
+  // REMOVED: Auto-resize textarea - it was causing scroll position issues
+  // Now using fixed height textarea with scrollbar
 
   // Find the first unread message based on last_read_at timestamp
   const getFirstUnreadIndex = () => {
@@ -440,15 +430,15 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                     ref={textareaRef}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    rows={1}
+                    rows={6}
                     placeholder={isCommonRoomPhase ? "Type your message... (Markdown supported)" : "Messaging is only available during Common Room phases"}
                     disabled={sending || !isCommonRoomPhase}
                     maxLength={50000}
                     showCharacterCount={true}
                     helperText="Maximum 50,000 characters"
-                    className="max-h-[200px]"
+                    style={{ height: '150px', resize: 'vertical' }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                      if (e.key === 'Enter' && (e.ctrlKey || e.metaCmd)) {
                         handleSendMessage(e);
                       }
                     }}
