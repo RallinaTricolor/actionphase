@@ -438,7 +438,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
                     helperText="Maximum 50,000 characters"
                     style={{ height: '150px', resize: 'vertical' }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && (e.ctrlKey || e.metaCmd)) {
+                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                         handleSendMessage(e);
                       }
                     }}
