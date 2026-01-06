@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { ConversationList } from './ConversationList';
 import { MessageThread } from './MessageThread';
 import { NewConversationModal } from './NewConversationModal';
-import { apiClient } from '../lib/api';
+import { ConversationProvider, useConversation } from '../contexts/ConversationContext';
 import type { Character } from '../types/characters';
-import type { ConversationListItem } from '../types/conversations';
 import { Button, Alert } from './ui';
 import { logger } from '@/services/LoggingService';
 
@@ -17,24 +16,16 @@ interface PrivateMessagesProps {
 }
 
 /**
- * PrivateMessages - Full-screen messaging interface
- *
- * Uses a mobile-first full-screen pattern for all screen sizes:
- * - Conversation list OR message thread (not both simultaneously)
- * - Back button navigation from thread to list
- * - Maximum screen space for reading messages (primary use case)
- * - Consistent UX across mobile, tablet, and desktop
- *
- * Layout follows modern messaging apps (Slack, Discord, WhatsApp Web):
- * - List view: Full-width conversation cards
- * - Thread view: Full-screen messages with centered content on desktop
+ * Inner component that uses ConversationContext
  */
-export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseType }: PrivateMessagesProps) {
-  const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
+function PrivateMessagesInner({ gameId, characters, isAnonymous, currentPhaseType }: PrivateMessagesProps) {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
-  const [isRefreshingList, setIsRefreshingList] = useState(false);
+  const {
+    selectedConversationId,
+    loadingConversations,
+    selectConversation,
+    loadConversations,
+  } = useConversation();
 
   // Check if we're in a common room phase (when messaging is allowed)
   const isCommonRoomPhase = currentPhaseType === 'common_room';
@@ -47,57 +38,32 @@ export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseT
     isCommonRoomPhase
   });
 
-  const loadConversations = useCallback(async () => {
-    try {
-      const response = await apiClient.conversations.getUserConversations(gameId);
-      // Deduplicate by ID
-      const conversationMap = new Map<number, ConversationListItem>();
-      (response.data.conversations || []).forEach(conv => {
-        if (!conversationMap.has(conv.id)) {
-          conversationMap.set(conv.id, conv);
-        }
-      });
-      setConversations(Array.from(conversationMap.values()));
-    } catch (_err) {
-      logger.error('Failed to load conversations', { error: _err, gameId });
-    }
-  }, [gameId]);
-
-  const handleRefreshConversations = useCallback(async () => {
-    setIsRefreshingList(true);
-    try {
-      setRefreshKey(prev => prev + 1);  // Force ConversationList to remount and fetch fresh data
-      await loadConversations();  // Update local state for read tracking
-      logger.debug('Refreshed conversation list', { gameId });
-    } finally {
-      setIsRefreshingList(false);
-    }
-  }, [loadConversations, gameId]);
-
-  // Load conversations for read tracking info
+  // Load conversations on mount and when gameId changes
   useEffect(() => {
-    loadConversations();
-  }, [gameId, refreshKey, loadConversations]);
+    loadConversations(gameId);
+  }, [gameId, loadConversations]);
 
   const handleConversationCreated = (conversationId: number) => {
     logger.debug('Conversation created', { conversationId, gameId });
-    setRefreshKey(prev => prev + 1);
-    setSelectedConversationId(conversationId);
+    // Refresh conversations list to show the new conversation
+    loadConversations(gameId);
+    // Select the new conversation
+    selectConversation(conversationId);
   };
 
   const handleSelectConversation = (conversationId: number) => {
     logger.debug('Conversation selected', { conversationId, gameId });
-    setSelectedConversationId(conversationId);
+    selectConversation(conversationId);
   };
 
   const handleBackToList = () => {
-    setSelectedConversationId(null);
+    selectConversation(null);
   };
 
-  // Get the selected conversation info for read tracking
-  const selectedConversationInfo = selectedConversationId
-    ? conversations.find(c => c.id === selectedConversationId)
-    : undefined;
+  const handleRefreshConversations = async () => {
+    await loadConversations(gameId);
+    logger.debug('Refreshed conversation list', { gameId });
+  };
 
   return (
     <div className="h-full">
@@ -112,11 +78,11 @@ export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseT
                   variant="ghost"
                   size="sm"
                   onClick={handleRefreshConversations}
-                  disabled={isRefreshingList}
+                  disabled={loadingConversations}
                   className="flex items-center gap-2"
                   aria-label="Refresh conversation list"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isRefreshingList ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 ${loadingConversations ? 'animate-spin' : ''}`} />
                 </Button>
                 <Button
                   variant="primary"
@@ -138,7 +104,6 @@ export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseT
 
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border-primary scrollbar-track-transparent hover:scrollbar-thumb-border-secondary">
             <ConversationList
-              key={refreshKey}
               gameId={gameId}
               onSelectConversation={handleSelectConversation}
               selectedConversationId={selectedConversationId || undefined}
@@ -172,8 +137,6 @@ export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseT
                 gameId={gameId}
                 conversationId={selectedConversationId}
                 characters={characters}
-                onMarkedAsRead={() => setRefreshKey(prev => prev + 1)}
-                conversationInfo={selectedConversationInfo}
                 currentPhaseType={currentPhaseType}
               />
             </div>
@@ -191,5 +154,26 @@ export function PrivateMessages({ gameId, characters, isAnonymous, currentPhaseT
         />
       )}
     </div>
+  );
+}
+
+/**
+ * PrivateMessages - Full-screen messaging interface
+ *
+ * Uses a mobile-first full-screen pattern for all screen sizes:
+ * - Conversation list OR message thread (not both simultaneously)
+ * - Back button navigation from thread to list
+ * - Maximum screen space for reading messages (primary use case)
+ * - Consistent UX across mobile, tablet, and desktop
+ *
+ * Layout follows modern messaging apps (Slack, Discord, WhatsApp Web):
+ * - List view: Full-width conversation cards
+ * - Thread view: Full-screen messages with centered content on desktop
+ */
+export function PrivateMessages(props: PrivateMessagesProps) {
+  return (
+    <ConversationProvider>
+      <PrivateMessagesInner {...props} />
+    </ConversationProvider>
   );
 }

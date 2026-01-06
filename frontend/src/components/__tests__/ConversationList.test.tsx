@@ -399,8 +399,10 @@ describe('ConversationList', () => {
         />
       )
 
+      // Error handling is now done via toast notifications in the context
+      // The component should show the empty state when there are no conversations
       await waitFor(() => {
-        expect(screen.getByText('Failed to load conversations')).toBeInTheDocument()
+        expect(screen.getByText('No conversations yet')).toBeInTheDocument()
       })
     })
   })

@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../lib/api';
-import type { ConversationListItem } from '../types/conversations';
+import { useEffect } from 'react';
+import { useConversation } from '../contexts/ConversationContext';
 import { Button } from './ui';
 import { logger } from '@/services/LoggingService';
 
@@ -11,44 +10,11 @@ interface ConversationListProps {
 }
 
 export function ConversationList({ gameId, onSelectConversation, selectedConversationId }: ConversationListProps) {
-  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadConversations = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await apiClient.conversations.getUserConversations(gameId);
-      logger.debug('Loaded conversations', { gameId, count: response.data.conversations?.length || 0 });
-
-      // Deduplicate conversations by ID (user may own multiple characters in same conversation)
-      const conversationMap = new Map<number, ConversationListItem>();
-      (response.data.conversations || []).forEach(conv => {
-        if (!conversationMap.has(conv.id)) {
-          conversationMap.set(conv.id, conv);
-        }
-      });
-      const uniqueConversations = Array.from(conversationMap.values());
-
-      logger.debug('Deduplicated conversations', {
-        gameId,
-        original: response.data.conversations?.length || 0,
-        unique: uniqueConversations.length
-      });
-
-      setConversations(uniqueConversations);
-    } catch (err) {
-      logger.error('Failed to load conversations', { error: err, gameId });
-      setError('Failed to load conversations');
-    } finally {
-      setLoading(false);
-    }
-  }, [gameId]);
+  const { conversations, loadingConversations, loadConversations } = useConversation();
 
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    loadConversations(gameId);
+  }, [gameId, loadConversations]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -65,20 +31,10 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
     return date.toLocaleDateString();
   };
 
-  if (loading) {
+  if (loadingConversations) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-content-secondary">Loading conversations...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-4">
-        <div className="bg-semantic-danger-subtle border border-semantic-danger rounded-lg p-4 text-semantic-danger">
-          {error}
-        </div>
       </div>
     );
   }

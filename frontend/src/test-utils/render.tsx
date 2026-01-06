@@ -6,6 +6,7 @@ import { AuthProvider } from '../contexts/AuthContext'
 import { AdminModeProvider } from '../contexts/AdminModeContext'
 import { ToastProvider } from '../contexts/ToastContext'
 import { ReadingModeProvider } from '../contexts/ReadingModeContext'
+import { ConversationProvider } from '../contexts/ConversationContext'
 
 interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
   /**
@@ -63,6 +64,7 @@ export function createTestQueryClient(): QueryClient {
  * - AdminModeProvider (Admin mode context)
  * - ReadingModeProvider (Reading mode context)
  * - ToastProvider (Toast notifications)
+ * - ConversationProvider (Conversation context)
  *
  * @example
  * ```tsx
@@ -88,11 +90,13 @@ export function renderWithProviders(
         <MemoryRouter initialEntries={initialEntries}>
           <ToastProvider>
             <AuthProvider>
-              <AdminModeProvider>
-                <ReadingModeProvider>
-                  {children}
-                </ReadingModeProvider>
-              </AdminModeProvider>
+              <ConversationProvider>
+                <AdminModeProvider>
+                  <ReadingModeProvider>
+                    {children}
+                  </ReadingModeProvider>
+                </AdminModeProvider>
+              </ConversationProvider>
             </AuthProvider>
           </ToastProvider>
         </MemoryRouter>

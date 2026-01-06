@@ -1,14 +1,12 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { Trash2, RefreshCw } from 'lucide-react';
-import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '../contexts/ToastContext';
+import { useConversation } from '../contexts/ConversationContext';
 import { Button, Select, Textarea, Alert } from './ui';
 import CharacterAvatar from './CharacterAvatar';
-import type { PrivateMessage, ConversationWithDetails, ConversationListItem } from '../types/conversations';
 import type { Character } from '../types/characters';
 import { logger } from '@/services/LoggingService';
 
@@ -16,31 +14,42 @@ interface MessageThreadProps {
   gameId: number;
   conversationId: number;
   characters: Character[];
-  onMarkedAsRead?: () => void;
-  conversationInfo?: ConversationListItem; // For read tracking info
   currentPhaseType?: string; // Current game phase type (common_room, action, results, etc.)
 }
 
-export function MessageThread({ gameId, conversationId, characters, onMarkedAsRead, conversationInfo, currentPhaseType }: MessageThreadProps) {
+export function MessageThread({ gameId, conversationId, characters, currentPhaseType }: MessageThreadProps) {
   // Check if we're in a common room phase (when messaging is allowed)
   const isCommonRoomPhase = currentPhaseType === 'common_room';
   const { currentUser } = useAuth();
-  const { showError } = useToast();
-  const [messages, setMessages] = useState<PrivateMessage[]>([]);
-  const [conversation, setConversation] = useState<ConversationWithDetails | null>(null);
-  const [loadingMessages, setLoadingMessages] = useState(true);
-  const [loadingConversation, setLoadingConversation] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  // Get conversation data from context
+  const {
+    messages,
+    conversation,
+    selectedConversationInfo,
+    loadingMessages,
+    loadingConversation,
+    isRefreshing,
+    loadConversation,
+    loadMessages,
+    refreshConversation,
+    markAsRead,
+    sendMessage,
+    deleteMessage,
+  } = useConversation();
+
+  // UI-specific state
   const [newMessage, setNewMessage] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firstUnreadRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [hasScrolledToUnread, setHasScrolledToUnread] = useState(false);
   const [deleteMessageId, setDeleteMessageId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const savedScrollPositionRef = useRef<number | null>(null);
 
   const loading = loadingMessages || loadingConversation;
 
@@ -55,21 +64,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
     return characters.filter(char => participantCharacterIds.includes(char.id));
   }, [conversation, characters]);
 
-  // Define callback functions before useEffect hooks
-  const markAsRead = useCallback(async () => {
-    try {
-      await apiClient.conversations.markConversationAsRead(gameId, conversationId);
-      logger.debug('Marked conversation as read', { conversationId, gameId });
-      // Notify parent to refresh conversation list
-      if (onMarkedAsRead) {
-        onMarkedAsRead();
-      }
-    } catch (_err) {
-      logger.error('Failed to mark conversation as read', { error: _err, conversationId, gameId });
-      // Don't show error to user - this is a background operation
-    }
-  }, [gameId, conversationId, onMarkedAsRead]);
-
+  // Scroll functions
   const scrollToBottom = useCallback(() => {
     logger.debug('scrollToBottom called', { conversationId, refExists: !!messagesEndRef.current });
     if (typeof messagesEndRef.current?.scrollIntoView === 'function') {
@@ -90,117 +85,79 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
     }
   }, [conversationId, scrollToBottom]);
 
-  const loadConversation = useCallback(async () => {
-    try {
-      setLoadingConversation(true);
-      const response = await apiClient.conversations.getConversation(gameId, conversationId);
-      setConversation(response.data);
-    } catch (_err) {
-      logger.error('Failed to load conversation', { error: _err, gameId, conversationId });
-      setError('Failed to load conversation');
-    } finally {
-      setLoadingConversation(false);
-    }
-  }, [gameId, conversationId]);
+  // Load conversation and messages on mount or when conversationId changes
+  useEffect(() => {
+    loadConversation(gameId, conversationId);
+    loadMessages(gameId, conversationId);
+  }, [gameId, conversationId, loadConversation, loadMessages]);
 
-  const loadMessages = useCallback(async () => {
-    try {
-      setLoadingMessages(true);
-      // Don't clear error if conversation loading failed
-      if (!error) {
-        setError(null);
-      }
-      const response = await apiClient.conversations.getConversationMessages(gameId, conversationId);
-      setMessages(response.data.messages || []);
-
-      // DON'T mark as read here - we'll do it after scrolling in the effect
-    } catch (_err) {
-      logger.error('Failed to load messages', { error: _err, gameId, conversationId });
-      setError('Failed to load messages');
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, [gameId, conversationId, error]);
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await loadMessages();
-      await loadConversation();
-      logger.debug('Refreshed conversation and messages', { conversationId, gameId });
-    } catch (_err) {
-      logger.error('Failed to refresh conversation', { error: _err, conversationId, gameId });
-      showError('Failed to refresh messages. Please try again.');
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [loadMessages, loadConversation, conversationId, gameId, showError]);
-
-  // Auto-select first character from participants, and reset if current selection is not a participant
+  // Auto-select first character from participants
   useEffect(() => {
     if (participantCharacters.length > 0) {
-      // If no character selected, or selected character is not in participants, select the first participant
       if (selectedCharacterId === null || !participantCharacters.some(c => c.id === selectedCharacterId)) {
         setSelectedCharacterId(participantCharacters[0].id);
       }
     }
   }, [participantCharacters, selectedCharacterId]);
 
-  useEffect(() => {
-    loadConversation();
-    loadMessages();
-  }, [loadConversation, loadMessages]);
-
-  // Scroll to first unread message or bottom
+  // Scroll to first unread message or bottom on initial load
   useEffect(() => {
     if (messages.length > 0 && !hasScrolledToUnread) {
-      logger.debug('MessageThread scroll effect triggered', {
+      logger.debug('Initial scroll effect triggered', {
         messagesCount: messages.length,
-        hasConversationInfo: !!conversationInfo,
-        unreadCount: conversationInfo?.unread_count,
-        lastReadAt: conversationInfo?.last_read_at,
+        hasConversationInfo: !!selectedConversationInfo,
+        unreadCount: selectedConversationInfo?.unread_count,
+        lastReadAt: selectedConversationInfo?.last_read_at,
         conversationId,
       });
 
-      const hasUnreads = conversationInfo && conversationInfo.unread_count > 0 && conversationInfo.last_read_at;
+      const hasUnreads = selectedConversationInfo && selectedConversationInfo.unread_count > 0 && selectedConversationInfo.last_read_at;
 
-      // If there are unread messages and we have read tracking info, scroll to first unread
       if (hasUnreads) {
-        logger.debug('Scrolling to first unread message', { conversationId, unreadCount: conversationInfo.unread_count });
+        logger.debug('Scrolling to first unread message', { conversationId, unreadCount: selectedConversationInfo.unread_count });
         scrollToFirstUnread();
       } else {
-        // Otherwise scroll to bottom (no unreads, or no tracking info yet)
         logger.debug('Scrolling to bottom (no unreads or no tracking info)', { conversationId });
-        // Use setTimeout to ensure DOM is fully rendered
         setTimeout(() => scrollToBottom(), 50);
       }
       setHasScrolledToUnread(true);
 
       // Mark as read AFTER a delay to give user time to see the "New messages" badge
-      // If there are no unreads, mark as read immediately (no badge to see)
       const delay = hasUnreads ? 2000 : 0;
       setTimeout(() => {
-        markAsRead();
+        markAsRead(gameId, conversationId);
       }, delay);
     }
-  }, [messages, hasScrolledToUnread, conversationInfo, conversationId, markAsRead, scrollToBottom, scrollToFirstUnread]);
+  }, [messages.length, hasScrolledToUnread, selectedConversationInfo, conversationId, gameId, markAsRead, scrollToBottom, scrollToFirstUnread]);
 
   // Reset scroll state when conversation changes
   useEffect(() => {
     setHasScrolledToUnread(false);
   }, [conversationId]);
 
-  // REMOVED: Auto-resize textarea - it was causing scroll position issues
-  // Now using fixed height textarea with scrollbar
+  // Restore scroll position after refresh or send completes
+  useLayoutEffect(() => {
+    if (!isRefreshing && !sending && savedScrollPositionRef.current !== null) {
+      const container = messagesContainerRef.current;
+      if (container) {
+        container.scrollTop = savedScrollPositionRef.current;
+        logger.debug('Restored scroll position', {
+          scrollTop: savedScrollPositionRef.current,
+          conversationId
+        });
+        savedScrollPositionRef.current = null;
+      }
+    }
+  }, [isRefreshing, sending, conversationId]);
 
   // Find the first unread message based on last_read_at timestamp
   const getFirstUnreadIndex = () => {
-    if (!conversationInfo || !conversationInfo.last_read_at) {
-      logger.debug('No conversation info or last_read_at', { conversationId, hasInfo: !!conversationInfo });
-      return -1; // No read tracking info
+    if (!selectedConversationInfo || !selectedConversationInfo.last_read_at) {
+      logger.debug('No conversation info or last_read_at', { conversationId, hasInfo: !!selectedConversationInfo });
+      return -1;
     }
 
-    const lastReadTime = new Date(conversationInfo.last_read_at).getTime();
+    const lastReadTime = new Date(selectedConversationInfo.last_read_at).getTime();
     const firstUnreadIndex = messages.findIndex(msg => {
       const msgTime = new Date(msg.created_at).getTime();
       return msgTime > lastReadTime;
@@ -211,35 +168,58 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       lastReadTime: new Date(lastReadTime).toISOString(),
       firstUnreadIndex,
       messagesCount: messages.length,
-      firstMessage: messages[0]?.created_at,
-      lastMessage: messages[messages.length - 1]?.created_at,
     });
 
     return firstUnreadIndex;
+  };
+
+  const handleRefresh = async () => {
+    // Store scroll position before refresh (in case there are no new messages)
+    const container = messagesContainerRef.current;
+    const currentScrollTop = container ? container.scrollTop : 0;
+
+    // Refresh conversation (context detects new messages and returns boolean)
+    const hasNewMessages = await refreshConversation(gameId, conversationId);
+
+    if (hasNewMessages) {
+      // New messages: scroll to them
+      savedScrollPositionRef.current = null;
+      setHasScrolledToUnread(false);  // This will trigger scroll effect
+    } else {
+      // No new messages: restore scroll position
+      savedScrollPositionRef.current = currentScrollTop;
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCharacterId || !newMessage.trim() || sending) return;
 
+    // Save scroll position before sending
+    const container = messagesContainerRef.current;
+    if (container) {
+      savedScrollPositionRef.current = container.scrollTop;
+      logger.debug('Saved scroll position before send', {
+        scrollTop: container.scrollTop,
+        conversationId
+      });
+    }
+
     try {
       setSending(true);
-      await apiClient.conversations.sendMessage(gameId, conversationId, {
+      setNewMessage('');
+
+      // Use context's sendMessage (it handles loadMessages and markAsRead)
+      // Scroll position will be restored by useLayoutEffect after messages re-render
+      await sendMessage(gameId, conversationId, {
         character_id: selectedCharacterId,
         content: newMessage.trim(),
       });
-
-      setNewMessage('');
-      await loadMessages();
-
-      // Mark as read immediately after sending to avoid showing own message as "new"
-      await markAsRead();
-
-      // Scroll to bottom after sending (use setTimeout to ensure messages are rendered)
-      setTimeout(() => scrollToBottom(), 100);
     } catch (_err) {
-      logger.error('Failed to send message', { error: _err, gameId, conversationId, characterId: selectedCharacterId });
-      showError('Failed to send message. Please try again.');
+      // Error already handled by context
+      logger.error('Failed to send message', { error: _err, gameId, conversationId });
+      // Clear saved position on error
+      savedScrollPositionRef.current = null;
     } finally {
       setSending(false);
     }
@@ -250,14 +230,11 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
 
     try {
       setDeleting(true);
-      await apiClient.conversations.deleteMessage(gameId, conversationId, deleteMessageId);
-
-      // Reload messages to show "[Message deleted]"
-      await loadMessages();
+      await deleteMessage(gameId, conversationId, deleteMessageId);
       setDeleteMessageId(null);
     } catch (_err) {
+      // Error already handled by context
       logger.error('Failed to delete message', { error: _err, gameId, conversationId, messageId: deleteMessageId });
-      showError('Failed to delete message. Please try again.');
     } finally {
       setDeleting(false);
     }
@@ -277,16 +254,6 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-content-secondary">Loading messages...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-4">
-        <Alert variant="danger">
-          {error}
-        </Alert>
       </div>
     );
   }
@@ -323,7 +290,7 @@ export function MessageThread({ gameId, conversationId, characters, onMarkedAsRe
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-content-secondary">
