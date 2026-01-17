@@ -371,9 +371,6 @@ test.describe('Common Room Flow', () => {
         const replyButton = commentContainer.getByRole('button', { name: 'Reply' });
         const replyButtonCount = await replyButton.count();
 
-        // eslint-disable-next-line no-console
-        console.log(`Depth ${depth}: Found ${replyButtonCount} Reply button(s)`);
-
         if (replyButtonCount === 0) {
           // We've reached max depth! Verify "Continue this thread" button appears
           const continueButton = currentPage.getByRole('button', { name: /Continue this thread/ });
