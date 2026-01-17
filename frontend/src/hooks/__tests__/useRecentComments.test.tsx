@@ -208,6 +208,44 @@ describe('useRecentComments', () => {
       expect(cachedData).toBeDefined();
     });
   });
+
+  it('handles missing offset in API response', async () => {
+    // Mock response without offset field (regression test for NaN bug)
+    const responseWithoutOffset = {
+      comments: Array(20).fill({ ...mockComment }),
+      total: 50,
+      limit: 20,
+      // offset intentionally missing
+    };
+
+    const secondPageResponse: RecentCommentsResponse = {
+      comments: Array(20).fill({ ...mockComment, id: 2 }),
+      total: 50,
+      limit: 20,
+      offset: 20,
+    };
+
+    vi.mocked(apiClient.messages.getRecentComments)
+      .mockResolvedValueOnce({ data: responseWithoutOffset } as Partial<AxiosResponse>)
+      .mockResolvedValueOnce({ data: secondPageResponse } as Partial<AxiosResponse<RecentCommentsResponse>>);
+
+    const { result } = renderHook(() => useRecentComments(1), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    // Should still be able to fetch next page
+    result.current.fetchNextPage();
+
+    // Verify the next call uses calculated offset (20), not NaN
+    await waitFor(() => {
+      expect(result.current.data?.pages).toHaveLength(2);
+    });
+
+    // Verify second API call used correct offset calculated from pages
+    expect(apiClient.messages.getRecentComments).toHaveBeenCalledWith(1, 20, 20);
+  });
 });
 
 describe('useTotalCommentCount', () => {

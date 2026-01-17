@@ -24,13 +24,14 @@ export function useRecentComments(gameId: number | undefined) {
       return response.data;
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage: { comments: CommentWithParent[]; offset: number }) => {
+    getNextPageParam: (lastPage, allPages) => {
       // If the last page had fewer items than the page size, we're at the end
       if (lastPage.comments.length < COMMENTS_PER_PAGE) {
         return undefined;
       }
-      // Return the next offset
-      return lastPage.offset + COMMENTS_PER_PAGE;
+      // Calculate next offset based on pages loaded (defensive approach)
+      // This doesn't rely on the API response including an offset field
+      return allPages.length * COMMENTS_PER_PAGE;
     },
     enabled: !!gameId,
     // Refetch when window regains focus to show new comments
