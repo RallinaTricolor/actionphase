@@ -1,6 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import type { CommentWithParent } from '@/types/messages';
 
 const COMMENTS_PER_PAGE = 20;
 

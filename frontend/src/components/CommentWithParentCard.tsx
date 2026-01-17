@@ -20,7 +20,10 @@ export function CommentWithParentCard({
   onNavigateToParent,
   onNavigateToComment,
 }: CommentWithParentCardProps) {
-  const timeAgo = formatDistanceToNow(new Date(comment.created_at), {
+  // Backend returns UTC timestamps without 'Z' suffix
+  // Append 'Z' to ensure proper UTC parsing
+  const utcDateString = comment.created_at.endsWith('Z') ? comment.created_at : `${comment.created_at}Z`;
+  const timeAgo = formatDistanceToNow(new Date(utcDateString), {
     addSuffix: true,
   });
 

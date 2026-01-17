@@ -1190,7 +1190,7 @@ describe('PostCard', () => {
   });
 
   describe('Date Formatting', () => {
-    it('formats recent dates as "just now"', () => {
+    it('formats recent dates with "ago" suffix', () => {
       const now = new Date();
       const recentPost = {
         ...mockPost,
@@ -1208,10 +1208,11 @@ describe('PostCard', () => {
         />
       );
 
-      expect(screen.getByText(/just now/i)).toBeInTheDocument();
+      // date-fns formatDistanceToNow returns "less than a minute ago" for very recent dates
+      expect(screen.getByText(/ago/i)).toBeInTheDocument();
     });
 
-    it('formats dates as "Xm ago" for minutes', () => {
+    it('formats dates as "X minutes ago" for minutes', () => {
       const now = new Date();
       const minutesAgo = new Date(now.getTime() - 5 * 60 * 1000); // 5 minutes ago
       const recentPost = {
@@ -1230,10 +1231,11 @@ describe('PostCard', () => {
         />
       );
 
-      expect(screen.getByText(/5m ago/i)).toBeInTheDocument();
+      // date-fns formats as "5 minutes ago"
+      expect(screen.getByText(/5 minutes ago/i)).toBeInTheDocument();
     });
 
-    it('formats dates as "Xh ago" for hours', () => {
+    it('formats dates as "X hours ago" for hours', () => {
       const now = new Date();
       const hoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000); // 3 hours ago
       const recentPost = {
@@ -1252,10 +1254,11 @@ describe('PostCard', () => {
         />
       );
 
-      expect(screen.getByText(/3h ago/i)).toBeInTheDocument();
+      // date-fns formats as "about 3 hours ago"
+      expect(screen.getByText(/3 hours ago/i)).toBeInTheDocument();
     });
 
-    it('formats dates as "Xd ago" for days', () => {
+    it('formats dates as "X days ago" for days', () => {
       const now = new Date();
       const daysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
       const recentPost = {
@@ -1274,10 +1277,11 @@ describe('PostCard', () => {
         />
       );
 
-      expect(screen.getByText(/2d ago/i)).toBeInTheDocument();
+      // date-fns formats as "2 days ago"
+      expect(screen.getByText(/2 days ago/i)).toBeInTheDocument();
     });
 
-    it('formats old dates as full date', () => {
+    it('formats old dates with relative time', () => {
       const now = new Date();
       const oldDate = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000); // 10 days ago
       const oldPost = {
@@ -1296,9 +1300,36 @@ describe('PostCard', () => {
         />
       );
 
-      // Should show a formatted date (exact format depends on locale)
-      const expectedDate = oldDate.toLocaleDateString();
-      expect(screen.getByText(new RegExp(expectedDate.replace(/\//g, '\\/')))).toBeInTheDocument();
+      // date-fns formats as "10 days ago"
+      expect(screen.getByText(/10 days ago/i)).toBeInTheDocument();
+    });
+
+    it('correctly handles UTC timestamps without Z suffix (backend format)', () => {
+      const now = new Date();
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+
+      // Backend returns UTC timestamps WITHOUT 'Z' suffix
+      // Convert to ISO string, then remove the 'Z'
+      const backendFormat = fiveMinutesAgo.toISOString().replace('Z', '');
+
+      const recentPost = {
+        ...mockPost,
+        created_at: backendFormat,
+      };
+
+      renderWithProviders(
+        <PostCard
+          post={recentPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      // Should correctly format as "5 minutes ago" (not "in X hours")
+      expect(screen.getByText(/5 minutes ago/i)).toBeInTheDocument();
     });
   });
 

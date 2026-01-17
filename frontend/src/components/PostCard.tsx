@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
+import { formatDistanceToNow } from 'date-fns';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { ThreadedComment } from './ThreadedComment';
@@ -219,19 +220,21 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return '';
+    // Backend returns UTC timestamps without 'Z' suffix
+    // Append 'Z' to ensure proper UTC parsing
+    const utcDateString = dateString.endsWith('Z') ? dateString : `${dateString}Z`;
+    const date = new Date(utcDateString);
 
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return '';
+    }
+
+    return formatDistanceToNow(date, {
+      addSuffix: true,
+    });
   };
 
   const isAuthor = currentUserId === post.author_id;

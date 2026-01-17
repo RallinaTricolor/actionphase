@@ -171,8 +171,8 @@ describe('ThreadedComment', () => {
         />
       );
 
-      // Should display a formatted timestamp (date shows as full date for 2025-01-15)
-      expect(screen.getAllByText(/1\/15\/2025|2025/)[0]).toBeInTheDocument();
+      // Should display a formatted timestamp with "ago" suffix (date-fns formatDistanceToNow)
+      expect(screen.getAllByText(/ago/i)[0]).toBeInTheDocument();
     });
 
     it('renders reply button', () => {
@@ -1207,7 +1207,7 @@ describe('ThreadedComment', () => {
   });
 
   describe('Date Formatting', () => {
-    it('formats recent timestamps as "just now"', () => {
+    it('formats recent timestamps with "ago" suffix', () => {
       const recentComment: Message = {
         ...mockComment,
         created_at: new Date().toISOString(),
@@ -1224,10 +1224,11 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getAllByText(/just now/i)[0]).toBeInTheDocument();
+      // date-fns formats as "less than a minute ago" for very recent dates
+      expect(screen.getAllByText(/ago/i)[0]).toBeInTheDocument();
     });
 
-    it('formats timestamps within an hour as minutes ago', () => {
+    it('formats timestamps within an hour as "X minutes ago"', () => {
       const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const recentComment: Message = {
         ...mockComment,
@@ -1245,10 +1246,11 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getAllByText(/30m ago/i)[0]).toBeInTheDocument();
+      // date-fns formats as "30 minutes ago"
+      expect(screen.getAllByText(/30 minutes ago/i)[0]).toBeInTheDocument();
     });
 
-    it('formats timestamps within a day as hours ago', () => {
+    it('formats timestamps within a day as "X hours ago"', () => {
       const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
       const recentComment: Message = {
         ...mockComment,
@@ -1266,10 +1268,11 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getAllByText(/5h ago/i)[0]).toBeInTheDocument();
+      // date-fns formats as "about 5 hours ago"
+      expect(screen.getAllByText(/5 hours ago/i)[0]).toBeInTheDocument();
     });
 
-    it('formats timestamps within a week as days ago', () => {
+    it('formats timestamps within a week as "X days ago"', () => {
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
       const recentComment: Message = {
         ...mockComment,
@@ -1287,10 +1290,11 @@ describe('ThreadedComment', () => {
         />
       );
 
-      expect(screen.getAllByText(/3d ago/i)[0]).toBeInTheDocument();
+      // date-fns formats as "3 days ago"
+      expect(screen.getAllByText(/3 days ago/i)[0]).toBeInTheDocument();
     });
 
-    it('formats old timestamps as full date', () => {
+    it('formats old timestamps with relative time', () => {
       // Using a date from 2023 to ensure it's more than a week ago
       const oldComment: Message = {
         ...mockComment,
@@ -1308,9 +1312,8 @@ describe('ThreadedComment', () => {
         />
       );
 
-      // Should display a formatted date - just verify something that looks like a date exists
-      // (the exact format varies by locale, so we just check that there's a date pattern)
-      expect(screen.getAllByText(/\d{1,2}\/\d{1,2}\/\d{4}|\d{4}/)[0]).toBeInTheDocument();
+      // date-fns formats as "about 2 years ago" or "over 2 years ago"
+      expect(screen.getAllByText(/years ago/i)[0]).toBeInTheDocument();
     });
   });
 
