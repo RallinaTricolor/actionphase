@@ -78,7 +78,7 @@ export function ThreadedComment({
   const hasLoadedRef = useRef(false);
 
   // Check if this comment has pre-loaded children (from tree structure)
-  const hasPreloadedChildren = 'children' in comment && Array.isArray(comment.children);
+  const hasPreloadedChildren = 'children' in comment && Array.isArray(comment.children) && comment.children.length > 0;
   const preloadedChildren = hasPreloadedChildren ? (comment as CommentTreeNode).children : [];
 
   const { adminModeEnabled } = useAdminMode();
