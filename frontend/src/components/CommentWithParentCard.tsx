@@ -7,6 +7,7 @@ import CharacterAvatar from './CharacterAvatar';
 
 interface CommentWithParentCardProps {
   comment: CommentWithParent;
+  gameId: number;
   onNavigateToParent?: () => void;
   onNavigateToComment?: () => void;
 }
@@ -17,6 +18,7 @@ interface CommentWithParentCardProps {
  */
 export function CommentWithParentCard({
   comment,
+  gameId,
   onNavigateToParent,
   onNavigateToComment,
 }: CommentWithParentCardProps) {
@@ -77,15 +79,19 @@ export function CommentWithParentCard({
           )}
         </div>
 
-        {/* Navigate to full thread button */}
+        {/* Navigate to full thread link */}
         {onNavigateToComment && !comment.is_deleted && (
           <div className="mt-3 pt-3 border-t border-border-primary">
-            <button
-              onClick={onNavigateToComment}
+            <a
+              href={`/games/${gameId}?tab=common-room&comment=${comment.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigateToComment();
+              }}
               className="text-sm text-interactive-primary hover:text-accent-secondary font-medium"
             >
               View in thread →
-            </button>
+            </a>
           </div>
         )}
       </CardBody>

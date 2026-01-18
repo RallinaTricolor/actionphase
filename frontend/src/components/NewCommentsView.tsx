@@ -134,6 +134,7 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
         <CommentWithParentCard
           key={comment.id}
           comment={comment}
+          gameId={gameId}
           onNavigateToParent={() => handleNavigateToParent(comment)}
           onNavigateToComment={() => handleNavigateToComment(comment)}
         />

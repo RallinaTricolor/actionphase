@@ -35,7 +35,7 @@ describe('CommentWithParentCard', () => {
   };
 
   it('renders comment with parent preview', () => {
-    render(<CommentWithParentCard comment={mockComment} />);
+    render(<CommentWithParentCard comment={mockComment} gameId={1} />);
 
     // Check comment content
     expect(screen.getByText('This is a test comment')).toBeInTheDocument();
@@ -53,13 +53,13 @@ describe('CommentWithParentCard', () => {
       edited_at: '2025-10-22T11:00:00Z',
     };
 
-    render(<CommentWithParentCard comment={editedComment} />);
+    render(<CommentWithParentCard comment={editedComment} gameId={1} />);
 
     expect(screen.getByText('Edited')).toBeInTheDocument();
   });
 
   it('does not show "Edited" badge when comment has not been edited', () => {
-    render(<CommentWithParentCard comment={mockComment} />);
+    render(<CommentWithParentCard comment={mockComment} gameId={1} />);
 
     expect(screen.queryByText('Edited')).not.toBeInTheDocument();
   });
@@ -71,7 +71,7 @@ describe('CommentWithParentCard', () => {
       deleted_at: '2025-10-22T12:00:00Z',
     };
 
-    render(<CommentWithParentCard comment={deletedComment} />);
+    render(<CommentWithParentCard comment={deletedComment} gameId={1} />);
 
     expect(screen.getByText('[deleted]')).toBeInTheDocument();
     expect(screen.queryByText('This is a test comment')).not.toBeInTheDocument();
@@ -87,6 +87,7 @@ describe('CommentWithParentCard', () => {
     render(
       <CommentWithParentCard
         comment={deletedComment}
+        gameId={1}
         onNavigateToComment={mockNavigate}
       />
     );
@@ -99,6 +100,7 @@ describe('CommentWithParentCard', () => {
     render(
       <CommentWithParentCard
         comment={mockComment}
+        gameId={1}
         onNavigateToComment={mockNavigate}
       />
     );
@@ -107,7 +109,7 @@ describe('CommentWithParentCard', () => {
   });
 
   it('hides "View in thread" button when onNavigateToComment is not provided', () => {
-    render(<CommentWithParentCard comment={mockComment} />);
+    render(<CommentWithParentCard comment={mockComment} gameId={1} />);
 
     expect(screen.queryByText(/view in thread/i)).not.toBeInTheDocument();
   });
@@ -119,6 +121,7 @@ describe('CommentWithParentCard', () => {
     render(
       <CommentWithParentCard
         comment={mockComment}
+        gameId={1}
         onNavigateToComment={mockNavigate}
       />
     );
@@ -136,6 +139,7 @@ describe('CommentWithParentCard', () => {
     render(
       <CommentWithParentCard
         comment={mockComment}
+        gameId={1}
         onNavigateToParent={mockNavigate}
       />
     );
@@ -153,7 +157,7 @@ describe('CommentWithParentCard', () => {
       created_at: oneHourAgo,
     };
 
-    render(<CommentWithParentCard comment={recentComment} />);
+    render(<CommentWithParentCard comment={recentComment} gameId={1} />);
 
     expect(screen.getByText(/1 hour ago/i)).toBeInTheDocument();
   });
@@ -164,15 +168,30 @@ describe('CommentWithParentCard', () => {
       character_name: null,
     };
 
-    render(<CommentWithParentCard comment={commentWithoutCharacter} />);
+    render(<CommentWithParentCard comment={commentWithoutCharacter} gameId={1} />);
 
     expect(screen.getByText('Unknown')).toBeInTheDocument();
   });
 
   it('applies hover shadow effect class', () => {
-    const { container } = render(<CommentWithParentCard comment={mockComment} />);
+    const { container } = render(<CommentWithParentCard comment={mockComment} gameId={1} />);
 
     const card = container.querySelector('.hover\\:shadow-md');
     expect(card).toBeInTheDocument();
+  });
+
+  it('renders "View in thread" as proper anchor tag with href', () => {
+    const mockNavigate = vi.fn();
+    render(
+      <CommentWithParentCard
+        comment={mockComment}
+        gameId={2}
+        onNavigateToComment={mockNavigate}
+      />
+    );
+
+    const link = screen.getByText(/view in thread/i);
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', '/games/2?tab=common-room&comment=1');
   });
 });
