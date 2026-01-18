@@ -756,17 +756,19 @@ type CommentWithParent struct {
 	EditCount      int32
 	DeletedAt      *time.Time
 	IsDeleted      bool
-	AuthorUsername string
-	CharacterName  *string
+	AuthorUsername     string
+	CharacterName      *string
+	CharacterAvatarUrl *string
 
 	// Parent data (the post or comment this comment is replying to)
-	ParentContent        *string
-	ParentCreatedAt      *time.Time
-	ParentDeletedAt      *time.Time
-	ParentIsDeleted      *bool
-	ParentMessageType    *string // "post" or "comment"
-	ParentAuthorUsername *string
-	ParentCharacterName  *string
+	ParentContent           *string
+	ParentCreatedAt         *time.Time
+	ParentDeletedAt         *time.Time
+	ParentIsDeleted         *bool
+	ParentMessageType       *string // "post" or "comment"
+	ParentAuthorUsername    *string
+	ParentCharacterName     *string
+	ParentCharacterAvatarUrl *string
 }
 
 // ListAllPrivateConversationsParams represents parameters for listing private conversations

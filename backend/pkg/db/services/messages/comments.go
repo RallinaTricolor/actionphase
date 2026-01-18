@@ -625,18 +625,20 @@ func (s *MessageService) ListRecentCommentsWithParents(ctx context.Context, game
 			EditedAt:       pgTimestamptzToTimePtr(row.EditedAt),
 			EditCount:      row.EditCount,
 			DeletedAt:      pgTimestampToTimePtr(row.DeletedAt),
-			IsDeleted:      row.IsDeleted,
-			AuthorUsername: row.AuthorUsername,
-			CharacterName:  pgTextToStringPtr(row.CharacterName),
+			IsDeleted:         row.IsDeleted,
+			AuthorUsername:    row.AuthorUsername,
+			CharacterName:     pgTextToStringPtr(row.CharacterName),
+			CharacterAvatarUrl: pgTextToStringPtr(row.CharacterAvatarUrl),
 
 			// Parent data
-			ParentContent:        pgTextToStringPtr(row.ParentContent),
-			ParentCreatedAt:      pgTimestampToTimePtr(row.ParentCreatedAt),
-			ParentDeletedAt:      pgTimestampToTimePtr(row.ParentDeletedAt),
-			ParentIsDeleted:      pgBoolToBoolPtr(row.ParentIsDeleted),
-			ParentMessageType:    nullMessageTypeToStringPtr(row.ParentMessageType),
-			ParentAuthorUsername: pgTextToStringPtr(row.ParentAuthorUsername),
-			ParentCharacterName:  pgTextToStringPtr(row.ParentCharacterName),
+			ParentContent:           pgTextToStringPtr(row.ParentContent),
+			ParentCreatedAt:         pgTimestampToTimePtr(row.ParentCreatedAt),
+			ParentDeletedAt:         pgTimestampToTimePtr(row.ParentDeletedAt),
+			ParentIsDeleted:         pgBoolToBoolPtr(row.ParentIsDeleted),
+			ParentMessageType:       nullMessageTypeToStringPtr(row.ParentMessageType),
+			ParentAuthorUsername:    pgTextToStringPtr(row.ParentAuthorUsername),
+			ParentCharacterName:     pgTextToStringPtr(row.ParentCharacterName),
+			ParentCharacterAvatarUrl: pgTextToStringPtr(row.ParentCharacterAvatarUrl),
 		}
 	}
 

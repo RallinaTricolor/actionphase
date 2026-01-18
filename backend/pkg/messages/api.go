@@ -1167,31 +1167,33 @@ func commentsWithParentsToResponse(comments []core.CommentWithParent) []map[stri
 	result := make([]map[string]interface{}, len(comments))
 	for i, comment := range comments {
 		commentData := map[string]interface{}{
-			"id":              comment.ID,
-			"game_id":         comment.GameID,
-			"parent_id":       comment.ParentID,
-			"author_id":       comment.AuthorID,
-			"character_id":    comment.CharacterID,
-			"content":         comment.Content,
-			"created_at":      comment.CreatedAt.Format(time.RFC3339),
-			"edited_at":       formatTimePtr(comment.EditedAt),
-			"edit_count":      comment.EditCount,
-			"deleted_at":      formatTimePtr(comment.DeletedAt),
-			"is_deleted":      comment.IsDeleted,
-			"author_username": comment.AuthorUsername,
-			"character_name":  comment.CharacterName,
+			"id":                   comment.ID,
+			"game_id":              comment.GameID,
+			"parent_id":            comment.ParentID,
+			"author_id":            comment.AuthorID,
+			"character_id":         comment.CharacterID,
+			"content":              comment.Content,
+			"created_at":           comment.CreatedAt.Format(time.RFC3339),
+			"edited_at":            formatTimePtr(comment.EditedAt),
+			"edit_count":           comment.EditCount,
+			"deleted_at":           formatTimePtr(comment.DeletedAt),
+			"is_deleted":           comment.IsDeleted,
+			"author_username":      comment.AuthorUsername,
+			"character_name":       comment.CharacterName,
+			"character_avatar_url": comment.CharacterAvatarUrl,
 		}
 
 		// Add parent data if exists
 		if comment.ParentContent != nil {
 			commentData["parent"] = map[string]interface{}{
-				"content":         comment.ParentContent,
-				"created_at":      formatTimePtr(comment.ParentCreatedAt),
-				"deleted_at":      formatTimePtr(comment.ParentDeletedAt),
-				"is_deleted":      comment.ParentIsDeleted,
-				"message_type":    comment.ParentMessageType,
-				"author_username": comment.ParentAuthorUsername,
-				"character_name":  comment.ParentCharacterName,
+				"content":           comment.ParentContent,
+				"created_at":        formatTimePtr(comment.ParentCreatedAt),
+				"deleted_at":        formatTimePtr(comment.ParentDeletedAt),
+				"is_deleted":        comment.ParentIsDeleted,
+				"message_type":      comment.ParentMessageType,
+				"author_username":   comment.ParentAuthorUsername,
+				"character_name":    comment.ParentCharacterName,
+				"character_avatar_url": comment.ParentCharacterAvatarUrl,
 			}
 		}
 

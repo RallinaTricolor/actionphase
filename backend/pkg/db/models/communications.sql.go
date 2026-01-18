@@ -745,7 +745,8 @@ WITH recent_comments AS (
         m.deleted_at,
         m.is_deleted,
         u.username as author_username,
-        c.name as character_name
+        c.name as character_name,
+        c.avatar_url as character_avatar_url
     FROM messages m
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
@@ -765,7 +766,8 @@ parent_messages AS (
         m.is_deleted,
         m.message_type,
         u.username as author_username,
-        c.name as character_name
+        c.name as character_name,
+        c.avatar_url as character_avatar_url
     FROM messages m
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
@@ -788,13 +790,15 @@ SELECT
     rc.is_deleted,
     rc.author_username,
     rc.character_name,
+    rc.character_avatar_url,
     pm.content as parent_content,
     pm.created_at as parent_created_at,
     pm.deleted_at as parent_deleted_at,
     pm.is_deleted as parent_is_deleted,
     pm.message_type as parent_message_type,
     pm.author_username as parent_author_username,
-    pm.character_name as parent_character_name
+    pm.character_name as parent_character_name,
+    pm.character_avatar_url as parent_character_avatar_url
 FROM recent_comments rc
 LEFT JOIN parent_messages pm ON rc.parent_id = pm.id
 ORDER BY rc.created_at DESC
@@ -807,26 +811,28 @@ type ListRecentCommentsWithParentsParams struct {
 }
 
 type ListRecentCommentsWithParentsRow struct {
-	ID                   int32              `json:"id"`
-	GameID               int32              `json:"game_id"`
-	ParentID             pgtype.Int4        `json:"parent_id"`
-	AuthorID             int32              `json:"author_id"`
-	CharacterID          int32              `json:"character_id"`
-	Content              string             `json:"content"`
-	CreatedAt            pgtype.Timestamp   `json:"created_at"`
-	EditedAt             pgtype.Timestamptz `json:"edited_at"`
-	EditCount            int32              `json:"edit_count"`
-	DeletedAt            pgtype.Timestamp   `json:"deleted_at"`
-	IsDeleted            bool               `json:"is_deleted"`
-	AuthorUsername       string             `json:"author_username"`
-	CharacterName        pgtype.Text        `json:"character_name"`
-	ParentContent        pgtype.Text        `json:"parent_content"`
-	ParentCreatedAt      pgtype.Timestamp   `json:"parent_created_at"`
-	ParentDeletedAt      pgtype.Timestamp   `json:"parent_deleted_at"`
-	ParentIsDeleted      pgtype.Bool        `json:"parent_is_deleted"`
-	ParentMessageType    NullMessageType    `json:"parent_message_type"`
-	ParentAuthorUsername pgtype.Text        `json:"parent_author_username"`
-	ParentCharacterName  pgtype.Text        `json:"parent_character_name"`
+	ID                       int32              `json:"id"`
+	GameID                   int32              `json:"game_id"`
+	ParentID                 pgtype.Int4        `json:"parent_id"`
+	AuthorID                 int32              `json:"author_id"`
+	CharacterID              int32              `json:"character_id"`
+	Content                  string             `json:"content"`
+	CreatedAt                pgtype.Timestamp   `json:"created_at"`
+	EditedAt                 pgtype.Timestamptz `json:"edited_at"`
+	EditCount                int32              `json:"edit_count"`
+	DeletedAt                pgtype.Timestamp   `json:"deleted_at"`
+	IsDeleted                bool               `json:"is_deleted"`
+	AuthorUsername           string             `json:"author_username"`
+	CharacterName            pgtype.Text        `json:"character_name"`
+	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
+	ParentContent            pgtype.Text        `json:"parent_content"`
+	ParentCreatedAt          pgtype.Timestamp   `json:"parent_created_at"`
+	ParentDeletedAt          pgtype.Timestamp   `json:"parent_deleted_at"`
+	ParentIsDeleted          pgtype.Bool        `json:"parent_is_deleted"`
+	ParentMessageType        NullMessageType    `json:"parent_message_type"`
+	ParentAuthorUsername     pgtype.Text        `json:"parent_author_username"`
+	ParentCharacterName      pgtype.Text        `json:"parent_character_name"`
+	ParentCharacterAvatarUrl pgtype.Text        `json:"parent_character_avatar_url"`
 }
 
 // Get recent comments with their parent comments/posts for New Comments view
@@ -853,6 +859,7 @@ func (q *Queries) ListRecentCommentsWithParents(ctx context.Context, arg ListRec
 			&i.IsDeleted,
 			&i.AuthorUsername,
 			&i.CharacterName,
+			&i.CharacterAvatarUrl,
 			&i.ParentContent,
 			&i.ParentCreatedAt,
 			&i.ParentDeletedAt,
@@ -860,6 +867,7 @@ func (q *Queries) ListRecentCommentsWithParents(ctx context.Context, arg ListRec
 			&i.ParentMessageType,
 			&i.ParentAuthorUsername,
 			&i.ParentCharacterName,
+			&i.ParentCharacterAvatarUrl,
 		); err != nil {
 			return nil, err
 		}

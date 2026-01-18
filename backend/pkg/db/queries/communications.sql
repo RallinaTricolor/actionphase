@@ -234,7 +234,8 @@ WITH recent_comments AS (
         m.deleted_at,
         m.is_deleted,
         u.username as author_username,
-        c.name as character_name
+        c.name as character_name,
+        c.avatar_url as character_avatar_url
     FROM messages m
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
@@ -254,7 +255,8 @@ parent_messages AS (
         m.is_deleted,
         m.message_type,
         u.username as author_username,
-        c.name as character_name
+        c.name as character_name,
+        c.avatar_url as character_avatar_url
     FROM messages m
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
@@ -277,13 +279,15 @@ SELECT
     rc.is_deleted,
     rc.author_username,
     rc.character_name,
+    rc.character_avatar_url,
     pm.content as parent_content,
     pm.created_at as parent_created_at,
     pm.deleted_at as parent_deleted_at,
     pm.is_deleted as parent_is_deleted,
     pm.message_type as parent_message_type,
     pm.author_username as parent_author_username,
-    pm.character_name as parent_character_name
+    pm.character_name as parent_character_name,
+    pm.character_avatar_url as parent_character_avatar_url
 FROM recent_comments rc
 LEFT JOIN parent_messages pm ON rc.parent_id = pm.id
 ORDER BY rc.created_at DESC;
