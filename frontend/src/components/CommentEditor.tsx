@@ -126,19 +126,20 @@ export function CommentEditor({
     }
 
     // Check if there's a space between @ and cursor (cancels mention)
+    // Also limit mention length to 50 characters for performance
     const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
-    if (textAfterAt.includes(' ') || textAfterAt.includes('\n')) {
+    if (textAfterAt.includes(' ') || textAfterAt.includes('\n') || textAfterAt.length > 50) {
       setShowAutocomplete(false);
       return;
     }
 
-    // Show autocomplete
+    // Show autocomplete and calculate position for dropdown
     setShowAutocomplete(true);
     setAutocompleteQuery(textAfterAt);
     setMentionStartIndex(lastAtIndex);
     setSelectedIndex(0);
 
-    // Calculate position
+    // Calculate dropdown position (only when showing autocomplete)
     if (textareaRef.current) {
       const position = getCaretCoordinates(textareaRef.current, cursorPosition);
       setAutocompletePosition(position);

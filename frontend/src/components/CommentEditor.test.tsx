@@ -323,6 +323,51 @@ describe('CommentEditor', () => {
     });
   });
 
+  describe('Performance Optimizations', () => {
+    const mockCharacters = [
+      { id: 1, name: 'Aragorn', avatar_url: 'https://example.com/aragorn.jpg' },
+      { id: 2, name: 'Gandalf' },
+      { id: 3, name: 'Arwen' },
+    ];
+
+    it('does not call getCaretCoordinates when typing regular text', () => {
+      const onChange = vi.fn();
+
+      render(<CommentEditor {...defaultProps} characters={mockCharacters} onChange={onChange} />);
+
+      // Spy on document.body.appendChild AFTER rendering to avoid capturing RTL's appendChild
+      const appendChildSpy = vi.spyOn(document.body, 'appendChild');
+
+      const textarea = screen.getByRole('textbox');
+
+      // Type regular text (no '@')
+      fireEvent.change(textarea, { target: { value: 'Hello world' } });
+
+      // Should not append mirror div to body (getCaretCoordinates not called)
+      expect(appendChildSpy).not.toHaveBeenCalled();
+
+      appendChildSpy.mockRestore();
+    });
+
+    it('closes autocomplete when mention exceeds 50 characters', () => {
+      const onChange = vi.fn();
+      render(<CommentEditor {...defaultProps} characters={mockCharacters} onChange={onChange} />);
+
+      const textarea = screen.getByRole('textbox');
+
+      // Type @ to trigger autocomplete
+      fireEvent.change(textarea, { target: { value: '@', selectionStart: 1 } });
+      expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+      // Type more than 50 characters after @
+      const longMention = '@' + 'a'.repeat(51);
+      fireEvent.change(textarea, { target: { value: longMention, selectionStart: longMention.length } });
+
+      // Autocomplete should close
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Character Mention Autocomplete', () => {
     const mockCharacters = [
       { id: 1, name: 'Aragorn', avatar_url: 'https://example.com/aragorn.jpg' },

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
@@ -32,7 +32,7 @@ interface PostCardProps {
   readOnly?: boolean; // Disable all interactive features (for history view)
 }
 
-export function PostCard({ post, gameId, characters, controllableCharacters, onCreateComment, onPostUpdated, currentUserId, 'data-testid': dataTestId, readOnly = false }: PostCardProps) {
+export const PostCard = React.memo(function PostCard({ post, gameId, characters, controllableCharacters, onCreateComment, onPostUpdated, currentUserId, 'data-testid': dataTestId, readOnly = false }: PostCardProps) {
   const [showComments, setShowComments] = useState(true);
   const [isCommenting, setIsCommenting] = useState(false);
   const [commentTree, setCommentTree] = useState<CommentTreeNode[]>([]);
@@ -648,4 +648,4 @@ export function PostCard({ post, gameId, characters, controllableCharacters, onC
       )}
     </div>
   );
-}
+});

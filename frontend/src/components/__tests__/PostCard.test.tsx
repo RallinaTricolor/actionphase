@@ -1388,6 +1388,40 @@ describe('PostCard', () => {
     });
   });
 
+  describe('Memoization', () => {
+    it('does not break when re-rendered with same props', () => {
+      const { rerender } = renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      // Verify initial render works
+      expect(screen.getByTestId('post-card')).toBeInTheDocument();
+
+      // Re-render with same props (should not cause issues)
+      rerender(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      // Component should still be rendered correctly
+      expect(screen.getByTestId('post-card')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /gm character/i })).toBeInTheDocument();
+    });
+  });
+
   describe('Post Editing', () => {
     it('shows edit button for post author', () => {
       renderWithProviders(
