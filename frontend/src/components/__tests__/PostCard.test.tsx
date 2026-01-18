@@ -91,6 +91,7 @@ describe('PostCard', () => {
 
   beforeEach(() => {
     mockOnCreateComment.mockReset();
+    localStorage.clear(); // Clear localStorage to prevent state persistence between tests
     // Setup default successful responses for new paginated endpoint
     server.use(
       http.get('/api/v1/games/:gameId/posts/:postId/comments-with-threads', () => {

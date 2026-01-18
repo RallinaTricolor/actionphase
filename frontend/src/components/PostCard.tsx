@@ -19,6 +19,7 @@ import { getRootPostId } from '../utils/commentUtils';
 import { logger } from '@/services/LoggingService';
 import { buildCommentTree, type CommentTreeNode } from '../lib/utils/commentTree';
 import { COMMENT_MAX_DEPTH } from '@/config/comments';
+import { usePostCollapseState } from '../hooks/usePostCollapseState';
 
 interface PostCardProps {
   post: Message;
@@ -41,7 +42,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
   const [replyContent, setReplyContent] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPostCollapsed, setIsPostCollapsed] = useState(false);
+  const [isPostCollapsed, setIsPostCollapsed] = usePostCollapseState(post.id);
   const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
 
   // Pagination state

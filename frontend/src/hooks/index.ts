@@ -52,3 +52,6 @@ export {
   useSubmitVote,
   usePollsByPhase,
 } from './usePolls';
+
+// UI state hooks
+export { usePostCollapseState } from './usePostCollapseState';
