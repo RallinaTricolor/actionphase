@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
@@ -32,6 +32,58 @@ interface PostCardProps {
   'data-testid'?: string;
   readOnly?: boolean; // Disable all interactive features (for history view)
 }
+
+// Memoized comment list that only re-renders when commentTree changes
+// This prevents re-renders when typing in the reply box (replyContent state changes)
+const CommentList = memo(function CommentList({
+  commentTree,
+  gameId,
+  postId,
+  characters,
+  controllableCharacters,
+  onCreateComment,
+  loadComments,
+  currentUserId,
+  localUnreadCommentIDs,
+  onOpenThread,
+  readOnly,
+}: {
+  commentTree: CommentTreeNode[];
+  gameId: number;
+  postId: number;
+  characters: Character[];
+  controllableCharacters: Character[];
+  onCreateComment: (postId: number, characterId: number, content: string) => Promise<void>;
+  loadComments: () => Promise<void>;
+  currentUserId?: number;
+  localUnreadCommentIDs: number[];
+  onOpenThread: (comment: Message) => void;
+  readOnly: boolean;
+}) {
+  return (
+    <div className="space-y-4">
+      {commentTree.map((commentNode) => (
+        <ThreadedComment
+          key={commentNode.id}
+          comment={commentNode}
+          gameId={gameId}
+          postId={postId}
+          characters={characters}
+          controllableCharacters={controllableCharacters}
+          onCreateReply={onCreateComment}
+          onCommentDeleted={loadComments}
+          currentUserId={currentUserId}
+          depth={0}
+          maxDepth={COMMENT_MAX_DEPTH}
+          unreadCommentIDs={localUnreadCommentIDs}
+          onOpenThread={onOpenThread}
+          readOnly={readOnly}
+          parentComment={null}
+        />
+      ))}
+    </div>
+  );
+});
 
 export const PostCard = React.memo(function PostCard({ post, gameId, characters, controllableCharacters, onCreateComment, onPostUpdated, currentUserId, 'data-testid': dataTestId, readOnly = false }: PostCardProps) {
   const [showComments, setShowComments] = useState(true);
@@ -144,7 +196,8 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
   }, [gameId, post.id, markAsReadMutation]);
 
   // Reload all comments from beginning (resets pagination)
-  const loadComments = async (delayMs: number = 0) => {
+  // Wrapped in useCallback to provide stable reference for memoized CommentList
+  const loadComments = useCallback(async (delayMs: number = 0) => {
     try {
       setLoadingComments(true);
       // Optional delay when reloading after creating a comment
@@ -169,7 +222,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
     } finally {
       setLoadingComments(false);
     }
-  };
+  }, [gameId, post.id, COMMENTS_PER_PAGE]);
 
   // Load more comments (append to existing tree)
   const loadMoreComments = async () => {
@@ -198,6 +251,10 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
     setShowComments(!showComments);
   };
 
+  // Stable callback for opening thread modal (prevents CommentList re-renders)
+  const handleOpenThread = useCallback((comment: Message) => {
+    setThreadModalComment(comment);
+  }, []);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -573,27 +630,19 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
             <p className="text-sm text-content-secondary italic text-center py-4">No comments yet. Be the first to reply!</p>
           ) : (
             <>
-              <div className="space-y-4">
-                {commentTree.map((commentNode) => (
-                  <ThreadedComment
-                    key={commentNode.id}
-                    comment={commentNode}
-                    gameId={gameId}
-                    postId={post.id} // Pass the root post ID
-                    characters={characters}
-                    controllableCharacters={controllableCharacters}
-                    onCreateReply={onCreateComment}
-                    onCommentDeleted={loadComments} // Reload comments when one is deleted
-                    currentUserId={currentUserId}
-                    depth={0}
-                    maxDepth={COMMENT_MAX_DEPTH}
-                    unreadCommentIDs={localUnreadCommentIDs}
-                    onOpenThread={(comment) => setThreadModalComment(comment)}
-                    readOnly={readOnly}
-                    parentComment={null}
-                  />
-                ))}
-              </div>
+              <CommentList
+                commentTree={commentTree}
+                gameId={gameId}
+                postId={post.id}
+                characters={characters}
+                controllableCharacters={controllableCharacters}
+                onCreateComment={onCreateComment}
+                loadComments={loadComments}
+                currentUserId={currentUserId}
+                localUnreadCommentIDs={localUnreadCommentIDs}
+                onOpenThread={handleOpenThread}
+                readOnly={readOnly}
+              />
 
               {/* Load More Button */}
               {hasMore && (

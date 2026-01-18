@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CharacterAutocomplete } from './CharacterAutocomplete';
 import { Button, Textarea } from './ui';
@@ -29,7 +29,7 @@ interface CommentEditorProps {
  * - Markdown help reference
  * - Support for character mentions (@CharacterName)
  */
-export function CommentEditor({
+export const CommentEditor = memo(function CommentEditor({
   value,
   onChange,
   placeholder = 'Write your comment...',
@@ -318,6 +318,6 @@ export function CommentEditor({
       )}
     </div>
   );
-}
+});
 
 export default CommentEditor;

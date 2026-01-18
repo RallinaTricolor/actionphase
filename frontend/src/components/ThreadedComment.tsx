@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { apiClient } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
@@ -34,7 +34,7 @@ interface ThreadedCommentProps {
   variant?: 'desktop' | 'mobile'; // Used to create unique IDs for desktop vs mobile rendering
 }
 
-export function ThreadedComment({
+export const ThreadedComment = memo(function ThreadedComment({
   comment: initialComment,
   gameId,
   postId,
@@ -875,4 +875,4 @@ export function ThreadedComment({
       />
     </div>
   );
-}
+});
