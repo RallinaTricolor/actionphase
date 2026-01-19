@@ -534,4 +534,384 @@ describe('CommonRoom', () => {
       });
     });
   });
+
+  describe('Notification Deep Linking - Phase 1 Race Condition Fixes', () => {
+    const mockComment: Message = {
+      id: 123,
+      game_id: 1,
+      phase_id: 1,
+      character_id: 2,
+      character_name: 'Player Character',
+      content: 'Test comment content',
+      message_type: 'comment',
+      created_at: '2024-01-01T01:00:00Z',
+      updated_at: '2024-01-01T01:00:00Z',
+    };
+
+    beforeEach(() => {
+      // Mock scroll behavior
+      Element.prototype.scrollIntoView = vi.fn();
+      // Setup handler for fetching single message (nested comment)
+      server.use(
+        http.get('/api/v1/games/:gameId/messages/:messageId', () => {
+          return HttpResponse.json(mockComment);
+        })
+      );
+    });
+
+    describe('Waiting for Data to Load', () => {
+      it('waits for loading to complete before attempting to scroll to comment', async () => {
+        const scrollIntoViewMock = vi.fn();
+        const mockElement = {
+          scrollIntoView: scrollIntoViewMock,
+          classList: { add: vi.fn(), remove: vi.fn() }
+        };
+
+        // Mock getElementById to return our element
+        const getElementByIdSpy = vi.spyOn(document, 'getElementById');
+        getElementByIdSpy.mockImplementation((id) => {
+          if (id === 'comment-123') {
+            return mockElement as any;
+          }
+          return null;
+        });
+
+        // Render with comment parameter in URL
+        renderWithProviders(<CommonRoom gameId={1} />, {
+          initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
+        });
+
+        // Initially should show loading state (check for role="status" to avoid multiple matches)
+        await waitFor(() => {
+          expect(screen.getByRole('status')).toBeInTheDocument();
+        });
+
+        // Should NOT attempt scroll yet (still loading)
+        expect(getElementByIdSpy).not.toHaveBeenCalledWith('comment-123');
+
+        // Wait for loading to complete
+        await waitFor(() => {
+          expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        });
+
+        // After loading completes, should attempt scroll
+        await waitFor(() => {
+          expect(getElementByIdSpy).toHaveBeenCalledWith('comment-123');
+        }, { timeout: 500 });
+
+        // Should scroll to the element
+        await waitFor(() => {
+          expect(scrollIntoViewMock).toHaveBeenCalledWith({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest',
+          });
+        });
+
+        getElementByIdSpy.mockRestore();
+      });
+
+      it('does not attempt scroll while still loading', async () => {
+        const getElementByIdSpy = vi.spyOn(document, 'getElementById');
+
+        // Mock API to delay response (simulate slow network)
+        server.use(
+          http.get('/api/v1/games/:gameId/posts', async () => {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            return HttpResponse.json(mockPosts);
+          })
+        );
+
+        renderWithProviders(<CommonRoom gameId={1} />, {
+          initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
+        });
+
+        // Verify loading state is shown (use role="status" to avoid multiple matches)
+        await waitFor(() => {
+          expect(screen.getByRole('status')).toBeInTheDocument();
+        });
+
+        // getElementById should not be called yet (still loading)
+        expect(getElementByIdSpy).not.toHaveBeenCalledWith('comment-123');
+
+        // Wait for loading to complete
+        await waitFor(() => {
+          expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        }, { timeout: 1000 });
+
+        // Now getElementById should be called
+        await waitFor(() => {
+          expect(getElementByIdSpy).toHaveBeenCalledWith('comment-123');
+        }, { timeout: 500 });
+
+        getElementByIdSpy.mockRestore();
+      });
+    });
+
+    describe('Duplicate Scroll Prevention', () => {
+      it('does not attempt to scroll multiple times for the same comment', async () => {
+        const getElementByIdSpy = vi.spyOn(document, 'getElementById');
+        const scrollIntoViewMock = vi.fn();
+        const mockElement = {
+          scrollIntoView: scrollIntoViewMock,
+          classList: { add: vi.fn(), remove: vi.fn() }
+        };
+
+        getElementByIdSpy.mockImplementation((id) => {
+          if (id === 'comment-123') {
+            return mockElement as any;
+          }
+          return null;
+        });
+
+        const { rerender } = renderWithProviders(<CommonRoom gameId={1} />, {
+          initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
+        });
+
+        // Wait for initial scroll attempt
+        await waitFor(() => {
+          expect(screen.queryByText(/Loading Common Room.../i)).not.toBeInTheDocument();
+        });
+
+        await waitFor(() => {
+          expect(getElementByIdSpy).toHaveBeenCalledWith('comment-123');
+        }, { timeout: 500 });
+
+        const initialCallCount = getElementByIdSpy.mock.calls.filter(
+          call => call[0] === 'comment-123'
+        ).length;
+
+        // Force re-render (simulating React re-render cycle)
+        rerender(<CommonRoom gameId={1} />);
+
+        // Wait to ensure effect would have run if it was going to
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Should not have attempted scroll again for the same comment
+        const finalCallCount = getElementByIdSpy.mock.calls.filter(
+          call => call[0] === 'comment-123'
+        ).length;
+
+        expect(finalCallCount).toBe(initialCallCount);
+
+        getElementByIdSpy.mockRestore();
+      });
+    });
+
+    describe('Loading Indicator for Nested Comments', () => {
+      it('shows loading indicator when fetching deeply nested comment', async () => {
+        // Mock getElementById to return null (comment not in DOM)
+        const getElementByIdSpy = vi.spyOn(document, 'getElementById');
+        getElementByIdSpy.mockReturnValue(null);
+
+        renderWithProviders(<CommonRoom gameId={1} />, {
+          initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
+        });
+
+        // Wait for initial loading to complete
+        await waitFor(() => {
+          expect(screen.queryByText(/Loading Common Room.../i)).not.toBeInTheDocument();
+        });
+
+        // Should show "Loading comment..." indicator when fetching nested comment
+        await waitFor(() => {
+          expect(screen.getByText(/Loading comment.../i)).toBeInTheDocument();
+        }, { timeout: 500 });
+
+        getElementByIdSpy.mockRestore();
+      });
+
+      it('hides loading indicator after comment fetch completes', async () => {
+        // Mock getElementById to return null (comment not in DOM)
+        const getElementByIdSpy = vi.spyOn(document, 'getElementById');
+        getElementByIdSpy.mockReturnValue(null);
+
+        renderWithProviders(<CommonRoom gameId={1} />, {
+          initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
+        });
+
+        // Wait for initial loading to complete
+        await waitFor(() => {
+          expect(screen.queryByText(/Loading Common Room.../i)).not.toBeInTheDocument();
+        });
+
+        // Loading indicator should appear
+        await waitFor(() => {
+          expect(screen.getByText(/Loading comment.../i)).toBeInTheDocument();
+        }, { timeout: 500 });
+
+        // Wait for fetch to complete (loading indicator should disappear)
+        await waitFor(() => {
+          expect(screen.queryByText(/Loading comment.../i)).not.toBeInTheDocument();
+        }, { timeout: 1500 });
+
+        getElementByIdSpy.mockRestore();
+      });
+
+      it('hides loading indicator on fetch error', async () => {
+        // Mock getElementById to return null (comment not in DOM)
+        const getElementByIdSpy = vi.spyOn(document, 'getElementById');
+        getElementByIdSpy.mockReturnValue(null);
+
+        // Mock API to return error
+        server.use(
+          http.get('/api/v1/games/:gameId/messages/:messageId', () => {
+            return HttpResponse.json({ error: 'Not found' }, { status: 404 });
+          })
+        );
+
+        renderWithProviders(<CommonRoom gameId={1} />, {
+          initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
+        });
+
+        // Wait for initial loading to complete
+        await waitFor(() => {
+          expect(screen.queryByText(/Loading Common Room.../i)).not.toBeInTheDocument();
+        });
+
+        // Loading indicator should appear briefly
+        await waitFor(() => {
+          expect(screen.getByText(/Loading comment.../i)).toBeInTheDocument();
+        }, { timeout: 500 });
+
+        // Should hide loading indicator after error
+        await waitFor(() => {
+          expect(screen.queryByText(/Loading comment.../i)).not.toBeInTheDocument();
+        }, { timeout: 1500 });
+
+        // Should show error message
+        await waitFor(() => {
+          expect(screen.getByText(/Failed to load comment/i)).toBeInTheDocument();
+        }, { timeout: 500 });
+
+        getElementByIdSpy.mockRestore();
+      });
+    });
+
+    describe('Scroll Behavior', () => {
+      it('scrolls to comment and adds highlight styling when found in DOM', async () => {
+        const scrollIntoViewMock = vi.fn();
+        const addClassMock = vi.fn();
+        const removeClassMock = vi.fn();
+        const mockElement = {
+          scrollIntoView: scrollIntoViewMock,
+          classList: {
+            add: addClassMock,
+            remove: removeClassMock
+          }
+        };
+
+        const getElementByIdSpy = vi.spyOn(document, 'getElementById');
+        getElementByIdSpy.mockImplementation((id) => {
+          if (id === 'comment-123') {
+            return mockElement as any;
+          }
+          return null;
+        });
+
+        renderWithProviders(<CommonRoom gameId={1} />, {
+          initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
+        });
+
+        await waitFor(() => {
+          expect(screen.queryByText(/Loading Common Room.../i)).not.toBeInTheDocument();
+        });
+
+        // Should scroll to element
+        await waitFor(() => {
+          expect(scrollIntoViewMock).toHaveBeenCalledWith({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest',
+          });
+        }, { timeout: 500 });
+
+        // Should add highlight classes
+        await waitFor(() => {
+          expect(addClassMock).toHaveBeenCalledWith('ring-2', 'ring-interactive-primary', 'rounded-lg', 'p-1');
+        });
+
+        getElementByIdSpy.mockRestore();
+      });
+
+      it('checks multiple element ID patterns until element is found', async () => {
+        const getElementByIdSpy = vi.spyOn(document, 'getElementById');
+        const mockElement = {
+          scrollIntoView: vi.fn(),
+          classList: { add: vi.fn(), remove: vi.fn() }
+        };
+
+        getElementByIdSpy.mockImplementation((id) => {
+          // Return element for -desktop variant (short-circuits at second check)
+          if (id === 'comment-123-desktop') {
+            return mockElement as any;
+          }
+          return null;
+        });
+
+        renderWithProviders(<CommonRoom gameId={1} />, {
+          initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
+        });
+
+        await waitFor(() => {
+          expect(screen.queryByText(/Loading Common Room.../i)).not.toBeInTheDocument();
+        });
+
+        // Should check base pattern first, then -desktop (finds element), stops before -mobile
+        await waitFor(() => {
+          const calls = getElementByIdSpy.mock.calls.map(call => call[0]);
+          expect(calls).toContain('comment-123');
+          expect(calls).toContain('comment-123-desktop');
+          // Should NOT check -mobile because element was found at -desktop
+          expect(calls).not.toContain('comment-123-mobile');
+        }, { timeout: 500 });
+
+        // Should have scrolled to the found element
+        expect(mockElement.scrollIntoView).toHaveBeenCalled();
+
+        getElementByIdSpy.mockRestore();
+      });
+
+      it('checks all three ID patterns when none are found', async () => {
+        const getElementByIdSpy = vi.spyOn(document, 'getElementById');
+        getElementByIdSpy.mockReturnValue(null); // All patterns return null
+
+        // Add delay to getMessage mock so we can observe loading state
+        server.use(
+          http.get('/api/v1/games/:gameId/messages/:messageId', async () => {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            return HttpResponse.json(mockComment);
+          })
+        );
+
+        renderWithProviders(<CommonRoom gameId={1} />, {
+          initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
+        });
+
+        await waitFor(() => {
+          expect(screen.queryByText(/Loading Common Room.../i)).not.toBeInTheDocument();
+        });
+
+        // When element not found in DOM, should check all three patterns
+        await waitFor(() => {
+          const calls = getElementByIdSpy.mock.calls.map(call => call[0]);
+          expect(calls).toContain('comment-123');
+          expect(calls).toContain('comment-123-desktop');
+          expect(calls).toContain('comment-123-mobile');
+        }, { timeout: 500 });
+
+        // Should show loading indicator for nested comment fetch
+        await waitFor(() => {
+          expect(screen.getByText(/Loading comment.../i)).toBeInTheDocument();
+        }, { timeout: 500 });
+
+        // Wait for loading to complete
+        await waitFor(() => {
+          expect(screen.queryByText(/Loading comment.../i)).not.toBeInTheDocument();
+        }, { timeout: 1000 });
+
+        getElementByIdSpy.mockRestore();
+      });
+    });
+  });
 });

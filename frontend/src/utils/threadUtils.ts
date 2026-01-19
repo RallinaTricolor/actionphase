@@ -1,11 +1,73 @@
 import { apiClient } from '../lib/api';
 import type { Message } from '../types/messages';
 import { logger } from '@/services/LoggingService';
+import { AxiosError } from 'axios';
+
+/**
+ * Fetch a message with exponential backoff retry logic
+ * Retries transient errors (timeouts, 500s, network issues)
+ * Fast-fails on 404s (comment deleted) and other client errors
+ *
+ * @param gameId - Game ID
+ * @param messageId - Message ID to fetch
+ * @param maxRetries - Maximum number of retry attempts (default: 2)
+ * @returns Promise<Message>
+ * @throws Error if all retries fail or on 404
+ */
+async function fetchMessageWithRetry(
+  gameId: number,
+  messageId: number,
+  maxRetries: number = 2
+): Promise<Message> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await apiClient.messages.getMessage(gameId, messageId);
+      return response.data;
+    } catch (error) {
+      lastError = error as Error;
+
+      // Check if it's an Axios error with response
+      if (error instanceof AxiosError && error.response) {
+        const status = error.response.status;
+
+        // Don't retry 404s (comment deleted) or other client errors (4xx)
+        if (status === 404) {
+          logger.debug(`Message ${messageId} not found (404), not retrying`);
+          throw error;
+        }
+
+        if (status >= 400 && status < 500) {
+          logger.debug(`Client error ${status} for message ${messageId}, not retrying`);
+          throw error;
+        }
+      }
+
+      // If this was the last attempt, throw the error
+      if (attempt === maxRetries) {
+        break;
+      }
+
+      // Calculate exponential backoff delay: 100ms, 200ms
+      const delay = 100 * Math.pow(2, attempt);
+      logger.debug(`Retrying message ${messageId} fetch after ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  // All retries exhausted
+  throw lastError || new Error('Failed to fetch message after retries');
+}
 
 /**
  * Fetch a comment with its parent chain context (up to N levels)
  * Walks up the parent chain by fetching each parent message
  * Returns messages in parent-to-child order (oldest → target)
+ *
+ * Uses retry logic with exponential backoff to handle transient network errors
  */
 export async function fetchCommentWithParents(
   gameId: number,
@@ -19,8 +81,8 @@ export async function fetchCommentWithParents(
   // Fetch the target comment and walk up the parent chain
   while (currentId && depth <= maxDepth) {
     try {
-      const response = await apiClient.messages.getMessage(gameId, currentId);
-      const message = response.data;
+      // Use retry logic to handle transient network errors
+      const message = await fetchMessageWithRetry(gameId, currentId, 2);
 
       // Prepend to array to maintain parent-to-child order
       messages.unshift(message);
@@ -29,7 +91,7 @@ export async function fetchCommentWithParents(
       currentId = message.parent_id;
       depth++;
     } catch (error) {
-      logger.error(`Failed to fetch message ${currentId}`, { error });
+      logger.error(`Failed to fetch message ${currentId} after retries`, { error });
       break;
     }
   }

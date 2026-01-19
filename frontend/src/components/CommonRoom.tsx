@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -57,6 +57,12 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
   const [activeTab, setActiveTab] = useState<'posts' | 'newComments' | 'polls'>(viewParam || 'posts');
   const navigate = useNavigate();
 
+  // Ref to track scroll attempts (prevents duplicate attempts for same comment)
+  const scrollAttemptedRef = useRef<string | null>(null);
+
+  // State to show loading indicator while fetching deeply nested comments
+  const [fetchingComment, setFetchingComment] = useState(false);
+
   // Fetch polls to calculate unvoted count for badge (phase-specific)
   const { data: polls = [], isLoading: pollsLoading } = usePollsByPhase(gameId, phaseId || 0);
   const unvotedPollsCount = polls.filter(poll => !poll.user_has_voted).length;
@@ -77,7 +83,13 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
 
   // Auto-scroll to comment from URL parameter
   useEffect(() => {
-    if (!commentIdParam || loading) return;
+    // Don't attempt scroll if:
+    // 1. No comment param
+    // 2. Still loading initial data
+    // 3. Already attempted scroll for this comment
+    if (!commentIdParam || loading || scrollAttemptedRef.current === commentIdParam) {
+      return;
+    }
 
     // If there's a comment parameter, ensure we're on the 'posts' tab
     if (activeTab !== 'posts') {
@@ -89,79 +101,93 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       return; // Let the tab switch complete, then the effect will re-run
     }
 
-    // Wait for DOM to be ready, then try to scroll to comment
-    const timer = setTimeout(async () => {
-      // Try to find comment with various ID patterns (base, -desktop, -mobile)
-      // Root comments use base ID, nested comments may have -desktop/-mobile suffix
-      const element = document.getElementById(`comment-${commentIdParam}`) ||
-                    document.getElementById(`comment-${commentIdParam}-desktop`) ||
-                    document.getElementById(`comment-${commentIdParam}-mobile`);
+    // Mark this comment as having been attempted
+    scrollAttemptedRef.current = commentIdParam;
 
-      if (element) {
-        // Comment is visible in the DOM - scroll to it
-        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    // Use requestAnimationFrame to ensure DOM has rendered
+    requestAnimationFrame(() => {
+      // Shorter timeout since we know data is loaded (loading=false)
+      const timer = setTimeout(async () => {
+        // Try to find comment with various ID patterns (base, -desktop, -mobile)
+        // Root comments use base ID, nested comments may have -desktop/-mobile suffix
+        const element = document.getElementById(`comment-${commentIdParam}`) ||
+                      document.getElementById(`comment-${commentIdParam}-desktop`) ||
+                      document.getElementById(`comment-${commentIdParam}-mobile`);
 
-        // Add bordered box styling to match modal appearance
-        element.classList.add('ring-2', 'ring-interactive-primary', 'rounded-lg', 'p-1');
+        if (element) {
+          // Comment is visible in the DOM - scroll to it
+          element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
 
-        // Remove after 5 seconds
-        setTimeout(() => {
-          element.classList.remove('ring-2', 'ring-interactive-primary', 'rounded-lg', 'p-1');
-        }, 5000);
+          // Add bordered box styling to match modal appearance
+          element.classList.add('ring-2', 'ring-interactive-primary', 'rounded-lg', 'p-1');
 
-        // Clear the comment parameter from URL after scrolling
-        const newParams = new URLSearchParams(searchParams);
-        newParams.delete('comment');
-        setSearchParams(newParams, { replace: true });
-      } else {
-        // Comment not found in DOM - likely nested deep (beyond depth 5)
-        // Fetch the comment and open it in ThreadViewModal
-        logger.debug('Comment not found in DOM, fetching and opening modal', { commentId: commentIdParam, gameId });
+          // Remove after 5 seconds
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-interactive-primary', 'rounded-lg', 'p-1');
+          }, 5000);
 
-        const fetchAndShowComment = async () => {
-          try {
-            // Fetch the comment with parent context (2-3 levels)
-            const { fetchCommentWithParents } = await import('../utils/threadUtils');
-            const { messages, hasFullThread } = await fetchCommentWithParents(
-              gameId,
-              parseInt(commentIdParam),
-              3 // Fetch up to 3 parent levels for context
-            );
+          // Clear the comment parameter from URL after scrolling
+          const newParams = new URLSearchParams(searchParams);
+          newParams.delete('comment');
+          setSearchParams(newParams, { replace: true });
+        } else {
+          // Comment not found in DOM - likely nested deep (beyond depth 5)
+          // Fetch the comment and open it in ThreadViewModal
+          logger.debug('Comment not found in DOM, fetching and opening modal', { commentId: commentIdParam, gameId });
 
-            if (messages.length === 0) {
-              throw new Error('No messages fetched');
+          const fetchAndShowComment = async () => {
+            setFetchingComment(true);
+            try {
+              // Fetch the comment with parent context (2-3 levels)
+              const { fetchCommentWithParents } = await import('../utils/threadUtils');
+              const { messages, hasFullThread } = await fetchCommentWithParents(
+                gameId,
+                parseInt(commentIdParam),
+                3 // Fetch up to 3 parent levels for context
+              );
+
+              if (messages.length === 0) {
+                throw new Error('No messages fetched');
+              }
+
+              // The target comment is the last one in the array
+              const targetComment = messages[messages.length - 1];
+
+              // Store the comment and its context for the modal
+              setThreadModalComment(targetComment);
+              setThreadModalContext({
+                parentChain: messages,
+                hasFullThread,
+                targetCommentId: parseInt(commentIdParam)
+              });
+
+              // Clear the comment parameter from URL
+              const newParams = new URLSearchParams(searchParams);
+              newParams.delete('comment');
+              setSearchParams(newParams, { replace: true });
+            } catch (_err) {
+              logger.error('Failed to fetch comment for modal', { error: _err, commentId: commentIdParam, gameId });
+              // If fetch fails, clear the comment parameter and show error
+              const newParams = new URLSearchParams(searchParams);
+              newParams.delete('comment');
+              setSearchParams(newParams, { replace: true });
+              setError('Failed to load comment. The comment may have been deleted.');
+            } finally {
+              setFetchingComment(false);
             }
+          };
 
-            // The target comment is the last one in the array
-            const targetComment = messages[messages.length - 1];
+          fetchAndShowComment();
+        }
+      }, 100); // Shorter timeout - DOM should be ready since loading=false
 
-            // Store the comment and its context for the modal
-            setThreadModalComment(targetComment);
-            setThreadModalContext({
-              parentChain: messages,
-              hasFullThread,
-              targetCommentId: parseInt(commentIdParam)
-            });
+      return () => clearTimeout(timer);
+    });
 
-            // Clear the comment parameter from URL
-            const newParams = new URLSearchParams(searchParams);
-            newParams.delete('comment');
-            setSearchParams(newParams, { replace: true });
-          } catch (_err) {
-            logger.error('Failed to fetch comment for modal', { error: _err, commentId: commentIdParam, gameId });
-            // If fetch fails, clear the comment parameter and show error
-            const newParams = new URLSearchParams(searchParams);
-            newParams.delete('comment');
-            setSearchParams(newParams, { replace: true });
-            setError('Failed to load comment. The comment may have been deleted.');
-          }
-        };
-
-        fetchAndShowComment();
-      }
-    }, 500); // Wait for comments to load and expand
-
-    return () => clearTimeout(timer);
+    // Cleanup: Reset scroll attempt tracking on unmount or when comment changes
+    return () => {
+      scrollAttemptedRef.current = null;
+    };
   }, [commentIdParam, loading, searchParams, setSearchParams, gameId, navigate, activeTab]);
 
   const loadData = useCallback(async () => {
@@ -237,6 +263,15 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     return (
       <div className="flex justify-center items-center py-12">
         <Spinner size="lg" label="Loading Common Room..." />
+      </div>
+    );
+  }
+
+  if (fetchingComment) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Spinner size="lg" />
+        <p className="ml-3 text-text-secondary">Loading comment...</p>
       </div>
     );
   }
