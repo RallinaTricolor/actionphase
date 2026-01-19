@@ -59,8 +59,7 @@ export function useGameListing() {
     },
     // Keep data fresh when returning to the page
     staleTime: 60000, // 1 minute
-    // Refetch when window regains focus
-    refetchOnWindowFocus: true,
+    // refetchOnWindowFocus: false is the global default - preserves pagination and filters
   });
 
   // Helper to update search params

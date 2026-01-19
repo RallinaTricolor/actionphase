@@ -73,7 +73,7 @@ export function useAllPrivateConversations(
     initialPageParam: 0,
     enabled: !!gameId,
     refetchInterval: 30000, // Refetch every 30 seconds
-    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    // refetchOnWindowFocus: false is the global default - refetchInterval provides sufficient freshness
   });
 }
 
@@ -104,7 +104,7 @@ export function useAllActionSubmissions(
     initialPageParam: 0,
     enabled: !!gameId,
     refetchInterval: 30000, // Refetch every 30 seconds
-    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    // refetchOnWindowFocus: false is the global default - refetchInterval provides sufficient freshness
   });
 }
 

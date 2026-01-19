@@ -52,7 +52,7 @@ export const useAuth = () => {
     // Set initial data from localStorage to avoid flash of unauthenticated state
     initialData: () => !!apiClient.getAuthToken(),
     staleTime: 0, // Always check fresh
-    refetchOnWindowFocus: true,
+    // refetchOnWindowFocus: false is the global default - auth token is validated by API interceptor on requests
   });
 
   logger.debug('useAuth state', { isAuthenticated, isCheckingAuth });

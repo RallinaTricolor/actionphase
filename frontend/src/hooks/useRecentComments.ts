@@ -33,8 +33,7 @@ export function useRecentComments(gameId: number | undefined) {
       return allPages.length * COMMENTS_PER_PAGE;
     },
     enabled: !!gameId,
-    // Refetch when window regains focus to show new comments
-    refetchOnWindowFocus: true,
+    // refetchOnWindowFocus: false is the global default - preserves scroll position
   });
 }
 
@@ -54,7 +53,6 @@ export function useTotalCommentCount(gameId: number | undefined) {
       return count;
     },
     enabled: !!gameId,
-    // Refetch when window regains focus
-    refetchOnWindowFocus: true,
+    // refetchOnWindowFocus: false is the global default - preserves scroll position
   });
 }

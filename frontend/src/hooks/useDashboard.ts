@@ -16,8 +16,7 @@ export function useDashboard() {
     },
     // Refetch every 15 seconds to match notification polling and keep unread counts fresh
     refetchInterval: 15000,
-    // Refetch on window focus to show latest data
-    refetchOnWindowFocus: true,
+    // refetchOnWindowFocus: false is the global default - refetchInterval provides sufficient freshness
     // Keep previous data while refetching for smoother UX
     placeholderData: (previousData) => previousData,
   });

@@ -34,6 +34,7 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false, // Prevent automatic refetch on tab switch to preserve user input and scroll position
     },
   },
 });

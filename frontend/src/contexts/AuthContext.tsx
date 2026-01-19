@@ -60,7 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     },
     retry: false,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    refetchOnWindowFocus: true,
+    // refetchOnWindowFocus: false is the global default - prevents cascading re-renders
   });
 
   // Derive authentication state from currentUser query
