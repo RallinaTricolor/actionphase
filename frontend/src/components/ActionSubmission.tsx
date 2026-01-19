@@ -4,6 +4,7 @@ import { apiClient } from '../lib/api';
 import { useUserCharacters } from '../hooks/useUserCharacters';
 import { CountdownTimer } from './CountdownTimer';
 import { Button, Select, Textarea, Alert } from './ui';
+import { MarkdownPreview } from './MarkdownPreview';
 import type { GamePhase, ActionSubmissionRequest, ActionWithDetails } from '../types/phases';
 
 interface ActionSubmissionProps {
@@ -140,8 +141,8 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="font-medium text-content-primary mb-2">Your Current Action</h3>
-                  <div className="text-sm text-content-primary surface-base p-3 rounded border border-theme-default whitespace-pre-wrap" data-testid="action-content">
-                    {isCollapsible && !isCurrentActionExpanded ? previewContent : currentAction.content}
+                  <div className="text-sm text-content-primary surface-base p-3 rounded border border-theme-default" data-testid="action-content">
+                    <MarkdownPreview content={isCollapsible && !isCurrentActionExpanded ? previewContent : currentAction.content} />
                   </div>
                   {isCollapsible && (
                     <button
@@ -373,8 +374,8 @@ function ActionHistory({ actions, currentPhaseId }: ActionHistoryProps) {
                 {new Date(action.submitted_at).toLocaleString()}
               </span>
             </div>
-            <div className="text-sm text-content-primary surface-raised p-3 rounded whitespace-pre-wrap">
-              {isCollapsible && !isExpanded ? previewContent : action.content}
+            <div className="text-sm text-content-primary surface-raised p-3 rounded">
+              <MarkdownPreview content={isCollapsible && !isExpanded ? previewContent : action.content} />
             </div>
             {isCollapsible && (
               <button
