@@ -158,7 +158,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   }, [content, mentionedCharacters]);
 
   return (
-    <div className={`markdown-preview prose dark:prose-invert ${fullWidth ? 'max-w-none' : 'max-w-prose'} text-content-primary dark:text-white ${className}`}>
+    <div className={`markdown-preview prose ${fullWidth ? 'max-w-none' : 'max-w-prose'} text-content-primary dark:text-white ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}

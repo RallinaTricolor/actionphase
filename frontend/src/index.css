@@ -416,7 +416,6 @@
 /* Markdown prose styles - using semantic tokens for theme compatibility */
 .prose {
   color: rgb(var(--color-content-primary));
-  max-width: 65ch;
 }
 
 .prose :where(p):not(:where([class~="not-prose"] *)) {
@@ -666,64 +665,6 @@
   font-size: 1.1428571em;
   margin-top: 1.5555556em;
   margin-bottom: 0.4444444em;
-}
-
-/* ===================================================================
-   DARK MODE PROSE OVERRIDES
-   =================================================================== */
-
-.dark .prose {
-  color: rgb(var(--color-content-primary));
-}
-
-.dark .prose :where(p):not(:where([class~="not-prose"] *)) {
-  color: rgb(var(--color-content-primary));
-}
-
-.dark .prose :where(strong):not(:where([class~="not-prose"] *)) {
-  color: rgb(var(--color-content-primary));
-}
-
-.dark .prose :where(em):not(:where([class~="not-prose"] *)) {
-  color: rgb(var(--color-content-secondary));
-}
-
-.dark .prose :where(h1):not(:where([class~="not-prose"] *)) {
-  color: rgb(var(--color-content-primary));
-}
-
-.dark .prose :where(h2):not(:where([class~="not-prose"] *)) {
-  color: rgb(var(--color-content-primary));
-}
-
-.dark .prose :where(h3):not(:where([class~="not-prose"] *)) {
-  color: rgb(var(--color-content-primary));
-}
-
-.dark .prose :where(h4):not(:where([class~="not-prose"] *)) {
-  color: rgb(var(--color-content-primary));
-}
-
-.dark .prose :where(li):not(:where([class~="not-prose"] *)) {
-  color: rgb(var(--color-content-primary));
-}
-
-.dark .prose :where(ol > li):not(:where([class~="not-prose"] *))::marker {
-  color: rgb(var(--color-content-tertiary));
-}
-
-.dark .prose :where(ul > li):not(:where([class~="not-prose"] *))::marker {
-  color: rgb(var(--color-content-tertiary));
-}
-
-.dark .prose :where(blockquote):not(:where([class~="not-prose"] *)) {
-  color: rgb(var(--color-content-secondary));
-  border-left-color: rgb(var(--color-border-default));
-}
-
-.dark .prose :where(code):not(:where([class~="not-prose"] *)) {
-  color: rgb(var(--color-content-primary));
-  background-color: rgb(var(--color-surface-raised));
 }
 
 /* ===================================================================

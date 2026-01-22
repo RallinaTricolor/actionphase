@@ -1,7 +1,4 @@
 import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSanitize from 'rehype-sanitize';
 import { formatDistanceToNow } from 'date-fns';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
@@ -10,6 +7,7 @@ import { ThreadViewModal } from './ThreadViewModal';
 import { apiClient } from '../lib/api';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
+import { MarkdownPreview } from './MarkdownPreview';
 import { useMarkPostAsRead, usePostUnreadCommentIDs } from '../hooks/useReadTracking';
 import { useUpdatePost } from '../hooks';
 import { Button, Select } from './ui';
@@ -365,14 +363,11 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
       {/* Post Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-4">{post.character_name}</h1>
-        <div className="prose dark:prose-invert max-w-none">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeSanitize]}
-          >
-            {post.content}
-          </ReactMarkdown>
-        </div>
+        <MarkdownPreview
+          content={post.content}
+          mentionedCharacters={characters}
+          fullWidth
+        />
       </div>
 
       {/* Comments Section */}
@@ -518,14 +513,10 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
               </div>
             ) : (
               // View Mode
-              <div className="prose dark:prose-invert max-w-prose">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeSanitize]}
-                >
-                  {post.content}
-                </ReactMarkdown>
-              </div>
+              <MarkdownPreview
+                content={post.content}
+                mentionedCharacters={characters}
+              />
             )}
           </div>
         )}

@@ -220,9 +220,10 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience =
                                 </div>
                               </div>
                             </div>
-                            <div className="prose dark:prose-invert max-w-none">
-                              <MarkdownPreview content={isCollapsible && !isExpanded ? previewContent : submission.content} />
-                            </div>
+                            <MarkdownPreview
+                              content={isCollapsible && !isExpanded ? previewContent : submission.content}
+                              fullWidth
+                            />
                             {isCollapsible && (
                               <button
                                 onClick={() => toggleSubmissionExpanded(submission.id)}
@@ -310,9 +311,10 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience =
                                 )}
                               </div>
                             </div>
-                            <div className="prose dark:prose-invert max-w-none">
-                              <MarkdownPreview content={isCollapsible && !isExpanded ? previewContent : result.content} />
-                            </div>
+                            <MarkdownPreview
+                              content={isCollapsible && !isExpanded ? previewContent : result.content}
+                              fullWidth
+                            />
                             {isCollapsible && (
                               <button
                                 onClick={() => toggleResultExpanded(result.id)}

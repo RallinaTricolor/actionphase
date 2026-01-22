@@ -1,12 +1,10 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSanitize from 'rehype-sanitize';
 import { Trash2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useConversation } from '../contexts/ConversationContext';
 import { Button, Select, Textarea, Alert } from './ui';
 import CharacterAvatar from './CharacterAvatar';
+import { MarkdownPreview } from './MarkdownPreview';
 import type { Character } from '../types/characters';
 import { logger } from '@/services/LoggingService';
 
@@ -345,13 +343,12 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                         {message.content}
                       </div>
                     ) : (
-                      <div className="surface-raised rounded-lg p-3 prose dark:prose-invert max-w-prose">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeSanitize]}
-                        >
-                          {message.content}
-                        </ReactMarkdown>
+                      <div className="surface-raised rounded-lg p-3">
+                        <MarkdownPreview
+                          content={message.content}
+                          mentionedCharacters={[]}
+                          fullWidth
+                        />
                       </div>
                     )}
                   </div>
