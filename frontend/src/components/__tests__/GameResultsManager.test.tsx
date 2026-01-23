@@ -748,22 +748,31 @@ describe('GameResultsManager', () => {
       expect(svg).toBeInTheDocument();
     });
 
-    it('preserves whitespace in result content display', async () => {
-      const resultWithWhitespace: ActionResult = {
+    it('renders markdown content correctly', async () => {
+      const resultWithMarkdown: ActionResult = {
         ...mockUnpublishedResult,
-        content: 'Line 1\n\nLine 2\n  Indented',
+        content: '**Bold text**\n\nThis is a paragraph with *italic* text.\n\n- List item 1\n- List item 2',
       };
-      setupDefaultHandlers([resultWithWhitespace]);
+      setupDefaultHandlers([resultWithMarkdown]);
 
       const { container } = renderWithProviders(<GameResultsManager gameId={mockGameId} />);
 
       await waitFor(() => {
-        const contentDiv = container.querySelector('.whitespace-pre-wrap');
-        expect(contentDiv).toBeInTheDocument();
-        // Check that the content includes all the pieces of text
-        expect(contentDiv).toHaveTextContent('Line 1');
-        expect(contentDiv).toHaveTextContent('Line 2');
-        expect(contentDiv).toHaveTextContent('Indented');
+        // Check that MarkdownPreview component is rendering
+        const markdownContainer = container.querySelector('.markdown-preview');
+        expect(markdownContainer).toBeInTheDocument();
+
+        // Check that markdown is rendered as HTML elements
+        const boldElement = container.querySelector('strong');
+        expect(boldElement).toBeInTheDocument();
+        expect(boldElement).toHaveTextContent('Bold text');
+
+        const italicElement = container.querySelector('em');
+        expect(italicElement).toBeInTheDocument();
+        expect(italicElement).toHaveTextContent('italic');
+
+        const listItems = container.querySelectorAll('li');
+        expect(listItems.length).toBeGreaterThanOrEqual(2);
       });
     });
   });
