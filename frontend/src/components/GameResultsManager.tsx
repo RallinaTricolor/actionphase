@@ -4,6 +4,7 @@ import type { ActionResult, GamePhase } from '../types/phases';
 import { Button, Textarea, Badge, Alert } from './ui';
 import { UpdateCharacterSheetModal } from './UpdateCharacterSheetModal';
 import { PublishResultConfirmationDialog } from './PublishResultConfirmationDialog';
+import { MarkdownPreview } from './MarkdownPreview';
 import { useDraftUpdateCount } from '../hooks';
 import { logger } from '@/services/LoggingService';
 
@@ -274,8 +275,12 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit }: Re
           </div>
         ) : (
           <>
-            <div className="surface-base p-4 rounded border border-theme-default whitespace-pre-wrap text-content-primary">
-              {isCollapsible && !isExpanded ? previewContent : result.content}
+            <div className="surface-base p-4 rounded border border-theme-default">
+              <MarkdownPreview
+                content={isCollapsible && !isExpanded ? previewContent : result.content}
+                mentionedCharacters={[]}
+                fullWidth
+              />
             </div>
             {isCollapsible && (
               <button
