@@ -178,13 +178,23 @@ func (as *ActionSubmissionService) mergeAndPublishDraftUpdates(ctx context.Conte
 		}
 
 		// 3. Merge draft items into existing array
-		// Use item name as unique key for upsert behavior
+		// Use appropriate field as unique key based on module type
 		itemMap := make(map[string]map[string]interface{})
 
-		// Add existing items to map
+		// Determine which field to use as the unique key
+		// Currency uses "type" field, others use "name" field
+		var keyField string
+		switch key.moduleType {
+		case "currency":
+			keyField = "type" // Currency entries: {"type":"Gold","amount":10}
+		default:
+			keyField = "name" // Items/abilities/skills: {"name":"Sword","quantity":1}
+		}
+
+		// Add existing items to map using the appropriate key field
 		for _, item := range existingArray {
-			if name, ok := item["name"].(string); ok {
-				itemMap[name] = item
+			if keyValue, ok := item[keyField].(string); ok {
+				itemMap[keyValue] = item
 			}
 		}
 
@@ -219,8 +229,17 @@ func (as *ActionSubmissionService) mergeAndPublishDraftUpdates(ctx context.Conte
 				}
 			}
 
-			// Use the field_name (item/ability/skill/currency name) as the key
-			itemMap[draft.FieldName] = draftItem
+			// Use the appropriate field from the draft item as the key
+			// For currency, extract from draftItem["type"], for others use draftItem["name"]
+			// If not present in the item, fall back to draft.FieldName
+			var itemKey string
+			if keyValue, ok := draftItem[keyField].(string); ok {
+				itemKey = keyValue
+			} else {
+				// Fallback to field_name if key field not present in draft item
+				itemKey = draft.FieldName
+			}
+			itemMap[itemKey] = draftItem
 		}
 
 		// 4. Convert map back to array

@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -874,7 +875,7 @@ func TestActionSubmissionService_PublishAllPhaseResults_WithDrafts(t *testing.T)
 				CharacterID:    character1.ID,
 				ModuleType:     "currency",
 				FieldName:      "test_" + string(rune('a'+i)),
-				FieldValue:     fmt.Sprintf(`{"name":"test_%s","amount":%d,"description":"Test currency"}`, string(rune('a'+i)), i+1),
+				FieldValue:     fmt.Sprintf(`{"type":"test_%s","amount":%d,"description":"Test currency"}`, string(rune('a'+i)), i+1),
 				FieldType:      "json",
 				Operation:      "upsert",
 			}
@@ -898,4 +899,125 @@ func TestActionSubmissionService_PublishAllPhaseResults_WithDrafts(t *testing.T)
 			assert.Equal(t, int64(0), count, "All drafts should be deleted atomically")
 		}
 	})
+}
+// Regression test for currency merge bug
+// Bug: When merging draft currencies into existing currencies, the merge logic
+// assumed all items have a "name" field, but currency items use "type" field.
+// This caused existing currencies to be lost when new currencies were added.
+func TestActionSubmissionService_CurrencyMergePreservesExisting(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Create test data
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	userID := int32(player.ID)
+	character, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &userID,
+		Name:          "Test Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Step 1: Character starts with existing "Gold" currency
+	existingCurrencies := []map[string]interface{}{
+		{
+			"id":          "550e8400-e29b-41d4-a716-446655440000",
+			"type":        "Gold",
+			"amount":      float64(10),
+			"description": "Starting gold",
+		},
+	}
+	existingJSON, err := json.Marshal(existingCurrencies)
+	require.NoError(t, err)
+
+	_, err = testDB.Pool.Exec(context.Background(),
+		`INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, created_at, updated_at)
+		 VALUES ($1, 'currency', 'currency', $2, 'json', NOW(), NOW())
+		 ON CONFLICT (character_id, module_type, field_name)
+		 DO UPDATE SET field_value = $2, updated_at = NOW()`,
+		character.ID, string(existingJSON))
+	require.NoError(t, err)
+
+	// Step 2: Create action phase and result that adds "Silver" currency
+	transitionReq := core.TransitionPhaseRequest{
+		PhaseType: "action",
+		Title:     "Action Phase",
+	}
+	phase, err := phaseService.TransitionToNextPhase(context.Background(), game.ID, int32(gm.ID), transitionReq)
+	require.NoError(t, err)
+
+	result, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
+		GameID:      game.ID,
+		PhaseID:     phase.ID,
+		UserID:      int32(player.ID),
+		Content:     "You receive silver coins",
+		IsPublished: false,
+	})
+	require.NoError(t, err)
+
+	// Step 3: Add draft that adds "Silver" currency
+	_, err = actionService.CreateDraftCharacterUpdate(context.Background(), core.CreateDraftCharacterUpdateRequest{
+		ActionResultID: result.ID,
+		CharacterID:    character.ID,
+		ModuleType:     "currency",
+		FieldName:      "Silver",
+		FieldValue:     `{"type":"Silver","amount":5,"description":"Reward"}`,
+		FieldType:      "json",
+		Operation:      "upsert",
+	})
+	require.NoError(t, err)
+
+	// Step 4: Publish result (should merge Silver into existing currencies)
+	err = actionService.PublishActionResult(context.Background(), result.ID, int32(gm.ID))
+	require.NoError(t, err)
+
+	// Step 5: Verify BOTH currencies exist (Gold should NOT be lost)
+	characterData, err := characterService.GetCharacterData(context.Background(), character.ID)
+	require.NoError(t, err)
+
+	// Find the currency field
+	var currencies []map[string]interface{}
+	found := false
+	for _, data := range characterData {
+		if data.ModuleType == "currency" && data.FieldName == "currency" {
+			err = json.Unmarshal([]byte(data.FieldValue.String), &currencies)
+			require.NoError(t, err)
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "Currency field should exist in character_data")
+
+	// CRITICAL: Must have 2 currencies (Gold + Silver), not just Silver
+	assert.Len(t, currencies, 2, "Both Gold and Silver should exist after merge")
+
+	// Verify Gold is present with original amount
+	goldFound := false
+	silverFound := false
+	for _, currency := range currencies {
+		if currency["type"] == "Gold" {
+			goldFound = true
+			assert.Equal(t, float64(10), currency["amount"], "Gold amount should be preserved")
+		}
+		if currency["type"] == "Silver" {
+			silverFound = true
+			assert.Equal(t, float64(5), currency["amount"], "Silver should be added")
+		}
+	}
+	assert.True(t, goldFound, "Gold currency should be preserved")
+	assert.True(t, silverFound, "Silver currency should be added")
 }
