@@ -15,8 +15,7 @@ const ensureIds = <T extends { id?: string }>(
   return items.map(item => {
     if (!item.id) {
       console.warn(`${itemType} missing id field (data corruption), generating:`, item);
-      const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      return { ...item, id: generateId() };
+      return { ...item, id: crypto.randomUUID() };
     }
     return item as T & { id: string };
   });
@@ -45,7 +44,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
   const [showAddItem, setShowAddItem] = useState(false);
   const [showAddCurrency, setShowAddCurrency] = useState(false);
 
-  const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const generateId = () => crypto.randomUUID();
 
   const addItem = (itemData: Omit<InventoryItem, 'id'>) => {
     const newItem: InventoryItem = {

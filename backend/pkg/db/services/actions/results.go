@@ -10,6 +10,7 @@ import (
 	models "actionphase/pkg/db/models"
 	"actionphase/pkg/validation"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -248,7 +249,10 @@ func (as *ActionSubmissionService) mergeAndPublishDraftUpdates(ctx context.Conte
 			}
 			// No need to reassign - maps are reference types in Go
 		} else {
-			// New item - add as-is
+			// New item - generate ID if missing
+			if _, hasID := draftItem["id"]; !hasID {
+				draftItem["id"] = uuid.New().String()
+			}
 			itemMap[itemKey] = draftItem
 		}
 		}

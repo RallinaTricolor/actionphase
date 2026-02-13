@@ -1229,4 +1229,224 @@ func TestDraftMerge_PreservesIdField_AllModuleTypes(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("generates UUID for new items added via draft", func(t *testing.T) {
+		// Action: Draft adds a NEW currency (not updating existing)
+		newCurrency := map[string]interface{}{
+			"type":   "Platinum",
+			"amount": float64(200),
+			// Note: NO ID field in draft
+		}
+		platinumJSON, err := json.Marshal(newCurrency)
+		require.NoError(t, err)
+
+		draftReq := core.CreateDraftCharacterUpdateRequest{
+			ActionResultID: result.ID,
+			CharacterID:    character.ID,
+			ModuleType:     "currency",
+			FieldName:      "Platinum",
+			FieldValue:     string(platinumJSON),
+			FieldType:      "json",
+			Operation:      "upsert",
+		}
+		_, err = actionService.CreateDraftCharacterUpdate(context.Background(), draftReq)
+		require.NoError(t, err)
+
+		// Publish the draft
+		err = actionService.PublishActionResult(context.Background(), result.ID, int32(gm.ID))
+		require.NoError(t, err)
+
+		// Verify: NEW currency has a generated UUID
+		charData, err := characterService.GetCharacterData(context.Background(), character.ID)
+		require.NoError(t, err)
+
+		var currencies []map[string]interface{}
+		for _, data := range charData {
+			if data.ModuleType == "currency" && data.FieldName == "currency" {
+				err := json.Unmarshal([]byte(data.FieldValue.String), &currencies)
+				require.NoError(t, err)
+				break
+			}
+		}
+
+		// Find the Platinum currency
+		var platinum map[string]interface{}
+		for _, curr := range currencies {
+			if curr["type"] == "Platinum" {
+				platinum = curr
+				break
+			}
+		}
+
+		require.NotNil(t, platinum, "Platinum currency should exist")
+
+		// CRITICAL: New item must have auto-generated ID
+		id, hasID := platinum["id"]
+		assert.True(t, hasID, "New currency must have 'id' field auto-generated")
+		assert.NotEmpty(t, id, "Generated 'id' must not be empty")
+
+		// Verify it's a valid UUID format
+		idStr, ok := id.(string)
+		require.True(t, ok, "ID should be a string")
+		assert.Len(t, idStr, 36, "UUID should be 36 characters (standard UUID format)")
+		assert.Contains(t, idStr, "-", "UUID should contain hyphens")
+	})
+
+	t.Run("preserves ID field in abilities data", func(t *testing.T) {
+		// Setup: Character has 3 abilities with IDs
+		abilitiesWithIDs := []map[string]interface{}{
+			{"id": "ability-1", "name": "Fireball", "description": "A ball of fire"},
+			{"id": "ability-2", "name": "Ice Blast", "description": "Freezing attack"},
+			{"id": "ability-3", "name": "Heal", "description": "Restore health"},
+		}
+		abilitiesJSON, err := json.Marshal(abilitiesWithIDs)
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(context.Background(),
+			`INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, created_at, updated_at)
+			 VALUES ($1, 'abilities', 'abilities', $2, 'json', NOW(), NOW())
+			 ON CONFLICT (character_id, module_type, field_name)
+			 DO UPDATE SET field_value = $2, updated_at = NOW()`,
+			character.ID, string(abilitiesJSON))
+		require.NoError(t, err)
+
+		// Action: Draft updates ONE ability (Fireball description changes)
+		updatedFireball := map[string]interface{}{
+			"name":        "Fireball",
+			"description": "An improved ball of fire", // Changed from "A ball of fire"
+		}
+		fireballJSON, err := json.Marshal(updatedFireball)
+		require.NoError(t, err)
+
+		draftReq := core.CreateDraftCharacterUpdateRequest{
+			ActionResultID: result.ID,
+			CharacterID:    character.ID,
+			ModuleType:     "abilities",
+			FieldName:      "Fireball", // Key field for abilities
+			FieldValue:     string(fireballJSON),
+			FieldType:      "json",
+			Operation:      "upsert",
+		}
+		_, err = actionService.CreateDraftCharacterUpdate(context.Background(), draftReq)
+		require.NoError(t, err)
+
+		// Publish the draft
+		err = actionService.PublishActionResult(context.Background(), result.ID, int32(gm.ID))
+		require.NoError(t, err)
+
+		// Verify: ALL abilities still have their IDs
+		charData, err := characterService.GetCharacterData(context.Background(), character.ID)
+		require.NoError(t, err)
+
+		var abilities []map[string]interface{}
+		for _, data := range charData {
+			if data.ModuleType == "abilities" && data.FieldName == "abilities" {
+				err := json.Unmarshal([]byte(data.FieldValue.String), &abilities)
+				require.NoError(t, err)
+				break
+			}
+		}
+
+		require.Len(t, abilities, 3, "All 3 abilities should still exist")
+
+		// CRITICAL: All abilities must have ID field
+		for i, ability := range abilities {
+			id, hasID := ability["id"]
+			assert.True(t, hasID, fmt.Sprintf("Ability %d (%s) must have 'id' field", i, ability["name"]))
+			assert.NotEmpty(t, id, fmt.Sprintf("Ability %d (%s) 'id' must not be empty", i, ability["name"]))
+
+			// Verify the original IDs are preserved (not regenerated)
+			abilityName := ability["name"].(string)
+			switch abilityName {
+			case "Fireball":
+				assert.Equal(t, "ability-1", id, "Fireball ID should be preserved")
+				assert.Equal(t, "An improved ball of fire", ability["description"], "Fireball description should be updated")
+			case "Ice Blast":
+				assert.Equal(t, "ability-2", id, "Ice Blast ID should be preserved")
+				assert.Equal(t, "Freezing attack", ability["description"], "Ice Blast description should be unchanged")
+			case "Heal":
+				assert.Equal(t, "ability-3", id, "Heal ID should be preserved")
+				assert.Equal(t, "Restore health", ability["description"], "Heal description should be unchanged")
+			}
+		}
+	})
+
+	t.Run("preserves ID field in skills data", func(t *testing.T) {
+		// Setup: Character has 3 skills with IDs
+		skillsWithIDs := []map[string]interface{}{
+			{"id": "skill-1", "name": "Lockpicking", "level": float64(5)},
+			{"id": "skill-2", "name": "Stealth", "level": float64(7)},
+			{"id": "skill-3", "name": "Persuasion", "level": float64(3)},
+		}
+		skillsJSON, err := json.Marshal(skillsWithIDs)
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(context.Background(),
+			`INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, created_at, updated_at)
+			 VALUES ($1, 'skills', 'skills', $2, 'json', NOW(), NOW())
+			 ON CONFLICT (character_id, module_type, field_name)
+			 DO UPDATE SET field_value = $2, updated_at = NOW()`,
+			character.ID, string(skillsJSON))
+		require.NoError(t, err)
+
+		// Action: Draft updates ONE skill (Lockpicking level increases)
+		updatedLockpicking := map[string]interface{}{
+			"name":  "Lockpicking",
+			"level": float64(8), // Increased from 5
+		}
+		lockpickingJSON, err := json.Marshal(updatedLockpicking)
+		require.NoError(t, err)
+
+		draftReq := core.CreateDraftCharacterUpdateRequest{
+			ActionResultID: result.ID,
+			CharacterID:    character.ID,
+			ModuleType:     "skills", // Skills have their own module_type
+			FieldName:      "Lockpicking",
+			FieldValue:     string(lockpickingJSON),
+			FieldType:      "json",
+			Operation:      "upsert",
+		}
+		_, err = actionService.CreateDraftCharacterUpdate(context.Background(), draftReq)
+		require.NoError(t, err)
+
+		// Publish the draft
+		err = actionService.PublishActionResult(context.Background(), result.ID, int32(gm.ID))
+		require.NoError(t, err)
+
+		// Verify: ALL skills still have their IDs
+		charData, err := characterService.GetCharacterData(context.Background(), character.ID)
+		require.NoError(t, err)
+
+		var skills []map[string]interface{}
+		for _, data := range charData {
+			if data.ModuleType == "skills" && data.FieldName == "skills" {
+				err := json.Unmarshal([]byte(data.FieldValue.String), &skills)
+				require.NoError(t, err)
+				break
+			}
+		}
+
+		require.Len(t, skills, 3, "All 3 skills should still exist")
+
+		// CRITICAL: All skills must have ID field
+		for i, skill := range skills {
+			id, hasID := skill["id"]
+			assert.True(t, hasID, fmt.Sprintf("Skill %d (%s) must have 'id' field", i, skill["name"]))
+			assert.NotEmpty(t, id, fmt.Sprintf("Skill %d (%s) 'id' must not be empty", i, skill["name"]))
+
+			// Verify the original IDs are preserved (not regenerated)
+			skillName := skill["name"].(string)
+			switch skillName {
+			case "Lockpicking":
+				assert.Equal(t, "skill-1", id, "Lockpicking ID should be preserved")
+				assert.Equal(t, float64(8), skill["level"], "Lockpicking level should be updated")
+			case "Stealth":
+				assert.Equal(t, "skill-2", id, "Stealth ID should be preserved")
+				assert.Equal(t, float64(7), skill["level"], "Stealth level should be unchanged")
+			case "Persuasion":
+				assert.Equal(t, "skill-3", id, "Persuasion ID should be preserved")
+				assert.Equal(t, float64(3), skill["level"], "Persuasion level should be unchanged")
+			}
+		}
+	})
 }
