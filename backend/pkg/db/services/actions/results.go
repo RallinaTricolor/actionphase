@@ -239,13 +239,42 @@ func (as *ActionSubmissionService) mergeAndPublishDraftUpdates(ctx context.Conte
 				// Fallback to field_name if key field not present in draft item
 				itemKey = draft.FieldName
 			}
+			// CRITICAL: Merge draft fields into existing item, don't replace entire object
+		// This preserves the "id" field and any other fields not in the draft
+		if existingItem, exists := itemMap[itemKey]; exists {
+			// Item exists - merge draft fields into existing item
+			for k, v := range draftItem {
+				existingItem[k] = v
+			}
+			// No need to reassign - maps are reference types in Go
+		} else {
+			// New item - add as-is
 			itemMap[itemKey] = draftItem
+		}
 		}
 
 		// 4. Convert map back to array
 		mergedArray := make([]map[string]interface{}, 0, len(itemMap))
 		for _, item := range itemMap {
 			mergedArray = append(mergedArray, item)
+		}
+
+		// Observability: Detect if items are missing ID field after merge
+		missingIDs := 0
+		for _, item := range mergedArray {
+			if _, hasID := item["id"]; !hasID {
+				missingIDs++
+			}
+		}
+		if missingIDs > 0 {
+			as.Logger.Warn(ctx, "Character data merge produced items without ID field - deletion may fail",
+				"actionResultID", resultID,
+				"characterID", key.characterID,
+				"moduleType", key.moduleType,
+				"fieldName", targetFieldName,
+				"totalItems", len(mergedArray),
+				"missingIDCount", missingIDs,
+			)
 		}
 
 		// 5. Marshal to JSON and save

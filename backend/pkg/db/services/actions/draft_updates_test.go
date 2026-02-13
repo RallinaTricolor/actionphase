@@ -1021,3 +1021,212 @@ func TestActionSubmissionService_CurrencyMergePreservesExisting(t *testing.T) {
 	assert.True(t, goldFound, "Gold currency should be preserved")
 	assert.True(t, silverFound, "Silver currency should be added")
 }
+
+// TestDraftMerge_PreservesIdField_AllModuleTypes verifies that draft merge preserves
+// the "id" field for ALL character data types (currencies, items, abilities, skills).
+// This is a regression test for bug where draft merge was stripping ID fields,
+// causing deletion to fail catastrophically (deleting ALL items instead of one).
+func TestDraftMerge_PreservesIdField_AllModuleTypes(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Create test data
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	// Create character
+	userID := int32(player.ID)
+	character, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &userID,
+		Name:          "Test Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Create action phase and result
+	transitionReq := core.TransitionPhaseRequest{
+		PhaseType: "action",
+		Title:     "Action Phase",
+	}
+	phase, err := phaseService.TransitionToNextPhase(context.Background(), game.ID, int32(gm.ID), transitionReq)
+	require.NoError(t, err)
+
+	resultReq := core.CreateActionResultRequest{
+		GameID:      game.ID,
+		PhaseID:     phase.ID,
+		UserID:      int32(player.ID),
+		Content:     "You find treasures",
+		IsPublished: false,
+	}
+	result, err := actionService.CreateActionResult(context.Background(), resultReq)
+	require.NoError(t, err)
+
+	t.Run("preserves ID field in currency data", func(t *testing.T) {
+		// Setup: Character has 3 currencies with IDs
+		currenciesWithIDs := []map[string]interface{}{
+			{"id": "currency-1", "type": "Gold", "amount": float64(100)},
+			{"id": "currency-2", "type": "Silver", "amount": float64(50)},
+			{"id": "currency-3", "type": "Bronze", "amount": float64(25)},
+		}
+		currenciesJSON, err := json.Marshal(currenciesWithIDs)
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(context.Background(),
+			`INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, created_at, updated_at)
+			 VALUES ($1, 'currency', 'currency', $2, 'json', NOW(), NOW())
+			 ON CONFLICT (character_id, module_type, field_name)
+			 DO UPDATE SET field_value = $2, updated_at = NOW()`,
+			character.ID, string(currenciesJSON))
+		require.NoError(t, err)
+
+		// Action: Draft updates ONE currency (Gold amount changes)
+		updatedGold := map[string]interface{}{
+			"type":   "Gold",
+			"amount": float64(150), // Increased from 100
+		}
+		goldJSON, err := json.Marshal(updatedGold)
+		require.NoError(t, err)
+
+		draftReq := core.CreateDraftCharacterUpdateRequest{
+			ActionResultID: result.ID,
+			CharacterID:    character.ID,
+			ModuleType:     "currency",
+			FieldName:      "Gold", // Key field for currency
+			FieldValue:     string(goldJSON),
+			FieldType:      "json",
+			Operation:      "upsert",
+		}
+		_, err = actionService.CreateDraftCharacterUpdate(context.Background(), draftReq)
+		require.NoError(t, err)
+
+		// Publish the draft
+		err = actionService.PublishActionResult(context.Background(), result.ID, int32(gm.ID))
+		require.NoError(t, err)
+
+		// Verify: ALL currencies still have their IDs
+		charData, err := characterService.GetCharacterData(context.Background(), character.ID)
+		require.NoError(t, err)
+
+		var currencies []map[string]interface{}
+		for _, data := range charData {
+			if data.ModuleType == "currency" && data.FieldName == "currency" {
+				err := json.Unmarshal([]byte(data.FieldValue.String), &currencies)
+				require.NoError(t, err)
+				break
+			}
+		}
+
+		require.Len(t, currencies, 3, "All 3 currencies should still exist")
+
+		// CRITICAL: All currencies must have ID field
+		for i, currency := range currencies {
+			id, hasID := currency["id"]
+			assert.True(t, hasID, fmt.Sprintf("Currency %d (%s) must have 'id' field", i, currency["type"]))
+			assert.NotEmpty(t, id, fmt.Sprintf("Currency %d (%s) 'id' must not be empty", i, currency["type"]))
+
+			// Verify the original IDs are preserved (not regenerated)
+			currencyType := currency["type"].(string)
+			switch currencyType {
+			case "Gold":
+				assert.Equal(t, "currency-1", id, "Gold ID should be preserved")
+				assert.Equal(t, float64(150), currency["amount"], "Gold amount should be updated")
+			case "Silver":
+				assert.Equal(t, "currency-2", id, "Silver ID should be preserved")
+				assert.Equal(t, float64(50), currency["amount"], "Silver amount should be unchanged")
+			case "Bronze":
+				assert.Equal(t, "currency-3", id, "Bronze ID should be preserved")
+				assert.Equal(t, float64(25), currency["amount"], "Bronze amount should be unchanged")
+			}
+		}
+	})
+
+	t.Run("preserves ID field in item data", func(t *testing.T) {
+		// Setup: Character has 3 items with IDs
+		itemsWithIDs := []map[string]interface{}{
+			{"id": "item-1", "name": "Sword", "quantity": float64(1)},
+			{"id": "item-2", "name": "Shield", "quantity": float64(1)},
+			{"id": "item-3", "name": "Potion", "quantity": float64(5)},
+		}
+		itemsJSON, err := json.Marshal(itemsWithIDs)
+		require.NoError(t, err)
+
+		_, err = testDB.Pool.Exec(context.Background(),
+			`INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type, created_at, updated_at)
+			 VALUES ($1, 'inventory', 'items', $2, 'json', NOW(), NOW())
+			 ON CONFLICT (character_id, module_type, field_name)
+			 DO UPDATE SET field_value = $2, updated_at = NOW()`,
+			character.ID, string(itemsJSON))
+		require.NoError(t, err)
+
+		// Action: Draft updates ONE item (Potion quantity changes)
+		updatedPotion := map[string]interface{}{
+			"name":     "Potion",
+			"quantity": float64(10), // Increased from 5
+		}
+		potionJSON, err := json.Marshal(updatedPotion)
+		require.NoError(t, err)
+
+		draftReq := core.CreateDraftCharacterUpdateRequest{
+			ActionResultID: result.ID,
+			CharacterID:    character.ID,
+			ModuleType:     "inventory",
+			FieldName:      "Potion", // Key field for items
+			FieldValue:     string(potionJSON),
+			FieldType:      "json",
+			Operation:      "upsert",
+		}
+		_, err = actionService.CreateDraftCharacterUpdate(context.Background(), draftReq)
+		require.NoError(t, err)
+
+		// Publish the draft
+		err = actionService.PublishActionResult(context.Background(), result.ID, int32(gm.ID))
+		require.NoError(t, err)
+
+		// Verify: ALL items still have their IDs
+		charData, err := characterService.GetCharacterData(context.Background(), character.ID)
+		require.NoError(t, err)
+
+		var items []map[string]interface{}
+		for _, data := range charData {
+			if data.ModuleType == "inventory" && data.FieldName == "items" {
+				err := json.Unmarshal([]byte(data.FieldValue.String), &items)
+				require.NoError(t, err)
+				break
+			}
+		}
+
+		require.Len(t, items, 3, "All 3 items should still exist")
+
+		// CRITICAL: All items must have ID field
+		for i, item := range items {
+			id, hasID := item["id"]
+			assert.True(t, hasID, fmt.Sprintf("Item %d (%s) must have 'id' field", i, item["name"]))
+			assert.NotEmpty(t, id, fmt.Sprintf("Item %d (%s) 'id' must not be empty", i, item["name"]))
+
+			// Verify the original IDs are preserved (not regenerated)
+			itemName := item["name"].(string)
+			switch itemName {
+			case "Sword":
+				assert.Equal(t, "item-1", id, "Sword ID should be preserved")
+				assert.Equal(t, float64(1), item["quantity"], "Sword quantity should be unchanged")
+			case "Shield":
+				assert.Equal(t, "item-2", id, "Shield ID should be preserved")
+				assert.Equal(t, float64(1), item["quantity"], "Shield quantity should be unchanged")
+			case "Potion":
+				assert.Equal(t, "item-3", id, "Potion ID should be preserved")
+				assert.Equal(t, float64(10), item["quantity"], "Potion quantity should be updated")
+			}
+		}
+	})
+}

@@ -1,10 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { CharacterAbility, CharacterSkill } from '../types/characters';
 import { AbilityCard } from './AbilityCard';
 import { SkillCard } from './SkillCard';
 import { AddAbilityModal } from './AddAbilityModal';
 import { AddSkillModal } from './AddSkillModal';
 import { Button } from './ui';
+
+// Defensive helper to ensure all items have ID fields
+// This protects against data corruption from draft merge bugs
+const ensureIds = <T extends { id?: string }>(
+  items: T[],
+  itemType: string
+): (T & { id: string })[] => {
+  return items.map(item => {
+    if (!item.id) {
+      console.warn(`${itemType} missing id field (data corruption), generating:`, item);
+      const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      return { ...item, id: generateId() };
+    }
+    return item as T & { id: string };
+  });
+};
 
 interface AbilitiesManagerProps {
   abilities: CharacterAbility[];
@@ -21,6 +37,10 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
   onAbilitiesChange,
   onSkillsChange
 }) => {
+  // Defensive: Ensure all abilities and skills have IDs (protects against backend data corruption)
+  const validatedAbilities = useMemo(() => ensureIds(abilities, 'Ability'), [abilities]);
+  const validatedSkills = useMemo(() => ensureIds(skills, 'Skill'), [skills]);
+
   const [activeTab, setActiveTab] = useState<'abilities' | 'skills'>('abilities');
   const [showAddAbility, setShowAddAbility] = useState(false);
   const [showAddSkill, setShowAddSkill] = useState(false);
@@ -32,7 +52,7 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
       id: generateId(),
       ...abilityData
     };
-    onAbilitiesChange([...abilities, newAbility]);
+    onAbilitiesChange([...validatedAbilities, newAbility]);
     setShowAddAbility(false);
   };
 
@@ -41,24 +61,24 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
       id: generateId(),
       ...skillData
     };
-    onSkillsChange([...skills, newSkill]);
+    onSkillsChange([...validatedSkills, newSkill]);
     setShowAddSkill(false);
   };
 
   const removeAbility = (id: string) => {
-    onAbilitiesChange(abilities.filter(a => a.id !== id));
+    onAbilitiesChange(validatedAbilities.filter(a => a.id !== id));
   };
 
   const removeSkill = (id: string) => {
-    onSkillsChange(skills.filter(s => s.id !== id));
+    onSkillsChange(validatedSkills.filter(s => s.id !== id));
   };
 
   const updateAbility = (id: string, updates: Partial<CharacterAbility>) => {
-    onAbilitiesChange(abilities.map(a => a.id === id ? { ...a, ...updates } : a));
+    onAbilitiesChange(validatedAbilities.map(a => a.id === id ? { ...a, ...updates } : a));
   };
 
   const updateSkill = (id: string, updates: Partial<CharacterSkill>) => {
-    onSkillsChange(skills.map(s => s.id === id ? { ...s, ...updates } : s));
+    onSkillsChange(validatedSkills.map(s => s.id === id ? { ...s, ...updates } : s));
   };
 
   return (
@@ -74,7 +94,7 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
               : 'border-transparent text-content-secondary hover:text-content-primary'
           }`}
         >
-          Abilities ({abilities.length})
+          Abilities ({validatedAbilities.length})
         </Button>
         <Button
           variant="ghost"
@@ -85,7 +105,7 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
               : 'border-transparent text-content-secondary hover:text-content-primary'
           }`}
         >
-          Skills ({skills.length})
+          Skills ({validatedSkills.length})
         </Button>
       </div>
 
@@ -105,14 +125,14 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
             )}
           </div>
 
-          {abilities.length === 0 ? (
+          {validatedAbilities.length === 0 ? (
             <div className="text-center py-8 text-content-secondary">
               <p>No abilities yet.</p>
               {canEdit && <p className="text-sm mt-1">Click "Add Ability" to get started.</p>}
             </div>
           ) : (
             <div className="space-y-3">
-              {abilities.map((ability) => (
+              {validatedAbilities.map((ability) => (
                 <AbilityCard
                   key={ability.id}
                   ability={ability}
@@ -149,14 +169,14 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
             )}
           </div>
 
-          {skills.length === 0 ? (
+          {validatedSkills.length === 0 ? (
             <div className="text-center py-8 text-content-secondary">
               <p>No skills yet.</p>
               {canEdit && <p className="text-sm mt-1">Click "Add Skill" to get started.</p>}
             </div>
           ) : (
             <div className="space-y-3">
-              {skills.map((skill) => (
+              {validatedSkills.map((skill) => (
                 <SkillCard
                   key={skill.id}
                   skill={skill}

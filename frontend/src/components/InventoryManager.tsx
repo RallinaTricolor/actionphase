@@ -1,10 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { InventoryItem, CurrencyEntry } from '../types/characters';
 import { ItemCard } from './ItemCard';
 import { CurrencyCard } from './CurrencyCard';
 import { AddItemModal } from './AddItemModal';
 import { AddCurrencyModal } from './AddCurrencyModal';
 import { Button } from './ui';
+
+// Defensive helper to ensure all items have ID fields
+// This protects against data corruption from draft merge bugs
+const ensureIds = <T extends { id?: string }>(
+  items: T[],
+  itemType: string
+): (T & { id: string })[] => {
+  return items.map(item => {
+    if (!item.id) {
+      console.warn(`${itemType} missing id field (data corruption), generating:`, item);
+      const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      return { ...item, id: generateId() };
+    }
+    return item as T & { id: string };
+  });
+};
 
 interface InventoryManagerProps {
   items: InventoryItem[];
@@ -21,6 +37,10 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
   onItemsChange,
   onCurrencyChange
 }) => {
+  // Defensive: Ensure all items and currency have IDs (protects against backend data corruption)
+  const validatedItems = useMemo(() => ensureIds(items, 'Item'), [items]);
+  const validatedCurrency = useMemo(() => ensureIds(currency, 'Currency'), [currency]);
+
   const [activeTab, setActiveTab] = useState<'items' | 'currency'>('items');
   const [showAddItem, setShowAddItem] = useState(false);
   const [showAddCurrency, setShowAddCurrency] = useState(false);
@@ -32,7 +52,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
       id: generateId(),
       ...itemData
     };
-    onItemsChange([...items, newItem]);
+    onItemsChange([...validatedItems, newItem]);
     setShowAddItem(false);
   };
 
@@ -41,32 +61,32 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
       id: generateId(),
       ...currencyData
     };
-    onCurrencyChange([...currency, newCurrency]);
+    onCurrencyChange([...validatedCurrency, newCurrency]);
     setShowAddCurrency(false);
   };
 
   const removeItem = (id: string) => {
-    onItemsChange(items.filter(i => i.id !== id));
+    onItemsChange(validatedItems.filter(i => i.id !== id));
   };
 
   const removeCurrency = (id: string) => {
-    onCurrencyChange(currency.filter(c => c.id !== id));
+    onCurrencyChange(validatedCurrency.filter(c => c.id !== id));
   };
 
   const updateItem = (id: string, updates: Partial<InventoryItem>) => {
-    onItemsChange(items.map(i => i.id === id ? { ...i, ...updates } : i));
+    onItemsChange(validatedItems.map(i => i.id === id ? { ...i, ...updates } : i));
   };
 
   const updateCurrency = (id: string, updates: Partial<CurrencyEntry>) => {
-    onCurrencyChange(currency.map(c => c.id === id ? { ...c, ...updates } : c));
+    onCurrencyChange(validatedCurrency.map(c => c.id === id ? { ...c, ...updates } : c));
   };
 
   const getTotalWeight = () => {
-    return items.reduce((total, item) => total + ((item.weight || 0) * item.quantity), 0);
+    return validatedItems.reduce((total, item) => total + ((item.weight || 0) * item.quantity), 0);
   };
 
   const getTotalValue = () => {
-    return items.reduce((total, item) => total + ((item.value || 0) * item.quantity), 0);
+    return validatedItems.reduce((total, item) => total + ((item.value || 0) * item.quantity), 0);
   };
 
   return (
@@ -82,7 +102,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
               : 'border-transparent text-content-secondary hover:text-content-primary'
           }`}
         >
-          Items ({items.length})
+          Items ({validatedItems.length})
         </Button>
         <Button
           variant="ghost"
@@ -93,7 +113,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
               : 'border-transparent text-content-secondary hover:text-content-primary'
           }`}
         >
-          Currency ({currency.length})
+          Currency ({validatedCurrency.length})
         </Button>
       </div>
 
@@ -103,7 +123,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="text-lg font-medium text-content-primary">Items</h3>
-              {items.length > 0 && (
+              {validatedItems.length > 0 && (
                 <div className="text-sm text-content-tertiary mt-1">
                   Total Weight: {getTotalWeight().toFixed(1)} • Total Value: {getTotalValue()}
                 </div>
@@ -120,14 +140,14 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
             )}
           </div>
 
-          {items.length === 0 ? (
+          {validatedItems.length === 0 ? (
             <div className="text-center py-8 text-content-secondary">
               <p>No items yet.</p>
               {canEdit && <p className="text-sm mt-1">Click "Add Item" to get started.</p>}
             </div>
           ) : (
             <div className="space-y-3">
-              {items.map((item) => (
+              {validatedItems.map((item) => (
                 <ItemCard
                   key={item.id}
                   item={item}
@@ -164,14 +184,14 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
             )}
           </div>
 
-          {currency.length === 0 ? (
+          {validatedCurrency.length === 0 ? (
             <div className="text-center py-8 text-content-secondary">
               <p>No currency tracked yet.</p>
               {canEdit && <p className="text-sm mt-1">Click "Add Currency" to get started.</p>}
             </div>
           ) : (
             <div className="space-y-3">
-              {currency.map((curr) => (
+              {validatedCurrency.map((curr) => (
                 <CurrencyCard
                   key={curr.id}
                   currency={curr}
