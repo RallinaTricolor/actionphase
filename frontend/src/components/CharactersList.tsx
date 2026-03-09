@@ -335,6 +335,7 @@ export function CharactersList({
               onClose={() => setSelectedCharacterId(null)}
               isAnonymous={isAnonymous}
               userRole={userRole}
+              gameState={gameState}
             />
           </Modal>
         );
