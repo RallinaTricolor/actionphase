@@ -67,9 +67,6 @@ describe('NewConversationModal', () => {
 
   const setupDefaultHandlers = () => {
     server.use(
-      http.get('/api/v1/games/:gameId/characters', () => {
-        return HttpResponse.json(allCharacters)
-      }),
       http.post('/api/v1/games/:gameId/conversations', async ({ request }) => {
         const body = await request.json() as { title?: string; character_ids: number[] }
         return HttpResponse.json({
@@ -98,6 +95,7 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -116,6 +114,7 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -137,6 +136,7 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -155,6 +155,7 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -169,19 +170,23 @@ describe('NewConversationModal', () => {
 
     it('auto-selects and displays single character when user has only one', () => {
       const singleCharacter = [userCharacters[0]]
-      renderWithProviders(
+      const { container } = renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
           characters={singleCharacter}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
 
-      expect(screen.getByText('Alice')).toBeInTheDocument()
-      expect(screen.getByText('player character')).toBeInTheDocument()
-      expect(screen.getByText('Played by testuser')).toBeInTheDocument()
+      // The auto-selected character display uses bg-interactive-primary-subtle
+      const selectedCharDiv = container.querySelector('.bg-interactive-primary-subtle')
+      expect(selectedCharDiv).toBeInTheDocument()
+      expect(within(selectedCharDiv!).getByText('Alice')).toBeInTheDocument()
+      expect(within(selectedCharDiv!).getByText('player character')).toBeInTheDocument()
+      expect(within(selectedCharDiv!).getByText('Played by testuser')).toBeInTheDocument()
       // No select dropdown should be present
       expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
     })
@@ -192,6 +197,7 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={singleCharacter}
+          allCharacters={allCharacters}
           isAnonymous={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -206,6 +212,7 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={[]}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -215,11 +222,12 @@ describe('NewConversationModal', () => {
       expect(screen.getByText('You need at least one character to create conversations')).toBeInTheDocument()
     })
 
-    it('renders participants section with loading state', () => {
+    it('renders participants section', () => {
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -227,65 +235,52 @@ describe('NewConversationModal', () => {
       )
 
       expect(screen.getByText(/Participants \(select at least 1\)/i)).toBeInTheDocument()
-      expect(screen.getByText('Loading characters...')).toBeInTheDocument()
     })
 
-    it('loads and displays available participants', async () => {
+    it('displays available participants from allCharacters prop', () => {
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
 
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
-
       // Should show other characters (Charlie and NPC)
       expect(screen.getByText('Charlie')).toBeInTheDocument()
       expect(screen.getByText('The Mysterious NPC')).toBeInTheDocument()
 
-      // Should ALSO show user's own characters in participant list
-      // (component allows selecting your own other characters as participants)
+      // Alice and Bob SHOULD be in the participants list (they can be selected as participants)
       const participantsList = screen.getByText('Charlie').closest('div[class*="space-y-2"]')
       expect(participantsList).toBeInTheDocument()
 
-      // Alice and Bob SHOULD be in the participants list (they can be selected as participants)
       const aliceInParticipants = within(participantsList!).queryByText('Alice')
       const bobInParticipants = within(participantsList!).queryByText('Bob')
       expect(aliceInParticipants).toBeInTheDocument()
       expect(bobInParticipants).toBeInTheDocument()
     })
 
-    it('shows message when no other characters available', async () => {
+    it('shows message when no other characters available', () => {
       // Use only ONE character so it gets auto-selected, leaving no other participants available
       const singleCharacter = [userCharacters[0]] // Just Alice
-
-      server.use(
-        http.get('/api/v1/games/:gameId/characters', () => {
-          return HttpResponse.json(singleCharacter) // Only Alice in the game
-        })
-      )
 
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
-          characters={singleCharacter} // Only Alice is controllable
+          characters={singleCharacter}
+          allCharacters={singleCharacter} // Only Alice in the game
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
 
-      await waitFor(() => {
-        // Alice gets auto-selected as "your character"
-        // No other characters exist, so "No other characters available" should show
-        expect(screen.getByText('No other characters available')).toBeInTheDocument()
-      })
+      // Alice gets auto-selected as "your character"
+      // No other characters exist, so "No other characters available" should show
+      expect(screen.getByText('No other characters available')).toBeInTheDocument()
     })
   })
 
@@ -296,6 +291,7 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -314,6 +310,7 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -332,15 +329,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       const charlieCheckbox = screen.getByRole('checkbox', { name: /Charlie/i })
       const npcCheckbox = screen.getByRole('checkbox', { name: /The Mysterious NPC/i })
@@ -367,15 +361,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Initially no participants selected
       expect(screen.queryByText(/participant.* selected/i)).not.toBeInTheDocument()
@@ -399,15 +390,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Select character
       const select = screen.getByRole('combobox')
@@ -430,15 +418,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Enter title
       const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
@@ -461,15 +446,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Enter title
       const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
@@ -492,15 +474,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Enter only whitespace as title
       const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
@@ -527,15 +506,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Fill in all required fields
       const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
@@ -580,15 +556,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Fill in all required fields
       const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
@@ -635,15 +608,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Fill in all required fields
       const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
@@ -674,9 +644,6 @@ describe('NewConversationModal', () => {
       const user = userEvent.setup()
 
       server.use(
-        http.get('/api/v1/games/:gameId/characters', () => {
-          return HttpResponse.json(allCharacters)
-        }),
         http.post('/api/v1/games/:gameId/conversations', () => {
           return HttpResponse.json(
             { error: 'Failed to create conversation' },
@@ -689,15 +656,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Fill in all required fields
       const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
@@ -722,31 +686,6 @@ describe('NewConversationModal', () => {
       expect(mockOnConversationCreated).not.toHaveBeenCalled()
       expect(mockOnClose).not.toHaveBeenCalled()
     })
-
-    it('handles error when loading characters fails', async () => {
-      server.use(
-        http.get('/api/v1/games/:gameId/characters', () => {
-          return HttpResponse.json(
-            { error: 'Failed to load characters' },
-            { status: 500 }
-          )
-        })
-      )
-
-      renderWithProviders(
-        <NewConversationModal
-          gameId={mockGameId}
-          characters={userCharacters}
-          isAnonymous={false}
-          onClose={mockOnClose}
-          onConversationCreated={mockOnConversationCreated}
-        />
-      )
-
-      await waitFor(() => {
-        expect(screen.getByText('Failed to load characters')).toBeInTheDocument()
-      })
-    })
   })
 
   describe('Close Behavior', () => {
@@ -756,6 +695,7 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -776,6 +716,7 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
@@ -813,15 +754,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Fill in all required fields
       const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
@@ -869,15 +807,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Fill in all required fields
       const titleInput = screen.getByPlaceholderText('e.g., Planning the heist') as HTMLInputElement
@@ -905,20 +840,17 @@ describe('NewConversationModal', () => {
       })
     })
 
-    it('disables create button when form is incomplete', async () => {
+    it('disables create button when form is incomplete', () => {
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       const createButton = screen.getByRole('button', { name: 'Create Conversation' })
 
@@ -932,15 +864,12 @@ describe('NewConversationModal', () => {
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       const createButton = screen.getByRole('button', { name: 'Create Conversation' })
       expect(createButton).toBeDisabled()
@@ -959,20 +888,17 @@ describe('NewConversationModal', () => {
       expect(createButton).toBeEnabled()
     })
 
-    it('disables create button when user has no characters', async () => {
+    it('disables create button when user has no characters', () => {
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
           characters={[]}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       const createButton = screen.getByRole('button', { name: 'Create Conversation' })
       expect(createButton).toBeDisabled()
@@ -980,74 +906,62 @@ describe('NewConversationModal', () => {
   })
 
   describe('Character Filtering', () => {
-    it('filters out user-controlled characters from participant list', async () => {
+    it('filters out user-controlled characters from participant list when selected as sender', async () => {
+      const user = userEvent.setup()
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
 
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
+      // Select Alice as "your character"
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, '1') // Select Alice (id: 1)
 
-      // User's characters should appear in "Your Character" section
-      expect(screen.getByText('Select your character...')).toBeInTheDocument()
-
-      // But not in participant checkboxes section
-      // The checkboxes are rendered with character info in adjacent divs
+      // Alice should not appear in participant checkboxes
       const checkboxes = screen.getAllByRole('checkbox')
-
-      // Verify that user's character names (Alice, Bob) don't appear
-      // as checkbox options by checking they're not adjacent to any checkbox
       checkboxes.forEach(checkbox => {
         const container = checkbox.parentElement
         if (container) {
           const containerText = container.textContent || ''
           expect(containerText).not.toContain('Alice')
-          expect(containerText).not.toContain('Bob')
         }
       })
     })
 
-    it('displays all character types in participant list (PCs and NPCs)', async () => {
+    it('displays all character types in participant list (PCs and NPCs)', () => {
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Should show both player character and NPC
       expect(screen.getByText('Charlie')).toBeInTheDocument() // player_character
-      expect(screen.getByText('The Mysterious NPC')).toBeInTheDocument() // npc_gm
+      expect(screen.getByText('The Mysterious NPC')).toBeInTheDocument() // npc
     })
 
-    it('shows character type for each participant', async () => {
+    it('shows character type for each participant', () => {
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
           characters={userCharacters}
+          allCharacters={allCharacters}
           isAnonymous={false}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
       )
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading characters...')).not.toBeInTheDocument()
-      })
 
       // Check that character types are displayed (with underscore replaced)
       const participantsList = screen.getAllByRole('checkbox')[0].closest('div[class*="space-y-2"]')

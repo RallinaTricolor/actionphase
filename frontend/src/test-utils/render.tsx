@@ -7,6 +7,7 @@ import { AdminModeProvider } from '../contexts/AdminModeContext'
 import { ToastProvider } from '../contexts/ToastContext'
 import { ReadingModeProvider } from '../contexts/ReadingModeContext'
 import { ConversationProvider } from '../contexts/ConversationContext'
+import { GameProvider } from '../contexts/GameContext'
 
 interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
   /**
@@ -25,6 +26,12 @@ interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
    * Additional routes for MemoryRouter
    */
   initialEntries?: MemoryRouterProps['initialEntries']
+
+  /**
+   * When provided, wraps children in a GameProvider with this gameId.
+   * Required for components that call useGameContext().
+   */
+  gameId?: number
 }
 
 /**
@@ -81,10 +88,15 @@ export function renderWithProviders(
     queryClient = createTestQueryClient(),
     initialRoute = '/',
     initialEntries = [initialRoute],
+    gameId,
     ...renderOptions
   } = options
 
   function Wrapper({ children }: { children: React.ReactNode }) {
+    const inner = gameId !== undefined ? (
+      <GameProvider gameId={gameId}>{children}</GameProvider>
+    ) : children
+
     return (
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={initialEntries}>
@@ -93,7 +105,7 @@ export function renderWithProviders(
               <ConversationProvider>
                 <AdminModeProvider>
                   <ReadingModeProvider>
-                    {children}
+                    {inner}
                   </ReadingModeProvider>
                 </AdminModeProvider>
               </ConversationProvider>

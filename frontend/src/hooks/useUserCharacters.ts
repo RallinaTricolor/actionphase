@@ -1,7 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '../lib/api';
+import { useGameContext } from '../contexts/GameContext';
 import type { Character } from '../types/characters';
-import { logger } from '@/services/LoggingService';
 
 export interface UserCharactersResult {
   // User's controllable characters
@@ -11,45 +9,27 @@ export interface UserCharactersResult {
   isLoading: boolean;
   error: Error | null;
 
-  // Refetch function
+  // Refetch function (no-op: data is managed by GameContext)
   refetch: () => Promise<void>;
 }
 
 /**
- * Hook to fetch the current user's controllable characters for a specific game.
- * This includes player characters they created and any NPCs assigned to them.
+ * Hook to get the current user's controllable characters for a specific game.
+ * Reads from GameContext — data is fetched and cached centrally.
  *
- * @param gameId - The ID of the game
+ * @param _gameId - Unused; kept for API compatibility
  * @returns UserCharactersResult with character list and loading state
  *
  * @example
  * const { characters, isLoading } = useUserCharacters(gameId);
  */
-export function useUserCharacters(gameId: number): UserCharactersResult {
-  const {
-    data: characters,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ['userControllableCharacters', gameId],
-    queryFn: async () => {
-      logger.debug('Fetching controllable characters', { gameId });
-      const response = await apiClient.characters.getUserControllableCharacters(gameId);
-      logger.debug('Characters loaded', { gameId, count: response.data?.length || 0 });
-      return response.data || [];
-    },
-    enabled: !!gameId,
-    staleTime: 30000, // Cache for 30 seconds
-    retry: 1,
-  });
+export function useUserCharacters(_gameId: number): UserCharactersResult {
+  const { userCharacters, isLoadingCharacters } = useGameContext();
 
   return {
-    characters: characters || [],
-    isLoading,
-    error: error as Error | null,
-    refetch: async () => {
-      await refetch();
-    },
+    characters: userCharacters,
+    isLoading: isLoadingCharacters,
+    error: null,
+    refetch: async () => {},
   };
 }

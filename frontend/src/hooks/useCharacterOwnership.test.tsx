@@ -1,57 +1,44 @@
-import React from 'react';
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCharacterOwnership } from './useCharacterOwnership';
-import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 
-// Mock the API client
-vi.mock('../lib/api');
+// Mock useUserCharacters since it now reads from GameContext
+vi.mock('./useUserCharacters');
 
-const mockApiClient = vi.mocked(apiClient);
+import { useUserCharacters } from './useUserCharacters';
+const mockUseUserCharacters = vi.mocked(useUserCharacters);
 
 describe('useCharacterOwnership', () => {
-  let queryClient: QueryClient;
-
   beforeEach(() => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
-    });
     vi.clearAllMocks();
   });
 
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-
-  it('should identify user-owned player characters', async () => {
+  it('should identify user-owned player characters', () => {
     const mockCharacters: Character[] = [
       { id: 1, name: 'My Character', character_type: 'player_character', user_id: 100, game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       { id: 2, name: 'NPC', character_type: 'npc', game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
     ];
 
-    mockApiClient.characters.getUserControllableCharacters = vi.fn().mockResolvedValue({
-      data: mockCharacters,
+    mockUseUserCharacters.mockReturnValue({
+      characters: mockCharacters,
+      isLoading: false,
+      error: null,
+      refetch: async () => {},
     });
 
-    const { result } = renderHook(() => useCharacterOwnership(1), { wrapper });
+    const { result } = renderHook(() => useCharacterOwnership(1));
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
+    expect(result.current.isLoading).toBe(false);
     // User owns character 1
     expect(result.current.isUserCharacter(1)).toBe(true);
-    // User does not own character 2
-    expect(result.current.isUserCharacter(2)).toBe(true); // NPC is also in controllable list
+    // NPC is also in controllable list
+    expect(result.current.isUserCharacter(2)).toBe(true);
     // User does not own character 3 (not in list)
     expect(result.current.isUserCharacter(3)).toBe(false);
   });
 
-  it('should handle assigned NPCs', async () => {
+  it('should handle assigned NPCs', () => {
     const mockCharacters: Character[] = [
       {
         id: 10,
@@ -65,19 +52,20 @@ describe('useCharacterOwnership', () => {
       },
     ];
 
-    mockApiClient.characters.getUserControllableCharacters = vi.fn().mockResolvedValue({
-      data: mockCharacters,
+    mockUseUserCharacters.mockReturnValue({
+      characters: mockCharacters,
+      isLoading: false,
+      error: null,
+      refetch: async () => {},
     });
 
-    const { result } = renderHook(() => useCharacterOwnership(1), { wrapper });
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const { result } = renderHook(() => useCharacterOwnership(1));
 
     // User owns the assigned NPC
     expect(result.current.isUserCharacter(10)).toBe(true);
   });
 
-  it('should work in anonymous mode (no user_id in response)', async () => {
+  it('should work in anonymous mode (no user_id in response)', () => {
     // In anonymous mode, the backend strips user_id from characters
     // But the controllable endpoint still works and returns your characters
     const mockCharacters: Character[] = [
@@ -93,46 +81,49 @@ describe('useCharacterOwnership', () => {
       },
     ];
 
-    mockApiClient.characters.getUserControllableCharacters = vi.fn().mockResolvedValue({
-      data: mockCharacters,
+    mockUseUserCharacters.mockReturnValue({
+      characters: mockCharacters,
+      isLoading: false,
+      error: null,
+      refetch: async () => {},
     });
 
-    const { result } = renderHook(() => useCharacterOwnership(1), { wrapper });
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const { result } = renderHook(() => useCharacterOwnership(1));
 
     // Even without user_id, the hook knows this is the user's character
     // because it came from the controllable endpoint
     expect(result.current.isUserCharacter(20)).toBe(true);
   });
 
-  it('should return empty set when no characters are controllable', async () => {
-    mockApiClient.characters.getUserControllableCharacters = vi.fn().mockResolvedValue({
-      data: [],
+  it('should return empty set when no characters are controllable', () => {
+    mockUseUserCharacters.mockReturnValue({
+      characters: [],
+      isLoading: false,
+      error: null,
+      refetch: async () => {},
     });
 
-    const { result } = renderHook(() => useCharacterOwnership(1), { wrapper });
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const { result } = renderHook(() => useCharacterOwnership(1));
 
     expect(result.current.userCharacterIds.size).toBe(0);
     expect(result.current.isUserCharacter(1)).toBe(false);
   });
 
-  it('should provide userCharacterIds as a Set', async () => {
+  it('should provide userCharacterIds as a Set', () => {
     const mockCharacters: Character[] = [
       { id: 1, name: 'Char 1', character_type: 'player_character', user_id: 100, game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       { id: 2, name: 'Char 2', character_type: 'player_character', user_id: 100, game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       { id: 3, name: 'Char 3', character_type: 'npc', assigned_user_id: 100, game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
     ];
 
-    mockApiClient.characters.getUserControllableCharacters = vi.fn().mockResolvedValue({
-      data: mockCharacters,
+    mockUseUserCharacters.mockReturnValue({
+      characters: mockCharacters,
+      isLoading: false,
+      error: null,
+      refetch: async () => {},
     });
 
-    const { result } = renderHook(() => useCharacterOwnership(1), { wrapper });
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const { result } = renderHook(() => useCharacterOwnership(1));
 
     expect(result.current.userCharacterIds).toBeInstanceOf(Set);
     expect(result.current.userCharacterIds.size).toBe(3);

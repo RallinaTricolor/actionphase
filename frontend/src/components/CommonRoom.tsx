@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useGameContext } from '../contexts/GameContext';
 import { Button, Alert, Spinner, Card } from './ui';
 import type { Message } from '../types/messages';
-import type { Character } from '../types/characters';
 import type { GamePhase } from '../types/phases';
 import { CreatePostForm } from './CreatePostForm';
 import { PostCard } from './PostCard';
@@ -36,14 +36,15 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
   const { currentUser } = useAuth();
   const currentUserId = currentUser?.id;
 
+  // Read character data from GameContext — single source of truth
+  const { userCharacters, allGameCharacters } = useGameContext();
+
   // URL search params for deep linking to comments and sub-tab navigation
   const [searchParams, setSearchParams] = useSearchParams();
   const commentIdParam = searchParams.get('comment');
   const viewParam = searchParams.get('view') as 'posts' | 'newComments' | 'polls' | null;
 
   const [posts, setPosts] = useState<Message[]>([]);
-  const [controllableCharacters, setControllableCharacters] = useState<Character[]>([]);
-  const [allCharacters, setAllCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
@@ -195,16 +196,8 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       setLoading(true);
       setError(null);
 
-      // Load posts, user's controllable characters, and all game characters in parallel
-      const [postsResponse, controllableCharsResponse, allCharsResponse] = await Promise.all([
-        apiClient.messages.getGamePosts(gameId, { phase_id: phaseId, limit: 50, offset: 0 }),
-        apiClient.characters.getUserControllableCharacters(gameId),
-        apiClient.characters.getGameCharacters(gameId)
-      ]);
-
+      const postsResponse = await apiClient.messages.getGamePosts(gameId, { phase_id: phaseId, limit: 50, offset: 0 });
       setPosts(postsResponse.data);
-      setControllableCharacters(controllableCharsResponse.data);
-      setAllCharacters(allCharsResponse.data);
     } catch (err) {
       logger.error('Failed to load Common Room data', { error: err, gameId, phaseId });
       setError('Failed to load Common Room. Please try again.');
@@ -381,8 +374,8 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
           {isCurrentPhase && isGM && (
             <CreatePostForm
               gameId={gameId}
-              characters={controllableCharacters}
-              allCharacters={allCharacters}
+              characters={userCharacters}
+              allCharacters={allGameCharacters}
               onSubmit={handleCreatePost}
               isSubmitting={isCreatingPost}
               shouldStartCollapsed={posts.length > 0}
@@ -415,8 +408,8 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
                   key={post.id}
                   post={post}
                   gameId={gameId}
-                  characters={allCharacters}
-                  controllableCharacters={controllableCharacters}
+                  characters={allGameCharacters}
+                  controllableCharacters={userCharacters}
                   onCreateComment={handleCreateComment}
                   onPostUpdated={handlePostUpdated}
                   currentUserId={currentUserId}
@@ -443,8 +436,8 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
           gameId={gameId}
           postId={getRootPostId(threadModalComment)} // Calculate root post ID from comment
           comment={threadModalComment}
-          characters={allCharacters}
-          controllableCharacters={controllableCharacters}
+          characters={allGameCharacters}
+          controllableCharacters={userCharacters}
           onClose={() => {
             setThreadModalComment(null);
             setThreadModalContext(null);

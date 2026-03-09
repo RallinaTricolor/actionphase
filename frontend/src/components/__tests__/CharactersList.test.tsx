@@ -87,8 +87,8 @@ describe('CharactersList', () => {
       )
 
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={1} gameState="setup" isParticipant={true} />
-      )
+        <CharactersList gameId={123} userRole="player" currentUserId={1} gameState="setup" isParticipant={true} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByText('No characters created yet.')).toBeInTheDocument()
@@ -101,8 +101,8 @@ describe('CharactersList', () => {
   describe('Character rendering', () => {
     it('should render character list when data is loaded', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
@@ -114,8 +114,8 @@ describe('CharactersList', () => {
 
     it('should group characters by type (Player Characters, NPCs)', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByText('Player Characters')).toBeInTheDocument()
@@ -126,8 +126,8 @@ describe('CharactersList', () => {
 
     it('should display character status badges for pending characters', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('pending')[0]).toBeInTheDocument()
@@ -139,8 +139,8 @@ describe('CharactersList', () => {
 
     it('should show ownership badge for user characters', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="player" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Your Character').length).toBeGreaterThan(0)
@@ -151,8 +151,8 @@ describe('CharactersList', () => {
   describe('Role-based visibility (GM)', () => {
     it('GM should see all characters regardless of status', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
@@ -164,8 +164,8 @@ describe('CharactersList', () => {
 
     it('GM should see publish button for pending characters', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Publish')[0]).toBeInTheDocument()
@@ -180,8 +180,8 @@ describe('CharactersList', () => {
       )
 
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
@@ -194,8 +194,8 @@ describe('CharactersList', () => {
   describe('Role-based visibility (Player)', () => {
     it('Player should see approved characters and their own characters', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="player" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
@@ -210,8 +210,8 @@ describe('CharactersList', () => {
 
     it('Player should NOT see publish button', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="player" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
@@ -231,8 +231,8 @@ describe('CharactersList', () => {
       )
 
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={2} gameState="character_creation" />
-      )
+        <CharactersList gameId={123} userRole="player" currentUserId={2} gameState="character_creation" />,
+      { gameId: 123 })
 
       await waitFor(() => {
         // Should see their own pending character (user_id=2, status='pending')
@@ -246,8 +246,8 @@ describe('CharactersList', () => {
     it('Player should NOT see their own pending character during in_progress', async () => {
       // During in_progress, pending characters are hidden even from their owners
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={2} gameState="in_progress" />
-      )
+        <CharactersList gameId={123} userRole="player" currentUserId={2} gameState="in_progress" />,
+      { gameId: 123 })
 
       await waitFor(() => {
         // Should see approved characters
@@ -262,8 +262,8 @@ describe('CharactersList', () => {
   describe('Create Character button', () => {
     it('should show create button for GM in setup state', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} gameState="setup" />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} gameState="setup" />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Create Character' })).toBeInTheDocument()
@@ -272,8 +272,8 @@ describe('CharactersList', () => {
 
     it('should show create button for player in character_creation state', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={1} gameState="character_creation" isParticipant={true} />
-      )
+        <CharactersList gameId={123} userRole="player" currentUserId={1} gameState="character_creation" isParticipant={true} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Create Character' })).toBeInTheDocument()
@@ -282,8 +282,8 @@ describe('CharactersList', () => {
 
     it('should NOT show create button for player in active state', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={1} gameState="active" />
-      )
+        <CharactersList gameId={123} userRole="player" currentUserId={1} gameState="active" />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByText('Characters')).toBeInTheDocument()
@@ -294,8 +294,8 @@ describe('CharactersList', () => {
 
     it('should NOT show create button in completed game', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} gameState="completed" />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} gameState="completed" />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByText('Characters')).toBeInTheDocument()
@@ -315,8 +315,8 @@ describe('CharactersList', () => {
           currentUserId={1}
           gameState="character_creation"
           isParticipant={false}
-        />
-      )
+        />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByText('Characters')).toBeInTheDocument()
@@ -335,8 +335,8 @@ describe('CharactersList', () => {
           currentUserId={1}
           gameState="setup"
           isParticipant={false}
-        />
-      )
+        />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByText('Characters')).toBeInTheDocument()
@@ -355,8 +355,8 @@ describe('CharactersList', () => {
           currentUserId={1}
           gameState="character_creation"
           isParticipant={true}
-        />
-      )
+        />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Create Character' })).toBeInTheDocument()
@@ -372,8 +372,8 @@ describe('CharactersList', () => {
           currentUserId={1}
           gameState="setup"
           isParticipant={true}
-        />
-      )
+        />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Create Character' })).toBeInTheDocument()
@@ -389,8 +389,8 @@ describe('CharactersList', () => {
           currentUserId={1}
           gameState="setup"
           isParticipant={false}
-        />
-      )
+        />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Create Character' })).toBeInTheDocument()
@@ -406,8 +406,8 @@ describe('CharactersList', () => {
           currentUserId={1}
           gameState="active"
           isParticipant={true}
-        />
-      )
+        />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getByText('Characters')).toBeInTheDocument()
@@ -420,8 +420,8 @@ describe('CharactersList', () => {
   describe('View/Edit Sheet permissions', () => {
     it('should show "Edit Sheet" button for user\'s own character', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="player" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByRole('button', { name: 'Edit Sheet' }).length).toBeGreaterThan(0)
@@ -437,8 +437,8 @@ describe('CharactersList', () => {
       )
 
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={999} />
-      )
+        <CharactersList gameId={123} userRole="player" currentUserId={999} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByRole('button', { name: 'View Sheet' }).length).toBeGreaterThan(0)
@@ -447,8 +447,8 @@ describe('CharactersList', () => {
 
     it('GM should be able to edit all character sheets', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={999} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={999} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByRole('button', { name: 'Edit Sheet' }).length).toBeGreaterThan(0)
@@ -464,17 +464,13 @@ describe('CharactersList', () => {
           userRole="player"
           currentUserId={1}
           isAnonymous={true}
-        />
-      )
+        />,
+      { gameId: 123 })
 
+      // Wait for both characters and ownership to load
       await waitFor(() => {
-        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
+        expect(screen.getAllByText('Your Character').length).toBeGreaterThan(0)
       })
-
-      // Players should see "Your Character" badge for their own characters even in anonymous mode
-      // User 1 owns Hero Character and Villain NPC, so should see 2 badges
-      const yourCharacterBadges = screen.getAllByText('Your Character')
-      expect(yourCharacterBadges.length).toBeGreaterThan(0)
     })
 
     it('should hide character type in anonymous mode', async () => {
@@ -484,8 +480,8 @@ describe('CharactersList', () => {
           userRole="player"
           currentUserId={1}
           isAnonymous={true}
-        />
-      )
+        />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
@@ -501,8 +497,8 @@ describe('CharactersList', () => {
           userRole="player"
           currentUserId={1}
           isAnonymous={true}
-        />
-      )
+        />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
@@ -519,8 +515,8 @@ describe('CharactersList', () => {
           userRole="gm"
           currentUserId={1}
           isAnonymous={true}
-        />
-      )
+        />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Your Character').length).toBeGreaterThan(0)
@@ -542,8 +538,8 @@ describe('CharactersList', () => {
       )
 
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Publish')[0]).toBeInTheDocument()
@@ -568,8 +564,8 @@ describe('CharactersList', () => {
       )
 
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
@@ -598,8 +594,8 @@ describe('CharactersList', () => {
   describe('Status badges', () => {
     it('should NOT show badge for approved characters', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
@@ -611,8 +607,8 @@ describe('CharactersList', () => {
 
     it('should show yellow badge for pending characters', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         const pendingBadges = screen.getAllByText('pending')
@@ -627,8 +623,8 @@ describe('CharactersList', () => {
   describe('Delete character functionality', () => {
     it('GM should see delete button for all characters', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         const deleteButtons = screen.getAllByTestId('delete-character-button')
@@ -640,8 +636,8 @@ describe('CharactersList', () => {
 
     it('Player should NOT see delete button', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="player" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="player" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
@@ -652,8 +648,8 @@ describe('CharactersList', () => {
 
     it('clicking delete button opens confirmation modal', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
@@ -674,8 +670,8 @@ describe('CharactersList', () => {
 
     it('confirmation modal displays character name', async () => {
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
@@ -704,8 +700,8 @@ describe('CharactersList', () => {
       )
 
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
@@ -735,8 +731,8 @@ describe('CharactersList', () => {
       )
 
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
@@ -769,8 +765,8 @@ describe('CharactersList', () => {
       )
 
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)
@@ -806,8 +802,8 @@ describe('CharactersList', () => {
       )
 
       renderWithProviders(
-        <CharactersList gameId={123} userRole="gm" currentUserId={1} />
-      )
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
 
       await waitFor(() => {
         // Dual-DOM renders buttons in both mobile and desktop views (3 characters × 2 = 6)

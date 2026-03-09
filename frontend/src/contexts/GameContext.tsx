@@ -19,6 +19,7 @@ interface GameContextValue {
   isLoadingGame: boolean;
   isLoadingParticipants: boolean;
   isLoadingCharacters: boolean;
+  isLoadingAllCharacters: boolean;
 
   // Current user's role and permissions
   userRole: UserGameRole;
@@ -30,14 +31,18 @@ interface GameContextValue {
   // User's characters
   userCharacters: Character[];
 
+  // All game characters (all participants' characters, filtered by backend permissions)
+  allGameCharacters: Character[];
+
   // Current phase ID
   currentPhaseId: number | null;
 
   // Character ownership checker
   isUserCharacter: (characterId: number) => boolean;
 
-  // Refresh function
+  // Refresh functions
   refetchGameData: () => Promise<void>;
+  refetchAllGameCharacters: () => Promise<void>;
 }
 
 const GameContext = createContext<GameContextValue | undefined>(undefined);
@@ -103,6 +108,23 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     staleTime: 30000,
   });
 
+  // Fetch all game characters (backend applies permission filtering)
+  const {
+    data: allGameCharacters,
+    isLoading: isLoadingAllCharacters,
+    refetch: refetchAllCharacters,
+  } = useQuery({
+    queryKey: ['gameCharacters', gameId],
+    queryFn: async () => {
+      logger.debug('Fetching all game characters', { gameId });
+      const response = await apiClient.characters.getGameCharacters(gameId);
+      logger.debug('All game characters loaded', { gameId, characterCount: response.data?.length || 0 });
+      return response.data || [];
+    },
+    enabled: !!gameId,
+    staleTime: 30000,
+  });
+
   // Compute user's role
   const userRole: UserGameRole = useMemo(() => {
     if (!currentUserId || !game) return 'none';
@@ -161,7 +183,12 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
       refetchGame(),
       refetchParticipants(),
       refetchCharacters(),
+      refetchAllCharacters(),
     ]);
+  };
+
+  const refetchAllGameCharacters = async () => {
+    await refetchAllCharacters();
   };
 
   const value: GameContextValue = {
@@ -171,15 +198,18 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     isLoadingGame,
     isLoadingParticipants,
     isLoadingCharacters,
+    isLoadingAllCharacters,
     userRole,
     isGM,
     isParticipant,
     isInGame,
     canEditGame,
     userCharacters: userCharacters || [],
+    allGameCharacters: allGameCharacters || [],
     currentPhaseId: null, // TODO: Get current phase ID from phases endpoint
     isUserCharacter,
     refetchGameData,
+    refetchAllGameCharacters,
   };
 
   logger.debug('GameContext state updated', {
@@ -191,6 +221,7 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
     isGM,
     isParticipant,
     userCharacterCount: userCharacters?.length || 0,
+    allGameCharacterCount: allGameCharacters?.length || 0,
     currentUserId,
   });
 

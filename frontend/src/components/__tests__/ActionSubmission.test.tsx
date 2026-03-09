@@ -151,7 +151,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockCommonRoomPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/no action phase active/i)).toBeInTheDocument();
@@ -163,7 +163,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockCommonRoomPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(
@@ -177,7 +177,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockCommonRoomPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/no action phase active/i)).toBeInTheDocument();
@@ -193,7 +193,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Action Submission')).toBeInTheDocument();
@@ -205,7 +205,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByTestId('countdown-timer')).toBeInTheDocument();
@@ -218,7 +218,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={phaseWithoutDeadline} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Action Submission')).toBeInTheDocument();
@@ -236,7 +236,7 @@ describe('ActionSubmission', () => {
           currentPhase={mockActionPhase}
           className="custom-class"
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Action Submission')).toBeInTheDocument();
@@ -252,7 +252,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/acting as:/i)).toBeInTheDocument();
@@ -265,7 +265,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/acting as character/i)).toBeInTheDocument();
@@ -281,7 +281,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/acting as character/i)).toBeInTheDocument();
@@ -298,7 +298,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/acting as character/i)).toBeInTheDocument();
@@ -317,7 +317,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/acting as character/i)).toBeInTheDocument();
@@ -337,7 +337,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByRole('textbox')).toBeInTheDocument();
@@ -349,7 +349,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         // Check that the textarea has the required attribute
@@ -363,7 +363,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(
@@ -378,7 +378,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const textarea = await screen.findByRole('textbox');
       await user.type(textarea, 'I open the mysterious door');
@@ -391,7 +391,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(
@@ -405,7 +405,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         const submitButton = screen.getByRole('button', {
@@ -421,7 +421,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const textarea = await screen.findByRole('textbox');
       await user.type(textarea, 'Test action');
@@ -440,7 +440,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const textarea = await screen.findByRole('textbox');
       await user.type(textarea, 'I investigate the room');
@@ -469,7 +469,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const textarea = await screen.findByRole('textbox');
       await user.type(textarea, '  Test action  ');
@@ -498,7 +498,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const select = await screen.findByRole('combobox');
       await user.selectOptions(select, '2');
@@ -522,7 +522,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const textarea = await screen.findByRole('textbox');
       await user.type(textarea, 'Test action');
@@ -550,7 +550,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const textarea = await screen.findByRole('textbox');
       await user.type(textarea, 'Test action');
@@ -578,7 +578,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const textarea = await screen.findByRole('textbox');
       await user.type(textarea, 'Test action');
@@ -600,7 +600,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Your Current Action')).toBeInTheDocument();
@@ -615,7 +615,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/acting as:/i)).toBeInTheDocument();
@@ -628,7 +628,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/last updated:/i)).toBeInTheDocument();
@@ -640,7 +640,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(
@@ -655,7 +655,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const editButton = await screen.findByRole('button', { name: /^edit$/i });
       await user.click(editButton);
@@ -673,7 +673,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const editButton = await screen.findByRole('button', { name: /^edit$/i });
       await user.click(editButton);
@@ -688,7 +688,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const editButton = await screen.findByRole('button', { name: /^edit$/i });
       await user.click(editButton);
@@ -706,7 +706,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const editButton = await screen.findByRole('button', { name: /^edit$/i });
       await user.click(editButton);
@@ -724,7 +724,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const editButton = await screen.findByRole('button', { name: /^edit$/i });
       await user.click(editButton);
@@ -750,7 +750,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const editButton = await screen.findByRole('button', { name: /^edit$/i });
       await user.click(editButton);
@@ -768,7 +768,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const editButton = await screen.findByRole('button', { name: /^edit$/i });
       await user.click(editButton);
@@ -796,7 +796,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={inactivePhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(
@@ -814,7 +814,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={expiredPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(
@@ -829,7 +829,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={inactivePhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Your Current Action')).toBeInTheDocument();
@@ -847,7 +847,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={expiredPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Your Current Action')).toBeInTheDocument();
@@ -866,7 +866,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(
@@ -883,7 +883,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/your previous actions \(1\)/i)).toBeInTheDocument();
@@ -899,7 +899,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const toggleButton = await screen.findByText(/your previous actions/i);
       await user.click(toggleButton);
@@ -920,7 +920,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const toggleButton = await screen.findByText(/your previous actions/i);
       await user.click(toggleButton);
@@ -949,7 +949,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const toggleButton = await screen.findByText(/your previous actions/i);
       await user.click(toggleButton);
@@ -968,7 +968,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const toggleButton = await screen.findByText(/your previous actions/i);
       await user.click(toggleButton);
@@ -983,7 +983,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Your Current Action')).toBeInTheDocument();
@@ -1011,7 +1011,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const textarea = await screen.findByRole('textbox');
       await user.type(textarea, 'Test action');
@@ -1040,7 +1040,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       const textarea = await screen.findByRole('textbox');
       await user.type(textarea, 'Test action');
@@ -1067,7 +1067,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       // Select character
       const select = await screen.findByRole('combobox');
@@ -1095,7 +1095,7 @@ describe('ActionSubmission', () => {
 
       renderWithProviders(
         <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      );
+      , { gameId: 1 });
 
       // Click edit
       const editButton = await screen.findByRole('button', { name: /^edit$/i });

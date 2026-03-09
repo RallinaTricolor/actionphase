@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
 import { Button, Input, Select, Checkbox, Alert } from './ui';
@@ -8,14 +8,13 @@ import { logger } from '@/services/LoggingService';
 interface NewConversationModalProps {
   gameId: number;
   characters: Character[]; // User's controllable characters
+  allCharacters: Character[]; // All game characters (from GameContext)
   isAnonymous: boolean;
   onClose: () => void;
   onConversationCreated: (conversationId: number) => void;
 }
 
-export function NewConversationModal({ gameId, characters, isAnonymous, onClose, onConversationCreated }: NewConversationModalProps) {
-  const [allCharacters, setAllCharacters] = useState<Character[]>([]);
-  const [loadingCharacters, setLoadingCharacters] = useState(true);
+export function NewConversationModal({ gameId, characters, allCharacters, isAnonymous, onClose, onConversationCreated }: NewConversationModalProps) {
   const [title, setTitle] = useState('');
   const [yourCharacterId, setYourCharacterId] = useState<number | null>(null);
   const [selectedParticipants, setSelectedParticipants] = useState<Set<number>>(new Set());
@@ -29,23 +28,6 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
     allCharactersCount: allCharacters.length,
     yourCharacterId,
   });
-
-  const loadAllCharacters = useCallback(async () => {
-    try {
-      setLoadingCharacters(true);
-      const response = await apiClient.characters.getGameCharacters(gameId);
-      setAllCharacters(response.data);
-    } catch (_err) {
-      logger.error('Failed to load characters', { error: _err, gameId });
-      setError('Failed to load characters');
-    } finally {
-      setLoadingCharacters(false);
-    }
-  }, [gameId]);
-
-  useEffect(() => {
-    loadAllCharacters();
-  }, [loadAllCharacters]);
 
   useEffect(() => {
     // Auto-select if user only has one character
@@ -187,11 +169,7 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
             Participants (select at least 1)
           </label>
           <div className="space-y-2 max-h-60 overflow-y-auto border border-theme-default rounded-md p-2">
-            {loadingCharacters ? (
-              <p className="text-sm text-content-tertiary text-center py-4">
-                Loading characters...
-              </p>
-            ) : availableParticipants.length === 0 ? (
+            {availableParticipants.length === 0 ? (
               <p className="text-sm text-content-tertiary text-center py-4">
                 No other characters available
               </p>
@@ -244,7 +222,7 @@ export function NewConversationModal({ gameId, characters, isAnonymous, onClose,
           <Button
             variant="primary"
             onClick={handleCreate}
-            disabled={creating || !title.trim() || !yourCharacterId || selectedParticipants.size === 0 || loadingCharacters || characters.length === 0}
+            disabled={creating || !title.trim() || !yourCharacterId || selectedParticipants.size === 0 || characters.length === 0}
             className="flex-1"
           >
             {creating ? 'Creating...' : 'Create Conversation'}

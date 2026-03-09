@@ -88,7 +88,7 @@ describe('CommonRoom', () => {
 
   describe('Loading State', () => {
     it('shows loading spinner initially', () => {
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       // Check for loading spinner by class
       const spinner = document.querySelector('.animate-spin');
@@ -96,7 +96,7 @@ describe('CommonRoom', () => {
     });
 
     it('hides loading spinner after data loads', async () => {
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.queryByRole('status', { hidden: true })).not.toBeInTheDocument();
@@ -112,21 +112,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      renderWithProviders(<CommonRoom gameId={1} />);
-
-      await waitFor(() => {
-        expect(screen.getByText(/failed to load common room/i)).toBeInTheDocument();
-      });
-    });
-
-    it('displays error message when characters fail to load', async () => {
-      server.use(
-        http.get('/api/v1/games/:gameId/characters/controllable', () => {
-          return HttpResponse.error();
-        })
-      );
-
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/failed to load common room/i)).toBeInTheDocument();
@@ -140,7 +126,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
@@ -161,7 +147,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/failed to load common room/i)).toBeInTheDocument();
@@ -178,7 +164,7 @@ describe('CommonRoom', () => {
 
   describe('Header Display', () => {
     it('displays Common Room title', async () => {
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: /common room/i })).toBeInTheDocument();
@@ -186,7 +172,7 @@ describe('CommonRoom', () => {
     });
 
     it('displays phase title when provided', async () => {
-      renderWithProviders(<CommonRoom gameId={1} phaseTitle="Phase 1" />);
+      renderWithProviders(<CommonRoom gameId={1} phaseTitle="Phase 1" />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: /common room - phase 1/i })).toBeInTheDocument();
@@ -194,7 +180,7 @@ describe('CommonRoom', () => {
     });
 
     it('shows GM description when user is GM on current phase', async () => {
-      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={true} isGM={true} />);
+      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={true} isGM={true} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/create gm posts to share information/i)).toBeInTheDocument();
@@ -202,7 +188,7 @@ describe('CommonRoom', () => {
     });
 
     it('shows player description when user is player on current phase', async () => {
-      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={true} isGM={false} />);
+      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={true} isGM={false} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/view gm posts and join the discussion/i)).toBeInTheDocument();
@@ -210,7 +196,7 @@ describe('CommonRoom', () => {
     });
 
     it('shows historical description for past phases', async () => {
-      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={false} />);
+      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={false} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/historical discussions from this phase/i)).toBeInTheDocument();
@@ -226,7 +212,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/no posts yet/i)).toBeInTheDocument();
@@ -240,7 +226,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/be the first to start a conversation/i)).toBeInTheDocument();
@@ -254,7 +240,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         const svg = document.querySelector('svg');
@@ -265,7 +251,7 @@ describe('CommonRoom', () => {
 
   describe('Posts Display', () => {
     it('displays all posts', async () => {
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         const post1Elements = screen.getAllByText((content, element) => {
@@ -281,7 +267,7 @@ describe('CommonRoom', () => {
     });
 
     it('renders PostCard for each post', async () => {
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         // PostCards should be present (we can check for post content)
@@ -300,7 +286,7 @@ describe('CommonRoom', () => {
 
   describe('CreatePostForm Visibility', () => {
     it('shows CreatePostForm for GM on current phase', async () => {
-      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={true} isGM={true} />);
+      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={true} isGM={true} />, { gameId: 1 });
 
       await waitFor(() => {
         // CreatePostForm should render - we can check for a textarea or similar
@@ -310,7 +296,7 @@ describe('CommonRoom', () => {
     });
 
     it('hides CreatePostForm for players', async () => {
-      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={true} isGM={false} />);
+      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={true} isGM={false} />, { gameId: 1 });
 
       await waitFor(() => {
         // Content should load without CreatePostForm visible
@@ -319,7 +305,7 @@ describe('CommonRoom', () => {
     });
 
     it('hides CreatePostForm for past phases even for GM', async () => {
-      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={false} isGM={true} />);
+      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={false} isGM={true} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.queryByText(/failed to load/i)).not.toBeInTheDocument();
@@ -338,7 +324,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      renderWithProviders(<CommonRoom gameId={42} />);
+      renderWithProviders(<CommonRoom gameId={42} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(requestedGameId).toBe('42');
@@ -355,7 +341,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      renderWithProviders(<CommonRoom gameId={1} phaseId={5} />);
+      renderWithProviders(<CommonRoom gameId={1} phaseId={5} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(requestParams?.get('phase_id')).toBe('5');
@@ -372,27 +358,10 @@ describe('CommonRoom', () => {
         })
       );
 
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(requestParams?.get('limit')).toBe('50');
-      });
-    });
-
-    it('loads controllable characters for the user', async () => {
-      let requestedGameId: string | undefined;
-
-      server.use(
-        http.get('/api/v1/games/:gameId/characters/controllable', ({ params }) => {
-          requestedGameId = params.gameId as string;
-          return HttpResponse.json(mockCharacters);
-        })
-      );
-
-      renderWithProviders(<CommonRoom gameId={42} />);
-
-      await waitFor(() => {
-        expect(requestedGameId).toBe('42');
       });
     });
 
@@ -406,7 +375,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      const { rerender } = renderWithProviders(<CommonRoom gameId={1} />);
+      const { rerender } = renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(loadCount).toBe(1);
@@ -429,7 +398,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      const { rerender } = renderWithProviders(<CommonRoom gameId={1} phaseId={1} />);
+      const { rerender } = renderWithProviders(<CommonRoom gameId={1} phaseId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(loadCount).toBe(1);
@@ -458,7 +427,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={true} isGM={true} />);
+      renderWithProviders(<CommonRoom gameId={1} isCurrentPhase={true} isGM={true} />, { gameId: 1 });
 
       // Wait for initial load
       await waitFor(() => {
@@ -485,7 +454,7 @@ describe('CommonRoom', () => {
         })
       );
 
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         const postElements = screen.getAllByText((content, element) => {
@@ -501,7 +470,7 @@ describe('CommonRoom', () => {
 
   describe('Integration', () => {
     it('displays posts and characters together', async () => {
-      renderWithProviders(<CommonRoom gameId={1} />);
+      renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         // Posts should be displayed
@@ -523,7 +492,7 @@ describe('CommonRoom', () => {
           isCurrentPhase={true}
           isGM={true}
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         const headings = screen.getAllByText((content, element) => {
@@ -578,6 +547,7 @@ describe('CommonRoom', () => {
 
         // Render with comment parameter in URL
         renderWithProviders(<CommonRoom gameId={1} />, {
+          gameId: 1,
           initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
         });
 
@@ -623,6 +593,7 @@ describe('CommonRoom', () => {
         );
 
         renderWithProviders(<CommonRoom gameId={1} />, {
+          gameId: 1,
           initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
         });
 
@@ -665,6 +636,7 @@ describe('CommonRoom', () => {
         });
 
         const { rerender } = renderWithProviders(<CommonRoom gameId={1} />, {
+          gameId: 1,
           initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
         });
 
@@ -705,6 +677,7 @@ describe('CommonRoom', () => {
         getElementByIdSpy.mockReturnValue(null);
 
         renderWithProviders(<CommonRoom gameId={1} />, {
+          gameId: 1,
           initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
         });
 
@@ -727,6 +700,7 @@ describe('CommonRoom', () => {
         getElementByIdSpy.mockReturnValue(null);
 
         renderWithProviders(<CommonRoom gameId={1} />, {
+          gameId: 1,
           initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
         });
 
@@ -761,6 +735,7 @@ describe('CommonRoom', () => {
         );
 
         renderWithProviders(<CommonRoom gameId={1} />, {
+          gameId: 1,
           initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
         });
 
@@ -810,6 +785,7 @@ describe('CommonRoom', () => {
         });
 
         renderWithProviders(<CommonRoom gameId={1} />, {
+          gameId: 1,
           initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
         });
 
@@ -850,6 +826,7 @@ describe('CommonRoom', () => {
         });
 
         renderWithProviders(<CommonRoom gameId={1} />, {
+          gameId: 1,
           initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
         });
 
@@ -885,6 +862,7 @@ describe('CommonRoom', () => {
         );
 
         renderWithProviders(<CommonRoom gameId={1} />, {
+          gameId: 1,
           initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
         });
 

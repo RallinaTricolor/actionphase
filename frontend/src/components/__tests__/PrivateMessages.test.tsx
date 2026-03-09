@@ -66,7 +66,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="action"
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/you can read message history/i)).toBeInTheDocument();
@@ -84,7 +84,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="common_room"
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.queryByText(/you can read message history/i)).not.toBeInTheDocument();
@@ -102,7 +102,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="results"
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         const newButton = screen.getByRole('button', { name: /\+ new/i });
@@ -118,7 +118,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="action"
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         const newButton = screen.getByRole('button', { name: /\+ new/i });
@@ -134,7 +134,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="common_room"
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         const newButton = screen.getByRole('button', { name: /\+ new/i });
@@ -150,7 +150,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType={undefined}
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         const newButton = screen.getByRole('button', { name: /\+ new/i });
@@ -169,7 +169,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="common_room"
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByLabelText(/refresh conversation list/i)).toBeInTheDocument();
@@ -184,7 +184,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="common_room"
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         const refreshButton = screen.getByLabelText(/refresh conversation list/i);
@@ -223,7 +223,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="common_room"
         />
-      );
+      , { gameId: 1 });
 
       // Wait for initial load
       await waitFor(() => {
@@ -259,7 +259,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="common_room"
         />
-      );
+      , { gameId: 1 });
 
       // Wait for initial load
       await waitFor(() => {
@@ -306,7 +306,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="common_room"
         />
-      );
+      , { gameId: 1 });
 
       // Wait for initial load
       await waitFor(() => {
@@ -343,7 +343,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="common_room"
         />
-      );
+      , { gameId: 1 });
 
       // Wait for initial load
       await waitFor(() => {
@@ -388,7 +388,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="common_room"
         />
-      );
+      , { gameId: 1 });
 
       // Wait for initial ConversationList mount and fetch
       await waitFor(() => {
@@ -417,7 +417,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="common_room"
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText(/private messages/i)).toBeInTheDocument();
@@ -432,7 +432,7 @@ describe('PrivateMessages', () => {
           isAnonymous={false}
           currentPhaseType="common_room"
         />
-      );
+      , { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /\+ new/i })).toBeInTheDocument();

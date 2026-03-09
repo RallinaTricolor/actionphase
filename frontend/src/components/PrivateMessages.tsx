@@ -4,6 +4,7 @@ import { ConversationList } from './ConversationList';
 import { MessageThread } from './MessageThread';
 import { NewConversationModal } from './NewConversationModal';
 import { ConversationProvider, useConversation } from '../contexts/ConversationContext';
+import { useGameContext } from '../contexts/GameContext';
 import type { Character } from '../types/characters';
 import { Button, Alert } from './ui';
 import { logger } from '@/services/LoggingService';
@@ -20,6 +21,7 @@ interface PrivateMessagesProps {
  */
 function PrivateMessagesInner({ gameId, characters, isAnonymous, currentPhaseType }: PrivateMessagesProps) {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const { allGameCharacters } = useGameContext();
   const {
     selectedConversationId,
     loadingConversations,
@@ -148,6 +150,7 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, currentPhaseTyp
         <NewConversationModal
           gameId={gameId}
           characters={characters}
+          allCharacters={allGameCharacters}
           isAnonymous={isAnonymous}
           onClose={() => setShowNewConversationModal(false)}
           onConversationCreated={handleConversationCreated}

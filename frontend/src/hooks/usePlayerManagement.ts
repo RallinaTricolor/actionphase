@@ -29,7 +29,7 @@ export function useRemovePlayer(gameId: number) {
       // Invalidate inactive characters list (character just became inactive)
       queryClient.invalidateQueries({ queryKey: ['inactive-characters', gameId] });
       // Invalidate game characters list
-      queryClient.invalidateQueries({ queryKey: ['game-characters', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
     },
   });
 }
@@ -124,11 +124,11 @@ export function useReassignCharacter() {
     onSuccess: (data: Character) => {
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['characters'] });
-      queryClient.invalidateQueries({ queryKey: ['game-characters', data.game_id] });
+      queryClient.invalidateQueries({ queryKey: ['gameCharacters', data.game_id] });
       queryClient.invalidateQueries({
         queryKey: ['inactive-characters', data.game_id],
       });
-      queryClient.invalidateQueries({ queryKey: ['controllable-characters', data.game_id] });
+      queryClient.invalidateQueries({ queryKey: ['userControllableCharacters', data.game_id] });
     },
   });
 }

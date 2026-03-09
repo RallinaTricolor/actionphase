@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
+import { useGameContext } from '../contexts/GameContext';
 import { CreateCharacterModal } from './CreateCharacterModal';
 import { CharacterSheet } from './CharacterSheet';
 import { AssignNPCModal } from './AssignNPCModal';
@@ -36,11 +37,13 @@ export function CharactersList({
   // Use ownership hook to check character ownership (works in anonymous mode)
   const { isUserCharacter: isUserCharacterById } = useCharacterOwnership(gameId);
 
-  const { data: charactersData, isLoading } = useQuery({
-    queryKey: ['gameCharacters', gameId],
-    queryFn: () => apiClient.characters.getGameCharacters(gameId).then(res => res.data || []),
-    refetchInterval: 30000 // Refetch every 30 seconds
-  });
+  // Read from GameContext — single source of truth for all game characters
+  const { allGameCharacters, isLoadingAllCharacters, refetchAllGameCharacters } = useGameContext();
+
+  // Refresh characters when visiting the People tab (mount refresh)
+  useEffect(() => {
+    refetchAllGameCharacters();
+  }, [gameId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch game participants for user assignment (when GM creates player characters)
   const { data: participantsData } = useQuery({
@@ -49,15 +52,16 @@ export function CharactersList({
     enabled: userRole === 'gm' // Only fetch for GMs
   });
 
-  // Ensure characters is always an array
-  const characters = charactersData || [];
+  // Alias for readability
+  const characters = allGameCharacters;
+  const isLoading = isLoadingAllCharacters;
   const participants = participantsData || [];
 
   const approveCharacterMutation = useMutation({
     mutationFn: ({ characterId, status }: { characterId: number; status: 'approved' | 'rejected' }) =>
       apiClient.characters.approveCharacter(characterId, { status }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
+      refetchAllGameCharacters();
       queryClient.invalidateQueries({ queryKey: ['userControllableCharacters', gameId] });
     }
   });
@@ -65,7 +69,7 @@ export function CharactersList({
   const deleteCharacterMutation = useMutation({
     mutationFn: (characterId: number) => apiClient.characters.deleteCharacter(characterId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
+      refetchAllGameCharacters();
       queryClient.invalidateQueries({ queryKey: ['userControllableCharacters', gameId] });
       setCharacterToDelete(null);
     },
@@ -238,9 +242,6 @@ export function CharactersList({
                     canViewSheet={canViewCharacterSheet(character)}
                     canEditSheet={canEditCharacterSheet(character)}
                     onViewSheet={() => {
-                      // Invalidate queries to ensure fresh data when opening sheet
-                      queryClient.invalidateQueries({ queryKey: ['character', character.id] });
-                      queryClient.invalidateQueries({ queryKey: ['characterData', character.id] });
                       setSelectedCharacterId(character.id);
                     }}
                   />
@@ -268,9 +269,6 @@ export function CharactersList({
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
                           onViewSheet={() => {
-                      // Invalidate queries to ensure fresh data when opening sheet
-                      queryClient.invalidateQueries({ queryKey: ['character', character.id] });
-                      queryClient.invalidateQueries({ queryKey: ['characterData', character.id] });
                       setSelectedCharacterId(character.id);
                     }}
                         />
@@ -298,9 +296,6 @@ export function CharactersList({
                           canViewSheet={canViewCharacterSheet(character)}
                           canEditSheet={canEditCharacterSheet(character)}
                           onViewSheet={() => {
-                      // Invalidate queries to ensure fresh data when opening sheet
-                      queryClient.invalidateQueries({ queryKey: ['character', character.id] });
-                      queryClient.invalidateQueries({ queryKey: ['characterData', character.id] });
                       setSelectedCharacterId(character.id);
                     }}
                         />
@@ -354,7 +349,7 @@ export function CharactersList({
           onClose={() => setNpcToAssign(null)}
           onSuccess={() => {
             setNpcToAssign(null);
-            queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
+            refetchAllGameCharacters();
           }}
         />
       )}
