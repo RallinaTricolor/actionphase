@@ -52,6 +52,24 @@ type PrivateConversationResponse struct {
 	LastSenderCharacterID   *int32       `json:"last_sender_character_id"`
 }
 
+type ActionSubmissionResponse struct {
+	ID               int32   `json:"id"`
+	GameID           int32   `json:"game_id"`
+	UserID           int32   `json:"user_id"`
+	PhaseID          int32   `json:"phase_id"`
+	CharacterID      *int32  `json:"character_id"`
+	Content          string  `json:"content"`
+	SubmittedAt      *string `json:"submitted_at"`
+	UpdatedAt        *string `json:"updated_at"`
+	Username         string  `json:"username"`
+	CharacterName    *string `json:"character_name"`
+	PhaseType        string  `json:"phase_type"`
+	PhaseNumber      int32   `json:"phase_number"`
+	PhaseTitle       string  `json:"phase_title"`
+	ActionResultID   *int32  `json:"action_result_id"`
+	Status           string  `json:"status"`
+}
+
 type AudienceMessageResponse struct {
 	ID                  int32   `json:"id"`
 	ConversationID      int32   `json:"conversation_id"`
@@ -489,8 +507,52 @@ func (h *Handler) ListAllActionSubmissions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Map to response structs with clean Go types (not pgtype wrappers)
+	responses := make([]ActionSubmissionResponse, len(submissions))
+	for i, s := range submissions {
+		var charID *int32
+		if s.CharacterID.Valid {
+			charID = &s.CharacterID.Int32
+		}
+		var charName *string
+		if s.CharacterName.Valid {
+			charName = &s.CharacterName.String
+		}
+		var submittedAt *string
+		if s.SubmittedAt.Valid {
+			t := s.SubmittedAt.Time.Format(time.RFC3339)
+			submittedAt = &t
+		}
+		var updatedAt *string
+		if s.UpdatedAt.Valid {
+			t := s.UpdatedAt.Time.Format(time.RFC3339)
+			updatedAt = &t
+		}
+		var actionResultID *int32
+		if s.ActionResultID.Valid {
+			actionResultID = &s.ActionResultID.Int32
+		}
+		responses[i] = ActionSubmissionResponse{
+			ID:             s.ID,
+			GameID:         s.GameID,
+			UserID:         s.UserID,
+			PhaseID:        s.PhaseID,
+			CharacterID:    charID,
+			Content:        s.Content,
+			SubmittedAt:    submittedAt,
+			UpdatedAt:      updatedAt,
+			Username:       s.Username,
+			CharacterName:  charName,
+			PhaseType:      s.PhaseType,
+			PhaseNumber:    s.PhaseNumber,
+			PhaseTitle:     s.PhaseTitle,
+			ActionResultID: actionResultID,
+			Status:         s.Status,
+		}
+	}
+
 	render.JSON(w, r, map[string]interface{}{
-		"action_submissions": submissions,
+		"action_submissions": responses,
 		"total":              total,
 	})
 }

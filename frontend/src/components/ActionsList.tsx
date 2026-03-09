@@ -6,6 +6,8 @@ import type { ActionWithDetails, GamePhase } from '../types/phases';
 import { CreateActionResultForm } from './CreateActionResultForm';
 import { Modal } from './Modal';
 import { MarkdownPreview } from './MarkdownPreview';
+import CharacterAvatar from './CharacterAvatar';
+import { useGameContext } from '../contexts/GameContext';
 
 interface ActionsListProps {
   gameId: number;
@@ -227,6 +229,10 @@ interface ActionCardProps {
 
 function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardProps) {
   const [showResultForm, setShowResultForm] = useState(false);
+  const { allGameCharacters } = useGameContext();
+  const avatarUrl = action.character_id
+    ? (allGameCharacters.find(c => c.id === action.character_id)?.avatar_url ?? null)
+    : null;
   return (
     <div className="border border-theme-default rounded-lg overflow-hidden hover:border-interactive-primary transition-colors" data-testid="action-card">
       <button
@@ -238,11 +244,11 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-interactive-primary-subtle rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-interactive-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
+                <CharacterAvatar
+                  characterName={action.character_name || action.username || ''}
+                  avatarUrl={avatarUrl}
+                  size="sm"
+                />
               </div>
               <h4 className="font-medium text-base text-content-primary truncate">{action.username}</h4>
             </div>
@@ -278,11 +284,11 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
         <div className="hidden md:flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1">
             <div className="flex-shrink-0">
-              <div className="w-10 h-10 bg-interactive-primary-subtle rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-interactive-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
+              <CharacterAvatar
+                characterName={action.character_name || action.username || ''}
+                avatarUrl={avatarUrl}
+                size="md"
+              />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2">

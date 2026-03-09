@@ -6,6 +6,8 @@ import { Badge } from './ui/Badge';
 import { Spinner } from './ui/Spinner';
 import { Alert } from './ui/Alert';
 import { MarkdownPreview } from './MarkdownPreview';
+import CharacterAvatar from './CharacterAvatar';
+import { useGameContext } from '../contexts/GameContext';
 import { apiClient } from '../lib/api';
 import { logger } from '@/services/LoggingService';
 
@@ -17,6 +19,7 @@ interface ActionSubmissionType {
   id: number;
   status: string;
   action_result_id?: number;
+  character_id?: number | null;
   character_name: string;
   username: string;
   submission_number: number;
@@ -219,6 +222,11 @@ function ActionSubmissionCard({ gameId, submission }: { gameId: number; submissi
   const [actionResult, setActionResult] = useState<ActionResultType | null>(null);
   const [loadingResult, setLoadingResult] = useState(false);
 
+  const { allGameCharacters } = useGameContext();
+  const avatarUrl = submission.character_id
+    ? (allGameCharacters.find(c => c.id === submission.character_id)?.avatar_url ?? null)
+    : null;
+
   // Fetch action result if the submission has a result posted
   useEffect(() => {
     if (isExpanded && submission.status === 'result_posted' && submission.action_result_id && !actionResult && !loadingResult) {
@@ -270,6 +278,11 @@ function ActionSubmissionCard({ gameId, submission }: { gameId: number; submissi
             <div className="space-y-1 flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-lg">{isExpanded ? '▼' : '▶'}</span>
+                <CharacterAvatar
+                  characterName={submission.character_name}
+                  avatarUrl={avatarUrl}
+                  size="sm"
+                />
                 <span className="font-semibold text-content-primary">
                   {submission.character_name}
                 </span>
