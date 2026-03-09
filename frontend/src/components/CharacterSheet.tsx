@@ -22,9 +22,10 @@ interface CharacterSheetProps {
   onClose?: () => void;
   isAnonymous?: boolean; // Whether the game is in anonymous mode
   userRole?: string; // User's role in the game ('gm', 'player', 'audience')
+  gameState?: string; // Current game state (e.g. 'completed')
 }
 
-export function CharacterSheet({ characterId, canEdit = false, canEditStats = false, onClose, isAnonymous = false, userRole }: CharacterSheetProps) {
+export function CharacterSheet({ characterId, canEdit = false, canEditStats = false, onClose, isAnonymous = false, userRole, gameState }: CharacterSheetProps) {
   const [activeModule, setActiveModule] = useState('bio');
   const [editingField, setEditingField] = useState<string | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -36,12 +37,15 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   const queryClient = useQueryClient();
   const renameMutation = useRenameCharacter();
 
-  // If user cannot edit and is not audience and is viewing a restricted module, switch to bio
+  // Participants can view all private data if the game is completed or they are audience
+  const canViewPrivate = canEdit || userRole === 'audience' || gameState === 'completed';
+
+  // If user cannot view private data and is viewing a restricted module, switch to bio
   useEffect(() => {
-    if (!canEdit && userRole !== 'audience' && activeModule !== 'bio') {
+    if (!canViewPrivate && activeModule !== 'bio') {
       setActiveModule('bio');
     }
-  }, [canEdit, userRole, activeModule]);
+  }, [canViewPrivate, activeModule]);
 
   const { data: character } = useQuery({
     queryKey: ['character', characterId],
@@ -312,8 +316,8 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
           tabs={CHARACTER_MODULES.filter((module) => {
             // Bio is always visible (public information)
             if (module.type === 'bio') return true;
-            // Private modules visible to editors (GM, owner) and audience members
-            return canEdit || userRole === 'audience';
+            // Private modules visible to editors (GM, owner), audience members, and all participants in completed games
+            return canViewPrivate;
           }).map((module): Tab => ({
             id: module.type,
             label: module.name
@@ -327,7 +331,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
         {CHARACTER_MODULES.filter(module => {
           // Only render modules the user has permission to view
           if (module.type === 'bio') return true;
-          return canEdit || userRole === 'audience';
+          return canViewPrivate;
         }).filter(module => module.type === activeModule).map((module) => (
           <div key={module.type} className="max-w-4xl mx-auto">
             <div className="mb-4 md:mb-6">
@@ -361,10 +365,10 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                   const value = getFieldValue(module.type, field.name);
                   const isEditing = editingField === key;
 
-                  // Hide private fields if user cannot edit and is not audience
+                  // Hide private fields if user cannot view private data
                   // If fieldData exists, use its is_public value; otherwise fall back to field.isPublic
                   const isFieldPublic = fieldData ? fieldData.is_public : (field.isPublic ?? true);
-                  if (!canEdit && userRole !== 'audience' && !isFieldPublic) {
+                  if (!canViewPrivate && !isFieldPublic) {
                     return null; // Don't render private fields for viewers
                   }
 

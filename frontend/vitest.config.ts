@@ -40,9 +40,7 @@ export default defineConfig({
       '**/e2e/**', // Exclude Playwright E2E tests
       'src/lib/__tests__/api.auth.test.ts',
       'src/lib/__tests__/api.games.test.ts',
-      // CharacterSheet.test.tsx has module transformation issues in vitest
-      // See CHARACTER_SHEET_TESTING_INVESTIGATION.md for details
-      'src/components/__tests__/CharacterSheet.test.tsx',
+
     ],
     coverage: {
       provider: 'v8',

@@ -454,6 +454,7 @@ describe('CharactersList', () => {
         expect(screen.getAllByRole('button', { name: 'Edit Sheet' }).length).toBeGreaterThan(0)
       })
     })
+
   })
 
   describe('Anonymous mode', () => {
