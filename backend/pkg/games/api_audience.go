@@ -36,6 +36,35 @@ type UpdateAutoAcceptAudienceRequest struct {
 	AutoAcceptAudience bool `json:"auto_accept_audience"`
 }
 
+type PrivateConversationResponse struct {
+	ConversationID          int32        `json:"conversation_id"`
+	Subject                 *string      `json:"subject"`
+	ConversationType        string       `json:"conversation_type"`
+	CreatedAt               string       `json:"created_at"`
+	MessageCount            int64        `json:"message_count"`
+	LastMessageAt           interface{}  `json:"last_message_at"`
+	ParticipantNames        interface{}  `json:"participant_names"`
+	ParticipantUsernames    interface{}  `json:"participant_usernames"`
+	ParticipantCharacterIDs interface{}  `json:"participant_character_ids"`
+	LastMessageContent      *string      `json:"last_message_content"`
+	LastSenderName          *string      `json:"last_sender_name"`
+	LastSenderUsername      *string      `json:"last_sender_username"`
+	LastSenderCharacterID   *int32       `json:"last_sender_character_id"`
+}
+
+type AudienceMessageResponse struct {
+	ID                  int32   `json:"id"`
+	ConversationID      int32   `json:"conversation_id"`
+	SenderUserID        *int32  `json:"sender_user_id"`
+	SenderCharacterID   *int32  `json:"sender_character_id"`
+	Content             string  `json:"content"`
+	CreatedAt           string  `json:"created_at"`
+	UpdatedAt           string  `json:"updated_at"`
+	IsDeleted           bool    `json:"is_deleted"`
+	SenderUsername      string  `json:"sender_username"`
+	SenderCharacterName *string `json:"sender_character_name"`
+}
+
 func (a *UpdateAutoAcceptAudienceRequest) Bind(r *http.Request) error {
 	return nil
 }
@@ -252,9 +281,49 @@ func (h *Handler) ListAllPrivateConversations(w http.ResponseWriter, r *http.Req
 	// Note: We're returning len(conversations) as total for now
 	// To get accurate total count, we'd need a separate COUNT query
 	// For pagination, the frontend can detect end when len(conversations) < limit
+	// Map to response structs with clean Go types (not pgtype wrappers)
+	responses := make([]PrivateConversationResponse, len(conversations))
+	for i, c := range conversations {
+		var subject *string
+		if c.Subject.Valid {
+			subject = &c.Subject.String
+		}
+		var lastContent *string
+		if c.LastMessageContent.Valid {
+			lastContent = &c.LastMessageContent.String
+		}
+		var lastSenderName *string
+		if c.LastSenderName.Valid {
+			lastSenderName = &c.LastSenderName.String
+		}
+		var lastSenderUsername *string
+		if c.LastSenderUsername.Valid {
+			lastSenderUsername = &c.LastSenderUsername.String
+		}
+		var lastSenderCharID *int32
+		if c.LastSenderCharacterID.Valid {
+			lastSenderCharID = &c.LastSenderCharacterID.Int32
+		}
+		responses[i] = PrivateConversationResponse{
+			ConversationID:          c.ConversationID,
+			Subject:                 subject,
+			ConversationType:        c.ConversationType,
+			CreatedAt:               c.CreatedAt.Time.Format(time.RFC3339),
+			MessageCount:            c.MessageCount,
+			LastMessageAt:           c.LastMessageAt,
+			ParticipantNames:        c.ParticipantNames,
+			ParticipantUsernames:    c.ParticipantUsernames,
+			ParticipantCharacterIDs: c.ParticipantCharacterIds,
+			LastMessageContent:      lastContent,
+			LastSenderName:          lastSenderName,
+			LastSenderUsername:      lastSenderUsername,
+			LastSenderCharacterID:   lastSenderCharID,
+		}
+	}
+
 	render.JSON(w, r, map[string]interface{}{
-		"conversations": conversations,
-		"total":         len(conversations),
+		"conversations": responses,
+		"total":         len(responses),
 	})
 }
 
@@ -309,8 +378,34 @@ func (h *Handler) GetAudienceConversationMessages(w http.ResponseWriter, r *http
 		return
 	}
 
+	// Map to response structs with clean Go types (not pgtype wrappers)
+	responses := make([]AudienceMessageResponse, len(messages))
+	for i, m := range messages {
+		senderUserID := m.SenderUserID
+		var senderCharID *int32
+		if m.SenderCharacterID.Valid {
+			senderCharID = &m.SenderCharacterID.Int32
+		}
+		var senderCharName *string
+		if m.SenderCharacterName.Valid {
+			senderCharName = &m.SenderCharacterName.String
+		}
+		responses[i] = AudienceMessageResponse{
+			ID:                  m.ID,
+			ConversationID:      m.ConversationID,
+			SenderUserID:        &senderUserID,
+			SenderCharacterID:   senderCharID,
+			Content:             m.Content,
+			CreatedAt:           m.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:           m.UpdatedAt.Time.Format(time.RFC3339),
+			IsDeleted:           m.IsDeleted.Bool,
+			SenderUsername:      m.SenderUsername,
+			SenderCharacterName: senderCharName,
+		}
+	}
+
 	render.JSON(w, r, map[string]interface{}{
-		"messages": messages,
+		"messages": responses,
 	})
 }
 

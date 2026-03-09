@@ -503,7 +503,7 @@ participants_agg AS (
     cp.conversation_id,
     array_agg(COALESCE(ch.name, u.username) ORDER BY cp.id) as participant_names,
     array_agg(u.username ORDER BY cp.id) as participant_usernames,
-    array_agg(ch.avatar_url ORDER BY cp.id) as participant_avatar_urls
+    array_agg(cp.character_id ORDER BY cp.id) as participant_character_ids
   FROM conversation_participants cp
   JOIN users u ON cp.user_id = u.id
   LEFT JOIN characters ch ON cp.character_id = ch.id
@@ -516,7 +516,7 @@ last_messages AS (
     LEFT(pm.content, 150) as last_message_content,
     COALESCE(c.name, u.username) as last_sender_name,
     u.username as last_sender_username,
-    c.avatar_url as last_sender_avatar_url
+    pm.sender_character_id as last_sender_character_id
   FROM private_messages pm
   JOIN users u ON pm.sender_user_id = u.id
   LEFT JOIN characters c ON pm.sender_character_id = c.id
@@ -534,11 +534,11 @@ SELECT
   cm.latest_message_at as last_message_at,
   pa.participant_names,
   pa.participant_usernames,
-  pa.participant_avatar_urls,
+  pa.participant_character_ids,
   lm.last_message_content,
   lm.last_sender_name,
   lm.last_sender_username,
-  lm.last_sender_avatar_url
+  lm.last_sender_character_id
 FROM conversation_messages cm
 LEFT JOIN participants_agg pa ON cm.conversation_id = pa.conversation_id
 LEFT JOIN last_messages lm ON cm.conversation_id = lm.conversation_id
@@ -558,8 +558,7 @@ OFFSET sqlc.arg(result_offset);
 -- Get all messages in a specific conversation (for audience/GM)
 SELECT pm.*,
        u.username as sender_username,
-       c.name as sender_character_name,
-       c.avatar_url as sender_avatar_url
+       c.name as sender_character_name
 FROM private_messages pm
 JOIN users u ON pm.sender_user_id = u.id
 LEFT JOIN characters c ON pm.sender_character_id = c.id

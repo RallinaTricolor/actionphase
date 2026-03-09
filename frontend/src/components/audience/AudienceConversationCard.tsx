@@ -3,6 +3,7 @@ import { formatDistanceToNow } from 'date-fns';
 import type { AudienceConversationListItem } from '../../types/conversations';
 import { Badge, Card, CardBody } from '../ui';
 import CharacterAvatar from '../CharacterAvatar';
+import { useGameContext } from '../../contexts/GameContext';
 
 interface AudienceConversationCardProps {
   conversation: AudienceConversationListItem;
@@ -15,6 +16,14 @@ export const AudienceConversationCard: React.FC<AudienceConversationCardProps> =
   onClick,
   isSelected = false
 }) => {
+  const { allGameCharacters } = useGameContext();
+
+  // Look up avatar URL by character ID from global character data
+  const getAvatarUrl = (characterId: number | null | undefined): string | null => {
+    if (!characterId) return null;
+    return allGameCharacters.find(c => c.id === characterId)?.avatar_url ?? null;
+  };
+
   // Calculate activity level based on message count
   const getActivityBadge = (count: number) => {
     if (count >= 21) {
@@ -83,7 +92,7 @@ export const AudienceConversationCard: React.FC<AudienceConversationCardProps> =
                 >
                   <CharacterAvatar
                     characterName={name}
-                    avatarUrl={conversation.participant_avatar_urls?.[index]}
+                    avatarUrl={getAvatarUrl(conversation.participant_character_ids?.[index])}
                     size="md"
                   />
                 </div>

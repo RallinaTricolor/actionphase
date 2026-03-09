@@ -377,8 +377,7 @@ func (q *Queries) GetAllDescendantComments(ctx context.Context, parentID pgtype.
 const getAudienceConversationMessages = `-- name: GetAudienceConversationMessages :many
 SELECT pm.id, pm.conversation_id, pm.sender_user_id, pm.sender_character_id, pm.content, pm.created_at, pm.updated_at, pm.deleted_at, pm.is_deleted,
        u.username as sender_username,
-       c.name as sender_character_name,
-       c.avatar_url as sender_avatar_url
+       c.name as sender_character_name
 FROM private_messages pm
 JOIN users u ON pm.sender_user_id = u.id
 LEFT JOIN characters c ON pm.sender_character_id = c.id
@@ -398,7 +397,6 @@ type GetAudienceConversationMessagesRow struct {
 	IsDeleted           pgtype.Bool        `json:"is_deleted"`
 	SenderUsername      string             `json:"sender_username"`
 	SenderCharacterName pgtype.Text        `json:"sender_character_name"`
-	SenderAvatarUrl     pgtype.Text        `json:"sender_avatar_url"`
 }
 
 // Get all messages in a specific conversation (for audience/GM)
@@ -423,7 +421,6 @@ func (q *Queries) GetAudienceConversationMessages(ctx context.Context, conversat
 			&i.IsDeleted,
 			&i.SenderUsername,
 			&i.SenderCharacterName,
-			&i.SenderAvatarUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -1485,7 +1482,7 @@ participants_agg AS (
     cp.conversation_id,
     array_agg(COALESCE(ch.name, u.username) ORDER BY cp.id) as participant_names,
     array_agg(u.username ORDER BY cp.id) as participant_usernames,
-    array_agg(ch.avatar_url ORDER BY cp.id) as participant_avatar_urls
+    array_agg(cp.character_id ORDER BY cp.id) as participant_character_ids
   FROM conversation_participants cp
   JOIN users u ON cp.user_id = u.id
   LEFT JOIN characters ch ON cp.character_id = ch.id
@@ -1498,7 +1495,7 @@ last_messages AS (
     LEFT(pm.content, 150) as last_message_content,
     COALESCE(c.name, u.username) as last_sender_name,
     u.username as last_sender_username,
-    c.avatar_url as last_sender_avatar_url
+    pm.sender_character_id as last_sender_character_id
   FROM private_messages pm
   JOIN users u ON pm.sender_user_id = u.id
   LEFT JOIN characters c ON pm.sender_character_id = c.id
@@ -1516,11 +1513,11 @@ SELECT
   cm.latest_message_at as last_message_at,
   pa.participant_names,
   pa.participant_usernames,
-  pa.participant_avatar_urls,
+  pa.participant_character_ids,
   lm.last_message_content,
   lm.last_sender_name,
   lm.last_sender_username,
-  lm.last_sender_avatar_url
+  lm.last_sender_character_id
 FROM conversation_messages cm
 LEFT JOIN participants_agg pa ON cm.conversation_id = pa.conversation_id
 LEFT JOIN last_messages lm ON cm.conversation_id = lm.conversation_id
@@ -1545,19 +1542,19 @@ type ListAllPrivateConversationsParams struct {
 }
 
 type ListAllPrivateConversationsRow struct {
-	ConversationID        int32              `json:"conversation_id"`
-	Subject               pgtype.Text        `json:"subject"`
-	ConversationType      string             `json:"conversation_type"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	MessageCount          int64              `json:"message_count"`
-	LastMessageAt         interface{}        `json:"last_message_at"`
-	ParticipantNames      interface{}        `json:"participant_names"`
-	ParticipantUsernames  interface{}        `json:"participant_usernames"`
-	ParticipantAvatarUrls interface{}        `json:"participant_avatar_urls"`
-	LastMessageContent    pgtype.Text        `json:"last_message_content"`
-	LastSenderName        pgtype.Text        `json:"last_sender_name"`
-	LastSenderUsername    pgtype.Text        `json:"last_sender_username"`
-	LastSenderAvatarUrl   pgtype.Text        `json:"last_sender_avatar_url"`
+	ConversationID          int32              `json:"conversation_id"`
+	Subject                 pgtype.Text        `json:"subject"`
+	ConversationType        string             `json:"conversation_type"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	MessageCount            int64              `json:"message_count"`
+	LastMessageAt           interface{}        `json:"last_message_at"`
+	ParticipantNames        interface{}        `json:"participant_names"`
+	ParticipantUsernames    interface{}        `json:"participant_usernames"`
+	ParticipantCharacterIds interface{}        `json:"participant_character_ids"`
+	LastMessageContent      pgtype.Text        `json:"last_message_content"`
+	LastSenderName          pgtype.Text        `json:"last_sender_name"`
+	LastSenderUsername      pgtype.Text        `json:"last_sender_username"`
+	LastSenderCharacterID   pgtype.Int4        `json:"last_sender_character_id"`
 }
 
 // ============================================================================
@@ -1589,11 +1586,11 @@ func (q *Queries) ListAllPrivateConversations(ctx context.Context, arg ListAllPr
 			&i.LastMessageAt,
 			&i.ParticipantNames,
 			&i.ParticipantUsernames,
-			&i.ParticipantAvatarUrls,
+			&i.ParticipantCharacterIds,
 			&i.LastMessageContent,
 			&i.LastSenderName,
 			&i.LastSenderUsername,
-			&i.LastSenderAvatarUrl,
+			&i.LastSenderCharacterID,
 		); err != nil {
 			return nil, err
 		}

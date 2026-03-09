@@ -9,6 +9,7 @@ import CharacterAvatar from './CharacterAvatar';
 import { AudienceConversationCard } from './audience/AudienceConversationCard';
 import { AudienceConversationHeader } from './audience/AudienceConversationHeader';
 import type { AudienceConversationListItem } from '../types/conversations';
+import { useGameContext } from '../contexts/GameContext';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 
 interface AllPrivateMessagesViewProps {
@@ -26,7 +27,6 @@ interface MessageType {
   sender_character_id?: number;
   sender_character_name?: string | null;
   sender_username: string;
-  sender_avatar_url?: string | null;
 }
 
 /**
@@ -286,6 +286,11 @@ function MessageViewer({
   error: Error | null;
   onBack: () => void;
 }) {
+  const { allGameCharacters } = useGameContext();
+
+  const getAvatarUrl = (characterId: number | undefined): string | null =>
+    allGameCharacters.find(c => c.id === characterId)?.avatar_url ?? null;
+
   // Format date for dividers
   const formatDateDivider = (date: Date): string => {
     if (isToday(date)) return 'Today';
@@ -352,7 +357,7 @@ function MessageViewer({
         currentSenderId = message.sender_character_id;
         currentSenderName = message.sender_character_name || 'Unknown Character';
         currentSenderUsername = message.sender_username;
-        currentSenderAvatar = message.sender_avatar_url ?? null;
+        currentSenderAvatar = getAvatarUrl(message.sender_character_id);
       }
       // Start new sender group within same date
       else if (isNewSender) {
@@ -371,7 +376,7 @@ function MessageViewer({
         currentSenderId = message.sender_character_id;
         currentSenderName = message.sender_character_name || 'Unknown Character';
         currentSenderUsername = message.sender_username;
-        currentSenderAvatar = message.sender_avatar_url ?? null;
+        currentSenderAvatar = getAvatarUrl(message.sender_character_id);
       }
       // Same sender, same date - add to current group
       else {

@@ -88,11 +88,11 @@ export interface AudienceConversationListItem {
   last_message_at?: string | null;
   participant_names: string[];
   participant_usernames: string[];
-  participant_avatar_urls?: (string | null)[];
+  participant_character_ids?: (number | null)[];
   last_message_content?: string | null;
   last_sender_name?: string | null;
   last_sender_username?: string | null;
-  last_sender_avatar_url?: string | null;
+  last_sender_character_id?: number | null;
 }
 
 export interface AudienceConversationMessage {
@@ -103,9 +103,7 @@ export interface AudienceConversationMessage {
   content: string;
   created_at: string;
   updated_at: string;
-  deleted_at?: string | null;
   is_deleted: boolean;
   sender_username: string;
   sender_character_name?: string | null;
-  sender_avatar_url?: string | null;
 }

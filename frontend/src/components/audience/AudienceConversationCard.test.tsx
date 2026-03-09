@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { renderWithProviders } from '../../test-utils';
 import { AudienceConversationCard } from './AudienceConversationCard';
 import type { AudienceConversationListItem } from '../../types/conversations';
 
@@ -17,37 +18,39 @@ describe('AudienceConversationCard', () => {
     last_message_content: 'This is the last message',
     last_sender_name: 'Alice',
     last_sender_username: 'alice',
-    last_sender_avatar_url: null,
   };
 
   it('renders conversation subject', () => {
-    render(
+    renderWithProviders(
       <AudienceConversationCard
         conversation={mockConversation}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     expect(screen.getByText('Test Conversation')).toBeInTheDocument();
   });
 
   it('renders participant names', () => {
-    render(
+    renderWithProviders(
       <AudienceConversationCard
         conversation={mockConversation}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     expect(screen.getByText('Alice, Bob, Charlie')).toBeInTheDocument();
   });
 
   it('renders last message preview', () => {
-    render(
+    renderWithProviders(
       <AudienceConversationCard
         conversation={mockConversation}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     expect(screen.getByText(/Alice:/)).toBeInTheDocument();
@@ -58,11 +61,12 @@ describe('AudienceConversationCard', () => {
     const user = userEvent.setup();
     const handleClick = vi.fn();
 
-    const { container } = render(
+    const { container } = renderWithProviders(
       <AudienceConversationCard
         conversation={mockConversation}
         onClick={handleClick}
-      />
+      />,
+    { gameId: 1 }
     );
 
     // Click on the card (cursor-pointer div)
@@ -75,11 +79,12 @@ describe('AudienceConversationCard', () => {
   });
 
   it('shows activity badge based on message count', () => {
-    const { rerender } = render(
+    const { rerender } = renderWithProviders(
       <AudienceConversationCard
         conversation={{ ...mockConversation, message_count: 3 }}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     // Low activity (1-5 messages) - should show just the count
@@ -108,11 +113,12 @@ describe('AudienceConversationCard', () => {
     const now = new Date();
     const recentTime = new Date(now.getTime() - 1000 * 60 * 60).toISOString(); // 1 hour ago
 
-    render(
+    renderWithProviders(
       <AudienceConversationCard
         conversation={{ ...mockConversation, last_message_at: recentTime }}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     expect(screen.getByText('Recent')).toBeInTheDocument();
@@ -121,22 +127,24 @@ describe('AudienceConversationCard', () => {
   it('does not show recent activity indicator for old messages', () => {
     const oldTime = new Date('2025-01-01T10:00:00Z').toISOString(); // Old date
 
-    render(
+    renderWithProviders(
       <AudienceConversationCard
         conversation={{ ...mockConversation, last_message_at: oldTime }}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     expect(screen.queryByText('Recent')).not.toBeInTheDocument();
   });
 
   it('renders avatars for up to 4 participants', () => {
-    render(
+    renderWithProviders(
       <AudienceConversationCard
         conversation={mockConversation}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     // Should render 3 CharacterAvatar components (one for each participant)
@@ -150,23 +158,25 @@ describe('AudienceConversationCard', () => {
       participant_names: ['Alice', 'Bob', 'Charlie', 'Dave', 'Eve', 'Frank'],
     };
 
-    render(
+    renderWithProviders(
       <AudienceConversationCard
         conversation={manyParticipants}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     expect(screen.getByText('+2')).toBeInTheDocument();
   });
 
   it('applies selected styling when isSelected is true', () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <AudienceConversationCard
         conversation={mockConversation}
         onClick={vi.fn()}
         isSelected={true}
-      />
+      />,
+    { gameId: 1 }
     );
 
     // Check for selected styling classes
@@ -175,11 +185,12 @@ describe('AudienceConversationCard', () => {
   });
 
   it('uses default subject when subject is null', () => {
-    render(
+    renderWithProviders(
       <AudienceConversationCard
         conversation={{ ...mockConversation, subject: null }}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     expect(screen.getByText('Conversation')).toBeInTheDocument();
@@ -192,11 +203,12 @@ describe('AudienceConversationCard', () => {
       last_sender_name: null,
     };
 
-    render(
+    renderWithProviders(
       <AudienceConversationCard
         conversation={noLastMessage}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     // Should still render the card without errors
@@ -205,11 +217,12 @@ describe('AudienceConversationCard', () => {
   });
 
   it('renders relative timestamp', () => {
-    render(
+    renderWithProviders(
       <AudienceConversationCard
         conversation={mockConversation}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     // Should show a relative time like "X days ago"
@@ -222,11 +235,12 @@ describe('AudienceConversationCard', () => {
       participant_names: [],
     };
 
-    render(
+    renderWithProviders(
       <AudienceConversationCard
         conversation={noParticipants}
         onClick={vi.fn()}
-      />
+      />,
+    { gameId: 1 }
     );
 
     expect(screen.getByText('No participants')).toBeInTheDocument();
