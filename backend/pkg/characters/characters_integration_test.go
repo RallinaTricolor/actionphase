@@ -202,6 +202,131 @@ func TestCharacterAPI_CompleteCharacterLifecycle(t *testing.T) {
 	})
 }
 
+// TestCharacterAPI_CompletedGamePlayersCanViewPrivateData is a regression test for the bug where
+// players who participated in a completed game could not view full (private) character sheet data
+// for OTHER players' characters. After game completion, all participants should have audience-level
+// visibility, meaning they can see private data on any character in the game.
+func TestCharacterAPI_CompletedGamePlayersCanViewPrivateData(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+
+	gmUser := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	// player1 owns the character; player2 is a fellow participant viewing it
+	player1User := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2User := testDB.CreateTestUser(t, "player2", "player2@example.com")
+	outsiderUser := testDB.CreateTestUser(t, "outsider", "outsider@example.com")
+
+	gameService := &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Completed Game",
+		Description: "A finished game",
+		GMUserID:    int32(gmUser.ID),
+		IsPublic:    true,
+	})
+	core.AssertNoError(t, err, "Failed to create test game")
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player1User.ID), "player")
+	core.AssertNoError(t, err, "Failed to add player1 participant")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2User.ID), "player")
+	core.AssertNoError(t, err, "Failed to add player2 participant")
+
+	// Create player1's character with private data
+	characterService := &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	player1CharID := int32(player1User.ID)
+	char, err := characterService.CreateCharacter(context.Background(), services.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &player1CharID,
+		Name:          "Test Hero",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Failed to create character")
+	_, err = characterService.ApproveCharacter(context.Background(), char.ID)
+	core.AssertNoError(t, err, "Failed to approve character")
+
+	// Add private (non-public) character data to player1's character
+	err = characterService.SetCharacterData(context.Background(), services.CharacterDataRequest{
+		CharacterID: char.ID,
+		ModuleType:  "bio",
+		FieldName:   "secret_notes",
+		FieldValue:  "Hidden backstory",
+		FieldType:   "text",
+		IsPublic:    false,
+	})
+	core.AssertNoError(t, err, "Failed to set private character data")
+
+	// Transition game through valid states to completed
+	_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateRecruitment)
+	core.AssertNoError(t, err, "Failed to transition to recruitment")
+	_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateCharacterCreation)
+	core.AssertNoError(t, err, "Failed to transition to character_creation")
+	_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateInProgress)
+	core.AssertNoError(t, err, "Failed to transition to in_progress")
+	_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateCompleted)
+	core.AssertNoError(t, err, "Failed to transition to completed")
+
+	// player2 is a fellow participant (not the character owner) — this is the bug scenario
+	player2Token, err := core.CreateTestJWTTokenForUser(app, player2User)
+	core.AssertNoError(t, err, "Failed to create player2 token")
+	outsiderToken, err := core.CreateTestJWTTokenForUser(app, outsiderUser)
+	core.AssertNoError(t, err, "Failed to create outsider token")
+
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &services.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+	r := chi.NewRouter()
+	handler := Handler{App: app}
+
+	r.Route("/api/v1/characters/{id}", func(r chi.Router) {
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
+		r.Get("/data", handler.GetCharacterData)
+	})
+
+	t.Run("fellow player in completed game can view private data on another player's character", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/characters/%d/data", char.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+player2Token)
+
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Expected 200 OK")
+
+		var response []map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Failed to unmarshal response")
+
+		foundPrivate := false
+		for _, item := range response {
+			if item["field_name"] == "secret_notes" {
+				foundPrivate = true
+			}
+		}
+		core.AssertTrue(t, foundPrivate, "Fellow player in completed game should see private character data")
+	})
+
+	t.Run("outsider not in the game only sees public data even after completion", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/characters/%d/data", char.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+outsiderToken)
+
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Expected 200 OK")
+
+		var response []map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Failed to unmarshal response")
+
+		for _, item := range response {
+			if item["field_name"] == "secret_notes" {
+				t.Error("Outsider should not see private character data even in a completed game")
+			}
+		}
+	})
+}
+
 func TestCharacterAPI_NPCManagement(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()

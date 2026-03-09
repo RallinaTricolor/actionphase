@@ -132,18 +132,31 @@ func (h *Handler) GetCharacterData(w http.ResponseWriter, r *http.Request) {
 		if err == nil && canEdit {
 			canViewPrivate = true
 		} else {
-			// Check if user is an audience member of this character's game
+			// Check if user is an audience member, or any participant in a completed game
 			queries := models.New(h.App.Pool)
 			character, err := queries.GetCharacter(ctx, int32(characterID))
 			if err == nil {
-				userRole, err := gameService.GetUserRole(ctx, character.GameID, *userID)
-				if err == nil && userRole == "audience" {
-					canViewPrivate = true
-					h.App.ObsLogger.Debug(ctx, "Audience member viewing character data",
-						"character_id", characterID,
-						"user_id", *userID,
-						"game_id", character.GameID,
-					)
+				game, gameErr := queries.GetGame(ctx, character.GameID)
+				userRole, roleErr := gameService.GetUserRole(ctx, character.GameID, *userID)
+				if roleErr == nil {
+					// Audience members always see private data
+					if userRole == "audience" {
+						canViewPrivate = true
+						h.App.ObsLogger.Debug(ctx, "Audience member viewing character data",
+							"character_id", characterID,
+							"user_id", *userID,
+							"game_id", character.GameID,
+						)
+					} else if gameErr == nil && game.State.Valid && game.State.String == "completed" {
+						// All participants (players, co-GMs) get full visibility in completed games
+						canViewPrivate = true
+						h.App.ObsLogger.Debug(ctx, "Participant viewing character data in completed game",
+							"character_id", characterID,
+							"user_id", *userID,
+							"game_id", character.GameID,
+							"role", userRole,
+						)
+					}
 				}
 			}
 		}
