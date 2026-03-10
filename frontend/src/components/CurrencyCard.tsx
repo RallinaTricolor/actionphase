@@ -47,8 +47,9 @@ export const CurrencyCard: React.FC<CurrencyCardProps> = ({ currency, canEdit, o
               <Input
                 type="number"
                 value={editAmount}
-                onChange={(e) => setEditAmount(parseInt(e.target.value) || 0)}
+                onChange={(e) => setEditAmount(parseFloat(e.target.value) || 0)}
                 className="w-24 text-right"
+                step="any"
               />
             </div>
           ) : (

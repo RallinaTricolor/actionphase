@@ -90,8 +90,9 @@ export const ItemForm: React.FC<ItemFormProps> = ({
           label="Value"
           type="number"
           value={value}
-          onChange={(e) => setValue(parseInt(e.target.value) || '')}
+          onChange={(e) => setValue(parseFloat(e.target.value) || '')}
           min={0}
+          step="any"
           placeholder="0"
         />
         <Input
@@ -101,7 +102,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
           value={weight}
           onChange={(e) => setWeight(parseFloat(e.target.value) || '')}
           min={0}
-          step={0.1}
+          step="any"
           placeholder="0.0"
         />
       </div>

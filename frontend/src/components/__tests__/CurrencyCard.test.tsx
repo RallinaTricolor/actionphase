@@ -342,6 +342,32 @@ describe('CurrencyCard', () => {
     });
   });
 
+  describe('Decimal Amount Support', () => {
+    it('accepts decimal amount input', async () => {
+      const onUpdate = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <CurrencyCard
+          currency={mockCurrency}
+          canEdit={true}
+          onUpdate={onUpdate}
+          onRemove={vi.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('✎'));
+      const amountInput = screen.getByDisplayValue('1000');
+      await user.clear(amountInput);
+      await user.type(amountInput, '1.5');
+
+      await user.click(screen.getByText('✓'));
+
+      expect(onUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 1.5 })
+      );
+    });
+  });
+
   describe('Number Formatting', () => {
     it('formats large amounts with thousands separators', () => {
       const largeCurrency = { ...mockCurrency, amount: 1234567 };

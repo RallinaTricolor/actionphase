@@ -38,7 +38,7 @@ export const CurrencyForm: React.FC<CurrencyFormProps> = ({
 
     onSubmit({
       type: type.trim(),
-      amount: parseInt(amount) || 0,
+      amount: parseFloat(amount) || 0,
       description: description.trim() || undefined,
     });
   };
@@ -63,6 +63,7 @@ export const CurrencyForm: React.FC<CurrencyFormProps> = ({
         onChange={(e) => setAmount(e.target.value)}
         placeholder="0"
         min={0}
+        step="any"
       />
 
       <Input
