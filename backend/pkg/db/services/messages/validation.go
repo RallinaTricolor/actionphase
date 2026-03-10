@@ -70,15 +70,22 @@ func (s *MessageService) notifyCharacterMentions(ctx context.Context, mentionedC
 		if mentionedChar.UserID.Valid {
 			characterOwnerID = mentionedChar.UserID.Int32
 		} else {
-			// NPC - notify the GM
-			game, err := queries.GetGame(ctx, gameID)
-			if err != nil {
-				s.Logger.LogError(ctx, err, "Failed to get game for NPC mention notification",
-					"game_id", gameID,
-				)
-				continue
+			// NPC - check if assigned to an audience member first
+			assignment, err := queries.GetNPCAssignment(ctx, mentionedCharID)
+			if err == nil {
+				// NPC is assigned to a user (e.g., audience member)
+				characterOwnerID = assignment.AssignedUserID
+			} else {
+				// Unassigned NPC - notify the GM
+				game, err := queries.GetGame(ctx, gameID)
+				if err != nil {
+					s.Logger.LogError(ctx, err, "Failed to get game for NPC mention notification",
+						"game_id", gameID,
+					)
+					continue
+				}
+				characterOwnerID = game.GmUserID
 			}
-			characterOwnerID = game.GmUserID
 		}
 
 		// Skip if author is the character owner (don't notify self)
