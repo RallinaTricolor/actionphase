@@ -41,7 +41,7 @@ test.describe('Action Results Flow', () => {
 
     // Click "Show full content" button to expand the collapsed text
     const showFullContentButton = page.getByRole('button', { name: 'Show full content' }).first();
-    if (await showFullContentButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+    if (await showFullContentButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await showFullContentButton.click();
     }
 
@@ -65,9 +65,12 @@ test.describe('Action Results Flow', () => {
     await resultsPage.goto();
     await resultsPage.viewPhaseResults(1);
 
+    // Wait for results to load before checking for the expand button
+    await expect(page.locator('text=Basement Investigation Results')).toBeVisible({ timeout: 10000 });
+
     // Click "Show full content" button to expand the collapsed text
     const showFullContentButton = page.getByRole('button', { name: 'Show full content' }).first();
-    if (await showFullContentButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+    if (await showFullContentButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await showFullContentButton.click();
     }
 
@@ -94,7 +97,7 @@ test.describe('Action Results Flow', () => {
 
     // Click "Show full content" button to expand the collapsed text
     const showFullContentButton = page.getByRole('button', { name: 'Show full content' }).first();
-    if (await showFullContentButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+    if (await showFullContentButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await showFullContentButton.click();
     }
 

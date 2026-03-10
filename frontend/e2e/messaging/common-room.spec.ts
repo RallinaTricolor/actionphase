@@ -346,9 +346,7 @@ test.describe('Common Room Flow', () => {
       let modalTestExecuted = false;
 
       for (let depth = 1; depth <= 6; depth++) {
-        // Reload and navigate
-        await currentPage.reload();
-        await currentPage.waitForLoadState('networkidle');
+        // Navigate fresh (no reload needed before goto)
         await currentCommonRoom.goto(gameId);
 
         // Expand comments if needed
@@ -362,16 +360,18 @@ test.describe('Common Room Flow', () => {
           }
         }
 
+        // Find the threaded-comment container that directly holds previousComment.
+        // Since each comment text is unique (timestamp-based), we locate the text node
+        // then walk up to its nearest threaded-comment ancestor.
+        const commentText = currentPage.getByText(previousComment, { exact: true }).first();
+        await expect(commentText).toBeVisible({ timeout: 10000 });
+        // Use :visible to exclude mobile-variant threaded-comment nodes (md:hidden, display:none
+        // at desktop viewport). Both desktop and mobile variants share data-testid="threaded-comment",
+        // but only the desktop variant is visible at Playwright's desktop viewport size.
         const commentContainer = currentPage
-            .locator('[data-testid="threaded-comment"]')
-            .filter({
-              has: currentPage.locator(`text="${previousComment}"`),
-              hasNot: currentPage.locator('[data-testid="threaded-comment"]').locator(`text="${previousComment}"`)
-            })
-            .first();
-
-        // Verify the comment exists before proceeding
-        await expect(commentContainer).toBeVisible({ timeout: 10000 });
+            .locator('[data-testid="threaded-comment"]:visible')
+            .filter({ has: commentText })
+            .last(); // last() = innermost visible threaded-comment that contains the text
 
         // Check if "Continue this thread" button appears (at depth 4 when children exist beyond maxDepth)
         const continueButton = commentContainer.getByRole('button', { name: /Continue this thread/ });
@@ -398,8 +398,9 @@ test.describe('Common Room Flow', () => {
           await expect(modal.getByText(previousComment)).toBeVisible({ timeout: 5000 });
 
           // === Test: Reply to a comment in the modal ===
-          const modalCommentContainer = modal.locator('[data-testid="threaded-comment"]').filter({ hasText: previousComment }).locator('visible=true').first();
-          const modalReplyButton = modalCommentContainer.getByRole('button', { name: 'Reply' }).locator('visible=true').first();
+          const modalCommentContainer = modal.locator('[data-testid="threaded-comment"]:visible').filter({ hasText: previousComment }).first();
+          const modalReplyButton = modalCommentContainer.getByRole('button', { name: /reply/i }).first();
+          await expect(modalReplyButton).toBeVisible({ timeout: 10000 });
           await modalReplyButton.click();
           await currentPage.waitForTimeout(500);
 
@@ -419,8 +420,10 @@ test.describe('Common Room Flow', () => {
         }
 
         // No "Continue thread" button - create nested reply
-        const replyButton = commentContainer.getByRole('button', { name: 'Reply' }).first();
-        await expect(replyButton).toBeVisible({ timeout: 5000 });
+        // Reply button has aria-label="Reply to this comment"; use longer timeout to allow
+        // controllable characters to finish loading (they gate the button's render)
+        const replyButton = commentContainer.getByRole('button', { name: /reply/i }).first();
+        await expect(replyButton).toBeVisible({ timeout: 10000 });
 
         // Click Reply
         await replyButton.click();
