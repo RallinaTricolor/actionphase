@@ -142,6 +142,37 @@ func IsUserGameMasterCtx(ctx context.Context, userID int32, isAdmin bool, game m
 	return false
 }
 
+// CanSeeUsernamesInAnonymousGame returns true if the user is allowed to see
+// author usernames in a game with is_anonymous=true.
+//
+// Rule: players cannot see each other's usernames in anonymous games.
+// GMs, co-GMs, and audience members can always see usernames.
+//
+// If the game is not anonymous, always returns true.
+func CanSeeUsernamesInAnonymousGame(ctx context.Context, db *pgxpool.Pool, game models.Game, userID int32) bool {
+	if !game.IsAnonymous {
+		return true
+	}
+
+	// Primary GM always sees usernames
+	if game.GmUserID == userID {
+		return true
+	}
+
+	// Check participant role: co_gm and audience can see usernames; players cannot
+	queries := models.New(db)
+	participant, err := queries.GetParticipantByGameAndUser(ctx, models.GetParticipantByGameAndUserParams{
+		GameID: game.ID,
+		UserID: userID,
+	})
+	if err != nil {
+		// Not a participant — redact to be safe
+		return false
+	}
+
+	return participant.Role == "co_gm" || participant.Role == "audience"
+}
+
 // CanUserControlNPC checks if a user can control an NPC character.
 // This includes:
 // 1. The NPC is assigned to the user (via npc_assignments table)

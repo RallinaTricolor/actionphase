@@ -435,7 +435,7 @@ export const ThreadedComment = memo(function ThreadedComment({
             <div className="hidden md:block">
               <span className="font-semibold text-sm text-content-primary">{comment.character_name}</span>
               <span className="text-xs text-content-secondary ml-2">
-                @{comment.author_username} · {formatDate(comment.created_at)}
+                {comment.author_username ? `@${comment.author_username} · ` : ''}{formatDate(comment.created_at)}
                 {comment.is_edited && !comment.is_deleted && (
                   <span className="ml-1 text-content-tertiary" title={comment.edited_at ? `Last edited ${formatDate(comment.edited_at)}` : undefined}>
                     (edited{comment.edit_count && comment.edit_count > 1 ? ` ${comment.edit_count}x` : ''})
@@ -460,9 +460,11 @@ export const ThreadedComment = memo(function ThreadedComment({
                   <span className="text-xs bg-semantic-warning-subtle text-content-primary px-1.5 py-0.5 rounded font-semibold flex-shrink-0">NEW</span>
                 )}
               </div>
-              <div className="text-xs text-content-secondary">
-                @{comment.author_username}
-              </div>
+              {comment.author_username && (
+                <div className="text-xs text-content-secondary">
+                  @{comment.author_username}
+                </div>
+              )}
               <div className="text-xs text-content-tertiary">
                 {formatDate(comment.created_at)}
                 {comment.is_edited && !comment.is_deleted && (

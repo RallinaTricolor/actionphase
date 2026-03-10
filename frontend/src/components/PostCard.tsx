@@ -420,7 +420,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                 <div className="flex-1">
                   <h3 className="font-bold text-xl text-content-primary">{post.character_name}</h3>
                   <p className="text-sm text-content-secondary">
-                    Posted by @{post.author_username} · {formatDate(post.created_at)}
+                    {post.author_username ? `Posted by @${post.author_username} · ` : 'Posted '}{formatDate(post.created_at)}
                     {post.is_edited && <span className="ml-1 text-content-tertiary">(edited)</span>}
                     {isAuthor && (
                       <span className="ml-2 text-xs bg-interactive-primary-subtle text-interactive-primary px-2 py-0.5 rounded">You</span>

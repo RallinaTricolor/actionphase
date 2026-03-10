@@ -145,7 +145,7 @@ describe('ActionsList', () => {
         })
       );
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const skeleton = document.querySelector('.animate-pulse');
       expect(skeleton).toBeInTheDocument();
@@ -167,7 +167,7 @@ describe('ActionsList', () => {
         })
       );
 
-      const { container } = renderWithProviders(<ActionsList gameId={1} />);
+      const { container } = renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const skeleton = container.querySelector('.animate-pulse');
       expect(skeleton).toBeInTheDocument();
@@ -182,7 +182,7 @@ describe('ActionsList', () => {
     it('returns null when there are no action phases', async () => {
       setupDefaultHandlers([], [mockCommonRoomPhase]);
 
-      const { container } = renderWithProviders(<ActionsList gameId={1} />);
+      const { container } = renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(container.firstChild).toBeNull();
@@ -192,7 +192,7 @@ describe('ActionsList', () => {
     it('does not render component when only common room phases exist', async () => {
       setupDefaultHandlers(mockActions, [mockCommonRoomPhase]);
 
-      const { container } = renderWithProviders(<ActionsList gameId={1} />);
+      const { container } = renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(container.firstChild).toBeNull();
@@ -202,7 +202,7 @@ describe('ActionsList', () => {
     it('shows empty state when no actions exist', async () => {
       setupDefaultHandlers([]);
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('No actions submitted yet')).toBeInTheDocument();
@@ -212,7 +212,7 @@ describe('ActionsList', () => {
     it('shows empty state message for no actions', async () => {
       setupDefaultHandlers([]);
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(
@@ -225,7 +225,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers([mockActions[0]]);
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Submitted Actions')).toBeInTheDocument();
@@ -244,7 +244,7 @@ describe('ActionsList', () => {
     it('renders heading', async () => {
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Submitted Actions')).toBeInTheDocument();
@@ -254,7 +254,7 @@ describe('ActionsList', () => {
     it('renders description', async () => {
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(
@@ -266,7 +266,7 @@ describe('ActionsList', () => {
     it('displays total action count', async () => {
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('3 Actions')).toBeInTheDocument();
@@ -276,7 +276,7 @@ describe('ActionsList', () => {
     it('displays singular action count when one action', async () => {
       setupDefaultHandlers([mockActions[0]]);
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('1 Action')).toBeInTheDocument();
@@ -286,7 +286,7 @@ describe('ActionsList', () => {
     it('lists all actions when no filter selected', async () => {
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         // Using getAllByText because dual-DOM renders username in both mobile and desktop views
@@ -300,7 +300,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers();
 
       const { container } = renderWithProviders(
-        <ActionsList gameId={1} className="custom-test-class" />
+        <ActionsList gameId={1} className="custom-test-class" />,
+        { gameId: 1 }
       );
 
       expect(container.querySelector('.custom-test-class')).toBeInTheDocument();
@@ -311,7 +312,7 @@ describe('ActionsList', () => {
     it('renders phase filter dropdown', async () => {
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Filter by Action Phase')).toBeInTheDocument();
@@ -321,7 +322,7 @@ describe('ActionsList', () => {
     it('shows only action phases in filter dropdown', async () => {
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         const select = screen.getByRole('combobox');
@@ -334,7 +335,7 @@ describe('ActionsList', () => {
     it('shows action count per phase in dropdown', async () => {
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         const select = screen.getByRole('combobox');
@@ -346,7 +347,7 @@ describe('ActionsList', () => {
     it('shows zero count for phases with no actions', async () => {
       setupDefaultHandlers([mockActions[0]]);
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         const select = screen.getByRole('combobox');
@@ -359,7 +360,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
@@ -380,7 +381,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('3 Actions')).toBeInTheDocument();
@@ -398,7 +399,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
@@ -423,7 +424,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers();
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       await waitFor(() => {
@@ -439,7 +441,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers();
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockCommonRoomPhase} />
+        <ActionsList gameId={1} currentPhase={mockCommonRoomPhase} />,
+        { gameId: 1 }
       );
 
       await waitFor(() => {
@@ -454,7 +457,7 @@ describe('ActionsList', () => {
     it('displays username for each action', async () => {
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
@@ -466,7 +469,7 @@ describe('ActionsList', () => {
     it('displays character name when present', async () => {
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getAllByText('as Hero Character')[0]).toBeInTheDocument();
@@ -478,7 +481,7 @@ describe('ActionsList', () => {
     it('displays phase information', async () => {
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         const phaseInfo = screen.getAllByText(/Phase \d+ - action/i);
@@ -489,7 +492,7 @@ describe('ActionsList', () => {
     it('displays submission timestamp', async () => {
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getAllByText('player1')[0]).toBeInTheDocument();
@@ -503,7 +506,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const actionCards = await screen.findAllByText('player1');
       await user.click(actionCards[0]);
@@ -519,7 +522,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const actionCards = await screen.findAllByText('player1');
       await user.click(actionCards[0]);
@@ -543,7 +546,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const actionCards = await screen.findAllByText('player1');
       await user.click(actionCards[0]);
@@ -559,7 +562,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const actionCards = await screen.findAllByText('player1');
       await user.click(actionCards[0]);
@@ -573,7 +576,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const actionCards = await screen.findAllByText('player1');
       await user.click(actionCards[0]);
@@ -589,7 +592,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const actionCards = await screen.findAllByText('player1');
       await user.click(actionCards[0]);
@@ -608,7 +611,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const actionCards = await screen.findAllByText('player1');
       await user.click(actionCards[0]);
@@ -629,7 +632,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const actionCards = await screen.findAllByText('player1');
       await user.click(actionCards[0]);
@@ -648,7 +651,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const actionCards = await screen.findAllByText('player1');
       await user.click(actionCards[0]);
@@ -676,7 +679,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const actionCards = await screen.findAllByText('player1');
       await user.click(actionCards[0]);
@@ -702,7 +705,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers();
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       const player1Cards = await screen.findAllByText('player1');
       await user.click(player1Cards[0]);
@@ -732,7 +735,7 @@ describe('ActionsList', () => {
     it('hides publish button when no unpublished results', async () => {
       setupDefaultHandlers(mockActions, [mockActionPhase1], 0);
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Submitted Actions')).toBeInTheDocument();
@@ -747,7 +750,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       await waitFor(() => {
@@ -761,7 +765,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers(mockActions, [mockActionPhase1], 5);
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       await waitFor(() => {
@@ -773,7 +778,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers(mockActions, [mockActionPhase1], 1);
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       await waitFor(() => {
@@ -785,7 +791,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       await waitFor(() => {
@@ -800,7 +807,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       const publishButton = await screen.findByRole('button', {
@@ -818,7 +826,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       const publishButton = await screen.findByRole('button', {
@@ -838,7 +847,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       const publishButton = await screen.findByRole('button', {
@@ -858,7 +868,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       const publishButton = await screen.findByRole('button', {
@@ -893,7 +904,8 @@ describe('ActionsList', () => {
       );
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       const publishButton = await screen.findByRole('button', {
@@ -927,7 +939,8 @@ describe('ActionsList', () => {
       );
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       const publishButton = await screen.findByRole('button', {
@@ -964,7 +977,8 @@ describe('ActionsList', () => {
       );
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       const publishButton = await screen.findByRole('button', {
@@ -994,7 +1008,8 @@ describe('ActionsList', () => {
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
-        <ActionsList gameId={1} currentPhase={mockActionPhase1} />
+        <ActionsList gameId={1} currentPhase={mockActionPhase1} />,
+        { gameId: 1 }
       );
 
       const publishButton = await screen.findByRole('button', {
@@ -1018,7 +1033,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup();
       setupDefaultHandlers(mockActions, [mockActionPhase1, mockActionPhase2], 2);
 
-      renderWithProviders(<ActionsList gameId={1} />);
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Submitted Actions')).toBeInTheDocument();

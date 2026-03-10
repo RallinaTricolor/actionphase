@@ -279,6 +279,18 @@ func (h *Handler) GetGamePosts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Fetch game for anonymous mode check
+	queries := models.New(h.App.Pool)
+	game, err := queries.GetGame(ctx, int32(gameID))
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	userID, _ := getUserIDFromToken(r, h.App)
+	showUsernames := core.CanSeeUsernamesInAnonymousGame(ctx, h.App.Pool, game, userID)
+
 	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	posts, err := messageService.GetGamePosts(ctx, int32(gameID), phaseID, limit, offset)
 	if err != nil {
@@ -290,6 +302,10 @@ func (h *Handler) GetGamePosts(w http.ResponseWriter, r *http.Request) {
 	// Convert to response format
 	response := make([]map[string]interface{}, 0)
 	for _, post := range posts {
+		authorUsername := post.AuthorUsername
+		if !showUsernames {
+			authorUsername = ""
+		}
 		postData := map[string]interface{}{
 			"id":                   post.ID,
 			"game_id":              post.GameID,
@@ -298,7 +314,7 @@ func (h *Handler) GetGamePosts(w http.ResponseWriter, r *http.Request) {
 			"content":              post.Content,
 			"message_type":         string(post.MessageType),
 			"thread_depth":         post.ThreadDepth,
-			"author_username":      post.AuthorUsername,
+			"author_username":      authorUsername,
 			"character_name":       post.CharacterName,
 			"character_avatar_url": post.CharacterAvatarUrl,
 			"comment_count":        post.CommentCount,
@@ -397,7 +413,7 @@ func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_message")()
 
 	gameIDStr := chi.URLParam(r, "gameId")
-	_, err := strconv.ParseInt(gameIDStr, 10, 32)
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
 		return
@@ -410,6 +426,17 @@ func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	queries := models.New(h.App.Pool)
+	game, err := queries.GetGame(ctx, int32(gameID))
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	userID, _ := getUserIDFromToken(r, h.App)
+	showUsernames := core.CanSeeUsernamesInAnonymousGame(ctx, h.App.Pool, game, userID)
+
 	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	message, err := messageService.GetMessage(ctx, int32(messageID))
 	if err != nil {
@@ -419,6 +446,9 @@ func (h *Handler) GetMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := messageWithDetailsToResponse(message)
+	if !showUsernames {
+		response.AuthorUsername = ""
+	}
 	render.Render(w, r, response)
 }
 
@@ -428,7 +458,7 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_post_comments")()
 
 	gameIDStr := chi.URLParam(r, "gameId")
-	_, err := strconv.ParseInt(gameIDStr, 10, 32)
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
 		return
@@ -441,6 +471,18 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch game for anonymous mode check
+	queries := models.New(h.App.Pool)
+	game, err := queries.GetGame(ctx, int32(gameID))
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	userID, _ := getUserIDFromToken(r, h.App)
+	showUsernames := core.CanSeeUsernamesInAnonymousGame(ctx, h.App.Pool, game, userID)
+
 	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 	comments, err := messageService.GetPostComments(ctx, int32(postID))
 	if err != nil {
@@ -452,6 +494,10 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 	// Convert to response format
 	response := make([]map[string]interface{}, 0)
 	for _, comment := range comments {
+		authorUsername := comment.AuthorUsername
+		if !showUsernames {
+			authorUsername = ""
+		}
 		commentData := map[string]interface{}{
 			"id":                      comment.ID,
 			"game_id":                 comment.GameID,
@@ -460,7 +506,7 @@ func (h *Handler) GetPostComments(w http.ResponseWriter, r *http.Request) {
 			"content":                 comment.Content,
 			"message_type":            string(comment.MessageType),
 			"thread_depth":            comment.ThreadDepth,
-			"author_username":         comment.AuthorUsername,
+			"author_username":         authorUsername,
 			"character_name":          comment.CharacterName,
 			"character_avatar_url":    comment.CharacterAvatarUrl,
 			"reply_count":             comment.ReplyCount,
@@ -494,7 +540,7 @@ func (h *Handler) GetPostCommentsWithThreads(w http.ResponseWriter, r *http.Requ
 
 	// Parse game ID
 	gameIDStr := chi.URLParam(r, "gameId")
-	_, err := strconv.ParseInt(gameIDStr, 10, 32)
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
 	if err != nil {
 		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
 		return
@@ -542,6 +588,18 @@ func (h *Handler) GetPostCommentsWithThreads(w http.ResponseWriter, r *http.Requ
 		maxDepth = int32(maxDepthInt)
 	}
 
+	// Fetch game for anonymous mode check
+	queries := models.New(h.App.Pool)
+	game, err := queries.GetGame(ctx, int32(gameID))
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	userID, _ := getUserIDFromToken(r, h.App)
+	showUsernames := core.CanSeeUsernamesInAnonymousGame(ctx, h.App.Pool, game, userID)
+
 	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 	// Get paginated comments with threads
@@ -564,6 +622,10 @@ func (h *Handler) GetPostCommentsWithThreads(w http.ResponseWriter, r *http.Requ
 	comments := make([]map[string]interface{}, 0)
 	for _, commentWithDepth := range commentsWithDepth {
 		comment := commentWithDepth.Comment
+		authorUsername := comment.AuthorUsername
+		if !showUsernames {
+			authorUsername = ""
+		}
 		commentData := map[string]interface{}{
 			"id":                      comment.ID,
 			"game_id":                 comment.GameID,
@@ -572,7 +634,7 @@ func (h *Handler) GetPostCommentsWithThreads(w http.ResponseWriter, r *http.Requ
 			"content":                 comment.Content,
 			"message_type":            string(comment.MessageType),
 			"thread_depth":            comment.ThreadDepth,
-			"author_username":         comment.AuthorUsername,
+			"author_username":         authorUsername,
 			"character_name":          comment.CharacterName,
 			"character_avatar_url":    comment.CharacterAvatarUrl,
 			"reply_count":             comment.ReplyCount,
@@ -1123,6 +1185,18 @@ func (h *Handler) ListRecentCommentsWithParents(w http.ResponseWriter, r *http.R
 		offset = parsedOffset
 	}
 
+	// Fetch game for anonymous mode check
+	queries := models.New(h.App.Pool)
+	game, err := queries.GetGame(ctx, int32(gameID))
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	userID, _ := getUserIDFromToken(r, h.App)
+	showUsernames := core.CanSeeUsernamesInAnonymousGame(ctx, h.App.Pool, game, userID)
+
 	// Get comments with parents from service
 	// Note: No permission check required - comments are publicly viewable like posts
 	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
@@ -1150,7 +1224,7 @@ func (h *Handler) ListRecentCommentsWithParents(w http.ResponseWriter, r *http.R
 
 	// Convert to response format
 	response := map[string]interface{}{
-		"comments": commentsWithParentsToResponse(comments),
+		"comments": commentsWithParentsToResponse(comments, showUsernames),
 		"pagination": map[string]interface{}{
 			"limit":  limit,
 			"offset": offset,
@@ -1163,9 +1237,13 @@ func (h *Handler) ListRecentCommentsWithParents(w http.ResponseWriter, r *http.R
 }
 
 // Helper function to convert CommentWithParent slice to response format
-func commentsWithParentsToResponse(comments []core.CommentWithParent) []map[string]interface{} {
+func commentsWithParentsToResponse(comments []core.CommentWithParent, showUsernames bool) []map[string]interface{} {
 	result := make([]map[string]interface{}, len(comments))
 	for i, comment := range comments {
+		authorUsername := comment.AuthorUsername
+		if !showUsernames {
+			authorUsername = ""
+		}
 		commentData := map[string]interface{}{
 			"id":                   comment.ID,
 			"game_id":              comment.GameID,
@@ -1178,21 +1256,26 @@ func commentsWithParentsToResponse(comments []core.CommentWithParent) []map[stri
 			"edit_count":           comment.EditCount,
 			"deleted_at":           formatTimePtr(comment.DeletedAt),
 			"is_deleted":           comment.IsDeleted,
-			"author_username":      comment.AuthorUsername,
+			"author_username":      authorUsername,
 			"character_name":       comment.CharacterName,
 			"character_avatar_url": comment.CharacterAvatarUrl,
 		}
 
 		// Add parent data if exists
 		if comment.ParentContent != nil {
+			parentAuthorUsername := comment.ParentAuthorUsername
+			if !showUsernames {
+				emptyStr := ""
+				parentAuthorUsername = &emptyStr
+			}
 			commentData["parent"] = map[string]interface{}{
-				"content":           comment.ParentContent,
-				"created_at":        formatTimePtr(comment.ParentCreatedAt),
-				"deleted_at":        formatTimePtr(comment.ParentDeletedAt),
-				"is_deleted":        comment.ParentIsDeleted,
-				"message_type":      comment.ParentMessageType,
-				"author_username":   comment.ParentAuthorUsername,
-				"character_name":    comment.ParentCharacterName,
+				"content":              comment.ParentContent,
+				"created_at":          formatTimePtr(comment.ParentCreatedAt),
+				"deleted_at":          formatTimePtr(comment.ParentDeletedAt),
+				"is_deleted":          comment.ParentIsDeleted,
+				"message_type":        comment.ParentMessageType,
+				"author_username":     parentAuthorUsername,
+				"character_name":      comment.ParentCharacterName,
 				"character_avatar_url": comment.ParentCharacterAvatarUrl,
 			}
 		}

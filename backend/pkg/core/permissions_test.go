@@ -10,6 +10,100 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// TestCanSeeUsernamesInAnonymousGame tests the anonymous game username visibility rule:
+// - Non-anonymous game: all users can see usernames
+// - Anonymous game: GM, co-GM, and audience can see usernames; players cannot
+func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
+	if os.Getenv("SKIP_DB_TESTS") == "true" {
+		t.Skip("Skipping integration test - SKIP_DB_TESTS=true")
+	}
+
+	testDB := NewTestDatabase(t)
+	defer testDB.Close()
+
+	ctx := context.Background()
+	queries := models.New(testDB.Pool)
+
+	gmUser := testDB.CreateTestUser(t, "anon_gm", "anon_gm@example.com")
+	coGMUser := testDB.CreateTestUser(t, "anon_cogm", "anon_cogm@example.com")
+	audienceUser := testDB.CreateTestUser(t, "anon_audience", "anon_audience@example.com")
+	playerUser := testDB.CreateTestUser(t, "anon_player", "anon_player@example.com")
+
+	// Create anonymous game directly (CreateTestGame doesn't set IsAnonymous)
+	anonGame, err := queries.CreateGame(ctx, models.CreateGameParams{
+		Title:       "Anonymous Test Game",
+		Description: pgtype.Text{String: "Test", Valid: true},
+		GmUserID:    int32(gmUser.ID),
+		IsAnonymous: true,
+		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create anonymous test game: %v", err)
+	}
+
+	// Create non-anonymous game for contrast
+	normalGame, err := queries.CreateGame(ctx, models.CreateGameParams{
+		Title:       "Normal Test Game",
+		Description: pgtype.Text{String: "Test", Valid: true},
+		GmUserID:    int32(gmUser.ID),
+		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create normal test game: %v", err)
+	}
+
+	type participant struct {
+		userID int32
+		role   string
+	}
+	participants := []participant{
+		{int32(coGMUser.ID), "co_gm"},
+		{int32(audienceUser.ID), "audience"},
+		{int32(playerUser.ID), "player"},
+	}
+	for _, p := range participants {
+		for _, gameRef := range []*models.Game{&anonGame, &normalGame} {
+			_, err := queries.AddGameParticipant(ctx, models.AddGameParticipantParams{
+				GameID: gameRef.ID,
+				UserID: p.userID,
+				Role:   p.role,
+			})
+			if err != nil {
+				t.Fatalf("Failed to add %s participant: %v", p.role, err)
+			}
+		}
+	}
+
+	tests := []struct {
+		name   string
+		game   models.Game
+		userID int32
+		want   bool
+	}{
+		// Non-anonymous game: everyone sees usernames
+		{"non-anon: GM sees username", normalGame, int32(gmUser.ID), true},
+		{"non-anon: player sees username", normalGame, int32(playerUser.ID), true},
+		{"non-anon: audience sees username", normalGame, int32(audienceUser.ID), true},
+		{"non-anon: co-GM sees username", normalGame, int32(coGMUser.ID), true},
+
+		// Anonymous game: GM, co-GM, audience see usernames; players do not
+		{"anon: GM sees username", anonGame, int32(gmUser.ID), true},
+		{"anon: co-GM sees username", anonGame, int32(coGMUser.ID), true},
+		{"anon: audience sees username", anonGame, int32(audienceUser.ID), true},
+		{"anon: player cannot see username", anonGame, int32(playerUser.ID), false},
+		{"anon: non-participant cannot see username", anonGame, 99999, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CanSeeUsernamesInAnonymousGame(ctx, testDB.Pool, tt.game, tt.userID)
+			if got != tt.want {
+				t.Errorf("CanSeeUsernamesInAnonymousGame() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestIsUserCoGM tests the IsUserCoGM permission check
 func TestIsUserCoGM(t *testing.T) {
 	if os.Getenv("SKIP_DB_TESTS") == "true" {
