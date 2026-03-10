@@ -6,6 +6,7 @@ import (
 	"actionphase/pkg/observability"
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -123,7 +124,7 @@ func (s *UserService) UserByUsername(username string) (*core.User, error) {
 func (s *UserService) UserByEmail(email string) (*core.User, error) {
 	ctx := context.Background()
 	q := db.New(s.DB)
-	dbUser, err := q.GetUserByEmail(ctx, email)
+	dbUser, err := q.GetUserByEmail(ctx, strings.ToLower(email))
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +185,7 @@ func (s *UserService) CreateUser(u *core.User) (*core.User, error) {
 	dbUser, err := q.CreateUser(ctx, db.CreateUserParams{
 		Username: u.Username,
 		Password: u.Password,
-		Email:    u.Email,
+		Email:    strings.ToLower(u.Email),
 	})
 
 	if err != nil {

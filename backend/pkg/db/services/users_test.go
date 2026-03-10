@@ -154,10 +154,10 @@ func TestUserService_UserByUsername(t *testing.T) {
 		assert.Nil(t, user)
 	})
 
-	t.Run("username is case-sensitive", func(t *testing.T) {
+	t.Run("username lookup is case-insensitive but stores original casing", func(t *testing.T) {
 		defer testDB.CleanupTables(t, "users")
 
-		// Create a user with specific casing
+		// Create a user with mixed casing
 		created := &core.User{
 			Username: "CaseSensitive",
 			Password: "password123",
@@ -170,12 +170,53 @@ func TestUserService_UserByUsername(t *testing.T) {
 		// Should find with exact case
 		found, err := service.UserByUsername("CaseSensitive")
 		require.NoError(t, err)
-		assert.Equal(t, "CaseSensitive", found.Username)
+		assert.Equal(t, "CaseSensitive", found.Username) // stored casing preserved
 
-		// Should not find with different case
-		notFound, err := service.UserByUsername("casesensitive")
-		assert.Error(t, err)
-		assert.Nil(t, notFound)
+		// Should also find with all-lowercase
+		foundLower, err := service.UserByUsername("casesensitive")
+		require.NoError(t, err)
+		assert.Equal(t, "CaseSensitive", foundLower.Username) // stored casing returned
+
+		// Should also find with all-uppercase
+		foundUpper, err := service.UserByUsername("CASESENSITIVE")
+		require.NoError(t, err)
+		assert.Equal(t, "CaseSensitive", foundUpper.Username)
+	})
+
+	t.Run("email lookup is case-insensitive", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		created := &core.User{
+			Username: "emailtest",
+			Password: "password123",
+			Email:    "User@Example.COM",
+		}
+
+		_, err := service.CreateUser(created)
+		require.NoError(t, err)
+
+		// Should find with any email casing
+		found, err := service.UserByEmail("user@example.com")
+		require.NoError(t, err)
+		assert.Equal(t, "emailtest", found.Username)
+
+		found2, err := service.UserByEmail("USER@EXAMPLE.COM")
+		require.NoError(t, err)
+		assert.Equal(t, "emailtest", found2.Username)
+	})
+
+	t.Run("email is stored normalized to lowercase", func(t *testing.T) {
+		defer testDB.CleanupTables(t, "users")
+
+		created := &core.User{
+			Username: "normtest",
+			Password: "password123",
+			Email:    "Mixed@Example.COM",
+		}
+
+		result, err := service.CreateUser(created)
+		require.NoError(t, err)
+		assert.Equal(t, "mixed@example.com", result.Email)
 	})
 }
 

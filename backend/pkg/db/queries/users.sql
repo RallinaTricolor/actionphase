@@ -4,7 +4,7 @@ WHERE id = $1 LIMIT 1;
 
 -- name: GetUserByUsername :one
 SELECT * FROM users
-WHERE username = $1 LIMIT 1;
+WHERE LOWER(username) = LOWER($1) LIMIT 1;
 
 -- name: ListUsers :many
 SELECT * FROM users
@@ -86,7 +86,7 @@ WHERE id = $1;
 
 -- name: GetUserByEmail :one
 SELECT * FROM users
-WHERE email = $1 LIMIT 1;
+WHERE LOWER(email) = LOWER($1) LIMIT 1;
 
 -- Password Reset Tokens
 

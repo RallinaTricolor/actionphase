@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	db "actionphase/pkg/db/models"
@@ -104,7 +105,7 @@ func (s *PasswordService) RequestPasswordReset(ctx context.Context, req *Request
 	queries := db.New(s.DB)
 
 	// Find user by email (use silent failure for security - don't reveal if email exists)
-	user, err := queries.GetUserByEmail(ctx, req.Email)
+	user, err := queries.GetUserByEmail(ctx, strings.ToLower(req.Email))
 	if err != nil {
 		// Don't reveal that email doesn't exist - return success anyway
 		return nil

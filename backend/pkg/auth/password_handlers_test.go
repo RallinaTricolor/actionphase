@@ -260,6 +260,14 @@ func TestV1RequestPasswordReset(t *testing.T) {
 			email:          "not-an-email",
 			expectedStatus: http.StatusBadRequest,
 		},
+		{
+			name: "case-insensitive email match sends reset token",
+			setupUser: func() int32 {
+				return createTestUser(t, pool, "reset_case@test.com", "resetcase", "TestPass123!")
+			},
+			email:          "RESET_CASE@TEST.COM",
+			expectedStatus: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {

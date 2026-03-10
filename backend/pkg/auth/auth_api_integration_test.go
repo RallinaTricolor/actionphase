@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -208,6 +209,26 @@ func TestAuthAPI_LoginEndpoint(t *testing.T) {
 			},
 			expectedStatus: 401,
 			description:    "Login with empty credentials should fail",
+		},
+		{
+			name: "login_username_uppercase",
+			payload: map[string]interface{}{
+				"username": strings.ToUpper(fixtures.TestUser.Username),
+				"password": plainPassword,
+			},
+			expectedStatus: 200,
+			description:    "Login with uppercase username should succeed (case-insensitive)",
+			checkFields:    []string{"Token"},
+		},
+		{
+			name: "login_email_uppercase",
+			payload: map[string]interface{}{
+				"username": strings.ToUpper(fixtures.TestUser.Email),
+				"password": plainPassword,
+			},
+			expectedStatus: 200,
+			description:    "Login with uppercase email should succeed (case-insensitive)",
+			checkFields:    []string{"Token"},
 		},
 	}
 

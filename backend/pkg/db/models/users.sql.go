@@ -293,11 +293,11 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
-WHERE email = $1 LIMIT 1
+WHERE LOWER(email) = LOWER($1) LIMIT 1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByEmail, email)
+func (q *Queries) GetUserByEmail(ctx context.Context, lower string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, lower)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -327,11 +327,11 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for FROM users
-WHERE username = $1 LIMIT 1
+WHERE LOWER(username) = LOWER($1) LIMIT 1
 `
 
-func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByUsername, username)
+func (q *Queries) GetUserByUsername(ctx context.Context, lower string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByUsername, lower)
 	var i User
 	err := row.Scan(
 		&i.ID,
