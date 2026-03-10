@@ -12,6 +12,7 @@ import (
 	db "actionphase/pkg/db/models"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"strings"
 )
 
 const (
@@ -268,6 +269,9 @@ func (s *AccountService) RequestEmailChange(ctx context.Context, userID int, req
 		}
 	}
 
+	// Normalize email to lowercase
+	req.NewEmail = strings.ToLower(req.NewEmail)
+
 	queries := db.New(s.DB)
 
 	// Get user to verify password
@@ -350,7 +354,7 @@ func (s *AccountService) CompleteEmailChange(ctx context.Context, req *VerifyEma
 	// Update email (this also clears email_change_pending and sets email_verified = true)
 	err = queries.UpdateUserEmail(ctx, db.UpdateUserEmailParams{
 		ID:    verificationToken.UserID,
-		Email: verificationToken.Email,
+		Email: strings.ToLower(verificationToken.Email),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update email: %w", err)

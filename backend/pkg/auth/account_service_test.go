@@ -185,6 +185,34 @@ func TestAccountService_ChangeUsername(t *testing.T) {
 		core.AssertTrue(t, ok, "Should be PasswordValidationError")
 		core.AssertTrue(t, strings.Contains(pwdErr.Reason, "already taken"), "Error should mention username is taken")
 	})
+
+	t.Run("rejects_duplicate_username_case_insensitive", func(t *testing.T) {
+		// Create a fresh user for this test (to avoid cooldown period)
+		caseUser, err := userService.CreateUser(&core.User{
+			Username: "caseconflictuser",
+			Password: "password123",
+			Email:    "caseconflict@example.com",
+		})
+		core.AssertNoError(t, err, "User creation should succeed")
+
+		// Create another user with lowercase version of the target
+		_, err = userService.CreateUser(&core.User{
+			Username: "ExistingCased",
+			Password: "password123",
+			Email:    "existingcased@example.com",
+		})
+		core.AssertNoError(t, err, "User creation should succeed")
+
+		// Try to claim "existingcased" (lowercase of "ExistingCased") — should be rejected
+		err = accountService.ChangeUsername(context.Background(), caseUser.ID, &ChangeUsernameRequest{
+			NewUsername:     "existingcased",
+			CurrentPassword: "password123",
+		})
+		core.AssertTrue(t, err != nil, "Should reject username that conflicts case-insensitively")
+		pwdErr, ok := err.(*PasswordValidationError)
+		core.AssertTrue(t, ok, "Should be PasswordValidationError")
+		core.AssertTrue(t, strings.Contains(pwdErr.Reason, "already taken"), "Error should mention username is taken")
+	})
 }
 
 func TestAccountService_SoftDeleteAccount(t *testing.T) {
@@ -384,5 +412,33 @@ func TestAccountService_RequestEmailChange(t *testing.T) {
 		pwdErr, ok := err.(*PasswordValidationError)
 		core.AssertTrue(t, ok, "Should be PasswordValidationError")
 		core.AssertTrue(t, strings.Contains(pwdErr.Reason, "invalid email"), "Error should mention invalid email format")
+	})
+
+	t.Run("rejects_duplicate_email_case_insensitive", func(t *testing.T) {
+		// Create another user with a specific email
+		_, err := userService.CreateUser(&core.User{
+			Username: "casedemailuser",
+			Password: "password123",
+			Email:    "CasedEmail@Example.com",
+		})
+		core.AssertNoError(t, err, "User creation should succeed")
+
+		// Create user to attempt the change
+		changer, err := userService.CreateUser(&core.User{
+			Username: "emailchanger",
+			Password: "password123",
+			Email:    "changer@example.com",
+		})
+		core.AssertNoError(t, err, "User creation should succeed")
+
+		// Try to claim "CASEDEMAIL@EXAMPLE.COM" — should conflict with stored "casedemail@example.com"
+		err = accountService.RequestEmailChange(context.Background(), changer.ID, &ChangeEmailRequest{
+			NewEmail:        "CASEDEMAIL@EXAMPLE.COM",
+			CurrentPassword: "password123",
+		})
+		core.AssertTrue(t, err != nil, "Should reject email that conflicts case-insensitively")
+		pwdErr, ok := err.(*PasswordValidationError)
+		core.AssertTrue(t, ok, "Should be PasswordValidationError")
+		core.AssertTrue(t, strings.Contains(pwdErr.Reason, "already in use"), "Error should mention email in use")
 	})
 }
