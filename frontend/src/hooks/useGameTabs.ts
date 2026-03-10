@@ -232,13 +232,19 @@ export function useGameTabs({
         }
         return;
       } else {
-        // Invalid URL param - redirect to default tab
-        if (hasSetInitialTab.current) {
-          setActiveTab(defaultTab);
-          const newParams = new URLSearchParams(searchParams);
-          newParams.set('tab', defaultTab);
-          setSearchParams(newParams, { replace: true });
-        }
+        // Invalid URL param - determine redirect target.
+        // If a comment deep-link is present, redirect to history (not the phase-aware
+        // default) so the comment can be resolved in the archived phase, preserving
+        // the comment param for HistoryView to handle.
+        const hasCommentParam = searchParams.has('comment');
+        const historyTabExists = tabs.some(t => t.id === 'history');
+        const redirectTab = (hasCommentParam && historyTabExists) ? 'history' : defaultTab;
+
+        hasSetInitialTab.current = true;
+        setActiveTab(redirectTab);
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('tab', redirectTab);
+        setSearchParams(newParams, { replace: true });
         return;
       }
     }

@@ -55,3 +55,6 @@ export {
 
 // UI state hooks
 export { usePostCollapseState } from './usePostCollapseState';
+
+// URL param sync hook (deep linking / permalink support)
+export { useUrlParam } from './useUrlParam';

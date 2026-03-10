@@ -57,7 +57,23 @@ describe('HistoryView', () => {
       }),
       http.get('/api/v1/games/:gameId/results', () => {
         return HttpResponse.json([]);
-      })
+      }),
+      // CommonRoom needs these when a phase is selected
+      http.get('/api/v1/games/:gameId/posts', () => {
+        return HttpResponse.json([]);
+      }),
+      http.get('/api/v1/games/:gameId/characters/controllable', () => {
+        return HttpResponse.json([]);
+      }),
+      http.get('/api/v1/games/:gameId/polls', () => {
+        return HttpResponse.json([]);
+      }),
+      http.get('/api/v1/games/:gameId/previous-phase-results', () => {
+        return HttpResponse.json({ results: [], phase_id: null, phase_title: null });
+      }),
+      http.get('/api/v1/games/:gameId/unread-comment-ids', () => {
+        return HttpResponse.json({});
+      }),
     );
   };
 
@@ -103,6 +119,89 @@ describe('HistoryView', () => {
       const actionButton = actionPhaseTitle[0].closest('button');
       expect(actionButton).toBeInTheDocument();
       expect(actionButton).not.toBeDisabled();
+    });
+  });
+
+  describe('URL param sync (phase deep linking)', () => {
+    it('auto-selects a phase when ?phase=<id> is in the URL', async () => {
+      // Phase 1 is the "Opening Ceremony" common_room phase
+      renderWithProviders(
+        <HistoryView
+          gameId={mockGameId}
+          currentPhaseId={mockCurrentPhaseId}
+          isGM={false}
+        />,
+        { initialRoute: '/games/1?tab=history&phase=1', gameId: mockGameId }
+      );
+
+      // Should render CommonRoom content for phase 1, not the phase list
+      // The "Back to History" button only appears when a phase is selected
+      expect(await screen.findByText('Back to History')).toBeInTheDocument();
+    });
+
+    it('updates the URL when a phase is clicked', async () => {
+      const user = (await import('@testing-library/user-event')).default.setup();
+
+      renderWithProviders(
+        <HistoryView
+          gameId={mockGameId}
+          currentPhaseId={mockCurrentPhaseId}
+          isGM={false}
+        />,
+        { initialRoute: '/games/1?tab=history', gameId: mockGameId }
+      );
+
+      // Wait for phase list, then click phase 1
+      const phaseButtons = await screen.findAllByText('Opening Ceremony');
+      await user.click(phaseButtons[0]);
+
+      // CommonRoom should now be visible
+      expect(await screen.findByText('Back to History')).toBeInTheDocument();
+    });
+
+    it('auto-navigates to the correct phase when ?comment param is present', async () => {
+      // Set up a mock for getMessage that returns a message with phase_id=1
+      const mockComment = {
+        id: 99,
+        game_id: mockGameId,
+        phase_id: 1,
+        author_id: 1,
+        character_id: 1,
+        content: 'A deep-linked comment',
+        message_type: 'comment',
+        parent_id: null,
+        thread_depth: 1,
+        author_username: 'testuser',
+        character_name: 'TestChar',
+        comment_count: 0,
+        is_edited: false,
+        is_deleted: false,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+      };
+
+      server.use(
+        http.get('/api/v1/games/:gameId/messages/:messageId', () => {
+          return HttpResponse.json(mockComment);
+        }),
+        // CommonRoom will fetch posts for phase 1
+        http.get('/api/v1/games/:gameId/posts', () => {
+          return HttpResponse.json([]);
+        })
+      );
+
+      renderWithProviders(
+        <HistoryView
+          gameId={mockGameId}
+          currentPhaseId={mockCurrentPhaseId}
+          isGM={false}
+        />,
+        { initialRoute: '/games/1?tab=history&comment=99', gameId: mockGameId }
+      );
+
+      // Should auto-select phase 1 (the phase containing comment 99)
+      // and render CommonRoom, showing the "Back to History" button
+      expect(await screen.findByText('Back to History')).toBeInTheDocument();
     });
   });
 });

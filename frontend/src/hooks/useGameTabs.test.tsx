@@ -585,4 +585,35 @@ describe('useGameTabs', () => {
       expect(applicationsTab).toBeUndefined();
     });
   });
+
+  describe('Bug: comment deep-link with invalid tab redirects to history preserving comment param', () => {
+    it('should redirect to history tab (not default) when common-room is invalid and comment param is present', async () => {
+      // Simulate arriving at ?tab=common-room&comment=42 during an action phase
+      // (common-room tab doesn't exist in the action phase tab list)
+      const wrapperWithUrl = ({ children }: { children: React.ReactNode }) => (
+        <MemoryRouter initialEntries={['/games/1?tab=common-room&comment=42']}>
+          {children}
+        </MemoryRouter>
+      );
+
+      const { result } = renderHook(
+        () => useGameTabs({
+          gameState: 'in_progress',
+          isGM: false,
+          participantCount: 3,
+          currentPhaseType: 'action',
+          isAudience: false,
+          isParticipant: true,
+          hasCharacters: true,
+        }),
+        { wrapper: wrapperWithUrl }
+      );
+
+      // Wait for the effect to run and redirect
+      await waitFor(() => {
+        // Active tab should be 'history', not 'actions' (the default for action phase)
+        expect(result.current.activeTab).toBe('history');
+      });
+    });
+  });
 });

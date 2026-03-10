@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 import { getActionPhaseLabel, getActionPhaseColor } from '../types/phases';
 import { CommonRoom } from './CommonRoom';
@@ -8,6 +9,12 @@ import { Button, Alert } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
 import CharacterAvatar from './CharacterAvatar';
 import type { ActionWithDetails } from '../types/phases';
+import { useUrlParam } from '../hooks/useUrlParam';
+
+const phaseParamOptions = {
+  deserialize: (s: string) => parseInt(s, 10) || null,
+  serialize: (v: number | null) => (v == null ? '' : String(v)),
+} as const;
 
 interface HistoryViewProps {
   gameId: number;
@@ -17,10 +24,25 @@ interface HistoryViewProps {
 }
 
 export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience = false }: HistoryViewProps) {
-  const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'submissions' | 'results' | 'polls'>('submissions');
+  const [selectedPhaseId, setSelectedPhaseIdState] = useUrlParam<number | null>(
+    'phase',
+    null,
+    { ...phaseParamOptions, replace: false }
+  );
+  const [activeTab, setActiveTabState] = useUrlParam<'submissions' | 'results' | 'polls'>(
+    'subTab',
+    'submissions',
+    { replace: false }
+  );
   const [expandedSubmissions, setExpandedSubmissions] = useState<Set<number>>(new Set());
   const [expandedResults, setExpandedResults] = useState<Set<number>>(new Set());
+
+  // Wrappers to keep the same call sites below
+  const setSelectedPhaseId = setSelectedPhaseIdState;
+  const setActiveTab = setActiveTabState;
+
+  const [searchParams] = useSearchParams();
+  const commentParam = searchParams.get('comment');
 
   const { data: phasesData, isLoading } = useQuery({
     queryKey: ['gamePhases', gameId],
@@ -96,6 +118,34 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience =
       setActiveTab('submissions');
     }
   }, [selectedPhase, activeTab]);
+
+  // Auto-navigate to the correct phase when a ?comment deep-link is present.
+  // This happens when a notification URL like ?tab=history&comment=99 lands here.
+  // We fetch the comment to determine its phase_id, then select that phase so
+  // CommonRoom can scroll to the comment.
+  useEffect(() => {
+    if (!commentParam || selectedPhaseId !== null || isLoading || phases.length === 0) {
+      return;
+    }
+
+    const resolveCommentPhase = async () => {
+      try {
+        const response = await apiClient.messages.getMessage(gameId, parseInt(commentParam, 10));
+        const message = response.data;
+        if (message.phase_id) {
+          // Only select if this phase exists in history
+          const phaseExists = phases.some(p => p.id === message.phase_id);
+          if (phaseExists) {
+            setSelectedPhaseId(message.phase_id);
+          }
+        }
+      } catch {
+        // If we can't resolve the comment's phase, leave the phase list visible
+      }
+    };
+
+    resolveCommentPhase();
+  }, [commentParam, selectedPhaseId, isLoading, phases, gameId, setSelectedPhaseId]);
 
   if (isLoading) {
     return (
