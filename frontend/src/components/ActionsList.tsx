@@ -183,7 +183,7 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
               <option value="">All Action Phases</option>
               {actionPhases.map((phase) => (
                 <option key={phase.id} value={phase.id}>
-                  Phase {phase.phase_number} - Action Phase
+                  Phase {phase.phase_number} - {phase.title || 'Action Phase'}
                   {actionsByPhase[phase.id] ? ` (${actionsByPhase[phase.id].length})` : ' (0)'}
                 </option>
               ))}
@@ -271,7 +271,7 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
           <div className="flex flex-col gap-1 text-xs text-content-secondary ml-10">
             {action.phase_type && action.phase_number && (
               <span>
-                Phase {action.phase_number} - {action.phase_type.replace('_', ' ')}
+                Phase {action.phase_number} - {action.phase_title || action.phase_type.replace('_', ' ')}
               </span>
             )}
             <span className="text-content-tertiary">
@@ -302,7 +302,7 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
               <div className="flex items-center space-x-2 mt-1">
                 {action.phase_type && action.phase_number && (
                   <span className="text-xs text-content-secondary">
-                    Phase {action.phase_number} - {action.phase_type.replace('_', ' ')}
+                    Phase {action.phase_number} - {action.phase_title || action.phase_type.replace('_', ' ')}
                   </span>
                 )}
                 <span className="text-xs text-content-tertiary">•</span>

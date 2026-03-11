@@ -308,6 +308,58 @@ describe('ActionsList', () => {
     });
   });
 
+  describe('Phase name display', () => {
+    it('shows phase title in filter dropdown when phase has a title', async () => {
+      setupDefaultHandlers();
+
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
+
+      await waitFor(() => {
+        const select = screen.getByRole('combobox');
+        expect(select).toHaveTextContent('First Action Phase');
+        expect(select).toHaveTextContent('Second Action Phase');
+      });
+    });
+
+    it('shows phase title in action card phase info', async () => {
+      const actionsWithTitle: ActionWithDetails[] = [
+        {
+          ...mockActions[0],
+          phase_title: 'The Great Heist',
+        },
+      ];
+      setupDefaultHandlers(actionsWithTitle);
+
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/The Great Heist/i)[0]).toBeInTheDocument();
+      });
+    });
+
+    it('falls back to "Action Phase" in dropdown when phase has no title', async () => {
+      const phaseWithoutTitle: GamePhase = { ...mockActionPhase1, title: undefined };
+      setupDefaultHandlers(mockActions, [phaseWithoutTitle]);
+
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
+
+      await waitFor(() => {
+        const select = screen.getByRole('combobox');
+        expect(select).toHaveTextContent('Phase 1 - Action Phase');
+      });
+    });
+
+    it('falls back to "action phase" in action card when action has no phase_title', async () => {
+      setupDefaultHandlers([mockActions[0]]);
+
+      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Phase 1 - action/i)[0]).toBeInTheDocument();
+      });
+    });
+  });
+
   describe('Phase Filtering', () => {
     it('renders phase filter dropdown', async () => {
       setupDefaultHandlers();
@@ -326,8 +378,8 @@ describe('ActionsList', () => {
 
       await waitFor(() => {
         const select = screen.getByRole('combobox');
-        expect(select).toHaveTextContent('Phase 1 - Action Phase');
-        expect(select).toHaveTextContent('Phase 2 - Action Phase');
+        expect(select).toHaveTextContent('Phase 1 - First Action Phase');
+        expect(select).toHaveTextContent('Phase 2 - Second Action Phase');
         expect(select).not.toHaveTextContent('Common Room Discussion');
       });
     });
@@ -339,8 +391,8 @@ describe('ActionsList', () => {
 
       await waitFor(() => {
         const select = screen.getByRole('combobox');
-        expect(select).toHaveTextContent('Phase 1 - Action Phase (2)');
-        expect(select).toHaveTextContent('Phase 2 - Action Phase (1)');
+        expect(select).toHaveTextContent('Phase 1 - First Action Phase (2)');
+        expect(select).toHaveTextContent('Phase 2 - Second Action Phase (1)');
       });
     });
 
@@ -351,8 +403,8 @@ describe('ActionsList', () => {
 
       await waitFor(() => {
         const select = screen.getByRole('combobox');
-        expect(select).toHaveTextContent('Phase 1 - Action Phase (1)');
-        expect(select).toHaveTextContent('Phase 2 - Action Phase (0)');
+        expect(select).toHaveTextContent('Phase 1 - First Action Phase (1)');
+        expect(select).toHaveTextContent('Phase 2 - Second Action Phase (0)');
       });
     });
 
