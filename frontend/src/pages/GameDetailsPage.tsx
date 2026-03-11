@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -117,6 +118,8 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   const { data: polls = [] } = usePollsByPhase(gameId, currentPhaseId || 0);
   const unvotedPollsCount = polls.filter(poll => !poll.user_has_voted).length;
 
+  const [searchParams] = useSearchParams();
+
   // Custom hooks for tab management
   const { tabs, activeTab, setActiveTab } = useGameTabs({
     gameState: game?.state || 'setup',
@@ -128,6 +131,12 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     hasCharacters: userCharacters.length > 0,
     unvotedPollsCount,
   });
+
+  const getTabHref = useCallback((tabId: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', tabId);
+    return `?${params.toString()}`;
+  }, [searchParams]);
 
   const actionLoading = appActionLoading || stateActionLoading;
   const [showEditModal, setShowEditModal] = useState(false);
@@ -397,6 +406,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
               tabs={tabs}
               activeTab={activeTab}
               onTabChange={setActiveTab}
+              getTabHref={getTabHref}
             />
 
             {/* Tab Content */}

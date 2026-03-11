@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 export interface Tab {
   id: string;
@@ -11,6 +12,8 @@ interface TabNavigationProps {
   tabs: Tab[];
   activeTab: string;
   onTabChange: (tabId: string) => void;
+  /** When provided, tabs render as <a> links for right-click / middle-click / Cmd+click support */
+  getTabHref?: (tabId: string) => string;
 }
 
 /**
@@ -19,7 +22,7 @@ interface TabNavigationProps {
  * Desktop: Horizontal tab bar with icons and labels
  * Mobile: Dropdown select menu for better space utilization
  */
-export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationProps) {
+export function TabNavigation({ tabs, activeTab, onTabChange, getTabHref }: TabNavigationProps) {
 
   return (
     <div className="border-b border-theme-default surface-base md:rounded-t-lg">
@@ -54,23 +57,23 @@ export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationPro
       <nav className="hidden md:flex -mb-px overflow-x-auto" role="tablist" aria-label="Tabs">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              role="tab"
-              onClick={() => onTabChange(tab.id)}
-              className={`
-                whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm flex items-center gap-2
-                transition-colors duration-200
-                ${isActive
-                  ? 'border-interactive-primary text-interactive-primary'
-                  : 'border-transparent text-content-secondary hover:text-content-primary hover:border-theme-default'
-                }
-              `}
-              aria-selected={isActive}
-              aria-current={isActive ? 'page' : undefined}
-              data-testid={`tab-${tab.id}`}
-            >
+          const className = `
+            whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm flex items-center gap-2
+            transition-colors duration-200
+            ${isActive
+              ? 'border-interactive-primary text-interactive-primary'
+              : 'border-transparent text-content-secondary hover:text-content-primary hover:border-theme-default'
+            }
+          `;
+          const sharedProps = {
+            role: 'tab' as const,
+            className,
+            'aria-selected': isActive,
+            'aria-current': isActive ? ('page' as const) : undefined,
+            'data-testid': `tab-${tab.id}`,
+          };
+          const content = (
+            <>
               {tab.icon && <span className="flex-shrink-0">{tab.icon}</span>}
               <span>{tab.label}</span>
               {tab.badge !== undefined && (
@@ -86,6 +89,23 @@ export function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationPro
                   {tab.badge}
                 </span>
               )}
+            </>
+          );
+          return getTabHref ? (
+            <Link
+              key={tab.id}
+              {...sharedProps}
+              to={getTabHref(tab.id)}
+            >
+              {content}
+            </Link>
+          ) : (
+            <button
+              key={tab.id}
+              {...sharedProps}
+              onClick={() => onTabChange(tab.id)}
+            >
+              {content}
             </button>
           );
         })}

@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { TabNavigation, type Tab } from '../TabNavigation';
+
+const getTabHref = (tabId: string) => `?tab=${tabId}`;
+
+const renderWithRouter = (ui: React.ReactElement) =>
+  render(<MemoryRouter>{ui}</MemoryRouter>);
 
 describe('TabNavigation', () => {
   const mockOnTabChange = vi.fn();
@@ -262,6 +268,55 @@ describe('TabNavigation', () => {
       const tablist = screen.getByRole('tablist');
       expect(tablist.className).toContain('hidden');
       expect(tablist.className).toContain('md:flex');
+    });
+  });
+
+  describe('Link behavior (getTabHref)', () => {
+    it('renders tabs as <a> elements when getTabHref is provided', () => {
+      renderWithRouter(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+          getTabHref={getTabHref}
+        />
+      );
+
+      const tab1 = screen.getByRole('tab', { name: /First Tab/i });
+      expect(tab1.tagName).toBe('A');
+      // Link resolves relative to current location — href will include the path
+      expect(tab1.getAttribute('href')).toContain('tab=tab1');
+    });
+
+    it('renders tabs as <button> elements when getTabHref is not provided', () => {
+      render(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+        />
+      );
+
+      const tab1 = screen.getByRole('tab', { name: /First Tab/i });
+      expect(tab1.tagName).toBe('BUTTON');
+      expect(tab1).not.toHaveAttribute('href');
+    });
+
+    it('each tab has correct href matching its id', () => {
+      renderWithRouter(
+        <TabNavigation
+          tabs={mockTabs}
+          activeTab="tab1"
+          onTabChange={mockOnTabChange}
+          getTabHref={getTabHref}
+        />
+      );
+
+      mockTabs.forEach(tab => {
+        const tabEl = screen.getByRole('tab', { name: new RegExp(tab.label) });
+        // Link resolves relative to current location — href will include the path
+        expect(tabEl.getAttribute('href')).toContain(`tab=${tab.id}`);
+      });
     });
   });
 
