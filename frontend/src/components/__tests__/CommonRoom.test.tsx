@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { useLocation } from 'react-router-dom';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { CommonRoom } from '../CommonRoom';
@@ -727,9 +728,10 @@ describe('CommonRoom', () => {
         const getElementByIdSpy = vi.spyOn(document, 'getElementById');
         getElementByIdSpy.mockReturnValue(null);
 
-        // Mock API to return error
+        // Mock API to return error (with delay so loading indicator is observable)
         server.use(
-          http.get('/api/v1/games/:gameId/messages/:messageId', () => {
+          http.get('/api/v1/games/:gameId/messages/:messageId', async () => {
+            await new Promise(resolve => setTimeout(resolve, 100));
             return HttpResponse.json({ error: 'Not found' }, { status: 404 });
           })
         );
@@ -886,6 +888,57 @@ describe('CommonRoom', () => {
         // Wait for loading to complete
         await waitFor(() => {
           expect(screen.queryByText(/Loading comment.../i)).not.toBeInTheDocument();
+        }, { timeout: 1000 });
+
+        getElementByIdSpy.mockRestore();
+      });
+    });
+
+    describe('Cross-phase redirect', () => {
+      it('redirects to History tab when comment belongs to a different phase', async () => {
+        // Comment 123 is in phase 99, but CommonRoom is rendering phase 1
+        const commentInOtherPhase: Message = {
+          ...mockComment,
+          id: 123,
+          phase_id: 99,
+        };
+
+        server.use(
+          http.get('/api/v1/games/:gameId/messages/:messageId', () => {
+            return HttpResponse.json(commentInOtherPhase);
+          })
+        );
+
+        // Mock getElementById to return null (comment not in DOM)
+        const getElementByIdSpy = vi.spyOn(document, 'getElementById');
+        getElementByIdSpy.mockReturnValue(null);
+
+        // Render a small helper component that displays the current MemoryRouter
+        // location so we can assert navigation happened.
+        const LocationCapture = () => {
+          const loc = useLocation();
+          return <div data-testid="location">{loc.pathname + loc.search}</div>;
+        };
+
+        renderWithProviders(
+          <>
+            <CommonRoom gameId={1} phaseId={1} />
+            <LocationCapture />
+          </>,
+          {
+            gameId: 1,
+            initialEntries: ['/games/1?tab=common-room&view=posts&comment=123'],
+          }
+        );
+
+        await waitFor(() => {
+          expect(screen.queryByText(/Loading Common Room.../i)).not.toBeInTheDocument();
+        });
+
+        // After redirect, the router location should be the history URL
+        await waitFor(() => {
+          const locationEl = screen.getByTestId('location');
+          expect(locationEl.textContent).toBe('/games/1?tab=history&phase=99&comment=123');
         }, { timeout: 1000 });
 
         getElementByIdSpy.mockRestore();

@@ -132,14 +132,31 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
           newParams.delete('comment');
           setSearchParams(newParams, { replace: true });
         } else {
-          // Comment not found in DOM - likely nested deep (beyond depth 5)
-          // Fetch the comment and open it in ThreadViewModal
-          logger.debug('Comment not found in DOM, fetching and opening modal', { commentId: commentIdParam, gameId });
+          // Comment not found in DOM - fetch it to determine where it lives
+          logger.debug('Comment not found in DOM, fetching comment metadata', { commentId: commentIdParam, gameId });
 
           const fetchAndShowComment = async () => {
             setFetchingComment(true);
             try {
-              // Fetch the comment with parent context (2-3 levels)
+              // First, fetch the comment to check its phase_id
+              const commentResponse = await apiClient.messages.getMessage(gameId, parseInt(commentIdParam));
+              const commentMeta = commentResponse.data;
+
+              // If the comment belongs to a different phase, redirect to History.
+              // Only redirect when phaseId is known (defined) — if CommonRoom has no phase
+              // context, we can't know whether the comment is "elsewhere", so fall through
+              // to the thread modal as before.
+              if (phaseId !== undefined && commentMeta.phase_id && commentMeta.phase_id !== phaseId) {
+                logger.debug('Comment is in a different phase, redirecting to History', {
+                  commentId: commentIdParam,
+                  commentPhaseId: commentMeta.phase_id,
+                  currentPhaseId: phaseId,
+                });
+                navigate(`/games/${gameId}?tab=history&phase=${commentMeta.phase_id}&comment=${commentIdParam}`, { replace: true });
+                return;
+              }
+
+              // Comment is in the current phase but deeply nested — open in ThreadViewModal
               const { fetchCommentWithParents } = await import('../utils/threadUtils');
               const { messages, hasFullThread } = await fetchCommentWithParents(
                 gameId,
@@ -167,7 +184,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
               newParams.delete('comment');
               setSearchParams(newParams, { replace: true });
             } catch (_err) {
-              logger.error('Failed to fetch comment for modal', { error: _err, commentId: commentIdParam, gameId });
+              logger.error('Failed to fetch comment', { error: _err, commentId: commentIdParam, gameId });
               // If fetch fails, clear the comment parameter and show error
               const newParams = new URLSearchParams(searchParams);
               newParams.delete('comment');
