@@ -126,6 +126,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     isGM,
     participantCount: participants.length,
     currentPhaseType: currentPhaseData?.phase?.phase_type,
+    isPhaseLoading: isLoadingPhase,
     isAudience: userRole === 'audience',
     isParticipant,
     hasCharacters: userCharacters.length > 0,

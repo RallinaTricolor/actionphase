@@ -8,6 +8,7 @@ interface UseGameTabsOptions {
   isGM: boolean;
   participantCount: number;
   currentPhaseType?: string;
+  isPhaseLoading?: boolean;
   isAudience?: boolean;
   isParticipant?: boolean;
   hasCharacters?: boolean;
@@ -47,6 +48,7 @@ export function useGameTabs({
   isGM,
   participantCount,
   currentPhaseType,
+  isPhaseLoading = false,
   isAudience = false,
   isParticipant = false,
   hasCharacters = false,
@@ -216,7 +218,7 @@ export function useGameTabs({
 
     // For in_progress games, wait for phase data to load before setting default tab
     // This prevents setting wrong default (People) when currentPhaseType is still loading
-    if (gameState === 'in_progress' && currentPhaseType === undefined && !hasSetInitialTab.current) {
+    if (gameState === 'in_progress' && isPhaseLoading && !hasSetInitialTab.current) {
       return;
     }
 
@@ -263,7 +265,7 @@ export function useGameTabs({
       newParams.set('tab', defaultTab);
       setSearchParams(newParams, { replace: true });
     }
-  }, [tabs, defaultTab, activeTab, searchParams, setSearchParams, gameState, currentPhaseType]);
+  }, [tabs, defaultTab, activeTab, searchParams, setSearchParams, gameState, currentPhaseType, isPhaseLoading]);
 
   // Wrapper for setActiveTab that updates URL with new tab
   const handleSetActiveTab = (tabId: string) => {

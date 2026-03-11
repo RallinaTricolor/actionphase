@@ -20,10 +20,12 @@ import (
 	"actionphase/pkg/phases"
 	"actionphase/pkg/polls"
 	"actionphase/pkg/users"
+	"context"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -509,6 +511,18 @@ func (h *Handler) Start() {
 		"address", server.Addr,
 		"read_timeout", server.ReadTimeout,
 		"write_timeout", server.WriteTimeout)
+
+	// Background job: delete notifications older than 30 days, runs once per day
+	go func() {
+		notificationService := &db.NotificationService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := notificationService.DeleteOldReadNotifications(context.Background()); err != nil {
+				h.App.ObsLogger.Error(context.Background(), "Background notification cleanup failed", "error", err)
+			}
+		}
+	}()
 
 	if err := server.ListenAndServe(); err != nil {
 		h.App.Logger.Error("HTTP server failed", "error", err)

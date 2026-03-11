@@ -328,3 +328,46 @@ func TestNotificationService_NotifyPhaseCreated(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, gmNotifications, 0)
 }
+
+func TestNotificationService_DeleteOldReadNotifications(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	ctx := context.Background()
+	app := core.NewTestApp(testDB.Pool)
+	service := &NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	user := testDB.CreateTestUser(t, "cleanup_user", "cleanup@example.com")
+
+	// Create a recent notification (should NOT be deleted)
+	recentNotif, err := service.CreateNotification(ctx, &core.CreateNotificationRequest{
+		UserID: int32(user.ID),
+		Type:   core.NotificationTypePrivateMessage,
+		Title:  "Recent notification",
+	})
+	require.NoError(t, err)
+
+	// Create an old notification (should be deleted) and backdate it
+	oldNotif, err := service.CreateNotification(ctx, &core.CreateNotificationRequest{
+		UserID: int32(user.ID),
+		Type:   core.NotificationTypePrivateMessage,
+		Title:  "Old notification",
+	})
+	require.NoError(t, err)
+
+	_, err = testDB.Pool.Exec(ctx,
+		"UPDATE notifications SET created_at = NOW() - INTERVAL '31 days' WHERE id = $1",
+		oldNotif.ID,
+	)
+	require.NoError(t, err)
+
+	// Run cleanup
+	err = service.DeleteOldReadNotifications(ctx)
+	require.NoError(t, err)
+
+	// Old notification should be gone
+	notifications, err := service.GetUserNotifications(ctx, int32(user.ID), 10, 0)
+	require.NoError(t, err)
+	require.Len(t, notifications, 1)
+	assert.Equal(t, recentNotif.ID, notifications[0].ID, "Only the recent notification should remain")
+}
