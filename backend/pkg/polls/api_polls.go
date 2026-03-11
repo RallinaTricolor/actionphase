@@ -94,9 +94,11 @@ type PollResponse struct {
 	db.CommonRoomPoll
 
 	// Additional response fields
-	Options           []db.PollOption `json:"options"`
-	HasVoted          bool            `json:"has_voted,omitempty"`
-	VotedCharacterIDs []int32         `json:"voted_character_ids,omitempty"` // Character IDs user has voted with (for character polls)
+	Options               []db.PollOption `json:"options"`
+	HasVoted              bool            `json:"has_voted,omitempty"`
+	VotedCharacterIDs     []int32         `json:"voted_character_ids,omitempty"`    // Character IDs user has voted with (for character polls)
+	UserVoteOptionID      *int32          `json:"user_vote_option_id,omitempty"`    // The option ID the user voted for (player polls)
+	UserVoteOtherResponse *string         `json:"user_vote_other_response,omitempty"` // The "other" text if user chose that option
 }
 
 // PollResultsResponse is the API response for poll results
@@ -468,12 +470,31 @@ func (h *Handler) GetPoll(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// For player-level polls where user has voted, fetch their selected option
+	var userVoteOptionID *int32
+	var userVoteOtherResponse *string
+	if hasVoted && pollWithOptions.Poll.VoteAsType == "player" {
+		vote, err := pollService.GetVote(ctx, int32(pollID), userID, nil)
+		if err == nil && vote != nil {
+			if vote.SelectedOptionID.Valid {
+				optID := vote.SelectedOptionID.Int32
+				userVoteOptionID = &optID
+			}
+			if vote.OtherResponse.Valid {
+				otherResp := vote.OtherResponse.String
+				userVoteOtherResponse = &otherResp
+			}
+		}
+	}
+
 	// Flatten the response structure
 	response := PollResponse{
-		CommonRoomPoll:    pollWithOptions.Poll,
-		Options:           pollWithOptions.Options,
-		HasVoted:          hasVoted,
-		VotedCharacterIDs: votedCharacterIDs,
+		CommonRoomPoll:        pollWithOptions.Poll,
+		Options:               pollWithOptions.Options,
+		HasVoted:              hasVoted,
+		VotedCharacterIDs:     votedCharacterIDs,
+		UserVoteOptionID:      userVoteOptionID,
+		UserVoteOtherResponse: userVoteOtherResponse,
 	}
 
 	render.JSON(w, r, response)

@@ -47,8 +47,9 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
     setShowResults(shouldShowResults);
   }, [isExpired, poll.user_has_voted, isGM, isAudience]);
 
-  // Fetch full poll details when needed
-  const { data: fullPoll, isLoading: pollLoading } = usePoll(showVotingForm ? poll.id : null);
+  // Fetch full poll details when showing vote form or when player has voted (to get their vote choice)
+  const needFullPoll = showVotingForm || (!isGM && !isAudience && !isExpired && poll.user_has_voted);
+  const { data: fullPoll, isLoading: pollLoading } = usePoll(needFullPoll ? poll.id : null);
 
   // Fetch results when showing results
   const { data: results, isLoading: resultsLoading } = usePollResults(showResults ? poll.id : null);
@@ -125,6 +126,22 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
         {poll.description && (
           <div className="mb-4">
             <MarkdownPreview content={poll.description} />
+          </div>
+        )}
+
+        {/* Your vote summary: shown to players who have voted on an active poll */}
+        {!isGM && !isAudience && !isExpired && poll.user_has_voted && !showVotingForm && (
+          <div className="mb-4 p-3 rounded-lg bg-bg-secondary border border-border-primary text-sm">
+            <span className="font-medium text-text-secondary">Your vote: </span>
+            {fullPoll?.user_vote_other_response ? (
+              <span className="text-text-primary italic">"{fullPoll.user_vote_other_response}"</span>
+            ) : fullPoll?.user_vote_option_id ? (
+              <span className="text-text-primary">
+                {fullPoll.options?.find(o => o.id === fullPoll.user_vote_option_id)?.option_text ?? '—'}
+              </span>
+            ) : (
+              <span className="text-text-secondary">—</span>
+            )}
           </div>
         )}
 

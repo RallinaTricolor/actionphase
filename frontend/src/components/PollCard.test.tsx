@@ -170,6 +170,73 @@ describe('PollCard', () => {
     });
   });
 
+  describe('Your vote display', () => {
+    it('shows "Your vote" with the chosen option for a player who has voted on an active poll', async () => {
+      const { usePoll } = await import('../hooks');
+      vi.mocked(usePoll).mockReturnValue({
+        data: {
+          ...mockPoll,
+          options: [
+            { id: 1, poll_id: 1, option_text: 'Option A', display_order: 1 },
+            { id: 2, poll_id: 1, option_text: 'Option B', display_order: 2 },
+          ],
+          user_vote_option_id: 2,
+          user_vote_other_response: undefined,
+        },
+        isLoading: false,
+        isPending: false,
+        error: null,
+      } as ReturnType<typeof usePoll>);
+
+      const votedPoll: Poll = { ...mockPoll, user_has_voted: true };
+      renderWithProviders(<PollCard poll={votedPoll} gameId={100} isGM={false} isAudience={false} />);
+
+      expect(screen.getByText(/your vote:/i)).toBeInTheDocument();
+      expect(screen.getByText('Option B')).toBeInTheDocument();
+    });
+
+    it('shows "Your vote" with the other response text when user chose "other"', async () => {
+      const { usePoll } = await import('../hooks');
+      vi.mocked(usePoll).mockReturnValue({
+        data: {
+          ...mockPoll,
+          options: [],
+          user_vote_option_id: undefined,
+          user_vote_other_response: 'My custom answer',
+        },
+        isLoading: false,
+        isPending: false,
+        error: null,
+      } as ReturnType<typeof usePoll>);
+
+      const votedPoll: Poll = { ...mockPoll, user_has_voted: true };
+      renderWithProviders(<PollCard poll={votedPoll} gameId={100} isGM={false} isAudience={false} />);
+
+      expect(screen.getByText(/your vote:/i)).toBeInTheDocument();
+      expect(screen.getByText(/"My custom answer"/)).toBeInTheDocument();
+    });
+
+    it('does NOT show "Your vote" for GM on active voted poll', async () => {
+      const votedPoll: Poll = { ...mockPoll, user_has_voted: true };
+      renderWithProviders(<PollCard poll={votedPoll} gameId={100} isGM={true} isAudience={false} />);
+
+      expect(screen.queryByText(/your vote:/i)).not.toBeInTheDocument();
+    });
+
+    it('does NOT show "Your vote" on expired polls (results shown instead)', async () => {
+      const votedExpiredPoll: Poll = { ...expiredPoll, user_has_voted: true };
+      renderWithProviders(<PollCard poll={votedExpiredPoll} gameId={100} isGM={false} isAudience={false} />);
+
+      expect(screen.queryByText(/your vote:/i)).not.toBeInTheDocument();
+    });
+
+    it('does NOT show "Your vote" when user has not voted', () => {
+      renderWithProviders(<PollCard poll={mockPoll} gameId={100} isGM={false} isAudience={false} />);
+
+      expect(screen.queryByText(/your vote:/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe('Voting functionality', () => {
     it('shows vote button for active polls when user has not voted', () => {
       renderWithProviders(<PollCard poll={mockPoll} gameId={100} isGM={false} isAudience={false} />);

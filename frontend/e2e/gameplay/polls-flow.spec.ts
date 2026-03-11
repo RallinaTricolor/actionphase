@@ -117,6 +117,10 @@ test.describe.serial('Polls Flow', () => {
 
     // Verify badge updated
     expect(await pollsPage.getPollVoteStatus('What should the party do next?')).toBe('voted');
+
+    // Verify "Your vote:" summary appears with the selected option
+    await expect(page.getByText('Your vote:').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Investigate the mysterious forest')).toBeVisible();
   });
 
   test('GM creates character-level poll successfully', async ({ page }) => {
@@ -285,6 +289,29 @@ test.describe.serial('Polls Flow', () => {
 
     // Badges should STILL show "Voted" (tests API contract persists across reload)
     expect(await pollsPage.getVotedBadgeCount()).toBe(2);
+  });
+
+  test('Your vote summary persists after page reload', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+    const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
+    const pollsPage = new PollsPage(page, gameId);
+
+    await pollsPage.goto();
+
+    // Wait for poll to load
+    await expect(page.getByRole('heading', { name: 'What should the party do next?' })).toBeVisible({ timeout: 5000 });
+
+    // Reload page and re-navigate to polls
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await pollsPage.goto();
+
+    await expect(page.getByRole('heading', { name: 'What should the party do next?' })).toBeVisible({ timeout: 5000 });
+
+    // "Your vote:" summary should still be visible (fetched fresh from backend)
+    // Use .first() as multiple polls may show "Your vote:" (PLAYER_1 voted on both polls)
+    await expect(page.getByText('Your vote:').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Investigate the mysterious forest')).toBeVisible();
   });
 
   test('Character vote badge persists after page reload', async ({ page }) => {

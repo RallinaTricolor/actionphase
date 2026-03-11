@@ -37,6 +37,8 @@ export interface Poll {
 
 export interface PollWithOptions extends Poll {
   options: PollOption[];
+  user_vote_option_id?: number;    // The option ID the user voted for (player polls)
+  user_vote_other_response?: string; // The "other" text if user chose that option
 }
 
 export interface PollVote {
