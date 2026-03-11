@@ -748,6 +748,47 @@ func TestCharacterService_GetUserControllableCharacters(t *testing.T) {
 	})
 }
 
+func TestCharacterService_GetUserControllableCharacters_PendingAssignedNPC(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Create an in_progress game (audience NPC assignments are only restricted during in_progress)
+	game := testDB.CreateTestGameWithState(t, int32(fixtures.TestUser.ID), "In Progress Game", "in_progress")
+
+	audienceUser := testDB.CreateTestUser(t, "audienceuser", "audience@example.com")
+
+	// Create a pending NPC (default status is pending) and assign to audience user
+	pendingNPC, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        nil,
+		Name:          "Pending Assigned NPC",
+		CharacterType: "npc",
+	})
+	core.AssertNoError(t, err, "Failed to create pending NPC")
+	core.AssertEqual(t, "pending", pendingNPC.Status.String, "NPC should start as pending")
+
+	err = characterService.AssignNPCToUser(context.Background(), pendingNPC.ID, int32(audienceUser.ID), int32(fixtures.TestUser.ID))
+	core.AssertNoError(t, err, "Failed to assign pending NPC to audience user")
+
+	t.Run("audience user can see assigned NPC even when pending", func(t *testing.T) {
+		controllable, err := characterService.GetUserControllableCharacters(context.Background(), game.ID, int32(audienceUser.ID))
+		core.AssertNoError(t, err, "Failed to get user controllable characters")
+
+		found := false
+		for _, char := range controllable {
+			if char.ID == pendingNPC.ID {
+				found = true
+			}
+		}
+		core.AssertEqual(t, true, found, "Audience user should see assigned NPC even when NPC status is pending")
+	})
+}
+
 func TestCharacterService_AssignNPCToUser_AudienceNPC(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	app := core.NewTestApp(testDB.Pool)

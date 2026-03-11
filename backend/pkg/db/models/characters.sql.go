@@ -693,8 +693,11 @@ WHERE c.game_id = $1
     -- If game is not in_progress, include all characters regardless of status
     (g.state != 'in_progress')
     OR
-    -- For NPCs and assigned characters during in_progress: exclude pending/rejected (these are GM-controlled)
+    -- For NPCs during in_progress: exclude pending/rejected unless assigned to this user
     (g.state = 'in_progress' AND c.character_type = 'npc' AND c.status NOT IN ('pending', 'rejected'))
+    OR
+    -- NPCs assigned to this user are always visible to the assignee regardless of status
+    (na.assigned_user_id = $2 AND c.character_type = 'npc')
   )
 ORDER BY c.character_type, c.name
 `
