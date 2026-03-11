@@ -52,7 +52,17 @@ export async function navigateToGameTab(page: Page, tabName: string) {
 
   const indicator = tabIndicators[tabName];
   if (indicator) {
-    await page.waitForSelector(indicator, { timeout: 5000 });
+    await page.waitForSelector(indicator, { timeout: 10000 });
+  }
+
+  // For Common Room: wait for comment loading spinners to finish.
+  // PostCard fires loadInitialComments in a useEffect *after* paint, so networkidle
+  // may resolve before the comment fetch starts. Waiting for "Loading comments..." to
+  // disappear ensures any in-flight comment fetches have completed before the test proceeds.
+  if (tabName === 'Common Room') {
+    await page.waitForSelector('text="Loading comments..."', { state: 'hidden', timeout: 10000 }).catch(() => {
+      // If the text never appeared (no posts or already done), that's fine
+    });
   }
 }
 

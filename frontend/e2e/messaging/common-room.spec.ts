@@ -346,25 +346,18 @@ test.describe('Common Room Flow', () => {
       let modalTestExecuted = false;
 
       for (let depth = 1; depth <= 6; depth++) {
-        // Navigate fresh (no reload needed before goto)
+        // Navigate fresh to pick up any new replies created by the other player
         await currentCommonRoom.goto(gameId);
 
-        // Expand comments if needed
-        const postCard = currentCommonRoom.getPostCard(postContent);
-        const commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
-        if (await commentsButton.count() > 0) {
-          const buttonText = await commentsButton.textContent();
-          if (buttonText?.includes('Show')) {
-            await commentsButton.click();
-            await currentPage.waitForLoadState('networkidle');
-          }
-        }
+        // Ensure the post card is visible before looking for comments.
+        // Under load (full suite), the backend is slower and comment fetches take longer.
+        await currentPage.getByText(postContent, { exact: true }).first().waitFor({ state: 'visible', timeout: 10000 });
 
         // Find the threaded-comment container that directly holds previousComment.
         // Since each comment text is unique (timestamp-based), we locate the text node
         // then walk up to its nearest threaded-comment ancestor.
         const commentText = currentPage.getByText(previousComment, { exact: true }).first();
-        await expect(commentText).toBeVisible({ timeout: 10000 });
+        await expect(commentText).toBeVisible({ timeout: 15000 });
         // Use :visible to exclude mobile-variant threaded-comment nodes (md:hidden, display:none
         // at desktop viewport). Both desktop and mobile variants share data-testid="threaded-comment",
         // but only the desktop variant is visible at Playwright's desktop viewport size.

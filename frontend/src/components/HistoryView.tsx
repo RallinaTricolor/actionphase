@@ -24,22 +24,18 @@ interface HistoryViewProps {
 }
 
 export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience = false }: HistoryViewProps) {
-  const [selectedPhaseId, setSelectedPhaseIdState] = useUrlParam<number | null>(
+  const [selectedPhaseId, setSelectedPhaseId] = useUrlParam<number | null>(
     'phase',
     null,
     { ...phaseParamOptions, replace: false }
   );
-  const [activeTab, setActiveTabState] = useUrlParam<'submissions' | 'results' | 'polls'>(
+  const [activeTab, setActiveTab] = useUrlParam<'submissions' | 'results' | 'polls'>(
     'subTab',
     'submissions',
     { replace: false }
   );
   const [expandedSubmissions, setExpandedSubmissions] = useState<Set<number>>(new Set());
   const [expandedResults, setExpandedResults] = useState<Set<number>>(new Set());
-
-  // Wrappers to keep the same call sites below
-  const setSelectedPhaseId = setSelectedPhaseIdState;
-  const setActiveTab = setActiveTabState;
 
   const [searchParams] = useSearchParams();
   const commentParam = searchParams.get('comment');

@@ -39,11 +39,8 @@ test.describe('Action Results Flow', () => {
     // Should see Player 1's published result
     await expect(page.locator('text=Basement Investigation Results').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
-    // Click "Show full content" button to expand the collapsed text
-    const showFullContentButton = page.getByRole('button', { name: 'Show full content' }).first();
-    if (await showFullContentButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await showFullContentButton.click();
-    }
+    // Result content is > 200 chars so it's collapsed — click to expand
+    await page.getByRole('button', { name: 'Show full content' }).first().click();
 
     // Should see result content with markdown
     await expect(page.locator('text=You descend into the basement')).toBeVisible();
@@ -65,14 +62,11 @@ test.describe('Action Results Flow', () => {
     await resultsPage.goto();
     await resultsPage.viewPhaseResults(1);
 
-    // Wait for results to load before checking for the expand button
+    // Wait for results to load
     await expect(page.locator('text=Basement Investigation Results')).toBeVisible({ timeout: 10000 });
 
-    // Click "Show full content" button to expand the collapsed text
-    const showFullContentButton = page.getByRole('button', { name: 'Show full content' }).first();
-    if (await showFullContentButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await showFullContentButton.click();
-    }
+    // Result content is > 200 chars so it's collapsed — click to expand
+    await page.getByRole('button', { name: 'Show full content' }).first().click();
 
     // Player 1's result contains a character mention: "@Result Test Char 2"
     await expect(page.locator('text=@Result Test Char 2')).toBeVisible({ timeout: 10000 });
@@ -95,11 +89,8 @@ test.describe('Action Results Flow', () => {
     // Should see Player 2's result about library research
     await expect(page.locator('text=Library Research Results').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
-    // Click "Show full content" button to expand the collapsed text
-    const showFullContentButton = page.getByRole('button', { name: 'Show full content' }).first();
-    if (await showFullContentButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await showFullContentButton.click();
-    }
+    // Result content is > 200 chars so it's collapsed — click to expand
+    await page.getByRole('button', { name: 'Show full content' }).first().click();
 
     // Should see result content
     await expect(page.locator('text=dusty tomes')).toBeVisible();
