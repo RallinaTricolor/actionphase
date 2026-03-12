@@ -165,7 +165,10 @@ export const ThreadedComment = memo(function ThreadedComment({
   }, [hasReplies, hasPreloadedChildren, loadReplies]);
 
   const handleCopyLink = async () => {
-    const url = `${window.location.origin}/games/${gameId}?tab=common-room&comment=${comment.id}`;
+    const phaseId = 'phase_id' in comment ? comment.phase_id : undefined;
+    const url = readOnly && phaseId
+      ? `${window.location.origin}/games/${gameId}?tab=history&phase=${phaseId}&comment=${comment.id}`
+      : `${window.location.origin}/games/${gameId}?tab=common-room&comment=${comment.id}`;
 
     try {
       // Check if Clipboard API is available (requires HTTPS or localhost)
