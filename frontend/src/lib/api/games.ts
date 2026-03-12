@@ -174,6 +174,18 @@ export class GamesApi extends BaseApiClient {
     return this.client.get<{ conversations: AudienceConversationListItem[]; total: number }>(url);
   }
 
+  async getConversationParticipants(gameId: number, selectedNames?: string[]) {
+    const params = new URLSearchParams();
+    if (selectedNames && selectedNames.length > 0) {
+      selectedNames.forEach(name => params.append('selected[]', name));
+    }
+    const queryString = params.toString();
+    const url = queryString
+      ? `/api/v1/games/${gameId}/private-messages/participants?${queryString}`
+      : `/api/v1/games/${gameId}/private-messages/participants`;
+    return this.client.get<{ participants: string[] }>(url);
+  }
+
   async getAudienceConversationMessages(gameId: number, conversationId: string) {
     return this.client.get<{ messages: AudienceConversationMessage[] }>(`/api/v1/games/${gameId}/private-messages/conversations/${conversationId}`);
   }

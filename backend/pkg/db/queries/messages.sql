@@ -499,12 +499,20 @@ WITH conversation_messages AS (
   GROUP BY c.id, c.title, c.conversation_type, c.created_at
 ),
 participants_agg AS (
+  -- Deduplicate by character_id first: an NPC shared by GM + co-GMs produces
+  -- multiple conversation_participants rows for the same character, so we pick
+  -- one row per (conversation_id, character_id) before aggregating names.
   SELECT
     cp.conversation_id,
     array_agg(COALESCE(ch.name, u.username) ORDER BY cp.id) as participant_names,
     array_agg(u.username ORDER BY cp.id) as participant_usernames,
     array_agg(cp.character_id ORDER BY cp.id) as participant_character_ids
-  FROM conversation_participants cp
+  FROM (
+    SELECT DISTINCT ON (conversation_id, character_id)
+      id, conversation_id, user_id, character_id
+    FROM conversation_participants
+    ORDER BY conversation_id, character_id, id
+  ) cp
   JOIN users u ON cp.user_id = u.id
   LEFT JOIN characters ch ON cp.character_id = ch.id
   GROUP BY cp.conversation_id
@@ -572,3 +580,36 @@ SELECT COUNT(*)
 FROM messages
 WHERE character_id = $1
   AND is_deleted = false;
+
+-- name: GetConversationParticipantNames :many
+-- Get all character/user names that appear in at least one conversation in the game,
+-- optionally narrowed to only those who share a conversation with ALL of the given names.
+-- When selected_names is empty, returns every participant across all conversations.
+-- When selected_names is non-empty, returns names that co-appear with all selected names.
+WITH participants_per_conv AS (
+  SELECT
+    cp.conversation_id,
+    array_agg(COALESCE(ch.name, u.username) ORDER BY cp.id) AS names
+  FROM conversation_participants cp
+  JOIN users u ON cp.user_id = u.id
+  LEFT JOIN characters ch ON cp.character_id = ch.id
+  JOIN conversations c ON cp.conversation_id = c.id
+  WHERE c.game_id = $1
+  GROUP BY cp.conversation_id
+),
+matching_convs AS (
+  -- Conversations that contain ALL of the selected names (or all if none selected)
+  SELECT conversation_id
+  FROM participants_per_conv
+  WHERE
+    CASE
+      WHEN sqlc.arg(selected_names)::text[] IS NULL
+        OR array_length(sqlc.arg(selected_names)::text[], 1) IS NULL
+      THEN true
+      ELSE names::text[] @> sqlc.arg(selected_names)::text[]
+    END
+)
+SELECT DISTINCT unnest(ppc.names) AS participant_name
+FROM participants_per_conv ppc
+JOIN matching_convs mc ON ppc.conversation_id = mc.conversation_id
+ORDER BY participant_name;

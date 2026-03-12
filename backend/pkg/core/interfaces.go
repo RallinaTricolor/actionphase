@@ -581,6 +581,10 @@ type MessageServiceInterface interface {
 	// Supports pagination (limit/offset) and filtering by participant names
 	ListAllPrivateConversations(ctx context.Context, params ListAllPrivateConversationsParams) ([]models.ListAllPrivateConversationsRow, error)
 
+	// GetConversationParticipantNames returns all participant names in the game's conversations,
+	// narrowed to co-participants of all selected names when selectedNames is non-empty.
+	GetConversationParticipantNames(ctx context.Context, gameID int32, selectedNames []string) ([]string, error)
+
 	// GetAudienceConversationMessages retrieves all messages in a conversation (for audience/GM)
 	GetAudienceConversationMessages(ctx context.Context, conversationID int32) ([]models.GetAudienceConversationMessagesRow, error)
 

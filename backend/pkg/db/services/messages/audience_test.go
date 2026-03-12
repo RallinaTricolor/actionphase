@@ -154,6 +154,89 @@ func TestListAllPrivateConversations_ParticipantFilter(t *testing.T) {
 	})
 }
 
+// TestGetConversationParticipantNames tests the participant filter list endpoint.
+func TestGetConversationParticipantNames(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+	fixtures := testDB.SetupFixtures(t)
+	msgService := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameID := fixtures.TestGame.ID
+
+	u1 := testDB.CreateTestUser(t, "gpn_user1", "gpn1@example.com")
+	u2 := testDB.CreateTestUser(t, "gpn_user2", "gpn2@example.com")
+	u3 := testDB.CreateTestUser(t, "gpn_user3", "gpn3@example.com")
+
+	charSvc := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	uid1, uid2, uid3 := int32(u1.ID), int32(u2.ID), int32(u3.ID)
+
+	cAlpha, err := charSvc.CreateCharacter(context.Background(), db.CreateCharacterRequest{GameID: gameID, UserID: &uid1, Name: "Alpha", CharacterType: "player_character"})
+	core.AssertNoError(t, err, "create Alpha")
+	cBeta, err := charSvc.CreateCharacter(context.Background(), db.CreateCharacterRequest{GameID: gameID, UserID: &uid2, Name: "Beta", CharacterType: "player_character"})
+	core.AssertNoError(t, err, "create Beta")
+	cGamma, err := charSvc.CreateCharacter(context.Background(), db.CreateCharacterRequest{GameID: gameID, UserID: &uid3, Name: "Gamma", CharacterType: "player_character"})
+	core.AssertNoError(t, err, "create Gamma")
+
+	convSvc := db.NewConversationService(testDB.Pool)
+
+	// Alpha <-> Beta conversation
+	_, err = convSvc.CreateConversation(context.Background(), db.CreateConversationRequest{
+		GameID: gameID, Title: "Alpha-Beta", CreatedByUserID: uid1,
+		ParticipantIDs: []int32{cAlpha.ID, cBeta.ID},
+	})
+	core.AssertNoError(t, err, "create Alpha-Beta conv")
+
+	// Alpha <-> Gamma conversation
+	_, err = convSvc.CreateConversation(context.Background(), db.CreateConversationRequest{
+		GameID: gameID, Title: "Alpha-Gamma", CreatedByUserID: uid1,
+		ParticipantIDs: []int32{cAlpha.ID, cGamma.ID},
+	})
+	core.AssertNoError(t, err, "create Alpha-Gamma conv")
+
+	// No Beta <-> Gamma conversation exists.
+
+	t.Run("no_filter_returns_all_participants", func(t *testing.T) {
+		names, err := msgService.GetConversationParticipantNames(context.Background(), gameID, []string{})
+		core.AssertNoError(t, err, "should succeed")
+		core.AssertTrue(t, contains(names, "Alpha"), "Alpha should be present")
+		core.AssertTrue(t, contains(names, "Beta"), "Beta should be present")
+		core.AssertTrue(t, contains(names, "Gamma"), "Gamma should be present")
+	})
+
+	t.Run("selecting_alpha_returns_beta_and_gamma", func(t *testing.T) {
+		names, err := msgService.GetConversationParticipantNames(context.Background(), gameID, []string{"Alpha"})
+		core.AssertNoError(t, err, "should succeed")
+		core.AssertTrue(t, contains(names, "Beta"), "Beta co-appears with Alpha")
+		core.AssertTrue(t, contains(names, "Gamma"), "Gamma co-appears with Alpha")
+	})
+
+	t.Run("selecting_beta_excludes_gamma", func(t *testing.T) {
+		// Beta and Gamma share no conversation, so Gamma must not appear
+		names, err := msgService.GetConversationParticipantNames(context.Background(), gameID, []string{"Beta"})
+		core.AssertNoError(t, err, "should succeed")
+		core.AssertTrue(t, contains(names, "Alpha"), "Alpha co-appears with Beta")
+		core.AssertTrue(t, !contains(names, "Gamma"), "Gamma does NOT co-appear with Beta")
+	})
+
+	t.Run("selecting_alpha_and_beta_excludes_gamma", func(t *testing.T) {
+		names, err := msgService.GetConversationParticipantNames(context.Background(), gameID, []string{"Alpha", "Beta"})
+		core.AssertNoError(t, err, "should succeed")
+		core.AssertTrue(t, contains(names, "Alpha"), "Alpha should be present")
+		core.AssertTrue(t, contains(names, "Beta"), "Beta should be present")
+		core.AssertTrue(t, !contains(names, "Gamma"), "Gamma does NOT share a conv with both Alpha and Beta")
+	})
+}
+
+func contains(slice []string, val string) bool {
+	for _, s := range slice {
+		if s == val {
+			return true
+		}
+	}
+	return false
+}
+
 // TestGetAudienceConversationMessages tests retrieving messages from a conversation
 func TestGetAudienceConversationMessages(t *testing.T) {
 	testDB := core.NewTestDatabase(t)

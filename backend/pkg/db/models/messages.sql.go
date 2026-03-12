@@ -499,6 +499,65 @@ func (q *Queries) GetComment(ctx context.Context, id int32) (GetCommentRow, erro
 	return i, err
 }
 
+const getConversationParticipantNames = `-- name: GetConversationParticipantNames :many
+WITH participants_per_conv AS (
+  SELECT
+    cp.conversation_id,
+    array_agg(COALESCE(ch.name, u.username) ORDER BY cp.id) AS names
+  FROM conversation_participants cp
+  JOIN users u ON cp.user_id = u.id
+  LEFT JOIN characters ch ON cp.character_id = ch.id
+  JOIN conversations c ON cp.conversation_id = c.id
+  WHERE c.game_id = $1
+  GROUP BY cp.conversation_id
+),
+matching_convs AS (
+  -- Conversations that contain ALL of the selected names (or all if none selected)
+  SELECT conversation_id
+  FROM participants_per_conv
+  WHERE
+    CASE
+      WHEN $2::text[] IS NULL
+        OR array_length($2::text[], 1) IS NULL
+      THEN true
+      ELSE names::text[] @> $2::text[]
+    END
+)
+SELECT DISTINCT unnest(ppc.names) AS participant_name
+FROM participants_per_conv ppc
+JOIN matching_convs mc ON ppc.conversation_id = mc.conversation_id
+ORDER BY participant_name
+`
+
+type GetConversationParticipantNamesParams struct {
+	GameID        int32    `json:"game_id"`
+	SelectedNames []string `json:"selected_names"`
+}
+
+// Get all character/user names that appear in at least one conversation in the game,
+// optionally narrowed to only those who share a conversation with ALL of the given names.
+// When selected_names is empty, returns every participant across all conversations.
+// When selected_names is non-empty, returns names that co-appear with all selected names.
+func (q *Queries) GetConversationParticipantNames(ctx context.Context, arg GetConversationParticipantNamesParams) ([]interface{}, error) {
+	rows, err := q.db.Query(ctx, getConversationParticipantNames, arg.GameID, arg.SelectedNames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []interface{}
+	for rows.Next() {
+		var participant_name interface{}
+		if err := rows.Scan(&participant_name); err != nil {
+			return nil, err
+		}
+		items = append(items, participant_name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGamePostCount = `-- name: GetGamePostCount :one
 
 SELECT COUNT(*)
@@ -1478,12 +1537,20 @@ WITH conversation_messages AS (
   GROUP BY c.id, c.title, c.conversation_type, c.created_at
 ),
 participants_agg AS (
+  -- Deduplicate by character_id first: an NPC shared by GM + co-GMs produces
+  -- multiple conversation_participants rows for the same character, so we pick
+  -- one row per (conversation_id, character_id) before aggregating names.
   SELECT
     cp.conversation_id,
     array_agg(COALESCE(ch.name, u.username) ORDER BY cp.id) as participant_names,
     array_agg(u.username ORDER BY cp.id) as participant_usernames,
     array_agg(cp.character_id ORDER BY cp.id) as participant_character_ids
-  FROM conversation_participants cp
+  FROM (
+    SELECT DISTINCT ON (conversation_id, character_id)
+      id, conversation_id, user_id, character_id
+    FROM conversation_participants
+    ORDER BY conversation_id, character_id, id
+  ) cp
   JOIN users u ON cp.user_id = u.id
   LEFT JOIN characters ch ON cp.character_id = ch.id
   GROUP BY cp.conversation_id

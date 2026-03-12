@@ -34,6 +34,29 @@ func (ms *MessageService) ListAllPrivateConversations(ctx context.Context, param
 	return conversations, nil
 }
 
+// GetConversationParticipantNames returns all participant names that appear in at least
+// one conversation in the game, optionally narrowed to those who share a conversation
+// with all of the given selected names.
+func (ms *MessageService) GetConversationParticipantNames(ctx context.Context, gameID int32, selectedNames []string) ([]string, error) {
+	queries := models.New(ms.DB)
+
+	rows, err := queries.GetConversationParticipantNames(ctx, models.GetConversationParticipantNamesParams{
+		GameID:        gameID,
+		SelectedNames: selectedNames,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get conversation participant names: %w", err)
+	}
+
+	names := make([]string, 0, len(rows))
+	for _, r := range rows {
+		if name, ok := r.(string); ok && name != "" {
+			names = append(names, name)
+		}
+	}
+	return names, nil
+}
+
 // GetAudienceConversationMessages retrieves all messages in a conversation (for audience/GM)
 // Returns messages with sender information and character details
 func (ms *MessageService) GetAudienceConversationMessages(ctx context.Context, conversationID int32) ([]models.GetAudienceConversationMessagesRow, error) {

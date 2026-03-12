@@ -427,6 +427,53 @@ func (h *Handler) GetAudienceConversationMessages(w http.ResponseWriter, r *http
 	})
 }
 
+// GetConversationParticipants returns participant names for the filter UI.
+// When no ?selected[] params are given, returns all names that appear in any conversation.
+// When selected names are given, returns only names that share a conversation with ALL of them.
+// GET /api/v1/games/:id/private-messages/participants
+func (h *Handler) GetConversationParticipants(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_conversation_participants")()
+
+	gameIDStr := chi.URLParam(r, "id")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	authUser := core.GetAuthenticatedUser(ctx)
+	if authUser == nil {
+		h.App.ObsLogger.Error(ctx, "No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
+		return
+	}
+
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	canView, err := gameService.CanUserViewGame(ctx, int32(gameID), int32(authUser.ID))
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to check game view access", "error", err, "game_id", gameID, "user_id", authUser.ID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+	if !canView {
+		render.Render(w, r, core.ErrForbidden("you do not have permission to view this game's content"))
+		return
+	}
+
+	selectedNames := r.URL.Query()["selected[]"]
+
+	messageService := &messagesvc.MessageService{DB: h.App.Pool}
+	names, err := messageService.GetConversationParticipantNames(ctx, int32(gameID), selectedNames)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get conversation participants", "error", err, "game_id", gameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	render.JSON(w, r, map[string][]string{"participants": names})
+}
+
 // ListAllActionSubmissions lists all action submissions for GM/audience
 // GET /api/v1/games/:id/action-submissions/all
 func (h *Handler) ListAllActionSubmissions(w http.ResponseWriter, r *http.Request) {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useAllPrivateConversations, useAudienceConversationMessages } from '../hooks/useAudience';
+import { useAllPrivateConversations, useAudienceConversationMessages, useConversationParticipants } from '../hooks/useAudience';
 import { Badge } from './ui/Badge';
 import { Spinner } from './ui/Spinner';
 import { Alert } from './ui/Alert';
@@ -45,7 +45,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
   } = useAudienceConversationMessages(gameId, selectedConversationId);
 
   // Fetch conversations with server-side filtering
-  const participantNamesArray = Array.from(selectedParticipants);
+  const selectedNamesForConvs = useMemo(() => Array.from(selectedParticipants), [selectedParticipants]);
   const {
     data,
     fetchNextPage,
@@ -54,7 +54,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
     isLoading,
     error,
   } = useAllPrivateConversations(gameId, {
-    participantNames: participantNamesArray.length > 0 ? participantNamesArray : undefined
+    participantNames: selectedNamesForConvs.length > 0 ? selectedNamesForConvs : undefined
   });
 
   // Infinite scroll handler
@@ -79,17 +79,11 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
     [data?.pages]
   );
 
-  // Extract unique participants across all conversations FOR DISPLAY ONLY
-  // We still need this to show the filter options
-  const allParticipants = useMemo(() => {
-    const participantsSet = new Set<string>();
-    (allConversations as ConversationType[]).forEach((conv) => {
-      (conv.participant_names || []).forEach((name: string) => {
-        participantsSet.add(name);
-      });
-    });
-    return Array.from(participantsSet).sort();
-  }, [allConversations]);
+  // Fetch valid filter options from the backend.
+  // Returns all participants when nothing is selected; narrows to co-participants
+  // of all selected names when a filter is active. Backed by a dedicated SQL query
+  // that scans ALL conversations — not just the paginated subset loaded so far.
+  const { data: filterOptions = [] } = useConversationParticipants(gameId, selectedNamesForConvs);
 
   const toggleParticipant = (participant: string) => {
     setSelectedParticipants(prev => {
@@ -183,7 +177,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
       </Alert>
 
       {/* Participant Filter */}
-      {allParticipants.length > 0 && (
+      {filterOptions.length > 0 && (
         <div className="border border-border-primary rounded-lg p-4 bg-bg-secondary">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-content-primary">Filter by Participants</h3>
@@ -199,7 +193,7 @@ export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) 
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {allParticipants.map((participant) => {
+            {filterOptions.map((participant) => {
               const isSelected = selectedParticipants.has(participant);
               return (
                 <button

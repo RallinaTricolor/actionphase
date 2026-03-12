@@ -46,6 +46,22 @@ export function useAudienceNPCs(gameId: number) {
 }
 
 /**
+ * Hook to fetch valid participant names for the conversation filter UI.
+ * Returns all participants when selectedNames is empty; narrows to co-participants
+ * of all selected names when non-empty.
+ */
+export function useConversationParticipants(gameId: number, selectedNames: string[]) {
+  return useQuery({
+    queryKey: ['conversation-participants', gameId, selectedNames],
+    queryFn: async () => {
+      const response = await apiClient.games.getConversationParticipants(gameId, selectedNames);
+      return response.data.participants;
+    },
+    enabled: !!gameId,
+  });
+}
+
+/**
  * Hook to fetch all private conversations (infinite scroll for GM/audience)
  */
 export function useAllPrivateConversations(
