@@ -250,8 +250,7 @@ comment_tree AS (
     u.username as author_username,
     c.name as character_name,
     c.avatar_url as character_avatar_url,
-    0::int as depth,
-    (SELECT COUNT(*) FROM messages WHERE parent_id = m.id)::bigint as reply_count
+    0::int as depth
   FROM messages m
   JOIN top_level_comments tlc ON m.id = tlc.id
   JOIN users u ON m.author_id = u.id
@@ -284,16 +283,31 @@ comment_tree AS (
     u.username as author_username,
     c.name as character_name,
     c.avatar_url as character_avatar_url,
-    comment_tree.depth + 1 as depth,
-    (SELECT COUNT(*) FROM messages WHERE parent_id = m.id)::bigint as reply_count
+    comment_tree.depth + 1 as depth
   FROM messages m
   JOIN comment_tree ON m.parent_id = comment_tree.id AND comment_tree.depth + 1 < $4
   JOIN users u ON m.author_id = u.id
   LEFT JOIN characters c ON m.character_id = c.id
   WHERE m.message_type = 'comment'
+),
+descendant_counts AS (
+  -- Recursively count all descendants for each comment in the tree
+  WITH RECURSIVE all_descendants AS (
+    SELECT id as root_id, id as descendant_id FROM comment_tree
+    UNION ALL
+    SELECT ad.root_id, m.id
+    FROM all_descendants ad
+    JOIN messages m ON m.parent_id = ad.descendant_id
+    WHERE m.message_type = 'comment'
+  )
+  SELECT root_id as comment_id, COUNT(*) - 1 as reply_count
+  FROM all_descendants
+  GROUP BY root_id
 )
-SELECT * FROM comment_tree
-ORDER BY created_at DESC`
+SELECT ct.*, COALESCE(dc.reply_count, 0)::bigint as reply_count
+FROM comment_tree ct
+LEFT JOIN descendant_counts dc ON ct.id = dc.comment_id
+ORDER BY ct.created_at DESC`
 
 	rows, err := s.DB.Query(ctx, query, postID, limit, offset, maxDepth)
 	if err != nil {

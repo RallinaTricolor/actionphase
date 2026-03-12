@@ -363,6 +363,74 @@ func TestMessageService_GetPostCommentsWithThreads(t *testing.T) {
 		assert.Equal(t, int64(3), topLevelComment.Comment.ReplyCount, "Top-level comment should have reply_count=3")
 	})
 
+	t.Run("reply_count includes all descendants, not just direct children", func(t *testing.T) {
+		// Create a post
+		post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			Content:     "Post for recursive reply_count test",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Create a 3-level chain: A → B → C
+		// A should have reply_count=2 (B + C), not 1 (just B)
+		time.Sleep(1 * time.Millisecond)
+		commentA, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    post.ID,
+			Content:     "Comment A (top-level)",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+		commentB, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    commentA.ID,
+			Content:     "Comment B (reply to A)",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+		_, err = service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    commentB.ID,
+			Content:     "Comment C (reply to B)",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		// Fetch with depth high enough to return all three
+		comments, err := service.GetPostCommentsWithThreads(context.Background(), post.ID, 10, 0, 5)
+		require.NoError(t, err)
+
+		// Find comment A in results
+		var foundA *core.CommentWithDepth
+		var foundB *core.CommentWithDepth
+		for i := range comments {
+			if comments[i].Comment.ID == commentA.ID {
+				foundA = &comments[i]
+			}
+			if comments[i].Comment.ID == commentB.ID {
+				foundB = &comments[i]
+			}
+		}
+
+		require.NotNil(t, foundA, "Comment A should be in results")
+		require.NotNil(t, foundB, "Comment B should be in results")
+		assert.Equal(t, int64(2), foundA.Comment.ReplyCount, "Comment A should have reply_count=2 (B + C, not just B)")
+		assert.Equal(t, int64(1), foundB.Comment.ReplyCount, "Comment B should have reply_count=1 (just C)")
+	})
+
 	t.Run("includes deleted comments to preserve thread structure", func(t *testing.T) {
 		// Create a post
 		post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
