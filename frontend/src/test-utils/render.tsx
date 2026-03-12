@@ -5,7 +5,6 @@ import { MemoryRouter, MemoryRouterProps } from 'react-router-dom'
 import { AuthProvider } from '../contexts/AuthContext'
 import { AdminModeProvider } from '../contexts/AdminModeContext'
 import { ToastProvider } from '../contexts/ToastContext'
-import { ReadingModeProvider } from '../contexts/ReadingModeContext'
 import { ConversationProvider } from '../contexts/ConversationContext'
 import { GameProvider } from '../contexts/GameContext'
 
@@ -69,7 +68,6 @@ export function createTestQueryClient(): QueryClient {
  * - MemoryRouter (React Router)
  * - AuthProvider (Authentication context)
  * - AdminModeProvider (Admin mode context)
- * - ReadingModeProvider (Reading mode context)
  * - ToastProvider (Toast notifications)
  * - ConversationProvider (Conversation context)
  *
@@ -104,9 +102,7 @@ export function renderWithProviders(
             <AuthProvider>
               <ConversationProvider>
                 <AdminModeProvider>
-                  <ReadingModeProvider>
                     {inner}
-                  </ReadingModeProvider>
                 </AdminModeProvider>
               </ConversationProvider>
             </AuthProvider>

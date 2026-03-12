@@ -11,9 +11,6 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { useMarkPostAsRead, usePostUnreadCommentIDs } from '../hooks/useReadTracking';
 import { useUpdatePost } from '../hooks';
 import { Button, Select } from './ui';
-import { ReadingModeToggle } from './ReadingModeToggle';
-import { useReadingMode } from '../contexts/ReadingModeContext';
-import { getRootPostId } from '../utils/commentUtils';
 import { logger } from '@/services/LoggingService';
 import { buildCommentTree, type CommentTreeNode } from '../lib/utils/commentTree';
 import { COMMENT_MAX_DEPTH } from '@/config/comments';
@@ -330,76 +327,6 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
   // Determine if post content is long (more than 500 characters)
   const isLongContent = post.content.length > 500;
 
-  // Get reading mode context
-  const { openThreadModal } = useReadingMode();
-
-  // Handler for "Continue thread" button in reading mode
-  const handleOpenThreadInReadingMode = (comment: Message) => {
-    // Open thread in modal overlay instead of navigating away
-    const threadContent = (
-      <ThreadedComment
-        comment={comment}
-        gameId={gameId}
-        postId={getRootPostId(comment)}
-        characters={characters}
-        controllableCharacters={[]} // No interactions in modal
-        onCreateReply={async () => {}}
-        onCommentDeleted={() => {}}
-        currentUserId={currentUserId}
-        depth={0}
-        maxDepth={COMMENT_MAX_DEPTH}
-        unreadCommentIDs={[]}
-        onOpenThread={handleOpenThreadInReadingMode} // Allow nested thread viewing
-        readOnly={true}
-        parentComment={null}
-      />
-    );
-    openThreadModal(threadContent);
-  };
-
-  // Build full reading mode content: post + all threaded comments as React components
-  const fullReadingContent = (
-    <>
-      {/* Post Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">{post.character_name}</h1>
-        <MarkdownPreview
-          content={post.content}
-          mentionedCharacters={characters}
-          fullWidth
-        />
-      </div>
-
-      {/* Comments Section */}
-      {commentTree.length > 0 && (
-        <div className="border-t border-border-primary pt-8">
-          <h2 className="text-2xl font-bold mb-6">Comments ({post.comment_count || 0})</h2>
-          <div className="space-y-6">
-            {commentTree.map((commentNode) => (
-              <ThreadedComment
-                key={commentNode.id}
-                comment={commentNode}
-                gameId={gameId}
-                postId={post.id}
-                characters={characters}
-                controllableCharacters={[]} // No interactions in reading mode
-                onCreateReply={async () => {}} // No interactions in reading mode
-                onCommentDeleted={() => {}} // No interactions in reading mode
-                currentUserId={currentUserId}
-                depth={0}
-                maxDepth={COMMENT_MAX_DEPTH} // Same as normal view - "Continue thread" button will appear for deep threads
-                unreadCommentIDs={[]}
-                onOpenThread={handleOpenThreadInReadingMode} // Navigate to thread view
-                readOnly={true} // Disable all interactions
-                parentComment={null}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </>
-  );
-
   return (
     <div ref={postRef} id={`comment-${post.id}`} data-testid={dataTestId || "post-card"} className="mb-8">
       {/* Post Card - Contains both post and comments */}
@@ -446,11 +373,6 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 mt-2">
-            {/* Reading Mode Toggle */}
-            {!readOnly && (
-              <ReadingModeToggle showLabel={false} content={fullReadingContent} />
-            )}
-
             {/* Toggle Button for Long Content */}
             {isLongContent && (
               <Button

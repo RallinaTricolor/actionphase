@@ -10,8 +10,6 @@ import { AdminModeProvider } from './contexts/AdminModeContext';
 import { GameProvider } from './contexts/GameContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
-import { ReadingModeProvider } from './contexts/ReadingModeContext';
-import { ReadingModeOverlay } from './components/ReadingModeOverlay';
 import { logger } from '@/services/LoggingService';
 
 // Lazy load all page components for better code splitting
@@ -54,7 +52,6 @@ function AppRoutes() {
   return (
     <Router>
       <Layout>
-        <ReadingModeOverlay />
         <Suspense fallback={<PageLoader />}>
           <Routes>
           <Route
@@ -202,9 +199,7 @@ function App() {
           <AuthProvider>
             <AdminModeProvider>
               <ThemeProvider>
-                <ReadingModeProvider>
                   <AppRoutes />
-                </ReadingModeProvider>
               </ThemeProvider>
             </AdminModeProvider>
           </AuthProvider>

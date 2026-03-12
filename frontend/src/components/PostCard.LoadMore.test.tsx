@@ -65,12 +65,6 @@ vi.mock('../hooks/useReadTracking', () => ({
   }),
 }));
 
-vi.mock('../contexts/ReadingModeContext', () => ({
-  useReadingMode: () => ({
-    readingMode: false,
-  }),
-}));
-
 describe('PostCard - Load More Comments', () => {
   let queryClient: QueryClient;
 
