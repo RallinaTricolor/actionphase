@@ -243,6 +243,13 @@ describe('Layout', () => {
       expect(nav).toBeInTheDocument()
     })
 
+    it('should have sticky navigation bar', () => {
+      const { container } = renderLayout(<div>Content</div>, '/dashboard')
+
+      const nav = container.querySelector('nav')
+      expect(nav).toHaveClass('sticky', 'top-0', 'z-50')
+    })
+
     it('should have main content wrapper', () => {
       renderLayout(<div data-testid="content">Content</div>, '/dashboard')
 
