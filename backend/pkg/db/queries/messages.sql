@@ -547,7 +547,7 @@ WHERE (
   -- Otherwise, show all conversations
   CASE
     WHEN sqlc.arg(participant_names)::text[] IS NULL OR array_length(sqlc.arg(participant_names)::text[], 1) IS NULL THEN true
-    ELSE pa.participant_names::text[] && sqlc.arg(participant_names)::text[]
+    ELSE pa.participant_names::text[] @> sqlc.arg(participant_names)::text[]
   END
 )
 ORDER BY cm.latest_message_at DESC NULLS LAST

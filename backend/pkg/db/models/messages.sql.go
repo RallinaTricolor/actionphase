@@ -1526,7 +1526,7 @@ WHERE (
   -- Otherwise, show all conversations
   CASE
     WHEN $2::text[] IS NULL OR array_length($2::text[], 1) IS NULL THEN true
-    ELSE pa.participant_names::text[] && $2::text[]
+    ELSE pa.participant_names::text[] @> $2::text[]
   END
 )
 ORDER BY cm.latest_message_at DESC NULLS LAST

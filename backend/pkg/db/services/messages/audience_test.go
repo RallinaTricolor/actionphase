@@ -89,6 +89,71 @@ func TestListAllPrivateConversations(t *testing.T) {
 	})
 }
 
+// TestListAllPrivateConversations_ParticipantFilter tests that filtering by multiple
+// participant names uses AND semantics (all must be present), not OR (any present).
+func TestListAllPrivateConversations_ParticipantFilter(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+	fixtures := testDB.SetupFixtures(t)
+	msgService := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameID := fixtures.TestGame.ID
+
+	// Create three users/characters
+	u1 := testDB.CreateTestUser(t, "pf_user1", "pf_user1@example.com")
+	u2 := testDB.CreateTestUser(t, "pf_user2", "pf_user2@example.com")
+	u3 := testDB.CreateTestUser(t, "pf_user3", "pf_user3@example.com")
+
+	charSvc := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	uid1, uid2, uid3 := int32(u1.ID), int32(u2.ID), int32(u3.ID)
+
+	c1, err := charSvc.CreateCharacter(context.Background(), db.CreateCharacterRequest{GameID: gameID, UserID: &uid1, Name: "Alpha", CharacterType: "player_character"})
+	core.AssertNoError(t, err, "create char 1")
+	c2, err := charSvc.CreateCharacter(context.Background(), db.CreateCharacterRequest{GameID: gameID, UserID: &uid2, Name: "Beta", CharacterType: "player_character"})
+	core.AssertNoError(t, err, "create char 2")
+	c3, err := charSvc.CreateCharacter(context.Background(), db.CreateCharacterRequest{GameID: gameID, UserID: &uid3, Name: "Gamma", CharacterType: "player_character"})
+	core.AssertNoError(t, err, "create char 3")
+
+	convSvc := db.NewConversationService(testDB.Pool)
+
+	// Conversation 1: Alpha + Beta
+	_, err = convSvc.CreateConversation(context.Background(), db.CreateConversationRequest{
+		GameID: gameID, Title: "Alpha-Beta", CreatedByUserID: uid1,
+		ParticipantIDs: []int32{c1.ID, c2.ID},
+	})
+	core.AssertNoError(t, err, "create conv Alpha-Beta")
+
+	// Conversation 2: Alpha + Gamma
+	_, err = convSvc.CreateConversation(context.Background(), db.CreateConversationRequest{
+		GameID: gameID, Title: "Alpha-Gamma", CreatedByUserID: uid1,
+		ParticipantIDs: []int32{c1.ID, c3.ID},
+	})
+	core.AssertNoError(t, err, "create conv Alpha-Gamma")
+
+	t.Run("single_participant_filter_returns_both", func(t *testing.T) {
+		// Filtering by Alpha alone should return both conversations
+		convs, err := msgService.ListAllPrivateConversations(context.Background(), core.ListAllPrivateConversationsParams{
+			GameID: gameID, ParticipantNames: []string{"Alpha"}, Limit: 20, Offset: 0,
+		})
+		core.AssertNoError(t, err, "should list successfully")
+		core.AssertTrue(t, len(convs) >= 2, "Alpha is in both conversations")
+	})
+
+	t.Run("two_participant_filter_uses_AND_not_OR", func(t *testing.T) {
+		// Filtering by Alpha + Beta should return ONLY the Alpha-Beta conversation,
+		// not Alpha-Gamma (which has Alpha but not Beta).
+		convs, err := msgService.ListAllPrivateConversations(context.Background(), core.ListAllPrivateConversationsParams{
+			GameID: gameID, ParticipantNames: []string{"Alpha", "Beta"}, Limit: 20, Offset: 0,
+		})
+		core.AssertNoError(t, err, "should list successfully")
+		core.AssertEqual(t, 1, len(convs), "should return only the Alpha-Beta conversation")
+		if len(convs) == 1 {
+			core.AssertEqual(t, "Alpha-Beta", convs[0].Subject.String, "returned conversation should be Alpha-Beta")
+		}
+	})
+}
+
 // TestGetAudienceConversationMessages tests retrieving messages from a conversation
 func TestGetAudienceConversationMessages(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
