@@ -24,16 +24,7 @@ export const AudienceConversationCard: React.FC<AudienceConversationCardProps> =
     return allGameCharacters.find(c => c.id === characterId)?.avatar_url ?? null;
   };
 
-  // Calculate activity level based on message count
-  const getActivityBadge = (count: number) => {
-    if (count >= 21) {
-      return { variant: 'primary' as const, label: `${count} messages` };
-    }
-    if (count >= 6) {
-      return { variant: 'secondary' as const, label: `${count} messages` };
-    }
-    return { variant: 'neutral' as const, label: `${count}` };
-  };
+  const messageCountLabel = `${conversation.message_count} messages`;
 
   // Check if conversation had activity in last 24 hours
   const isRecentActivity = () => {
@@ -61,7 +52,6 @@ export const AudienceConversationCard: React.FC<AudienceConversationCardProps> =
     ? Math.max(0, conversation.participant_names.length - 4)
     : 0;
 
-  const activityBadge = getActivityBadge(conversation.message_count);
   const hasRecentActivity = isRecentActivity();
 
   return (
@@ -122,8 +112,8 @@ export const AudienceConversationCard: React.FC<AudienceConversationCardProps> =
             <h3 className="text-base font-bold text-content-primary line-clamp-1">
               {conversation.subject || 'Conversation'}
             </h3>
-            <Badge variant={activityBadge.variant} size="sm">
-              {activityBadge.label}
+            <Badge variant="neutral" size="sm">
+              {messageCountLabel}
             </Badge>
           </div>
 

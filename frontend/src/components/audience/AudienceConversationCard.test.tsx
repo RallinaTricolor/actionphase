@@ -78,7 +78,7 @@ describe('AudienceConversationCard', () => {
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 
-  it('shows activity badge based on message count', () => {
+  it('shows message count badge', () => {
     const { rerender } = renderWithProviders(
       <AudienceConversationCard
         conversation={{ ...mockConversation, message_count: 3 }}
@@ -87,19 +87,8 @@ describe('AudienceConversationCard', () => {
     { gameId: 1 }
     );
 
-    // Low activity (1-5 messages) - should show just the count
-    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('3 messages')).toBeInTheDocument();
 
-    // Medium activity (6-20 messages)
-    rerender(
-      <AudienceConversationCard
-        conversation={{ ...mockConversation, message_count: 10 }}
-        onClick={vi.fn()}
-      />
-    );
-    expect(screen.getByText('10 messages')).toBeInTheDocument();
-
-    // High activity (21+ messages)
     rerender(
       <AudienceConversationCard
         conversation={{ ...mockConversation, message_count: 25 }}
