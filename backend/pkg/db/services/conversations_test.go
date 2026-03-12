@@ -1135,6 +1135,61 @@ func TestConversationService_GetUserConversations_UnreadCounts(t *testing.T) {
 	})
 }
 
+func TestConversationService_GetUserConversations_DeletedMessagePreview(t *testing.T) {
+	suite := NewTestSuite(t).
+		WithCleanup("conversations").
+		Setup()
+	defer suite.Cleanup()
+
+	ctx := context.Background()
+	service := NewConversationService(suite.Pool())
+
+	user1 := suite.Factory().NewUser().Create()
+	user2 := suite.Factory().NewUser().Create()
+	gm := suite.Factory().NewUser().Create()
+	game := suite.Factory().NewGame().WithGM(gm.ID).Create()
+	char1 := suite.Factory().NewCharacter().InGame(game).OwnedBy(user1).Create()
+	char2 := suite.Factory().NewCharacter().InGame(game).OwnedBy(user2).Create()
+
+	conv, err := service.CreateConversation(ctx, CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Test Conv",
+		CreatedByUserID: user1.ID,
+		ParticipantIDs:  []int32{char1.ID, char2.ID},
+	})
+	require.NoError(t, err)
+
+	// Send first message
+	_, err = service.SendMessage(ctx, SendMessageRequest{
+		ConversationID:    conv.ID,
+		SenderUserID:      user1.ID,
+		SenderCharacterID: char1.ID,
+		Content:           "First message",
+	})
+	require.NoError(t, err)
+
+	// Send second (most recent) message then delete it
+	msg2, err := service.SendMessage(ctx, SendMessageRequest{
+		ConversationID:    conv.ID,
+		SenderUserID:      user1.ID,
+		SenderCharacterID: char1.ID,
+		Content:           "Deleted message",
+	})
+	require.NoError(t, err)
+
+	err = service.DeletePrivateMessage(ctx, msg2.ID, user1.ID)
+	require.NoError(t, err)
+
+	t.Run("deleted message does not appear as conversation preview", func(t *testing.T) {
+		conversations, err := service.GetUserConversations(ctx, game.ID, user1.ID)
+		require.NoError(t, err)
+		require.Len(t, conversations, 1)
+
+		// The preview should show the first (non-deleted) message, not the deleted one
+		assert.Equal(t, "First message", conversations[0].LastMessage, "deleted message should not appear in preview")
+	})
+}
+
 func TestConversationService_DeletePrivateMessage(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	app := core.NewTestApp(testDB.Pool)

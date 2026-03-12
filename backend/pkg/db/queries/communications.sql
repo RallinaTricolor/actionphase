@@ -124,6 +124,8 @@ LEFT JOIN LATERAL (
     SELECT content as last_message, created_at as last_message_at
     FROM private_messages
     WHERE conversation_id = c.id
+      AND is_deleted = false
+      AND deleted_at IS NULL
     ORDER BY created_at DESC
     LIMIT 1
 ) lm ON true
