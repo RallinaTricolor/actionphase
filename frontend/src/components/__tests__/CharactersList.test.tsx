@@ -592,6 +592,120 @@ describe('CharactersList', () => {
     })
   })
 
+  describe('My Characters section', () => {
+    it('shows "My Characters" section at top for non-GM player with own character', async () => {
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="player" currentUserId={1} />,
+      { gameId: 123 })
+
+      await waitFor(() => {
+        expect(screen.getByText('My Characters')).toBeInTheDocument()
+      })
+    })
+
+    it('"My Characters" section appears before "Player Characters" section', async () => {
+      // Need another approved player character (not owned by user 1) to trigger "Player Characters" section
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/characters', () => {
+          return HttpResponse.json([
+            ...mockCharacters,
+            { id: 4, name: 'Other Player Character', game_id: 123, user_id: 3, username: 'player3',
+              character_type: 'player_character', status: 'approved', attributes: {}, inventory: [], notes: '',
+              created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
+          ])
+        })
+      )
+
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="player" currentUserId={1} />,
+      { gameId: 123 })
+
+      await waitFor(() => {
+        expect(screen.getByText('My Characters')).toBeInTheDocument()
+      })
+
+      const headings = screen.getAllByRole('heading', { level: 3 })
+      const myCharIdx = headings.findIndex(h => h.textContent === 'My Characters')
+      const playerCharIdx = headings.findIndex(h => h.textContent === 'Player Characters')
+      expect(myCharIdx).toBeGreaterThanOrEqual(0)
+      expect(playerCharIdx).toBeGreaterThanOrEqual(0)
+      expect(myCharIdx).toBeLessThan(playerCharIdx)
+    })
+
+    it("player's own character appears in My Characters but not in Player Characters", async () => {
+      // Need another approved player character to ensure "Player Characters" section renders
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/characters', () => {
+          return HttpResponse.json([
+            ...mockCharacters,
+            { id: 4, name: 'Other Player Character', game_id: 123, user_id: 3, username: 'player3',
+              character_type: 'player_character', status: 'approved', attributes: {}, inventory: [], notes: '',
+              created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
+          ])
+        })
+      )
+
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="player" currentUserId={1} />,
+      { gameId: 123 })
+
+      await waitFor(() => {
+        expect(screen.getByText('My Characters')).toBeInTheDocument()
+      })
+
+      const myCharSection = screen.getByText('My Characters').closest('div')!
+      const playerCharSection = screen.getByText('Player Characters').closest('div')!
+
+      // Hero Character (owned by user 1) should be in My Characters section
+      expect(myCharSection.textContent).toContain('Hero Character')
+      // Hero Character should NOT also be in the Player Characters section
+      expect(playerCharSection.textContent).not.toContain('Hero Character')
+      // Other player's character should be in Player Characters, not My Characters
+      expect(playerCharSection.textContent).toContain('Other Player Character')
+      expect(myCharSection.textContent).not.toContain('Other Player Character')
+    })
+
+    it('does NOT show "My Characters" section for GM', async () => {
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
+
+      await waitFor(() => {
+        expect(screen.getByText('Player Characters')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByText('My Characters')).not.toBeInTheDocument()
+    })
+
+    it('shows "My Characters" section in anonymous mode too', async () => {
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="player" currentUserId={1} isAnonymous={true} />,
+      { gameId: 123 })
+
+      await waitFor(() => {
+        expect(screen.getByText('My Characters')).toBeInTheDocument()
+      })
+    })
+
+    it('does NOT show "My Characters" section when player has no characters', async () => {
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/characters/controllable', () => {
+          return HttpResponse.json([])
+        })
+      )
+
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="player" currentUserId={999} />,
+      { gameId: 123 })
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
+      })
+
+      expect(screen.queryByText('My Characters')).not.toBeInTheDocument()
+    })
+  })
+
   describe('Status badges', () => {
     it('should NOT show badge for approved characters', async () => {
       renderWithProviders(

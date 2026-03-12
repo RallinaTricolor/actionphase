@@ -104,9 +104,18 @@ export function CharactersList({
         return false;
       });
 
+  // For non-GM players/audience: split out their own characters to show at top
+  // Use isUserCharacterById directly here (isUserCharacter is defined below)
+  const myCharacters = userRole !== 'gm'
+    ? visibleCharacters.filter(char => isUserCharacterById(char.id))
+    : [];
+  const otherVisibleCharacters = myCharacters.length > 0
+    ? visibleCharacters.filter(char => !isUserCharacterById(char.id))
+    : visibleCharacters;
+
   // Group characters by type
-  const playerCharacters = visibleCharacters.filter(char => char.character_type === 'player_character');
-  const npcs = visibleCharacters.filter(char => char.character_type === 'npc');
+  const playerCharacters = otherVisibleCharacters.filter(char => char.character_type === 'player_character');
+  const npcs = otherVisibleCharacters.filter(char => char.character_type === 'npc');
 
   // Check if user can create characters
   const canCreateCharacter = () => {
@@ -225,31 +234,81 @@ export function CharactersList({
         <div className="space-y-6">
           {/* Anonymous mode: Show all characters in one unified list */}
           {isAnonymous && userRole !== 'gm' ? (
-              <div className="space-y-3">
-                {[...visibleCharacters]
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((character) => (
-                  <CharacterCard
-                    key={character.id}
-                    character={character}
-                    isOwner={isUserCharacter(character)}
-                    userRole={userRole}
-                    isAnonymous={isAnonymous}
-                    onApprove={handleApproveCharacter}
-                    onAssignNPC={setNpcToAssign}
-                    onDelete={canDeleteCharacter() ? setCharacterToDelete : undefined}
-                    getStatusBadgeVariant={getStatusBadgeVariant}
-                    canViewSheet={canViewCharacterSheet(character)}
-                    canEditSheet={canEditCharacterSheet(character)}
-                    onViewSheet={() => {
-                      setSelectedCharacterId(character.id);
-                    }}
-                  />
-                ))}
-              </div>
+              <>
+                {/* My Characters section (anonymous mode) */}
+                {myCharacters.length > 0 && (
+                  <div>
+                    <h3 className="text-md font-medium text-content-primary mb-3">My Characters</h3>
+                    <div className="space-y-3">
+                      {myCharacters.map((character) => (
+                        <CharacterCard
+                          key={character.id}
+                          character={character}
+                          isOwner={true}
+                          userRole={userRole}
+                          isAnonymous={isAnonymous}
+                          onApprove={handleApproveCharacter}
+                          onAssignNPC={setNpcToAssign}
+                          onDelete={canDeleteCharacter() ? setCharacterToDelete : undefined}
+                          getStatusBadgeVariant={getStatusBadgeVariant}
+                          canViewSheet={canViewCharacterSheet(character)}
+                          canEditSheet={canEditCharacterSheet(character)}
+                          onViewSheet={() => setSelectedCharacterId(character.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* All other characters sorted alphabetically */}
+                <div className="space-y-3">
+                  {[...otherVisibleCharacters]
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((character) => (
+                    <CharacterCard
+                      key={character.id}
+                      character={character}
+                      isOwner={isUserCharacter(character)}
+                      userRole={userRole}
+                      isAnonymous={isAnonymous}
+                      onApprove={handleApproveCharacter}
+                      onAssignNPC={setNpcToAssign}
+                      onDelete={canDeleteCharacter() ? setCharacterToDelete : undefined}
+                      getStatusBadgeVariant={getStatusBadgeVariant}
+                      canViewSheet={canViewCharacterSheet(character)}
+                      canEditSheet={canEditCharacterSheet(character)}
+                      onViewSheet={() => setSelectedCharacterId(character.id)}
+                    />
+                  ))}
+                </div>
+              </>
             ) : (
               <>
                 {/* Non-anonymous mode: Show characters grouped by type */}
+                {/* My Characters (non-GM players only) */}
+                {myCharacters.length > 0 && (
+                  <div>
+                    <h3 className="text-md font-medium text-content-primary mb-3">My Characters</h3>
+                    <div className="space-y-3">
+                      {myCharacters.map((character) => (
+                        <CharacterCard
+                          key={character.id}
+                          character={character}
+                          isOwner={true}
+                          userRole={userRole}
+                          isAnonymous={isAnonymous}
+                          onApprove={handleApproveCharacter}
+                          onAssignNPC={setNpcToAssign}
+                          onDelete={canDeleteCharacter() ? setCharacterToDelete : undefined}
+                          getStatusBadgeVariant={getStatusBadgeVariant}
+                          canViewSheet={canViewCharacterSheet(character)}
+                          canEditSheet={canEditCharacterSheet(character)}
+                          onViewSheet={() => setSelectedCharacterId(character.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Player Characters */}
                 {playerCharacters.length > 0 && (
                   <div>
