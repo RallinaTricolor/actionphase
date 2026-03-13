@@ -16,9 +16,6 @@ interface AllPrivateMessagesViewProps {
   gameId: number;
 }
 
-interface ConversationType extends AudienceConversationListItem {
-  [key: string]: unknown;
-}
 
 interface MessageType {
   id: number;
