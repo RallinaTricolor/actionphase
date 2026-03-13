@@ -250,7 +250,8 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     try {
       await apiClient.messages.createComment(gameId, postId, {
         character_id: characterId,
-        content
+        content,
+        phase_id: phaseId
       });
       // Don't reload all posts - let the individual PostCard/ThreadedComment handle the update
       // This prevents jarring full-page reloads when commenting deep in a thread
