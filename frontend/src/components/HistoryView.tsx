@@ -49,16 +49,19 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience =
   const phases = phasesData || [];
 
   // Fetch action results (use appropriate endpoint based on isGM)
+  // Only fetch results/submissions once a phase is selected — avoids loading all data on tab open
+  const hasSelectedPhase = selectedPhaseId !== null;
+
   const { data: userActionResults, isLoading: isLoadingUserResults, error: userResultsError } = useQuery({
     queryKey: ['actionResults', 'user', gameId],
     queryFn: () => apiClient.phases.getUserResults(gameId).then(res => res.data),
-    enabled: !!gameId && !isGM,
+    enabled: !!gameId && !isGM && hasSelectedPhase,
   });
 
   const { data: gmActionResults, isLoading: isLoadingGMResults, error: gmResultsError } = useQuery({
     queryKey: ['actionResults', 'game', gameId],
     queryFn: () => apiClient.phases.getGameResults(gameId).then(res => res.data),
-    enabled: !!gameId && isGM,
+    enabled: !!gameId && isGM && hasSelectedPhase,
   });
 
   // Use GM results if GM, otherwise user results
@@ -70,13 +73,13 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience =
   const { data: userActionSubmissionsData, isLoading: isLoadingUserSubmissions, error: userSubmissionsError } = useQuery<ActionWithDetails[]>({
     queryKey: ['userActions', gameId],
     queryFn: () => apiClient.phases.getUserActions(gameId).then(res => res.data),
-    enabled: !!gameId && !isGM,
+    enabled: !!gameId && !isGM && hasSelectedPhase,
   });
 
   const { data: gmActionSubmissionsData, isLoading: isLoadingGMSubmissions, error: gmSubmissionsError } = useQuery<ActionWithDetails[]>({
     queryKey: ['gameActions', gameId],
     queryFn: () => apiClient.phases.getGameActions(gameId).then(res => res.data),
-    enabled: !!gameId && isGM,
+    enabled: !!gameId && isGM && hasSelectedPhase,
   });
 
   // Use GM submissions if GM, otherwise user submissions
