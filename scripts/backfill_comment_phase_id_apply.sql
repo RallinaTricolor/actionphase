@@ -4,33 +4,33 @@
 BEGIN;
 
 WITH RECURSIVE comment_roots AS (
-  -- Start with comments missing phase_id, track their parent chain
+  -- Start with comments missing phase_id
   SELECT
-    c.id       AS comment_id,
-    c.parent_id,
-    0          AS depth
+    c.id        AS comment_id,
+    c.id        AS current_id,
+    c.parent_id AS current_parent_id
   FROM messages c
   WHERE c.message_type = 'comment'
     AND c.phase_id IS NULL
 
   UNION ALL
 
-  -- Walk up toward the root post
+  -- Walk up one level toward the root
   SELECT
     cr.comment_id,
-    m.parent_id,
-    cr.depth + 1
+    m.id,
+    m.parent_id
   FROM comment_roots cr
-  JOIN messages m ON m.id = cr.parent_id
-  WHERE cr.parent_id IS NOT NULL
+  JOIN messages m ON m.id = cr.current_parent_id
+  WHERE cr.current_parent_id IS NOT NULL
 ),
--- Keep only the row where we reached the root (parent_id IS NULL = root post)
+-- The root is the node with no parent
 roots AS (
   SELECT DISTINCT ON (comment_id)
     comment_id,
-    parent_id AS root_id
+    current_id AS root_id
   FROM comment_roots
-  ORDER BY comment_id, depth DESC
+  WHERE current_parent_id IS NULL
 )
 UPDATE messages c
 SET phase_id = p.phase_id
@@ -39,11 +39,10 @@ JOIN messages p ON p.id = r.root_id
 WHERE c.id = r.comment_id
   AND p.phase_id IS NOT NULL;
 
--- Show how many rows were updated
-GET DIAGNOSTICS -- not valid outside plpgsql, so use rowcount trick:
-SELECT 'Rows updated: ' || COUNT(*) AS result
+-- Show how many comments still have no phase_id (should be 0 if backfill worked)
+SELECT COUNT(*) AS comments_still_missing_phase_id
 FROM messages
 WHERE message_type = 'comment'
-  AND phase_id IS NOT NULL;
+  AND phase_id IS NULL;
 
 COMMIT;

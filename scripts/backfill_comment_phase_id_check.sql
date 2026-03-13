@@ -10,33 +10,33 @@ ORDER BY message_type, missing_phase_id;
 
 -- Preview: which comments will be updated and what phase_id they'll get
 WITH RECURSIVE comment_roots AS (
-  -- Start with comments missing phase_id, track their parent chain
+  -- Start with comments missing phase_id
   SELECT
-    c.id       AS comment_id,
-    c.parent_id,
-    0          AS depth
+    c.id        AS comment_id,
+    c.id        AS current_id,
+    c.parent_id AS current_parent_id
   FROM messages c
   WHERE c.message_type = 'comment'
     AND c.phase_id IS NULL
 
   UNION ALL
 
-  -- Walk up toward the root post
+  -- Walk up one level toward the root
   SELECT
     cr.comment_id,
-    m.parent_id,
-    cr.depth + 1
+    m.id,
+    m.parent_id
   FROM comment_roots cr
-  JOIN messages m ON m.id = cr.parent_id
-  WHERE cr.parent_id IS NOT NULL
+  JOIN messages m ON m.id = cr.current_parent_id
+  WHERE cr.current_parent_id IS NOT NULL
 ),
--- Keep only the row where we reached the root (parent_id IS NULL = root post)
+-- The root is the node with no parent
 roots AS (
   SELECT DISTINCT ON (comment_id)
     comment_id,
-    parent_id AS root_id
+    current_id AS root_id
   FROM comment_roots
-  ORDER BY comment_id, depth DESC
+  WHERE current_parent_id IS NULL
 )
 SELECT
   c.id          AS comment_id,
