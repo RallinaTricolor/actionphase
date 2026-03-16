@@ -8,9 +8,10 @@ import type { LoginRequest } from '../types/auth';
 
 interface LoginFormProps {
   onSuccess?: () => void;
+  hideForgotPassword?: boolean;
 }
 
-export const LoginForm = ({ onSuccess }: LoginFormProps) => {
+export const LoginForm = ({ onSuccess, hideForgotPassword = false }: LoginFormProps) => {
   const [formData, setFormData] = useState<LoginRequest>({
     username: '',
     password: '',
@@ -77,14 +78,16 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           compact
         />
 
-        <div className="flex items-center justify-end mb-4">
-          <Link
-            to="/forgot-password"
-            className="text-sm text-interactive-primary hover:text-interactive-hover"
-          >
-            Forgot password?
-          </Link>
-        </div>
+        {!hideForgotPassword && (
+          <div className="flex items-center justify-end mb-4">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-interactive-primary hover:text-interactive-hover"
+            >
+              Forgot password?
+            </Link>
+          </div>
+        )}
 
         <Button
           type="submit"
