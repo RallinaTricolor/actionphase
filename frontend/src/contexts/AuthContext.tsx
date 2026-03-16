@@ -1,10 +1,8 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { LoginRequest, RegisterRequest, User } from '../types/auth';
 import { logger } from '@/services/LoggingService';
-import { getSavedDrafts } from '@/utils/draftRestoration';
-import { useToast } from './ToastContext';
 
 interface AuthContextValue {
   // User data
@@ -34,7 +32,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const queryClient = useQueryClient();
   const [authError, setAuthError] = useState<Error | null>(null);
-  const { showSuccess } = useToast();
+
 
   // Check if user is authenticated by fetching current user data
   // This works for both localStorage tokens AND HTTP-only cookies
@@ -74,39 +72,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [userError]);
 
-  // Track whether we've already shown the draft restoration toast
-  const draftToastShownRef = useRef(false);
-
-  // Check for and restore saved drafts when user becomes authenticated
-  // This helps recover work-in-progress when session expires
-  useEffect(() => {
-    // Only check when user first becomes authenticated and auth check is complete
-    // AND we haven't already shown the toast
-    if (isAuthenticated && !isCheckingAuth && !draftToastShownRef.current) {
-      const draftData = getSavedDrafts();
-      if (draftData) {
-        logger.info('Found saved drafts after login', {
-          draftCount: Object.keys(draftData.drafts).length,
-          originalPath: draftData.path,
-        });
-
-        // Mark that we've shown the toast
-        draftToastShownRef.current = true;
-
-        // Show toast with path information and clear the drafts
-        // Users can navigate back if needed, but we won't keep showing the toast
-        const draftCount = Object.keys(draftData.drafts).length;
-        const pathDisplay = draftData.path === '/' ? 'home page' : draftData.path;
-        const message = `We found ${draftCount} unsaved draft${draftCount > 1 ? 's' : ''} from ${pathDisplay}. Navigate back to that page to see your restored work, or continue - we won't remind you again.`;
-
-        showSuccess(message);
-
-        // Clear the drafts from localStorage so the toast doesn't reappear
-        localStorage.removeItem('session_expired_drafts');
-      }
-    }
-  }, [isAuthenticated, isCheckingAuth, showSuccess]);
-
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (data: LoginRequest) => {
@@ -124,6 +89,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         queryClient.invalidateQueries({ queryKey: ['currentUser'] });
         setAuthError(null);
       }
+
     },
     onError: (error: Error) => {
       logger.error('Login failed', { error });
@@ -231,7 +197,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isCheckingAuth: value.isCheckingAuth,
   });
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
