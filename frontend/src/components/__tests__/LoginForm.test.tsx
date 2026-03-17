@@ -130,6 +130,18 @@ describe('LoginForm', () => {
     })
   })
 
+  it('shows forgot password link by default', () => {
+    renderWithProviders(<LoginForm />)
+
+    expect(screen.getByRole('link', { name: /forgot password/i })).toBeInTheDocument()
+  })
+
+  it('hides forgot password link when hideForgotPassword is true', () => {
+    renderWithProviders(<LoginForm hideForgotPassword />)
+
+    expect(screen.queryByRole('link', { name: /forgot password/i })).not.toBeInTheDocument()
+  })
+
   it('has proper accessibility attributes', () => {
     renderWithProviders(<LoginForm />)
 

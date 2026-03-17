@@ -10,7 +10,6 @@ export class BaseApiClient {
   protected client: ReturnType<typeof axios.create>;
   protected refreshClient: ReturnType<typeof axios.create>;
   private refreshPromise: Promise<void> | null = null;
-  private sessionExpiredDispatched: boolean = false;
   private isLoggingOut: boolean = false;
   private lastLogoutTime: number = 0;
 
@@ -140,9 +139,6 @@ export class BaseApiClient {
               logger.info('Token refresh successful, retrying request', {
                 url: originalRequest.url,
               });
-              // Reset the session expired flag on successful refresh
-              // This allows showing the message again if session expires in the future
-              this.sessionExpiredDispatched = false;
               return this.client(originalRequest);
             } finally {
               // Clear the refresh promise so future requests can trigger a new refresh if needed
@@ -157,30 +153,10 @@ export class BaseApiClient {
             // Clear any legacy localStorage tokens
             localStorage.removeItem('auth_token');
 
-            // Check if we just logged out (within 2 seconds)
-            // If so, skip showing session expired message as this is expected
-            const timeSinceLogout = Date.now() - this.lastLogoutTime;
-            const isRecentLogout = timeSinceLogout < 2000;
-
-            // Only dispatch events once to prevent infinite toast loop
-            // Multiple requests may fail and enter this catch block, but we only
-            // want to show the session expired message once
-            // Skip if this is part of an expected logout flow
-            if (!this.sessionExpiredDispatched && !isRecentLogout) {
-              this.sessionExpiredDispatched = true;
-
-              // Dispatch event to show session expired modal
-              window.dispatchEvent(new CustomEvent('auth:sessionExpired', {
-                detail: { message: 'Your session has expired. Please log in again.' }
-              }));
-
-              // Dispatch event to clear React Query cache
-              window.dispatchEvent(new CustomEvent('auth:logout'));
-            } else if (isRecentLogout) {
-              logger.debug('Skipping session expired event - recent logout detected', {
-                timeSinceLogout,
-                originalUrl: originalRequest.url
-              });
+            // Don't show the modal if this is an expected logout from this tab
+            const isRecentLogout = (Date.now() - this.lastLogoutTime) < 2000;
+            if (!isRecentLogout) {
+              window.dispatchEvent(new CustomEvent('auth:sessionExpired'));
             }
             return Promise.reject(refreshError);
           }
@@ -215,8 +191,6 @@ export class BaseApiClient {
     }
     logger.debug('Setting auth token');
     localStorage.setItem('auth_token', token);
-    // Reset the session expired flag on successful authentication
-    this.sessionExpiredDispatched = false;
   }
 
   removeAuthToken() {

@@ -209,6 +209,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const handleSessionExpiredSuccess = () => {
     logger.info('Re-authentication successful, closing session expired modal');
     setShowSessionExpiredModal(false);
+    // Invalidate all queries so components refresh with the new session
+    queryClient.invalidateQueries();
   };
 
   return (
