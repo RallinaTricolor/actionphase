@@ -44,20 +44,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // Listen for session expiration events from API client
-  useEffect(() => {
-    const handleSessionExpired = (event: Event) => {
-      const customEvent = event as CustomEvent<{ message: string }>;
-      showError(customEvent.detail.message);
-    };
-
-    window.addEventListener('auth:sessionExpired', handleSessionExpired);
-
-    return () => {
-      window.removeEventListener('auth:sessionExpired', handleSessionExpired);
-    };
-  }, [showError]);
-
   return (
     <ToastContext.Provider value={{ showToast, showSuccess, showError, showWarning, showInfo }}>
       {children}

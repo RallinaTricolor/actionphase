@@ -1,9 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { SessionExpiredModal } from '../SessionExpiredModal'
 import { renderWithProviders } from '../../test-utils/render'
 import { server } from '../../mocks/server'
+
+// A minimal component that uses AuthContext so we can test the event-driven flow
+function AuthContextTestHarness() {
+  return <div data-testid="page-content">Page content preserved</div>
+}
 
 describe('SessionExpiredModal', () => {
   beforeEach(() => {
@@ -98,5 +103,88 @@ describe('SessionExpiredModal', () => {
     }, { timeout: 3000 })
 
     expect(onSuccess).not.toHaveBeenCalled()
+  })
+})
+
+describe('SessionExpiredModal — AuthContext integration', () => {
+  beforeEach(() => {
+    server.resetHandlers()
+    localStorage.clear()
+  })
+
+  it('modal appears when auth:sessionExpired event is dispatched', async () => {
+    renderWithProviders(<AuthContextTestHarness />)
+
+    expect(screen.queryByRole('heading', { name: 'Session Expired' })).not.toBeInTheDocument()
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('auth:sessionExpired'))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Session Expired' })).toBeInTheDocument()
+    })
+  })
+
+  it('page content is still present while modal is open', async () => {
+    renderWithProviders(<AuthContextTestHarness />)
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('auth:sessionExpired'))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Session Expired' })).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('page-content')).toBeInTheDocument()
+  })
+
+  it('modal closes after successful re-authentication', async () => {
+    server.use(
+      http.post('/api/v1/auth/login', () => {
+        return HttpResponse.json({
+          user: { id: 1, username: 'testuser', email: 'test@example.com' },
+          Token: 'mock-jwt-token',
+        })
+      }),
+      http.get('/api/v1/auth/me', () => {
+        return HttpResponse.json({ id: 1, username: 'testuser', email: 'test@example.com' })
+      })
+    )
+
+    renderWithProviders(<AuthContextTestHarness />)
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('auth:sessionExpired'))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Session Expired' })).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByLabelText('Username or Email'), { target: { value: 'testuser' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Session Expired' })).not.toBeInTheDocument()
+    }, { timeout: 3000 })
+  })
+
+  it('dispatching auth:sessionExpired twice only shows one modal', async () => {
+    renderWithProviders(<AuthContextTestHarness />)
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('auth:sessionExpired'))
+      window.dispatchEvent(new CustomEvent('auth:sessionExpired'))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Session Expired' })).toBeInTheDocument()
+    })
+
+    // Only one modal heading — not duplicated
+    expect(screen.getAllByRole('heading', { name: 'Session Expired' })).toHaveLength(1)
   })
 })
