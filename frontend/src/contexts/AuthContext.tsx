@@ -91,7 +91,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         queryClient.invalidateQueries({ queryKey: ['currentUser'] });
         setAuthError(null);
       }
-
     },
     onError: (error: Error) => {
       logger.error('Login failed', { error });
@@ -149,28 +148,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // Listen for logout events from API client (e.g., when token refresh fails)
+  // Listen for session expiry events from API client (token refresh failure)
   useEffect(() => {
-    const handleLogout = () => {
-      logger.info('Handling auth:logout event - clearing React Query cache');
-      queryClient.setQueryData(['currentUser'], null);
-      queryClient.clear();
-      setAuthError(null);
-    };
-
     const handleSessionExpired = () => {
       logger.info('Handling auth:sessionExpired event - showing re-auth modal');
       setShowSessionExpiredModal(true);
     };
 
-    window.addEventListener('auth:logout', handleLogout);
     window.addEventListener('auth:sessionExpired', handleSessionExpired);
 
     return () => {
-      window.removeEventListener('auth:logout', handleLogout);
       window.removeEventListener('auth:sessionExpired', handleSessionExpired);
     };
-  }, [queryClient]);
+  }, []);
 
   // Combined loading state
   const isLoading = loginMutation.isPending || registerMutation.isPending;

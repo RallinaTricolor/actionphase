@@ -4,10 +4,17 @@ import { http, HttpResponse } from 'msw'
 import { SessionExpiredModal } from '../SessionExpiredModal'
 import { renderWithProviders } from '../../test-utils/render'
 import { server } from '../../mocks/server'
+import { useAuth } from '../../contexts/AuthContext'
 
-// A minimal component that uses AuthContext so we can test the event-driven flow
+// Renders page content and exposes auth state for assertions
 function AuthContextTestHarness() {
-  return <div data-testid="page-content">Page content preserved</div>
+  const { isAuthenticated } = useAuth()
+  return (
+    <div>
+      <div data-testid="page-content">Page content preserved</div>
+      <div data-testid="auth-status">{isAuthenticated ? 'authenticated' : 'unauthenticated'}</div>
+    </div>
+  )
 }
 
 describe('SessionExpiredModal', () => {
@@ -186,5 +193,63 @@ describe('SessionExpiredModal — AuthContext integration', () => {
 
     // Only one modal heading — not duplicated
     expect(screen.getAllByRole('heading', { name: 'Session Expired' })).toHaveLength(1)
+  })
+
+  it('user remains authenticated while modal is open — ProtectedRoute does not redirect', async () => {
+    renderWithProviders(<AuthContextTestHarness />)
+
+    // User starts authenticated (default MSW handler returns a user for /auth/me)
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('authenticated')
+    })
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('auth:sessionExpired'))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Session Expired' })).toBeInTheDocument()
+    })
+
+    // Auth state must not have changed — this is what keeps ProtectedRoute from redirecting
+    expect(screen.getByTestId('auth-status')).toHaveTextContent('authenticated')
+  })
+
+  it('user is authenticated again after re-auth and modal closes', async () => {
+    server.use(
+      http.post('/api/v1/auth/login', () => {
+        return HttpResponse.json({
+          user: { id: 1, username: 'testuser', email: 'test@example.com' },
+          Token: 'mock-jwt-token',
+        })
+      }),
+      http.get('/api/v1/auth/me', () => {
+        return HttpResponse.json({ id: 1, username: 'testuser', email: 'test@example.com' })
+      })
+    )
+
+    renderWithProviders(<AuthContextTestHarness />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('authenticated')
+    })
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('auth:sessionExpired'))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Session Expired' })).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByLabelText('Username or Email'), { target: { value: 'testuser' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Session Expired' })).not.toBeInTheDocument()
+    }, { timeout: 3000 })
+
+    expect(screen.getByTestId('auth-status')).toHaveTextContent('authenticated')
   })
 })
