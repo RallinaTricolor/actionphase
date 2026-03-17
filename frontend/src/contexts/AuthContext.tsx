@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { LoginRequest, RegisterRequest, User } from '../types/auth';
 import { logger } from '@/services/LoggingService';
+import { SessionExpiredModal } from '@/components/SessionExpiredModal';
 
 interface AuthContextValue {
   // User data
@@ -32,6 +33,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const queryClient = useQueryClient();
   const [authError, setAuthError] = useState<Error | null>(null);
+  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
 
 
   // Check if user is authenticated by fetching current user data
@@ -156,10 +158,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setAuthError(null);
     };
 
+    const handleSessionExpired = () => {
+      logger.info('Handling auth:sessionExpired event - showing re-auth modal');
+      setShowSessionExpiredModal(true);
+    };
+
     window.addEventListener('auth:logout', handleLogout);
+    window.addEventListener('auth:sessionExpired', handleSessionExpired);
 
     return () => {
       window.removeEventListener('auth:logout', handleLogout);
+      window.removeEventListener('auth:sessionExpired', handleSessionExpired);
     };
   }, [queryClient]);
 
@@ -197,9 +206,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isCheckingAuth: value.isCheckingAuth,
   });
 
+  const handleSessionExpiredSuccess = () => {
+    logger.info('Re-authentication successful, closing session expired modal');
+    setShowSessionExpiredModal(false);
+  };
+
   return (
     <AuthContext.Provider value={value}>
       {children}
+      <SessionExpiredModal
+        isOpen={showSessionExpiredModal}
+        onSuccess={handleSessionExpiredSuccess}
+      />
     </AuthContext.Provider>
   );
 }
