@@ -36,15 +36,13 @@ test.describe('Action Submission Flow', () => {
     await assertTextVisible(page, 'Your Current Action');
     await assertTextVisible(page, 'This is a draft action that needs to be completed');
 
-    // Update the action content using POM
-    const newActionContent = `I will execute my plan with precision and care. This is my updated action for testing. ${Date.now()}`;
+    // Update the action content using POM — include a timestamp to make it unique
+    const newActionContent = `I will execute my plan with precision and care. Updated: ${Date.now()}`;
     await actionPage.editAction(newActionContent);
 
-    // Verify the action was submitted successfully
-    await assertTextVisible(page, 'Your Current Action');
-
-    // Verify the new content is displayed
-    await assertTextVisible(page, 'I will execute my plan');
+    // Verify the full updated content is displayed (not just a fragment that could match the original)
+    const savedContent = await actionPage.getCurrentActionContent();
+    expect(savedContent).toContain(newActionContent);
     await expect(page.locator('text=Acting as:').locator('..').locator('span:has-text("E2E Test Char 4")')).toBeVisible();
   });
 
