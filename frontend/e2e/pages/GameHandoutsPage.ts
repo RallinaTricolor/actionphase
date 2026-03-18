@@ -98,8 +98,8 @@ export class GameHandoutsPage {
 
     // Find the handout card containing this heading
     const card = this.page.getByTestId('handout-card').filter({ has: heading });
-    const viewButton = card.getByRole('button', { name: 'View' });
-    await viewButton.click();
+    const viewLink = card.getByRole('link', { name: 'View' });
+    await viewLink.click();
     await this.page.waitForLoadState('networkidle');
   }
 
