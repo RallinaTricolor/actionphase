@@ -449,6 +449,46 @@ describe('HandoutView', () => {
     });
   });
 
+  describe('Handout Edited Timestamp', () => {
+    it('does not show edited timestamp when updated_at equals created_at', async () => {
+      const unedited = { ...mockHandout, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' };
+
+      renderWithProviders(
+        <HandoutView
+          gameId={1}
+          handout={unedited}
+          isGM={false}
+          onClose={mockOnClose}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Handout')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText(/^edited /i)).not.toBeInTheDocument();
+    });
+
+    it('shows edited timestamp when updated_at differs from created_at', async () => {
+      const editedHandout = { ...mockHandout, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-03-01T15:00:00Z' };
+
+      renderWithProviders(
+        <HandoutView
+          gameId={1}
+          handout={editedHandout}
+          isGM={false}
+          onClose={mockOnClose}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Handout')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/^edited /i)).toBeInTheDocument();
+    });
+  });
+
   describe('Deleted Comments Filtering', () => {
     it('filters out deleted comments from display', async () => {
       renderWithProviders(

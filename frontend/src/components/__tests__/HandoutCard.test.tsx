@@ -74,16 +74,40 @@ describe('HandoutCard', () => {
       expect(screen.getByText('Draft')).toBeInTheDocument();
     });
 
-    it('renders updated timestamp', () => {
+    it('does not show edited timestamp when updated_at equals created_at', () => {
+      const unedited: Handout = {
+        ...publishedHandout,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      };
+
       renderWithProviders(
         <HandoutCard
-          handout={publishedHandout}
+          handout={unedited}
           isGM={false}
           onView={mockOnView}
         />
       );
 
-      expect(screen.getByText(/updated/i)).toBeInTheDocument();
+      expect(screen.queryByText(/edited/i)).not.toBeInTheDocument();
+    });
+
+    it('shows edited timestamp when updated_at differs from created_at', () => {
+      const editedHandout: Handout = {
+        ...publishedHandout,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-05T09:00:00Z',
+      };
+
+      renderWithProviders(
+        <HandoutCard
+          handout={editedHandout}
+          isGM={false}
+          onView={mockOnView}
+        />
+      );
+
+      expect(screen.getByText(/edited/i)).toBeInTheDocument();
     });
 
     it('renders View button', () => {

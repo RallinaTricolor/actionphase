@@ -12,7 +12,7 @@ type Handout struct {
 	Content   string     `json:"content"`    // Markdown content
 	Status    string     `json:"status"`     // "draft" or "published"
 	CreatedAt *time.Time `json:"created_at"` // Creation timestamp
-	UpdatedAt *time.Time `json:"updated_at"` // Last update timestamp
+	UpdatedAt *time.Time `json:"updated_at"` // Last content edit timestamp
 }
 
 // HandoutComment represents a comment on a handout.

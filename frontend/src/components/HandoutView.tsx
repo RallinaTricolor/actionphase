@@ -121,9 +121,9 @@ export function HandoutView({ gameId, handout, isGM, onClose, onEdit }: HandoutV
               </Badge>
             </div>
 
-            {handout.updated_at && (
+            {handout.updated_at && handout.created_at && handout.updated_at !== handout.created_at && (
               <p className="text-sm text-content-tertiary">
-                Last updated {new Date(handout.updated_at).toLocaleString()}
+                Edited {new Date(handout.updated_at).toLocaleString()}
               </p>
             )}
           </div>

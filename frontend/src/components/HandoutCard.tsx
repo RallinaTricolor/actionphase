@@ -36,9 +36,9 @@ export function HandoutCard({
           </div>
         </div>
 
-        {handout.updated_at && (
+        {handout.updated_at && handout.created_at && handout.updated_at !== handout.created_at && (
           <p className="text-sm text-content-tertiary">
-            Updated {new Date(handout.updated_at).toLocaleString()}
+            Edited {new Date(handout.updated_at).toLocaleString()}
           </p>
         )}
 

@@ -45,15 +45,13 @@ DELETE FROM handouts WHERE id = $1;
 
 -- name: PublishHandout :one
 UPDATE handouts
-SET status = 'published',
-    updated_at = NOW()
+SET status = 'published'
 WHERE id = $1
 RETURNING *;
 
 -- name: UnpublishHandout :one
 UPDATE handouts
-SET status = 'draft',
-    updated_at = NOW()
+SET status = 'draft'
 WHERE id = $1
 RETURNING *;
 
