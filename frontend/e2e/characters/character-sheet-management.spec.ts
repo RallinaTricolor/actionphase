@@ -25,16 +25,12 @@ import { CharacterSheetPage } from '../pages/CharacterSheetPage';
 
 test.describe('Character Sheet Management', () => {
 
-  // Close any open modals before each test
-  test.beforeEach(async ({ page }) => {
-    // Close any open modal by clicking X button or pressing Escape
-    const closeButton = page.locator('button').filter({ has: page.locator('svg') }).locator('visible=true').first();
-    if (await closeButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await closeButton.click();
-      await page.waitForTimeout(500);
-    }
+  // Close any open modals after each test so the next test starts clean.
+  // afterEach runs while still on the game page, so Escape reliably dismisses the modal.
+  // beforeEach was wrong for this: it fired before loginAs/goto, so the page was
+  // on '/' and Escape had nothing to close.
+  test.afterEach(async ({ page }) => {
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
   });
 
   test('player can view existing abilities, skills, items, and currency on their character sheet', async ({ page }) => {
@@ -132,10 +128,13 @@ test.describe('Character Sheet Management', () => {
     const characterPage = new CharacterWorkflowPage(page, gameId);
     await characterPage.goto();
 
-    // Verify GM sees all characters
-    await expect(page.getByText('Sheet Test Char 1').first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Sheet Test Char 2').first()).toBeVisible();
-    await expect(page.getByText('Empty Sheet Char').first()).toBeVisible();
+    // Verify GM sees all characters.
+    // Each character card renders two data-testid="character-name" elements — one for mobile
+    // layout (hidden on desktop) and one for desktop layout (hidden on mobile). Filter to the
+    // visible one to avoid strict mode violations and hidden-element false negatives.
+    await expect(page.getByTestId('character-name').filter({ hasText: 'Sheet Test Char 1' }).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('character-name').filter({ hasText: 'Sheet Test Char 2' }).locator('visible=true').first()).toBeVisible();
+    await expect(page.getByTestId('character-name').filter({ hasText: 'Empty Sheet Char' }).locator('visible=true').first()).toBeVisible();
 
     // GM should be able to view any character (open char 2, owned by PLAYER_2)
     await characterPage.openCharacterSheet('Sheet Test Char 2');
