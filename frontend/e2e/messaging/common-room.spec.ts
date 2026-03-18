@@ -700,32 +700,30 @@ test.describe('Common Room Flow', () => {
     await commonRoom.addComment(postContent, commentContent, { asCharacter: 'Town Guard' });
     await commonRoom.verifyCommentExists(commentContent);
 
-    // Verify the comment shows "Town Guard" as the author
+    // Verify the comment shows "Town Guard" as the author (scoped to author label, not dropdown options)
     const commentContainer = page.locator('[data-testid="threaded-comment"]').filter({ hasText: commentContent }).locator('visible=true').first();
-    await expect(commentContainer.getByText('Town Guard').first()).toBeVisible({ timeout: 5000 });
+    await expect(commentContainer.getByTestId('comment-author').filter({ hasText: 'Town Guard' }).first()).toBeVisible({ timeout: 5000 });
 
     // Click Edit on the comment
     const editButton = commentContainer.getByRole('button', { name: 'Edit' }).locator('visible=true').first();
     await editButton.click();
-    await page.waitForTimeout(500); // Wait for edit form to appear
 
     // Change the character to "Mysterious Stranger"
     const characterSelect = commentContainer.locator('select').locator('visible=true').first();
     await characterSelect.waitFor({ state: 'visible', timeout: 5000 });
     await characterSelect.selectOption({ label: 'Edit as Mysterious Stranger' });
-    await page.waitForTimeout(300);
 
     // Save the edit (content stays the same, just changing the character)
     const saveButton = commentContainer.getByRole('button', { name: 'Save' }).locator('visible=true').first();
     await saveButton.click();
     await page.waitForLoadState('networkidle');
 
-    // Verify the character name updates immediately WITHOUT page reload
+    // Verify the author label updates immediately WITHOUT page reload
     // This is the key test - the character name should change from "Town Guard" to "Mysterious Stranger"
-    await expect(commentContainer.getByText('Mysterious Stranger').first()).toBeVisible({ timeout: 5000 });
+    await expect(commentContainer.getByTestId('comment-author').filter({ hasText: 'Mysterious Stranger' }).first()).toBeVisible({ timeout: 5000 });
 
-    // Verify "Town Guard" is no longer showing (it should have been replaced)
-    await expect(commentContainer.getByText('Town Guard').first()).not.toBeVisible();
+    // Verify "Town Guard" author label is no longer showing (it should have been replaced)
+    await expect(commentContainer.getByTestId('comment-author').filter({ hasText: 'Town Guard' }).first()).not.toBeVisible();
 
     // Verify (edited) marker appears
     await expect(commentContainer.getByText('(edited)').first()).toBeVisible({ timeout: 3000 });

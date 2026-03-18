@@ -191,13 +191,10 @@ test.describe.serial('Co-GM Management', () => {
     // Wait for co-GM section to load
     await expect(page.getByRole('heading', { name: /Co-GMs/ })).toBeVisible({ timeout: 10000 });
 
-    // Find the actions button by filtering all participant action buttons
-    // NOTE: There is only ONE co-GM (TestAudience1, promoted in previous test)
-    const allActionButtons = await page.getByRole('button', { name: 'Participant actions' }).all();
-    // Players section has 1 button (TestPlayer1)
-    // Co-GMs section has 1 button (TestAudience1)
-    // So TestAudience1 is at index 1 (0=Player, 1=TestAudience1)
-    await allActionButtons[1].click();
+    // Find the actions button scoped to the Co-GMs section (avoids fragile global index)
+    const coGmSection = page.locator('div:has(> h3:has-text("Co-GMs"))').first();
+    const coGmActionsButton = coGmSection.getByRole('button', { name: 'Participant actions' }).first();
+    await coGmActionsButton.click();
 
     // Click "Demote from Co-GM" option
     await page.getByRole('menuitem', { name: 'Demote from Co-GM' }).click();

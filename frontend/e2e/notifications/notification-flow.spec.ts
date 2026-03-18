@@ -33,13 +33,27 @@ test.describe.configure({ mode: 'serial' });
 test.describe('Notification System', () => {
   // Clean up messages and notifications between tests to prevent test contamination
   // Serial tests share the same game fixture, so we need to clean up after each test
-  test.afterEach(async () => {
-    const { exec } = await import('child_process');
-    const { promisify } = await import('util');
-    const execAsync = promisify(exec);
+  test.afterEach(async ({ browser }) => {
+    // Clean up messages and notifications for the notifications fixture game
+    // Use the API to look up the game ID dynamically rather than hardcoding it
+    const ctx = await browser.newContext();
+    const cleanupPage = await ctx.newPage();
+    try {
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
 
-    // Delete messages and notifications from game 166 between tests
-    await execAsync(`PGPASSWORD=example psql -h localhost -U postgres -d actionphase -c "DELETE FROM messages WHERE game_id = 166; DELETE FROM notifications WHERE game_id = 166;"`);
+      // Look up the game ID by title to avoid hardcoding
+      const { getGameIdByTitle } = await import('../fixtures/game-helpers');
+      await loginAs(cleanupPage, 'GM');
+      const gameId = await getGameIdByTitle(cleanupPage, 'E2E Common Room - Notifications');
+
+      if (gameId !== null) {
+        await execAsync(`PGPASSWORD=example psql -h localhost -U postgres -d actionphase -c "DELETE FROM messages WHERE game_id = ${gameId}; DELETE FROM notifications WHERE game_id = ${gameId};"`);
+      }
+    } finally {
+      await ctx.close();
+    }
   });
 
   test.describe('Notification UI', () => {
