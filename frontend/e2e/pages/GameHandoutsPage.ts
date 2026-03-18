@@ -104,6 +104,26 @@ export class GameHandoutsPage {
   }
 
   /**
+   * Get the deep-link URL for a handout by reading the href from its View link.
+   *
+   * @param title - Handout title
+   * @returns Full URL including the ?tab=handouts&handout=<id> params
+   */
+  async getHandoutDeepLink(title: string): Promise<string> {
+    const heading = this.page.getByRole('heading', { name: title, level: 3 });
+    await heading.waitFor({ state: 'visible', timeout: 5000 });
+
+    const card = this.page.getByTestId('handout-card').filter({ has: heading });
+    const viewLink = card.getByRole('link', { name: 'View' });
+    const href = await viewLink.getAttribute('href');
+    if (!href) throw new Error(`Could not get href for handout: ${title}`);
+
+    // href is relative (e.g. "?tab=handouts&handout=42"), make it absolute
+    const url = new URL(href, this.page.url());
+    return url.toString();
+  }
+
+  /**
    * Edit a handout
    *
    * @param currentTitle - Current handout title

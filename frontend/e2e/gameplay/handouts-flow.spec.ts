@@ -162,6 +162,32 @@ Example dice roll: 1d20 + 5
     await expect(page.locator(`text=${handout3}`)).toBeVisible();
   });
 
+  test('handout can be opened via direct deep link', async ({ page }) => {
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+
+    const handoutsPage = new GameHandoutsPage(page, gameId);
+    await handoutsPage.goto();
+
+    // Create a handout to deep-link to
+    const handoutTitle = `Deep Link Test ${Date.now()}`;
+    const handoutContent = 'Content visible via deep link';
+    await handoutsPage.createHandout(handoutTitle, handoutContent, true);
+    await page.waitForLoadState('networkidle');
+
+    // Read the deep-link URL from the View link (without clicking it)
+    const deepLinkUrl = await handoutsPage.getHandoutDeepLink(handoutTitle);
+    expect(deepLinkUrl).toMatch(/[?&]handout=\d+/);
+
+    // Navigate directly to the deep-link URL — simulates sharing the link
+    await page.goto(deepLinkUrl);
+    await page.waitForLoadState('networkidle');
+
+    // Handout view should open immediately without any clicks
+    await expect(page.getByRole('heading', { name: handoutTitle, level: 1 })).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(`text=${handoutContent}`)).toBeVisible();
+  });
+
   test('players cannot see draft handouts', async ({ page }) => {
     // GM creates both a draft and a published handout
     await loginAs(page, 'GM');
