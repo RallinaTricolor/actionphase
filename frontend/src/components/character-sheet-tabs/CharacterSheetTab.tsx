@@ -331,12 +331,12 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
         )}
 
         {drafts.map((draft) => (
-          <Card key={draft.id} variant="bordered" padding="sm">
+          <Card key={draft.id} variant="bordered" padding="sm" data-testid={`draft-item-${draft.id}`}>
             <CardBody>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-content-primary">
+                    <span className="font-medium text-content-primary" data-testid="draft-field-name">
                       {draft.field_name}
                     </span>
                     <Badge variant="warning" className="text-xs">
@@ -352,6 +352,7 @@ export const CharacterSheetTab: React.FC<CharacterSheetTabProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => onDeleteDraft(draft.id)}
+                  data-testid="draft-remove-button"
                 >
                   Remove
                 </Button>
