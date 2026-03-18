@@ -222,7 +222,7 @@ test.describe('Permissions & Access Control', () => {
         const messagesTab = player1Page.getByRole('button', { name: 'Messages' });
         await expect(messagesTab).toBeVisible({ timeout: 5000 });
         await messagesTab.click();
-        await player1Page.waitForTimeout(1000);
+        await player1Page.waitForLoadState('networkidle');
 
         // Create new conversation
         const newConvButton = player1Page.getByRole('button', { name: /New Conversation/i }).or(
@@ -238,7 +238,7 @@ test.describe('Permissions & Access Control', () => {
         }
 
         await newConvButton.click();
-        await player1Page.waitForTimeout(1000);
+        await player1Page.waitForLoadState('networkidle');
 
         const conversationTitle = `Private Test ${Date.now()}`;
         const titleInput = player1Page.getByPlaceholder(/Planning|Title|Name/i);
@@ -251,7 +251,7 @@ test.describe('Permissions & Access Control', () => {
         // Create conversation
         const createButton = player1Page.getByRole('button', { name: /Create/i });
         await createButton.click();
-        await player1Page.waitForTimeout(2000);
+        await player1Page.waitForLoadState('networkidle');
 
         // Player 3 logs in and verifies they can't see the conversation
         await loginAs(player3Page, 'PLAYER_3');
@@ -260,7 +260,7 @@ test.describe('Permissions & Access Control', () => {
         const player3MessagesTab = player3Page.getByRole('button', { name: 'Messages' });
         await expect(player3MessagesTab).toBeVisible({ timeout: 5000 });
         await player3MessagesTab.click();
-        await player3Page.waitForTimeout(1000);
+        await player3Page.waitForLoadState('networkidle');
 
         // Player 3 should NOT see the private conversation title
         const privateConversation = player3Page.getByText(conversationTitle);

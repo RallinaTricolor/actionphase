@@ -41,9 +41,6 @@ test.describe('Game Lifecycle Management', () => {
     // Start the game using POM (handles kebab menu)
     await gamePage.startGame();
 
-    // Wait for state transition
-    await page.waitForTimeout(2000);
-
     // Refresh to see new state
     await page.reload();
     await page.waitForLoadState('networkidle');
@@ -65,9 +62,6 @@ test.describe('Game Lifecycle Management', () => {
 
     // Pause the game using POM (handles confirmation modal)
     await gamePage.pauseGame();
-
-    // Wait for state transition
-    await page.waitForTimeout(2000);
 
     // Refresh to see new state
     await page.reload();
@@ -91,9 +85,6 @@ test.describe('Game Lifecycle Management', () => {
     // Resume the game using POM (handles kebab menu)
     await gamePage.resumeGame();
 
-    // Wait for state transition
-    await page.waitForTimeout(2000);
-
     // Refresh to see new state
     await page.reload();
     await page.waitForLoadState('networkidle');
@@ -116,9 +107,6 @@ test.describe('Game Lifecycle Management', () => {
     // Complete the game using POM (handles confirmation modal)
     await gamePage.completeGame();
 
-    // Wait for state transition
-    await page.waitForTimeout(2000);
-
     // Refresh to see new state
     await page.reload();
     await page.waitForLoadState('networkidle');
@@ -140,9 +128,6 @@ test.describe('Game Lifecycle Management', () => {
 
     // Cancel the game using POM (handles kebab menu + confirmation modal)
     await gamePage.cancelGame();
-
-    // Wait for state transition
-    await page.waitForTimeout(2000);
 
     // Refresh to see new state
     await page.reload();

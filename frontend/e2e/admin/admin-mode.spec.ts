@@ -21,44 +21,32 @@ test.describe('Admin Mode', () => {
   test('admin user can toggle admin mode on and off', async ({ page }) => {
     await loginAs(page, 'GM');
 
-    // Navigate to admin page
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
 
     // Should see Admin Mode tab (default tab)
     await expect(page.locator('text=Admin Mode').first()).toBeVisible();
 
-    // Find the admin mode toggle switch
     const adminModeToggle = page.locator('button[role="switch"][aria-label*="admin mode" i]');
     await expect(adminModeToggle).toBeVisible();
 
-    // Initially, admin mode should be OFF (or ON depending on localStorage from previous tests)
-    // Let's ensure it starts OFF by clicking if it's ON
+    // Ensure admin mode starts OFF (it may be ON from a previous test run)
     const initialState = await adminModeToggle.getAttribute('aria-checked');
     if (initialState === 'true') {
       await adminModeToggle.click();
-      await page.waitForTimeout(500);
+      await expect(adminModeToggle).toHaveAttribute('aria-checked', 'false');
     }
 
-    // Now admin mode should be OFF
     await expect(adminModeToggle).toHaveAttribute('aria-checked', 'false');
-    // "ACTIVE" badge should NOT be visible
     await expect(page.locator('text=ACTIVE').first()).not.toBeVisible();
 
-    // Click to enable admin mode
+    // Enable admin mode
     await adminModeToggle.click();
-    await page.waitForTimeout(500);
-
-    // Admin mode should now be ON
     await expect(adminModeToggle).toHaveAttribute('aria-checked', 'true');
-    // "ACTIVE" badge should be visible
     await expect(page.locator('text=ACTIVE').first()).toBeVisible();
 
-    // Click to disable admin mode
+    // Disable admin mode
     await adminModeToggle.click();
-    await page.waitForTimeout(500);
-
-    // Admin mode should be OFF again
     await expect(adminModeToggle).toHaveAttribute('aria-checked', 'false');
     await expect(page.locator('text=ACTIVE').first()).not.toBeVisible();
   });
@@ -66,7 +54,6 @@ test.describe('Admin Mode', () => {
   test('admin mode state persists across page refreshes', async ({ page }) => {
     await loginAs(page, 'GM');
 
-    // Navigate to admin page and enable admin mode
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
 
@@ -76,100 +63,76 @@ test.describe('Admin Mode', () => {
     const initialState = await adminModeToggle.getAttribute('aria-checked');
     if (initialState === 'true') {
       await adminModeToggle.click();
-      await page.waitForTimeout(500);
+      await expect(adminModeToggle).toHaveAttribute('aria-checked', 'false');
     }
 
     // Enable admin mode
     await adminModeToggle.click();
-    await page.waitForTimeout(500);
     await expect(adminModeToggle).toHaveAttribute('aria-checked', 'true');
 
-    // Refresh the page
+    // Refresh — admin mode should persist (stored in localStorage)
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Admin mode should still be enabled after refresh
     const toggleAfterRefresh = page.locator('button[role="switch"][aria-label*="admin mode" i]');
     await expect(toggleAfterRefresh).toHaveAttribute('aria-checked', 'true');
     await expect(page.locator('text=ACTIVE').first()).toBeVisible();
 
-    // Disable admin mode for cleanup
+    // Cleanup
     await toggleAfterRefresh.click();
-    await page.waitForTimeout(500);
     await expect(toggleAfterRefresh).toHaveAttribute('aria-checked', 'false');
   });
 
   test('non-admin user cannot see admin mode controls', async ({ page }) => {
-    // Login as regular player
     await loginAs(page, 'PLAYER_1');
 
-    // Try to navigate to admin page
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
 
-    // Should see error or be redirected (admin page should not be accessible)
-    // The admin mode toggle should NOT be visible
-    const adminModeToggle = page.locator('button[role="switch"][aria-label*="admin mode" i]');
-
-    // Either the toggle doesn't exist, or the entire admin panel shows an error
-    const toggleVisible = await adminModeToggle.isVisible().catch(() => false);
-    expect(toggleVisible).toBe(false);
+    // Admin mode toggle should not be accessible to non-admin users
+    await expect(page.locator('button[role="switch"][aria-label*="admin mode" i]')).not.toBeVisible();
   });
 
   test('admin mode affects game listing visibility', async ({ page }) => {
-    // First, create a private game (or use existing test data)
-    // For this test, we'll verify that admin mode shows different games
-
     await loginAs(page, 'GM');
 
-    // Navigate to games listing
-    await page.goto('/games');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000); // Wait for games to load
-
-    // Count games WITHOUT admin mode
+    // Ensure admin mode is OFF before counting
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
     const adminModeToggle = page.locator('button[role="switch"][aria-label*="admin mode" i]');
 
-    // Ensure admin mode is OFF
     const currentState = await adminModeToggle.getAttribute('aria-checked');
     if (currentState === 'true') {
       await adminModeToggle.click();
-      await page.waitForTimeout(500);
+      await expect(adminModeToggle).toHaveAttribute('aria-checked', 'false');
     }
-    await expect(adminModeToggle).toHaveAttribute('aria-checked', 'false');
 
-    // Go to games listing and count visible games
+    // Count games WITHOUT admin mode
     await page.goto('/games');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
-    // Get game count from metadata or visible game cards
-    const gamesWithoutAdminMode = await page.locator('[data-testid="game-card"]').or(
+    const gameCards = page.locator('[data-testid="game-card"]').or(
       page.locator('a[href^="/games/"]').filter({ hasText: /E2E Test|Game/ })
-    ).count();
+    );
+    // Wait for at least one game to appear
+    await expect(gameCards.first()).toBeVisible({ timeout: 5000 });
+    const gamesWithoutAdminMode = await gameCards.count();
 
     // Enable admin mode
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
     const toggleForEnable = page.locator('button[role="switch"][aria-label*="admin mode" i]');
     await toggleForEnable.click();
-    await page.waitForTimeout(500);
     await expect(toggleForEnable).toHaveAttribute('aria-checked', 'true');
 
-    // Go back to games listing
+    // Count games WITH admin mode — should be same or more (never fewer)
     await page.goto('/games');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
-    // Count games WITH admin mode
-    const gamesWithAdminMode = await page.locator('[data-testid="game-card"]').or(
+    const gameCardsAdmin = page.locator('[data-testid="game-card"]').or(
       page.locator('a[href^="/games/"]').filter({ hasText: /E2E Test|Game/ })
-    ).count();
+    );
+    await expect(gameCardsAdmin.first()).toBeVisible({ timeout: 5000 });
+    const gamesWithAdminMode = await gameCardsAdmin.count();
 
-    // With admin mode, should see same or MORE games (never fewer)
-    // Since admin mode bypasses is_public filter
     expect(gamesWithAdminMode).toBeGreaterThanOrEqual(gamesWithoutAdminMode);
 
     // Cleanup: disable admin mode
@@ -177,17 +140,15 @@ test.describe('Admin Mode', () => {
     await page.waitForLoadState('networkidle');
     const toggleForDisable = page.locator('button[role="switch"][aria-label*="admin mode" i]');
     await toggleForDisable.click();
-    await page.waitForTimeout(500);
+    await expect(toggleForDisable).toHaveAttribute('aria-checked', 'false');
   });
 
   test('admin mode toggle is accessible via keyboard', async ({ page }) => {
     await loginAs(page, 'GM');
 
-    // Navigate to admin page
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
 
-    // Find the admin mode toggle
     const adminModeToggle = page.locator('button[role="switch"][aria-label*="admin mode" i]');
     await expect(adminModeToggle).toBeVisible();
 
@@ -195,27 +156,17 @@ test.describe('Admin Mode', () => {
     const initialState = await adminModeToggle.getAttribute('aria-checked');
     if (initialState === 'true') {
       await adminModeToggle.click();
-      await page.waitForTimeout(500);
+      await expect(adminModeToggle).toHaveAttribute('aria-checked', 'false');
     }
 
-    // Focus the toggle using Tab navigation
+    // Focus the toggle and toggle via keyboard
     await adminModeToggle.focus();
-
-    // Verify it has focus
     await expect(adminModeToggle).toBeFocused();
 
-    // Press Space to toggle (keyboard accessibility)
     await page.keyboard.press('Space');
-    await page.waitForTimeout(500);
-
-    // Should now be enabled
     await expect(adminModeToggle).toHaveAttribute('aria-checked', 'true');
 
-    // Press Space again to disable
     await page.keyboard.press('Space');
-    await page.waitForTimeout(500);
-
-    // Should be disabled
     await expect(adminModeToggle).toHaveAttribute('aria-checked', 'false');
   });
 });

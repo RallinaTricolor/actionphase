@@ -53,7 +53,6 @@ test.describe.serial('Co-GM Management', () => {
 
     // Verify modal closes and co-GM section disappears
     await expect(page.getByRole('heading', { name: 'Demote from Co-GM?' })).not.toBeVisible();
-    await page.waitForTimeout(500);
     await expect(page.getByRole('heading', { name: /Co-GMs/ })).not.toBeVisible();
   });
 
@@ -209,8 +208,6 @@ test.describe.serial('Co-GM Management', () => {
     // Verify modal closes and user moves back to Audience section
     await expect(page.getByRole('heading', { name: 'Demote from Co-GM?' })).not.toBeVisible();
 
-    // Wait for the page to update and verify co-GM section is gone
-    await page.waitForTimeout(500); // Brief wait for state update
     const coGMSectionAfter = page.locator('h3:has-text("Co-GMs")');
     // Co-GM section should disappear since we demoted the only co-GM
     await expect(coGMSectionAfter).not.toBeVisible();
@@ -307,9 +304,6 @@ test.describe.serial('Co-GM Management', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Wait for auth state to stabilize and co-GM permissions to be reflected
-    await page.waitForTimeout(2000);
-
     // Verify we're logged in as the correct user and they're shown as co-GM in header
     await expect(page.getByText(/Co-GM:.*TestAudience2/).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
@@ -383,7 +377,6 @@ test.describe.serial('Co-GM Management', () => {
     // Reload to ensure fresh auth state
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Navigate to Messages tab using POM method
     await messagingPage.navigateToMessages();
@@ -437,7 +430,6 @@ test.describe.serial('Co-GM Management', () => {
     // Reload to ensure fresh auth state
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Navigate to Actions tab (GM-only, now visible because action phase is active)
     await page.getByRole('tab', { name: 'Actions' }).click();
@@ -460,7 +452,6 @@ test.describe.serial('Co-GM Management', () => {
     // Reload to ensure fresh auth state
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Navigate to Phases tab
     await page.getByRole('tab', { name: 'Phases' }).click();
@@ -490,7 +481,6 @@ test.describe.serial('Co-GM Management', () => {
     // Reload to ensure fresh auth state
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Navigate to Handouts tab
     await page.getByRole('tab', { name: 'Handouts' }).click();
@@ -528,7 +518,6 @@ test.describe.serial('Co-GM Management', () => {
     // Reload to ensure fresh auth state
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Navigate to People tab
     await page.getByRole('tab', { name: 'People' }).click();
@@ -557,7 +546,6 @@ test.describe.serial('Co-GM Management', () => {
     // Reload to ensure fresh auth state
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Navigate to People tab > Characters sub-tab
     await page.getByRole('tab', { name: 'People' }).click();
@@ -604,7 +592,6 @@ test.describe.serial('Co-GM Management', () => {
     // Reload to ensure fresh auth state
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Verify co-GM can see Audience tab (GM-only during in_progress)
     await expect(page.getByRole('tab', { name: 'Audience' })).toBeVisible();
@@ -632,7 +619,6 @@ test.describe.serial('Co-GM Management', () => {
     // Reload to ensure fresh auth state
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Navigate to Actions tab where GMs manage action results
     // (visible because action phase is active from previous test)
@@ -655,7 +641,6 @@ test.describe.serial('Co-GM Management', () => {
     // Reload to ensure fresh auth state
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Navigate to People tab > Characters
     await page.getByRole('tab', { name: 'People' }).click();

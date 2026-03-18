@@ -373,24 +373,19 @@ test.describe('Notification System', () => {
 
       await page.goto('/dashboard');
 
-      // Open notifications
+      // Open notifications and wait for dropdown to render
       await page.click('[data-testid="notification-bell"]');
-
-      // Wait for notifications to load
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Dismiss all existing notifications to ensure empty state
       const dismissButtons = page.locator('[data-testid="dismiss-notification"]');
       const count = await dismissButtons.count();
-
-      if (count > 0) {
-        // Dismiss all notifications
-        for (let i = 0; i < count; i++) {
-          const firstDismiss = page.locator('[data-testid="dismiss-notification"]').locator('visible=true').first();
-          if (await firstDismiss.isVisible()) {
-            await firstDismiss.click();
-            await page.waitForTimeout(300); // Wait for dismissal animation
-          }
+      for (let i = 0; i < count; i++) {
+        const firstDismiss = page.locator('[data-testid="dismiss-notification"]').first();
+        if (await firstDismiss.isVisible()) {
+          await firstDismiss.click();
+          // Wait for the item count to decrease before clicking the next one
+          await expect(page.locator('[data-testid="dismiss-notification"]')).toHaveCount(count - i - 1, { timeout: 3000 }).catch(() => {});
         }
       }
 

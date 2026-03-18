@@ -18,42 +18,32 @@ import { MessagingPage } from '../pages/MessagingPage';
 
 test.describe('Private Message Deletion', () => {
   test('allows user to delete own message', async ({ page }) => {
-    // Login as TestPlayer1
     await loginAs(page, 'PLAYER_1');
 
-    // Get the PM deletion test game
     const gameId = await getFixtureGameId(page, 'E2E_MESSAGES');
-
-    // Navigate to Messages
     const messaging = new MessagingPage(page);
     await messaging.goto(gameId);
 
-    // Wait for conversations to load
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
     // Open the first conversation (from fixture)
-    const conversation = page.locator('[data-testid="conversation-item"]').locator('visible=true').first();
+    const conversation = page.locator('[data-testid="conversation-item"]').first();
     await expect(conversation).toBeVisible({ timeout: 10000 });
     await conversation.click();
 
     // Wait for messages to load
-    await expect(page.locator('[data-testid="message"]').locator('visible=true').first()).toBeVisible();
+    await expect(page.locator('[data-testid="message"]').first()).toBeVisible();
 
     // Count initial messages
     const initialMessageCount = await page.locator('[data-testid="message"]').count();
 
-    // Find and hover over own message to reveal delete button
+    // Hover over own message to reveal delete button
     const ownMessage = page.locator('[data-testid="message"]')
       .filter({ hasText: 'Message from Player 1' })
-      .locator('visible=true').first();
+      .first();
     await ownMessage.hover();
 
     // Delete button should appear
     const deleteButton = ownMessage.locator('button[title="Delete message"]');
     await expect(deleteButton).toBeVisible();
-
-    // Click delete button
     await deleteButton.click();
 
     // Verify confirmation modal appears
@@ -61,66 +51,53 @@ test.describe('Private Message Deletion', () => {
     await expect(page.locator('text=This will permanently delete your message')).toBeVisible();
 
     // Verify modal has Cancel and Delete buttons
-    await expect(page.getByRole('button', { name: 'Cancel', exact: true }).locator('visible=true').first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Delete', exact: true }).locator('visible=true').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cancel', exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete', exact: true }).first()).toBeVisible();
 
     // Confirm deletion
-    await page.getByRole('button', { name: 'Delete', exact: true }).locator('visible=true').first().click();
+    await page.getByRole('button', { name: 'Delete', exact: true }).first().click();
 
     // Wait for modal to close
     await expect(page.locator('h3:has-text("Delete Message?")')).not.toBeVisible();
 
-    // Verify message shows as deleted
+    // Verify message shows as deleted (soft delete — count stays the same)
     const deletedMessage = page.locator('[data-testid="message"]')
       .filter({ hasText: '[Message deleted]' })
-      .locator('visible=true').first();
+      .first();
     await expect(deletedMessage).toBeVisible();
 
-    // Message count should remain the same (soft delete)
     const finalMessageCount = await page.locator('[data-testid="message"]').count();
     expect(finalMessageCount).toBe(initialMessageCount);
 
     // Sender name and timestamp should still be visible
     const messageHeader = deletedMessage.locator('[data-testid="message-sender"]');
-    await expect(messageHeader).toContainText('E2E Test Char 1'); // TestPlayer1's character from Game 354
+    await expect(messageHeader).toContainText('E2E Test Char 1');
   });
 
   test('cannot delete other users messages', async ({ page }) => {
-    // Login as TestPlayer1
     await loginAs(page, 'PLAYER_1');
 
-    // Get the PM deletion test game
     const gameId = await getFixtureGameId(page, 'E2E_MESSAGES');
-
-    // Navigate to Messages
     const messaging = new MessagingPage(page);
     await messaging.goto(gameId);
 
-    // Wait for conversations to load
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
     // Open the first conversation
-    const conversation = page.locator('[data-testid="conversation-item"]').locator('visible=true').first();
+    const conversation = page.locator('[data-testid="conversation-item"]').first();
     await expect(conversation).toBeVisible({ timeout: 10000 });
     await conversation.click();
-    await expect(page.locator('[data-testid="message"]').locator('visible=true').first()).toBeVisible();
+    await expect(page.locator('[data-testid="message"]').first()).toBeVisible();
 
-    // Try to find delete button on other user's message
+    // Hover over other user's message
     const otherMessage = page.locator('[data-testid="message"]')
       .filter({ hasText: 'Message from Player 2' })
-      .locator('visible=true').first();
+      .first();
     await otherMessage.hover();
 
     // Delete button should NOT appear
-    const deleteButton = otherMessage.locator('button[title="Delete message"]');
-    await expect(deleteButton).not.toBeVisible();
+    await expect(otherMessage.locator('button[title="Delete message"]')).not.toBeVisible();
   });
 
   test('deleted message visible to all conversation participants', async ({ browser }) => {
-    // This test uses two browser contexts to simulate two different users
-
-    // First user (TestPlayer1) deletes a message
     const player1Context = await browser.newContext();
     const player1Page = await player1Context.newPage();
 
@@ -131,33 +108,25 @@ test.describe('Private Message Deletion', () => {
       const player1Messaging = new MessagingPage(player1Page);
       await player1Messaging.goto(gameId);
 
-      // Wait for conversations to load
-      await player1Page.waitForLoadState('networkidle');
-      await player1Page.waitForTimeout(1000);
-
-      const conversation = player1Page.locator('[data-testid="conversation-item"]').locator('visible=true').first();
+      const conversation = player1Page.locator('[data-testid="conversation-item"]').first();
       await expect(conversation).toBeVisible({ timeout: 10000 });
       await conversation.click();
 
       const ownMessage = player1Page.locator('[data-testid="message"]')
         .filter({ hasText: 'Message from Player 1' })
-        .locator('visible=true').first();
+        .first();
       await ownMessage.hover();
 
-      const deleteButton = ownMessage.locator('button[title="Delete message"]');
-      await deleteButton.click();
+      await ownMessage.locator('button[title="Delete message"]').click();
+      await player1Page.getByRole('button', { name: 'Delete', exact: true }).first().click();
 
-      await player1Page.getByRole('button', { name: 'Delete', exact: true }).locator('visible=true').first().click();
-
-      // Wait for deletion to complete
-      await player1Page.waitForLoadState('networkidle');
-      await player1Page.waitForTimeout(1000);
+      // Wait for deletion to complete (modal closes = deletion done)
+      await expect(player1Page.locator('h3:has-text("Delete Message?")')).not.toBeVisible();
 
       // Verify deletion for Player 1
-      const deletedMessage = player1Page.locator('[data-testid="message"]')
-        .filter({ hasText: '[Message deleted]' })
-        .locator('visible=true').first();
-      await expect(deletedMessage).toBeVisible();
+      await expect(
+        player1Page.locator('[data-testid="message"]').filter({ hasText: '[Message deleted]' }).first()
+      ).toBeVisible();
 
       // Second user (TestPlayer2) sees the deleted message
       const player2Context = await browser.newContext();
@@ -170,23 +139,13 @@ test.describe('Private Message Deletion', () => {
         const player2Messaging = new MessagingPage(player2Page);
         await player2Messaging.goto(gameId2);
 
-        // Wait for conversations to load
-        await player2Page.waitForLoadState('networkidle');
-        await player2Page.waitForTimeout(1000);
-
-        const conversation2 = player2Page.locator('[data-testid="conversation-item"]').locator('visible=true').first();
+        const conversation2 = player2Page.locator('[data-testid="conversation-item"]').first();
         await expect(conversation2).toBeVisible({ timeout: 10000 });
         await conversation2.click();
 
-        // Wait for messages to load
-        await player2Page.waitForLoadState('networkidle');
-        await player2Page.waitForTimeout(1000);
-
-        // Player 2 should also see "[Message deleted]"
-        const deletedMessage2 = player2Page.locator('[data-testid="message"]')
-          .filter({ hasText: '[Message deleted]' })
-          .locator('visible=true').first();
-        await expect(deletedMessage2).toBeVisible({ timeout: 10000 });
+        await expect(
+          player2Page.locator('[data-testid="message"]').filter({ hasText: '[Message deleted]' }).first()
+        ).toBeVisible({ timeout: 10000 });
       } finally {
         await player2Context.close();
       }
@@ -196,89 +155,67 @@ test.describe('Private Message Deletion', () => {
   });
 
   test('cancel button prevents deletion', async ({ page }) => {
-    // Login and navigate to conversation
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'E2E_MESSAGES');
 
     const messaging = new MessagingPage(page);
     await messaging.goto(gameId);
 
-    // Wait for conversations to load
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
-    const conversation = page.locator('[data-testid="conversation-item"]').locator('visible=true').first();
+    const conversation = page.locator('[data-testid="conversation-item"]').first();
     await expect(conversation).toBeVisible({ timeout: 10000 });
     await conversation.click();
 
-    // Get original message text
     const ownMessage = page.locator('[data-testid="message"]')
       .filter({ hasText: 'Message from Player 1' })
-      .locator('visible=true').first();
+      .first();
     const originalText = await ownMessage.textContent();
 
     // Open delete modal and cancel
     await ownMessage.hover();
-    const deleteButton = ownMessage.locator('button[title="Delete message"]');
-    await deleteButton.click();
+    await ownMessage.locator('button[title="Delete message"]').click();
 
     await expect(page.locator('h3:has-text("Delete Message?")')).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel', exact: true }).first().click();
 
-    // Click Cancel
-    await page.getByRole('button', { name: 'Cancel', exact: true }).locator('visible=true').first().click();
-
-    // Modal should close
+    // Modal should close, message unchanged
     await expect(page.locator('h3:has-text("Delete Message?")')).not.toBeVisible();
 
-    // Verify message unchanged
     const messageAfterCancel = page.locator('[data-testid="message"]')
       .filter({ hasText: 'Message from Player 1' })
-      .locator('visible=true').first();
-    const textAfterCancel = await messageAfterCancel.textContent();
-
-    expect(textAfterCancel).toBe(originalText);
-
-    // Verify message still shows actual content, not "[Message deleted]"
+      .first();
+    expect(await messageAfterCancel.textContent()).toBe(originalText);
     await expect(messageAfterCancel).toContainText('Message from Player 1');
   });
 
   test('deleted message does not show delete button again', async ({ page }) => {
-    // Login and navigate to conversation
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'E2E_MESSAGES');
 
     const messaging = new MessagingPage(page);
     await messaging.goto(gameId);
 
-    // Wait for conversations to load
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
-    const conversation = page.locator('[data-testid="conversation-item"]').locator('visible=true').first();
+    const conversation = page.locator('[data-testid="conversation-item"]').first();
     await expect(conversation).toBeVisible({ timeout: 10000 });
     await conversation.click();
 
-    // Delete a message
     const ownMessage = page.locator('[data-testid="message"]')
       .filter({ hasText: 'Message from Player 1' })
-      .locator('visible=true').first();
+      .first();
     await ownMessage.hover();
 
-    const deleteButton = ownMessage.locator('button[title="Delete message"]');
-    await deleteButton.click();
-    await page.getByRole('button', { name: 'Delete', exact: true }).locator('visible=true').first().click();
+    await ownMessage.locator('button[title="Delete message"]').click();
+    await page.getByRole('button', { name: 'Delete', exact: true }).first().click();
 
-    // Verify message shows as deleted
+    // Wait for deletion to complete
+    await expect(page.locator('h3:has-text("Delete Message?")')).not.toBeVisible();
+
     const deletedMessage = page.locator('[data-testid="message"]')
       .filter({ hasText: '[Message deleted]' })
-      .locator('visible=true').first();
+      .first();
     await expect(deletedMessage).toBeVisible();
 
-    // Hover over deleted message
+    // Hover — delete button should NOT appear on already-deleted message
     await deletedMessage.hover();
-
-    // Delete button should NOT appear
-    const deleteButtonAfter = deletedMessage.locator('button[title="Delete message"]');
-    await expect(deleteButtonAfter).not.toBeVisible();
+    await expect(deletedMessage.locator('button[title="Delete message"]')).not.toBeVisible();
   });
 });
