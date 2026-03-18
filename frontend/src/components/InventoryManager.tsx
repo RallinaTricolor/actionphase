@@ -169,7 +169,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
 
       {/* Currency Tab */}
       {activeTab === 'currency' && (
-        <div>
+        <div data-testid="currency-section">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium text-content-primary">Currency & Resources</h3>
             {canEdit && (

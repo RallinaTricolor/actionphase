@@ -37,7 +37,7 @@ test.describe('Action Results Flow', () => {
     await expect(page.getByRole('heading', { name: /Completed Action Phase/ })).toBeVisible({ timeout: 10000 });
 
     // Should see Player 1's published result
-    await expect(page.locator('text=Basement Investigation Results').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Basement Investigation Results').first()).toBeVisible({ timeout: 10000 });
 
     // Result content is > 200 chars so it's collapsed — click to expand
     await page.getByRole('button', { name: 'Show full content' }).first().click();
@@ -50,7 +50,7 @@ test.describe('Action Results Flow', () => {
     await expect(page.locator('text=A secret passage!')).toBeVisible();
 
     // Should see GM attribution (TestGM or TestGM_N for worker N)
-    await expect(page.locator(`text=From: ${getWorkerUsername('TestGM')}`).locator('visible=true').first()).toBeVisible();
+    await expect(page.getByText(`From: ${getWorkerUsername('TestGM')}`).first()).toBeVisible();
   });
 
   test('player can see character mentions in results', async ({ page }) => {
@@ -63,7 +63,7 @@ test.describe('Action Results Flow', () => {
     await resultsPage.viewPhaseResults(1);
 
     // Wait for results to load
-    await expect(page.locator('text=Basement Investigation Results')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Basement Investigation Results').first()).toBeVisible({ timeout: 10000 });
 
     // Result content is > 200 chars so it's collapsed — click to expand
     await page.getByRole('button', { name: 'Show full content' }).first().click();
@@ -87,7 +87,7 @@ test.describe('Action Results Flow', () => {
     await expect(page.getByRole('heading', { name: /Completed Action Phase/ })).toBeVisible({ timeout: 10000 });
 
     // Should see Player 2's result about library research
-    await expect(page.locator('text=Library Research Results').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Library Research Results').first()).toBeVisible({ timeout: 10000 });
 
     // Result content is > 200 chars so it's collapsed — click to expand
     await page.getByRole('button', { name: 'Show full content' }).first().click();

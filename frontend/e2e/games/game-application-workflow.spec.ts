@@ -48,9 +48,6 @@ test.describe('Game Application Workflow', () => {
       'player'
     );
 
-    // Wait for submission to process
-    await page.waitForTimeout(1000);
-
     // Refresh page to see updated application status
     await gamePage.goto(gameId);
     await page.waitForLoadState('networkidle');
@@ -94,9 +91,6 @@ test.describe('Game Application Workflow', () => {
     // Approve PLAYER_3's application using POM
     await applicationsPage.approveApplication(getWorkerUsername('TestPlayer3'));
 
-    // Wait for approval to process
-    await page.waitForTimeout(2000);
-
     // === STEP 2: Verify player DOES have access after approval ===
     // (Approval immediately grants participant access)
     await loginAs(page, 'PLAYER_3');
@@ -108,8 +102,8 @@ test.describe('Game Application Workflow', () => {
     const applyButton = page.getByRole('button', { name: 'Apply to Join' });
     await expect(applyButton).not.toBeVisible();
 
-    // Should see participant tabs (user is now a participant) - use .locator('visible=true').first() to avoid strict mode violation
-    await expect(page.getByRole('tab', { name: 'Participants' }).or(page.getByRole('tab', { name: 'Game Info' })).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
+    // Should see participant tabs (user is now a participant)
+    await expect(page.getByRole('tab', { name: 'Participants' }).or(page.getByRole('tab', { name: 'Game Info' })).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('GM can reject application with confirmation', async ({ page }) => {
@@ -144,7 +138,6 @@ test.describe('Game Application Workflow', () => {
 
     // Wait for rejection to process
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Refresh and navigate back to applications
     await applicationsPage.goto();
@@ -167,7 +160,9 @@ test.describe('Game Application Workflow', () => {
     expect(await applicationsPage.hasApplyButton()).toBe(false);
 
     // Should see application status instead
-    await expect(page.locator('text=Application Pending').or(page.locator('text=pending')).locator('visible=true').first()).toBeVisible();
+    await expect(
+      page.locator('text=Application Pending').or(page.locator('text=pending')).first()
+    ).toBeVisible();
   });
 
   test('player can withdraw their pending application', async ({ page }) => {
@@ -184,20 +179,17 @@ test.describe('Game Application Workflow', () => {
     expect(await applicationsPage.hasApplyButton()).toBe(true);
     await applicationsPage.submitApplication('I would like to join this game.', 'player');
 
-    // Wait for submission to process
-    await page.waitForTimeout(1000);
-
     // Refresh to see updated status
     await gamePage.goto(gameId);
     await page.waitForLoadState('networkidle');
 
     // Should see application pending status
-    const pendingIndicator = page.locator('text=Application Pending').or(
-      page.locator('text=Pending')
-    ).or(
-      page.locator('text=Applied').locator('visible=true').first()
-    );
-    await expect(pendingIndicator.locator('visible=true').first()).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.locator('text=Application Pending')
+        .or(page.locator('text=Pending'))
+        .or(page.locator('text=Applied'))
+        .first()
+    ).toBeVisible({ timeout: 10000 });
 
     // Withdraw application using POM
     await applicationsPage.withdrawApplication();
@@ -205,9 +197,6 @@ test.describe('Game Application Workflow', () => {
     // Wait for confirmation modal and confirm withdrawal
     await expect(page.getByRole('heading', { name: 'Withdraw Application' })).toBeVisible({ timeout: 5000 });
     await page.getByRole('button', { name: 'Withdraw Application' }).last().click();
-
-    // Wait for withdrawal to process
-    await page.waitForTimeout(1000);
 
     // Refresh page to see updated state
     await gamePage.goto(gameId);
@@ -217,9 +206,9 @@ test.describe('Game Application Workflow', () => {
     expect(await applicationsPage.hasApplyButton()).toBe(true);
 
     // Should NOT see pending status anymore
-    const pendingAfterWithdraw = page.locator('text=Application Pending').or(page.locator('text=pending')).locator('visible=true').first();
-    const stillPending = await pendingAfterWithdraw.isVisible().catch(() => false);
-    expect(stillPending).toBe(false);
+    await expect(
+      page.locator('text=Application Pending').or(page.locator('text=pending')).first()
+    ).not.toBeVisible();
   });
 
   test('public applicants list is visible during recruitment', async ({ page }) => {
@@ -235,7 +224,6 @@ test.describe('Game Application Workflow', () => {
 
     if (await applicationsPage.hasApplyButton()) {
       await applicationsPage.submitApplication('I want to join!', 'player');
-      await page.waitForTimeout(1000);
     }
 
     // PLAYER_3 applies
@@ -245,7 +233,6 @@ test.describe('Game Application Workflow', () => {
 
     if (await applicationsPage.hasApplyButton()) {
       await applicationsPage.submitApplication('Count me in!', 'player');
-      await page.waitForTimeout(1000);
     }
 
     // === STEP 2: Navigate to Game Info tab to see public applicants ===
@@ -255,7 +242,6 @@ test.describe('Game Application Workflow', () => {
     // Click on Game Info tab
     const infoTab = page.getByRole('tab', { name: 'Game Info' }).or(page.getByRole('tab', { name: 'Info' }));
     await infoTab.click();
-    await page.waitForTimeout(500);
 
     // === STEP 3: Verify public applicants section is visible ===
     // Should see "Applicants" heading
@@ -266,14 +252,15 @@ test.describe('Game Application Workflow', () => {
     const player3Username = getWorkerUsername('TestPlayer3');
 
     // At least one of the applicants should be visible
-    const hasApplicants = await page.locator(`text=${player2Username}`).or(page.locator(`text=${player3Username}`)).first().isVisible().catch(() => false);
-    expect(hasApplicants).toBe(true);
+    await expect(
+      page.locator(`text=${player2Username}`).or(page.locator(`text=${player3Username}`)).first()
+    ).toBeVisible({ timeout: 5000 });
 
     // === STEP 4: Verify NO status badges are shown (pending/approved/rejected) ===
     // The public list should NOT show application status
-    const statusBadge = page.locator('text=Pending Review').or(page.locator('text=Approved')).or(page.locator('text=Rejected'));
-    const hasStatus = await statusBadge.first().isVisible().catch(() => false);
-    expect(hasStatus).toBe(false); // Status should NOT be visible to non-GMs
+    await expect(
+      page.locator('text=Pending Review').or(page.locator('text=Approved')).or(page.locator('text=Rejected')).first()
+    ).not.toBeVisible(); // Status should NOT be visible to non-GMs
   });
 
   test('player can join as audience during character creation', async ({ page }) => {
@@ -315,16 +302,11 @@ test.describe('Game Application Workflow', () => {
     await expect(page.getByRole('heading', { name: 'Join as Audience' })).not.toBeVisible({ timeout: 5000 });
 
     // With auto_accept_audience: true, user should be immediately added as participant
-    // Wait a moment for the data to refetch
-    await page.waitForTimeout(1000);
-
     // Verify "Join as Audience" button is no longer visible (user successfully joined)
     await expect(page.getByTestId('join-as-audience-button')).not.toBeVisible({ timeout: 5000 });
 
     // Verify no "Apply to Join" button appears (would appear for non-participants)
-    const applyButtonCheck = page.getByTestId(/apply-button-/);
-    const hasApplyButton = await applyButtonCheck.isVisible().catch(() => false);
-    expect(hasApplyButton).toBe(false);
+    await expect(page.getByTestId(/apply-button-/)).not.toBeVisible();
 
     // Success! User successfully joined as audience during character creation
   });

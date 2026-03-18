@@ -116,10 +116,11 @@ test.describe('Character Sheet Management', () => {
     // Navigate to Currency tab
     await sheetPage.goToCurrencyTab(2);
 
-    // Verify currency amounts are displayed (names may not be shown in UI)
-    await expect(page.locator('text=Currency & Resources')).toBeVisible();
-    await expect(page.locator('text=50').locator('visible=true').first()).toBeVisible();
-    await expect(page.locator('text=25').locator('visible=true').first()).toBeVisible(); // .locator('visible=true').first() to avoid matching footer copyright "2025"
+    // Verify currency amounts are displayed — scoped to currency section to avoid matching unrelated "50"/"25" on page
+    const currencySection = page.getByTestId('currency-section');
+    await expect(currencySection.locator('text=Currency & Resources')).toBeVisible();
+    await expect(currencySection.locator('text=50')).toBeVisible();
+    await expect(currencySection.locator('text=25')).toBeVisible();
   });
 
   test('GM can view all character sheets', async ({ page }) => {
@@ -132,9 +133,9 @@ test.describe('Character Sheet Management', () => {
     await characterPage.goto();
 
     // Verify GM sees all characters
-    await expect(page.locator('text=Sheet Test Char 1').locator('visible=true').first()).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=Sheet Test Char 2').locator('visible=true').first()).toBeVisible();
-    await expect(page.locator('text=Empty Sheet Char').locator('visible=true').first()).toBeVisible();
+    await expect(page.getByText('Sheet Test Char 1').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Sheet Test Char 2').first()).toBeVisible();
+    await expect(page.getByText('Empty Sheet Char').first()).toBeVisible();
 
     // GM should be able to view any character (open char 2, owned by PLAYER_2)
     await characterPage.openCharacterSheet('Sheet Test Char 2');

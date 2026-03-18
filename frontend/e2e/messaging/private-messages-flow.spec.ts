@@ -257,9 +257,6 @@ test.describe('Private Messages Flow', () => {
       const audienceMessaging = new MessagingPage(audiencePage);
       await audienceMessaging.goto(gameId);
 
-      // Wait for page to fully load
-      await audiencePage.waitForTimeout(2000);
-
       // Create conversation as The Narrator (audience member's assigned NPC)
       const narratorConvoTitle = `Narrative Insight ${Date.now()}`;
       await audienceMessaging.createConversation(
@@ -322,15 +319,11 @@ test.describe('Private Messages Flow', () => {
       const coGmMessaging = new MessagingPage(coGmPage);
       await coGmMessaging.goto(gameId);
 
-      // Wait for page to fully load to ensure characters are available
-      await coGmPage.waitForTimeout(2000);
-
       // Create conversation as first unassigned NPC (Mysterious Stranger)
       const strangerConvoTitle = `Strange Encounter ${Date.now()}`;
 
       // Debug: Check what characters are available
       await coGmMessaging.openNewConversationForm();
-      await coGmPage.waitForTimeout(1000);
 
       // Try to select the NPC and participant
       await coGmMessaging.selectSendingCharacter('Mysterious Stranger');
