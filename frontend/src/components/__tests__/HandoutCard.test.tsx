@@ -26,7 +26,7 @@ const draftHandout: Handout = {
 };
 
 describe('HandoutCard', () => {
-  const mockOnView = vi.fn();
+  // mockOnView removed — View is now a Link, navigation is URL-driven
   const mockOnEdit = vi.fn();
   const mockOnDelete = vi.fn();
   const mockOnPublish = vi.fn();
@@ -43,7 +43,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={false}
-          onView={mockOnView}
+
         />
       );
 
@@ -55,7 +55,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={false}
-          onView={mockOnView}
+
         />
       );
 
@@ -67,7 +67,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={draftHandout}
           isGM={true}
-          onView={mockOnView}
+
         />
       );
 
@@ -85,7 +85,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={unedited}
           isGM={false}
-          onView={mockOnView}
+
         />
       );
 
@@ -103,7 +103,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={editedHandout}
           isGM={false}
-          onView={mockOnView}
+
         />
       );
 
@@ -115,11 +115,11 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={false}
-          onView={mockOnView}
+
         />
       );
 
-      expect(screen.getByRole('button', { name: /view/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /view/i })).toBeInTheDocument();
     });
   });
 
@@ -129,7 +129,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={false}
-          onView={mockOnView}
+
         />
       );
 
@@ -141,7 +141,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={false}
-          onView={mockOnView}
+
         />
       );
 
@@ -153,7 +153,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={draftHandout}
           isGM={false}
-          onView={mockOnView}
+
         />
       );
 
@@ -167,7 +167,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={true}
-          onView={mockOnView}
+
           onEdit={mockOnEdit}
         />
       );
@@ -180,7 +180,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={true}
-          onView={mockOnView}
+
           onDelete={mockOnDelete}
         />
       );
@@ -193,7 +193,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={draftHandout}
           isGM={true}
-          onView={mockOnView}
+
           onPublish={mockOnPublish}
         />
       );
@@ -206,7 +206,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={true}
-          onView={mockOnView}
+
           onUnpublish={mockOnUnpublish}
         />
       );
@@ -219,7 +219,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={true}
-          onView={mockOnView}
+
           onPublish={mockOnPublish}
         />
       );
@@ -232,7 +232,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={draftHandout}
           isGM={true}
-          onView={mockOnView}
+
           onUnpublish={mockOnUnpublish}
         />
       );
@@ -242,21 +242,16 @@ describe('HandoutCard', () => {
   });
 
   describe('User Interactions', () => {
-    it('calls onView when View button clicked', async () => {
-      const user = userEvent.setup();
-
+    it('View link points to the handout URL', () => {
       renderWithProviders(
         <HandoutCard
           handout={publishedHandout}
           isGM={false}
-          onView={mockOnView}
         />
       );
 
-      const viewButton = screen.getByRole('button', { name: /view/i });
-      await user.click(viewButton);
-
-      expect(mockOnView).toHaveBeenCalledWith(publishedHandout);
+      const viewLink = screen.getByRole('link', { name: /view/i });
+      expect(viewLink).toHaveAttribute('href', expect.stringContaining('handout=1'));
     });
 
     it('calls onEdit when Edit button clicked', async () => {
@@ -266,7 +261,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={true}
-          onView={mockOnView}
+
           onEdit={mockOnEdit}
         />
       );
@@ -284,7 +279,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={draftHandout}
           isGM={true}
-          onView={mockOnView}
+
           onPublish={mockOnPublish}
         />
       );
@@ -302,7 +297,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={true}
-          onView={mockOnView}
+
           onUnpublish={mockOnUnpublish}
         />
       );
@@ -320,7 +315,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={true}
-          onView={mockOnView}
+
           onDelete={mockOnDelete}
         />
       );
@@ -338,7 +333,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={true}
-          onView={mockOnView}
+
           onDelete={mockOnDelete}
         />
       );
@@ -357,7 +352,7 @@ describe('HandoutCard', () => {
         <HandoutCard
           handout={publishedHandout}
           isGM={true}
-          onView={mockOnView}
+
           onDelete={mockOnDelete}
         />
       );

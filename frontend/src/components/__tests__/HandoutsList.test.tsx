@@ -368,7 +368,7 @@ describe('HandoutsList', () => {
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
       // Click view on first handout
-      const viewButtons = screen.getAllByRole('button', { name: /view/i });
+      const viewButtons = screen.getAllByRole('link', { name: /view/i });
       await user.click(viewButtons[0]);
 
       // HandoutView should be rendered
@@ -382,7 +382,7 @@ describe('HandoutsList', () => {
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
       // View handout
-      const viewButtons = screen.getAllByRole('button', { name: /view/i });
+      const viewButtons = screen.getAllByRole('link', { name: /view/i });
       await user.click(viewButtons[0]);
 
       // Go back
@@ -401,7 +401,7 @@ describe('HandoutsList', () => {
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
       // View handout
-      const viewButtons = screen.getAllByRole('button', { name: /view/i });
+      const viewButtons = screen.getAllByRole('link', { name: /view/i });
       await user.click(viewButtons[0]);
 
       // Click edit in view

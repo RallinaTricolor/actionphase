@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, Spinner, Alert, Button } from './ui';
 import { useToast } from '../contexts/ToastContext';
 import { useHandouts } from '../hooks/useHandouts';
@@ -16,6 +17,7 @@ interface HandoutsListProps {
 
 export function HandoutsList({ gameId, isGM, gameState }: HandoutsListProps) {
   const { showError } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     handouts,
     isLoading,
@@ -29,6 +31,27 @@ export function HandoutsList({ gameId, isGM, gameState }: HandoutsListProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingHandout, setEditingHandout] = useState<Handout | null>(null);
   const [viewingHandout, setViewingHandout] = useState<Handout | null>(null);
+
+  // Drive viewed handout entirely from the URL param — handles normal clicks,
+  // direct links, and browser back/forward correctly.
+  useEffect(() => {
+    const handoutId = searchParams.get('handout');
+    if (isLoading) return;
+    if (!handoutId) {
+      setViewingHandout(null);
+      return;
+    }
+    const handout = handouts.find(h => h.id === parseInt(handoutId, 10));
+    setViewingHandout(handout ?? null);
+  }, [searchParams, handouts, isLoading]);
+
+  const handleCloseView = () => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.delete('handout');
+      return next;
+    });
+  };
 
   const handleCreate = async (data: CreateHandoutRequest) => {
     try {
@@ -88,9 +111,9 @@ export function HandoutsList({ gameId, isGM, gameState }: HandoutsListProps) {
         gameId={gameId}
         handout={viewingHandout}
         isGM={isGM}
-        onClose={() => setViewingHandout(null)}
+        onClose={handleCloseView}
         onEdit={isGM ? () => {
-          setViewingHandout(null);
+          handleCloseView();
           setEditingHandout(viewingHandout);
         } : undefined}
       />
@@ -139,7 +162,6 @@ export function HandoutsList({ gameId, isGM, gameState }: HandoutsListProps) {
                   key={handout.id}
                   handout={handout}
                   isGM={isGM}
-                  onView={setViewingHandout}
                   onEdit={canEditHandout ? setEditingHandout : undefined}
                   onDelete={canEditHandout ? handleDelete : undefined}
                   onPublish={canEditHandout ? handlePublish : undefined}

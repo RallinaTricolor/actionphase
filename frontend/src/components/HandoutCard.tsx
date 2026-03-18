@@ -1,10 +1,10 @@
+import { Link, useSearchParams } from 'react-router-dom';
 import { Card, Badge, Button } from './ui';
 import type { Handout } from '../types/handouts';
 
 interface HandoutCardProps {
   handout: Handout;
   isGM: boolean;
-  onView: (handout: Handout) => void;
   onEdit?: (handout: Handout) => void;
   onDelete?: (handout: Handout) => void;
   onPublish?: (handout: Handout) => void;
@@ -14,12 +14,19 @@ interface HandoutCardProps {
 export function HandoutCard({
   handout,
   isGM,
-  onView,
   onEdit,
   onDelete,
   onPublish,
   onUnpublish
 }: HandoutCardProps) {
+  const [searchParams] = useSearchParams();
+  const viewHref = (() => {
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', 'handouts');
+    params.set('handout', String(handout.id));
+    return `?${params.toString()}`;
+  })();
+
   const statusBadgeVariant = handout.status === 'published' ? 'success' : 'warning';
 
   return (
@@ -43,13 +50,12 @@ export function HandoutCard({
         )}
 
         <div className="flex flex-wrap gap-2 mt-3">
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => onView(handout)}
+          <Link
+            to={viewHref}
+            className="inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-interactive-primary focus:ring-offset-2 bg-interactive-primary hover:bg-interactive-primary-hover text-content-inverse px-3 py-1.5 text-sm"
           >
             View
-          </Button>
+          </Link>
 
           {isGM && (
             <>
