@@ -143,6 +143,9 @@ test.describe('Private Message Deletion', () => {
         await expect(conversation2).toBeVisible({ timeout: 10000 });
         await conversation2.click();
 
+        // Wait for messages to load before asserting specific content
+        await expect(player2Page.locator('[data-testid="message"]').first()).toBeVisible({ timeout: 10000 });
+
         await expect(
           player2Page.locator('[data-testid="message"]').filter({ hasText: '[Message deleted]' }).first()
         ).toBeVisible({ timeout: 10000 });
