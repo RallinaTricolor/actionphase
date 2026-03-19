@@ -174,9 +174,6 @@ export class MessagingPage {
     const conversation = this.page.getByText(conversationTitle).locator('visible=true').first();
     await conversation.click();
     await this.page.waitForLoadState('networkidle');
-
-    // Wait for conversation to load (give UI time to render)
-    await this.page.waitForTimeout(1000);
   }
 
   /**

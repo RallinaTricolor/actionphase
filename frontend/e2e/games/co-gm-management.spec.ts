@@ -656,4 +656,39 @@ test.describe.serial('Co-GM Management', () => {
     // Note: Full character approval workflow tested in character-approval-workflow.spec.ts
     // This test verifies co-GMs have same access to character management
   });
+
+  test('Teardown: Restore TestAudience1 as co-GM', async ({ page }) => {
+    // The fixture has TestAudience1 as co-GM. This suite demoted them in Setup and promoted
+    // TestAudience2 instead. Restore the fixture state so other test files (private-messages-flow)
+    // that depend on TestAudience1 being co-GM of this game are not affected.
+    await loginAs(page, 'GM');
+
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
+
+    // Navigate to People tab > Participants
+    await page.getByRole('tab', { name: 'People' }).click();
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: /Game Participants/ }).click();
+
+    // Demote TestAudience2 (current co-GM)
+    await expect(page.getByRole('heading', { name: /Co-GMs/ })).toBeVisible();
+    const coGmSection = page.locator('div:has(> h3:has-text("Co-GMs"))').first();
+    await coGmSection.getByRole('button', { name: 'Participant actions' }).first().click();
+    await page.getByRole('menuitem', { name: 'Demote from Co-GM' }).click();
+    await expect(page.getByRole('heading', { name: 'Demote from Co-GM?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Demote to Audience' }).click();
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: /Co-GMs/ })).not.toBeVisible();
+
+    // Promote TestAudience1 back to co-GM
+    const audience1Username = getWorkerUsername('TestAudience1');
+    const audience1Card = page.locator('div.border.rounded-lg.surface-raised').filter({ hasText: audience1Username });
+    await audience1Card.getByRole('button', { name: 'Participant actions' }).click();
+    await page.getByRole('menuitem', { name: 'Promote to Co-GM' }).click();
+    await expect(page.getByRole('heading', { name: 'Promote to Co-GM?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Promote to Co-GM' }).click();
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: /Co-GMs/ })).toBeVisible();
+  });
 });
