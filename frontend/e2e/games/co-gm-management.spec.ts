@@ -71,12 +71,10 @@ test.describe.serial('Co-GM Management', () => {
     // Wait for participant data to load and find the audience heading
     await expect(page.getByRole('heading', { name: /Audience/ })).toBeVisible();
 
-    // Find TestAudience2 in the audience section
-    // Both TestAudience1 and TestAudience2 are now audience members
-    // We want TestAudience2 (the second one)
-    const audienceSection = page.locator('div:has(> h3:has-text("Audience"))').first();
-    const actionsButtons = await audienceSection.getByRole('button', { name: 'Participant actions' }).all();
-    await actionsButtons[1].click(); // Second audience member (TestAudience2)
+    // Find TestAudience2's participant card by username, then click their actions button
+    const audience2Username = getWorkerUsername('TestAudience2');
+    const audience2Card = page.locator('div.border.rounded-lg.surface-raised').filter({ hasText: audience2Username });
+    await audience2Card.getByRole('button', { name: 'Participant actions' }).click();
 
     // Wait for menu to appear and click "Promote to Co-GM" option
     const promoteMenuItem = page.getByRole('menuitem', { name: 'Promote to Co-GM' });
