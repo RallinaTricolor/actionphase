@@ -135,4 +135,20 @@ func TestPhaseService_CanDeletePhase(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "2 action submission(s)")
 	})
+
+	t.Run("blocks deletion when phase has messages", func(t *testing.T) {
+		phase := factory.NewPhase().InGame(game).CommonRoom().Create()
+		author := factory.NewUser().Create()
+		character := factory.NewCharacter().InGame(game).OwnedBy(author).Create()
+
+		factory.NewPost().
+			InPhase(phase).
+			ByAuthor(author).
+			ByCharacter(character).
+			Create()
+
+		err := phaseService.CanDeletePhase(context.Background(), phase.ID)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "message(s) exist")
+	})
 }

@@ -137,28 +137,25 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 		core.AssertEqual(t, updateData.MaxPlayers, response.MaxPlayers, "Updated max players should match")
 	})
 
-	// Step 5: Update game state
-	t.Run("update_game_state", func(t *testing.T) {
-		stateData := UpdateGameStateRequest{
-			State: "in_progress",
-		}
+	// Step 5: Advance game through valid state sequence to in_progress
+	for _, step := range []string{"recruitment", "character_creation", "in_progress"} {
+		step := step
+		t.Run("update_game_state_to_"+step, func(t *testing.T) {
+			stateData := UpdateGameStateRequest{State: step}
+			payload, _ := json.Marshal(stateData)
+			req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(createdGameID))+"/state", bytes.NewBuffer(payload))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			core.AssertEqual(t, 200, w.Code, "Game state update to "+step+" should succeed")
 
-		payload, _ := json.Marshal(stateData)
-		req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(createdGameID))+"/state", bytes.NewBuffer(payload))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+accessToken)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		core.AssertEqual(t, 200, w.Code, "Game state update should succeed")
-
-		var response GameResponse
-		err := json.Unmarshal(w.Body.Bytes(), &response)
-		core.AssertNoError(t, err, "Response should be valid JSON")
-
-		core.AssertEqual(t, "in_progress", response.State, "Game state should be updated to in_progress")
-	})
+			var response GameResponse
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			core.AssertNoError(t, err, "Response should be valid JSON")
+			core.AssertEqual(t, step, response.State, "Response body should reflect new state")
+		})
+	}
 
 	// Step 6: Cancel game (required before deletion)
 	t.Run("cancel_game", func(t *testing.T) {
@@ -1111,9 +1108,8 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 	err = gameService.UpdateGameAutoAcceptAudience(context.Background(), game.ID, true)
 	core.AssertNoError(t, err, "Auto-accept audience update should succeed")
 
-	// Update game state to in_progress
-	_, err = gameService.UpdateGameState(context.Background(), game.ID, "in_progress")
-	core.AssertNoError(t, err, "Game state update should succeed")
+	// Set game to in_progress (bypassing transition validation — state is test setup, not subject of test)
+	testDB.SetGameStateDirectly(t, game.ID, "in_progress")
 
 	t.Run("apply_as_audience_success", func(t *testing.T) {
 		payload := ApplyToGameRequest{

@@ -275,9 +275,8 @@ func TestCharacterAPI_PendingCharacterVisibilityByRole(t *testing.T) {
 	_, err = gameService.AddGameParticipant(context.Background(), fixtures.TestGame.ID, int32(regularPlayer.ID), "player")
 	core.AssertNoError(t, err, "Adding regular player to game should succeed")
 
-	// Update game to in_progress state to trigger character filtering
-	_, err = gameService.UpdateGameState(context.Background(), fixtures.TestGame.ID, "in_progress")
-	core.AssertNoError(t, err, "Updating game state should succeed")
+	// Set game to in_progress state (bypassing transition validation — state is test setup, not subject of test)
+	testDB.SetGameStateDirectly(t, fixtures.TestGame.ID, "in_progress")
 
 	// Create a pending character using direct SQL (simplest for test setup)
 	var pendingCharID int32
@@ -414,9 +413,8 @@ func TestCharacterAPI_PlayerCannotSeeOtherPlayersPendingCharacters(t *testing.T)
 	_, err = gameService.AddGameParticipant(context.Background(), fixtures.TestGame.ID, int32(player2.ID), "player")
 	core.AssertNoError(t, err, "Adding player2 to game should succeed")
 
-	// Update game to in_progress state to trigger character filtering
-	_, err = gameService.UpdateGameState(context.Background(), fixtures.TestGame.ID, "in_progress")
-	core.AssertNoError(t, err, "Updating game state should succeed")
+	// Set game to in_progress state (bypassing transition validation — state is test setup, not subject of test)
+	testDB.SetGameStateDirectly(t, fixtures.TestGame.ID, "in_progress")
 
 	// Player 1 creates a pending character (owned by player1)
 	var player1PendingCharID int32

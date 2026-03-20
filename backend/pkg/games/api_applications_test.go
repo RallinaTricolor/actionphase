@@ -213,9 +213,10 @@ func TestGetPublicGameApplicants_ForbiddenWhenNotRecruiting(t *testing.T) {
 			})
 			core.AssertNoError(t, err, "Game creation should succeed")
 
-			// Update game to test state
-			_, err = gameService.UpdateGameState(context.Background(), game.ID, tt.gameState)
-			core.AssertNoError(t, err, "Game state update should succeed")
+			// Set game to test state (bypassing transition validation — state is test setup, not subject of test)
+			if tt.gameState != core.GameStateSetup {
+				testDB.SetGameStateDirectly(t, game.ID, tt.gameState)
+			}
 
 			// Make request without authentication
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/applicants", nil)

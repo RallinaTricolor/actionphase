@@ -318,6 +318,24 @@ func (td *TestDatabase) CreateTestGameWithState(t TestingInterface, gmUserID int
 	return &game
 }
 
+// SetGameStateDirectly updates a game's state by writing directly to the database,
+// bypassing service-layer transition validation. Use this only in test setup when
+// you need a game in a specific state and the path to get there is not the subject
+// of the test.
+func (td *TestDatabase) SetGameStateDirectly(t TestingInterface, gameID int32, state string) *models.Game {
+	ctx := context.Background()
+	queries := models.New(td.Pool)
+
+	updatedGame, err := queries.UpdateGameState(ctx, models.UpdateGameStateParams{
+		ID:    gameID,
+		State: pgtype.Text{String: state, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("SetGameStateDirectly: failed to set game %d to state %s: %v", gameID, state, err)
+	}
+	return &updatedGame
+}
+
 // CreateTestPhase creates a test phase for a game
 func (td *TestDatabase) CreateTestPhase(t TestingInterface, gameID int32, phaseType string, title string) *models.GamePhase {
 	ctx := context.Background()

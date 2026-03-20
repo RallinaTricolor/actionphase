@@ -128,6 +128,71 @@ func TestGameService_UpdateGameState(t *testing.T) {
 	}
 }
 
+func TestGameService_UpdateGameState_InvalidTransitions(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Helper to create a game at a specific state by walking the state machine.
+	// States reachable via the forward path (cancelled is reached from in_progress).
+	forwardPath := []string{"recruitment", "character_creation", "in_progress", "paused", "in_progress", "completed"}
+	cancelledPath := []string{"recruitment", "character_creation", "in_progress", "cancelled"}
+
+	createGameAtState := func(t *testing.T, targetState string) *models.Game {
+		t.Helper()
+		req := core.CreateGameRequest{
+			Title:       "Transition Test Game " + targetState,
+			Description: "Test game for invalid transition tests",
+			GMUserID:    int32(fixtures.TestUser.ID),
+		}
+		game, err := gameService.CreateGame(context.Background(), req)
+		core.AssertNoError(t, err, "setup: create game")
+
+		path := forwardPath
+		if targetState == "cancelled" {
+			path = cancelledPath
+		}
+
+		for _, s := range path {
+			if game.State.String == targetState {
+				break
+			}
+			updated, err := gameService.UpdateGameState(context.Background(), game.ID, s)
+			core.AssertNoError(t, err, "setup: advance to "+s)
+			game = updated
+		}
+		core.AssertEqual(t, targetState, game.State.String, "setup: reached target state")
+		return game
+	}
+
+	cases := []struct {
+		name      string
+		fromState string
+		toState   string
+	}{
+		{"recruitment to setup (backward)", "recruitment", "setup"},
+		{"in_progress to recruitment (skip back)", "in_progress", "recruitment"},
+		{"completed to in_progress (reopen completed)", "completed", "in_progress"},
+		{"completed to cancelled (terminal state)", "completed", "cancelled"},
+		{"cancelled to recruitment (reopen cancelled)", "cancelled", "recruitment"},
+		{"paused to completed (skip paused→in_progress)", "paused", "completed"},
+		{"in_progress to character_creation (backward)", "in_progress", "character_creation"},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			game := createGameAtState(t, tc.fromState)
+			_, err := gameService.UpdateGameState(context.Background(), game.ID, tc.toState)
+			core.AssertErrorContains(t, err, "invalid game state transition", "expected error for invalid transition "+tc.fromState+" → "+tc.toState)
+		})
+	}
+}
+
 // NOTE: TestGameService_JoinGame has been removed because direct joining is no longer supported.
 // All game participation now goes through the application system (GameApplicationService).
 // See game_applications_test.go for tests of the new application-based joining process.
@@ -547,6 +612,8 @@ func TestGameService_GetRecruitingGames(t *testing.T) {
 
 	_, err = gameService.UpdateGameState(context.Background(), inProgressGame.ID, "recruitment")
 	core.AssertNoError(t, err, "Failed to set game to recruitment")
+	_, err = gameService.UpdateGameState(context.Background(), inProgressGame.ID, "character_creation")
+	core.AssertNoError(t, err, "Failed to set game to character_creation")
 	_, err = gameService.UpdateGameState(context.Background(), inProgressGame.ID, "in_progress")
 	core.AssertNoError(t, err, "Failed to set game to in_progress")
 
@@ -753,6 +820,8 @@ func TestGameService_GetFilteredGames(t *testing.T) {
 	// Transition sci-fi game to in_progress
 	_, err = gameService.UpdateGameState(ctx, scifiGame.ID, "recruitment")
 	core.AssertNoError(t, err, "Failed to update sci-fi game to recruitment")
+	_, err = gameService.UpdateGameState(ctx, scifiGame.ID, "character_creation")
+	core.AssertNoError(t, err, "Failed to update sci-fi game to character_creation")
 	_, err = gameService.UpdateGameState(ctx, scifiGame.ID, "in_progress")
 	core.AssertNoError(t, err, "Failed to update sci-fi game to in_progress")
 
@@ -1554,6 +1623,10 @@ func TestGameService_UpdateGameState_AutoCreateGamemasterNPC(t *testing.T) {
 		core.AssertNoError(t, err, "Failed to get characters")
 		core.AssertEqual(t, 0, len(characters), "Should have no characters initially")
 
+		// Walk through the valid path to character_creation
+		_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateRecruitment)
+		core.AssertNoError(t, err, "Failed to transition to recruitment")
+
 		// Transition to character_creation state
 		updatedGame, err := gameService.UpdateGameState(context.Background(), game.ID, core.GameStateCharacterCreation)
 		core.AssertNoError(t, err, "Failed to update game state")
@@ -1573,43 +1646,25 @@ func TestGameService_UpdateGameState_AutoCreateGamemasterNPC(t *testing.T) {
 		core.AssertEqual(t, false, gamemasterNPC.UserID.Valid, "User ID should be NULL for GM NPCs")
 	})
 
-	t.Run("does not create duplicate if transitioning to character_creation twice", func(t *testing.T) {
-		// Create a game in setup state
-		game := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Multiple Transition Test Game")
+	t.Run("creates exactly one Gamemaster NPC (no duplicates)", func(t *testing.T) {
+		// Create a game and walk the valid path to character_creation
+		game := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "NPC Uniqueness Test Game")
 
-		// First transition to character_creation
-		_, err := gameService.UpdateGameState(context.Background(), game.ID, core.GameStateCharacterCreation)
-		core.AssertNoError(t, err, "Failed first state transition")
+		_, err := gameService.UpdateGameState(context.Background(), game.ID, core.GameStateRecruitment)
+		core.AssertNoError(t, err, "Failed to transition to recruitment")
+		_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateCharacterCreation)
+		core.AssertNoError(t, err, "Failed to transition to character_creation")
 
-		// Get characters - should have exactly 1 Gamemaster NPC
+		// Count Gamemaster NPCs — must be exactly 1
 		characters, err := queries.GetCharactersByGame(context.Background(), game.ID)
-		core.AssertNoError(t, err, "Failed to get characters after first transition")
+		core.AssertNoError(t, err, "Failed to get characters")
 		gamemasterCount := 0
 		for _, char := range characters {
 			if char.Name == "Gamemaster" {
 				gamemasterCount++
 			}
 		}
-		core.AssertEqual(t, 1, gamemasterCount, "Should have exactly 1 Gamemaster NPC after first transition")
-
-		// Transition to another state (e.g., in_progress)
-		_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateInProgress)
-		core.AssertNoError(t, err, "Failed to transition to in_progress")
-
-		// Transition back to character_creation (edge case)
-		_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateCharacterCreation)
-		core.AssertNoError(t, err, "Failed second state transition to character_creation")
-
-		// Verify still only 1 Gamemaster NPC (no duplicate created)
-		characters, err = queries.GetCharactersByGame(context.Background(), game.ID)
-		core.AssertNoError(t, err, "Failed to get characters after second transition")
-		gamemasterCount = 0
-		for _, char := range characters {
-			if char.Name == "Gamemaster" {
-				gamemasterCount++
-			}
-		}
-		core.AssertEqual(t, 1, gamemasterCount, "Should still have exactly 1 Gamemaster NPC after second transition")
+		core.AssertEqual(t, 1, gamemasterCount, "Should have exactly 1 Gamemaster NPC")
 	})
 
 	t.Run("does not create NPC for other state transitions", func(t *testing.T) {

@@ -280,10 +280,22 @@ func createTestGameInState(t *testing.T, testDB *core.TestDatabase, gameService 
 		require.NoError(t, err)
 	}
 
-	// Update state if not setup (default state)
-	if state != "setup" {
-		_, err = gameService.UpdateGameState(ctx, game.ID, state)
-		require.NoError(t, err)
+	// Walk the state machine to reach the target state.
+	// Valid forward path: setup → recruitment → character_creation → in_progress → paused → in_progress → completed
+	// Cancelled can be reached from any non-terminal state.
+	statePath := map[string][]string{
+		"recruitment":        {"recruitment"},
+		"character_creation": {"recruitment", "character_creation"},
+		"in_progress":        {"recruitment", "character_creation", "in_progress"},
+		"paused":             {"recruitment", "character_creation", "in_progress", "paused"},
+		"completed":          {"recruitment", "character_creation", "in_progress", "completed"},
+		"cancelled":          {"recruitment", "character_creation", "in_progress", "cancelled"},
+	}
+	if steps, ok := statePath[state]; ok {
+		for _, s := range steps {
+			_, err = gameService.UpdateGameState(ctx, game.ID, s)
+			require.NoError(t, err, "failed to advance to state %s", s)
+		}
 	}
 
 	return game.ID

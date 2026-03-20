@@ -210,14 +210,15 @@ func (as *ActionSubmissionService) GetPhaseSubmissions(ctx context.Context, phas
 
 // DeleteActionSubmission deletes an action submission
 func (as *ActionSubmissionService) DeleteActionSubmission(ctx context.Context, submissionID, userID int32) error {
-	queries := models.New(as.DB)
-
-	err := queries.DeleteActionSubmission(ctx, models.DeleteActionSubmissionParams{
-		ID:     submissionID,
-		UserID: userID,
-	})
+	tag, err := as.DB.Exec(ctx,
+		"DELETE FROM action_submissions WHERE id = $1 AND user_id = $2",
+		submissionID, userID,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to delete action submission: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("action submission not found or not owned by user")
 	}
 
 	return nil

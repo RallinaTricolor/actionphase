@@ -314,7 +314,6 @@ func TestActionSubmissionService_DeleteActionSubmission(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("deletes submission successfully", func(t *testing.T) {
-		// Submit an action
 		submitReq := core.SubmitActionRequest{
 			GameID:  game.ID,
 			PhaseID: phase.ID,
@@ -325,13 +324,57 @@ func TestActionSubmissionService_DeleteActionSubmission(t *testing.T) {
 		submission, err := actionService.SubmitAction(context.Background(), submitReq)
 		require.NoError(t, err)
 
-		// Delete it
 		err = actionService.DeleteActionSubmission(context.Background(), submission.ID, int32(user.ID))
 		require.NoError(t, err)
 
 		// Verify it's gone
 		_, err = actionService.GetActionSubmission(context.Background(), submission.ID)
 		require.Error(t, err)
+	})
+
+	t.Run("wrong user cannot delete another user's submission", func(t *testing.T) {
+		otherUser := testDB.CreateTestUser(t, "otheruser", "other@example.com")
+
+		submitReq := core.SubmitActionRequest{
+			GameID:  game.ID,
+			PhaseID: phase.ID,
+			UserID:  int32(user.ID),
+			Content: "Submission owned by user",
+			IsDraft: true,
+		}
+		submission, err := actionService.SubmitAction(context.Background(), submitReq)
+		require.NoError(t, err)
+
+		// Other user attempts to delete - must fail
+		err = actionService.DeleteActionSubmission(context.Background(), submission.ID, int32(otherUser.ID))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not found or not owned")
+
+		// Submission still exists
+		_, err = actionService.GetActionSubmission(context.Background(), submission.ID)
+		require.NoError(t, err)
+	})
+
+	t.Run("returns error for non-existent submission id", func(t *testing.T) {
+		err := actionService.DeleteActionSubmission(context.Background(), 99999, int32(user.ID))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not found or not owned")
+	})
+
+	t.Run("owner can delete finalized submission (no service-layer restriction)", func(t *testing.T) {
+		submitReq := core.SubmitActionRequest{
+			GameID:  game.ID,
+			PhaseID: phase.ID,
+			UserID:  int32(user.ID),
+			Content: "Finalized submission",
+			IsDraft: false,
+		}
+		submission, err := actionService.SubmitAction(context.Background(), submitReq)
+		require.NoError(t, err)
+		assert.False(t, submission.IsDraft.Bool)
+
+		err = actionService.DeleteActionSubmission(context.Background(), submission.ID, int32(user.ID))
+		require.NoError(t, err)
 	})
 }
 

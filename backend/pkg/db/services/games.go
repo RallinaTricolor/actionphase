@@ -139,13 +139,14 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 	)
 
 	// Validate state transition
-	if !isValidGameState(newState) {
+	currentState := currentGame.State.String
+	if !isValidTransition(currentState, newState) {
 		gs.Logger.Warn(ctx, "Invalid game state transition",
 			"game_id", gameID,
-			"from_state", currentGame.State,
-			"invalid_state", newState,
+			"from_state", currentState,
+			"to_state", newState,
 		)
-		return nil, fmt.Errorf("invalid game state: %s", newState)
+		return nil, fmt.Errorf("invalid game state transition: %s → %s", currentState, newState)
 	}
 
 	game, err := queries.UpdateGameState(ctx, models.UpdateGameStateParams{
@@ -279,32 +280,30 @@ func (gs *GameService) IsUserInGame(ctx context.Context, gameID, userID int32) (
 	return exists, err
 }
 
-// isValidGameState validates that a game state string is one of the allowed values.
-// This function enforces the game state machine and prevents invalid transitions.
+// allowedTransitions defines the valid state machine for games.
 //
-// Valid Game States:
-//   - "setup": Initial state when game is created, GM configuring game
-//   - "recruitment": Game is accepting new players to join
-//   - "character_creation": Players are creating their characters
-//   - "in_progress": Game is actively being played
-//   - "paused": Game is temporarily suspended but can resume
-//   - "completed": Game has finished successfully
-//   - "cancelled": Game was cancelled before completion
-//
-// State Transition Rules (enforced at business logic level):
+// State Transition Rules:
 //
 //	setup → recruitment → character_creation → in_progress ↔ paused → completed
-//	Any state → cancelled (emergency cancellation)
-//
-// Parameters:
-//   - state: The state string to validate
-//
-// Returns:
-//   - bool: true if state is valid, false otherwise
-func isValidGameState(state string) bool {
-	validStates := []string{"setup", "recruitment", "character_creation", "in_progress", "paused", "completed", "cancelled"}
-	for _, validState := range validStates {
-		if state == validState {
+//	Any non-terminal state → cancelled (emergency cancellation)
+var allowedTransitions = map[string][]string{
+	"setup":              {"recruitment", "cancelled"},
+	"recruitment":        {"character_creation", "cancelled"},
+	"character_creation": {"in_progress", "cancelled"},
+	"in_progress":        {"paused", "completed", "cancelled"},
+	"paused":             {"in_progress", "cancelled"},
+	"completed":          {},
+	"cancelled":          {},
+}
+
+// isValidTransition returns true if moving from currentState to newState is permitted.
+func isValidTransition(currentState, newState string) bool {
+	allowed, ok := allowedTransitions[currentState]
+	if !ok {
+		return false
+	}
+	for _, s := range allowed {
+		if s == newState {
 			return true
 		}
 	}
