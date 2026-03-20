@@ -87,8 +87,9 @@ export class GameApplicationsPage {
    * Get list of pending application usernames
    */
   async getPendingApplications(): Promise<string[]> {
-    // Wait for pending section to be visible
+    // Wait for pending section to be visible and at least one card to appear
     await this.applicationsPendingSection.waitFor({ state: 'visible', timeout: 5000 });
+    await this.applicationsPendingSection.getByTestId('application-card').first().waitFor({ state: 'visible', timeout: 5000 });
 
     const applicationCards = await this.applicationsPendingSection
       .getByTestId('application-card')

@@ -139,8 +139,6 @@ test.describe('Game Lifecycle Management', () => {
 
   test('GM can delete cancelled game', async ({ page }) => {
     // Testing game deletion and verification it no longer appears in games list
-    // NOTE: This test expects the game to already be cancelled by the previous test
-    // because the test suite runs in serial mode
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GAME_LIFECYCLE_CANCEL');
 
@@ -149,6 +147,17 @@ test.describe('Game Lifecycle Management', () => {
 
     // Verify game title
     await expect(page.getByText('E2E Test: Game Lifecycle - Cancel')).toBeVisible({ timeout: 10000 });
+
+    // Ensure the game is cancelled before trying to delete it.
+    // The prior test may have already cancelled it (serial mode), but if not, cancel it now.
+    const statusBadge = page.getByTestId('game-status-badge');
+    await statusBadge.waitFor({ state: 'visible', timeout: 5000 });
+    const currentStatus = await statusBadge.textContent();
+    if (!currentStatus?.toLowerCase().includes('cancel')) {
+      await gamePage.cancelGame();
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+    }
 
     // Now delete the game using POM (handles kebab menu + confirmation modal)
     await gamePage.deleteGame();

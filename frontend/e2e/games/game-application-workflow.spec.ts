@@ -114,6 +114,7 @@ test.describe('Game Application Workflow', () => {
 
     // Navigate to applications tab using POM
     await applicationsPage.goto();
+    await page.waitForLoadState('networkidle');
 
     // Should see pending applications
     const pendingCount = await applicationsPage.getPendingApplicationsCount();
@@ -122,21 +123,24 @@ test.describe('Game Application Workflow', () => {
     // Get first pending application username
     const pendingApplications = await applicationsPage.getPendingApplications();
     const usernameToReject = pendingApplications[0];
+    expect(usernameToReject).toBeTruthy();
 
     // Click reject button (this opens the confirmation modal)
     const card = await applicationsPage['findApplicationCard'](usernameToReject);
     const rejectButton = card.getByTestId('reject-application-button');
-    await rejectButton.waitFor({ state: 'visible', timeout: 3000 });
+    await rejectButton.waitFor({ state: 'visible', timeout: 5000 });
     await rejectButton.click();
 
-    // Wait for confirmation modal to appear
-    await page.waitForSelector('text=Reject Application', { timeout: 3000 });
+    // Wait for confirmation modal to appear and confirm
+    // (Modal uses div-based layout, not role="dialog" — scope via fixed/overlay container)
+    const modalHeading = page.getByRole('heading', { name: 'Reject Application' });
+    await expect(modalHeading).toBeVisible({ timeout: 10000 });
+    // Scope to modal container (fixed overlay) to distinguish from card's Reject button
+    const modalContainer = page.locator('.fixed.inset-0').filter({ hasText: 'Reject Application' });
+    await modalContainer.getByRole('button', { name: 'Reject', exact: true }).click();
 
-    // Confirm rejection by clicking the "Reject" button in the modal
-    const confirmButton = page.getByRole('button', { name: 'Reject', exact: true }).last();
-    await confirmButton.click();
-
-    // Wait for rejection to process
+    // Wait for modal to close (rejection complete)
+    await expect(modalHeading).not.toBeVisible({ timeout: 10000 });
     await page.waitForLoadState('networkidle');
 
     // Refresh and navigate back to applications
@@ -195,15 +199,22 @@ test.describe('Game Application Workflow', () => {
     await applicationsPage.withdrawApplication();
 
     // Wait for confirmation modal and confirm withdrawal
-    await expect(page.getByRole('heading', { name: 'Withdraw Application' })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: 'Withdraw Application' }).last().click();
+    // (Modal uses div-based layout — scope via fixed overlay container)
+    const withdrawModalHeading = page.getByRole('heading', { name: 'Withdraw Application' });
+    await expect(withdrawModalHeading).toBeVisible({ timeout: 5000 });
+    const withdrawModalContainer = page.locator('.fixed.inset-0').filter({ hasText: 'Withdraw Application' });
+    await withdrawModalContainer.getByRole('button', { name: 'Withdraw Application', exact: true }).click();
+
+    // Wait for modal to close before navigating
+    await expect(withdrawModalHeading).not.toBeVisible({ timeout: 10000 });
+    await page.waitForLoadState('networkidle');
 
     // Refresh page to see updated state
     await gamePage.goto(gameId);
     await page.waitForLoadState('networkidle');
 
     // Should now see "Apply to Join" button again (able to reapply)
-    expect(await applicationsPage.hasApplyButton()).toBe(true);
+    await expect(applicationsPage.applyButton).toBeVisible({ timeout: 10000 });
 
     // Should NOT see pending status anymore
     await expect(

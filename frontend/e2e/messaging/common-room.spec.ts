@@ -353,11 +353,12 @@ test.describe('Common Room Flow', () => {
         // Under load (full suite), the backend is slower and comment fetches take longer.
         await currentPage.getByText(postContent, { exact: true }).first().waitFor({ state: 'visible', timeout: 10000 });
 
+        // Wait for the previous comment to appear — comments load async after the post.
         // Find the threaded-comment container that directly holds previousComment.
         // Since each comment text is unique (timestamp-based), we locate the text node
         // then walk up to its nearest threaded-comment ancestor.
         const commentText = currentPage.getByText(previousComment, { exact: true }).first();
-        await expect(commentText).toBeVisible({ timeout: 15000 });
+        await commentText.waitFor({ state: 'visible', timeout: 20000 });
         // Use :visible to exclude mobile-variant threaded-comment nodes (md:hidden, display:none
         // at desktop viewport). Both desktop and mobile variants share data-testid="threaded-comment",
         // but only the desktop variant is visible at Playwright's desktop viewport size.

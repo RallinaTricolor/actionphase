@@ -43,8 +43,8 @@ apply_worker_sql() {
         # Only remove title-based DELETE statements (ID-based ones will be offset by Python)
         sed -E \
             -e "s/'Test(GM|Player[0-9]|Audience)@/'Test\1_${WORKER_INDEX}@/g" \
-            -e "s/test_(gm|player[0-9]|audience)@/test_\1_${WORKER_INDEX}@/g" \
-            -e "s/'Test(GM|Player[0-9]|Audience)'/'Test\1_${WORKER_INDEX}'/g" \
+            -e "s/test_(gm|player[0-9]|audience[0-9]|audience)@/test_\1_${WORKER_INDEX}@/g" \
+            -e "s/'Test(GM|Player[0-9]|Audience[0-9]|Audience)'/'Test\1_${WORKER_INDEX}'/g" \
             -e "/^DELETE FROM games WHERE title IN/,/;$/d" \
             "$sql_file" > "$temp_file.step1"
 

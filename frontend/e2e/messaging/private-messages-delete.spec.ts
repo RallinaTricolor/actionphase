@@ -110,6 +110,11 @@ test.describe('Private Message Deletion', () => {
 
       const conversation = player1Page.locator('[data-testid="conversation-item"]').first();
       await expect(conversation).toBeVisible({ timeout: 10000 });
+
+      // Capture the conversation title so Player 2 can open the same one
+      // (title is in an h3 inside the item — use first visible h3 to avoid dual-DOM duplication)
+      const conversationTitle = await conversation.locator('h3').locator('visible=true').first().textContent();
+
       await conversation.click();
 
       const ownMessage = player1Page.locator('[data-testid="message"]')
@@ -139,9 +144,13 @@ test.describe('Private Message Deletion', () => {
         const player2Messaging = new MessagingPage(player2Page);
         await player2Messaging.goto(gameId2);
 
-        const conversation2 = player2Page.locator('[data-testid="conversation-item"]').first();
-        await expect(conversation2).toBeVisible({ timeout: 10000 });
-        await conversation2.click();
+        // Open the same conversation Player 1 was in (by title) to avoid ordering issues
+        const conversationTitleTrimmed = (conversationTitle ?? '').trim();
+        const targetConversation = conversationTitleTrimmed
+          ? player2Page.locator('[data-testid="conversation-item"]').filter({ hasText: conversationTitleTrimmed }).first()
+          : player2Page.locator('[data-testid="conversation-item"]').first();
+        await expect(targetConversation).toBeVisible({ timeout: 10000 });
+        await targetConversation.click();
 
         // Wait for messages to load before asserting specific content
         await expect(player2Page.locator('[data-testid="message"]').first()).toBeVisible({ timeout: 10000 });

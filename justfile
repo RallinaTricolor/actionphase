@@ -18,7 +18,7 @@ help:
 
 # Launch Claude Code editor
 claude:
-    CLAUDE_CONFIG_DIR="/Users/jhouser/.claude-personal" /Users/jhouser/.npm-global/bin/claude
+    CLAUDE_CONFIG_DIR="/Users/jhouser/.claude-personal" /Users/jhouser/.local/bin/claude
 
 # ═══════════════════════════════════════════════════════════════════════════
 # DATABASE COMMANDS

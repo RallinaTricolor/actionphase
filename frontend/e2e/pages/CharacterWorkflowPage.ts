@@ -202,9 +202,12 @@ export class CharacterWorkflowPage {
    *
    * @param characterName - Character name to check
    */
-  async hasCharacter(characterName: string): Promise<boolean> {
+  async hasCharacter(characterName: string, timeout = 5000): Promise<boolean> {
     try {
-      await this.findCharacterCard(characterName);
+      // Use a retrying locator rather than a one-shot .all() snapshot so we wait
+      // for React Query to re-render the list after a create/update.
+      const card = this.page.getByTestId('character-card').filter({ hasText: characterName });
+      await card.first().waitFor({ state: 'visible', timeout });
       return true;
     } catch {
       return false;

@@ -68,8 +68,6 @@ export class GameDetailsPage {
    */
   async openGameActionsMenu() {
     await this.page.getByLabel('Game actions').click();
-    // Wait for menu to be visible
-    await this.page.waitForTimeout(100);
   }
 
   /**
@@ -77,7 +75,10 @@ export class GameDetailsPage {
    */
   async clickMenuButton(text: string) {
     await this.openGameActionsMenu();
-    await this.page.getByRole('button', { name: text }).click();
+    // Wait for the specific menu item to be visible before clicking
+    const menuButton = this.page.getByRole('button', { name: text });
+    await menuButton.waitFor({ state: 'visible', timeout: 5000 });
+    await menuButton.click();
     await this.page.waitForLoadState('networkidle');
   }
 
@@ -134,11 +135,9 @@ export class GameDetailsPage {
     // Click pause button from kebab menu
     await this.clickMenuButton('Pause Game');
 
-    // Wait for modal to stabilize (animations complete)
-    await this.page.waitForTimeout(500);
-
-    // Click confirm button in modal using testid (avoids ambiguity with initial button)
+    // Wait for confirm button to be visible before clicking
     const confirmButton = this.page.getByTestId('pause-game-confirm-button');
+    await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
     await confirmButton.click();
     await this.page.waitForLoadState('networkidle');
   }
@@ -158,11 +157,9 @@ export class GameDetailsPage {
     // Click complete button from kebab menu
     await this.clickMenuButton('Complete Game');
 
-    // Wait for modal to stabilize
-    await this.page.waitForTimeout(500);
-
-    // Type confirmation text
+    // Wait for confirmation input to be visible before typing
     const confirmInput = this.page.getByPlaceholder('completed');
+    await confirmInput.waitFor({ state: 'visible', timeout: 5000 });
     await confirmInput.fill('completed');
 
     // Click confirm button in modal using testid (avoids ambiguity with initial button)
@@ -179,11 +176,9 @@ export class GameDetailsPage {
     // Click cancel button from kebab menu
     await this.clickMenuButton('Cancel Game');
 
-    // Wait for modal to stabilize
-    await this.page.waitForTimeout(500);
-
-    // Click confirm button in modal using testid (avoids ambiguity with initial button)
+    // Wait for confirm button to be visible before clicking
     const confirmButton = this.page.getByTestId('cancel-game-confirm-button');
+    await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
     await confirmButton.click();
     await this.page.waitForLoadState('networkidle');
   }
@@ -197,11 +192,9 @@ export class GameDetailsPage {
     // Click delete button from kebab menu
     await this.clickMenuButton('Delete Game');
 
-    // Wait for modal to stabilize
-    await this.page.waitForTimeout(500);
-
-    // Click confirm button in modal using testid (avoids ambiguity with initial button)
+    // Wait for confirm button to be visible before clicking
     const confirmButton = this.page.getByTestId('delete-game-confirm-button');
+    await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
     await confirmButton.click();
     await this.page.waitForLoadState('networkidle');
   }
