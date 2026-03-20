@@ -214,14 +214,21 @@ function CharacterMessageCard({ message, onNavigate }: CharacterMessageCardProps
         )}
 
         {/* Message header */}
-        <div className="flex items-center gap-2 mb-2">
-          <Badge variant={message.message_type === 'post' ? 'primary' : 'secondary'} size="sm">
-            {message.message_type === 'post' ? 'Post' : 'Reply'}
-          </Badge>
-          <span className="text-sm text-content-tertiary">{timeAgo}</span>
-          {isEdited && (
-            <Badge variant="secondary" size="sm">Edited</Badge>
-          )}
+        <div className="flex items-center gap-3 mb-2">
+          <CharacterAvatar
+            avatarUrl={message.character_avatar_url}
+            characterName={message.character_name || message.author_username}
+            size="sm"
+          />
+          <div className="flex flex-col min-w-0">
+            <span className="font-medium text-text-heading leading-tight">{message.character_name || message.author_username}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-content-tertiary">@{message.author_username}</span>
+              <span className="text-sm text-content-tertiary">·</span>
+              <span className="text-sm text-content-tertiary">{timeAgo}</span>
+              {isEdited && <span className="text-sm text-content-tertiary">(edited)</span>}
+            </div>
+          </div>
         </div>
 
         {/* Message content */}

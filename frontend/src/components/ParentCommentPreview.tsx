@@ -61,9 +61,11 @@ export function ParentCommentPreview({
               size="xs"
             />
           )}
-          {characterName && (
+          {characterName ? (
             <span className="font-medium text-text-heading truncate">{characterName}</span>
-          )}
+          ) : authorUsername ? (
+            <span className="text-content-secondary truncate">@{authorUsername}</span>
+          ) : null}
         </div>
 
         {!isDeleted && (

@@ -228,3 +228,48 @@ func TestMessageService_CountCharacterPostsAndComments(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), count)
 }
+
+func TestMessageService_CountCharacterPostsAndComments_NPCFilter(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	gm := testDB.CreateTestUser(t, "gm_npc_count", "gm_npc_count@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "NPC Count Filter Test Game")
+
+	npc, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		Name:          "Count NPC",
+		CharacterType: "npc",
+	})
+	require.NoError(t, err)
+
+	// Create a top-level post (should not be counted for NPC)
+	post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID:      game.ID,
+		AuthorID:    int32(gm.ID),
+		CharacterID: npc.ID,
+		Content:     "NPC post",
+		Visibility:  string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	// Create a comment (should be counted)
+	_, err = service.CreateComment(context.Background(), core.CreateCommentRequest{
+		GameID:      game.ID,
+		AuthorID:    int32(gm.ID),
+		CharacterID: npc.ID,
+		Content:     "NPC comment",
+		ParentID:    post.ID,
+		Visibility:  string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	count, err := service.CountCharacterPostsAndComments(context.Background(), npc.ID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), count, "NPC posts should not be counted, only comments")
+}
