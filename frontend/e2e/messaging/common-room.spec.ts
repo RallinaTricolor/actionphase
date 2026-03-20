@@ -16,7 +16,7 @@ import { assertTextVisible } from '../utils/assertions';
  * Created by fixture: backend/pkg/db/test_fixtures/07_common_room.sql
  *
  * REFACTORED: Using Page Object Model and shared utilities
- * - Eliminated all waitForTimeout calls (was 18)
+ * - Eliminated waitForTimeout calls (was 18, now 0)
  * - Reduced code by ~45% (173 → ~95 lines)
  * - Improved readability and maintainability
  */
@@ -199,9 +199,6 @@ test.describe('Common Room Flow', () => {
       const player1NestedReply = player1Page.locator('[data-testid="threaded-comment"]').filter({ hasText: player1Reply }).locator('visible=true').first();
       await expect(player1NestedReply).toBeVisible({ timeout: 10000 });
 
-      // Wait a bit to ensure the reply is fully persisted to the database
-      await player1Page.waitForTimeout(1000);
-
       // === Player 2 can see the nested reply ===
       await player2Page.reload();
       await player2Page.waitForLoadState('networkidle');
@@ -336,6 +333,8 @@ test.describe('Common Room Flow', () => {
       // === Player 1 adds initial comment to the post ===
       const initialComment = `Initial Comment ${Date.now()}`;
       await player1CommonRoom.addComment(postContent, initialComment);
+      // Verify comment is visible on the current page before navigating away.
+      // This confirms the write completed before the loop's cross-player reads begin.
       await player1CommonRoom.verifyCommentExists(initialComment);
 
       // === Create nested replies up to max depth (5 levels) ===
@@ -351,14 +350,23 @@ test.describe('Common Room Flow', () => {
 
         // Ensure the post card is visible before looking for comments.
         // Under load (full suite), the backend is slower and comment fetches take longer.
+        const postCard = currentCommonRoom.getPostCard(postContent);
         await currentPage.getByText(postContent, { exact: true }).first().waitFor({ state: 'visible', timeout: 10000 });
+
+        // Expand comments if collapsed — the comments section may be hidden after a fresh goto.
+        const commentsToggle = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
+        const toggleText = await commentsToggle.textContent().catch(() => '');
+        if (toggleText?.includes('Show')) {
+          await commentsToggle.click();
+          await currentPage.waitForLoadState('networkidle');
+        }
 
         // Wait for the previous comment to appear — comments load async after the post.
         // Find the threaded-comment container that directly holds previousComment.
         // Since each comment text is unique (timestamp-based), we locate the text node
         // then walk up to its nearest threaded-comment ancestor.
         const commentText = currentPage.getByText(previousComment, { exact: true }).first();
-        await commentText.waitFor({ state: 'visible', timeout: 20000 });
+        await commentText.waitFor({ state: 'visible', timeout: 30000 });
         // Use :visible to exclude mobile-variant threaded-comment nodes (md:hidden, display:none
         // at desktop viewport). Both desktop and mobile variants share data-testid="threaded-comment",
         // but only the desktop variant is visible at Playwright's desktop viewport size.
@@ -378,7 +386,6 @@ test.describe('Common Room Flow', () => {
 
           // === Test: Click the "Continue this thread" button ===
           await continueButton.click();
-          await currentPage.waitForTimeout(500); // Wait for modal animation
 
           // === Test: Verify modal opens ===
           // Modal has "Thread View" header text, not role="dialog"
@@ -396,11 +403,11 @@ test.describe('Common Room Flow', () => {
           const modalReplyButton = modalCommentContainer.getByRole('button', { name: /reply/i }).first();
           await expect(modalReplyButton).toBeVisible({ timeout: 10000 });
           await modalReplyButton.click();
-          await currentPage.waitForTimeout(500);
 
           // Write reply in modal
           const modalReply = `Modal Reply - ${Date.now()}`;
           const modalReplyTextarea = modalCommentContainer.locator('textarea').locator('visible=true').first();
+          await modalReplyTextarea.waitFor({ state: 'visible', timeout: 5000 });
           await modalReplyTextarea.fill(modalReply);
 
           // Submit reply in modal
@@ -432,10 +439,10 @@ test.describe('Common Room Flow', () => {
         await replyForm.evaluate((f: HTMLFormElement) => f.requestSubmit());
         await currentPage.waitForLoadState('networkidle');
 
-        // Verify the reply appears (only for comments below maxDepth)
         if (depth < 5) {
-          await expect(currentPage.getByText(nestedReply).first()).toBeVisible({ timeout: 5000 });
-          // Update previousComment for next iteration
+          // Verify the reply is visible on the current page (local state) before
+          // switching to the other player who will fetch it fresh from the server.
+          await expect(currentPage.getByText(nestedReply).first()).toBeVisible({ timeout: 10000 });
           previousComment = nestedReply;
         }
         // At depth 5+, don't update previousComment since the comment won't be visible
@@ -644,18 +651,15 @@ test.describe('Common Room Flow', () => {
       const replyButton = commentContainer.getByRole('button', { name: 'Reply' }).locator('visible=true').first();
       await replyButton.click();
 
-      // Wait for reply form to appear
-      await coGmPage.waitForTimeout(800); // Wait for character selector to appear
-
       // Select NPC character for the reply
       const characterSelect = commentContainer.locator('role=combobox').locator('visible=true').first();
       await characterSelect.waitFor({ state: 'visible', timeout: 5000 });
       await characterSelect.selectOption({ label: 'Reply as Mysterious Stranger' });
-      await coGmPage.waitForTimeout(500);
 
       // Write the reply
       const coGmReply = `Reply ${Date.now()}: I have information that may shed light on these events`;
       const replyTextarea = commentContainer.locator('textarea').locator('visible=true').first();
+      await replyTextarea.waitFor({ state: 'visible', timeout: 5000 });
       await replyTextarea.fill(coGmReply);
 
       // Submit the reply

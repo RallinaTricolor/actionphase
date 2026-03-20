@@ -154,9 +154,18 @@ test.describe('Notification System', () => {
         const dropdown = originalPosterPage.locator('[data-testid="notification-dropdown"]');
         await expect(dropdown).toBeVisible();
 
-        // Wait for loading to complete and notification to appear
+        // Wait for the reply notification to appear. Under parallel load, the notification
+        // may arrive after the dropdown opens (dropdown shows a point-in-time snapshot).
+        // Poll by closing and reopening the bell until the notification is present.
         const replyNotification = originalPosterPage.locator('.notification-item').filter({ hasText: 'replied' }).locator('visible=true').first();
-        await expect(replyNotification).toBeVisible({ timeout: 20000 });
+        await expect(async () => {
+          if (!await replyNotification.isVisible()) {
+            await originalPosterPage.click('[data-testid="notification-bell"]'); // close
+            await originalPosterPage.click('[data-testid="notification-bell"]'); // reopen
+            await expect(dropdown).toBeVisible();
+          }
+          await expect(replyNotification).toBeVisible();
+        }).toPass({ timeout: 20000, intervals: [1000] });
 
         // 6. Click notification and verify navigation
         await replyNotification.click();
@@ -385,7 +394,7 @@ test.describe('Notification System', () => {
         if (await firstDismiss.isVisible()) {
           await firstDismiss.click();
           // Wait for the item count to decrease before clicking the next one
-          await expect(page.locator('[data-testid="dismiss-notification"]')).toHaveCount(count - i - 1, { timeout: 3000 }).catch(() => {});
+          await expect(page.locator('[data-testid="dismiss-notification"]')).toHaveCount(count - i - 1, { timeout: 3000 });
         }
       }
 

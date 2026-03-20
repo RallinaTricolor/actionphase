@@ -301,7 +301,7 @@ test.describe('Private Messages Flow', () => {
     test.setTimeout(60000); // Extended timeout for messaging flow
 
     // Co-GMs should have the same NPC control permissions as GMs.
-    // Uses a dedicated fixture (game 346) where TestAudience1 is stably co-GM.
+    // Uses a dedicated fixture (game 347) where TestAudience1 is stably co-GM.
     // This is separate from game 339 (co-gm-management.spec.ts) to avoid
     // cross-test fixture mutation races.
 
@@ -314,7 +314,7 @@ test.describe('Private Messages Flow', () => {
     const gameId = getWorkerGameId(347); // Dedicated co-GM NPC messaging fixture
 
     try {
-      // Login as TestAudience1 — stably co-GM in game 346
+      // Login as TestAudience1 — stably co-GM in game 347
       await loginAs(coGmPage, 'AUDIENCE_1');
 
       const coGmMessaging = new MessagingPage(coGmPage);

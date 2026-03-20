@@ -202,7 +202,7 @@ export class CharacterWorkflowPage {
    *
    * @param characterName - Character name to check
    */
-  async hasCharacter(characterName: string, timeout = 5000): Promise<boolean> {
+  async hasCharacter(characterName: string, timeout = 10000): Promise<boolean> {
     try {
       // Use a retrying locator rather than a one-shot .all() snapshot so we wait
       // for React Query to re-render the list after a create/update.

@@ -73,7 +73,7 @@ test.describe.serial('Co-GM Management', () => {
 
     // Find TestAudience2's participant card by username, then click their actions button
     const audience2Username = getWorkerUsername('TestAudience2');
-    const audience2Card = page.locator('div.border.rounded-lg.surface-raised').filter({ hasText: audience2Username });
+    const audience2Card = page.getByTestId('participant-card').filter({ hasText: audience2Username });
     await audience2Card.getByRole('button', { name: 'Participant actions' }).click();
 
     // Wait for menu to appear and click "Promote to Co-GM" option

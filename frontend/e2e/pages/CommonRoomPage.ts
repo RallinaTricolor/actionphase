@@ -124,8 +124,12 @@ export class CommonRoomPage {
    * @param content - Partial or full post content
    */
   getPostCard(content: string): Locator {
-    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
-    return this.page.locator(`div:has-text("${content}")`).locator('visible=true').first();
+    // Scope to the common-room container to avoid matching the create-post form or
+    // other page elements. Within that scope, find the post card by its content.
+    return this.page
+      .getByTestId('common-room-container')
+      .locator('[data-testid^="post-"]')
+      .filter({ hasText: content });
   }
 
   /**
@@ -286,8 +290,8 @@ export class CommonRoomPage {
    * Verify a comment exists with specific content
    * @param content - Comment content to verify
    */
-  async verifyCommentExists(content: string) {
-    await assertTextVisible(this.page, content);
+  async verifyCommentExists(content: string, timeout = 10000) {
+    await assertTextVisible(this.page, content, { timeout });
   }
 
   /**

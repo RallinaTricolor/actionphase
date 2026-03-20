@@ -145,10 +145,9 @@ test.describe('Private Message Deletion', () => {
         await player2Messaging.goto(gameId2);
 
         // Open the same conversation Player 1 was in (by title) to avoid ordering issues
-        const conversationTitleTrimmed = (conversationTitle ?? '').trim();
-        const targetConversation = conversationTitleTrimmed
-          ? player2Page.locator('[data-testid="conversation-item"]').filter({ hasText: conversationTitleTrimmed }).first()
-          : player2Page.locator('[data-testid="conversation-item"]').first();
+        expect(conversationTitle, 'conversation title must be readable from fixture').toBeTruthy();
+        const conversationTitleTrimmed = conversationTitle!.trim();
+        const targetConversation = player2Page.locator('[data-testid="conversation-item"]').filter({ hasText: conversationTitleTrimmed }).first();
         await expect(targetConversation).toBeVisible({ timeout: 10000 });
         await targetConversation.click();
 

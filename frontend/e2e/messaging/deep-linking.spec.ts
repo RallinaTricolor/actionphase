@@ -135,8 +135,8 @@ test.describe('Deep Linking in Common Room', () => {
     // Wait for scroll animation and deep linking logic to complete
     await page.waitForTimeout(1500);
 
-    // Verify the comment is visible
-    const comment = page.locator(`#comment-${commentId}`);
+    // Verify the comment is visible (locator('visible=true') handles dual desktop/mobile DOM)
+    const comment = page.locator(`#comment-${commentId}`).locator('visible=true').first();
     await expect(comment).toBeVisible();
 
     // Verify the comment was scrolled into viewport (at least partially visible)
