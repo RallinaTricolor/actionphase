@@ -603,6 +603,13 @@ type MessageServiceInterface interface {
 	// CountTopLevelComments returns the total count of top-level comments for a post
 	// Used for pagination metadata (calculating has_more, total pages, etc.)
 	CountTopLevelComments(ctx context.Context, postID int32) (int64, error)
+
+	// ListCharacterPostsAndComments retrieves paginated public messages by a specific character
+	// Returns posts and comments with parent context for the Character Page
+	ListCharacterPostsAndComments(ctx context.Context, characterID int32, limit, offset int32) ([]CharacterMessage, error)
+
+	// CountCharacterPostsAndComments returns the total count of public messages by a character
+	CountCharacterPostsAndComments(ctx context.Context, characterID int32) (int64, error)
 }
 
 // CreatePhaseRequest represents the parameters needed to create a new game phase
@@ -742,6 +749,37 @@ type MessageWithDetails struct {
 type CommentWithDepth struct {
 	Comment MessageWithDetails
 	Depth   int32 // Nesting level: 0 = top-level, 1+ = nested replies
+}
+
+// CharacterMessage represents a post or comment by a specific character
+// Used for the Character Page to show their activity feed with parent context
+type CharacterMessage struct {
+	// Message data
+	ID             int32
+	GameID         int32
+	ParentID       *int32
+	AuthorID       int32
+	CharacterID    int32
+	Content        string
+	MessageType    string // "post" or "comment"
+	CreatedAt      time.Time
+	EditedAt       *time.Time
+	EditCount      int32
+	DeletedAt      *time.Time
+	IsDeleted      bool
+	AuthorUsername     string
+	CharacterName      *string
+	CharacterAvatarUrl *string
+
+	// Parent data (only set when MessageType == "comment")
+	ParentContent            *string
+	ParentCreatedAt          *time.Time
+	ParentDeletedAt          *time.Time
+	ParentIsDeleted          *bool
+	ParentMessageType        *string // "post" or "comment"
+	ParentAuthorUsername     *string
+	ParentCharacterName      *string
+	ParentCharacterAvatarUrl *string
 }
 
 // CommentWithParent represents a comment along with its parent message/post

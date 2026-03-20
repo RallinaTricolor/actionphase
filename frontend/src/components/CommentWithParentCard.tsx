@@ -42,6 +42,7 @@ export function CommentWithParentCard({
           messageType={comment.parent_message_type}
           authorUsername={comment.parent_author_username}
           characterName={comment.parent_character_name}
+          characterAvatarUrl={comment.parent_character_avatar_url}
           onNavigateToParent={onNavigateToParent}
         />
 

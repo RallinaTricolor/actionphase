@@ -288,6 +288,10 @@ func (h *Handler) Start() {
 			r.Post("/{id}/data", characterHandler.SetCharacterData)
 			r.Get("/{id}/data", characterHandler.GetCharacterData)
 
+			// Character page - public activity feed
+			messageHandler := messages.Handler{App: h.App}
+			r.Get("/{id}/comments", messageHandler.GetCharacterComments)
+
 			// Avatar management
 			r.Post("/{id}/avatar", avatarHandler.UploadCharacterAvatar)
 			r.Delete("/{id}/avatar", avatarHandler.DeleteCharacterAvatar)

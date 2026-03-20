@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
+import CharacterAvatar from './CharacterAvatar';
 import type { Character } from '../types/characters';
 
 interface ParentCommentPreviewProps {
@@ -11,6 +12,7 @@ interface ParentCommentPreviewProps {
   messageType?: string | null;
   authorUsername?: string | null;
   characterName?: string | null;
+  characterAvatarUrl?: string | null;
   onNavigateToParent?: () => void;
   mentionedCharacters?: Character[];
   defaultExpanded?: boolean;
@@ -27,6 +29,7 @@ export function ParentCommentPreview({
   messageType,
   authorUsername,
   characterName,
+  characterAvatarUrl,
   onNavigateToParent,
   mentionedCharacters = [],
   defaultExpanded = false,
@@ -44,21 +47,23 @@ export function ParentCommentPreview({
 
   return (
     <div className="bg-bg-secondary border-l-4 border-border-secondary rounded-lg p-3 mb-3">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-xs text-content-tertiary">Replying to</span>
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <div className="flex items-center gap-2 text-sm min-w-0">
           {messageType && (
             <Badge variant="secondary" size="sm">
               {messageType === 'post' ? 'Post' : 'Comment'}
             </Badge>
           )}
           {characterName && (
-            <span className="font-medium text-text-heading">{characterName}</span>
+            <CharacterAvatar
+              avatarUrl={characterAvatarUrl}
+              characterName={characterName}
+              size="xs"
+            />
           )}
-          {authorUsername && (
-            <span className="text-content-tertiary">@{authorUsername}</span>
+          {characterName && (
+            <span className="font-medium text-text-heading truncate">{characterName}</span>
           )}
-          {timeAgo && <span className="text-xs text-content-tertiary">{timeAgo}</span>}
         </div>
 
         {!isDeleted && (

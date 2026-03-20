@@ -8,6 +8,7 @@ import type {
   ApproveCharacterRequest,
   AssignNPCRequest
 } from '../../types/characters';
+import type { CharacterMessagesResponse } from '../../types/messages';
 
 /**
  * Characters API client
@@ -115,5 +116,12 @@ export class CharactersApi extends BaseApiClient {
   // Audience Participation endpoints
   async listAudienceNPCs(gameId: number) {
     return this.client.get<{ npcs: Character[] }>(`/api/v1/games/${gameId}/characters/audience-npcs`);
+  }
+
+  async getCharacterComments(characterId: number, limit: number = 20, offset: number = 0) {
+    const queryParams = new URLSearchParams();
+    queryParams.append('limit', limit.toString());
+    queryParams.append('offset', offset.toString());
+    return this.client.get<CharacterMessagesResponse>(`/api/v1/characters/${characterId}/comments?${queryParams.toString()}`);
   }
 }

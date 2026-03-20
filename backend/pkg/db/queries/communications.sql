@@ -302,3 +302,95 @@ WHERE game_id = $1
   AND message_type = 'comment'
   AND is_deleted = false
   AND deleted_at IS NULL;
+
+-- name: ListCharacterPostsAndComments :many
+-- Get all posts and comments by a specific character (for Character Page)
+-- Returns both posts and comments with parent context for comments
+-- Only returns public (game-visibility) messages, not deleted ones
+-- NPCs only show comments (not top-level posts)
+WITH character_messages AS (
+    SELECT
+        m.id,
+        m.game_id,
+        m.parent_id,
+        m.author_id,
+        m.character_id,
+        m.content,
+        m.message_type,
+        m.created_at,
+        m.edited_at,
+        m.edit_count,
+        m.deleted_at,
+        m.is_deleted,
+        u.username as author_username,
+        c.name as character_name,
+        c.avatar_url as character_avatar_url
+    FROM messages m
+    JOIN users u ON m.author_id = u.id
+    JOIN characters c ON m.character_id = c.id
+    WHERE m.character_id = $1
+      AND m.visibility = 'game'
+      AND m.is_deleted = false
+      AND m.deleted_at IS NULL
+      AND NOT (c.character_type = 'npc' AND m.message_type = 'post')
+    ORDER BY m.created_at DESC
+    LIMIT $2 OFFSET $3
+),
+parent_messages AS (
+    SELECT
+        m.id,
+        m.content,
+        m.created_at,
+        m.deleted_at,
+        m.is_deleted,
+        m.message_type,
+        u.username as author_username,
+        c.name as character_name,
+        c.avatar_url as character_avatar_url
+    FROM messages m
+    JOIN users u ON m.author_id = u.id
+    LEFT JOIN characters c ON m.character_id = c.id
+    WHERE m.id IN (
+        SELECT parent_id FROM character_messages
+        WHERE parent_id IS NOT NULL
+    )
+)
+SELECT
+    cm.id,
+    cm.game_id,
+    cm.parent_id,
+    cm.author_id,
+    cm.character_id,
+    cm.content,
+    cm.message_type,
+    cm.created_at,
+    cm.edited_at,
+    cm.edit_count,
+    cm.deleted_at,
+    cm.is_deleted,
+    cm.author_username,
+    cm.character_name,
+    cm.character_avatar_url,
+    pm.content as parent_content,
+    pm.created_at as parent_created_at,
+    pm.deleted_at as parent_deleted_at,
+    pm.is_deleted as parent_is_deleted,
+    pm.message_type as parent_message_type,
+    pm.author_username as parent_author_username,
+    pm.character_name as parent_character_name,
+    pm.character_avatar_url as parent_character_avatar_url
+FROM character_messages cm
+LEFT JOIN parent_messages pm ON cm.parent_id = pm.id
+ORDER BY cm.created_at DESC;
+
+-- name: CountCharacterPostsAndComments :one
+-- Count all public non-deleted posts and comments by a character
+-- NPCs only count comments (not top-level posts)
+SELECT COUNT(*) as total
+FROM messages m
+JOIN characters c ON m.character_id = c.id
+WHERE m.character_id = $1
+  AND m.visibility = 'game'
+  AND m.is_deleted = false
+  AND m.deleted_at IS NULL
+  AND NOT (c.character_type = 'npc' AND m.message_type = 'post');

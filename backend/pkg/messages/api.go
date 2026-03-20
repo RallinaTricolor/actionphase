@@ -1292,3 +1292,106 @@ func formatTimePtr(t *time.Time) interface{} {
 	}
 	return t.Format(time.RFC3339)
 }
+
+// GetCharacterComments retrieves paginated public posts and comments by a specific character
+func (h *Handler) GetCharacterComments(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_character_comments")()
+
+	characterIDStr := chi.URLParam(r, "id")
+	characterID, err := strconv.ParseInt(characterIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid character ID")))
+		return
+	}
+
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+
+	limit := 20
+	if limitStr != "" {
+		parsedLimit, err := strconv.Atoi(limitStr)
+		if err != nil || parsedLimit < 1 {
+			render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid limit parameter")))
+			return
+		}
+		if parsedLimit > 50 {
+			parsedLimit = 50
+		}
+		limit = parsedLimit
+	}
+
+	offset := 0
+	if offsetStr != "" {
+		parsedOffset, err := strconv.Atoi(offsetStr)
+		if err != nil || parsedOffset < 0 {
+			render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid offset parameter")))
+			return
+		}
+		offset = parsedOffset
+	}
+
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+
+	messages, err := messageService.ListCharacterPostsAndComments(ctx, int32(characterID), int32(limit), int32(offset))
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to list character messages", "error", err, "character_id", characterID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	totalCount, err := messageService.CountCharacterPostsAndComments(ctx, int32(characterID))
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to count character messages", "error", err, "character_id", characterID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	result := make([]map[string]interface{}, len(messages))
+	for i, msg := range messages {
+		msgData := map[string]interface{}{
+			"id":                   msg.ID,
+			"game_id":              msg.GameID,
+			"parent_id":            msg.ParentID,
+			"author_id":            msg.AuthorID,
+			"character_id":         msg.CharacterID,
+			"content":              msg.Content,
+			"message_type":         msg.MessageType,
+			"created_at":           msg.CreatedAt.Format(time.RFC3339),
+			"edited_at":            formatTimePtr(msg.EditedAt),
+			"edit_count":           msg.EditCount,
+			"deleted_at":           formatTimePtr(msg.DeletedAt),
+			"is_deleted":           msg.IsDeleted,
+			"author_username":      msg.AuthorUsername,
+			"character_name":       msg.CharacterName,
+			"character_avatar_url": msg.CharacterAvatarUrl,
+		}
+
+		if msg.ParentContent != nil {
+			msgData["parent"] = map[string]interface{}{
+				"content":              msg.ParentContent,
+				"created_at":          formatTimePtr(msg.ParentCreatedAt),
+				"deleted_at":          formatTimePtr(msg.ParentDeletedAt),
+				"is_deleted":          msg.ParentIsDeleted,
+				"message_type":        msg.ParentMessageType,
+				"author_username":     msg.ParentAuthorUsername,
+				"character_name":      msg.ParentCharacterName,
+				"character_avatar_url": msg.ParentCharacterAvatarUrl,
+			}
+		}
+
+		result[i] = msgData
+	}
+
+	response := map[string]interface{}{
+		"messages": result,
+		"pagination": map[string]interface{}{
+			"limit":  limit,
+			"offset": offset,
+			"total":  totalCount,
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}

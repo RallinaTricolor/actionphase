@@ -38,6 +38,26 @@ func (q *Queries) AddConversationParticipant(ctx context.Context, arg AddConvers
 	return i, err
 }
 
+const countCharacterPostsAndComments = `-- name: CountCharacterPostsAndComments :one
+SELECT COUNT(*) as total
+FROM messages m
+JOIN characters c ON m.character_id = c.id
+WHERE m.character_id = $1
+  AND m.visibility = 'game'
+  AND m.is_deleted = false
+  AND m.deleted_at IS NULL
+  AND NOT (c.character_type = 'npc' AND m.message_type = 'post')
+`
+
+// Count all public non-deleted posts and comments by a character
+// NPCs only count comments (not top-level posts)
+func (q *Queries) CountCharacterPostsAndComments(ctx context.Context, characterID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countCharacterPostsAndComments, characterID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const createConversation = `-- name: CreateConversation :one
 INSERT INTO conversations (game_id, conversation_type, title, created_by_user_id)
 VALUES ($1, $2, $3, $4)
@@ -730,6 +750,163 @@ func (q *Queries) IsUserInConversation(ctx context.Context, arg IsUserInConversa
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const listCharacterPostsAndComments = `-- name: ListCharacterPostsAndComments :many
+WITH character_messages AS (
+    SELECT
+        m.id,
+        m.game_id,
+        m.parent_id,
+        m.author_id,
+        m.character_id,
+        m.content,
+        m.message_type,
+        m.created_at,
+        m.edited_at,
+        m.edit_count,
+        m.deleted_at,
+        m.is_deleted,
+        u.username as author_username,
+        c.name as character_name,
+        c.avatar_url as character_avatar_url
+    FROM messages m
+    JOIN users u ON m.author_id = u.id
+    JOIN characters c ON m.character_id = c.id
+    WHERE m.character_id = $1
+      AND m.visibility = 'game'
+      AND m.is_deleted = false
+      AND m.deleted_at IS NULL
+      AND NOT (c.character_type = 'npc' AND m.message_type = 'post')
+    ORDER BY m.created_at DESC
+    LIMIT $2 OFFSET $3
+),
+parent_messages AS (
+    SELECT
+        m.id,
+        m.content,
+        m.created_at,
+        m.deleted_at,
+        m.is_deleted,
+        m.message_type,
+        u.username as author_username,
+        c.name as character_name,
+        c.avatar_url as character_avatar_url
+    FROM messages m
+    JOIN users u ON m.author_id = u.id
+    LEFT JOIN characters c ON m.character_id = c.id
+    WHERE m.id IN (
+        SELECT parent_id FROM character_messages
+        WHERE parent_id IS NOT NULL
+    )
+)
+SELECT
+    cm.id,
+    cm.game_id,
+    cm.parent_id,
+    cm.author_id,
+    cm.character_id,
+    cm.content,
+    cm.message_type,
+    cm.created_at,
+    cm.edited_at,
+    cm.edit_count,
+    cm.deleted_at,
+    cm.is_deleted,
+    cm.author_username,
+    cm.character_name,
+    cm.character_avatar_url,
+    pm.content as parent_content,
+    pm.created_at as parent_created_at,
+    pm.deleted_at as parent_deleted_at,
+    pm.is_deleted as parent_is_deleted,
+    pm.message_type as parent_message_type,
+    pm.author_username as parent_author_username,
+    pm.character_name as parent_character_name,
+    pm.character_avatar_url as parent_character_avatar_url
+FROM character_messages cm
+LEFT JOIN parent_messages pm ON cm.parent_id = pm.id
+ORDER BY cm.created_at DESC
+`
+
+type ListCharacterPostsAndCommentsParams struct {
+	CharacterID int32 `json:"character_id"`
+	Limit       int32 `json:"limit"`
+	Offset      int32 `json:"offset"`
+}
+
+type ListCharacterPostsAndCommentsRow struct {
+	ID                       int32              `json:"id"`
+	GameID                   int32              `json:"game_id"`
+	ParentID                 pgtype.Int4        `json:"parent_id"`
+	AuthorID                 int32              `json:"author_id"`
+	CharacterID              int32              `json:"character_id"`
+	Content                  string             `json:"content"`
+	MessageType              MessageType        `json:"message_type"`
+	CreatedAt                pgtype.Timestamp   `json:"created_at"`
+	EditedAt                 pgtype.Timestamptz `json:"edited_at"`
+	EditCount                int32              `json:"edit_count"`
+	DeletedAt                pgtype.Timestamp   `json:"deleted_at"`
+	IsDeleted                bool               `json:"is_deleted"`
+	AuthorUsername           string             `json:"author_username"`
+	CharacterName            string             `json:"character_name"`
+	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
+	ParentContent            pgtype.Text        `json:"parent_content"`
+	ParentCreatedAt          pgtype.Timestamp   `json:"parent_created_at"`
+	ParentDeletedAt          pgtype.Timestamp   `json:"parent_deleted_at"`
+	ParentIsDeleted          pgtype.Bool        `json:"parent_is_deleted"`
+	ParentMessageType        NullMessageType    `json:"parent_message_type"`
+	ParentAuthorUsername     pgtype.Text        `json:"parent_author_username"`
+	ParentCharacterName      pgtype.Text        `json:"parent_character_name"`
+	ParentCharacterAvatarUrl pgtype.Text        `json:"parent_character_avatar_url"`
+}
+
+// Get all posts and comments by a specific character (for Character Page)
+// Returns both posts and comments with parent context for comments
+// Only returns public (game-visibility) messages, not deleted ones
+// NPCs only show comments (not top-level posts)
+func (q *Queries) ListCharacterPostsAndComments(ctx context.Context, arg ListCharacterPostsAndCommentsParams) ([]ListCharacterPostsAndCommentsRow, error) {
+	rows, err := q.db.Query(ctx, listCharacterPostsAndComments, arg.CharacterID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCharacterPostsAndCommentsRow
+	for rows.Next() {
+		var i ListCharacterPostsAndCommentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.ParentID,
+			&i.AuthorID,
+			&i.CharacterID,
+			&i.Content,
+			&i.MessageType,
+			&i.CreatedAt,
+			&i.EditedAt,
+			&i.EditCount,
+			&i.DeletedAt,
+			&i.IsDeleted,
+			&i.AuthorUsername,
+			&i.CharacterName,
+			&i.CharacterAvatarUrl,
+			&i.ParentContent,
+			&i.ParentCreatedAt,
+			&i.ParentDeletedAt,
+			&i.ParentIsDeleted,
+			&i.ParentMessageType,
+			&i.ParentAuthorUsername,
+			&i.ParentCharacterName,
+			&i.ParentCharacterAvatarUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listRecentCommentsWithParents = `-- name: ListRecentCommentsWithParents :many

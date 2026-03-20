@@ -142,3 +142,43 @@ export interface RecentCommentsResponse {
   limit: number;
   offset: number;
 }
+
+// A post or comment by a specific character (for Character Page)
+export interface CharacterMessage {
+  id: number;
+  game_id: number;
+  parent_id?: number | null;
+  author_id: number;
+  character_id: number;
+  content: string;
+  message_type: 'post' | 'comment';
+  created_at: string;
+  edited_at?: string | null;
+  edit_count: number;
+  deleted_at?: string | null;
+  is_deleted: boolean;
+  author_username: string;
+  character_name?: string | null;
+  character_avatar_url?: string | null;
+
+  // Parent context (only set for comments)
+  parent?: {
+    content?: string | null;
+    created_at?: string | null;
+    deleted_at?: string | null;
+    is_deleted?: boolean | null;
+    message_type?: string | null;
+    author_username?: string | null;
+    character_name?: string | null;
+    character_avatar_url?: string | null;
+  } | null;
+}
+
+export interface CharacterMessagesResponse {
+  messages: CharacterMessage[];
+  pagination: {
+    limit: number;
+    offset: number;
+    total: number;
+  };
+}

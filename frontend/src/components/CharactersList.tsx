@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { Character } from '../types/characters';
@@ -510,6 +511,8 @@ function CharacterCard({
   canEditSheet,
   onViewSheet
 }: CharacterCardProps) {
+  const navigate = useNavigate();
+
   return (
     <div className="border border-theme-default rounded-lg p-3 md:p-4 surface-base hover:shadow-sm transition-shadow" data-testid="character-card">
       {/* Mobile: Vertical Stack Layout */}
@@ -566,6 +569,14 @@ function CharacterCard({
               <span data-testid="edit-character-button">{canEditSheet ? 'Edit Sheet' : 'View Sheet'}</span>
             </Button>
           )}
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(`/characters/${character.id}`)}
+          >
+            View Profile
+          </Button>
 
           {userRole === 'gm' && character.character_type === 'npc' && onAssignNPC && (
             <Button
@@ -653,6 +664,14 @@ function CharacterCard({
               <span data-testid="edit-character-button">{canEditSheet ? 'Edit Sheet' : 'View Sheet'}</span>
             </Button>
           )}
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(`/characters/${character.id}`)}
+          >
+            View Profile
+          </Button>
 
           {/* Assign NPC Button (GM only, for NPCs) */}
           {userRole === 'gm' && character.character_type === 'npc' && onAssignNPC && (

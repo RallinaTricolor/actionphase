@@ -298,6 +298,33 @@
         ]
       }
     },
+    "implement-feature": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "description": "Small feature implementation guide for ActionPhase — end-to-end from database migration through backend service, API handler, frontend hook, and component, following the test pyramid at each layer",
+      "promptTriggers": {
+        "keywords": [
+          "implement feature",
+          "add feature",
+          "new feature",
+          "small feature",
+          "feature implementation",
+          "build feature",
+          "implement endpoint",
+          "add endpoint",
+          "add API",
+          "implement API",
+          "add functionality",
+          "implement functionality"
+        ],
+        "intentPatterns": [
+          "(implement|build|add|create).*?(feature|functionality|capability)",
+          "(add|create|implement).*?(end.to.end|full.stack|backend.*frontend|frontend.*backend)",
+          "need.*?(feature|endpoint|API|functionality)"
+        ]
+      }
+    },
     "skill-developer": {
       "type": "meta",
       "enforcement": "suggest",

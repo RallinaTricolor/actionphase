@@ -25,6 +25,7 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
+const CharacterPage = lazy(() => import('./pages/CharacterPage').then(m => ({ default: m.CharacterPage })));
 const ThemeTestPage = lazy(() => import('./pages/ThemeTestPage'));
 
 const queryClient = new QueryClient({
@@ -149,6 +150,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <UserProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/characters/:characterId"
+            element={
+              <ProtectedRoute>
+                <CharacterPage />
               </ProtectedRoute>
             }
           />
