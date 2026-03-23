@@ -142,5 +142,5 @@ export const getActionPhaseColor = (phase: GamePhase): string => {
   if (phase.phase_type !== 'action') return PHASE_TYPE_COLORS[phase.phase_type];
   return phase.is_published
     ? 'bg-semantic-info-subtle text-content-primary border-semantic-info'
-    : 'bg-interactive-primary-subtle text-interactive-primary border-interactive-primary';
+    : 'bg-interactive-primary-subtle text-content-primary border-interactive-primary';
 };
