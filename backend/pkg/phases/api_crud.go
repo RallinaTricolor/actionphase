@@ -327,8 +327,10 @@ func (h *Handler) UpdatePhase(w http.ResponseWriter, r *http.Request) {
 
 	// Update phase
 	req := core.UpdatePhaseRequest{
-		ID:       int32(phaseID),
-		Deadline: data.Deadline.ToTimePtr(),
+		ID:        int32(phaseID),
+		StartTime: data.StartTime.ToTimePtr(),
+		EndTime:   data.EndTime.ToTimePtr(),
+		Deadline:  data.Deadline.ToTimePtr(),
 	}
 
 	if data.Title != nil {

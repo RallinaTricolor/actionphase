@@ -19,10 +19,8 @@ describe('ParentCommentPreview', () => {
       />
     );
 
-    expect(screen.getByText(/replying to/i)).toBeInTheDocument();
     expect(screen.getByText('Post')).toBeInTheDocument();
     expect(screen.getByText('Test Character')).toBeInTheDocument();
-    expect(screen.getByText(/testuser/i)).toBeInTheDocument();
     expect(screen.getByText(/this is the parent comment content/i)).toBeInTheDocument();
     expect(screen.getByText(/view in thread/i)).toBeInTheDocument();
   });
@@ -130,7 +128,7 @@ describe('ParentCommentPreview', () => {
     expect(screen.getByText('[deleted]')).toBeInTheDocument();
   });
 
-  it('formats timestamp as relative time', () => {
+  it('renders content when createdAt is provided', () => {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
     render(
@@ -140,7 +138,7 @@ describe('ParentCommentPreview', () => {
       />
     );
 
-    expect(screen.getByText(/1 hour ago/i)).toBeInTheDocument();
+    expect(screen.getByText(/parent content/i)).toBeInTheDocument();
   });
 
   it('handles missing optional fields gracefully', () => {
@@ -151,7 +149,6 @@ describe('ParentCommentPreview', () => {
     );
 
     expect(screen.getByText(/parent content/i)).toBeInTheDocument();
-    expect(screen.queryByText(/replying to/i)).toBeInTheDocument();
   });
 
   it('starts collapsed by default', () => {

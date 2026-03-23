@@ -32,6 +32,8 @@ func (r *UpdateDeadlineRequest) Bind(req *http.Request) error {
 type UpdatePhaseRequest struct {
 	Title       *string             `json:"title,omitempty"`
 	Description *string             `json:"description,omitempty"`
+	StartTime   *core.LocalDateTime `json:"start_time,omitempty"`
+	EndTime     *core.LocalDateTime `json:"end_time,omitempty"`
 	Deadline    *core.LocalDateTime `json:"deadline,omitempty"`
 }
 

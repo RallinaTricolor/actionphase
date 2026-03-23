@@ -7,6 +7,24 @@ RETURNING *;
 SELECT * FROM game_phases
 WHERE game_id = $1 AND is_active = true;
 
+-- name: GetActivePhaseActivatedAt :one
+-- Returns the activated_at timestamp of the currently active phase for a game.
+-- Used by the scheduler to detect if a manual activation superseded a scheduled one.
+SELECT activated_at FROM game_phases
+WHERE game_id = $1 AND is_active = true;
+
+-- name: GetScheduledPhasesToActivate :many
+-- Returns inactive phases whose start_time has arrived, for games that are in_progress.
+-- Used by the scheduler to auto-activate phases.
+SELECT gp.*
+FROM game_phases gp
+JOIN games g ON gp.game_id = g.id
+WHERE gp.is_active = false
+  AND gp.start_time IS NOT NULL
+  AND gp.start_time <= NOW()
+  AND g.state = 'in_progress'
+ORDER BY gp.start_time ASC;
+
 -- name: GetGamePhases :many
 SELECT * FROM game_phases
 WHERE game_id = $1
@@ -17,7 +35,7 @@ SELECT * FROM game_phases WHERE id = $1;
 
 -- name: ActivatePhase :one
 UPDATE game_phases
-SET is_active = true
+SET is_active = true, activated_at = NOW()
 WHERE id = $1
 RETURNING *;
 
@@ -31,6 +49,18 @@ RETURNING *;
 UPDATE game_phases
 SET is_active = false
 WHERE game_id = $1;
+
+-- name: ClearStaleScheduledStartTimes :exec
+-- Clears start_time on inactive phases in a game whose start_time is in the past,
+-- excluding the phase just activated. Called during phase activation to prevent
+-- the scheduler from overriding a manual activation with an overdue scheduled phase.
+UPDATE game_phases
+SET start_time = NULL
+WHERE game_id = $1
+  AND id != $2
+  AND is_active = false
+  AND start_time IS NOT NULL
+  AND start_time <= NOW();
 
 -- name: UpdatePhaseDeadline :one
 UPDATE game_phases

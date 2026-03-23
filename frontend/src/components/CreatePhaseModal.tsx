@@ -21,6 +21,7 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
     e.preventDefault();
     onSubmit({
       ...formData,
+      start_time: formData.start_time ? localDateTimeToUTC(formData.start_time) : undefined,
       deadline: formData.deadline ? localDateTimeToUTC(formData.deadline) : undefined
     });
   };
@@ -75,6 +76,19 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
                 maxLength={500}
                 showCharacterCount
                 helperText="Brief description of what happens in this phase (500 char max)"
+              />
+            </div>
+
+            <div>
+              <DateTimeInput
+                id="phase-start-time"
+                label="Auto-activate at (Optional)"
+                value={formData.start_time || ''}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  start_time: e.target.value || undefined
+                }))}
+                helperText="Phase will activate automatically at this time. Leave blank to activate manually."
               />
             </div>
 

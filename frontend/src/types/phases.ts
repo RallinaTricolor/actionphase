@@ -29,6 +29,8 @@ export interface CreatePhaseRequest {
 export interface UpdatePhaseRequest {
   title?: string;
   description?: string;
+  start_time?: string;
+  end_time?: string;
   deadline?: string;
 }
 

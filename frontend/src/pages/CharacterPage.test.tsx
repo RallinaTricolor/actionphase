@@ -190,9 +190,9 @@ describe('CharacterPage', () => {
 
     expect(screen.getByText('Hello world')).toBeInTheDocument();
     expect(screen.getByText('A reply')).toBeInTheDocument();
-    // Post and Reply badges
-    expect(screen.getAllByText('Post').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Reply')).toBeInTheDocument();
+    // Content is present (badges removed from CharacterPage activity feed)
+    expect(screen.getByText('Hello world')).toBeInTheDocument();
+    expect(screen.getByText('A reply')).toBeInTheDocument();
   });
 
   it('shows error when messages fail to load', () => {

@@ -97,6 +97,7 @@ export function PhaseManagement({ gameId, className = '' }: PhaseManagementProps
                 key={phase.id}
                 phase={phase}
                 gameId={gameId}
+                allPhases={phases}
                 currentPhaseId={currentPhase?.id}
                 isActive={phase.is_active}
                 isSelected={selectedPhaseId === phase.id}

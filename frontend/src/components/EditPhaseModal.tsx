@@ -16,6 +16,7 @@ export function EditPhaseModal({ phase, onClose, onSubmit, isSubmitting }: EditP
   const [formData, setFormData] = useState<UpdatePhaseRequest>({
     title: phase.title || '',
     description: phase.description || '',
+    start_time: phase.start_time ? utcToLocalDateTime(phase.start_time) : '',
     deadline: phase.deadline ? utcToLocalDateTime(phase.deadline) : ''
   });
 
@@ -24,6 +25,7 @@ export function EditPhaseModal({ phase, onClose, onSubmit, isSubmitting }: EditP
     onSubmit({
       title: formData.title || undefined,
       description: formData.description || undefined,
+      start_time: formData.start_time ? localDateTimeToUTC(formData.start_time) : undefined,
       deadline: formData.deadline ? localDateTimeToUTC(formData.deadline) : undefined
     });
   };
@@ -81,12 +83,25 @@ export function EditPhaseModal({ phase, onClose, onSubmit, isSubmitting }: EditP
 
             <div>
               <DateTimeInput
-                id="edit-phase-deadline"
-                label="Deadline (Optional)"
-                value={formData.deadline}
+                id="edit-phase-start-time"
+                label="Auto-activate at (Optional)"
+                value={formData.start_time || ''}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
-                  deadline: e.target.value
+                  start_time: e.target.value || undefined
+                }))}
+                helperText="Phase will activate automatically at this time. Leave blank to activate manually."
+              />
+            </div>
+
+            <div>
+              <DateTimeInput
+                id="edit-phase-deadline"
+                label="Deadline (Optional)"
+                value={formData.deadline || ''}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  deadline: e.target.value || undefined
                 }))}
                 helperText="Set or update the deadline for this phase"
               />

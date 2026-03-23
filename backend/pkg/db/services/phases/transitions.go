@@ -233,6 +233,17 @@ func (ps *PhaseService) activatePhaseInternal(ctx context.Context, phaseID int32
 		return nil, fmt.Errorf("failed to deactivate existing phases: %w", err)
 	}
 
+	// Clear stale scheduled start times — any inactive phase whose start_time is
+	// already in the past would otherwise fire on the next scheduler tick and
+	// override this activation. Future-scheduled phases are left untouched.
+	err = txQueries.ClearStaleScheduledStartTimes(ctx, models.ClearStaleScheduledStartTimesParams{
+		GameID: phase.GameID,
+		ID:     phaseID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to clear stale scheduled start times: %w", err)
+	}
+
 	// Activate the new phase
 	activePhase, err := txQueries.ActivatePhase(ctx, phaseID)
 	if err != nil {

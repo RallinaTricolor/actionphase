@@ -13,9 +13,9 @@ import (
 
 const activatePhase = `-- name: ActivatePhase :one
 UPDATE game_phases
-SET is_active = true
+SET is_active = true, activated_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at
 `
 
 func (q *Queries) ActivatePhase(ctx context.Context, id int32) (GamePhase, error) {
@@ -33,6 +33,7 @@ func (q *Queries) ActivatePhase(ctx context.Context, id int32) (GamePhase, error
 		&i.Deadline,
 		&i.IsActive,
 		&i.IsPublished,
+		&i.ActivatedAt,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -63,6 +64,29 @@ func (q *Queries) CanUserSubmitToPhase(ctx context.Context, arg CanUserSubmitToP
 	var can_submit bool
 	err := row.Scan(&can_submit)
 	return can_submit, err
+}
+
+const clearStaleScheduledStartTimes = `-- name: ClearStaleScheduledStartTimes :exec
+UPDATE game_phases
+SET start_time = NULL
+WHERE game_id = $1
+  AND id != $2
+  AND is_active = false
+  AND start_time IS NOT NULL
+  AND start_time <= NOW()
+`
+
+type ClearStaleScheduledStartTimesParams struct {
+	GameID int32 `json:"game_id"`
+	ID     int32 `json:"id"`
+}
+
+// Clears start_time on inactive phases in a game whose start_time is in the past,
+// excluding the phase just activated. Called during phase activation to prevent
+// the scheduler from overriding a manual activation with an overdue scheduled phase.
+func (q *Queries) ClearStaleScheduledStartTimes(ctx context.Context, arg ClearStaleScheduledStartTimesParams) error {
+	_, err := q.db.Exec(ctx, clearStaleScheduledStartTimes, arg.GameID, arg.ID)
+	return err
 }
 
 const countActionResultsByPhase = `-- name: CountActionResultsByPhase :one
@@ -224,7 +248,7 @@ func (q *Queries) CreateActionResult(ctx context.Context, arg CreateActionResult
 const createGamePhase = `-- name: CreateGamePhase :one
 INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, end_time, deadline)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at
 `
 
 type CreateGamePhaseParams struct {
@@ -262,6 +286,7 @@ func (q *Queries) CreateGamePhase(ctx context.Context, arg CreateGamePhaseParams
 		&i.Deadline,
 		&i.IsActive,
 		&i.IsPublished,
+		&i.ActivatedAt,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -319,7 +344,7 @@ const deactivatePhase = `-- name: DeactivatePhase :one
 UPDATE game_phases
 SET is_active = false, end_time = NOW()
 WHERE id = $1
-RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at
 `
 
 func (q *Queries) DeactivatePhase(ctx context.Context, id int32) (GamePhase, error) {
@@ -337,6 +362,7 @@ func (q *Queries) DeactivatePhase(ctx context.Context, id int32) (GamePhase, err
 		&i.Deadline,
 		&i.IsActive,
 		&i.IsPublished,
+		&i.ActivatedAt,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -426,7 +452,7 @@ func (q *Queries) GetActionSubmission(ctx context.Context, id int32) (ActionSubm
 }
 
 const getActivePhase = `-- name: GetActivePhase :one
-SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, created_at FROM game_phases
+SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at FROM game_phases
 WHERE game_id = $1 AND is_active = true
 `
 
@@ -445,9 +471,24 @@ func (q *Queries) GetActivePhase(ctx context.Context, gameID int32) (GamePhase, 
 		&i.Deadline,
 		&i.IsActive,
 		&i.IsPublished,
+		&i.ActivatedAt,
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getActivePhaseActivatedAt = `-- name: GetActivePhaseActivatedAt :one
+SELECT activated_at FROM game_phases
+WHERE game_id = $1 AND is_active = true
+`
+
+// Returns the activated_at timestamp of the currently active phase for a game.
+// Used by the scheduler to detect if a manual activation superseded a scheduled one.
+func (q *Queries) GetActivePhaseActivatedAt(ctx context.Context, gameID int32) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, getActivePhaseActivatedAt, gameID)
+	var activated_at pgtype.Timestamptz
+	err := row.Scan(&activated_at)
+	return activated_at, err
 }
 
 const getGameActions = `-- name: GetGameActions :many
@@ -511,7 +552,7 @@ func (q *Queries) GetGameActions(ctx context.Context, gameID int32) ([]GetGameAc
 }
 
 const getGamePhases = `-- name: GetGamePhases :many
-SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, created_at FROM game_phases
+SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at FROM game_phases
 WHERE game_id = $1
 ORDER BY phase_number
 `
@@ -537,6 +578,7 @@ func (q *Queries) GetGamePhases(ctx context.Context, gameID int32) ([]GamePhase,
 			&i.Deadline,
 			&i.IsActive,
 			&i.IsPublished,
+			&i.ActivatedAt,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -626,7 +668,7 @@ func (q *Queries) GetLatestPhaseNumber(ctx context.Context, gameID int32) (inter
 }
 
 const getPhase = `-- name: GetPhase :one
-SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, created_at FROM game_phases WHERE id = $1
+SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at FROM game_phases WHERE id = $1
 `
 
 func (q *Queries) GetPhase(ctx context.Context, id int32) (GamePhase, error) {
@@ -644,6 +686,7 @@ func (q *Queries) GetPhase(ctx context.Context, id int32) (GamePhase, error) {
 		&i.Deadline,
 		&i.IsActive,
 		&i.IsPublished,
+		&i.ActivatedAt,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -870,6 +913,53 @@ func (q *Queries) GetPhaseTransitions(ctx context.Context, gameID int32) ([]GetP
 			&i.ToPhaseType,
 			&i.ToPhaseNumber,
 			&i.InitiatedByUsername,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getScheduledPhasesToActivate = `-- name: GetScheduledPhasesToActivate :many
+SELECT gp.id, gp.game_id, gp.phase_type, gp.phase_number, gp.title, gp.description, gp.start_time, gp.end_time, gp.deadline, gp.is_active, gp.is_published, gp.activated_at, gp.created_at
+FROM game_phases gp
+JOIN games g ON gp.game_id = g.id
+WHERE gp.is_active = false
+  AND gp.start_time IS NOT NULL
+  AND gp.start_time <= NOW()
+  AND g.state = 'in_progress'
+ORDER BY gp.start_time ASC
+`
+
+// Returns inactive phases whose start_time has arrived, for games that are in_progress.
+// Used by the scheduler to auto-activate phases.
+func (q *Queries) GetScheduledPhasesToActivate(ctx context.Context) ([]GamePhase, error) {
+	rows, err := q.db.Query(ctx, getScheduledPhasesToActivate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GamePhase
+	for rows.Next() {
+		var i GamePhase
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.PhaseType,
+			&i.PhaseNumber,
+			&i.Title,
+			&i.Description,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Deadline,
+			&i.IsActive,
+			&i.IsPublished,
+			&i.ActivatedAt,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1412,7 +1502,7 @@ const updatePhase = `-- name: UpdatePhase :one
 UPDATE game_phases
 SET title = $2, description = $3, start_time = $4, end_time = $5, deadline = $6
 WHERE id = $1
-RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at
 `
 
 type UpdatePhaseParams struct {
@@ -1447,6 +1537,7 @@ func (q *Queries) UpdatePhase(ctx context.Context, arg UpdatePhaseParams) (GameP
 		&i.Deadline,
 		&i.IsActive,
 		&i.IsPublished,
+		&i.ActivatedAt,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -1456,7 +1547,7 @@ const updatePhaseDeadline = `-- name: UpdatePhaseDeadline :one
 UPDATE game_phases
 SET deadline = $2
 WHERE id = $1
-RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at
 `
 
 type UpdatePhaseDeadlineParams struct {
@@ -1479,6 +1570,7 @@ func (q *Queries) UpdatePhaseDeadline(ctx context.Context, arg UpdatePhaseDeadli
 		&i.Deadline,
 		&i.IsActive,
 		&i.IsPublished,
+		&i.ActivatedAt,
 		&i.CreatedAt,
 	)
 	return i, err

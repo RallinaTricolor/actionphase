@@ -168,6 +168,7 @@ CREATE TABLE game_phases (
     deadline TIMESTAMP WITH TIME ZONE,
     is_active BOOLEAN DEFAULT FALSE,
     is_published BOOLEAN NOT NULL DEFAULT FALSE,
+    activated_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(game_id, phase_number)
 );

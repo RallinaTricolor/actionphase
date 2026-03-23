@@ -284,6 +284,7 @@ type GamePhase struct {
 	Deadline    pgtype.Timestamptz `json:"deadline"`
 	IsActive    pgtype.Bool        `json:"is_active"`
 	IsPublished bool               `json:"is_published"`
+	ActivatedAt pgtype.Timestamptz `json:"activated_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 

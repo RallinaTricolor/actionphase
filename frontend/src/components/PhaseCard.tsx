@@ -11,9 +11,18 @@ import {
 } from '../types/phases';
 import type { GamePhase } from '../types/phases';
 
+function isScheduledFuture(phase: GamePhase): boolean {
+  if (!phase.start_time || phase.is_active) return false;
+  return new Date(phase.start_time).getTime() > Date.now();
+}
+
+// Phases with a scheduled start_time within this window may override a manual activation
+const NEAR_FUTURE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+
 interface PhaseCardProps {
   phase: GamePhase;
   gameId: number;
+  allPhases?: GamePhase[];
   currentPhaseId?: number;
   isActive: boolean;
   isSelected: boolean;
@@ -32,6 +41,7 @@ interface PhaseCardProps {
 export function PhaseCard({
   phase,
   gameId,
+  allPhases = [],
   currentPhaseId,
   isActive,
   isSelected,
@@ -57,11 +67,24 @@ export function PhaseCard({
     showActivateConfirm
   );
 
+  // Find any other inactive phases with start_time in the near future — activating
+  // this phase manually won't prevent them from firing on the next scheduler tick.
+  const nearFutureScheduled = allPhases.filter(p => {
+    if (p.id === phase.id || p.is_active) return false;
+    if (!p.start_time) return false;
+    const ms = new Date(p.start_time).getTime() - Date.now();
+    return ms > 0 && ms <= NEAR_FUTURE_WINDOW_MS;
+  });
+
   const phaseColorClass = getActionPhaseColor(phase);
   const phaseLabel = getActionPhaseLabel(phase);
 
+  const scheduled = isScheduledFuture(phase);
+
   const borderClass = isActive
     ? 'border-interactive-primary bg-interactive-primary-subtle'
+    : scheduled
+    ? 'border-semantic-warning bg-semantic-warning-subtle'
     : isSelected
     ? 'border-theme-strong surface-raised'
     : 'border-theme-default hover:border-theme-strong';
@@ -135,12 +158,22 @@ export function PhaseCard({
 
         {/* Countdown + Activate button */}
         <div className="flex items-center justify-between gap-3 pt-2">
-          {phase.deadline && !isEditingDeadline && (
-            <SimpleCountdown
-              deadline={phase.deadline}
-              className="text-content-secondary text-sm"
-            />
-          )}
+          <div className="flex items-center gap-2">
+            {phase.deadline && !isEditingDeadline && (
+              <SimpleCountdown
+                deadline={phase.deadline}
+                className="text-content-secondary text-sm"
+              />
+            )}
+            {scheduled && phase.start_time && (
+              <span className="text-sm text-semantic-warning flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Activates in <SimpleCountdown deadline={phase.start_time} className="text-semantic-warning" />
+              </span>
+            )}
+          </div>
           {!isActive && (
             <Button
               variant="primary"
@@ -185,6 +218,15 @@ export function PhaseCard({
               deadline={phase.deadline}
               className="text-content-secondary"
             />
+          )}
+
+          {scheduled && phase.start_time && (
+            <span className="text-sm text-semantic-warning flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Activates in <SimpleCountdown deadline={phase.start_time} className="text-semantic-warning" />
+            </span>
           )}
 
           {!isActive && (
@@ -277,6 +319,7 @@ export function PhaseCard({
           phaseNumber={phase.phase_number}
           currentPhaseId={currentPhaseId}
           unpublishedCount={unpublishedCount}
+          nearFutureScheduled={nearFutureScheduled}
           isActivating={isActivating}
           publishAllMutation={publishAllMutation}
           onActivate={onActivate}

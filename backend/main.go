@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -17,6 +18,8 @@ import (
 	"actionphase/pkg/core"
 	"actionphase/pkg/http"
 	"actionphase/pkg/observability"
+	phasesvc "actionphase/pkg/db/services/phases"
+	"actionphase/pkg/scheduler"
 	"actionphase/pkg/storage"
 )
 
@@ -160,6 +163,12 @@ func main() {
 	} else {
 		logger.Info("Skipping database migrations (RUN_MIGRATIONS=false)")
 	}
+
+	// Start phase scheduler (auto-activates phases based on start_time)
+	phaseService := &phasesvc.PhaseService{DB: pool, Logger: obs.Logger}
+	sched := scheduler.New(phaseService, obs.Logger, time.Minute)
+	cancelScheduler := sched.Start(ctx)
+	defer cancelScheduler()
 
 	// Start HTTP server
 	logger.Info("Starting HTTP server",
