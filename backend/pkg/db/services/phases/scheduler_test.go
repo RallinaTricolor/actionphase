@@ -314,3 +314,134 @@ func TestPhaseService_RunScheduledActivations_DoesNotOverrideManualActivation(t 
 	require.NoError(t, err)
 	assert.False(t, scheduled.IsActive.Bool, "scheduled phase should not have been activated")
 }
+
+func TestPhaseService_RunScheduledActivations_SkipsCompletedHistoricalPhase(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+	phaseService := &PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	queries := models.New(testDB.Pool)
+
+	gm := testDB.CreateTestUser(t, "sched_gm_hist", "sched_gm_hist@example.com")
+	game := testDB.CreateTestGameWithState(t, int32(gm.ID), "Historical Phase Game", "in_progress")
+
+	past := time.Now().Add(-10 * 24 * time.Hour)
+	ended := time.Now().Add(-2 * 24 * time.Hour)
+
+	// Historical/completed phase: start_time AND end_time in the past, is_active = false
+	// (matches the fixture pattern — these should never be re-activated by the scheduler)
+	_, err := queries.CreateGamePhase(context.Background(), models.CreateGamePhaseParams{
+		GameID:      game.ID,
+		PhaseType:   "action",
+		PhaseNumber: 1,
+		Title:       "Historical Action Phase",
+		StartTime:   pgtype.Timestamptz{Time: past, Valid: true},
+		EndTime:     pgtype.Timestamptz{Time: ended, Valid: true},
+	})
+	require.NoError(t, err)
+
+	// Add an active common_room phase as the current phase (no start_time, as is typical post-fixture)
+	currentPhase, err := queries.CreateGamePhase(context.Background(), models.CreateGamePhaseParams{
+		GameID:      game.ID,
+		PhaseType:   "common_room",
+		PhaseNumber: 2,
+		Title:       "Current Discussion Phase",
+	})
+	require.NoError(t, err)
+	_, err = queries.ActivatePhase(context.Background(), currentPhase.ID)
+	require.NoError(t, err)
+
+	// Scheduler should NOT pick up the historical phase (it has end_time set)
+	activated, err := phaseService.RunScheduledActivations(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 0, activated, "historical phase with end_time should not be re-activated")
+
+	// Common room phase should still be active
+	active, err := queries.GetActivePhase(context.Background(), game.ID)
+	require.NoError(t, err)
+	assert.Equal(t, currentPhase.ID, active.ID, "current phase should remain active")
+}
+
+func TestPhaseService_RunScheduledActivations_SkipsAlreadyActivePhase(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+	phaseService := &PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	queries := models.New(testDB.Pool)
+
+	gm := testDB.CreateTestUser(t, "sched_gm8", "sched_gm8@example.com")
+	game := testDB.CreateTestGameWithState(t, int32(gm.ID), "Active Phase Game", "in_progress")
+
+	// Create a phase with a past start_time and immediately activate it
+	past := time.Now().Add(-5 * time.Minute)
+	phase, err := queries.CreateGamePhase(context.Background(), models.CreateGamePhaseParams{
+		GameID:      game.ID,
+		PhaseType:   "common_room",
+		PhaseNumber: 1,
+		Title:       "Already Active Phase",
+		StartTime:   pgtype.Timestamptz{Time: past, Valid: true},
+	})
+	require.NoError(t, err)
+	_, err = queries.ActivatePhase(context.Background(), phase.ID)
+	require.NoError(t, err)
+
+	// Scheduler should not blow up or double-activate this phase
+	activated, err := phaseService.RunScheduledActivations(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 0, activated, "already-active phase should not be counted as a new activation")
+
+	// Phase should still be active and be the same phase
+	active, err := queries.GetActivePhase(context.Background(), game.ID)
+	require.NoError(t, err)
+	assert.Equal(t, phase.ID, active.ID)
+}
+
+func TestPhaseService_RunScheduledActivations_ActivatesAcrossMultipleGames(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+	phaseService := &PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	queries := models.New(testDB.Pool)
+
+	past := time.Now().Add(-3 * time.Minute)
+
+	// Set up two independent games, each with a past-due scheduled phase
+	gm1 := testDB.CreateTestUser(t, "sched_gm9", "sched_gm9@example.com")
+	game1 := testDB.CreateTestGameWithState(t, int32(gm1.ID), "Multi-Game Test 1", "in_progress")
+
+	gm2 := testDB.CreateTestUser(t, "sched_gm10", "sched_gm10@example.com")
+	game2 := testDB.CreateTestGameWithState(t, int32(gm2.ID), "Multi-Game Test 2", "in_progress")
+
+	phase1, err := queries.CreateGamePhase(context.Background(), models.CreateGamePhaseParams{
+		GameID:      game1.ID,
+		PhaseType:   "common_room",
+		PhaseNumber: 1,
+		Title:       "Phase for Game 1",
+		StartTime:   pgtype.Timestamptz{Time: past, Valid: true},
+	})
+	require.NoError(t, err)
+
+	phase2, err := queries.CreateGamePhase(context.Background(), models.CreateGamePhaseParams{
+		GameID:      game2.ID,
+		PhaseType:   "action",
+		PhaseNumber: 1,
+		Title:       "Phase for Game 2",
+		StartTime:   pgtype.Timestamptz{Time: past, Valid: true},
+	})
+	require.NoError(t, err)
+
+	activated, err := phaseService.RunScheduledActivations(context.Background())
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, activated, 2, "should activate one phase per game")
+
+	active1, err := queries.GetActivePhase(context.Background(), game1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, phase1.ID, active1.ID)
+
+	active2, err := queries.GetActivePhase(context.Background(), game2.ID)
+	require.NoError(t, err)
+	assert.Equal(t, phase2.ID, active2.ID)
+}

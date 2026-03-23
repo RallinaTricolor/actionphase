@@ -931,11 +931,13 @@ JOIN games g ON gp.game_id = g.id
 WHERE gp.is_active = false
   AND gp.start_time IS NOT NULL
   AND gp.start_time <= NOW()
+  AND gp.end_time IS NULL
   AND g.state = 'in_progress'
 ORDER BY gp.start_time ASC
 `
 
 // Returns inactive phases whose start_time has arrived, for games that are in_progress.
+// Excludes phases with end_time set — those are completed/historical and should never be re-activated.
 // Used by the scheduler to auto-activate phases.
 func (q *Queries) GetScheduledPhasesToActivate(ctx context.Context) ([]GamePhase, error) {
 	rows, err := q.db.Query(ctx, getScheduledPhasesToActivate)

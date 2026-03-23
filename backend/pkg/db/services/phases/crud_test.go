@@ -219,6 +219,37 @@ func TestPhaseService_UpdatePhase(t *testing.T) {
 		assert.Equal(t, updateReq.Description, updatedPhase.Description.String)
 		assert.True(t, updatedPhase.EndTime.Valid)
 	})
+
+	t.Run("sets start_time when provided", func(t *testing.T) {
+		future := time.Now().Add(2 * time.Hour)
+		updateReq := core.UpdatePhaseRequest{
+			ID:        phase.ID,
+			StartTime: core.TimePtr(future),
+		}
+
+		updatedPhase, err := phaseService.UpdatePhase(context.Background(), updateReq)
+		require.NoError(t, err)
+		assert.True(t, updatedPhase.StartTime.Valid, "start_time should be set")
+		assert.WithinDuration(t, future, updatedPhase.StartTime.Time, time.Second)
+	})
+
+	t.Run("clears start_time when set to nil", func(t *testing.T) {
+		// First set a start_time
+		future := time.Now().Add(2 * time.Hour)
+		_, err := phaseService.UpdatePhase(context.Background(), core.UpdatePhaseRequest{
+			ID:        phase.ID,
+			StartTime: core.TimePtr(future),
+		})
+		require.NoError(t, err)
+
+		// Now clear it by passing nil
+		updatedPhase, err := phaseService.UpdatePhase(context.Background(), core.UpdatePhaseRequest{
+			ID:        phase.ID,
+			StartTime: nil,
+		})
+		require.NoError(t, err)
+		assert.False(t, updatedPhase.StartTime.Valid, "start_time should be cleared when nil is passed")
+	})
 }
 
 func TestPhaseService_DeletePhase(t *testing.T) {

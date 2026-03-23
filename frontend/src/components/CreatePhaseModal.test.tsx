@@ -281,6 +281,38 @@ describe('CreatePhaseModal', () => {
       expect(vi.mocked(timezoneUtils.localDateTimeToUTC)).not.toHaveBeenCalled();
     });
 
+    it('submits undefined for start_time when not provided', () => {
+      renderWithProviders(
+        <CreatePhaseModal
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+        />
+      );
+
+      const form = screen.getByRole('button', { name: /Create Phase/i }).closest('form');
+      fireEvent.submit(form!);
+
+      const submitData = mockOnSubmit.mock.calls[0][0];
+      expect(submitData.start_time).toBeUndefined();
+    });
+
+    it('does not call localDateTimeToUTC when start_time is empty', () => {
+      renderWithProviders(
+        <CreatePhaseModal
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+        />
+      );
+
+      const form = screen.getByRole('button', { name: /Create Phase/i }).closest('form');
+      fireEvent.submit(form!);
+
+      // localDateTimeToUTC should not be called for empty start_time
+      expect(vi.mocked(timezoneUtils.localDateTimeToUTC)).not.toHaveBeenCalled();
+    });
+
     // Note: Testing DateTimeInput interactions with timezone conversion is done at the E2E level
     // The DateTimeInput component uses react-datepicker which requires complex interactions
     // Unit tests verify the timezone utility functions work correctly (see timezone.test.ts)
