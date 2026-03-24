@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
@@ -11,6 +12,7 @@ interface ParentCommentPreviewProps {
   isDeleted?: boolean | null;
   messageType?: string | null;
   authorUsername?: string | null;
+  characterId?: number | null;
   characterName?: string | null;
   characterAvatarUrl?: string | null;
   onNavigateToParent?: () => void;
@@ -28,6 +30,7 @@ export function ParentCommentPreview({
   isDeleted,
   messageType,
   authorUsername,
+  characterId,
   characterName,
   characterAvatarUrl,
   onNavigateToParent,
@@ -62,7 +65,11 @@ export function ParentCommentPreview({
             />
           )}
           {characterName ? (
-            <span className="font-medium text-text-heading truncate">{characterName}</span>
+            characterId ? (
+              <Link to={`/characters/${characterId}`} className="font-medium text-text-heading truncate hover:underline">{characterName}</Link>
+            ) : (
+              <span className="font-medium text-text-heading truncate">{characterName}</span>
+            )
           ) : authorUsername ? (
             <span className="text-content-secondary truncate">@{authorUsername}</span>
           ) : null}

@@ -5,6 +5,7 @@ import { ParentCommentPreview } from './ParentCommentPreview';
 import { MarkdownPreview } from './MarkdownPreview';
 import { Card, CardBody, Badge } from './ui';
 import CharacterAvatar from './CharacterAvatar';
+import { useGameContext } from '../contexts/GameContext';
 
 interface CommentWithParentCardProps {
   comment: CommentWithParent;
@@ -23,6 +24,12 @@ export function CommentWithParentCard({
   onNavigateToParent,
   onNavigateToComment,
 }: CommentWithParentCardProps) {
+  const { allGameCharacters } = useGameContext();
+
+  const parentCharacterId = comment.parent_character_name
+    ? allGameCharacters.find(c => c.name === comment.parent_character_name)?.id ?? null
+    : null;
+
   // Backend returns UTC timestamps without 'Z' suffix
   // Append 'Z' to ensure proper UTC parsing
   const utcDateString = comment.created_at.endsWith('Z') ? comment.created_at : `${comment.created_at}Z`;
@@ -42,6 +49,7 @@ export function CommentWithParentCard({
           isDeleted={comment.parent_is_deleted}
           messageType={comment.parent_message_type}
           authorUsername={comment.parent_author_username}
+          characterId={parentCharacterId}
           characterName={comment.parent_character_name}
           characterAvatarUrl={comment.parent_character_avatar_url}
           onNavigateToParent={onNavigateToParent}
