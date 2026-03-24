@@ -433,6 +433,7 @@ func (s *ConversationService) notifyPrivateMessage(ctx context.Context, conversa
 			participant.UserID,
 			messageID,
 			conv.GameID,
+			conversationID,
 			senderCharName,
 		)
 		if err != nil {

@@ -357,7 +357,7 @@ func (s *NotificationService) DeleteOldReadNotifications(ctx context.Context) er
 // Helper methods for specific notification types
 
 // NotifyPrivateMessage creates a notification for a new private message.
-func (s *NotificationService) NotifyPrivateMessage(ctx context.Context, recipientUserID int32, messageID int32, gameID int32, senderCharacterName string) error {
+func (s *NotificationService) NotifyPrivateMessage(ctx context.Context, recipientUserID int32, messageID int32, gameID int32, conversationID int32, senderCharacterName string) error {
 	_, err := s.CreateNotification(ctx, &core.CreateNotificationRequest{
 		UserID:      recipientUserID,
 		GameID:      &gameID,
@@ -365,7 +365,7 @@ func (s *NotificationService) NotifyPrivateMessage(ctx context.Context, recipien
 		Title:       fmt.Sprintf("New message from %s", senderCharacterName),
 		RelatedType: stringPtr("message"),
 		RelatedID:   &messageID,
-		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=messages", gameID)),
+		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=messages&conversation=%d", gameID, conversationID)),
 	})
 	return err
 }

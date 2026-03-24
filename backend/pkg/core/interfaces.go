@@ -907,7 +907,7 @@ type NotificationServiceInterface interface {
 	// These methods handle the creation logic for specific notification types
 
 	// NotifyPrivateMessage creates a notification for a new private message
-	NotifyPrivateMessage(ctx context.Context, recipientUserID int32, messageID int32, gameID int32, senderCharacterName string) error
+	NotifyPrivateMessage(ctx context.Context, recipientUserID int32, messageID int32, gameID int32, conversationID int32, senderCharacterName string) error
 
 	// NotifyCommentReply creates a notification when someone replies to a comment
 	NotifyCommentReply(ctx context.Context, originalCommentAuthorID int32, replyID int32, gameID int32, replierCharacterName string) error
