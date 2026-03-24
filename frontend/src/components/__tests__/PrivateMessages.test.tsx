@@ -408,6 +408,134 @@ describe('PrivateMessages', () => {
     });
   });
 
+  describe('URL sync - conversation param', () => {
+    const mockConversations = [
+      {
+        id: 42,
+        game_id: 1,
+        title: 'Deep Linked Conversation',
+        conversation_type: 'direct',
+        participant_count: 2,
+        participant_names: 'Alice, Bob',
+        last_message: 'Hello!',
+        last_message_at: '2025-01-15T10:00:00Z',
+        unread_count: 0,
+        created_at: '2025-01-01T00:00:00Z',
+      },
+    ];
+
+    it('opens conversation from URL param on mount', async () => {
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations', () => {
+          return HttpResponse.json({ conversations: mockConversations });
+        }),
+        http.get('/api/v1/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: [] });
+        })
+      );
+
+      renderWithProviders(
+        <PrivateMessages
+          gameId={1}
+          characters={mockCharacters}
+          isAnonymous={false}
+          currentPhaseType="common_room"
+        />,
+        { gameId: 1, initialEntries: ['/?tab=messages&conversation=42'] }
+      );
+
+      // Should show the thread view (back button) rather than the list
+      await waitFor(() => {
+        expect(screen.getByText(/back to conversations/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows conversation list when no conversation param is present', async () => {
+      renderWithProviders(
+        <PrivateMessages
+          gameId={1}
+          characters={mockCharacters}
+          isAnonymous={false}
+          currentPhaseType="common_room"
+        />,
+        { gameId: 1 }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/private messages/i)).toBeInTheDocument();
+        expect(screen.queryByText(/back to conversations/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it('updates URL when a conversation is selected', async () => {
+      const user = userEvent.setup();
+
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/conversations', () => {
+          return HttpResponse.json({ conversations: mockConversations });
+        }),
+        http.get('http://localhost:3000/api/v1/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: [] });
+        })
+      );
+
+      renderWithProviders(
+        <PrivateMessages
+          gameId={1}
+          characters={mockCharacters}
+          isAnonymous={false}
+          currentPhaseType="common_room"
+        />,
+        { gameId: 1 }
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Deep Linked Conversation')[0]).toBeInTheDocument();
+      });
+
+      // The conversation link calls onSelectConversation which sets the URL param
+      await user.click(screen.getAllByText('Deep Linked Conversation')[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText(/back to conversations/i)).toBeInTheDocument();
+      });
+    });
+
+    it('clears conversation param when back button is clicked', async () => {
+      const user = userEvent.setup();
+
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations', () => {
+          return HttpResponse.json({ conversations: mockConversations });
+        }),
+        http.get('/api/v1/conversations/:conversationId/messages', () => {
+          return HttpResponse.json({ messages: [] });
+        })
+      );
+
+      renderWithProviders(
+        <PrivateMessages
+          gameId={1}
+          characters={mockCharacters}
+          isAnonymous={false}
+          currentPhaseType="common_room"
+        />,
+        { gameId: 1, initialEntries: ['/?tab=messages&conversation=42'] }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/back to conversations/i)).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText(/back to conversations/i));
+
+      await waitFor(() => {
+        expect(screen.getByText(/private messages/i)).toBeInTheDocument();
+        expect(screen.queryByText(/back to conversations/i)).not.toBeInTheDocument();
+      });
+    });
+  });
+
   describe('Basic Rendering', () => {
     it('renders private messages component', async () => {
       renderWithProviders(

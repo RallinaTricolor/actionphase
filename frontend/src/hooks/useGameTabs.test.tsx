@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { renderHook, waitFor, render, screen, act } from '@testing-library/react';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { useGameTabs } from './useGameTabs';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -583,6 +583,103 @@ describe('useGameTabs', () => {
 
       const applicationsTab = result.current.tabs.find(tab => tab.id === 'applications');
       expect(applicationsTab).toBeUndefined();
+    });
+  });
+
+  describe('Tab param clearing when switching tabs', () => {
+    // Helper: renders a component that exposes the current search params via data-testid spans
+    function TabParamSpy({ tabArgs }: { tabArgs: Parameters<typeof useGameTabs>[0] }) {
+      const [searchParams] = useSearchParams();
+      const { setActiveTab } = useGameTabs(tabArgs);
+      return (
+        <div>
+          <span data-testid="conversation">{searchParams.get('conversation') ?? ''}</span>
+          <span data-testid="audienceConversation">{searchParams.get('audienceConversation') ?? ''}</span>
+          <span data-testid="character">{searchParams.get('character') ?? ''}</span>
+          <span data-testid="peopleTab">{searchParams.get('peopleTab') ?? ''}</span>
+          <button onClick={() => setActiveTab('common-room')}>go-common-room</button>
+          <button onClick={() => setActiveTab('messages')}>go-messages</button>
+        </div>
+      );
+    }
+
+    const defaultTabArgs: Parameters<typeof useGameTabs>[0] = {
+      gameState: 'in_progress',
+      isGM: false,
+      participantCount: 3,
+      currentPhaseType: 'common_room',
+      isAudience: false,
+      isParticipant: true,
+      hasCharacters: true,
+    };
+
+    it('should clear conversation param when switching away from messages tab', async () => {
+      render(
+        <MemoryRouter initialEntries={['/games/1?tab=messages&conversation=42']}>
+          <TabParamSpy tabArgs={defaultTabArgs} />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByTestId('conversation').textContent).toBe('42');
+
+      act(() => { screen.getByRole('button', { name: 'go-common-room' }).click(); });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('conversation').textContent).toBe('');
+      });
+    });
+
+    it('should clear audienceConversation param when switching away from audience tab', async () => {
+      const gmArgs = { ...defaultTabArgs, isGM: true, isParticipant: false, hasCharacters: false };
+      render(
+        <MemoryRouter initialEntries={['/games/1?tab=audience&audienceConversation=7']}>
+          <TabParamSpy tabArgs={gmArgs} />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByTestId('audienceConversation').textContent).toBe('7');
+
+      act(() => { screen.getByRole('button', { name: 'go-common-room' }).click(); });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('audienceConversation').textContent).toBe('');
+      });
+    });
+
+    it('should clear character and peopleTab params when switching away from people tab', async () => {
+      render(
+        <MemoryRouter initialEntries={['/games/1?tab=people&character=5&peopleTab=participants']}>
+          <TabParamSpy tabArgs={defaultTabArgs} />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByTestId('character').textContent).toBe('5');
+      expect(screen.getByTestId('peopleTab').textContent).toBe('participants');
+
+      act(() => { screen.getByRole('button', { name: 'go-common-room' }).click(); });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('character').textContent).toBe('');
+        expect(screen.getByTestId('peopleTab').textContent).toBe('');
+      });
+    });
+
+    it('should preserve conversation param when navigating to messages tab', async () => {
+      render(
+        <MemoryRouter initialEntries={['/games/1?tab=common-room&conversation=42']}>
+          <TabParamSpy tabArgs={defaultTabArgs} />
+        </MemoryRouter>
+      );
+
+      // conversation is in the URL but we're on common-room
+      expect(screen.getByTestId('conversation').textContent).toBe('42');
+
+      act(() => { screen.getByRole('button', { name: 'go-messages' }).click(); });
+
+      // Switching TO messages should not clear conversation
+      await waitFor(() => {
+        expect(screen.getByTestId('conversation').textContent).toBe('42');
+      });
     });
   });
 

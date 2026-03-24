@@ -942,4 +942,5 @@ describe('CharactersList', () => {
       expect(deleteWasCalled).toBe(false)
     })
   })
+
 })

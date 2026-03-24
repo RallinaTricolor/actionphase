@@ -1,19 +1,14 @@
-import React from 'react';
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CommentWithParentCard } from '../CommentWithParentCard';
 import type { CommentWithParent } from '../../types/messages';
+import { renderWithProviders } from '../../test-utils/render';
 
 // Mock the MarkdownPreview component
 vi.mock('../MarkdownPreview', () => ({
   MarkdownPreview: ({ content }: { content: string }) => <div>{content}</div>,
 }));
-
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <MemoryRouter>{children}</MemoryRouter>
-);
 
 describe('CommentWithParentCard', () => {
   const mockComment: CommentWithParent = {
@@ -41,7 +36,7 @@ describe('CommentWithParentCard', () => {
   };
 
   it('renders comment with parent preview', () => {
-    render(<CommentWithParentCard comment={mockComment} gameId={1} />, { wrapper });
+    renderWithProviders(<CommentWithParentCard comment={mockComment} gameId={1} />, { gameId: 1 });
 
     // Check comment content
     expect(screen.getByText('This is a test comment')).toBeInTheDocument();
@@ -59,13 +54,13 @@ describe('CommentWithParentCard', () => {
       edited_at: '2025-10-22T11:00:00Z',
     };
 
-    render(<CommentWithParentCard comment={editedComment} gameId={1} />, { wrapper });
+    renderWithProviders(<CommentWithParentCard comment={editedComment} gameId={1} />, { gameId: 1 });
 
     expect(screen.getByText('Edited')).toBeInTheDocument();
   });
 
   it('does not show "Edited" badge when comment has not been edited', () => {
-    render(<CommentWithParentCard comment={mockComment} gameId={1} />, { wrapper });
+    renderWithProviders(<CommentWithParentCard comment={mockComment} gameId={1} />, { gameId: 1 });
 
     expect(screen.queryByText('Edited')).not.toBeInTheDocument();
   });
@@ -77,7 +72,7 @@ describe('CommentWithParentCard', () => {
       deleted_at: '2025-10-22T12:00:00Z',
     };
 
-    render(<CommentWithParentCard comment={deletedComment} gameId={1} />, { wrapper });
+    renderWithProviders(<CommentWithParentCard comment={deletedComment} gameId={1} />, { gameId: 1 });
 
     expect(screen.getByText('[deleted]')).toBeInTheDocument();
     expect(screen.queryByText('This is a test comment')).not.toBeInTheDocument();
@@ -90,13 +85,13 @@ describe('CommentWithParentCard', () => {
     };
 
     const mockNavigate = vi.fn();
-    render(
+    renderWithProviders(
       <CommentWithParentCard
         comment={deletedComment}
         gameId={1}
         onNavigateToComment={mockNavigate}
       />,
-      { wrapper }
+      { gameId: 1 }
     );
 
     expect(screen.queryByText(/view in thread/i)).not.toBeInTheDocument();
@@ -104,20 +99,20 @@ describe('CommentWithParentCard', () => {
 
   it('shows "View in thread" button when onNavigateToComment is provided', () => {
     const mockNavigate = vi.fn();
-    render(
+    renderWithProviders(
       <CommentWithParentCard
         comment={mockComment}
         gameId={1}
         onNavigateToComment={mockNavigate}
       />,
-      { wrapper }
+      { gameId: 1 }
     );
 
     expect(screen.getByText(/view in thread/i)).toBeInTheDocument();
   });
 
   it('hides "View in thread" button when onNavigateToComment is not provided', () => {
-    render(<CommentWithParentCard comment={mockComment} gameId={1} />, { wrapper });
+    renderWithProviders(<CommentWithParentCard comment={mockComment} gameId={1} />, { gameId: 1 });
 
     expect(screen.queryByText(/view in thread/i)).not.toBeInTheDocument();
   });
@@ -126,13 +121,13 @@ describe('CommentWithParentCard', () => {
     const user = userEvent.setup();
     const mockNavigate = vi.fn();
 
-    render(
+    renderWithProviders(
       <CommentWithParentCard
         comment={mockComment}
         gameId={1}
         onNavigateToComment={mockNavigate}
       />,
-      { wrapper }
+      { gameId: 1 }
     );
 
     const button = screen.getByText(/view in thread/i);
@@ -145,13 +140,13 @@ describe('CommentWithParentCard', () => {
     const user = userEvent.setup();
     const mockNavigate = vi.fn();
 
-    render(
+    renderWithProviders(
       <CommentWithParentCard
         comment={mockComment}
         gameId={1}
         onNavigateToParent={mockNavigate}
       />,
-      { wrapper }
+      { gameId: 1 }
     );
 
     const parentButton = screen.getByText(/view in thread/i);
@@ -167,7 +162,7 @@ describe('CommentWithParentCard', () => {
       created_at: oneHourAgo,
     };
 
-    render(<CommentWithParentCard comment={recentComment} gameId={1} />, { wrapper });
+    renderWithProviders(<CommentWithParentCard comment={recentComment} gameId={1} />, { gameId: 1 });
 
     expect(screen.getByText(/1 hour ago/i)).toBeInTheDocument();
   });
@@ -178,13 +173,13 @@ describe('CommentWithParentCard', () => {
       character_name: null,
     };
 
-    render(<CommentWithParentCard comment={commentWithoutCharacter} gameId={1} />, { wrapper });
+    renderWithProviders(<CommentWithParentCard comment={commentWithoutCharacter} gameId={1} />, { gameId: 1 });
 
     expect(screen.getByText('Unknown')).toBeInTheDocument();
   });
 
   it('applies hover shadow effect class', () => {
-    const { container } = render(<CommentWithParentCard comment={mockComment} gameId={1} />, { wrapper });
+    const { container } = renderWithProviders(<CommentWithParentCard comment={mockComment} gameId={1} />, { gameId: 1 });
 
     const card = container.querySelector('.hover\\:shadow-md');
     expect(card).toBeInTheDocument();
@@ -192,13 +187,13 @@ describe('CommentWithParentCard', () => {
 
   it('renders "View in thread" as proper anchor tag with href', () => {
     const mockNavigate = vi.fn();
-    render(
+    renderWithProviders(
       <CommentWithParentCard
         comment={mockComment}
         gameId={2}
         onNavigateToComment={mockNavigate}
       />,
-      { wrapper }
+      { gameId: 2 }
     );
 
     const link = screen.getByText(/view in thread/i);

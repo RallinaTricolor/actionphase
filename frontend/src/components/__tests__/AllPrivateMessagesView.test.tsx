@@ -39,6 +39,103 @@ beforeEach(() => {
   )
 })
 
+const mockConversation = {
+  conversation_id: 7,
+  subject: 'Secret Plans',
+  conversation_type: 'direct',
+  participant_names: ['Alice', 'Bob'],
+  participant_usernames: ['alice', 'bob'],
+  last_message_at: '2025-01-15T10:00:00Z',
+  message_count: 3,
+  created_at: '2025-01-01T00:00:00Z',
+}
+
+describe('AllPrivateMessagesView - URL sync', () => {
+  it('opens a conversation from audienceConversation URL param on mount', async () => {
+    server.use(
+      http.get('/api/v1/games/:gameId/private-messages/all', () => {
+        return HttpResponse.json({ conversations: [mockConversation], total: 1 })
+      }),
+      http.get('/api/v1/games/:gameId/private-messages/conversations/:conversationId', () => {
+        return HttpResponse.json({ messages: [] })
+      })
+    )
+
+    renderWithProviders(
+      <AllPrivateMessagesView gameId={gameId} />,
+      { gameId, initialEntries: [`/?tab=audience&audienceConversation=7`] }
+    )
+
+    // Should show the message viewer (back button) not the conversation list
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /back/i })[0]).toBeInTheDocument()
+    })
+  })
+
+  it('shows conversation list when no audienceConversation param is present', async () => {
+    renderWithProviders(<AllPrivateMessagesView gameId={gameId} />, { gameId })
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/all private messages/i)[0]).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument()
+    })
+  })
+
+  it('selecting a conversation card sets the audienceConversation param', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('/api/v1/games/:gameId/private-messages/all', () => {
+        return HttpResponse.json({ conversations: [mockConversation], total: 1 })
+      }),
+      http.get('/api/v1/games/:gameId/private-messages/conversations/:conversationId', () => {
+        return HttpResponse.json({ messages: [] })
+      })
+    )
+
+    renderWithProviders(<AllPrivateMessagesView gameId={gameId} />, { gameId })
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Secret Plans')[0]).toBeInTheDocument()
+    })
+
+    await user.click(screen.getAllByText('Secret Plans')[0])
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /back/i })[0]).toBeInTheDocument()
+    })
+  })
+
+  it('clicking back returns to conversation list and clears the param', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('/api/v1/games/:gameId/private-messages/all', () => {
+        return HttpResponse.json({ conversations: [mockConversation], total: 1 })
+      }),
+      http.get('/api/v1/games/:gameId/private-messages/conversations/:conversationId', () => {
+        return HttpResponse.json({ messages: [] })
+      })
+    )
+
+    renderWithProviders(
+      <AllPrivateMessagesView gameId={gameId} />,
+      { gameId, initialEntries: [`/?tab=audience&audienceConversation=7`] }
+    )
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /back/i })[0]).toBeInTheDocument()
+    })
+
+    await user.click(screen.getAllByRole('button', { name: /back/i })[0])
+
+    await waitFor(() => {
+      // After going back, the back button disappears (we're on the list view)
+      expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument()
+      // The list header appears (multiple renders due to responsive layout)
+      expect(screen.getAllByText(/all private messages/i)[0]).toBeInTheDocument()
+    })
+  })
+})
+
 describe('AllPrivateMessagesView - participant filter', () => {
   it('shows all conversation participants as filter options on initial load', async () => {
     renderWithProviders(<AllPrivateMessagesView gameId={gameId} />, { gameId })
