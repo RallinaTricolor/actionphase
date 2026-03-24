@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { useUrlParam } from '../hooks/useUrlParam';
 import { ConversationList } from './ConversationList';
 import { MessageThread } from './MessageThread';
 import { NewConversationModal } from './NewConversationModal';
@@ -29,6 +30,12 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, currentPhaseTyp
     loadConversations,
   } = useConversation();
 
+  const [conversationParam, setConversationParam] = useUrlParam<number | null>('conversation', null, {
+    deserialize: (s) => parseInt(s, 10) || null,
+    serialize: (v) => v == null ? '' : String(v),
+    replace: true,
+  });
+
   // Check if we're in a common room phase (when messaging is allowed)
   const isCommonRoomPhase = currentPhaseType === 'common_room';
 
@@ -45,21 +52,28 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, currentPhaseTyp
     loadConversations(gameId);
   }, [gameId, loadConversations]);
 
+  // Sync URL param → context on mount and when param changes
+  useEffect(() => {
+    if (conversationParam !== selectedConversationId) {
+      selectConversation(conversationParam);
+    }
+  }, [conversationParam]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleConversationCreated = (conversationId: number) => {
     logger.debug('Conversation created', { conversationId, gameId });
     // Refresh conversations list to show the new conversation
     loadConversations(gameId);
     // Select the new conversation
-    selectConversation(conversationId);
+    setConversationParam(conversationId);
   };
 
   const handleSelectConversation = (conversationId: number) => {
     logger.debug('Conversation selected', { conversationId, gameId });
-    selectConversation(conversationId);
+    setConversationParam(conversationId);
   };
 
   const handleBackToList = () => {
-    selectConversation(null);
+    setConversationParam(null);
   };
 
   const handleRefreshConversations = async () => {

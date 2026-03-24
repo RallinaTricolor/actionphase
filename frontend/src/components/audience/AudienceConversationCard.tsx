@@ -1,7 +1,8 @@
 import React from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import type { AudienceConversationListItem } from '../../types/conversations';
-import { Badge, Card, CardBody } from '../ui';
+import { Badge, CardBody } from '../ui';
 import CharacterAvatar from '../CharacterAvatar';
 import { useGameContext } from '../../contexts/GameContext';
 
@@ -17,6 +18,13 @@ export const AudienceConversationCard: React.FC<AudienceConversationCardProps> =
   isSelected = false
 }) => {
   const { allGameCharacters } = useGameContext();
+  const [searchParams] = useSearchParams();
+
+  const href = (() => {
+    const params = new URLSearchParams(searchParams);
+    params.set('audienceConversation', String(conversation.conversation_id));
+    return `?${params.toString()}`;
+  })();
 
   // Look up avatar URL by character ID from global character data
   const getAvatarUrl = (characterId: number | null | undefined): string | null => {
@@ -55,17 +63,21 @@ export const AudienceConversationCard: React.FC<AudienceConversationCardProps> =
   const hasRecentActivity = isRecentActivity();
 
   return (
-    <Card
-      variant={isSelected ? 'bordered' : 'default'}
-      padding="md"
+    <Link
+      to={href}
+      onClick={(e) => {
+        if (e.ctrlKey || e.metaKey) return;
+        onClick();
+      }}
       className={`
-        cursor-pointer
+        block
+        rounded-lg
+        p-4
         transition-all
         duration-200
         hover:shadow-lg
-        ${isSelected ? 'border-l-4 border-l-blue-500 bg-bg-secondary' : 'hover:bg-bg-secondary'}
+        ${isSelected ? 'border border-border-primary border-l-4 border-l-blue-500 bg-bg-secondary' : 'border border-border-primary hover:bg-bg-secondary'}
       `}
-      onClick={onClick}
     >
       <CardBody>
         <div className="flex flex-col gap-3">
@@ -142,6 +154,6 @@ export const AudienceConversationCard: React.FC<AudienceConversationCardProps> =
           )}
         </div>
       </CardBody>
-    </Card>
+    </Link>
   );
 };

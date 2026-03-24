@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useUrlParam } from '../hooks/useUrlParam';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
@@ -32,7 +33,11 @@ export function CharactersList({
   isParticipant = false
 }: CharactersListProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
+  const [selectedCharacterId, setSelectedCharacterId] = useUrlParam<number | null>('character', null, {
+    deserialize: (s) => parseInt(s, 10) || null,
+    serialize: (v) => v == null ? '' : String(v),
+    replace: true,
+  });
   const [npcToAssign, setNpcToAssign] = useState<Character | null>(null);
   const [characterToDelete, setCharacterToDelete] = useState<Character | null>(null);
   const queryClient = useQueryClient();

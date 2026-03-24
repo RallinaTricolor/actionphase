@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { PeopleView } from '../PeopleView';
 import type { GameParticipant } from '../../types/games';
+
+const renderInRouter = (ui: React.ReactElement) =>
+  render(<MemoryRouter>{ui}</MemoryRouter>);
 
 // Mock the child components that have complex dependencies
 vi.mock('../CharactersList', () => ({
@@ -64,7 +68,7 @@ describe('PeopleView - Leave Game Button', () => {
       // Arrange: User is an audience member
       const user = userEvent.setup();
 
-      render(
+      renderInRouter(
         <PeopleView
           gameId={1}
           participants={[mockAudienceParticipant]}
@@ -88,7 +92,7 @@ describe('PeopleView - Leave Game Button', () => {
       // Arrange: User has no role in the game
       const user = userEvent.setup();
 
-      render(
+      renderInRouter(
         <PeopleView
           gameId={1}
           participants={[mockPlayerParticipant]}
@@ -113,7 +117,7 @@ describe('PeopleView - Leave Game Button', () => {
       const user = userEvent.setup();
       const onLeaveGame = vi.fn();
 
-      render(
+      renderInRouter(
         <PeopleView
           gameId={1}
           participants={[mockAudienceParticipant]}
@@ -140,7 +144,7 @@ describe('PeopleView - Leave Game Button', () => {
       // Arrange: User is a regular player participant
       const user = userEvent.setup();
 
-      render(
+      renderInRouter(
         <PeopleView
           gameId={1}
           participants={[mockPlayerParticipant]}
@@ -164,7 +168,7 @@ describe('PeopleView - Leave Game Button', () => {
       // Arrange
       const user = userEvent.setup();
 
-      render(
+      renderInRouter(
         <PeopleView
           gameId={1}
           participants={[mockAudienceParticipant]}
@@ -188,7 +192,7 @@ describe('PeopleView - Leave Game Button', () => {
       // Arrange
       const user = userEvent.setup();
 
-      render(
+      renderInRouter(
         <PeopleView
           gameId={1}
           participants={[mockAudienceParticipant]}
@@ -212,7 +216,7 @@ describe('PeopleView - Leave Game Button', () => {
       // Arrange: onLeaveGame callback is undefined
       const user = userEvent.setup();
 
-      render(
+      renderInRouter(
         <PeopleView
           gameId={1}
           participants={[mockPlayerParticipant]}
@@ -236,7 +240,7 @@ describe('PeopleView - Leave Game Button', () => {
       // Arrange: Current user is the GM
       const user = userEvent.setup();
 
-      render(
+      renderInRouter(
         <PeopleView
           gameId={1}
           participants={[mockGMParticipant]}
@@ -260,7 +264,7 @@ describe('PeopleView - Leave Game Button', () => {
       // Arrange
       const user = userEvent.setup();
 
-      render(
+      renderInRouter(
         <PeopleView
           gameId={1}
           participants={[mockPlayerParticipant]}

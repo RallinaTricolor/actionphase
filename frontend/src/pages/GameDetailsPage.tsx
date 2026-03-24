@@ -136,6 +136,13 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   const getTabHref = useCallback((tabId: string) => {
     const params = new URLSearchParams(searchParams);
     params.set('tab', tabId);
+    // Clear tab-specific sub-params when leaving their tab
+    if (tabId !== 'messages') params.delete('conversation');
+    if (tabId !== 'audience') params.delete('audienceConversation');
+    if (tabId !== 'people') {
+      params.delete('character');
+      params.delete('peopleTab');
+    }
     return `?${params.toString()}`;
   }, [searchParams]);
 

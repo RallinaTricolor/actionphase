@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useUrlParam } from '../hooks/useUrlParam';
 import { useAllPrivateConversations, useAudienceConversationMessages, useConversationParticipants } from '../hooks/useAudience';
 import { Badge } from './ui/Badge';
 import { Spinner } from './ui/Spinner';
@@ -31,7 +32,11 @@ interface MessageType {
  * Features infinite scroll, participant filtering, and conversation browsing
  */
 export function AllPrivateMessagesView({ gameId }: AllPrivateMessagesViewProps) {
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useUrlParam<string | null>('audienceConversation', null, {
+    deserialize: (s) => s || null,
+    serialize: (v) => v ?? '',
+    replace: true,
+  });
   const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
 
   // Fetch messages for selected conversation

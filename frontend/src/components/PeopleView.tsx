@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useUrlParam } from '../hooks/useUrlParam';
 import { CharactersList } from './CharactersList';
 import CharacterAvatar from './CharacterAvatar';
 import { ParticipantActionsMenu } from './ParticipantActionsMenu';
@@ -47,7 +48,7 @@ export function PeopleView({
   onRefreshData,
   actionLoading = false
 }: PeopleViewProps) {
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('characters');
+  const [activeSubTab, setActiveSubTab] = useUrlParam<SubTab>('peopleTab', 'characters', { replace: true });
 
   // Determine user's role from participants list for anonymous mode handling
   const currentUserRole = (() => {

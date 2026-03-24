@@ -273,6 +273,13 @@ export function useGameTabs({
     // Update URL with new tab parameter (creates history entry)
     const newParams = new URLSearchParams(searchParams);
     newParams.set('tab', tabId);
+    // Clear tab-specific sub-params when leaving their tab
+    if (tabId !== 'messages') newParams.delete('conversation');
+    if (tabId !== 'audience') newParams.delete('audienceConversation');
+    if (tabId !== 'people') {
+      newParams.delete('character');
+      newParams.delete('peopleTab');
+    }
     setSearchParams(newParams, { replace: false });
   };
 

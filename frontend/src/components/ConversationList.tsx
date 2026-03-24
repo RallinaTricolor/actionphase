@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useConversation } from '../contexts/ConversationContext';
-import { Button } from './ui';
 import { logger } from '@/services/LoggingService';
 
 interface ConversationListProps {
@@ -11,6 +11,13 @@ interface ConversationListProps {
 
 export function ConversationList({ gameId, onSelectConversation, selectedConversationId }: ConversationListProps) {
   const { conversations, loadingConversations, loadConversations } = useConversation();
+  const [searchParams] = useSearchParams();
+
+  const getConversationHref = (conversationId: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('conversation', String(conversationId));
+    return `?${params.toString()}`;
+  };
 
   useEffect(() => {
     loadConversations(gameId);
@@ -56,14 +63,15 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
   return (
     <div className="space-y-1">
       {conversations.map((conversation) => (
-        <Button
+        <Link
           key={conversation.id}
-          variant="ghost"
-          onClick={() => {
+          to={getConversationHref(conversation.id)}
+          onClick={(e) => {
+            if (e.ctrlKey || e.metaKey) return;
             logger.debug('Conversation clicked', { conversationId: conversation.id, gameId, title: conversation.title });
             onSelectConversation(conversation.id);
           }}
-          className={`w-full justify-start text-left hover:bg-surface-raised transition-colors rounded-none border-l-4 px-4 py-3 border-b border-theme-subtle ${
+          className={`block w-full text-left hover:bg-surface-raised transition-colors rounded-none border-l-4 px-4 py-3 border-b border-theme-subtle ${
             selectedConversationId === conversation.id
               ? 'bg-interactive-primary-subtle border-l-interactive-primary'
               : 'border-l-transparent hover:border-l-border-primary'
@@ -134,7 +142,7 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
               </p>
             )}
           </div>
-        </Button>
+        </Link>
       ))}
     </div>
   );
