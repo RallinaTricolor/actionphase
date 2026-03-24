@@ -37,37 +37,37 @@ type UpdateAutoAcceptAudienceRequest struct {
 }
 
 type PrivateConversationResponse struct {
-	ConversationID          int32        `json:"conversation_id"`
-	Subject                 *string      `json:"subject"`
-	ConversationType        string       `json:"conversation_type"`
-	CreatedAt               string       `json:"created_at"`
-	MessageCount            int64        `json:"message_count"`
-	LastMessageAt           interface{}  `json:"last_message_at"`
-	ParticipantNames        interface{}  `json:"participant_names"`
-	ParticipantUsernames    interface{}  `json:"participant_usernames"`
-	ParticipantCharacterIDs interface{}  `json:"participant_character_ids"`
-	LastMessageContent      *string      `json:"last_message_content"`
-	LastSenderName          *string      `json:"last_sender_name"`
-	LastSenderUsername      *string      `json:"last_sender_username"`
-	LastSenderCharacterID   *int32       `json:"last_sender_character_id"`
+	ConversationID          int32       `json:"conversation_id"`
+	Subject                 *string     `json:"subject"`
+	ConversationType        string      `json:"conversation_type"`
+	CreatedAt               string      `json:"created_at"`
+	MessageCount            int64       `json:"message_count"`
+	LastMessageAt           interface{} `json:"last_message_at"`
+	ParticipantNames        interface{} `json:"participant_names"`
+	ParticipantUsernames    interface{} `json:"participant_usernames"`
+	ParticipantCharacterIDs interface{} `json:"participant_character_ids"`
+	LastMessageContent      *string     `json:"last_message_content"`
+	LastSenderName          *string     `json:"last_sender_name"`
+	LastSenderUsername      *string     `json:"last_sender_username"`
+	LastSenderCharacterID   *int32      `json:"last_sender_character_id"`
 }
 
 type ActionSubmissionResponse struct {
-	ID               int32   `json:"id"`
-	GameID           int32   `json:"game_id"`
-	UserID           int32   `json:"user_id"`
-	PhaseID          int32   `json:"phase_id"`
-	CharacterID      *int32  `json:"character_id"`
-	Content          string  `json:"content"`
-	SubmittedAt      *string `json:"submitted_at"`
-	UpdatedAt        *string `json:"updated_at"`
-	Username         string  `json:"username"`
-	CharacterName    *string `json:"character_name"`
-	PhaseType        string  `json:"phase_type"`
-	PhaseNumber      int32   `json:"phase_number"`
-	PhaseTitle       string  `json:"phase_title"`
-	ActionResultID   *int32  `json:"action_result_id"`
-	Status           string  `json:"status"`
+	ID             int32   `json:"id"`
+	GameID         int32   `json:"game_id"`
+	UserID         int32   `json:"user_id"`
+	PhaseID        int32   `json:"phase_id"`
+	CharacterID    *int32  `json:"character_id"`
+	Content        string  `json:"content"`
+	SubmittedAt    *string `json:"submitted_at"`
+	UpdatedAt      *string `json:"updated_at"`
+	Username       string  `json:"username"`
+	CharacterName  *string `json:"character_name"`
+	PhaseType      string  `json:"phase_type"`
+	PhaseNumber    int32   `json:"phase_number"`
+	PhaseTitle     string  `json:"phase_title"`
+	ActionResultID *int32  `json:"action_result_id"`
+	Status         string  `json:"status"`
 }
 
 type AudienceMessageResponse struct {

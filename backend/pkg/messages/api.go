@@ -1270,12 +1270,12 @@ func commentsWithParentsToResponse(comments []core.CommentWithParent, showUserna
 			}
 			commentData["parent"] = map[string]interface{}{
 				"content":              comment.ParentContent,
-				"created_at":          formatTimePtr(comment.ParentCreatedAt),
-				"deleted_at":          formatTimePtr(comment.ParentDeletedAt),
-				"is_deleted":          comment.ParentIsDeleted,
-				"message_type":        comment.ParentMessageType,
-				"author_username":     parentAuthorUsername,
-				"character_name":      comment.ParentCharacterName,
+				"created_at":           formatTimePtr(comment.ParentCreatedAt),
+				"deleted_at":           formatTimePtr(comment.ParentDeletedAt),
+				"is_deleted":           comment.ParentIsDeleted,
+				"message_type":         comment.ParentMessageType,
+				"author_username":      parentAuthorUsername,
+				"character_name":       comment.ParentCharacterName,
 				"character_avatar_url": comment.ParentCharacterAvatarUrl,
 			}
 		}
@@ -1370,12 +1370,12 @@ func (h *Handler) GetCharacterComments(w http.ResponseWriter, r *http.Request) {
 		if msg.ParentContent != nil {
 			msgData["parent"] = map[string]interface{}{
 				"content":              msg.ParentContent,
-				"created_at":          formatTimePtr(msg.ParentCreatedAt),
-				"deleted_at":          formatTimePtr(msg.ParentDeletedAt),
-				"is_deleted":          msg.ParentIsDeleted,
-				"message_type":        msg.ParentMessageType,
-				"author_username":     msg.ParentAuthorUsername,
-				"character_name":      msg.ParentCharacterName,
+				"created_at":           formatTimePtr(msg.ParentCreatedAt),
+				"deleted_at":           formatTimePtr(msg.ParentDeletedAt),
+				"is_deleted":           msg.ParentIsDeleted,
+				"message_type":         msg.ParentMessageType,
+				"author_username":      msg.ParentAuthorUsername,
+				"character_name":       msg.ParentCharacterName,
 				"character_avatar_url": msg.ParentCharacterAvatarUrl,
 			}
 		}

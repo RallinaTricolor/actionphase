@@ -454,4 +454,3 @@ func TestGetCharacterStats_CoGMSeesPrivateCount(t *testing.T) {
 	}
 	core.AssertEqual(t, int64(1), *resp.PrivateMessages, "Co-GM should see 1 private message")
 }
-

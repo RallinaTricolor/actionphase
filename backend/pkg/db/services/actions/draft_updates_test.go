@@ -900,6 +900,7 @@ func TestActionSubmissionService_PublishAllPhaseResults_WithDrafts(t *testing.T)
 		}
 	})
 }
+
 // Regression test for currency merge bug
 // Bug: When merging draft currencies into existing currencies, the merge logic
 // assumed all items have a "name" field, but currency items use "type" field.

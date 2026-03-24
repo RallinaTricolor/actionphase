@@ -96,8 +96,8 @@ type PollResponse struct {
 	// Additional response fields
 	Options               []db.PollOption `json:"options"`
 	HasVoted              bool            `json:"has_voted,omitempty"`
-	VotedCharacterIDs     []int32         `json:"voted_character_ids,omitempty"`    // Character IDs user has voted with (for character polls)
-	UserVoteOptionID      *int32          `json:"user_vote_option_id,omitempty"`    // The option ID the user voted for (player polls)
+	VotedCharacterIDs     []int32         `json:"voted_character_ids,omitempty"`      // Character IDs user has voted with (for character polls)
+	UserVoteOptionID      *int32          `json:"user_vote_option_id,omitempty"`      // The option ID the user voted for (player polls)
 	UserVoteOtherResponse *string         `json:"user_vote_other_response,omitempty"` // The "other" text if user chose that option
 }
 

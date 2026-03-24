@@ -241,20 +241,20 @@ func (as *ActionSubmissionService) mergeAndPublishDraftUpdates(ctx context.Conte
 				itemKey = draft.FieldName
 			}
 			// CRITICAL: Merge draft fields into existing item, don't replace entire object
-		// This preserves the "id" field and any other fields not in the draft
-		if existingItem, exists := itemMap[itemKey]; exists {
-			// Item exists - merge draft fields into existing item
-			for k, v := range draftItem {
-				existingItem[k] = v
+			// This preserves the "id" field and any other fields not in the draft
+			if existingItem, exists := itemMap[itemKey]; exists {
+				// Item exists - merge draft fields into existing item
+				for k, v := range draftItem {
+					existingItem[k] = v
+				}
+				// No need to reassign - maps are reference types in Go
+			} else {
+				// New item - generate ID if missing
+				if _, hasID := draftItem["id"]; !hasID {
+					draftItem["id"] = uuid.New().String()
+				}
+				itemMap[itemKey] = draftItem
 			}
-			// No need to reassign - maps are reference types in Go
-		} else {
-			// New item - generate ID if missing
-			if _, hasID := draftItem["id"]; !hasID {
-				draftItem["id"] = uuid.New().String()
-			}
-			itemMap[itemKey] = draftItem
-		}
 		}
 
 		// 4. Convert map back to array

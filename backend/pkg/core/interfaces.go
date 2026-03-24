@@ -759,18 +759,18 @@ type CommentWithDepth struct {
 // Used for the Character Page to show their activity feed with parent context
 type CharacterMessage struct {
 	// Message data
-	ID             int32
-	GameID         int32
-	ParentID       *int32
-	AuthorID       int32
-	CharacterID    int32
-	Content        string
-	MessageType    string // "post" or "comment"
-	CreatedAt      time.Time
-	EditedAt       *time.Time
-	EditCount      int32
-	DeletedAt      *time.Time
-	IsDeleted      bool
+	ID                 int32
+	GameID             int32
+	ParentID           *int32
+	AuthorID           int32
+	CharacterID        int32
+	Content            string
+	MessageType        string // "post" or "comment"
+	CreatedAt          time.Time
+	EditedAt           *time.Time
+	EditCount          int32
+	DeletedAt          *time.Time
+	IsDeleted          bool
 	AuthorUsername     string
 	CharacterName      *string
 	CharacterAvatarUrl *string
@@ -790,30 +790,30 @@ type CharacterMessage struct {
 // Used for the "New Comments" view to show recent activity with context
 type CommentWithParent struct {
 	// Comment data
-	ID             int32
-	GameID         int32
-	ParentID       *int32
-	AuthorID       int32
-	CharacterID    int32
-	Content        string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	EditedAt       *time.Time
-	EditCount      int32
-	DeletedAt      *time.Time
-	IsDeleted      bool
+	ID                 int32
+	GameID             int32
+	ParentID           *int32
+	AuthorID           int32
+	CharacterID        int32
+	Content            string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	EditedAt           *time.Time
+	EditCount          int32
+	DeletedAt          *time.Time
+	IsDeleted          bool
 	AuthorUsername     string
 	CharacterName      *string
 	CharacterAvatarUrl *string
 
 	// Parent data (the post or comment this comment is replying to)
-	ParentContent           *string
-	ParentCreatedAt         *time.Time
-	ParentDeletedAt         *time.Time
-	ParentIsDeleted         *bool
-	ParentMessageType       *string // "post" or "comment"
-	ParentAuthorUsername    *string
-	ParentCharacterName     *string
+	ParentContent            *string
+	ParentCreatedAt          *time.Time
+	ParentDeletedAt          *time.Time
+	ParentIsDeleted          *bool
+	ParentMessageType        *string // "post" or "comment"
+	ParentAuthorUsername     *string
+	ParentCharacterName      *string
 	ParentCharacterAvatarUrl *string
 }
 
@@ -1492,4 +1492,3 @@ type UserAvatarServiceInterface interface {
 	// Returns nil if the user has no avatar.
 	GetUserAvatarURL(ctx context.Context, userID int32) (*string, error)
 }
-
