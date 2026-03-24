@@ -103,7 +103,7 @@ describe('ConversationList', () => {
       })
 
       // CRITICAL: Should only render ONE conversation, not two duplicates
-      const conversationButtons = screen.getAllByRole('button')
+      const conversationButtons = screen.getAllByRole('link')
       expect(conversationButtons).toHaveLength(1)
 
       // Verify the conversation has the correct data
@@ -170,7 +170,7 @@ describe('ConversationList', () => {
       })
 
       // Should render both distinct conversations
-      const conversationButtons = screen.getAllByRole('button')
+      const conversationButtons = screen.getAllByRole('link')
       expect(conversationButtons).toHaveLength(2)
       expect(screen.getAllByText('Conversation 1')[0]).toBeInTheDocument()
       expect(screen.getAllByText('Conversation 2')[0]).toBeInTheDocument()
@@ -249,7 +249,7 @@ describe('ConversationList', () => {
       })
 
       // Should render only 3 distinct conversations, not 4
-      const conversationButtons = screen.getAllByRole('button')
+      const conversationButtons = screen.getAllByRole('link')
       expect(conversationButtons).toHaveLength(3)
     })
 
@@ -280,7 +280,7 @@ describe('ConversationList', () => {
         expect(screen.getByText('No conversations yet')).toBeInTheDocument()
       })
 
-      expect(screen.queryByRole('button')).not.toBeInTheDocument()
+      expect(screen.queryByRole('link')).not.toBeInTheDocument()
     })
   })
 
@@ -344,7 +344,7 @@ describe('ConversationList', () => {
         expect(screen.getAllByText('Test Conversation')[0]).toBeInTheDocument()
       })
 
-      const conversationButton = screen.getByRole('button')
+      const conversationButton = screen.getByRole('link')
       fireEvent.click(conversationButton)
 
       expect(mockOnSelectConversation).toHaveBeenCalledWith(1)
@@ -378,7 +378,7 @@ describe('ConversationList', () => {
         expect(screen.getAllByText('Test Conversation')[0]).toBeInTheDocument()
       })
 
-      const conversationButton = screen.getByRole('button')
+      const conversationButton = screen.getByRole('link')
       expect(conversationButton).toHaveClass('bg-interactive-primary-subtle', 'border-l-4', 'border-l-interactive-primary')
     })
 

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThreadedComment } from '../ThreadedComment';
 import type { Message } from '../../types/messages';
@@ -42,6 +43,7 @@ describe('ThreadedComment - Depth Limiting', () => {
   it('should show reply button when under max depth', () => {
     render(
       <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
         <ToastProvider>
           <AuthProvider>
             <AdminModeProvider>
@@ -57,6 +59,7 @@ describe('ThreadedComment - Depth Limiting', () => {
             </AdminModeProvider>
           </AuthProvider>
         </ToastProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
 
@@ -66,6 +69,7 @@ describe('ThreadedComment - Depth Limiting', () => {
   it('should hide reply button at max depth', () => {
     render(
       <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
         <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
@@ -81,6 +85,7 @@ describe('ThreadedComment - Depth Limiting', () => {
         </AdminModeProvider>
         </AuthProvider>
         </ToastProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
 
@@ -95,6 +100,7 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
         <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
@@ -110,6 +116,7 @@ describe('ThreadedComment - Depth Limiting', () => {
         </AdminModeProvider>
         </AuthProvider>
         </ToastProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
 
@@ -126,6 +133,7 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
         <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
@@ -141,6 +149,7 @@ describe('ThreadedComment - Depth Limiting', () => {
         </AdminModeProvider>
         </AuthProvider>
         </ToastProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
 
@@ -158,6 +167,7 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
         <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
@@ -174,6 +184,7 @@ describe('ThreadedComment - Depth Limiting', () => {
         </AdminModeProvider>
         </AuthProvider>
         </ToastProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
 
@@ -191,6 +202,7 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
         <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
@@ -206,6 +218,7 @@ describe('ThreadedComment - Depth Limiting', () => {
         </AdminModeProvider>
         </AuthProvider>
         </ToastProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
 
@@ -217,6 +230,7 @@ describe('ThreadedComment - Depth Limiting', () => {
   it('should use default maxDepth of 5', () => {
     render(
       <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
         <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
@@ -232,6 +246,7 @@ describe('ThreadedComment - Depth Limiting', () => {
         </AdminModeProvider>
         </AuthProvider>
         </ToastProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
 
@@ -242,6 +257,7 @@ describe('ThreadedComment - Depth Limiting', () => {
   it('should respect custom maxDepth prop', () => {
     render(
       <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
         <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
@@ -257,6 +273,7 @@ describe('ThreadedComment - Depth Limiting', () => {
         </AdminModeProvider>
         </AuthProvider>
         </ToastProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
 
@@ -272,6 +289,7 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
         <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
@@ -287,6 +305,7 @@ describe('ThreadedComment - Depth Limiting', () => {
         </AdminModeProvider>
         </AuthProvider>
         </ToastProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
 
@@ -301,6 +320,7 @@ describe('ThreadedComment - Depth Limiting', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
         <ToastProvider>
         <AuthProvider>
         <AdminModeProvider>
@@ -316,6 +336,7 @@ describe('ThreadedComment - Depth Limiting', () => {
         </AdminModeProvider>
         </AuthProvider>
         </ToastProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
 

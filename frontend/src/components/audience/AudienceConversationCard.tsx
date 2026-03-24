@@ -71,6 +71,7 @@ export const AudienceConversationCard: React.FC<AudienceConversationCardProps> =
       }}
       className={`
         block
+        cursor-pointer
         rounded-lg
         p-4
         transition-all

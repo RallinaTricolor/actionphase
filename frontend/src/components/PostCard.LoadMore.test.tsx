@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AxiosResponse } from 'axios';
@@ -130,15 +131,17 @@ describe('PostCard - Load More Comments', () => {
   const renderPostCard = (post: Message) => {
     return render(
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <PostCard
-            post={post}
-            gameId={1}
-            characters={mockCharacters}
-            controllableCharacters={mockCharacters}
-            currentUserId={1}
-          />
-        </ToastProvider>
+        <MemoryRouter>
+          <ToastProvider>
+            <PostCard
+              post={post}
+              gameId={1}
+              characters={mockCharacters}
+              controllableCharacters={mockCharacters}
+              currentUserId={1}
+            />
+          </ToastProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
   };
