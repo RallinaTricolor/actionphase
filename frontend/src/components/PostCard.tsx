@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
@@ -345,7 +346,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                   className="md:w-16 md:h-16"
                 />
                 <div className="flex-1">
-                  <h3 className="font-bold text-xl text-content-primary">{post.character_name}</h3>
+                  <Link to={`/characters/${post.character_id}`} className="font-bold text-xl text-content-primary hover:underline">{post.character_name}</Link>
                   <p className="text-sm text-content-secondary">
                     {post.author_username ? `Posted by @${post.author_username} · ` : 'Posted '}{formatDate(post.created_at)}
                     {post.is_edited && <span className="ml-1 text-content-tertiary">(edited)</span>}

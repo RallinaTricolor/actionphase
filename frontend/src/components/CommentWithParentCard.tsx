@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import type { CommentWithParent } from '../types/messages';
 import { ParentCommentPreview } from './ParentCommentPreview';
@@ -55,9 +56,9 @@ export function CommentWithParentCard({
           />
           <div className="flex flex-col flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-text-heading">
+              <Link to={`/characters/${comment.character_id}`} className="font-medium text-text-heading hover:underline">
                 {comment.character_name || 'Unknown'}
-              </span>
+              </Link>
               <span className="text-sm text-content-tertiary">
                 @{comment.author_username}
               </span>

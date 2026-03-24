@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { apiClient } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
@@ -436,7 +437,7 @@ export const ThreadedComment = memo(function ThreadedComment({
           <div className="flex-1 min-w-0">
             {/* Desktop: horizontal layout */}
             <div className="hidden md:block">
-              <span className="font-semibold text-sm text-content-primary" data-testid="comment-author">{comment.character_name}</span>
+              <Link to={`/characters/${comment.character_id}`} className="font-semibold text-sm text-content-primary hover:underline" data-testid="comment-author">{comment.character_name}</Link>
               <span className="text-xs text-content-secondary ml-2">
                 {comment.author_username ? `@${comment.author_username} · ` : ''}{formatDate(comment.created_at)}
                 {comment.is_edited && !comment.is_deleted && (
@@ -455,7 +456,7 @@ export const ThreadedComment = memo(function ThreadedComment({
             {/* Mobile: vertical layout */}
             <div className="md:hidden">
               <div className="flex items-center gap-1 flex-wrap">
-                <span className="font-semibold text-xs text-content-primary truncate" data-testid="comment-author">{comment.character_name}</span>
+                <Link to={`/characters/${comment.character_id}`} className="font-semibold text-xs text-content-primary truncate hover:underline" data-testid="comment-author">{comment.character_name}</Link>
                 {isAuthor && (
                   <span className="text-xs bg-interactive-primary-subtle text-content-primary px-1 py-0.5 rounded flex-shrink-0">You</span>
                 )}
