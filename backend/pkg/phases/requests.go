@@ -33,8 +33,8 @@ type UpdatePhaseRequest struct {
 	Title       *string             `json:"title,omitempty"`
 	Description *string             `json:"description,omitempty"`
 	StartTime   *core.LocalDateTime `json:"start_time,omitempty"`
-	EndTime     *core.LocalDateTime `json:"end_time,omitempty"`
 	Deadline    *core.LocalDateTime `json:"deadline,omitempty"`
+	// EndTime is intentionally excluded — it is system-managed and set by DeactivatePhase
 }
 
 func (r *UpdatePhaseRequest) Bind(req *http.Request) error {

@@ -11,10 +11,13 @@ func (ps *PhaseService) ConvertPhaseToResponse(phase *models.GamePhase) PhaseRes
 		GameID:      phase.GameID,
 		PhaseType:   phase.PhaseType,
 		PhaseNumber: phase.PhaseNumber,
-		StartTime:   phase.StartTime.Time,
 		IsActive:    phase.IsActive.Bool,
 		IsPublished: phase.IsPublished,
 		CreatedAt:   phase.CreatedAt.Time,
+	}
+
+	if phase.StartTime.Valid {
+		response.StartTime = &phase.StartTime.Time
 	}
 
 	if phase.Title != "" {

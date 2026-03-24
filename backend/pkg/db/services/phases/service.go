@@ -35,7 +35,7 @@ type PhaseResponse struct {
 	PhaseNumber int32      `json:"phase_number"`
 	Title       *string    `json:"title,omitempty"`
 	Description *string    `json:"description,omitempty"`
-	StartTime   time.Time  `json:"start_time"`
+	StartTime   *time.Time `json:"start_time,omitempty"`
 	EndTime     *time.Time `json:"end_time,omitempty"`
 	Deadline    *time.Time `json:"deadline,omitempty"`
 	IsActive    bool       `json:"is_active"`

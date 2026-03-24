@@ -2,9 +2,11 @@ package phases
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	models "actionphase/pkg/db/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // RunScheduledActivations finds all inactive phases whose start_time has arrived
@@ -42,6 +44,15 @@ func (ps *PhaseService) RunScheduledActivations(ctx context.Context) (int, error
 		// override their decision. This prevents a silent override when a GM
 		// manually activates a phase seconds before a scheduled transition fires.
 		activatedAt, err := queries.GetActivePhaseActivatedAt(ctx, phase.GameID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			// Unexpected DB error — skip this game rather than risk overriding state we can't read
+			ps.Logger.LogError(ctx, err, "Failed to check active phase activated_at, skipping game",
+				"game_id", phase.GameID,
+				"phase_id", phase.ID,
+			)
+			processedGames[phase.GameID] = true
+			continue
+		}
 		if err == nil && activatedAt.Valid && phase.StartTime.Valid {
 			if activatedAt.Time.After(phase.StartTime.Time) {
 				ps.Logger.Info(ctx, "Skipping scheduled phase — current phase was manually activated after scheduled start_time",
