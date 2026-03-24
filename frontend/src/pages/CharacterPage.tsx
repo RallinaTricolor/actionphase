@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useCharacterComments } from '../hooks/useCharacterComments';
+import { useCharacterStats } from '../hooks/useCharacterStats';
 import CharacterAvatar from '../components/CharacterAvatar';
 import { ParentCommentPreview } from '../components/ParentCommentPreview';
 import { MarkdownPreview } from '../components/MarkdownPreview';
 import { Spinner, Alert, Badge, Card, CardBody } from '../components/ui';
 import { formatDistanceToNow } from 'date-fns';
 import type { CharacterMessage } from '../types/messages';
+import { CharacterActivityStats } from '../components/CharacterActivityStats';
 
 /**
  * CharacterPage - Displays a character's profile and public activity feed
@@ -41,6 +43,8 @@ export function CharacterPage() {
     queryFn: () => apiClient.characters.getCharacter(characterIdNum!).then(res => res.data),
     enabled: !!characterIdNum && !isNaN(characterIdNum),
   });
+
+  const { data: statsData } = useCharacterStats(characterIdNum);
 
   const {
     data,
@@ -129,6 +133,11 @@ export function CharacterPage() {
               </div>
             </div>
           ) : null}
+
+          {/* Activity Stats */}
+          {statsData && (
+            <CharacterActivityStats stats={statsData} className="mt-4" />
+          )}
         </div>
 
         {/* Activity Feed */}

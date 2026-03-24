@@ -1492,3 +1492,4 @@ type UserAvatarServiceInterface interface {
 	// Returns nil if the user has no avatar.
 	GetUserAvatarURL(ctx context.Context, userID int32) (*string, error)
 }
+

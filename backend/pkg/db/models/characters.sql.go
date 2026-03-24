@@ -238,6 +238,31 @@ func (q *Queries) GetCharacter(ctx context.Context, id int32) (Character, error)
 	return i, err
 }
 
+const getCharacterActivityStats = `-- name: GetCharacterActivityStats :one
+SELECT
+    COUNT(DISTINCT m.id) FILTER (WHERE m.is_deleted = false) AS public_messages,
+    COUNT(DISTINCT pm.id) FILTER (WHERE pm.is_deleted = false) AS private_messages
+FROM characters c
+LEFT JOIN messages m ON m.character_id = c.id
+LEFT JOIN private_messages pm ON pm.sender_character_id = c.id
+WHERE c.id = $1
+`
+
+type GetCharacterActivityStatsRow struct {
+	PublicMessages  int64 `json:"public_messages"`
+	PrivateMessages int64 `json:"private_messages"`
+}
+
+// Returns public message count and private message count for a character.
+// public_messages: all non-deleted messages (posts + comments) in the common room
+// private_messages: all non-deleted private messages sent as this character
+func (q *Queries) GetCharacterActivityStats(ctx context.Context, id int32) (GetCharacterActivityStatsRow, error) {
+	row := q.db.QueryRow(ctx, getCharacterActivityStats, id)
+	var i GetCharacterActivityStatsRow
+	err := row.Scan(&i.PublicMessages, &i.PrivateMessages)
+	return i, err
+}
+
 const getCharacterByNameAndGame = `-- name: GetCharacterByNameAndGame :one
 SELECT id, game_id, user_id, name, character_type, status, avatar_url, is_active, original_owner_user_id, created_at, updated_at FROM characters
 WHERE name = $1 AND game_id = $2

@@ -4,11 +4,13 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { UseInfiniteQueryResult, UseQueryResult } from '@tanstack/react-query';
 import { CharacterPage } from './CharacterPage';
 import * as useCharacterCommentsModule from '../hooks/useCharacterComments';
+import * as useCharacterStatsModule from '../hooks/useCharacterStats';
 import type { Character } from '../types/characters';
 import type { CharacterMessage, CharacterMessagesResponse } from '../types/messages';
 
 // Mock hooks
 vi.mock('../hooks/useCharacterComments');
+vi.mock('../hooks/useCharacterStats');
 
 vi.mock('@tanstack/react-query', async () => {
   const actual = await vi.importActual('@tanstack/react-query');
@@ -98,6 +100,12 @@ function renderCharacterPage(characterId = '42') {
 describe('CharacterPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: stats not loaded (undefined data)
+    vi.mocked(useCharacterStatsModule.useCharacterStats).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as Partial<ReturnType<typeof useCharacterStatsModule.useCharacterStats>>);
   });
 
   it('shows loading state while character loads', () => {
@@ -271,6 +279,63 @@ describe('CharacterPage', () => {
     link.click();
 
     expect(mockNavigate).toHaveBeenCalledWith('/games/1?tab=common-room&comment=1');
+  });
+
+  it('shows public and private stats when both are returned', () => {
+    vi.mocked(useQuery).mockReturnValue({
+      data: mockCharacter,
+      isLoading: false,
+      isError: false,
+    } as Partial<UseQueryResult<Character>>);
+
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+      data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+      isLoading: false,
+      isError: false,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+
+    vi.mocked(useCharacterStatsModule.useCharacterStats).mockReturnValue({
+      data: { public_messages: 42, private_messages: 13 },
+      isLoading: false,
+      isError: false,
+    } as Partial<ReturnType<typeof useCharacterStatsModule.useCharacterStats>>);
+
+    renderCharacterPage();
+
+    expect(screen.getByTestId('character-stats')).toBeInTheDocument();
+    expect(screen.getByTestId('public-message-count')).toHaveTextContent('42');
+    expect(screen.getByTestId('private-message-count')).toHaveTextContent('13');
+  });
+
+  it('shows only public stats when private_messages is absent', () => {
+    vi.mocked(useQuery).mockReturnValue({
+      data: mockCharacter,
+      isLoading: false,
+      isError: false,
+    } as Partial<UseQueryResult<Character>>);
+
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+      data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+      isLoading: false,
+      isError: false,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+
+    vi.mocked(useCharacterStatsModule.useCharacterStats).mockReturnValue({
+      data: { public_messages: 7 },
+      isLoading: false,
+      isError: false,
+    } as Partial<ReturnType<typeof useCharacterStatsModule.useCharacterStats>>);
+
+    renderCharacterPage();
+
+    expect(screen.getByTestId('public-message-count')).toHaveTextContent('7');
+    expect(screen.queryByTestId('private-message-count')).not.toBeInTheDocument();
   });
 
   it('shows invalid character ID error for non-numeric ID', () => {

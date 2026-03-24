@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
+import { useCharacterStats } from '../hooks/useCharacterStats';
 import type { Character } from '../types/characters';
+import { CharacterActivityStats } from './CharacterActivityStats';
 import { useGameContext } from '../contexts/GameContext';
 import { CreateCharacterModal } from './CreateCharacterModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -247,6 +249,7 @@ export function CharactersList({
                           character={character}
                           isOwner={true}
                           userRole={userRole}
+                          gameState={gameState}
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
                           onAssignNPC={setNpcToAssign}
@@ -296,6 +299,7 @@ export function CharactersList({
                           character={character}
                           isOwner={true}
                           userRole={userRole}
+                          gameState={gameState}
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
                           onAssignNPC={setNpcToAssign}
@@ -321,6 +325,7 @@ export function CharactersList({
                           character={character}
                           isOwner={isUserCharacter(character)}
                           userRole={userRole}
+                          gameState={gameState}
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
                           onAssignNPC={setNpcToAssign}
@@ -348,6 +353,7 @@ export function CharactersList({
                           character={character}
                           isOwner={isUserCharacter(character)}
                           userRole={userRole}
+                          gameState={gameState}
                           isAnonymous={isAnonymous}
                           onApprove={handleApproveCharacter}
                           onAssignNPC={setNpcToAssign}
@@ -488,6 +494,7 @@ interface CharacterCardProps {
   character: Character;
   isOwner: boolean;
   userRole: string;
+  gameState?: string;
   isAnonymous?: boolean;
   onApprove: (characterId: number, status: 'approved' | 'rejected') => void;
   onAssignNPC?: (character: Character) => void;
@@ -502,6 +509,7 @@ function CharacterCard({
   character,
   isOwner,
   userRole,
+  gameState = 'setup',
   isAnonymous = false,
   onApprove,
   onAssignNPC,
@@ -512,6 +520,10 @@ function CharacterCard({
   onViewSheet
 }: CharacterCardProps) {
   const navigate = useNavigate();
+
+  // Show stats for GMs, audience, owners, or anyone in a completed game
+  const canViewStats = isOwner || userRole === 'gm' || userRole === 'co_gm' || userRole === 'audience' || gameState === 'completed';
+  const { data: statsData } = useCharacterStats(canViewStats ? character.id : undefined);
 
   return (
     <div className="border border-theme-default rounded-lg p-3 md:p-4 surface-base hover:shadow-sm transition-shadow" data-testid="character-card">
@@ -555,6 +567,10 @@ function CharacterCard({
           )}
           {character.character_type === 'player_character' && character.username && canSeePlayerNames(isAnonymous || false, userRole) && (
             <div>Player: {character.username}</div>
+          )}
+          {/* Activity stats (owner, GM, audience, or completed game) */}
+          {canViewStats && statsData && (
+            <CharacterActivityStats stats={statsData} />
           )}
         </div>
 
@@ -648,6 +664,10 @@ function CharacterCard({
               {/* For player characters, show player name if not anonymous mode OR if user can see player names (GM/co-GM/audience) */}
               {character.character_type === 'player_character' && character.username && canSeePlayerNames(isAnonymous || false, userRole) && (
                 <div>Player: {character.username}</div>
+              )}
+              {/* Activity stats (owner, GM, audience, or completed game) */}
+              {canViewStats && statsData && (
+                <CharacterActivityStats stats={statsData} />
               )}
             </div>
           </div>

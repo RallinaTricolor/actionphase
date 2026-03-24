@@ -3,6 +3,7 @@ import { logger } from '@/services/LoggingService';
 import type {
   Character,
   CharacterData,
+  CharacterActivityStats,
   CreateCharacterRequest,
   CharacterDataRequest,
   ApproveCharacterRequest,
@@ -116,6 +117,10 @@ export class CharactersApi extends BaseApiClient {
   // Audience Participation endpoints
   async listAudienceNPCs(gameId: number) {
     return this.client.get<{ npcs: Character[] }>(`/api/v1/games/${gameId}/characters/audience-npcs`);
+  }
+
+  async getCharacterStats(characterId: number) {
+    return this.client.get<CharacterActivityStats>(`/api/v1/characters/${characterId}/stats`);
   }
 
   async getCharacterComments(characterId: number, limit: number = 20, offset: number = 0) {

@@ -58,6 +58,11 @@ export interface ReassignCharacterRequest {
   new_owner_user_id: number;
 }
 
+export interface CharacterActivityStats {
+  public_messages: number;
+  private_messages?: number;
+}
+
 // Individual ability/skill item structures for JSON fields
 export interface CharacterAbility {
   id: string; // UUID or unique identifier

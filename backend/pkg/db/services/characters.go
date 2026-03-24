@@ -624,6 +624,20 @@ func (cs *CharacterService) ListAudienceNPCs(ctx context.Context, gameID int32) 
 	return npcs, nil
 }
 
+// GetCharacterActivityStats returns public and private message counts for a character.
+func (cs *CharacterService) GetCharacterActivityStats(ctx context.Context, characterID int32) (*core.CharacterActivityStats, error) {
+	queries := models.New(cs.DB)
+	row, err := queries.GetCharacterActivityStats(ctx, characterID)
+	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to get character activity stats", "character_id", characterID)
+		return nil, err
+	}
+	return &core.CharacterActivityStats{
+		PublicMessages:  row.PublicMessages,
+		PrivateMessages: &row.PrivateMessages,
+	}, nil
+}
+
 // AssignNPCToAudience assigns an NPC character to an audience member
 // Creates or updates the NPC assignment record
 func (cs *CharacterService) AssignNPCToAudience(ctx context.Context, characterID, assignedUserID, assignedByUserID int32) (*models.NpcAssignment, error) {

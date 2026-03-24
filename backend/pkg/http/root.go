@@ -288,6 +288,9 @@ func (h *Handler) Start() {
 			r.Post("/{id}/data", characterHandler.SetCharacterData)
 			r.Get("/{id}/data", characterHandler.GetCharacterData)
 
+			// Character activity stats
+			r.Get("/{id}/stats", characterHandler.GetCharacterStats)
+
 			// Character page - public activity feed
 			messageHandler := messages.Handler{App: h.App}
 			r.Get("/{id}/comments", messageHandler.GetCharacterComments)

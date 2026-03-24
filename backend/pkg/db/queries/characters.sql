@@ -207,3 +207,15 @@ VALUES ($1, $2, $3)
 ON CONFLICT (character_id)
 DO UPDATE SET assigned_user_id = $2, assigned_by_user_id = $3, assigned_at = NOW()
 RETURNING *;
+
+-- name: GetCharacterActivityStats :one
+-- Returns public message count and private message count for a character.
+-- public_messages: all non-deleted messages (posts + comments) in the common room
+-- private_messages: all non-deleted private messages sent as this character
+SELECT
+    COUNT(DISTINCT m.id) FILTER (WHERE m.is_deleted = false) AS public_messages,
+    COUNT(DISTINCT pm.id) FILTER (WHERE pm.is_deleted = false) AS private_messages
+FROM characters c
+LEFT JOIN messages m ON m.character_id = c.id
+LEFT JOIN private_messages pm ON pm.sender_character_id = c.id
+WHERE c.id = $1;
