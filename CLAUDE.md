@@ -207,7 +207,7 @@ just test-frontend-watch      # Watch mode for development
 
 **Database Management**:
 ```bash
-just make_migration <name>    # Create new migration
+just migration create <name> # Create new migration
 just migrate                  # Apply migrations to actionphase database
 just migrate_test             # Apply migrations to test database
 
@@ -272,7 +272,7 @@ just migrate_test             # Apply migrations to test database
 **Implement BOTH backend and frontend together before moving to next feature.**
 
 **Backend Flow**:
-1. Database migration (if needed) → `just make_migration <name>`
+1. Database migration (if needed) → `just migration create <name>`
 2. SQL queries → `backend/pkg/db/queries/*.sql`
 3. Generate code → `just sqlgen`
 4. Define interface → `backend/pkg/core/interfaces.go`
@@ -591,7 +591,7 @@ Key variables in `.env`:
 4. Use Game #2 for action testing, Game #6 for pagination
 
 ### Updating Database Schema
-1. Create migration: `just make_migration <name>`
+1. Create migration: `just migration create <name>`
 2. Write both `.up.sql` and `.down.sql`
 3. Update queries in `backend/pkg/db/queries/`
 4. Regenerate code: `just sqlgen`
