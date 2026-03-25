@@ -2,7 +2,8 @@ import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } fr
 import { Trash2, RefreshCw, Pencil } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useConversation } from '../contexts/ConversationContext';
-import { Button, Select, Textarea, Alert } from './ui';
+import { Button, Select, Alert } from './ui';
+import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
 import { MarkdownPreview } from './MarkdownPreview';
 import type { Character } from '../types/characters';
@@ -43,7 +44,6 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firstUnreadRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [hasScrolledToUnread, setHasScrolledToUnread] = useState(false);
   const [deleteMessageId, setDeleteMessageId] = useState<number | null>(null);
@@ -382,14 +382,13 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                       </div>
                     ) : editingMessageId === message.id ? (
                       <div className="surface-raised rounded-lg p-3">
-                        <Textarea
+                        <CommentEditor
                           value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
+                          onChange={setEditContent}
                           rows={4}
                           maxLength={50000}
                           disabled={saving}
-                          autoFocus
-                          data-testid="edit-message-textarea"
+                          characters={participantCharacters}
                         />
                         <div className="flex gap-2 mt-2">
                           <Button
@@ -461,27 +460,16 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                 </div>
               )}
 
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <Textarea
-                    ref={textareaRef}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    rows={6}
-                    placeholder={isCommonRoomPhase ? "Type your message... (Markdown supported)" : "Messaging is only available during Common Room phases"}
-                    disabled={sending || !isCommonRoomPhase}
-                    maxLength={50000}
-                    showCharacterCount={true}
-                    helperText="Maximum 50,000 characters"
-                    style={{ height: '150px', resize: 'vertical' }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                        handleSendMessage(e);
-                      }
-                    }}
-                  />
-                </div>
-              </div>
+              <CommentEditor
+                value={newMessage}
+                onChange={setNewMessage}
+                rows={4}
+                placeholder={isCommonRoomPhase ? "Type your message..." : "Messaging is only available during Common Room phases"}
+                disabled={sending || !isCommonRoomPhase}
+                maxLength={50000}
+                showCharacterCount={true}
+                characters={participantCharacters}
+              />
               <div className="flex items-center gap-2 mt-2">
                 <Button
                     type="submit"

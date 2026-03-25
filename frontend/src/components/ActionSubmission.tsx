@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useUserCharacters } from '../hooks/useUserCharacters';
 import { CountdownTimer } from './CountdownTimer';
-import { Button, Select, Textarea, Alert } from './ui';
+import { Button, Select, Alert } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
+import { CommentEditor } from './CommentEditor';
 import type { GamePhase, ActionSubmissionRequest, ActionWithDetails } from '../types/phases';
 
 interface ActionSubmissionProps {
@@ -221,19 +222,19 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
             )}
 
             {/* Action Content */}
-            <Textarea
-              label="Your Action"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Describe what your character does during this phase. Be as detailed as you like - this will only be seen by the GM until the game ends."
-              rows={8}
-              required
-              disabled={submitActionMutation.isPending}
-              maxLength={100000}
-              showCharacterCount={true}
-              helperText="This action is private and will only be visible to the GM during the game. Maximum 100,000 characters."
-              data-testid="action-textarea"
-            />
+            <div>
+              <label className="block text-sm font-medium text-content-primary mb-1">Your Action</label>
+              <CommentEditor
+                value={content}
+                onChange={setContent}
+                placeholder="Describe what your character does during this phase. Be as detailed as you like - this will only be seen by the GM until the game ends."
+                rows={8}
+                disabled={submitActionMutation.isPending}
+                maxLength={100000}
+                showCharacterCount={true}
+              />
+              <p className="mt-1 text-xs text-content-tertiary">This action is private and will only be visible to the GM during the game. Maximum 100,000 characters.</p>
+            </div>
 
             {/* Submit Buttons */}
             <div className="flex justify-end space-x-3">

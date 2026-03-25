@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useCreateActionResult } from '../hooks/useActionResults';
 import { useToast } from '../contexts/ToastContext';
-import { Button, Textarea, Alert } from './ui';
+import { Button, Alert } from './ui';
+import { CommentEditor } from './CommentEditor';
 import { logger } from '@/services/LoggingService';
 
 interface CreateActionResultFormProps {
@@ -58,17 +59,17 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
       <h4 className="font-semibold text-content-primary mb-2">Send Result to {recipientLabel}</h4>
 
       <div className="mb-4">
-        <Textarea
+        <label className="block text-sm font-medium text-content-primary mb-1">Result Content</label>
+        <CommentEditor
           id="content"
-          label="Result Content"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={setContent}
           rows={4}
           placeholder="Enter the result of the player's action..."
           maxLength={100000}
           showCharacterCount={true}
-          helperText="Maximum 100,000 characters. Result will be created as a draft."
         />
+        <p className="mt-1 text-xs text-content-tertiary">Maximum 100,000 characters. Result will be created as a draft.</p>
       </div>
 
       <Button
