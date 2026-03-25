@@ -357,7 +357,7 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                       </span>
                       {/* Edit/Delete buttons - only show for sender's non-deleted messages */}
                       {currentUser && message.sender_user_id === currentUser.id && !message.is_deleted && isCommonRoomPhase && (
-                        <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="ml-auto flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => handleStartEdit(message.id, message.content)}
                             className="p-1 hover:bg-interactive-primary-subtle hover:text-interactive-primary rounded"
