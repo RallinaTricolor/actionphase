@@ -29,14 +29,37 @@ async function setDeadlineDateTime(page: Page, futureDate: Date) {
   // Wait for the date picker dialog to appear
   await expect(page.getByRole('dialog', { name: 'Choose Date and Time' })).toBeVisible();
 
-  // The calendar should already be on the correct month for near-future dates
-  // Click the appropriate date cell
+  const targetMonth = futureDate.getMonth(); // 0-indexed
+  const targetYear = futureDate.getFullYear();
+
+  // Navigate to the correct month — react-datepicker may be on any month
+  // Read the currently displayed month/year from the calendar header and navigate forward/back
+  for (let attempts = 0; attempts < 24; attempts++) {
+    const header = page.locator('.react-datepicker__current-month');
+    const headerText = await header.textContent();
+    if (!headerText) break;
+
+    // Parse "March 2026" style header
+    const displayedDate = new Date(`${headerText} 1`);
+    const displayedMonth = displayedDate.getMonth();
+    const displayedYear = displayedDate.getFullYear();
+
+    if (displayedYear === targetYear && displayedMonth === targetMonth) break;
+
+    const isAhead = displayedYear > targetYear || (displayedYear === targetYear && displayedMonth > targetMonth);
+    if (isAhead) {
+      await page.getByRole('button', { name: 'Previous Month' }).click();
+    } else {
+      await page.getByRole('button', { name: 'Next Month' }).click();
+    }
+  }
+
+  // Click the correct date cell
   const dayOfMonth = futureDate.getDate();
   const monthName = futureDate.toLocaleString('en-US', { month: 'long' });
   const year = futureDate.getFullYear();
   const ordinalDay = getOrdinalSuffix(dayOfMonth);
 
-  // Click the date (e.g., "Choose Friday, November 7th, 2025")
   await page.getByRole('gridcell', { name: new RegExp(`Choose.*${monthName} ${ordinalDay}, ${year}`, 'i') }).click();
 
   // Select the time from the dropdown
@@ -88,7 +111,7 @@ test.describe('Deadline Management', () => {
     // Set deadline to 48 hours from now (future, >24h = blue)
     // Round to nearest 15 minutes since the time picker uses 15-minute intervals
     const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
-    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+    futureDate.setMinutes(Math.ceil(futureDate.getMinutes() / 15) * 15);
     futureDate.setSeconds(0);
     futureDate.setMilliseconds(0);
 
@@ -117,7 +140,7 @@ test.describe('Deadline Management', () => {
     await page.getByRole('textbox', { name: 'Description' }).fill('Original description');
 
     const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
-    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+    futureDate.setMinutes(Math.ceil(futureDate.getMinutes() / 15) * 15);
     futureDate.setSeconds(0);
     futureDate.setMilliseconds(0);
 
@@ -200,7 +223,7 @@ test.describe('Deadline Management', () => {
     await page.getByRole('textbox', { name: 'Description' }).fill('This deadline will be deleted');
 
     const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
-    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+    futureDate.setMinutes(Math.ceil(futureDate.getMinutes() / 15) * 15);
     futureDate.setSeconds(0);
     futureDate.setMilliseconds(0);
 
@@ -239,7 +262,7 @@ test.describe('Deadline Management', () => {
     await page.getByRole('textbox', { name: 'Description' }).fill('Players should see this read-only');
 
     const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
-    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+    futureDate.setMinutes(Math.ceil(futureDate.getMinutes() / 15) * 15);
     futureDate.setSeconds(0);
     futureDate.setMilliseconds(0);
 
@@ -299,7 +322,7 @@ test.describe('Deadline Management', () => {
       // Set deadlines far enough in the future to account for test execution time
       // Start at 2 days from now, then add more days for each deadline
       const futureDate = new Date(Date.now() + ((i + 1) * 24) * 60 * 60 * 1000);
-      futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+      futureDate.setMinutes(Math.ceil(futureDate.getMinutes() / 15) * 15);
       futureDate.setSeconds(0);
       futureDate.setMilliseconds(0);
 
@@ -351,7 +374,7 @@ test.describe('Deadline Management', () => {
     await page.getByRole('textbox', { name: 'Description' }).fill('Testing unified deadline view');
 
     const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
-    futureDate.setMinutes(Math.round(futureDate.getMinutes() / 15) * 15);
+    futureDate.setMinutes(Math.ceil(futureDate.getMinutes() / 15) * 15);
     futureDate.setSeconds(0);
     futureDate.setMilliseconds(0);
 

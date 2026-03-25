@@ -217,10 +217,7 @@ export class MessagingPage {
    * Navigate to Messages tab using button/tab click
    */
   async navigateToMessages() {
-    const messagesTab = this.page.getByRole('tab', { name: 'Messages' }).or(
-      this.page.getByRole('button', { name: 'Messages' })
-    );
-    await messagesTab.click();
+    await this.page.getByTestId('tab-messages').click();
     await this.page.waitForLoadState('networkidle');
   }
 }

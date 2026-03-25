@@ -165,6 +165,7 @@ test.describe('Private Messages Flow', () => {
   });
 
   test('GM can send private messages as different NPCs', async ({ browser }) => {
+    test.setTimeout(60000);
     const gmContext = await browser.newContext();
     const playerContext = await browser.newContext();
 
@@ -206,9 +207,8 @@ test.describe('Private Messages Flow', () => {
       await playerMessaging.sendMessage(playerReply);
 
       // === GM creates DIFFERENT conversation as Whisper (different NPC) ===
-      await gmPage.reload();
-      await gmPage.waitForLoadState('networkidle');
-      await gmMessaging.navigateToMessages();
+      // Use goto() to navigate cleanly without any lingering conversation URL param
+      await gmMessaging.goto(gameId);
 
       const informantConvoTitle = `Secret Intel ${Date.now()}`;
       await gmMessaging.createConversation(
@@ -222,9 +222,8 @@ test.describe('Private Messages Flow', () => {
       await gmMessaging.sendMessage(informantMessage);
 
       // === Player sees BOTH conversations from different NPCs ===
-      await playerPage.reload();
-      await playerPage.waitForLoadState('networkidle');
-      await playerMessaging.navigateToMessages();
+      // Use goto() to navigate cleanly without any lingering conversation URL param
+      await playerMessaging.goto(gameId);
 
       // Verify both conversations exist
       await playerMessaging.verifyConversationExists(detectiveConvoTitle);

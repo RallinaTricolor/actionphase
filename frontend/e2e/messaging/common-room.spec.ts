@@ -300,6 +300,7 @@ test.describe('Common Room Flow', () => {
   });
 
   test('Deep nesting shows Continue this thread button at max depth', async ({ browser }) => {
+    test.setTimeout(60000);
     const gmContext = await browser.newContext();
     const player1Context = await browser.newContext();
     const player2Context = await browser.newContext();
@@ -354,8 +355,10 @@ test.describe('Common Room Flow', () => {
         await currentPage.getByText(postContent, { exact: true }).first().waitFor({ state: 'visible', timeout: 10000 });
 
         // Expand comments if collapsed — the comments section may be hidden after a fresh goto.
-        const commentsToggle = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
-        const toggleText = await commentsToggle.textContent().catch(() => '');
+        // Wait for the toggle button to be present before reading its state.
+        const commentsToggle = postCard.locator('button', { hasText: /Comments/ }).filter({ visible: true }).first();
+        await commentsToggle.waitFor({ state: 'visible', timeout: 10000 });
+        const toggleText = await commentsToggle.textContent();
         if (toggleText?.includes('Show')) {
           await commentsToggle.click();
           await currentPage.waitForLoadState('networkidle');

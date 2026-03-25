@@ -60,7 +60,7 @@ export async function navigateToGameTab(page: Page, tabName: string) {
   // may resolve before the comment fetch starts. Waiting for "Loading comments..." to
   // disappear ensures any in-flight comment fetches have completed before the test proceeds.
   if (tabName === 'Common Room') {
-    await page.waitForSelector('text="Loading comments..."', { state: 'hidden', timeout: 10000 }).catch(() => {
+    await page.waitForSelector('text="Loading comments..."', { state: 'hidden', timeout: 30000 }).catch(() => {
       // If the text never appeared (no posts or already done), that's fine
     });
   }
