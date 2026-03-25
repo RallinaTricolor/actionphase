@@ -51,7 +51,7 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    // Firefox and WebKit can be added later if needed
+// Firefox and WebKit can be added later if needed
     // {
     //   name: 'firefox',
     //   use: { ...devices['Desktop Firefox'] },
