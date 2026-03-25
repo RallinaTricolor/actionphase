@@ -256,9 +256,11 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
                       </>
                     ) : (
                       <>
-                        <Button variant="secondary" size="sm" onClick={() => handleStartEdit(draft)}>
-                          Edit
-                        </Button>
+                        {draft.operation !== 'delete' && (
+                          <Button variant="secondary" size="sm" onClick={() => handleStartEdit(draft)}>
+                            Edit
+                          </Button>
+                        )}
                         <Button
                           variant="danger"
                           size="sm"
@@ -277,22 +279,31 @@ export function DraftCharacterUpdates({ gameId, resultId, characterId, onClose }
                     <span className="text-text-secondary">Field:</span>
                     <span className="ml-2 text-text-primary font-medium">{draft.field_name}</span>
                   </div>
-                  <div>
-                    <span className="text-text-secondary">Type:</span>
-                    <span className="ml-2 text-text-primary">{draft.field_type}</span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-text-secondary">Value:</span>
-                    {editingDraftId === draft.id ? (
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="mt-1"
-                      />
-                    ) : (
-                      <span className="ml-2 text-text-primary font-medium">{draft.field_value}</span>
-                    )}
-                  </div>
+                  {draft.operation !== 'delete' && (
+                    <>
+                      <div>
+                        <span className="text-text-secondary">Type:</span>
+                        <span className="ml-2 text-text-primary">{draft.field_type}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-text-secondary">Value:</span>
+                        {editingDraftId === draft.id ? (
+                          <Input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            className="mt-1"
+                          />
+                        ) : (
+                          <span className="ml-2 text-text-primary font-medium">{draft.field_value}</span>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  {draft.operation === 'delete' && (
+                    <div className="col-span-2">
+                      <span className="text-semantic-danger text-sm">Will be removed when result is published</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-2 text-xs text-text-secondary">

@@ -424,8 +424,8 @@ func TestActionSubmissionService_PublishAllPhaseResults(t *testing.T) {
 	})
 }
 
-// TestActionSubmissionService_PublishCharacterUpdates tests the character update merge logic
-// This is a regression test for Issue 6.4: Pending Character Updates Not Applied
+// TestActionSubmissionService_PublishCharacterUpdates tests that draft character updates are written
+// directly to character_data on publish (whole-array snapshot model — no per-item merging).
 func TestActionSubmissionService_PublishCharacterUpdates(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
@@ -478,31 +478,22 @@ func TestActionSubmissionService_PublishCharacterUpdates(t *testing.T) {
 	result, err := actionService.CreateActionResult(context.Background(), resultReq)
 	require.NoError(t, err)
 
-	t.Run("merges inventory items into array format", func(t *testing.T) {
-		// Create draft character updates (individual rows per item)
-		// This simulates how the frontend stores draft updates
-		drafts := []struct {
-			fieldName  string
-			fieldValue string
-		}{
-			{"Sword", `{"name":"Sword","description":"A sharp blade","quantity":1}`},
-			{"Potion", `{"name":"Potion","description":"Healing potion","quantity":3}`},
-		}
+	t.Run("writes inventory array draft directly to character_data", func(t *testing.T) {
+		// Draft stores the complete desired final state as a whole array
+		itemsJSON := `[{"name":"Sword","description":"A sharp blade","quantity":1},{"name":"Potion","description":"Healing potion","quantity":3}]`
 
-		for _, draft := range drafts {
-			_, err := testDB.Pool.Exec(context.Background(),
-				`INSERT INTO action_result_character_updates
-				(action_result_id, character_id, module_type, field_name, field_value, field_type, operation)
-				VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-				result.ID, character.ID, "inventory", draft.fieldName, draft.fieldValue, "json", "upsert")
-			require.NoError(t, err)
-		}
+		_, err := testDB.Pool.Exec(context.Background(),
+			`INSERT INTO action_result_character_updates
+			(action_result_id, character_id, module_type, field_name, field_value, field_type, operation)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			result.ID, character.ID, "inventory", "items", itemsJSON, "json", "upsert")
+		require.NoError(t, err)
 
-		// Publish the result (should trigger merge logic)
+		// Publish
 		err = actionService.PublishActionResult(context.Background(), result.ID, int32(player.ID))
 		require.NoError(t, err)
 
-		// Verify character_data has correct format: field_name='items' with JSON array
+		// Verify character_data has the array written verbatim
 		var fieldName, fieldValue string
 		err = testDB.Pool.QueryRow(context.Background(),
 			`SELECT field_name, field_value FROM character_data
@@ -510,15 +501,10 @@ func TestActionSubmissionService_PublishCharacterUpdates(t *testing.T) {
 			character.ID, "inventory").Scan(&fieldName, &fieldValue)
 		require.NoError(t, err)
 
-		// Assertions
-		assert.Equal(t, "items", fieldName, "Field name should be 'items', not individual item names")
-		assert.Contains(t, fieldValue, `"name":"Sword"`, "Merged array should contain Sword")
-		assert.Contains(t, fieldValue, `"name":"Potion"`, "Merged array should contain Potion")
-		assert.Contains(t, fieldValue, `"quantity":1`, "Sword should have quantity 1")
-		assert.Contains(t, fieldValue, `"quantity":3`, "Potion should have quantity 3")
-
-		// Verify it's a JSON array, not individual fields
-		assert.True(t, fieldValue[0] == '[', "Field value should be a JSON array starting with '['")
+		assert.Equal(t, "items", fieldName)
+		assert.Contains(t, fieldValue, `"name":"Sword"`)
+		assert.Contains(t, fieldValue, `"name":"Potion"`)
+		assert.True(t, len(fieldValue) > 0 && fieldValue[0] == '[', "field value should be a JSON array")
 
 		// Verify drafts were cleaned up
 		var draftCount int
@@ -526,11 +512,10 @@ func TestActionSubmissionService_PublishCharacterUpdates(t *testing.T) {
 			`SELECT COUNT(*) FROM action_result_character_updates WHERE action_result_id = $1`,
 			result.ID).Scan(&draftCount)
 		require.NoError(t, err)
-		assert.Equal(t, 0, draftCount, "Draft updates should be deleted after publishing")
+		assert.Equal(t, 0, draftCount, "draft updates should be deleted after publishing")
 	})
 
-	t.Run("merges abilities into array format", func(t *testing.T) {
-		// Create new result for abilities test
+	t.Run("writes abilities array draft directly to character_data", func(t *testing.T) {
 		result2, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
 			GameID:      game.ID,
 			PhaseID:     phase.ID,
@@ -540,29 +525,18 @@ func TestActionSubmissionService_PublishCharacterUpdates(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		// Create draft ability updates
-		abilities := []struct {
-			fieldName  string
-			fieldValue string
-		}{
-			{"Fireball", `{"name":"Fireball","description":"Cast a fireball","cost":5}`},
-			{"Shield", `{"name":"Shield","description":"Protective barrier","cost":3}`},
-		}
+		abilitiesJSON := `[{"name":"Fireball","description":"Cast a fireball","cost":5},{"name":"Shield","description":"Protective barrier","cost":3}]`
 
-		for _, ability := range abilities {
-			_, err := testDB.Pool.Exec(context.Background(),
-				`INSERT INTO action_result_character_updates
-				(action_result_id, character_id, module_type, field_name, field_value, field_type, operation)
-				VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-				result2.ID, character.ID, "abilities", ability.fieldName, ability.fieldValue, "json", "upsert")
-			require.NoError(t, err)
-		}
+		_, err = testDB.Pool.Exec(context.Background(),
+			`INSERT INTO action_result_character_updates
+			(action_result_id, character_id, module_type, field_name, field_value, field_type, operation)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			result2.ID, character.ID, "abilities", "abilities", abilitiesJSON, "json", "upsert")
+		require.NoError(t, err)
 
-		// Publish
 		err = actionService.PublishActionResult(context.Background(), result2.ID, int32(player.ID))
 		require.NoError(t, err)
 
-		// Verify merged format
 		var fieldName, fieldValue string
 		err = testDB.Pool.QueryRow(context.Background(),
 			`SELECT field_name, field_value FROM character_data
@@ -570,47 +544,44 @@ func TestActionSubmissionService_PublishCharacterUpdates(t *testing.T) {
 			character.ID, "abilities").Scan(&fieldName, &fieldValue)
 		require.NoError(t, err)
 
-		assert.Equal(t, "abilities", fieldName, "Field name should be 'abilities'")
+		assert.Equal(t, "abilities", fieldName)
 		assert.Contains(t, fieldValue, `"name":"Fireball"`)
 		assert.Contains(t, fieldValue, `"name":"Shield"`)
-		assert.True(t, fieldValue[0] == '[', "Should be JSON array")
+		assert.True(t, len(fieldValue) > 0 && fieldValue[0] == '[', "field value should be a JSON array")
 	})
 
-	t.Run("merges new items with existing items", func(t *testing.T) {
-		// First, create existing character data with one item
+	t.Run("replaces existing character_data when draft is published", func(t *testing.T) {
+		// Pre-populate character_data with old items
 		_, err := testDB.Pool.Exec(context.Background(),
 			`INSERT INTO character_data (character_id, module_type, field_name, field_value, field_type)
 			VALUES ($1, $2, $3, $4, $5)
 			ON CONFLICT (character_id, module_type, field_name) DO UPDATE
 			SET field_value = EXCLUDED.field_value`,
 			character.ID, "inventory", "items",
-			`[{"name":"Existing Item","quantity":1}]`, "json")
+			`[{"name":"Old Item","quantity":1}]`, "json")
 		require.NoError(t, err)
 
-		// Create new result with additional item
 		result3, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
 			GameID:      game.ID,
 			PhaseID:     phase.ID,
 			UserID:      int32(player.ID),
-			Content:     "You find more items.",
+			Content:     "Your inventory has changed.",
 			IsPublished: false,
 		})
 		require.NoError(t, err)
 
-		// Add draft update for new item
+		// Draft contains the complete new desired state (Old Item removed, New Sword added)
+		newItemsJSON := `[{"name":"New Sword","quantity":1}]`
 		_, err = testDB.Pool.Exec(context.Background(),
 			`INSERT INTO action_result_character_updates
 			(action_result_id, character_id, module_type, field_name, field_value, field_type, operation)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			result3.ID, character.ID, "inventory", "New Sword",
-			`{"name":"New Sword","quantity":1}`, "json", "upsert")
+			result3.ID, character.ID, "inventory", "items", newItemsJSON, "json", "upsert")
 		require.NoError(t, err)
 
-		// Publish
 		err = actionService.PublishActionResult(context.Background(), result3.ID, int32(player.ID))
 		require.NoError(t, err)
 
-		// Verify both items exist in merged array
 		var fieldValue string
 		err = testDB.Pool.QueryRow(context.Background(),
 			`SELECT field_value FROM character_data
@@ -618,8 +589,8 @@ func TestActionSubmissionService_PublishCharacterUpdates(t *testing.T) {
 			character.ID, "inventory", "items").Scan(&fieldValue)
 		require.NoError(t, err)
 
-		assert.Contains(t, fieldValue, `"Existing Item"`, "Should preserve existing items")
-		assert.Contains(t, fieldValue, `"New Sword"`, "Should add new items")
+		assert.Contains(t, fieldValue, `"New Sword"`, "should contain the new item")
+		assert.NotContains(t, fieldValue, `"Old Item"`, "old item should be replaced, not preserved")
 	})
 }
 

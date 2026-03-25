@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -10,7 +9,6 @@ import (
 	models "actionphase/pkg/db/models"
 	"actionphase/pkg/validation"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -94,10 +92,10 @@ func (as *ActionSubmissionService) GetUserPhaseResults(ctx context.Context, phas
 	return results, nil
 }
 
-// mergeAndPublishDraftUpdates merges individual draft updates into array format and publishes them.
-// This handles the mismatch between how drafts are stored (individual rows per item/ability/skill)
-// and how character sheets expect data (single rows with JSON arrays).
-func (as *ActionSubmissionService) mergeAndPublishDraftUpdates(ctx context.Context, queries *models.Queries, resultID int32) error {
+// publishDraftUpdates applies draft character updates to character_data.
+// Each draft row stores the complete desired final state for a (character_id, module_type, field_name)
+// combination — no merging required, just write the value directly.
+func (as *ActionSubmissionService) publishDraftUpdates(ctx context.Context, queries *models.Queries, resultID int32) error {
 	// Get all draft updates for this result
 	drafts, err := queries.GetDraftCharacterUpdates(ctx, resultID)
 	if err != nil {
@@ -108,195 +106,28 @@ func (as *ActionSubmissionService) mergeAndPublishDraftUpdates(ctx context.Conte
 		return nil // Nothing to publish
 	}
 
-	// Define which module_types need array aggregation and their target field names
-	// Map structure: module_type -> target_field_name
-	arrayModules := map[string]string{
-		"inventory": "items",     // Inventory items stored individually, need to merge into 'items' array
-		"currency":  "currency",  // Currency entries stored individually, need to merge into 'currency' array
-		"abilities": "abilities", // Abilities stored individually, need to merge into 'abilities' array
-		"skills":    "skills",    // Skills stored individually, need to merge into 'skills' array
+	// isPublic determines visibility based on field name
+	isPublicField := func(fieldName string) bool {
+		// currency is private; everything else (abilities, skills, items) is public
+		return fieldName != "currency"
 	}
 
-	// Group drafts by (character_id, module_type)
-	type groupKey struct {
-		characterID int32
-		moduleType  string
-	}
-	groups := make(map[groupKey][]models.ActionResultCharacterUpdate)
+	// Each draft row is a complete snapshot — write it directly to character_data
 	for _, draft := range drafts {
-		if draft.Operation != "upsert" {
-			continue // Only handle upsert operations
-		}
-		key := groupKey{characterID: draft.CharacterID, moduleType: draft.ModuleType}
-		groups[key] = append(groups[key], draft)
-	}
-
-	// Process each group
-	for key, groupDrafts := range groups {
-		targetFieldName, needsAggregation := arrayModules[key.moduleType]
-
-		if !needsAggregation {
-			// For non-array modules, use simple upsert (old behavior)
-			for _, draft := range groupDrafts {
-				_, err := queries.CreateCharacterData(ctx, models.CreateCharacterDataParams{
-					CharacterID: draft.CharacterID,
-					ModuleType:  draft.ModuleType,
-					FieldName:   draft.FieldName,
-					FieldValue:  draft.FieldValue,
-					FieldType:   pgtype.Text{String: draft.FieldType, Valid: true},
-					IsPublic:    pgtype.Bool{Bool: false, Valid: true}, // Default to private
-				})
-				if err != nil {
-					return fmt.Errorf("failed to upsert non-array field: %w", err)
-				}
-			}
+		if !draft.FieldValue.Valid {
 			continue
 		}
-
-		// For array modules, merge all drafts into a single array
-		// 1. Fetch existing array data (if any)
-		existingData, err := queries.GetCharacterDataByModule(ctx, models.GetCharacterDataByModuleParams{
-			CharacterID: key.characterID,
-			ModuleType:  key.moduleType,
+		_, err := queries.CreateCharacterData(ctx, models.CreateCharacterDataParams{
+			CharacterID: draft.CharacterID,
+			ModuleType:  draft.ModuleType,
+			FieldName:   draft.FieldName,
+			FieldValue:  draft.FieldValue,
+			FieldType:   pgtype.Text{String: draft.FieldType, Valid: true},
+			IsPublic:    pgtype.Bool{Bool: isPublicField(draft.FieldName), Valid: true},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to get existing character data: %w", err)
-		}
-
-		// 2. Parse existing array or initialize empty
-		var existingArray []map[string]interface{}
-		for _, data := range existingData {
-			if data.FieldName == targetFieldName && data.FieldValue.Valid {
-				if err := json.Unmarshal([]byte(data.FieldValue.String), &existingArray); err != nil {
-					// If parse fails, start with empty array
-					existingArray = []map[string]interface{}{}
-				}
-				break
-			}
-		}
-		if existingArray == nil {
-			existingArray = []map[string]interface{}{}
-		}
-
-		// 3. Merge draft items into existing array
-		// Use appropriate field as unique key based on module type
-		itemMap := make(map[string]map[string]interface{})
-
-		// Determine which field to use as the unique key
-		// Currency uses "type" field, others use "name" field
-		var keyField string
-		switch key.moduleType {
-		case "currency":
-			keyField = "type" // Currency entries: {"type":"Gold","amount":10}
-		default:
-			keyField = "name" // Items/abilities/skills: {"name":"Sword","quantity":1}
-		}
-
-		// Add existing items to map using the appropriate key field
-		for _, item := range existingArray {
-			if keyValue, ok := item[keyField].(string); ok {
-				itemMap[keyValue] = item
-			}
-		}
-
-		// Upsert draft items (overwrite if same name exists)
-		for _, draft := range groupDrafts {
-			if !draft.FieldValue.Valid {
-				continue
-			}
-
-			var draftItem map[string]interface{}
-
-			// Try to unmarshal as JSON first
-			if err := json.Unmarshal([]byte(draft.FieldValue.String), &draftItem); err != nil {
-				// If unmarshal fails and this is currency, it might be in the old format (plain number)
-				// Handle legacy format for currency: convert plain number to proper currency object
-				if key.moduleType == "currency" {
-					// Try parsing as a plain number (old format)
-					var amount float64
-					if numErr := json.Unmarshal([]byte(draft.FieldValue.String), &amount); numErr == nil {
-						// Successfully parsed as number - construct proper currency object
-						draftItem = map[string]interface{}{
-							"type":   draft.FieldName,
-							"amount": amount,
-						}
-					} else {
-						// Not JSON and not a number - fail
-						return fmt.Errorf("failed to parse draft item JSON: %w (also not a valid number)", err)
-					}
-				} else {
-					// For non-currency modules, JSON parse failure is an error
-					return fmt.Errorf("failed to parse draft item JSON: %w", err)
-				}
-			}
-
-			// Use the appropriate field from the draft item as the key
-			// For currency, extract from draftItem["type"], for others use draftItem["name"]
-			// If not present in the item, fall back to draft.FieldName
-			var itemKey string
-			if keyValue, ok := draftItem[keyField].(string); ok {
-				itemKey = keyValue
-			} else {
-				// Fallback to field_name if key field not present in draft item
-				itemKey = draft.FieldName
-			}
-			// CRITICAL: Merge draft fields into existing item, don't replace entire object
-			// This preserves the "id" field and any other fields not in the draft
-			if existingItem, exists := itemMap[itemKey]; exists {
-				// Item exists - merge draft fields into existing item
-				for k, v := range draftItem {
-					existingItem[k] = v
-				}
-				// No need to reassign - maps are reference types in Go
-			} else {
-				// New item - generate ID if missing
-				if _, hasID := draftItem["id"]; !hasID {
-					draftItem["id"] = uuid.New().String()
-				}
-				itemMap[itemKey] = draftItem
-			}
-		}
-
-		// 4. Convert map back to array
-		mergedArray := make([]map[string]interface{}, 0, len(itemMap))
-		for _, item := range itemMap {
-			mergedArray = append(mergedArray, item)
-		}
-
-		// Observability: Detect if items are missing ID field after merge
-		missingIDs := 0
-		for _, item := range mergedArray {
-			if _, hasID := item["id"]; !hasID {
-				missingIDs++
-			}
-		}
-		if missingIDs > 0 {
-			as.Logger.Warn(ctx, "Character data merge produced items without ID field - deletion may fail",
-				"actionResultID", resultID,
-				"characterID", key.characterID,
-				"moduleType", key.moduleType,
-				"fieldName", targetFieldName,
-				"totalItems", len(mergedArray),
-				"missingIDCount", missingIDs,
-			)
-		}
-
-		// 5. Marshal to JSON and save
-		mergedJSON, err := json.Marshal(mergedArray)
-		if err != nil {
-			return fmt.Errorf("failed to marshal merged array: %w", err)
-		}
-
-		_, err = queries.CreateCharacterData(ctx, models.CreateCharacterDataParams{
-			CharacterID: key.characterID,
-			ModuleType:  key.moduleType,
-			FieldName:   targetFieldName, // Use the target field name (e.g., 'items', 'abilities')
-			FieldValue:  pgtype.Text{String: string(mergedJSON), Valid: true},
-			FieldType:   pgtype.Text{String: "json", Valid: true},
-			IsPublic:    pgtype.Bool{Bool: false, Valid: true},
-		})
-		if err != nil {
-			return fmt.Errorf("failed to save merged array: %w", err)
+			return fmt.Errorf("failed to publish draft for character %d %s/%s: %w",
+				draft.CharacterID, draft.ModuleType, draft.FieldName, err)
 		}
 	}
 
@@ -335,11 +166,11 @@ func (as *ActionSubmissionService) publishSingleResultWithDrafts(ctx context.Con
 		)
 	}
 
-	// Step 2: Merge and publish draft character updates
-	// This aggregates individual draft rows into array format expected by character sheets
-	err = as.mergeAndPublishDraftUpdates(ctx, queries, resultID)
+	// Step 2: Publish draft character updates
+	// Each draft row contains the complete desired final state — write directly to character_data
+	err = as.publishDraftUpdates(ctx, queries, resultID)
 	if err != nil {
-		return fmt.Errorf("failed to merge and publish draft character updates for result %d: %w", resultID, err)
+		return fmt.Errorf("failed to publish draft character updates for result %d: %w", resultID, err)
 	}
 
 	// Step 3: Delete the published drafts (cleanup)
