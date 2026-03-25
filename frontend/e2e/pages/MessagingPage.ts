@@ -220,4 +220,30 @@ export class MessagingPage {
     await this.page.getByTestId('tab-messages').click();
     await this.page.waitForLoadState('networkidle');
   }
+
+  /**
+   * Click the edit button on a message
+   * @param messageLocator - Locator for the message element
+   */
+  async clickEditButton(messageLocator: Locator) {
+    await messageLocator.hover();
+    const editButton = messageLocator.locator('button[title="Edit message"]');
+    await expect(editButton).toBeVisible();
+    await editButton.click();
+  }
+
+  /**
+   * Edit a message's content via the inline editor
+   * @param messageLocator - Locator for the message element
+   * @param newContent - New content to replace with
+   */
+  async editMessage(messageLocator: Locator, newContent: string) {
+    await this.clickEditButton(messageLocator);
+    const textarea = this.page.getByTestId('edit-message-textarea');
+    await expect(textarea).toBeVisible();
+    await textarea.clear();
+    await textarea.fill(newContent);
+    await this.page.getByTestId('save-edit-button').click();
+    await this.page.waitForLoadState('networkidle');
+  }
 }
