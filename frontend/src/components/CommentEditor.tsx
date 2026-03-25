@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo } from 'react';
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CharacterAutocomplete } from './CharacterAutocomplete';
 import { Button, Textarea } from './ui';
@@ -48,6 +48,10 @@ export const CommentEditor = memo(function CommentEditor({
   const [autocompletePosition, setAutocompletePosition] = useState({ top: 0, left: 0 });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mentionStartIndex, setMentionStartIndex] = useState(0);
+  const [editorHeight, setEditorHeight] = useState<number | null>(null);
+  const dragStartY = useRef<number | null>(null);
+  const dragStartHeight = useRef<number>(0);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -209,21 +213,83 @@ export const CommentEditor = memo(function CommentEditor({
     }
   }, [showAutocomplete]);
 
+  const handleDragStart = useCallback((clientY: number) => {
+    // Measure the actual textarea or preview div height at drag start.
+    // editorRef points to the panel; use the current editorHeight or fall back
+    // to the panel's inner height minus padding (approx 24px for p-3).
+    dragStartY.current = clientY;
+    const panelHeight = editorRef.current ? editorRef.current.offsetHeight : 0;
+    dragStartHeight.current = editorHeight !== null ? editorHeight : Math.max(0, panelHeight - 24);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'row-resize';
+  }, [editorHeight]);
+
+  const handleDragMove = useCallback((clientY: number) => {
+    if (dragStartY.current === null) return;
+    const delta = clientY - dragStartY.current;
+    const newHeight = Math.max(80, dragStartHeight.current + delta);
+    setEditorHeight(newHeight);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    dragStartY.current = null;
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }, []);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => handleDragMove(e.clientY);
+    const onTouchMove = (e: TouchEvent) => handleDragMove(e.touches[0].clientY);
+    const onEnd = () => handleDragEnd();
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
+    document.addEventListener('touchend', onEnd);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onEnd);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onEnd);
+    };
+  }, [handleDragMove, handleDragEnd]);
+
   return (
     <div className="comment-editor">
-      {/* Editor Header with Controls */}
-      <div className="flex items-center justify-between mb-2 text-xs text-content-secondary">
-        <div className="flex items-center gap-3">
-          <Button
+      {/* Tab bar + secondary controls */}
+      <div className="flex items-end justify-between">
+        {/* Manila-style tabs */}
+        <div className="flex items-end gap-1">
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowPreview(!showPreview)}
+            onClick={() => setShowPreview(false)}
             disabled={disabled}
+            className={[
+              'px-4 py-1.5 text-sm font-medium rounded-t-md border border-b-0 transition-colors',
+              !showPreview
+                ? 'surface-base border-theme-default text-content-primary relative z-10 -mb-px'
+                : 'surface-sunken border-transparent text-content-tertiary hover:text-content-secondary',
+            ].join(' ')}
           >
-            {showPreview ? '👁️ Hide Preview' : '👁️ Show Preview'}
-          </Button>
+            Write
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowPreview(true)}
+            disabled={disabled}
+            className={[
+              'px-4 py-1.5 text-sm font-medium rounded-t-md border border-b-0 transition-colors',
+              showPreview
+                ? 'surface-base border-theme-default text-content-primary relative z-10 -mb-px'
+                : 'surface-sunken border-transparent text-content-tertiary hover:text-content-secondary',
+            ].join(' ')}
+          >
+            Preview
+          </button>
+        </div>
 
+        {/* Secondary controls */}
+        <div className="flex items-center gap-3 mb-1 text-xs">
           <Button
             type="button"
             variant="ghost"
@@ -233,50 +299,47 @@ export const CommentEditor = memo(function CommentEditor({
           >
             ❓ Markdown Help
           </Button>
+          <span className="text-content-tertiary">{value.length} characters</span>
         </div>
-
-        <span className="text-content-tertiary">
-          {value.length} characters
-        </span>
       </div>
 
-      {/* Markdown Help Panel */}
-      {showHelp && (
-        <div className="mb-3 p-3 bg-interactive-primary-subtle border border-interactive-primary rounded text-xs">
-          <div className="font-semibold text-interactive-primary mb-2">Markdown Quick Reference</div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-content-primary">
-            <div>
-              <code className="surface-sunken px-1 rounded">**bold**</code> → <strong>bold</strong>
-            </div>
-            <div>
-              <code className="surface-sunken px-1 rounded">*italic*</code> → <em>italic</em>
-            </div>
-            <div>
-              <code className="surface-sunken px-1 rounded">[link](url)</code> → link
-            </div>
-            <div>
-              <code className="surface-sunken px-1 rounded">`code`</code> → <code className="surface-sunken px-1">code</code>
-            </div>
-            <div>
-              <code className="surface-sunken px-1 rounded"># Heading</code> → Heading
-            </div>
-            <div>
-              <code className="surface-sunken px-1 rounded">- list item</code> → • list item
-            </div>
-            <div>
-              <code className="surface-sunken px-1 rounded">&gt; quote</code> → blockquote
-            </div>
-            <div>
-              <code className="surface-sunken px-1 rounded">@CharacterName</code> → mention
+      {/* Tab content panel — shares border with active tab */}
+      <div ref={editorRef} className="border border-b-0 border-theme-default rounded-tr-md surface-base p-3">
+        {/* Markdown Help Panel */}
+        {showHelp && (
+          <div className="mb-3 p-3 bg-interactive-primary-subtle border border-interactive-primary rounded text-xs">
+            <div className="font-semibold text-interactive-primary mb-2">Markdown Quick Reference</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-content-primary">
+              <div>
+                <code className="surface-sunken px-1 rounded">**bold**</code> → <strong>bold</strong>
+              </div>
+              <div>
+                <code className="surface-sunken px-1 rounded">*italic*</code> → <em>italic</em>
+              </div>
+              <div>
+                <code className="surface-sunken px-1 rounded">[link](url)</code> → link
+              </div>
+              <div>
+                <code className="surface-sunken px-1 rounded">`code`</code> → <code className="surface-sunken px-1">code</code>
+              </div>
+              <div>
+                <code className="surface-sunken px-1 rounded"># Heading</code> → Heading
+              </div>
+              <div>
+                <code className="surface-sunken px-1 rounded">- list item</code> → • list item
+              </div>
+              <div>
+                <code className="surface-sunken px-1 rounded">&gt; quote</code> → blockquote
+              </div>
+              <div>
+                <code className="surface-sunken px-1 rounded">@CharacterName</code> → mention
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Editor and Preview */}
-      <div className={`grid ${showPreview ? 'grid-cols-2 gap-3' : 'grid-cols-1'}`}>
-        {/* Textarea */}
-        <div className="relative">
+        {/* Write tab */}
+        {!showPreview && (
           <Textarea
             id={id}
             ref={textareaRef}
@@ -287,15 +350,19 @@ export const CommentEditor = memo(function CommentEditor({
             disabled={disabled}
             rows={rows}
             textareaSize="sm"
-            className="font-mono resize-y"
+            className="font-mono resize-none"
+            style={editorHeight !== null ? { height: editorHeight } : undefined}
             maxLength={maxLength}
             showCharacterCount={showCharacterCount}
           />
-        </div>
+        )}
 
-        {/* Live Preview */}
+        {/* Preview tab */}
         {showPreview && (
-          <div className="border border-theme-default rounded-md p-3 surface-raised overflow-auto" style={{ maxHeight: `${rows * 1.5}rem` }}>
+          <div
+            className="overflow-auto"
+            style={editorHeight !== null ? { height: editorHeight } : { minHeight: `${rows * 1.5}rem` }}
+          >
             {value.trim() ? (
               <MarkdownPreview content={value} />
             ) : (
@@ -303,6 +370,26 @@ export const CommentEditor = memo(function CommentEditor({
             )}
           </div>
         )}
+      </div>
+
+      {/* Drag handle */}
+      <div
+        className="relative flex items-center justify-center h-5 border border-t-0 border-theme-default rounded-b-md cursor-row-resize touch-none select-none surface-raised group"
+        onMouseDown={(e) => { e.preventDefault(); handleDragStart(e.clientY); }}
+        onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
+        aria-hidden="true"
+      >
+        {/* Center pill — prominent on mobile */}
+        <div className="w-10 h-1 rounded-full bg-gray-400 group-hover:bg-interactive-primary transition-colors" />
+        {/* Corner grip dots — familiar desktop affordance */}
+        <div className="absolute right-2 bottom-1 hidden sm:grid grid-cols-2 gap-px opacity-40 group-hover:opacity-80 transition-opacity">
+          <div className="w-1 h-1 rounded-full bg-gray-500" />
+          <div className="w-1 h-1 rounded-full bg-gray-500" />
+          <div className="w-1 h-1 rounded-full bg-gray-500" />
+          <div className="w-1 h-1 rounded-full bg-gray-500" />
+          <div className="w-1 h-1 rounded-full bg-gray-500" />
+          <div className="w-1 h-1 rounded-full bg-gray-500" />
+        </div>
       </div>
 
       {/* Character Autocomplete */}
