@@ -211,6 +211,9 @@ SELECT pm.id,
        pm.updated_at,
        pm.deleted_at,
        pm.is_deleted,
+       pm.is_edited,
+       pm.edited_at,
+       pm.edit_count,
        u.username as sender_username,
        c.name as sender_character_name,
        c.avatar_url as sender_avatar_url
@@ -231,6 +234,9 @@ type GetConversationMessagesRow struct {
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
 	IsDeleted           pgtype.Bool        `json:"is_deleted"`
+	IsEdited            bool               `json:"is_edited"`
+	EditedAt            pgtype.Timestamptz `json:"edited_at"`
+	EditCount           int32              `json:"edit_count"`
 	SenderUsername      string             `json:"sender_username"`
 	SenderCharacterName pgtype.Text        `json:"sender_character_name"`
 	SenderAvatarUrl     pgtype.Text        `json:"sender_avatar_url"`
@@ -255,6 +261,9 @@ func (q *Queries) GetConversationMessages(ctx context.Context, conversationID in
 			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.IsDeleted,
+			&i.IsEdited,
+			&i.EditedAt,
+			&i.EditCount,
 			&i.SenderUsername,
 			&i.SenderCharacterName,
 			&i.SenderAvatarUrl,
@@ -429,7 +438,7 @@ func (q *Queries) GetPhaseThreads(ctx context.Context, phaseID pgtype.Int4) ([]G
 }
 
 const getPrivateMessage = `-- name: GetPrivateMessage :one
-SELECT id, conversation_id, sender_user_id, sender_character_id, content, created_at, updated_at, deleted_at, is_deleted FROM private_messages WHERE id = $1
+SELECT id, conversation_id, sender_user_id, sender_character_id, content, created_at, updated_at, deleted_at, is_deleted, is_edited, edited_at, edit_count FROM private_messages WHERE id = $1
 `
 
 func (q *Queries) GetPrivateMessage(ctx context.Context, id int32) (PrivateMessage, error) {
@@ -445,6 +454,9 @@ func (q *Queries) GetPrivateMessage(ctx context.Context, id int32) (PrivateMessa
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.IsDeleted,
+		&i.IsEdited,
+		&i.EditedAt,
+		&i.EditCount,
 	)
 	return i, err
 }
@@ -1077,7 +1089,7 @@ func (q *Queries) RemoveConversationParticipant(ctx context.Context, arg RemoveC
 const sendPrivateMessage = `-- name: SendPrivateMessage :one
 INSERT INTO private_messages (conversation_id, sender_user_id, sender_character_id, content)
 VALUES ($1, $2, $3, $4)
-RETURNING id, conversation_id, sender_user_id, sender_character_id, content, created_at, updated_at, deleted_at, is_deleted
+RETURNING id, conversation_id, sender_user_id, sender_character_id, content, created_at, updated_at, deleted_at, is_deleted, is_edited, edited_at, edit_count
 `
 
 type SendPrivateMessageParams struct {
@@ -1105,6 +1117,9 @@ func (q *Queries) SendPrivateMessage(ctx context.Context, arg SendPrivateMessage
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.IsDeleted,
+		&i.IsEdited,
+		&i.EditedAt,
+		&i.EditCount,
 	)
 	return i, err
 }
@@ -1190,6 +1205,44 @@ type UpdateLastReadTimeParams struct {
 func (q *Queries) UpdateLastReadTime(ctx context.Context, arg UpdateLastReadTimeParams) error {
 	_, err := q.db.Exec(ctx, updateLastReadTime, arg.ConversationID, arg.UserID)
 	return err
+}
+
+const updatePrivateMessage = `-- name: UpdatePrivateMessage :one
+UPDATE private_messages
+SET content = $2,
+    is_edited = true,
+    edited_at = NOW(),
+    edit_count = edit_count + 1
+WHERE id = $1
+  AND sender_user_id = $3
+  AND is_deleted = false
+RETURNING id, conversation_id, sender_user_id, sender_character_id, content, created_at, updated_at, deleted_at, is_deleted, is_edited, edited_at, edit_count
+`
+
+type UpdatePrivateMessageParams struct {
+	ID           int32  `json:"id"`
+	Content      string `json:"content"`
+	SenderUserID int32  `json:"sender_user_id"`
+}
+
+func (q *Queries) UpdatePrivateMessage(ctx context.Context, arg UpdatePrivateMessageParams) (PrivateMessage, error) {
+	row := q.db.QueryRow(ctx, updatePrivateMessage, arg.ID, arg.Content, arg.SenderUserID)
+	var i PrivateMessage
+	err := row.Scan(
+		&i.ID,
+		&i.ConversationID,
+		&i.SenderUserID,
+		&i.SenderCharacterID,
+		&i.Content,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.IsDeleted,
+		&i.IsEdited,
+		&i.EditedAt,
+		&i.EditCount,
+	)
+	return i, err
 }
 
 const updateThread = `-- name: UpdateThread :one

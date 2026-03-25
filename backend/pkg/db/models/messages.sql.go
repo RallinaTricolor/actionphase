@@ -375,7 +375,7 @@ func (q *Queries) GetAllDescendantComments(ctx context.Context, parentID pgtype.
 }
 
 const getAudienceConversationMessages = `-- name: GetAudienceConversationMessages :many
-SELECT pm.id, pm.conversation_id, pm.sender_user_id, pm.sender_character_id, pm.content, pm.created_at, pm.updated_at, pm.deleted_at, pm.is_deleted,
+SELECT pm.id, pm.conversation_id, pm.sender_user_id, pm.sender_character_id, pm.content, pm.created_at, pm.updated_at, pm.deleted_at, pm.is_deleted, pm.is_edited, pm.edited_at, pm.edit_count,
        u.username as sender_username,
        c.name as sender_character_name
 FROM private_messages pm
@@ -395,6 +395,9 @@ type GetAudienceConversationMessagesRow struct {
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
 	IsDeleted           pgtype.Bool        `json:"is_deleted"`
+	IsEdited            bool               `json:"is_edited"`
+	EditedAt            pgtype.Timestamptz `json:"edited_at"`
+	EditCount           int32              `json:"edit_count"`
 	SenderUsername      string             `json:"sender_username"`
 	SenderCharacterName pgtype.Text        `json:"sender_character_name"`
 }
@@ -419,6 +422,9 @@ func (q *Queries) GetAudienceConversationMessages(ctx context.Context, conversat
 			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.IsDeleted,
+			&i.IsEdited,
+			&i.EditedAt,
+			&i.EditCount,
 			&i.SenderUsername,
 			&i.SenderCharacterName,
 		); err != nil {

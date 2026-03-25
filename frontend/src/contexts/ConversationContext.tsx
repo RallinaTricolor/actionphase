@@ -28,6 +28,7 @@ interface ConversationContextType {
   markAsRead: (gameId: number, conversationId: number) => Promise<void>;
   sendMessage: (gameId: number, conversationId: number, data: { character_id: number; content: string }) => Promise<void>;
   deleteMessage: (gameId: number, conversationId: number, messageId: number) => Promise<void>;
+  editMessage: (gameId: number, conversationId: number, messageId: number, content: string) => Promise<void>;
   createConversation: (gameId: number, data: any) => Promise<number>;
 
   // Utility
@@ -224,6 +225,25 @@ export function ConversationProvider({ children }: ConversationProviderProps) {
     }
   }, [loadMessages, showError]);
 
+  const editMessage = useCallback(async (
+    gameId: number,
+    conversationId: number,
+    messageId: number,
+    content: string
+  ) => {
+    try {
+      await apiClient.conversations.updateMessage(gameId, conversationId, messageId, { content });
+      logger.debug('Edited message', { gameId, conversationId, messageId });
+
+      // Reload messages to show updated content
+      await loadMessages(gameId, conversationId);
+    } catch (_err) {
+      logger.error('Failed to edit message', { error: _err, gameId, conversationId, messageId });
+      showError('Failed to edit message. Please try again.');
+      throw _err;
+    }
+  }, [loadMessages, showError]);
+
   const createConversation = useCallback(async (gameId: number, data: any) => {
     try {
       const response = await apiClient.conversations.createConversation(gameId, data);
@@ -271,6 +291,7 @@ export function ConversationProvider({ children }: ConversationProviderProps) {
     markAsRead,
     sendMessage,
     deleteMessage,
+    editMessage,
     createConversation,
 
     // Utility

@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
-import { Trash2, RefreshCw } from 'lucide-react';
+import { Trash2, RefreshCw, Pencil } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useConversation } from '../contexts/ConversationContext';
 import { Button, Select, Textarea, Alert } from './ui';
@@ -34,6 +34,7 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
     markAsRead,
     sendMessage,
     deleteMessage,
+    editMessage,
   } = useConversation();
 
   // UI-specific state
@@ -47,6 +48,9 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
   const [hasScrolledToUnread, setHasScrolledToUnread] = useState(false);
   const [deleteMessageId, setDeleteMessageId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [saving, setSaving] = useState(false);
   const savedScrollPositionRef = useRef<number | null>(null);
 
   const loading = loadingMessages || loadingConversation;
@@ -223,6 +227,30 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
     }
   };
 
+  const handleStartEdit = (messageId: number, currentContent: string) => {
+    setEditingMessageId(messageId);
+    setEditContent(currentContent);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditContent('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMessageId || !editContent.trim() || saving) return;
+    try {
+      setSaving(true);
+      await editMessage(gameId, conversationId, editingMessageId, editContent.trim());
+      setEditingMessageId(null);
+      setEditContent('');
+    } catch (_err) {
+      logger.error('Failed to save edit', { error: _err, gameId, conversationId, messageId: editingMessageId });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDeleteMessage = async () => {
     if (!deleteMessageId) return;
 
@@ -327,20 +355,62 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                       <span className="text-xs text-content-tertiary">
                         {formatTimestamp(message.created_at)}
                       </span>
-                      {/* Delete button - only show for sender's messages */}
-                      {currentUser && message.sender_user_id === currentUser.id && !message.is_deleted && (
-                        <button
-                          onClick={() => setDeleteMessageId(message.id)}
-                          className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-semantic-danger hover:text-content-inverse rounded"
-                          title="Delete message"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      {/* Edit/Delete buttons - only show for sender's non-deleted messages */}
+                      {currentUser && message.sender_user_id === currentUser.id && !message.is_deleted && isCommonRoomPhase && (
+                        <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleStartEdit(message.id, message.content)}
+                            className="p-1 hover:bg-interactive-primary-subtle hover:text-interactive-primary rounded"
+                            title="Edit message"
+                            data-testid="edit-message-button"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteMessageId(message.id)}
+                            className="p-1 hover:bg-semantic-danger hover:text-content-inverse rounded"
+                            title="Delete message"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       )}
                     </div>
                     {message.is_deleted ? (
                       <div className="surface-raised rounded-lg p-3 italic text-content-tertiary">
                         {message.content}
+                      </div>
+                    ) : editingMessageId === message.id ? (
+                      <div className="surface-raised rounded-lg p-3">
+                        <Textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          rows={4}
+                          maxLength={50000}
+                          disabled={saving}
+                          autoFocus
+                          data-testid="edit-message-textarea"
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={handleSaveEdit}
+                            disabled={saving || !editContent.trim()}
+                            loading={saving}
+                            data-testid="save-edit-button"
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleCancelEdit}
+                            disabled={saving}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <div className="surface-raised rounded-lg p-3">
@@ -349,6 +419,9 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                           mentionedCharacters={[]}
                           fullWidth
                         />
+                        {message.is_edited && (
+                          <span className="text-xs text-content-tertiary mt-1 block" data-testid="edited-label">(edited)</span>
+                        )}
                       </div>
                     )}
                   </div>

@@ -257,7 +257,10 @@ CREATE TABLE private_messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     deleted_at TIMESTAMP WITH TIME ZONE,
-    is_deleted BOOLEAN DEFAULT FALSE
+    is_deleted BOOLEAN DEFAULT FALSE,
+    is_edited BOOLEAN NOT NULL DEFAULT FALSE,
+    edited_at TIMESTAMP WITH TIME ZONE,
+    edit_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE conversation_reads (

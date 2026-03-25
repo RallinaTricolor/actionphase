@@ -32,6 +32,9 @@ export interface PrivateMessage {
   sender_avatar_url?: string | null;
   deleted_at?: string;
   is_deleted?: boolean;
+  is_edited?: boolean;
+  edited_at?: string;
+  edit_count?: number;
 }
 
 export interface ConversationListItem {
@@ -69,6 +72,10 @@ export interface SendMessageRequest {
 
 export interface AddParticipantRequest {
   character_id: number;
+}
+
+export interface UpdateMessageRequest {
+  content: string;
 }
 
 // Read tracking types

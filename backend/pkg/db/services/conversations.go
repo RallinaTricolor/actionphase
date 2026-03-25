@@ -507,6 +507,37 @@ func (s *ConversationService) GetUserConversationRead(ctx context.Context, userI
 	return &read, nil
 }
 
+// UpdatePrivateMessage edits the content of a private message.
+// Only the message sender can edit their own messages, and only if not deleted.
+func (s *ConversationService) UpdatePrivateMessage(ctx context.Context, messageID int32, userID int32, content string) (*models.PrivateMessage, error) {
+	// Get the message to verify ownership and status
+	message, err := s.Queries.GetPrivateMessage(ctx, messageID)
+	if err != nil {
+		return nil, fmt.Errorf("message not found")
+	}
+
+	// Verify the user is the sender
+	if message.SenderUserID != userID {
+		return nil, fmt.Errorf("forbidden: you can only edit your own messages")
+	}
+
+	// Cannot edit a deleted message
+	if message.IsDeleted.Valid && message.IsDeleted.Bool {
+		return nil, fmt.Errorf("cannot edit a deleted message")
+	}
+
+	updated, err := s.Queries.UpdatePrivateMessage(ctx, models.UpdatePrivateMessageParams{
+		ID:           messageID,
+		Content:      content,
+		SenderUserID: userID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update message: %w", err)
+	}
+
+	return &updated, nil
+}
+
 // DeletePrivateMessage soft-deletes a private message
 // Only the message sender can delete their own messages
 func (s *ConversationService) DeletePrivateMessage(ctx context.Context, messageID int32, userID int32) error {

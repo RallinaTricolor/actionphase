@@ -178,6 +178,9 @@ SELECT pm.id,
        pm.updated_at,
        pm.deleted_at,
        pm.is_deleted,
+       pm.is_edited,
+       pm.edited_at,
+       pm.edit_count,
        u.username as sender_username,
        c.name as sender_character_name,
        c.avatar_url as sender_avatar_url
@@ -214,6 +217,17 @@ SELECT * FROM private_messages WHERE id = $1;
 UPDATE private_messages
 SET deleted_at = NOW(), is_deleted = true
 WHERE id = $1 AND sender_user_id = $2;
+
+-- name: UpdatePrivateMessage :one
+UPDATE private_messages
+SET content = $2,
+    is_edited = true,
+    edited_at = NOW(),
+    edit_count = edit_count + 1
+WHERE id = $1
+  AND sender_user_id = $3
+  AND is_deleted = false
+RETURNING *;
 
 -- name: SoftDeleteMessage :exec
 UPDATE messages

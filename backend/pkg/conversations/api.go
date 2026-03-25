@@ -30,6 +30,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/{conversationId}/messages", h.GetConversationMessages)      // Get messages
 		r.Post("/{conversationId}/messages", h.SendMessage)                 // Send message
 		r.Delete("/{conversationId}/messages/{messageId}", h.DeleteMessage) // Delete message
+		r.Patch("/{conversationId}/messages/{messageId}", h.UpdateMessage)  // Edit message
 		r.Post("/{conversationId}/read", h.MarkAsRead)                      // Mark as read
 		r.Post("/{conversationId}/participants", h.AddParticipant)          // Add participant
 	})
@@ -462,6 +463,119 @@ func (h *Handler) AddParticipant(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 	})
+}
+
+// UpdateMessageRequest represents the request body for editing a message
+type UpdateMessageRequest struct {
+	Content string `json:"content"`
+}
+
+func (r *UpdateMessageRequest) Bind(req *http.Request) error {
+	return nil
+}
+
+// UpdateMessage edits an existing private message
+func (h *Handler) UpdateMessage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authUser := core.GetAuthenticatedUser(r.Context())
+	if authUser == nil {
+		h.App.Logger.Error("No authenticated user in context")
+		render.Render(w, r, core.ErrUnauthorized("authentication required"))
+		return
+	}
+
+	userID := int32(authUser.ID)
+
+	conversationIDStr := chi.URLParam(r, "conversationId")
+	conversationID, err := strconv.ParseInt(conversationIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid conversation ID")))
+		return
+	}
+
+	messageIDStr := chi.URLParam(r, "messageId")
+	messageID, err := strconv.ParseInt(messageIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid message ID")))
+		return
+	}
+
+	data := &UpdateMessageRequest{}
+	if err := render.Bind(r, data); err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(err))
+		return
+	}
+
+	if data.Content == "" {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("message content is required")))
+		return
+	}
+
+	conversationService := db.NewConversationService(h.App.Pool)
+
+	// Verify user has valid access to the conversation
+	canAccess, err := conversationService.CanUserAccessConversation(ctx, int32(conversationID), userID, authUser.IsAdmin)
+	if err != nil {
+		h.App.Logger.Error("Failed to check conversation access", "error", err, "conversation_id", conversationID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+	if !canAccess {
+		render.Render(w, r, core.ErrForbidden("you don't have access to this conversation"))
+		return
+	}
+
+	// Get the message to find the character/game for phase validation
+	msg, err := conversationService.Queries.GetPrivateMessage(ctx, int32(messageID))
+	if err != nil {
+		render.Render(w, r, core.ErrNotFound("message not found"))
+		return
+	}
+
+	// Validate that the game is in a common room phase (same gate as sending)
+	conv, err := conversationService.Queries.GetConversation(ctx, int32(conversationID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get conversation", "error", err, "conversation_id", conversationID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	phaseService := &phases.PhaseService{DB: h.App.Pool}
+	activePhase, err := phaseService.GetActivePhase(ctx, conv.GameID)
+	if err != nil {
+		h.App.Logger.Error("Failed to get active phase", "error", err, "game_id", conv.GameID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	if activePhase == nil || activePhase.PhaseType != "common_room" {
+		render.Render(w, r, core.ErrForbidden("private messages can only be edited during common room phases"))
+		return
+	}
+
+	updated, err := conversationService.UpdatePrivateMessage(ctx, int32(messageID), userID, data.Content)
+	if err != nil {
+		if err.Error() == "message not found" {
+			render.Render(w, r, core.ErrNotFound("message not found"))
+			return
+		}
+		if err.Error() == "forbidden: you can only edit your own messages" {
+			render.Render(w, r, core.ErrForbidden("you can only edit your own messages"))
+			return
+		}
+		if err.Error() == "cannot edit a deleted message" {
+			render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("cannot edit a deleted message")))
+			return
+		}
+		h.App.Logger.Error("Failed to update message", "error", err, "message_id", messageID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	h.App.Logger.Info("Message updated successfully", "message_id", msg.ID, "conversation_id", conversationID, "user_id", userID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
 }
 
 // DeleteMessage deletes a private message (soft delete)

@@ -6,7 +6,8 @@ import type {
   PrivateMessage,
   CreateConversationRequest,
   SendMessageRequest,
-  AddParticipantRequest
+  AddParticipantRequest,
+  UpdateMessageRequest
 } from '../../types/conversations';
 
 /**
@@ -44,5 +45,9 @@ export class ConversationsApi extends BaseApiClient {
 
   async deleteMessage(gameId: number, conversationId: number, messageId: number) {
     return this.client.delete<{ message: string; id: number }>(`/api/v1/games/${gameId}/conversations/${conversationId}/messages/${messageId}`);
+  }
+
+  async updateMessage(gameId: number, conversationId: number, messageId: number, data: UpdateMessageRequest) {
+    return this.client.patch<PrivateMessage>(`/api/v1/games/${gameId}/conversations/${conversationId}/messages/${messageId}`, data);
   }
 }

@@ -421,6 +421,9 @@ type PrivateMessage struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	IsDeleted         pgtype.Bool        `json:"is_deleted"`
+	IsEdited          bool               `json:"is_edited"`
+	EditedAt          pgtype.Timestamptz `json:"edited_at"`
+	EditCount         int32              `json:"edit_count"`
 }
 
 type RegistrationAttempt struct {

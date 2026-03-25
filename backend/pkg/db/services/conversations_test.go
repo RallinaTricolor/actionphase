@@ -1410,3 +1410,117 @@ func TestConversationService_DeletePrivateMessage(t *testing.T) {
 		assert.Equal(t, countBefore+1, len(messagesAfter), "Deleted message should still be counted")
 	})
 }
+
+func TestConversationService_UpdatePrivateMessage(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+
+	service := NewConversationService(testDB.Pool)
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	ctx := context.Background()
+
+	// Setup
+	gm := testDB.CreateTestUser(t, "gm_update", "gm_update@example.com")
+	player1 := testDB.CreateTestUser(t, "player1_update", "player1_update@example.com")
+	player2 := testDB.CreateTestUser(t, "player2_update", "player2_update@example.com")
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Update Test Game")
+
+	_, err := gameService.AddGameParticipant(ctx, game.ID, int32(player1.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(player2.ID), "player")
+	require.NoError(t, err)
+
+	char1, err := charService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player1.ID)),
+		Name:          "Char1 Update",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	char2, err := charService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player2.ID)),
+		Name:          "Char2 Update",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	conv, err := service.CreateConversation(ctx, CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Update Test Conv",
+		CreatedByUserID: int32(player1.ID),
+		ParticipantIDs:  []int32{char1.ID, char2.ID},
+	})
+	require.NoError(t, err)
+
+	sendMsg := func(userID int32, charID int32, content string) *dbmodels.PrivateMessage {
+		msg, err := service.SendMessage(ctx, SendMessageRequest{
+			ConversationID:    conv.ID,
+			SenderUserID:      userID,
+			SenderCharacterID: charID,
+			Content:           content,
+		})
+		require.NoError(t, err)
+		return msg
+	}
+
+	t.Run("successfully edits message and tracks edit metadata", func(t *testing.T) {
+		msg := sendMsg(int32(player1.ID), char1.ID, "original content")
+
+		updated, err := service.UpdatePrivateMessage(ctx, msg.ID, int32(player1.ID), "edited content")
+
+		require.NoError(t, err)
+		assert.Equal(t, "edited content", updated.Content)
+		assert.True(t, updated.IsEdited)
+		assert.True(t, updated.EditedAt.Valid)
+		assert.Equal(t, int32(1), updated.EditCount)
+	})
+
+	t.Run("increments edit_count on subsequent edits", func(t *testing.T) {
+		msg := sendMsg(int32(player1.ID), char1.ID, "first version")
+
+		updated1, err := service.UpdatePrivateMessage(ctx, msg.ID, int32(player1.ID), "second version")
+		require.NoError(t, err)
+		assert.Equal(t, int32(1), updated1.EditCount)
+
+		updated2, err := service.UpdatePrivateMessage(ctx, msg.ID, int32(player1.ID), "third version")
+		require.NoError(t, err)
+		assert.Equal(t, int32(2), updated2.EditCount)
+		assert.Equal(t, "third version", updated2.Content)
+	})
+
+	t.Run("non-sender cannot edit message", func(t *testing.T) {
+		msg := sendMsg(int32(player1.ID), char1.ID, "player1 wrote this")
+
+		_, err := service.UpdatePrivateMessage(ctx, msg.ID, int32(player2.ID), "player2 tries to edit")
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "forbidden")
+	})
+
+	t.Run("cannot edit a deleted message", func(t *testing.T) {
+		msg := sendMsg(int32(player1.ID), char1.ID, "will be deleted")
+
+		err := service.DeletePrivateMessage(ctx, msg.ID, int32(player1.ID))
+		require.NoError(t, err)
+
+		_, err = service.UpdatePrivateMessage(ctx, msg.ID, int32(player1.ID), "trying to edit deleted")
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "deleted")
+	})
+
+	t.Run("returns error for nonexistent message", func(t *testing.T) {
+		_, err := service.UpdatePrivateMessage(ctx, 999999, int32(player1.ID), "ghost edit")
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	_ = time.Now() // keep time import used
+}
