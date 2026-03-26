@@ -232,6 +232,7 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
                 disabled={submitActionMutation.isPending}
                 maxLength={100000}
                 showCharacterCount={true}
+                textareaTestId="action-textarea"
               />
               <p className="mt-1 text-xs text-content-tertiary">This action is private and will only be visible to the GM during the game. Maximum 100,000 characters.</p>
             </div>

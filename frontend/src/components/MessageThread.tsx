@@ -389,6 +389,7 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                           maxLength={50000}
                           disabled={saving}
                           characters={participantCharacters}
+                          textareaTestId="edit-message-textarea"
                         />
                         <div className="flex gap-2 mt-2">
                           <Button

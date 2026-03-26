@@ -15,6 +15,7 @@ interface CommentEditorProps {
   id?: string; // HTML id for label association
   maxLength?: number; // Maximum character limit
   showCharacterCount?: boolean; // Show character counter below textarea
+  textareaTestId?: string; // data-testid forwarded to the inner textarea (for E2E tests)
 }
 
 /**
@@ -40,6 +41,7 @@ export const CommentEditor = memo(function CommentEditor({
   id,
   maxLength,
   showCharacterCount = false,
+  textareaTestId,
 }: CommentEditorProps) {
   const [showPreview, setShowPreview] = useState(showPreviewByDefault);
   const [showHelp, setShowHelp] = useState(false);
@@ -354,6 +356,7 @@ export const CommentEditor = memo(function CommentEditor({
             style={editorHeight !== null ? { height: editorHeight } : undefined}
             maxLength={maxLength}
             showCharacterCount={showCharacterCount}
+            data-testid={textareaTestId}
           />
         )}
 
