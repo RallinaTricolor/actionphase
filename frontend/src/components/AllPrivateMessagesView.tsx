@@ -513,7 +513,7 @@ function MessageViewer({
 
                               {/* Message content */}
                               <div>
-                                <MarkdownPreview content={message.content} />
+                                <MarkdownPreview content={message.content} fullWidth />
                               </div>
                             </div>
                           ))}
