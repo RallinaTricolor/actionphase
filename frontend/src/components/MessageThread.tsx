@@ -14,9 +14,10 @@ interface MessageThreadProps {
   conversationId: number;
   characters: Character[];
   currentPhaseType?: string; // Current game phase type (common_room, action, results, etc.)
+  onBack?: () => void;
 }
 
-export function MessageThread({ gameId, conversationId, characters, currentPhaseType }: MessageThreadProps) {
+export function MessageThread({ gameId, conversationId, characters, currentPhaseType, onBack }: MessageThreadProps) {
   // Check if we're in a common room phase (when messaging is allowed)
   const isCommonRoomPhase = currentPhaseType === 'common_room';
   const { currentUser } = useAuth();
@@ -48,6 +49,7 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
   const [hasScrolledToUnread, setHasScrolledToUnread] = useState(false);
   const [deleteMessageId, setDeleteMessageId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState('');
   const [saving, setSaving] = useState(false);
@@ -210,6 +212,7 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
     try {
       setSending(true);
       setNewMessage('');
+      setReplyOpen(false);
 
       // Use context's sendMessage (it handles loadMessages and markAsRead)
       // Scroll position will be restored by useLayoutEffect after messages re-render
@@ -288,14 +291,25 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
     <div className="flex flex-col h-full">
       {/* Conversation Header */}
       {conversation && conversation.conversation && (
-        <div className="surface-base border-b border-theme-default p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-content-primary">
+        <div className="surface-base border-b border-theme-default px-3 py-2">
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <button
+                onClick={onBack}
+                aria-label="Back to conversations"
+                className="flex-shrink-0 p-1.5 rounded hover:bg-interactive-primary-subtle text-interactive-primary hover:text-interactive-primary-hover"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-bold text-content-primary leading-tight truncate">
                 {conversation.conversation.title || 'Untitled Conversation'}
               </h2>
-              <p className="text-sm text-content-secondary mt-1">
-                Participants: {conversation.participants?.map(p => p.character_name || p.username).join(', ') || 'None'}
+              <p className="text-xs text-content-secondary truncate">
+                {conversation.participants?.map(p => p.character_name || p.username).join(', ') || 'None'}
               </p>
             </div>
             <Button
@@ -434,7 +448,21 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
       </div>
 
       {/* Message Input */}
-      <div className="surface-base border-t border-theme-default p-4">
+      <div className="surface-base border-t border-theme-default">
+        {/* Mobile: "Reply" button shown when reply box is collapsed */}
+        {isCommonRoomPhase && !replyOpen && (
+          <div className="sm:hidden p-2 flex justify-end">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setReplyOpen(true)}
+            >
+              Reply
+            </Button>
+          </div>
+        )}
+
+        <div className={`p-4 ${!replyOpen ? 'hidden sm:block' : ''}`}>
         {/* Phase restriction alert */}
         {!isCommonRoomPhase && (
           <Alert variant="info" className="mb-4">
@@ -481,9 +509,19 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                 >
                   {sending ? 'Sending...' : 'Send'}
                 </Button>
-                <p className="text-xs text-content-tertiary mt-1">
+                <p className="text-xs text-content-tertiary hidden sm:block">
                   Press Ctrl/Cmd + Enter to send
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setReplyOpen(false)}
+                  aria-label="Close reply"
+                  className="sm:hidden ml-auto p-1.5 rounded text-content-tertiary hover:text-content-primary hover:bg-interactive-primary-subtle"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             </>
           ) : (
@@ -494,6 +532,7 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
             </p>
           )}
         </form>
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}

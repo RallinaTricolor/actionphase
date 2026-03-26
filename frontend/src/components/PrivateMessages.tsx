@@ -129,23 +129,6 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, currentPhaseTyp
       ) : (
         /* Message Thread (full screen with centered content on desktop) */
         <div className="h-full flex flex-col surface-base">
-          {/* Back button */}
-          <div className="p-3 border-b border-theme-default surface-base sticky top-0 z-10">
-            <div className="max-w-5xl mx-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBackToList}
-                className="flex items-center text-interactive-primary hover:text-interactive-primary-hover font-medium h-auto p-0"
-              >
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Back to conversations
-              </Button>
-            </div>
-          </div>
-
           {/* Thread - centered with max-width for better readability on desktop */}
           <div className="flex-1 overflow-hidden">
             <div className="h-full max-w-5xl mx-auto">
@@ -154,6 +137,7 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, currentPhaseTyp
                 conversationId={selectedConversationId}
                 characters={characters}
                 currentPhaseType={currentPhaseType}
+                onBack={handleBackToList}
               />
             </div>
           </div>
