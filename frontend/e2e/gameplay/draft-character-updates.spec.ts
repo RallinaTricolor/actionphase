@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
+import { CharacterSheetPage } from '../pages/CharacterSheetPage';
 
 /**
  * E2E Tests for Draft Character Updates Feature
@@ -211,5 +212,71 @@ test.describe('Draft Character Updates - Core Workflow', () => {
 
     // Verify unpublished count is now 0
     await expect(page.getByText('0 Unpublished')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('published ability appears on the player character sheet', async ({ browser }) => {
+    test.setTimeout(90000);
+    // GM adds ability and publishes
+    const gmContext = await browser.newContext();
+    const gmPage = await gmContext.newPage();
+
+    const abilityName = `Published Ability ${Date.now()}`;
+
+    try {
+      await loginAs(gmPage, 'GM');
+      const gameId = await getFixtureGameId(gmPage, 'E2E_GM_EDITING_RESULTS');
+      const gamePage = new GameDetailsPage(gmPage);
+
+      await gamePage.goto(gameId);
+      await gamePage.goToActions();
+      await expect(gmPage.getByText('Unpublished Results (Editable)')).toBeVisible({ timeout: 10000 });
+
+      // Add ability draft
+      await gmPage.getByRole('button', { name: 'Update Character Sheet' }).click();
+      await expect(gmPage.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
+      await gmPage.getByRole('button', { name: 'Add Ability' }).click();
+      await gmPage.getByPlaceholder('e.g., Fireball, Sneak Attack').fill(abilityName);
+      await gmPage.getByPlaceholder('Describe this ability...').fill('Granted by GM on publish');
+      await gmPage.getByRole('button', { name: 'Add Ability' }).last().click();
+      await expect(gmPage.getByRole('heading', { name: abilityName })).toBeVisible({ timeout: 5000 });
+      await gmPage.getByRole('button', { name: 'Done' }).click();
+      await gmPage.waitForTimeout(1200);
+
+      // Publish
+      await gmPage.getByRole('button', { name: 'Publish Result' }).click();
+      await expect(gmPage.getByRole('heading', { name: 'Publish Action Result?' })).toBeVisible({ timeout: 5000 });
+      await gmPage.getByRole('button', { name: 'Publish', exact: true }).click();
+      await expect(gmPage.getByRole('heading', { name: 'Publish Action Result?' })).not.toBeVisible({ timeout: 10000 });
+      await expect(gmPage.getByText('0 Unpublished')).toBeVisible({ timeout: 5000 });
+    } finally {
+      await gmContext.close();
+    }
+
+    // Player 3 checks their character sheet and sees the ability
+    const playerContext = await browser.newContext();
+    const playerPage = await playerContext.newPage();
+
+    try {
+      await loginAs(playerPage, 'PLAYER_3');
+      const gameId = await getFixtureGameId(playerPage, 'E2E_GM_EDITING_RESULTS');
+      const gamePage = new GameDetailsPage(playerPage);
+      const characterSheet = new CharacterSheetPage(playerPage);
+
+      // Navigate to the character via People > Characters
+      await gamePage.goto(gameId);
+      await gamePage.goToCharacters();
+
+      // Click on Player 3's character (opens inline via Edit Sheet button)
+      await playerPage.getByRole('button', { name: 'Edit Sheet' }).click();
+      await playerPage.waitForLoadState('networkidle');
+
+      // Go to Abilities & Skills tab
+      await characterSheet.goToAbilitiesModule();
+
+      // The ability granted by the GM should now be visible
+      await expect(playerPage.getByRole('heading', { name: abilityName })).toBeVisible({ timeout: 5000 });
+    } finally {
+      await playerContext.close();
+    }
   });
 });
