@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Input, Textarea, Select } from './ui';
+import { Button, Input, Select } from './ui';
+import { CommentEditor } from './CommentEditor';
 import type { Handout, UpdateHandoutRequest } from '../types/handouts';
 import { Modal } from './Modal';
 
@@ -42,18 +43,16 @@ export function EditHandoutModal({ handout, onClose, onSubmit, isSubmitting }: E
             </div>
 
             <div>
-              <Textarea
-                id="handout-content"
-                label="Content"
+              <label className="block text-sm font-medium text-content-primary mb-1">
+                Content <span className="text-danger">*</span>
+              </label>
+              <CommentEditor
                 value={formData.content}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  content: e.target.value
-                }))}
+                onChange={(content) => setFormData(prev => ({ ...prev, content }))}
                 placeholder="Write your handout content here... (Markdown supported)"
                 rows={10}
-                required
-                helperText="Supports Markdown formatting"
+                warnOnUnsavedChanges
+                textareaTestId="handout-content-input"
               />
             </div>
 
