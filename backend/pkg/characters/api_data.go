@@ -54,8 +54,10 @@ func (h *Handler) SetCharacterData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Additional check: only GMs can edit character stats (abilities, skills, items, currency)
-	isStatField := (data.ModuleType == "abilities" && (data.FieldName == "abilities" || data.FieldName == "skills")) ||
-		(data.ModuleType == "inventory" && (data.FieldName == "items" || data.FieldName == "currency"))
+	isStatField := (data.ModuleType == "abilities" && data.FieldName == "abilities") ||
+		(data.ModuleType == "skills" && data.FieldName == "skills") ||
+		(data.ModuleType == "inventory" && data.FieldName == "items") ||
+		(data.ModuleType == "currency" && data.FieldName == "currency")
 
 	if isStatField {
 		// Verify user is the GM of this character's game

@@ -55,30 +55,52 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
   const queryClient = useQueryClient();
 
   // Load the character's current sheet data
-  const { data: characterData, isLoading } = useQuery({
+  const { data: characterData, isLoading: isLoadingCharacterData } = useQuery({
     queryKey: ['characterData', characterId],
     queryFn: () => apiClient.characters.getCharacterData(characterId).then(res => res.data),
     enabled: isOpen && !!characterId,
   });
 
-  // Initialize local state from server data (once per modal open, after load completes)
+  // Load any existing drafts for this result — these represent the GM's last saved state
+  // and take precedence over raw characterData when initializing the editor
+  const { data: existingDrafts, isLoading: isLoadingDrafts } = useQuery({
+    queryKey: ['draftCharacterUpdates', gameId, actionResultId],
+    queryFn: () => apiClient.phases.getDraftCharacterUpdates(gameId, actionResultId).then(res => res.data ?? []),
+    enabled: isOpen && !!actionResultId,
+  });
+
+  const isLoading = isLoadingCharacterData || isLoadingDrafts;
+
+  // Initialize local state once per modal open, after both queries complete.
+  // Drafts take precedence over characterData — they represent the most recent intended state
+  // (e.g. a save that fired just before the modal closed may not yet be in characterData).
   useEffect(() => {
     if (!isOpen) {
       initialized.current = false;
       return;
     }
-    if (initialized.current || isLoading || characterData === undefined) return;
+    if (initialized.current || isLoading || characterData === undefined || existingDrafts === undefined) return;
+
+    // Treat null (no drafts yet) the same as empty array
+    const drafts = existingDrafts ?? [];
+
+    // Helper: prefer draft value if one exists for this field, else fall back to characterData
+    const getDraftField = (moduleType: string, fieldName: string) =>
+      drafts.find(d => d.module_type === moduleType && d.field_name === fieldName)?.field_value;
+
+    const getCharacterField = (moduleType: string, fieldName: string) =>
+      characterData.find(d => d.module_type === moduleType && d.field_name === fieldName)?.field_value;
 
     const getField = (moduleType: string, fieldName: string) =>
-      characterData.find(d => d.module_type === moduleType && d.field_name === fieldName)?.field_value;
+      getDraftField(moduleType, fieldName) ?? getCharacterField(moduleType, fieldName);
 
     setAbilities(parseJsonArray<CharacterAbility>(getField('abilities', 'abilities')));
     setSkills(parseJsonArray<CharacterSkill>(getField('skills', 'skills')));
     setItems(parseJsonArray<InventoryItem>(getField('inventory', 'items')));
-    setCurrency(parseJsonArray<CurrencyEntry>(getField('inventory', 'currency')));
+    setCurrency(parseJsonArray<CurrencyEntry>(getField('currency', 'currency')));
 
     initialized.current = true;
-  }, [isOpen, isLoading, characterData]);
+  }, [isOpen, isLoading, characterData, existingDrafts]);
 
   // Mutation to upsert a single draft row (whole-array snapshot)
   const saveDraftMutation = useMutation({
@@ -150,7 +172,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
 
   const handleCurrencyChange = (newCurrency: CurrencyEntry[]) => {
     setCurrency(newCurrency);
-    scheduleSave('inventory', 'currency', newCurrency);
+    scheduleSave('currency', 'currency', newCurrency);
   };
 
   // Flush any pending debounced save before closing so changes aren't lost
