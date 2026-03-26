@@ -1,5 +1,5 @@
 import { Modal } from './Modal';
-import { Button, Badge, Alert } from './ui';
+import { Button, Alert } from './ui';
 import { useDraftCharacterUpdates } from '../hooks';
 
 interface PublishResultConfirmationDialogProps {
@@ -30,17 +30,8 @@ export const PublishResultConfirmationDialog: React.FC<PublishResultConfirmation
         </p>
 
         {draftCount > 0 && (
-          <Alert variant="warning" title={`This will also publish ${draftCount} character sheet update${draftCount !== 1 ? 's' : ''}`}>
-            <ul className="list-disc list-inside space-y-1 mt-2">
-              {drafts?.map(draft => (
-                <li key={draft.id} className="text-sm">
-                  <Badge variant="primary" className="mr-1">
-                    {draft.module_type}
-                  </Badge>
-                  <span className="font-medium">{draft.field_name}</span>
-                </li>
-              ))}
-            </ul>
+          <Alert variant="warning">
+            This will also publish {draftCount} character sheet update{draftCount !== 1 ? 's' : ''} to the player&apos;s character.
           </Alert>
         )}
 

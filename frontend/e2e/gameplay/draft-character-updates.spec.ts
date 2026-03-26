@@ -22,7 +22,7 @@ import { GameDetailsPage } from '../pages/GameDetailsPage';
 
 test.describe('Draft Character Updates - Core Workflow', () => {
 
-  test('GM can open Update Character Sheet modal and see all tabs', async ({ page }) => {
+  test('GM can open Update Character Sheet modal and see sections', async ({ page }) => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GM_EDITING_RESULTS');
     const gamePage = new GameDetailsPage(page);
@@ -34,19 +34,23 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     // Click "Update Character Sheet" button
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
 
-    // Modal should open with all tabs
+    // Modal should open with section heading
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('button', { name: 'Abilities' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Skills' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Inventory' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Currency' })).toBeVisible();
 
-    // Close button should work
-    await page.getByRole('button', { name: 'Close' }).click();
+    // Section nav buttons should be visible
+    await expect(page.getByRole('button', { name: 'abilities' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'inventory' })).toBeVisible();
+
+    // Abilities sub-tabs should be visible by default
+    await expect(page.getByRole('button', { name: /Abilities/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Skills/ })).toBeVisible();
+
+    // Done button should close the modal
+    await page.getByRole('button', { name: 'Done' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).not.toBeVisible();
   });
 
-  test('GM can add an ability draft update and it persists', async ({ page }) => {
+  test('GM can add an ability and it persists after reopening', async ({ page }) => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GM_EDITING_RESULTS');
     const gamePage = new GameDetailsPage(page);
@@ -59,8 +63,8 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
 
-    // Click "+ Add Ability" to show form
-    await page.getByRole('button', { name: '+ Add Ability' }).click();
+    // Click "Add Ability" to show form
+    await page.getByRole('button', { name: 'Add Ability' }).click();
 
     // Wait for form to appear
     await expect(page.getByPlaceholder('e.g., Fireball, Sneak Attack')).toBeVisible({ timeout: 5000 });
@@ -71,24 +75,26 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await page.getByPlaceholder('Describe this ability...').fill('You can see in darkness within 60 feet');
 
     // Add the ability
-    await page.getByTestId('add-abilities-button').click();
+    await page.getByRole('button', { name: 'Add Ability' }).last().click();
 
-    // Should see draft in list immediately
-    await expect(page.getByTestId('draft-field-name').filter({ hasText: abilityName })).toBeVisible({ timeout: 5000 });
-    await expect(page.getByTestId('draft-field-name').filter({ hasText: abilityName }).locator('..').getByText('DRAFT')).toBeVisible();
+    // Should see the ability in the list immediately
+    await expect(page.getByRole('heading', { name: abilityName })).toBeVisible({ timeout: 5000 });
 
-    // Close and reopen the modal to verify the draft persisted (not just in-memory)
-    await page.getByRole('button', { name: 'Close' }).click();
+    // Close and reopen to verify the draft persisted (not just in-memory)
+    await page.getByRole('button', { name: 'Done' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).not.toBeVisible();
+
+    // Wait for the draft to be saved (debounced save)
+    await page.waitForTimeout(1200);
 
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
 
-    // Draft should still be present after closing and reopening
-    await expect(page.getByTestId('draft-field-name').filter({ hasText: abilityName })).toBeVisible({ timeout: 5000 });
+    // Ability should still be present after closing and reopening
+    await expect(page.getByRole('heading', { name: abilityName })).toBeVisible({ timeout: 5000 });
   });
 
-  test('GM can remove a draft update', async ({ page }) => {
+  test('GM can remove an ability', async ({ page }) => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GM_EDITING_RESULTS');
     const gamePage = new GameDetailsPage(page);
@@ -97,22 +103,22 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await gamePage.goToActions();
     await expect(page.getByText('Unpublished Results (Editable)')).toBeVisible({ timeout: 10000 });
 
-    // Open modal and add ability with unique name
+    // Open modal and add an ability
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: '+ Add Ability' }).click();
+    await page.getByRole('button', { name: 'Add Ability' }).click();
 
     const uniqueAbilityName = `Remove Test ${Date.now()}`;
     await page.getByPlaceholder('e.g., Fireball, Sneak Attack').fill(uniqueAbilityName);
     await page.getByPlaceholder('Describe this ability...').fill('Test removal');
-    await page.getByTestId('add-abilities-button').click();
-    await expect(page.getByTestId('draft-field-name').filter({ hasText: uniqueAbilityName })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Add Ability' }).last().click();
+    await expect(page.getByRole('heading', { name: uniqueAbilityName })).toBeVisible({ timeout: 5000 });
 
-    // Find the specific draft card by its name and click its Remove button
-    const draftCard = page.locator('[data-testid^="draft-item-"]').filter({ hasText: uniqueAbilityName });
-    await draftCard.getByTestId('draft-remove-button').click();
+    // Click the remove button on the ability card
+    const abilityCard = page.locator('div').filter({ has: page.getByRole('heading', { name: uniqueAbilityName }) });
+    await abilityCard.getByRole('button', { name: 'Remove ability' }).click();
 
-    await expect(page.getByTestId('draft-field-name').filter({ hasText: uniqueAbilityName })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: uniqueAbilityName })).not.toBeVisible();
   });
 
   test('GM sees draft count badge on Update Character Sheet button', async ({ page }) => {
@@ -124,29 +130,26 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await gamePage.goToActions();
     await expect(page.getByText('Unpublished Results (Editable)')).toBeVisible({ timeout: 10000 });
 
-    // Open modal and add exactly one draft
+    // Open modal and add an ability
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: '+ Add Ability' }).click();
+    await page.getByRole('button', { name: 'Add Ability' }).click();
     const abilityName = `Badge Test ${Date.now()}`;
     await page.getByPlaceholder('e.g., Fireball, Sneak Attack').fill(abilityName);
     await page.getByPlaceholder('Describe this ability...').fill('Description');
-    await page.getByTestId('add-abilities-button').click();
-    await expect(page.getByTestId('draft-field-name').filter({ hasText: abilityName })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Add Ability' }).last().click();
+    await expect(page.getByRole('heading', { name: abilityName })).toBeVisible({ timeout: 5000 });
 
-    // Note the current draft count shown in the modal header badge, then close
-    const modalBadge = page.getByRole('heading', { name: 'Update Character Sheet' }).locator('..').getByText(/\d+ pending change/);
-    const badgeText = await modalBadge.textContent();
-    const totalDrafts = parseInt(badgeText?.match(/(\d+)/)?.[1] ?? '1', 10);
+    // Close modal and wait for debounced save
+    await page.getByRole('button', { name: 'Done' }).click();
+    await page.waitForTimeout(1200);
 
-    await page.getByRole('button', { name: 'Close' }).click();
-
-    // Button should show badge with the total draft count
-    const updateButton = page.getByRole('button', { name: 'Update Character Sheet' });
-    await expect(updateButton.getByText(String(totalDrafts))).toBeVisible({ timeout: 5000 });
+    // Button should show a badge with a count > 0
+    const updateButton = page.getByRole('button', { name: /Update Character Sheet/ });
+    await expect(updateButton.locator('span, div').filter({ hasText: /^\d+$/ })).toBeVisible({ timeout: 5000 });
   });
 
-  test('publish confirmation dialog shows pending character updates', async ({ page }) => {
+  test('publish confirmation dialog shows character update warning', async ({ page }) => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'E2E_GM_EDITING_RESULTS');
     const gamePage = new GameDetailsPage(page);
@@ -155,26 +158,24 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await gamePage.goToActions();
     await expect(page.getByText('Unpublished Results (Editable)')).toBeVisible({ timeout: 10000 });
 
-    // Add a character update with a unique name
+    // Add a character update
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: '+ Add Ability' }).click();
+    await page.getByRole('button', { name: 'Add Ability' }).click();
     const abilityName = `Publish Dialog Test ${Date.now()}`;
     await page.getByPlaceholder('e.g., Fireball, Sneak Attack').fill(abilityName);
     await page.getByPlaceholder('Describe this ability...').fill('This will be published');
-    await page.getByTestId('add-abilities-button').click();
-    await expect(page.getByTestId('draft-field-name').filter({ hasText: abilityName })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: 'Close' }).click();
+    await page.getByRole('button', { name: 'Add Ability' }).last().click();
+    await expect(page.getByRole('heading', { name: abilityName })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Done' }).click();
+    await page.waitForTimeout(1200);
 
     // Open publish dialog
     await page.getByRole('button', { name: 'Publish Result' }).click();
     await expect(page.getByRole('heading', { name: 'Publish Action Result?' })).toBeVisible({ timeout: 5000 });
 
-    // Should show warning about publishing character updates (count >= 1)
+    // Should show warning about publishing character updates
     await expect(page.getByText(/This will also publish \d+ character sheet update/)).toBeVisible();
-
-    // The specific ability we just added should be listed
-    await expect(page.getByText(abilityName)).toBeVisible();
   });
 
   test('GM can successfully publish result with character updates', async ({ page }) => {
@@ -189,12 +190,13 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     // Add a character update
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: '+ Add Ability' }).click();
+    await page.getByRole('button', { name: 'Add Ability' }).click();
     await page.getByPlaceholder('e.g., Fireball, Sneak Attack').fill('Final Ability');
     await page.getByPlaceholder('Describe this ability...').fill('Final test');
-    await page.getByTestId('add-abilities-button').click();
-    await expect(page.getByTestId('draft-field-name').filter({ hasText: 'Final Ability' })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: 'Close' }).click();
+    await page.getByRole('button', { name: 'Add Ability' }).last().click();
+    await expect(page.getByRole('heading', { name: 'Final Ability' })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Done' }).click();
+    await page.waitForTimeout(1200);
 
     // Publish the result
     await page.getByRole('button', { name: 'Publish Result' }).click();
@@ -204,7 +206,7 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     // Wait for dialog to close (indicates publish completed)
     await expect(page.getByRole('heading', { name: 'Publish Action Result?' })).not.toBeVisible({ timeout: 10000 });
 
-    // Result should move to Published Results section (this is the actual success indicator)
+    // Result should move to Published Results section
     await expect(page.getByRole('heading', { name: 'Published Results' })).toBeVisible({ timeout: 10000 });
 
     // Verify unpublished count is now 0

@@ -101,6 +101,7 @@ export const AbilityCard: React.FC<AbilityCardProps> = ({ ability, canEdit, onUp
                     variant="ghost"
                     size="sm"
                     onClick={onRemove}
+                    aria-label="Remove ability"
                     className="p-1 text-semantic-danger hover:text-semantic-danger"
                   >
                     🗑
