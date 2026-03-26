@@ -106,13 +106,8 @@ func (as *ActionSubmissionService) publishDraftUpdates(ctx context.Context, quer
 		return nil // Nothing to publish
 	}
 
-	// isPublic determines visibility based on field name
-	isPublicField := func(fieldName string) bool {
-		// currency is private; everything else (abilities, skills, items) is public
-		return fieldName != "currency"
-	}
-
-	// Each draft row is a complete snapshot — write it directly to character_data
+	// Each draft row is a complete snapshot — write it directly to character_data.
+	// Abilities/skills/items/currency access is gated at the tab level, not by is_public.
 	for _, draft := range drafts {
 		if !draft.FieldValue.Valid {
 			continue
@@ -123,7 +118,7 @@ func (as *ActionSubmissionService) publishDraftUpdates(ctx context.Context, quer
 			FieldName:   draft.FieldName,
 			FieldValue:  draft.FieldValue,
 			FieldType:   pgtype.Text{String: draft.FieldType, Valid: true},
-			IsPublic:    pgtype.Bool{Bool: isPublicField(draft.FieldName), Valid: true},
+			IsPublic:    pgtype.Bool{Bool: false, Valid: true},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to publish draft for character %d %s/%s: %w",

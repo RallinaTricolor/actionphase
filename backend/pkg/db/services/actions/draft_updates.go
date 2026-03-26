@@ -7,7 +7,6 @@ import (
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -88,29 +87,6 @@ func (s *ActionSubmissionService) DeleteDraftCharacterUpdate(ctx context.Context
 	}
 
 	return nil
-}
-
-// PublishDraftCharacterUpdates copies all draft updates to the character_data table
-// and then deletes the drafts. Called when an action result is published.
-// Uses a transaction to ensure both operations succeed or fail together.
-func (s *ActionSubmissionService) PublishDraftCharacterUpdates(ctx context.Context, actionResultID int32) error {
-	return pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
-		queries := models.New(tx)
-
-		// First, publish the drafts (copy to character_data)
-		err := queries.PublishDraftCharacterUpdates(ctx, actionResultID)
-		if err != nil {
-			return fmt.Errorf("failed to publish draft character updates: %w", err)
-		}
-
-		// Then, delete the drafts
-		err = queries.DeletePublishedDrafts(ctx, actionResultID)
-		if err != nil {
-			return fmt.Errorf("failed to delete published drafts: %w", err)
-		}
-
-		return nil
-	})
 }
 
 // GetDraftUpdateCount returns the count of draft updates for an action result.

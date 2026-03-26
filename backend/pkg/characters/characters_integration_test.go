@@ -596,7 +596,7 @@ func TestCharacterAPI_Authorization(t *testing.T) {
 			token:          playerToken,
 			expectedStatus: http.StatusForbidden,
 			body: CharacterDataRequest{
-				ModuleType: "abilities",
+				ModuleType: "skills",
 				FieldName:  "skills",
 				FieldValue: `[{"id":"skill-1","name":"Archery","proficiency":"expert"}]`,
 				FieldType:  "json",
@@ -626,7 +626,7 @@ func TestCharacterAPI_Authorization(t *testing.T) {
 			token:          playerToken,
 			expectedStatus: http.StatusForbidden,
 			body: CharacterDataRequest{
-				ModuleType: "inventory",
+				ModuleType: "currency",
 				FieldName:  "currency",
 				FieldValue: `[{"name":"Gold","amount":100}]`,
 				FieldType:  "json",

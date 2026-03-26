@@ -467,10 +467,6 @@ type ActionSubmissionServiceInterface interface {
 	// DeleteDraftCharacterUpdate removes a draft character update
 	DeleteDraftCharacterUpdate(ctx context.Context, draftID int32) error
 
-	// PublishDraftCharacterUpdates copies all draft updates to the character_data table
-	// and then deletes the drafts. Called when an action result is published.
-	PublishDraftCharacterUpdates(ctx context.Context, actionResultID int32) error
-
 	// GetDraftUpdateCount returns the count of draft updates for an action result
 	GetDraftUpdateCount(ctx context.Context, actionResultID int32) (int64, error)
 }

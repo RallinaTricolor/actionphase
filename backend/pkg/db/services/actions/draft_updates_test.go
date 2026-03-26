@@ -497,96 +497,6 @@ func TestActionSubmissionService_GetDraftUpdateCount(t *testing.T) {
 	})
 }
 
-func TestActionSubmissionService_PublishDraftCharacterUpdates(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
-
-	app := core.NewTestApp(testDB.Pool)
-
-	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
-	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
-	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
-
-	// Create test data
-	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
-	player := testDB.CreateTestUser(t, "player", "player@example.com")
-	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
-
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
-	require.NoError(t, err)
-
-	userID := int32(player.ID)
-	character, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
-		GameID:        game.ID,
-		UserID:        &userID,
-		Name:          "Test Character",
-		CharacterType: "player_character",
-	})
-	require.NoError(t, err)
-
-	transitionReq := core.TransitionPhaseRequest{
-		PhaseType: "action",
-		Title:     "Action Phase",
-	}
-	phase, err := phaseService.TransitionToNextPhase(context.Background(), game.ID, int32(gm.ID), transitionReq)
-	require.NoError(t, err)
-
-	resultReq := core.CreateActionResultRequest{
-		GameID:      game.ID,
-		PhaseID:     phase.ID,
-		UserID:      int32(player.ID),
-		Content:     "You find a key",
-		IsPublished: false,
-	}
-	result, err := actionService.CreateActionResult(context.Background(), resultReq)
-	require.NoError(t, err)
-
-	t.Run("publishes drafts and deletes them", func(t *testing.T) {
-		// Create drafts
-		createReq := core.CreateDraftCharacterUpdateRequest{
-			ActionResultID: result.ID,
-			CharacterID:    character.ID,
-			ModuleType:     "abilities",
-			FieldName:      "strength",
-			FieldValue:     "18",
-			FieldType:      "number",
-			Operation:      "upsert",
-		}
-		_, err := actionService.CreateDraftCharacterUpdate(context.Background(), createReq)
-		require.NoError(t, err)
-
-		// Verify draft exists
-		count, err := actionService.GetDraftUpdateCount(context.Background(), result.ID)
-		require.NoError(t, err)
-		assert.Equal(t, int64(1), count)
-
-		// Publish drafts
-		err = actionService.PublishDraftCharacterUpdates(context.Background(), result.ID)
-		require.NoError(t, err)
-
-		// Verify drafts are deleted
-		countAfter, err := actionService.GetDraftUpdateCount(context.Background(), result.ID)
-		require.NoError(t, err)
-		assert.Equal(t, int64(0), countAfter)
-
-		// Verify data was copied to character_data
-		characterData, err := characterService.GetCharacterData(context.Background(), character.ID)
-		require.NoError(t, err)
-
-		// Find the strength field
-		found := false
-		for _, data := range characterData {
-			if data.ModuleType == "abilities" && data.FieldName == "strength" {
-				assert.Equal(t, "18", data.FieldValue.String)
-				found = true
-				break
-			}
-		}
-		assert.True(t, found, "strength field should be in character_data")
-	})
-}
-
 func TestActionSubmissionService_PublishActionResult_WithDrafts(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
@@ -1041,5 +951,50 @@ func TestDraftPublish_DirectWrite(t *testing.T) {
 
 		assert.Equal(t, abilitiesJSON, dataByKey["abilities/abilities"], "abilities should be written")
 		assert.Equal(t, currencyJSON, dataByKey["currency/currency"], "currency should be written")
+	})
+
+	t.Run("character with no prior character_data gets row created on publish", func(t *testing.T) {
+		// Use a fresh character with zero character_data rows
+		freshUserID := int32(player.ID)
+		freshChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        game.ID,
+			UserID:        &freshUserID,
+			Name:          "Fresh Character",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		// Verify no character_data rows exist yet
+		existingData, err := characterService.GetCharacterData(context.Background(), freshChar.ID)
+		require.NoError(t, err)
+		require.Empty(t, existingData, "fresh character should have no character_data")
+
+		resultID := makeResult(t, "First ever update")
+		itemsJSON := `[{"id":"item-1","name":"Starter Sword","quantity":1}]`
+
+		_, err = actionService.CreateDraftCharacterUpdate(context.Background(), core.CreateDraftCharacterUpdateRequest{
+			ActionResultID: resultID,
+			CharacterID:    freshChar.ID,
+			ModuleType:     "inventory",
+			FieldName:      "items",
+			FieldValue:     itemsJSON,
+			FieldType:      "json",
+			Operation:      "upsert",
+		})
+		require.NoError(t, err)
+
+		err = actionService.PublishActionResult(context.Background(), resultID, int32(gm.ID))
+		require.NoError(t, err)
+
+		charData, err := characterService.GetCharacterData(context.Background(), freshChar.ID)
+		require.NoError(t, err)
+
+		for _, d := range charData {
+			if d.ModuleType == "inventory" && d.FieldName == "items" {
+				assert.Equal(t, itemsJSON, d.FieldValue.String)
+				return
+			}
+		}
+		t.Fatal("inventory/items row should have been created for fresh character")
 	})
 }

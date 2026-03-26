@@ -138,7 +138,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
       field_name: fieldName,
       field_value: value,
       field_type: 'json',
-      is_public: fieldName !== 'currency' // currency is private, others are public
+      is_public: false // abilities/skills/items/currency access is gated at the tab level, not by is_public
     });
   };
 
