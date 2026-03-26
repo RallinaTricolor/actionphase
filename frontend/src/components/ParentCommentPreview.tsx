@@ -73,6 +73,9 @@ export function ParentCommentPreview({
           ) : authorUsername ? (
             <span className="text-content-secondary truncate">@{authorUsername}</span>
           ) : null}
+          {timeAgo && (
+            <span className="text-content-tertiary shrink-0">{timeAgo}</span>
+          )}
         </div>
 
         {!isDeleted && (
