@@ -117,7 +117,7 @@ describe('MessageThread edit functionality', () => {
 
     await user.click(screen.getByTestId('edit-message-button'));
 
-    expect(screen.getByTestId('edit-message-textarea')).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
     expect(screen.getByTestId('save-edit-button')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
   });
@@ -131,7 +131,7 @@ describe('MessageThread edit functionality', () => {
 
     await user.click(screen.getByTestId('edit-message-button'));
 
-    const textarea = screen.getByTestId('edit-message-textarea');
+    const textarea = screen.getByRole('textbox');
     await user.clear(textarea);
     await user.type(textarea, 'Edited content');
 
@@ -140,7 +140,7 @@ describe('MessageThread edit functionality', () => {
     await waitFor(() => {
       expect(mockEditMessage).toHaveBeenCalledWith(1, 1, 42, 'Edited content');
     });
-    expect(screen.queryByTestId('edit-message-textarea')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
   it('cancels editing without saving', async () => {
@@ -150,10 +150,10 @@ describe('MessageThread edit functionality', () => {
     render(<MessageThread {...defaultProps} />);
 
     await user.click(screen.getByTestId('edit-message-button'));
-    expect(screen.getByTestId('edit-message-textarea')).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /cancel/i }));
-    expect(screen.queryByTestId('edit-message-textarea')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(mockEditMessage).not.toHaveBeenCalled();
   });
 

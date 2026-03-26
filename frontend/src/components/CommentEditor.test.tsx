@@ -41,9 +41,10 @@ describe('CommentEditor', () => {
   });
 
   describe('Preview Toggle', () => {
-    it('shows preview toggle button', () => {
+    it('shows Write and Preview tab buttons', () => {
       render(<CommentEditor {...defaultProps} />);
-      expect(screen.getByText(/Show Preview/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Write' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Preview' })).toBeInTheDocument();
     });
 
     it('does not show preview by default', () => {
@@ -51,30 +52,26 @@ describe('CommentEditor', () => {
       expect(screen.queryByText('Preview will appear here...')).not.toBeInTheDocument();
     });
 
-    it('shows preview when toggle is clicked', async () => {
+    it('shows preview when Preview tab is clicked', async () => {
       const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="" />);
 
-      const toggleButton = screen.getByText(/Show Preview/);
-      await user.click(toggleButton);
+      await user.click(screen.getByRole('button', { name: 'Preview' }));
 
       expect(screen.getByText('Preview will appear here...')).toBeInTheDocument();
-      expect(screen.getByText(/Hide Preview/)).toBeInTheDocument();
     });
 
-    it('hides preview when toggle is clicked again', async () => {
+    it('hides preview when Write tab is clicked', async () => {
       const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="" showPreviewByDefault />);
 
       // Preview should be visible initially
       expect(screen.getByText('Preview will appear here...')).toBeInTheDocument();
 
-      const toggleButton = screen.getByText(/Hide Preview/);
-      await user.click(toggleButton);
+      await user.click(screen.getByRole('button', { name: 'Write' }));
 
       // Preview should be hidden
       expect(screen.queryByText('Preview will appear here...')).not.toBeInTheDocument();
-      expect(screen.getByText(/Show Preview/)).toBeInTheDocument();
     });
 
     it('can show preview by default when prop is set', () => {
@@ -88,7 +85,7 @@ describe('CommentEditor', () => {
       const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="**bold text**" />);
 
-      await user.click(screen.getByText(/Show Preview/));
+      await user.click(screen.getByRole('button', { name: 'Preview' }));
 
       const boldElement = screen.getByText('bold text');
       expect(boldElement.tagName).toBe('STRONG');
@@ -112,7 +109,7 @@ describe('CommentEditor', () => {
       const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="" />);
 
-      await user.click(screen.getByText(/Show Preview/));
+      await user.click(screen.getByRole('button', { name: 'Preview' }));
 
       expect(screen.getByText('Preview will appear here...')).toBeInTheDocument();
     });
@@ -121,7 +118,7 @@ describe('CommentEditor', () => {
       const user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="   " />);
 
-      await user.click(screen.getByText(/Show Preview/));
+      await user.click(screen.getByRole('button', { name: 'Preview' }));
 
       expect(screen.getByText('Preview will appear here...')).toBeInTheDocument();
     });
@@ -222,8 +219,7 @@ describe('CommentEditor', () => {
 
     it('disables preview toggle when disabled', () => {
       render(<CommentEditor {...defaultProps} disabled />);
-      const toggleButton = screen.getByText(/Show Preview/);
-      expect(toggleButton).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Preview' })).toBeDisabled();
     });
 
     it('disables help toggle when disabled', () => {
@@ -247,21 +243,21 @@ describe('CommentEditor', () => {
     });
   });
 
-  describe('Split View Layout', () => {
-    it('shows single column when preview is hidden', () => {
-      const { container } = render(<CommentEditor {...defaultProps} value="Test" />);
-      const grid = container.querySelector('.grid');
-      expect(grid).toHaveClass('grid-cols-1');
+  describe('Tab Layout', () => {
+    it('shows write tab content when Write is active', () => {
+      render(<CommentEditor {...defaultProps} value="Test" />);
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+      expect(screen.queryByText('Preview will appear here...')).not.toBeInTheDocument();
     });
 
-    it('shows two columns when preview is shown', async () => {
+    it('shows preview tab content when Preview is active', async () => {
       const user = userEvent.setup();
-      const { container } = render(<CommentEditor {...defaultProps} value="Test" />);
+      render(<CommentEditor {...defaultProps} value="Test" />);
 
-      await user.click(screen.getByText(/Show Preview/));
+      await user.click(screen.getByRole('button', { name: 'Preview' }));
 
-      const grid = container.querySelector('.grid');
-      expect(grid).toHaveClass('grid-cols-2');
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      expect(screen.getByText('Test')).toBeInTheDocument();
     });
   });
 

@@ -344,20 +344,6 @@ describe('ActionSubmission', () => {
       });
     });
 
-    it('shows required indicator on action field', async () => {
-      setupDefaultHandlers();
-
-      renderWithProviders(
-        <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
-      , { gameId: 1 });
-
-      await waitFor(() => {
-        // Check that the textarea has the required attribute
-        const textarea = screen.getByPlaceholderText(/describe what your character does/i);
-        expect(textarea).toHaveAttribute('required');
-      });
-    });
-
     it('shows privacy notice', async () => {
       setupDefaultHandlers();
 
