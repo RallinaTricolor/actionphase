@@ -707,6 +707,7 @@ export const ThreadedComment = memo(function ThreadedComment({
                     disabled={isSubmitting}
                     characters={characters}
                     maxLength={10000}
+                    warnOnUnsavedChanges
                     showCharacterCount={true}
                   />
                 </div>

@@ -468,6 +468,7 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                 placeholder={isCommonRoomPhase ? "Type your message..." : "Messaging is only available during Common Room phases"}
                 disabled={sending || !isCommonRoomPhase}
                 maxLength={50000}
+                warnOnUnsavedChanges
                 showCharacterCount={true}
                 characters={participantCharacters}
               />

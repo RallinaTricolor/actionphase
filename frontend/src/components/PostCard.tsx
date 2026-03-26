@@ -504,6 +504,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                     disabled={isSubmitting}
                     characters={characters}
                     maxLength={10000}
+                    warnOnUnsavedChanges
                     showCharacterCount={true}
                   />
                 </div>

@@ -152,6 +152,7 @@ export function HandoutView({ gameId, handout, isGM, onClose, onEdit }: HandoutV
               placeholder="Add an update or clarification about this handout..."
               disabled={isSubmitting}
               rows={4}
+              warnOnUnsavedChanges
             />
             <div className="flex justify-end gap-2">
               <Button

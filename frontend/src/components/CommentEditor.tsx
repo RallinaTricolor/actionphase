@@ -1,8 +1,50 @@
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
+import { useBlocker } from 'react-router-dom';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CharacterAutocomplete } from './CharacterAutocomplete';
-import { Button, Textarea } from './ui';
+import { Button, Textarea, Modal } from './ui';
 import type { Character } from '../types/characters';
+
+/**
+ * Inner component that calls useBlocker and renders the confirmation modal.
+ * Extracted so useBlocker is only called when warnOnUnsavedChanges is true,
+ * keeping it isolated from the main editor (hooks must not be called conditionally).
+ */
+function UnsavedChangesGuard({ hasContent }: { hasContent: boolean }) {
+  const blocker = useBlocker(hasContent);
+
+  useEffect(() => {
+    if (!hasContent) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasContent]);
+
+  return (
+    <Modal
+      isOpen={blocker.state === 'blocked'}
+      onClose={() => blocker.reset?.()}
+      title="Leave page?"
+      size="sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => blocker.reset?.()}>
+            Stay
+          </Button>
+          <Button variant="danger" onClick={() => blocker.proceed?.()}>
+            Leave
+          </Button>
+        </>
+      }
+    >
+      <p className="text-content-primary">
+        You have unsaved text in this editor. If you leave, your changes will be lost.
+      </p>
+    </Modal>
+  );
+}
 
 interface CommentEditorProps {
   value: string;
@@ -16,6 +58,7 @@ interface CommentEditorProps {
   maxLength?: number; // Maximum character limit
   showCharacterCount?: boolean; // Show character counter below textarea
   textareaTestId?: string; // data-testid forwarded to the inner textarea (for E2E tests)
+  warnOnUnsavedChanges?: boolean; // Show confirmation dialog when navigating away with unsaved content
 }
 
 /**
@@ -42,6 +85,7 @@ export const CommentEditor = memo(function CommentEditor({
   maxLength,
   showCharacterCount = false,
   textareaTestId,
+  warnOnUnsavedChanges = false,
 }: CommentEditorProps) {
   const [showPreview, setShowPreview] = useState(showPreviewByDefault);
   const [showHelp, setShowHelp] = useState(false);
@@ -405,6 +449,11 @@ export const CommentEditor = memo(function CommentEditor({
           selectedIndex={selectedIndex}
           onClose={() => setShowAutocomplete(false)}
         />
+      )}
+
+      {/* Unsaved changes navigation warning */}
+      {warnOnUnsavedChanges && (
+        <UnsavedChangesGuard hasContent={value.trim().length > 0} />
       )}
     </div>
   );

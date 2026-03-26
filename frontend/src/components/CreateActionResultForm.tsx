@@ -67,6 +67,7 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
           rows={4}
           placeholder="Enter the result of the player's action..."
           maxLength={100000}
+          warnOnUnsavedChanges
           showCharacterCount={true}
         />
         <p className="mt-1 text-xs text-content-tertiary">Maximum 100,000 characters. Result will be created as a draft.</p>

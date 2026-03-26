@@ -1,7 +1,25 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { CommentEditor } from './CommentEditor';
+
+/**
+ * Renders CommentEditor inside a data router so useBlocker works.
+ * Only needed for warnOnUnsavedChanges tests.
+ */
+function renderWithDataRouter(
+  props: Parameters<typeof CommentEditor>[0],
+  { additionalRoutes = [] }: { additionalRoutes?: Parameters<typeof createMemoryRouter>[0] } = {}
+) {
+  const routes = [
+    { path: '/', element: <CommentEditor {...props} /> },
+    { path: '/other', element: <div>Other page</div> },
+    ...additionalRoutes,
+  ];
+  const router = createMemoryRouter(routes, { initialEntries: ['/'] });
+  return { ...render(<RouterProvider router={router} />), router };
+}
 
 describe('CommentEditor', () => {
   const defaultProps = {
@@ -488,6 +506,91 @@ describe('CommentEditor', () => {
       // Should not show autocomplete because @ is part of email
       // (there's text before @ without space)
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Unsaved Changes Warning', () => {
+    it('does not show warning dialog when field is empty', async () => {
+      const { router } = renderWithDataRouter({
+        value: '',
+        onChange: vi.fn(),
+        warnOnUnsavedChanges: true,
+      });
+
+      await act(() => router.navigate('/other'));
+
+      expect(screen.queryByText('Leave page?')).not.toBeInTheDocument();
+    });
+
+    it('shows confirmation dialog when navigating away with unsaved content', async () => {
+      const { router } = renderWithDataRouter({
+        value: 'some draft text',
+        onChange: vi.fn(),
+        warnOnUnsavedChanges: true,
+      });
+
+      await act(() => router.navigate('/other'));
+
+      expect(screen.getByText('Leave page?')).toBeInTheDocument();
+      expect(screen.getByText(/you have unsaved text/i)).toBeInTheDocument();
+    });
+
+    it('stays on page when user clicks Stay', async () => {
+      const user = userEvent.setup();
+      const { router } = renderWithDataRouter({
+        value: 'some draft text',
+        onChange: vi.fn(),
+        warnOnUnsavedChanges: true,
+      });
+
+      await act(() => router.navigate('/other'));
+      expect(screen.getByText('Leave page?')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Stay' }));
+
+      await waitFor(() => expect(screen.queryByText('Leave page?')).not.toBeInTheDocument());
+      expect(router.state.location.pathname).toBe('/');
+    });
+
+    it('navigates away when user clicks Leave', async () => {
+      const user = userEvent.setup();
+      const { router } = renderWithDataRouter({
+        value: 'some draft text',
+        onChange: vi.fn(),
+        warnOnUnsavedChanges: true,
+      });
+
+      await act(() => router.navigate('/other'));
+      expect(screen.getByText('Leave page?')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Leave' }));
+
+      expect(router.state.location.pathname).toBe('/other');
+    });
+
+    it('does not block navigation when warnOnUnsavedChanges is false', async () => {
+      const { router } = renderWithDataRouter({
+        value: 'some draft text',
+        onChange: vi.fn(),
+        warnOnUnsavedChanges: false,
+      });
+
+      await act(() => router.navigate('/other'));
+
+      expect(screen.queryByText('Leave page?')).not.toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/other');
+    });
+
+    it('does not block navigation when warnOnUnsavedChanges is omitted (default off)', async () => {
+      const { router } = renderWithDataRouter({
+        value: 'some draft text',
+        onChange: vi.fn(),
+      });
+
+      await act(() => router.navigate('/other'));
+
+      expect(screen.queryByText('Leave page?')).not.toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/other');
     });
   });
 });
