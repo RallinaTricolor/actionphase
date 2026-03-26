@@ -53,39 +53,39 @@ export function CommentWithParentCard({
           characterName={comment.parent_character_name}
           characterAvatarUrl={comment.parent_character_avatar_url}
           onNavigateToParent={onNavigateToParent}
+          hideViewInThread
         />
 
-        {/* Comment header */}
-        <div className="flex items-start gap-3 mb-2">
-          <CharacterAvatar
-            avatarUrl={comment.character_avatar_url}
-            characterName={comment.character_name || comment.author_username}
-            size="sm"
-          />
-          <div className="flex flex-col flex-1">
-            <div className="flex items-center gap-2">
-              <Link to={`/characters/${comment.character_id}`} className="font-medium text-text-heading hover:underline">
-                {comment.character_name || 'Unknown'}
-              </Link>
-              <span className="text-sm text-content-tertiary">
-                @{comment.author_username}
-              </span>
-              <span className="text-sm text-content-tertiary">{timeAgo}</span>
-              {isEdited && (
-                <Badge variant="secondary" size="sm">
-                  Edited
-                </Badge>
-              )}
+        {/* Comment header + body */}
+        <div className="bg-bg-secondary rounded-lg p-3">
+          <div className="flex items-start gap-3 mb-2">
+            <CharacterAvatar
+              avatarUrl={comment.character_avatar_url}
+              characterName={comment.character_name || comment.author_username}
+              size="sm"
+            />
+            <div className="flex flex-col flex-1">
+              <div className="flex items-center gap-2">
+                <Link to={`/characters/${comment.character_id}`} className="font-medium text-text-heading hover:underline">
+                  {comment.character_name || 'Unknown'}
+                </Link>
+                <span className="text-sm text-content-tertiary">
+                  @{comment.author_username}
+                </span>
+                <span className="text-sm text-content-tertiary">{timeAgo}</span>
+                {isEdited && (
+                  <Badge variant="secondary" size="sm">
+                    Edited
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Comment content */}
-        <div>
           {comment.is_deleted ? (
             <p className="text-content-tertiary italic">[deleted]</p>
           ) : (
-            <MarkdownPreview content={comment.content} />
+            <MarkdownPreview content={comment.content} fullWidth />
           )}
         </div>
 

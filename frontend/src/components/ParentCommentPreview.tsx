@@ -18,6 +18,7 @@ interface ParentCommentPreviewProps {
   onNavigateToParent?: () => void;
   mentionedCharacters?: Character[];
   defaultExpanded?: boolean;
+  hideViewInThread?: boolean;
 }
 
 /**
@@ -36,6 +37,7 @@ export function ParentCommentPreview({
   onNavigateToParent,
   mentionedCharacters = [],
   defaultExpanded = false,
+  hideViewInThread = false,
 }: ParentCommentPreviewProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
@@ -49,7 +51,7 @@ export function ParentCommentPreview({
     : null;
 
   return (
-    <div className="bg-bg-secondary border-l-4 border-border-secondary rounded-lg p-3 mb-3">
+    <div className="border-l-2 border-border-secondary pl-3 mb-3 opacity-70">
       <div className="flex items-center justify-between mb-2 gap-2">
         <div className="flex items-center gap-2 text-sm min-w-0">
           {messageType && (
@@ -120,7 +122,7 @@ export function ParentCommentPreview({
         </div>
       )}
 
-      {onNavigateToParent && !isDeleted && (
+      {onNavigateToParent && !isDeleted && !hideViewInThread && (
         <button
           onClick={onNavigateToParent}
           className="text-xs text-interactive-primary hover:text-accent-secondary mt-2 flex items-center gap-1"
