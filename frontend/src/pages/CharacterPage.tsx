@@ -78,7 +78,7 @@ export function CharacterPage() {
   if (!characterId || isNaN(parseInt(characterId, 10))) {
     return (
       <div className="min-h-screen bg-surface-sunken py-8">
-        <div className="max-w-3xl mx-auto px-4">
+        <div className="max-w-5xl mx-auto px-4">
           <Alert variant="danger">Invalid character ID.</Alert>
         </div>
       </div>
@@ -89,7 +89,7 @@ export function CharacterPage() {
 
   return (
     <div className="min-h-screen bg-surface-sunken py-8">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
         {/* Character Header */}
         <div className="mb-8">
           {isLoadingCharacter ? (

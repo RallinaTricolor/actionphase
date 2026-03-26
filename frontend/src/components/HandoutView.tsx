@@ -129,7 +129,7 @@ export function HandoutView({ gameId, handout, isGM, onClose, onEdit }: HandoutV
           </div>
 
           <div className="border-t border-border-primary pt-4">
-            <MarkdownPreview content={handout.content} />
+            <MarkdownPreview content={handout.content} fullWidth />
           </div>
         </div>
       </Card>

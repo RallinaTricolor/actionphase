@@ -439,6 +439,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
               <MarkdownPreview
                 content={post.content}
                 mentionedCharacters={characters}
+                fullWidth
               />
             )}
           </div>
