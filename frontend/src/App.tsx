@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate, useParams, Outlet } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
@@ -47,132 +47,38 @@ function PageLoader() {
   );
 }
 
-function AppRoutes() {
-  const { isAuthenticated, isCheckingAuth } = useAuth();
-
+// Root layout: wraps every route with the shared Layout + Suspense
+function RootLayout() {
   return (
-    <Router>
-      <Layout>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-          <Route
-            path="/login"
-            element={
-              // Wait for auth check to complete before making routing decisions
-              // This prevents ERR_ABORTED during page navigation in E2E tests
-              isCheckingAuth ? null : (
-                isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
-              )
-            }
-          />
-          <Route
-            path="/forgot-password"
-            element={
-              isCheckingAuth ? null : (
-                isAuthenticated ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />
-              )
-            }
-          />
-          <Route
-            path="/reset-password"
-            element={
-              isCheckingAuth ? null : (
-                isAuthenticated ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />
-              )
-            }
-          />
-          <Route
-            path="/verify-email"
-            element={<VerifyEmailPage />}
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <NotificationsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <SettingsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/theme-test"
-            element={
-              <ProtectedRoute>
-                <ThemeTestPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/games"
-            element={
-              <ProtectedRoute>
-                <GamesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/games/recruiting"
-            element={<Navigate to="/games?states=recruitment" replace />}
-          />
-          <Route
-            path="/games/:gameId"
-            element={
-              <PublicArchiveRoute>
-                <GameDetailsPageWrapper />
-              </PublicArchiveRoute>
-            }
-          />
-          <Route
-            path="/users/:username"
-            element={
-              <ProtectedRoute>
-                <UserProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/characters/:characterId"
-            element={
-              <ProtectedRoute>
-                <CharacterPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/" element={<HomePage />} />
-          <Route
-            path="*"
-            element={
-              <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
-            }
-          />
-        </Routes>
-        </Suspense>
-      </Layout>
-    </Router>
+    <Layout>
+      <Suspense fallback={<PageLoader />}>
+        <Outlet />
+      </Suspense>
+    </Layout>
   );
+}
+
+function AuthGatedLogin() {
+  const { isAuthenticated, isCheckingAuth } = useAuth();
+  if (isCheckingAuth) return null;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />;
+}
+
+function AuthGatedForgotPassword() {
+  const { isAuthenticated, isCheckingAuth } = useAuth();
+  if (isCheckingAuth) return null;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />;
+}
+
+function AuthGatedResetPassword() {
+  const { isAuthenticated, isCheckingAuth } = useAuth();
+  if (isCheckingAuth) return null;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />;
+}
+
+function CatchAll() {
+  const { isAuthenticated } = useAuth();
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
 }
 
 function GameDetailsPageWrapper() {
@@ -191,6 +97,60 @@ function GameDetailsPageWrapper() {
   );
 }
 
+const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    children: [
+      { path: '/login', element: <AuthGatedLogin /> },
+      { path: '/forgot-password', element: <AuthGatedForgotPassword /> },
+      { path: '/reset-password', element: <AuthGatedResetPassword /> },
+      { path: '/verify-email', element: <VerifyEmailPage /> },
+      {
+        path: '/dashboard',
+        element: <ProtectedRoute><DashboardPage /></ProtectedRoute>,
+      },
+      {
+        path: '/notifications',
+        element: <ProtectedRoute><NotificationsPage /></ProtectedRoute>,
+      },
+      {
+        path: '/settings',
+        element: <ProtectedRoute><SettingsPage /></ProtectedRoute>,
+      },
+      {
+        path: '/admin',
+        element: <ProtectedRoute><AdminPage /></ProtectedRoute>,
+      },
+      {
+        path: '/theme-test',
+        element: <ProtectedRoute><ThemeTestPage /></ProtectedRoute>,
+      },
+      {
+        path: '/games',
+        element: <ProtectedRoute><GamesPage /></ProtectedRoute>,
+      },
+      {
+        path: '/games/recruiting',
+        element: <Navigate to="/games?states=recruitment" replace />,
+      },
+      {
+        path: '/games/:gameId',
+        element: <PublicArchiveRoute><GameDetailsPageWrapper /></PublicArchiveRoute>,
+      },
+      {
+        path: '/users/:username',
+        element: <ProtectedRoute><UserProfilePage /></ProtectedRoute>,
+      },
+      {
+        path: '/characters/:characterId',
+        element: <ProtectedRoute><CharacterPage /></ProtectedRoute>,
+      },
+      { path: '/', element: <HomePage /> },
+      { path: '*', element: <CatchAll /> },
+    ],
+  },
+]);
+
 function App() {
   useEffect(() => {
     // Log application initialization
@@ -208,7 +168,7 @@ function App() {
           <AuthProvider>
             <AdminModeProvider>
               <ThemeProvider>
-                  <AppRoutes />
+                <RouterProvider router={router} />
               </ThemeProvider>
             </AdminModeProvider>
           </AuthProvider>

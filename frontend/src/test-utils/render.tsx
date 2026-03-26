@@ -1,7 +1,7 @@
-import React from 'react'
-import { render, RenderOptions } from '@testing-library/react'
+import React, { useState } from 'react'
+import { render, act, RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, MemoryRouterProps } from 'react-router-dom'
+import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { AuthProvider } from '../contexts/AuthContext'
 import { AdminModeProvider } from '../contexts/AdminModeContext'
 import { ToastProvider } from '../contexts/ToastContext'
@@ -16,15 +16,16 @@ interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
   queryClient?: QueryClient
 
   /**
-   * Initial route for MemoryRouter
+   * Initial route (path only, e.g. '/games/1')
    * Default: '/'
    */
   initialRoute?: string
 
   /**
-   * Additional routes for MemoryRouter
+   * Initial entries for the router history stack (e.g. ['/games/1?tab=foo'])
+   * Takes precedence over initialRoute when provided.
    */
-  initialEntries?: MemoryRouterProps['initialEntries']
+  initialEntries?: string[]
 
   /**
    * When provided, wraps children in a GameProvider with this gameId.
@@ -85,35 +86,57 @@ export function renderWithProviders(
   const {
     queryClient = createTestQueryClient(),
     initialRoute = '/',
-    initialEntries = [initialRoute],
+    initialEntries,
     gameId,
     ...renderOptions
   } = options
 
-  function Wrapper({ children }: { children: React.ReactNode }) {
-    const inner = gameId !== undefined ? (
-      <GameProvider gameId={gameId}>{children}</GameProvider>
-    ) : children
+  function wrapUi(element: React.ReactElement) {
+    return gameId !== undefined ? (
+      <GameProvider gameId={gameId}>{element}</GameProvider>
+    ) : element
+  }
 
+  // Use a data router so useBlocker and other data-router hooks work in tests.
+  // RouteElement uses useState so that rerender() triggers a real React re-render
+  // inside RouterProvider (refs don't cause re-renders).
+  let setRouteElement!: React.Dispatch<React.SetStateAction<React.ReactElement>>
+
+  function RouteElement() {
+    const [element, setElement] = useState(() => wrapUi(ui))
+    setRouteElement = setElement
+    return element
+  }
+
+  const router = createMemoryRouter(
+    [{ path: '*', element: <RouteElement /> }],
+    { initialEntries: initialEntries ?? [initialRoute] }
+  )
+
+  function Wrapper() {
     return (
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={initialEntries}>
-          <ToastProvider>
-            <AuthProvider>
-              <ConversationProvider>
-                <AdminModeProvider>
-                    {inner}
-                </AdminModeProvider>
-              </ConversationProvider>
-            </AuthProvider>
-          </ToastProvider>
-        </MemoryRouter>
+        <ToastProvider>
+          <AuthProvider>
+            <ConversationProvider>
+              <AdminModeProvider>
+                <RouterProvider router={router} />
+              </AdminModeProvider>
+            </ConversationProvider>
+          </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     )
   }
 
+  const result = render(<Wrapper />, renderOptions)
+
   return {
-    ...render(ui, { wrapper: Wrapper, ...renderOptions }),
+    ...result,
+    // Override rerender so callers can pass a new UI element and it still has providers
+    rerender: (newUi: React.ReactElement) => {
+      act(() => { setRouteElement(wrapUi(newUi)) })
+    },
     queryClient,
   }
 }

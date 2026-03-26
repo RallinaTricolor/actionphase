@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
 import { Badge } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
 import CharacterAvatar from './CharacterAvatar';
@@ -25,7 +26,7 @@ interface ParentCommentPreviewProps {
  */
 export function ParentCommentPreview({
   content,
-  createdAt: _createdAt,
+  createdAt,
   isDeleted,
   messageType,
   authorUsername,
@@ -42,6 +43,10 @@ export function ParentCommentPreview({
   if (!content && !isDeleted) {
     return null;
   }
+
+  const timeAgo = createdAt
+    ? formatDistanceToNow(new Date(createdAt), { addSuffix: true })
+    : null;
 
   return (
     <div className="bg-bg-secondary border-l-4 border-border-secondary rounded-lg p-3 mb-3">
