@@ -172,9 +172,7 @@ describe('MessageThread', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/participants:/i)).toBeInTheDocument();
-        // Character names appear in multiple places (participant list, character selector, messages)
-        // so just verify they appear at least once
+        // Character names appear in the header participant line, selector, and messages
         const heroMatches = screen.getAllByText(/hero character/i);
         const companionMatches = screen.getAllByText(/companion character/i);
         expect(heroMatches.length).toBeGreaterThan(0);

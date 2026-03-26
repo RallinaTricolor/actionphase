@@ -429,6 +429,12 @@ describe('PrivateMessages', () => {
         http.get('/api/v1/games/:gameId/conversations', () => {
           return HttpResponse.json({ conversations: mockConversations });
         }),
+        http.get('/api/v1/games/:gameId/conversations/:conversationId', () => {
+          return HttpResponse.json({
+            conversation: { id: 42, title: 'Deep Linked Conversation', conversation_type: 'direct' },
+            participants: [{ user_id: 1, character_id: 1, character_name: 'Alice', username: 'alice' }],
+          });
+        }),
         http.get('/api/v1/conversations/:conversationId/messages', () => {
           return HttpResponse.json({ messages: [] });
         })
@@ -446,7 +452,7 @@ describe('PrivateMessages', () => {
 
       // Should show the thread view (back button) rather than the list
       await waitFor(() => {
-        expect(screen.getByText(/back to conversations/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /back to conversations/i })).toBeInTheDocument();
       });
     });
 
@@ -463,7 +469,7 @@ describe('PrivateMessages', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/private messages/i)).toBeInTheDocument();
-        expect(screen.queryByText(/back to conversations/i)).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /back to conversations/i })).not.toBeInTheDocument();
       });
     });
 
@@ -473,6 +479,12 @@ describe('PrivateMessages', () => {
       server.use(
         http.get('http://localhost:3000/api/v1/games/:gameId/conversations', () => {
           return HttpResponse.json({ conversations: mockConversations });
+        }),
+        http.get('http://localhost:3000/api/v1/games/:gameId/conversations/:conversationId', () => {
+          return HttpResponse.json({
+            conversation: { id: 42, title: 'Deep Linked Conversation', conversation_type: 'direct' },
+            participants: [{ user_id: 1, character_id: 1, character_name: 'Alice', username: 'alice' }],
+          });
         }),
         http.get('http://localhost:3000/api/v1/conversations/:conversationId/messages', () => {
           return HttpResponse.json({ messages: [] });
@@ -497,7 +509,7 @@ describe('PrivateMessages', () => {
       await user.click(screen.getAllByText('Deep Linked Conversation')[0]);
 
       await waitFor(() => {
-        expect(screen.getByText(/back to conversations/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /back to conversations/i })).toBeInTheDocument();
       });
     });
 
@@ -507,6 +519,12 @@ describe('PrivateMessages', () => {
       server.use(
         http.get('/api/v1/games/:gameId/conversations', () => {
           return HttpResponse.json({ conversations: mockConversations });
+        }),
+        http.get('/api/v1/games/:gameId/conversations/:conversationId', () => {
+          return HttpResponse.json({
+            conversation: { id: 42, title: 'Deep Linked Conversation', conversation_type: 'direct' },
+            participants: [{ user_id: 1, character_id: 1, character_name: 'Alice', username: 'alice' }],
+          });
         }),
         http.get('/api/v1/conversations/:conversationId/messages', () => {
           return HttpResponse.json({ messages: [] });
@@ -524,14 +542,14 @@ describe('PrivateMessages', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/back to conversations/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /back to conversations/i })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText(/back to conversations/i));
+      await user.click(screen.getByRole('button', { name: /back to conversations/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/private messages/i)).toBeInTheDocument();
-        expect(screen.queryByText(/back to conversations/i)).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /back to conversations/i })).not.toBeInTheDocument();
       });
     });
   });

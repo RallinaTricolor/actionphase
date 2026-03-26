@@ -136,8 +136,7 @@ describe('CommentWithParentCard', () => {
     expect(mockNavigate).toHaveBeenCalledTimes(1);
   });
 
-  it('passes onNavigateToParent to ParentCommentPreview', async () => {
-    const user = userEvent.setup();
+  it('does not show "view in thread" inside the parent preview (suppressed by hideViewInThread)', () => {
     const mockNavigate = vi.fn();
 
     renderWithProviders(
@@ -145,14 +144,14 @@ describe('CommentWithParentCard', () => {
         comment={mockComment}
         gameId={1}
         onNavigateToParent={mockNavigate}
+        onNavigateToComment={mockNavigate}
       />,
       { gameId: 1 }
     );
 
-    const parentButton = screen.getByText(/view in thread/i);
-    await user.click(parentButton);
-
-    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    // "View in thread" appears only once — at the card level, not inside the parent preview
+    const links = screen.getAllByText(/view in thread/i);
+    expect(links).toHaveLength(1);
   });
 
   it('formats timestamp as relative time', () => {

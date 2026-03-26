@@ -224,7 +224,7 @@ describe('HandoutsList', () => {
 
       // Fill form
       const titleInput = screen.getByLabelText(/title/i);
-      const contentTextarea = screen.getByLabelText(/content/i);
+      const contentTextarea = screen.getByTestId('handout-content-input');
 
       await user.type(titleInput, 'New Handout');
       await user.type(contentTextarea, 'Handout content');
@@ -257,7 +257,7 @@ describe('HandoutsList', () => {
       const titleInput = screen.getByLabelText(/title/i);
       await user.type(titleInput, 'New Handout');
 
-      const contentTextarea = screen.getByLabelText(/content/i);
+      const contentTextarea = screen.getByTestId('handout-content-input');
       await user.type(contentTextarea, 'Content');
 
       const submitButtons = screen.getAllByRole('button', { name: /create handout/i });
@@ -283,7 +283,7 @@ describe('HandoutsList', () => {
       const titleInput = screen.getByLabelText(/title/i);
       await user.type(titleInput, 'New Handout');
 
-      const contentTextarea = screen.getByLabelText(/content/i);
+      const contentTextarea = screen.getByTestId('handout-content-input');
       await user.type(contentTextarea, 'Content');
 
       const submitButtons = screen.getAllByRole('button', { name: /create handout/i });
@@ -530,7 +530,7 @@ describe('HandoutsList', () => {
       await user.click(createButton);
 
       const titleInput = screen.getByLabelText(/title/i);
-      const contentTextarea = screen.getByLabelText(/content/i);
+      const contentTextarea = screen.getByTestId('handout-content-input');
 
       await user.type(titleInput, 'New Handout');
       await user.type(contentTextarea, 'New content');
