@@ -8,6 +8,10 @@ import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import CharacterAvatar from './CharacterAvatar';
 
+const ALLOWED_COLORS = new Set([
+  'red', 'green', 'blue', 'purple', 'orange', 'gold', 'gray', 'teal', 'pink',
+]);
+
 interface MentionedCharacter {
   id: number;
   name: string;
@@ -61,10 +65,11 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   const sanitizeSchema = React.useMemo(() => {
     return {
       ...defaultSchema,
-      tagNames: [...(defaultSchema.tagNames || []), 'mark'],
+      tagNames: [...(defaultSchema.tagNames || []), 'mark', 'span'],
       attributes: {
         ...defaultSchema.attributes,
         mark: ['dataMentionId', 'data-mention-id', 'className'],
+        span: ['dataColor', 'data-color'],
       },
     };
   }, []);
@@ -75,86 +80,83 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     return mentionedCharacters.find((char) => char.id === hoveredMentionId) || null;
   }, [hoveredMentionId, mentionedCharacters]);
 
-  // Replace @CharacterName mentions with highlighted spans
-  // BUT skip mentions inside code blocks (inline or fenced)
-  const processedContent = React.useMemo(() => {
-    if (!mentionedCharacters.length) return content;
-
-    // Split content into code and non-code segments
-    // This regex matches:
-    // - Fenced code blocks (```lang\ncode\n``` or ```code```)
-    // - Inline code (`code`)
+  // Helper: split content into code and non-code segments to skip processing inside code blocks
+  const splitByCodeBlocks = (text: string): Array<{ text: string; isCode: boolean }> => {
     const codeBlockRegex = /(```[\s\S]*?```|`[^`\n]+?`)/g;
-
     const segments: Array<{ text: string; isCode: boolean }> = [];
     let lastIndex = 0;
     let match;
 
-    while ((match = codeBlockRegex.exec(content)) !== null) {
-      // Add non-code text before this code block
+    while ((match = codeBlockRegex.exec(text)) !== null) {
       if (match.index > lastIndex) {
-        segments.push({ text: content.substring(lastIndex, match.index), isCode: false });
+        segments.push({ text: text.substring(lastIndex, match.index), isCode: false });
       }
-      // Add code block
       segments.push({ text: match[0], isCode: true });
       lastIndex = match.index + match[0].length;
     }
 
-    // Add remaining non-code text
-    if (lastIndex < content.length) {
-      segments.push({ text: content.substring(lastIndex), isCode: false });
+    if (lastIndex < text.length) {
+      segments.push({ text: text.substring(lastIndex), isCode: false });
     }
 
-    // If no segments were created (no code blocks), treat entire content as non-code
     if (segments.length === 0) {
-      segments.push({ text: content, isCode: false });
+      segments.push({ text, isCode: false });
     }
 
-    // Sort by name length (descending) to handle longer names first
-    // This prevents "Bob Smith" from being partially matched as just "Bob"
-    const sortedCharacters = [...mentionedCharacters].sort(
-      (a, b) => b.name.length - a.name.length
-    );
+    return segments;
+  };
 
-    // Process each segment
-    const processedSegments = segments.map((segment) => {
-      if (segment.isCode) {
-        // Don't process mentions inside code blocks
-        return segment.text;
-      }
+  // Replace @CharacterName mentions with highlighted spans and [color:X]...[/color] with colored spans,
+  // skipping both transformations inside code blocks (inline or fenced).
+  const processedContent = React.useMemo(() => {
+    // Step 1: Process character mentions
+    let mentionsResult = content;
+    if (mentionedCharacters.length) {
+      const segments = splitByCodeBlocks(content);
 
-      let processedText = segment.text;
+      const sortedCharacters = [...mentionedCharacters].sort(
+        (a, b) => b.name.length - a.name.length
+      );
 
-      // Use placeholders to prevent nested replacements
-      // First pass: replace mentions with unique placeholders
-      const replacements: Array<{ placeholder: string; replacement: string }> = [];
-      sortedCharacters.forEach(({ id, name }, index) => {
-        // Simple regex without lookbehind/lookahead since we already filtered out code blocks
-        const mentionRegex = new RegExp(`@(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g');
-        const placeholder = `___MENTION_${index}_${id}___`;
+      mentionsResult = segments.map((segment) => {
+        if (segment.isCode) return segment.text;
 
-        // Replace with placeholder
-        processedText = processedText.replace(
-          mentionRegex,
-          (match) => {
-            replacements.push({
-              placeholder,
-              replacement: `<mark data-mention-id="${id}">${match}</mark>`,
-            });
+        let processedText = segment.text;
+        const replacements: Array<{ placeholder: string; replacement: string }> = [];
+        sortedCharacters.forEach(({ id, name }, index) => {
+          const mentionRegex = new RegExp(`@(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g');
+          const placeholder = `___MENTION_${index}_${id}___`;
+          processedText = processedText.replace(mentionRegex, (m) => {
+            replacements.push({ placeholder, replacement: `<mark data-mention-id="${id}">${m}</mark>` });
             return placeholder;
+          });
+        });
+        replacements.forEach(({ placeholder, replacement }) => {
+          processedText = processedText.replace(placeholder, replacement);
+        });
+        return processedText;
+      }).join('');
+    }
+
+    // Step 2: Process [color:X]...[/color] syntax, skipping code blocks
+    const colorRegex = /\[color:([a-z]+)\]([\s\S]*?)\[\/color\]/g;
+    const hasColorSyntax = colorRegex.test(mentionsResult);
+    if (!hasColorSyntax) return mentionsResult;
+
+    const colorSegments = splitByCodeBlocks(mentionsResult);
+    return colorSegments.map((segment) => {
+      if (segment.isCode) return segment.text;
+      return segment.text.replace(
+        /\[color:([a-z]+)\]([\s\S]*?)\[\/color\]/g,
+        (_match, colorName: string, innerText: string) => {
+          if (ALLOWED_COLORS.has(colorName)) {
+            return `<span data-color="${colorName}">${innerText}</span>`;
           }
-        );
-      });
-
-      // Second pass: replace placeholders with actual mark elements
-      replacements.forEach(({ placeholder, replacement }) => {
-        processedText = processedText.replace(placeholder, replacement);
-      });
-
-      return processedText;
-    });
-
-    return processedSegments.join('');
+          // Unknown color: render as literal text
+          return _match;
+        }
+      );
+    }).join('');
   }, [content, mentionedCharacters]);
 
   return (
@@ -231,6 +233,15 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                 {children}
               </mark>
             );
+          },
+
+          // Custom span element for colored text [color:X]...[/color]
+          span({ children, ...props }) {
+            const dataColor = (props as Record<string, unknown>)['data-color'] as string | undefined;
+            if (dataColor && ALLOWED_COLORS.has(dataColor)) {
+              return <span data-color={dataColor} {...props}>{children}</span>;
+            }
+            return <span {...props}>{children}</span>;
           },
 
           // Style headers

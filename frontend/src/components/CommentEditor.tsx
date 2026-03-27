@@ -381,6 +381,13 @@ export const CommentEditor = memo(function CommentEditor({
                 <code className="surface-sunken px-1 rounded">@CharacterName</code> → mention
               </div>
             </div>
+            <div className="mt-2 pt-2 border-t border-theme-default text-content-primary">
+              <div className="font-semibold text-content-secondary mb-1">Colored Text</div>
+              <div>
+                <code className="surface-sunken px-1 rounded">[color:red]text[/color]</code>
+                {' — colors: red, green, blue, purple, orange, gold, gray, teal, pink'}
+              </div>
+            </div>
           </div>
         )}
 

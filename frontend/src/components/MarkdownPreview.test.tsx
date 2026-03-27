@@ -373,4 +373,73 @@ describe('MarkdownPreview', () => {
       expect(container.querySelector('.markdown-preview')).toBeInTheDocument();
     });
   });
+
+  describe('Colored Text Rendering', () => {
+    it('renders a known color as a span with data-color attribute', () => {
+      const { container } = render(<MarkdownPreview content="[color:red]hello[/color]" />);
+      const span = container.querySelector('[data-color="red"]');
+      expect(span).toBeInTheDocument();
+      expect(span?.textContent).toBe('hello');
+    });
+
+    it.each([
+      'red', 'green', 'blue', 'purple', 'orange', 'gold', 'gray', 'teal', 'pink',
+    ])('renders [color:%s] with the correct data-color attribute', (color) => {
+      const { container } = render(<MarkdownPreview content={`[color:${color}]text[/color]`} />);
+      const span = container.querySelector(`[data-color="${color}"]`);
+      expect(span).toBeInTheDocument();
+    });
+
+    it('renders unknown color names as literal text', () => {
+      const { container } = render(<MarkdownPreview content="[color:mauve]some text[/color]" />);
+      expect(container.querySelector('[data-color]')).not.toBeInTheDocument();
+      expect(container.textContent).toContain('[color:mauve]some text[/color]');
+    });
+
+    it('does not process color syntax inside inline code', () => {
+      const { container } = render(<MarkdownPreview content="`[color:red]text[/color]`" />);
+      expect(container.querySelector('[data-color]')).not.toBeInTheDocument();
+      expect(container.textContent).toContain('[color:red]text[/color]');
+    });
+
+    it('does not process color syntax inside fenced code blocks', () => {
+      const content = '```\n[color:red]text[/color]\n```';
+      const { container } = render(<MarkdownPreview content={content} />);
+      expect(container.querySelector('[data-color]')).not.toBeInTheDocument();
+    });
+
+    it('renders multi-line content inside color tags', () => {
+      const { container } = render(<MarkdownPreview content="[color:green]line one\nline two[/color]" />);
+      const span = container.querySelector('[data-color="green"]');
+      expect(span).toBeInTheDocument();
+      expect(span?.textContent).toContain('line one');
+      expect(span?.textContent).toContain('line two');
+    });
+
+    it('does not add a style attribute to colored spans', () => {
+      const { container } = render(<MarkdownPreview content="[color:red]styled[/color]" />);
+      const span = container.querySelector('[data-color="red"]');
+      expect(span).toBeInTheDocument();
+      expect(span).not.toHaveAttribute('style');
+    });
+
+    it('works with mentions inside a colored span', () => {
+      const chars = [{ id: 1, name: 'Alice' }];
+      const { container } = render(
+        <MarkdownPreview content="[color:blue]@Alice[/color]" mentionedCharacters={chars} />
+      );
+      const span = container.querySelector('[data-color="blue"]');
+      expect(span).toBeInTheDocument();
+      const mark = span?.querySelector('[data-mention-id]');
+      expect(mark).toBeInTheDocument();
+    });
+
+    it('does not create a span for injection attempts via color name', () => {
+      // The color regex only matches [a-z]+, so this won't match as a color tag
+      const { container } = render(
+        <MarkdownPreview content='[color:red onmouseover="alert(1)"]text[/color]' />
+      );
+      expect(container.querySelector('[data-color]')).not.toBeInTheDocument();
+    });
+  });
 });

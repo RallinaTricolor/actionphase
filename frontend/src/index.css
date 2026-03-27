@@ -720,6 +720,27 @@
   }
 }
 
+/* Colored text — custom markdown extension [color:X]...[/color] */
+[data-color="red"]    { color: #dc2626; }
+[data-color="green"]  { color: #16a34a; }
+[data-color="blue"]   { color: #2563eb; }
+[data-color="purple"] { color: #7c3aed; }
+[data-color="orange"] { color: #f97316; }
+[data-color="gold"]   { color: #ca8a04; }
+[data-color="gray"]   { color: #6b7280; }
+[data-color="teal"]   { color: #0d9488; }
+[data-color="pink"]   { color: #db2777; }
+
+.dark [data-color="red"]    { color: #f87171; }
+.dark [data-color="green"]  { color: #4ade80; }
+.dark [data-color="blue"]   { color: #60a5fa; }
+.dark [data-color="purple"] { color: #a78bfa; }
+.dark [data-color="orange"] { color: #fb923c; }
+.dark [data-color="gold"]   { color: #facc15; }
+.dark [data-color="gray"]   { color: #9ca3af; }
+.dark [data-color="teal"]   { color: #2dd4bf; }
+.dark [data-color="pink"]   { color: #f472b6; }
+
 /* Landscape orientation: Adjust for wider viewport but shorter height */
 @media (max-width: 896px) and (orientation: landscape) {
   /* Reduce vertical spacing to fit more content */
