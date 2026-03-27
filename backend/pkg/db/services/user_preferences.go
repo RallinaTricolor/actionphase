@@ -26,8 +26,8 @@ func NewUserPreferencesService(db *pgxpool.Pool) *UserPreferencesService {
 
 // PreferencesData represents the structured preferences object
 type PreferencesData struct {
-	Theme string `json:"theme"` // "light" | "dark" | "auto"
-	// Future preferences can be added here
+	Theme           string `json:"theme"`             // "light" | "dark" | "auto"
+	CommentReadMode string `json:"comment_read_mode"` // "auto" | "manual"
 }
 
 // GetUserPreferences gets user preferences, returning defaults if not found
@@ -36,7 +36,8 @@ func (s *UserPreferencesService) GetUserPreferences(ctx context.Context, userID 
 	if err != nil {
 		// Return default preferences if not found
 		return &PreferencesData{
-			Theme: "auto",
+			Theme:           "auto",
+			CommentReadMode: "auto",
 		}, nil
 	}
 
@@ -50,16 +51,33 @@ func (s *UserPreferencesService) GetUserPreferences(ctx context.Context, userID 
 	if data.Theme == "" {
 		data.Theme = "auto"
 	}
+	if data.CommentReadMode == "" {
+		data.CommentReadMode = "auto"
+	}
 
 	return &data, nil
 }
 
 // UpdateUserPreferences updates or creates user preferences
 func (s *UserPreferencesService) UpdateUserPreferences(ctx context.Context, userID int32, prefs PreferencesData) (*PreferencesData, error) {
+	// Apply defaults before validation so callers only need to specify fields they care about
+	if prefs.Theme == "" {
+		prefs.Theme = "auto"
+	}
+	if prefs.CommentReadMode == "" {
+		prefs.CommentReadMode = "auto"
+	}
+
 	// Validate theme value
 	validThemes := map[string]bool{"light": true, "dark": true, "auto": true}
 	if !validThemes[prefs.Theme] {
 		return nil, fmt.Errorf("invalid theme value: must be 'light', 'dark', or 'auto'")
+	}
+
+	// Validate comment_read_mode value
+	validReadModes := map[string]bool{"auto": true, "manual": true}
+	if !validReadModes[prefs.CommentReadMode] {
+		return nil, fmt.Errorf("invalid comment_read_mode value: must be 'auto' or 'manual'")
 	}
 
 	// Marshal preferences to JSONB

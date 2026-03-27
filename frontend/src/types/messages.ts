@@ -79,6 +79,12 @@ export interface PostUnreadComments {
   unread_comment_ids: number[];
 }
 
+// Manually read comment IDs for a post (user-controlled, persisted)
+export interface ManualCommentReads {
+  post_id: number;
+  read_comment_ids: number[];
+}
+
 // Paginated comments with threads (includes depth for tree building)
 export interface CommentWithDepth extends Message {
   depth: number; // Nesting depth (0 = top-level, 1+ = nested replies)

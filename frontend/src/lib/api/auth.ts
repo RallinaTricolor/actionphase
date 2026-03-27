@@ -9,10 +9,12 @@ import type {
   User
 } from '../../types/auth';
 
-type Theme = 'light' | 'dark' | 'auto';
+export type Theme = 'light' | 'dark' | 'auto';
+export type CommentReadMode = 'auto' | 'manual';
 
-interface UserPreferences {
+export interface UserPreferences {
   theme: Theme;
+  comment_read_mode: CommentReadMode;
 }
 
 interface PreferencesResponse {

@@ -207,6 +207,93 @@ func (s *MessageService) GetUnreadCommentIDsForPosts(ctx context.Context, userID
 	return result, nil
 }
 
+// ToggleCommentRead marks or unmarks a single comment as manually read by a user.
+// Validates that the comment actually belongs to the specified post and game
+// before writing to prevent users from toggling arbitrary comment IDs.
+//
+// Parameters:
+//   - ctx: Request context
+//   - userID: The user toggling the read state
+//   - gameID: The game the comment belongs to
+//   - postID: The post the comment belongs to
+//   - commentID: The comment being toggled
+//   - markAsRead: true to mark as read, false to mark as unread
+func (s *MessageService) ToggleCommentRead(ctx context.Context, userID, gameID, postID, commentID int32, markAsRead bool) error {
+	queries := db.New(s.DB)
+
+	// Validate the comment belongs to the specified game to prevent cross-game manipulation
+	msg, err := queries.GetMessage(ctx, commentID)
+	if err != nil {
+		return fmt.Errorf("comment not found: %w", err)
+	}
+	if msg.GameID != gameID {
+		return fmt.Errorf("comment does not belong to this game")
+	}
+
+	if markAsRead {
+		return queries.MarkCommentRead(ctx, db.MarkCommentReadParams{
+			UserID:    userID,
+			CommentID: commentID,
+			PostID:    postID,
+			GameID:    gameID,
+		})
+	}
+	return queries.UnmarkCommentRead(ctx, db.UnmarkCommentReadParams{
+		UserID:    userID,
+		CommentID: commentID,
+	})
+}
+
+// GetManualReadCommentIDsForGame retrieves all comment IDs manually marked as read
+// by a user across all posts in a game. Results are grouped by post ID.
+//
+// Parameters:
+//   - ctx: Request context
+//   - userID: The user ID
+//   - gameID: The game ID
+//
+// Returns:
+//   - []*core.ManualCommentReads: Per-post lists of manually read comment IDs
+//   - error: Any error that occurred
+func (s *MessageService) GetManualReadCommentIDsForGame(ctx context.Context, userID, gameID int32) ([]*core.ManualCommentReads, error) {
+	queries := db.New(s.DB)
+
+	rows, err := queries.GetManualReadCommentIDsForGame(ctx, db.GetManualReadCommentIDsForGameParams{
+		UserID: userID,
+		GameID: gameID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get manual read comment IDs: %w", err)
+	}
+
+	// Group by post_id
+	postMap := make(map[int32]*core.ManualCommentReads)
+	for _, row := range rows {
+		entry, ok := postMap[row.PostID]
+		if !ok {
+			entry = &core.ManualCommentReads{PostID: row.PostID, ReadCommentIDs: []int32{}}
+			postMap[row.PostID] = entry
+		}
+		entry.ReadCommentIDs = append(entry.ReadCommentIDs, row.CommentID)
+	}
+
+	result := make([]*core.ManualCommentReads, 0, len(postMap))
+	for _, v := range postMap {
+		result = append(result, v)
+	}
+	return result, nil
+}
+
+// DeleteManualCommentReadsForGame deletes all manual read records for a game.
+// Should be called when a game transitions to completed/archived status.
+func (s *MessageService) DeleteManualCommentReadsForGame(ctx context.Context, gameID int32) error {
+	queries := db.New(s.DB)
+	if err := queries.DeleteManualCommentReadsForGame(ctx, gameID); err != nil {
+		return fmt.Errorf("failed to delete manual comment reads for game: %w", err)
+	}
+	return nil
+}
+
 // Helper function to convert DB read marker to core model
 func readMarkerToCore(dbMarker *db.UserCommonRoomRead) *core.ReadMarker {
 	marker := &core.ReadMarker{

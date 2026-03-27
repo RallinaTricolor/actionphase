@@ -9,6 +9,7 @@ import type {
   PostUnreadInfo,
   MarkPostReadRequest,
   PostUnreadComments,
+  ManualCommentReads,
   PaginatedCommentsResponse,
   RecentCommentsResponse,
   CommentWithParent
@@ -97,6 +98,18 @@ export class MessagesApi extends BaseApiClient {
 
   async getUnreadCommentIDs(gameId: number) {
     return this.client.get<PostUnreadComments[]>(`/api/v1/games/${gameId}/unread-comment-ids`);
+  }
+
+  // Manual read tracking endpoints
+  async toggleCommentRead(gameId: number, postId: number, commentId: number, read: boolean) {
+    return this.client.post<void>(
+      `/api/v1/games/${gameId}/posts/${postId}/comments/${commentId}/toggle-read`,
+      { read }
+    );
+  }
+
+  async getManualReadCommentIDs(gameId: number) {
+    return this.client.get<ManualCommentReads[]>(`/api/v1/games/${gameId}/manual-read-comment-ids`);
   }
 
   // Recent comments (New Comments view)

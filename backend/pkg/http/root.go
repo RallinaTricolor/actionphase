@@ -230,6 +230,10 @@ func (h *Handler) Start() {
 			r.Get("/{gameId}/posts-unread-info", messageHandler.GetPostsUnreadInfo)
 			r.Get("/{gameId}/unread-comment-ids", messageHandler.GetUnreadCommentIDs)
 
+			// Manual read tracking (per-comment)
+			r.Post("/{gameId}/posts/{postId}/comments/{commentId}/toggle-read", messageHandler.ToggleCommentRead)
+			r.Get("/{gameId}/manual-read-comment-ids", messageHandler.GetManualReadCommentIDs)
+
 			// Private messages (conversations)
 			conversationHandler := &conversations.Handler{App: h.App}
 			conversationHandler.RegisterRoutes(r)

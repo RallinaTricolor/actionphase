@@ -9,7 +9,8 @@ import { apiClient } from '../lib/api';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
 import { MarkdownPreview } from './MarkdownPreview';
-import { useMarkPostAsRead, usePostUnreadCommentIDs } from '../hooks/useReadTracking';
+import { useMarkPostAsRead, usePostUnreadCommentIDs, usePostManualReadCommentIDs, useToggleCommentRead } from '../hooks/useReadTracking';
+import { useCommentReadMode } from '../hooks/useUserPreferences';
 import { useUpdatePost } from '../hooks';
 import { Button, Select } from './ui';
 import { logger } from '@/services/LoggingService';
@@ -41,6 +42,9 @@ const CommentList = memo(function CommentList({
   loadComments,
   currentUserId,
   localUnreadCommentIDs,
+  manualReadCommentIDs,
+  commentReadMode,
+  onToggleRead,
   onOpenThread,
   readOnly,
 }: {
@@ -53,6 +57,9 @@ const CommentList = memo(function CommentList({
   loadComments: () => Promise<void>;
   currentUserId?: number;
   localUnreadCommentIDs: number[];
+  manualReadCommentIDs: number[];
+  commentReadMode: 'auto' | 'manual';
+  onToggleRead: (commentId: number, currentlyRead: boolean) => void;
   onOpenThread: (comment: Message) => void;
   readOnly: boolean;
 }) {
@@ -72,6 +79,9 @@ const CommentList = memo(function CommentList({
           depth={0}
           maxDepth={COMMENT_MAX_DEPTH}
           unreadCommentIDs={localUnreadCommentIDs}
+          manualReadCommentIDs={manualReadCommentIDs}
+          commentReadMode={commentReadMode}
+          onToggleRead={onToggleRead}
           onOpenThread={onOpenThread}
           readOnly={readOnly}
           parentComment={null}
@@ -109,6 +119,20 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
 
   // Local state to preserve unread IDs and prevent auto-clearing
   const [localUnreadCommentIDs, setLocalUnreadCommentIDs] = useState<number[]>([]);
+
+  // Manual read tracking
+  const commentReadMode = useCommentReadMode();
+  const manualReadCommentIDs = usePostManualReadCommentIDs(gameId, post.id);
+  const toggleCommentReadMutation = useToggleCommentRead();
+
+  const handleToggleRead = useCallback((commentId: number, currentlyRead: boolean) => {
+    toggleCommentReadMutation.mutate({
+      gameId,
+      postId: post.id,
+      commentId,
+      read: !currentlyRead,
+    });
+  }, [toggleCommentReadMutation, gameId, post.id]);
 
   // Mutation for marking post as read
   const markAsReadMutation = useMarkPostAsRead();
@@ -556,6 +580,9 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                 loadComments={loadComments}
                 currentUserId={currentUserId}
                 localUnreadCommentIDs={localUnreadCommentIDs}
+                manualReadCommentIDs={manualReadCommentIDs}
+                commentReadMode={commentReadMode}
+                onToggleRead={handleToggleRead}
                 onOpenThread={handleOpenThread}
                 readOnly={readOnly}
               />
@@ -609,6 +636,9 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
           onCreateReply={onCreateComment}
           currentUserId={currentUserId}
           unreadCommentIDs={localUnreadCommentIDs}
+          manualReadCommentIDs={manualReadCommentIDs}
+          commentReadMode={commentReadMode}
+          onToggleRead={handleToggleRead}
           readOnly={readOnly}
         />
       )}

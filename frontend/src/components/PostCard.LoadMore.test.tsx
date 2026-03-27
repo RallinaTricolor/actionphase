@@ -61,9 +61,13 @@ vi.mock('../hooks/useReadTracking', () => ({
     isError: false,
     error: null,
   }),
-  usePostUnreadCommentIDs: () => ({
-    data: [],
-  }),
+  usePostUnreadCommentIDs: () => [],
+  usePostManualReadCommentIDs: () => [],
+  useToggleCommentRead: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock('../hooks/useUserPreferences', () => ({
+  useCommentReadMode: () => 'auto',
 }));
 
 describe('PostCard - Load More Comments', () => {

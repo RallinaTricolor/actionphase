@@ -6,10 +6,21 @@ import { ActiveSessions } from '../components/ActiveSessions';
 import { ChangeUsernameForm } from '../components/ChangeUsernameForm';
 import { ChangeEmailForm } from '../components/ChangeEmailForm';
 import { SettingsSidebar } from '../components/SettingsSidebar';
+import { useUserPreferences, useUpdateUserPreferences } from '../hooks/useUserPreferences';
+import type { CommentReadMode } from '../lib/api/auth';
 
 export function SettingsPage() {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [activeSection, setActiveSection] = useState('profile');
+  const { data: preferences } = useUserPreferences();
+  const updatePreferences = useUpdateUserPreferences();
+
+  const handleCommentReadModeChange = (mode: CommentReadMode) => {
+    updatePreferences.mutate({
+      theme: preferences?.theme ?? 'auto',
+      comment_read_mode: mode,
+    });
+  };
 
   const sections = [
     {
@@ -45,6 +56,15 @@ export function SettingsPage() {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'reading',
+      label: 'Reading',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
       ),
     },
@@ -229,6 +249,68 @@ export function SettingsPage() {
             <div className="space-y-6">
               <ChangeUsernameForm />
               <ChangeEmailForm />
+            </div>
+          </div>
+        )}
+
+        {/* Reading Section */}
+        {activeSection === 'reading' && (
+          <div className="bg-surface-base rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold text-content-primary mb-4">Reading</h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-content-secondary mb-2">
+                  Comment Read Tracking
+                </label>
+                <div className="space-y-2">
+                  <label
+                    className="flex items-center p-3 border border-theme-default rounded-lg cursor-pointer hover:bg-surface-raised"
+                    data-testid="read-mode-auto"
+                  >
+                    <input
+                      type="radio"
+                      name="comment_read_mode"
+                      value="auto"
+                      checked={(preferences?.comment_read_mode ?? 'auto') === 'auto'}
+                      onChange={() => handleCommentReadModeChange('auto')}
+                      className="h-4 w-4 text-interactive-primary focus:ring-2 focus:ring-interactive-primary"
+                    />
+                    <div className="ml-3">
+                      <div className="text-sm font-medium text-content-primary">Automatic</div>
+                      <div className="text-sm text-content-tertiary">
+                        Highlight new comments since your last visit
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    className="flex items-center p-3 border border-theme-default rounded-lg cursor-pointer hover:bg-surface-raised"
+                    data-testid="read-mode-manual"
+                  >
+                    <input
+                      type="radio"
+                      name="comment_read_mode"
+                      value="manual"
+                      checked={(preferences?.comment_read_mode ?? 'auto') === 'manual'}
+                      onChange={() => handleCommentReadModeChange('manual')}
+                      className="h-4 w-4 text-interactive-primary focus:ring-2 focus:ring-interactive-primary"
+                    />
+                    <div className="ml-3">
+                      <div className="text-sm font-medium text-content-primary">Manual</div>
+                      <div className="text-sm text-content-tertiary">
+                        Mark individual comments as read yourself; read comments fade out
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-theme-default">
+                <p className="text-sm text-content-secondary">
+                  Your reading preference is saved and synced across devices.
+                </p>
+              </div>
             </div>
           </div>
         )}

@@ -884,6 +884,99 @@ func (h *Handler) GetUnreadCommentIDs(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// ToggleCommentRead marks or unmarks a single comment as manually read by the current user
+// POST /api/v1/games/:gameId/posts/:postId/comments/:commentId/toggle-read
+func (h *Handler) ToggleCommentRead(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_toggle_comment_read")()
+
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	postIDStr := chi.URLParam(r, "postId")
+	postID, err := strconv.ParseInt(postIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid post ID")))
+		return
+	}
+
+	commentIDStr := chi.URLParam(r, "commentId")
+	commentID, err := strconv.ParseInt(commentIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid comment ID")))
+		return
+	}
+
+	userID, err := getUserIDFromToken(r, h.App)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	var requestBody struct {
+		Read bool `json:"read"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil && err != io.EOF {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid request body")))
+		return
+	}
+
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	if err := messageService.ToggleCommentRead(ctx, userID, int32(gameID), int32(postID), int32(commentID), requestBody.Read); err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to toggle comment read", "error", err,
+			"game_id", gameID, "post_id", postID, "comment_id", commentID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetManualReadCommentIDs gets all comment IDs manually marked as read by the current user in a game
+// GET /api/v1/games/:gameId/manual-read-comment-ids
+func (h *Handler) GetManualReadCommentIDs(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	defer h.App.ObsLogger.LogOperation(ctx, "api_get_manual_read_comment_ids")()
+
+	gameIDStr := chi.URLParam(r, "gameId")
+	gameID, err := strconv.ParseInt(gameIDStr, 10, 32)
+	if err != nil {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("invalid game ID")))
+		return
+	}
+
+	userID, err := getUserIDFromToken(r, h.App)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get user from token", "error", err)
+		render.Render(w, r, core.ErrUnauthorized(err.Error()))
+		return
+	}
+
+	messageService := &messagesvc.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	manualReads, err := messageService.GetManualReadCommentIDsForGame(ctx, userID, int32(gameID))
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get manual read comment IDs", "error", err, "game_id", gameID, "user_id", userID)
+		render.Render(w, r, core.ErrInternalError(err))
+		return
+	}
+
+	response := make([]map[string]interface{}, 0, len(manualReads))
+	for _, mr := range manualReads {
+		response = append(response, map[string]interface{}{
+			"post_id":          mr.PostID,
+			"read_comment_ids": mr.ReadCommentIDs,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 // UpdatePost updates the content of an existing post
 // PATCH /api/v1/games/:gameId/posts/:postId
 func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {

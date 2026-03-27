@@ -916,3 +916,154 @@ func TestMessageService_GetUnreadCommentIDsForPosts(t *testing.T) {
 		assert.NotContains(t, postResult.UnreadCommentIDs, deletedComment.ID, "Should NOT contain deleted comment")
 	})
 }
+
+func TestMessageService_ToggleCommentRead(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Setup
+	player := testDB.CreateTestUser(t, "toggle_player", "toggle@example.com")
+	game := testDB.CreateTestGame(t, int32(player.ID), "Toggle Test Game")
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Toggle Char",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID:      game.ID,
+		AuthorID:    int32(player.ID),
+		CharacterID: char.ID,
+		Content:     "Test post for manual reads",
+		Visibility:  string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+		GameID:      game.ID,
+		ParentID:    post.ID,
+		AuthorID:    int32(player.ID),
+		CharacterID: char.ID,
+		Content:     "Test comment",
+		Visibility:  string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	t.Run("marks comment as read", func(t *testing.T) {
+		err := service.ToggleCommentRead(context.Background(), int32(player.ID), game.ID, post.ID, comment.ID, true)
+		require.NoError(t, err)
+
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		require.NoError(t, err)
+		require.Len(t, reads, 1)
+		assert.Equal(t, post.ID, reads[0].PostID)
+		assert.Contains(t, reads[0].ReadCommentIDs, comment.ID)
+	})
+
+	t.Run("marking same comment read again is idempotent", func(t *testing.T) {
+		err := service.ToggleCommentRead(context.Background(), int32(player.ID), game.ID, post.ID, comment.ID, true)
+		require.NoError(t, err)
+
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		require.NoError(t, err)
+		require.Len(t, reads, 1)
+		assert.Len(t, reads[0].ReadCommentIDs, 1, "should not duplicate the entry")
+	})
+
+	t.Run("unmarks comment as read", func(t *testing.T) {
+		err := service.ToggleCommentRead(context.Background(), int32(player.ID), game.ID, post.ID, comment.ID, false)
+		require.NoError(t, err)
+
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		require.NoError(t, err)
+		assert.Empty(t, reads, "no reads should remain after unmarking")
+	})
+
+	t.Run("rejects comment from wrong game", func(t *testing.T) {
+		otherGame := testDB.CreateTestGame(t, int32(player.ID), "Other Game")
+		err := service.ToggleCommentRead(context.Background(), int32(player.ID), otherGame.ID, post.ID, comment.ID, true)
+		assert.Error(t, err, "should reject comment that belongs to a different game")
+	})
+}
+
+func TestMessageService_GetManualReadCommentIDsForGame(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+
+	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	player := testDB.CreateTestUser(t, "getmanual_player", "getmanual@example.com")
+	game := testDB.CreateTestGame(t, int32(player.ID), "GetManual Test Game")
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Manual Char",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Create two posts, each with a comment
+	post1, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID: game.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		Content: "Post 1", Visibility: string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	post2, err := service.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID: game.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		Content: "Post 2", Visibility: string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	comment1, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+		GameID: game.ID, ParentID: post1.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		Content: "Comment on post 1", Visibility: string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	comment2, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+		GameID: game.ID, ParentID: post2.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		Content: "Comment on post 2", Visibility: string(models.MessageVisibilityGame),
+	})
+	require.NoError(t, err)
+
+	t.Run("returns empty when no reads", func(t *testing.T) {
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		require.NoError(t, err)
+		assert.Empty(t, reads)
+	})
+
+	t.Run("returns grouped results across multiple posts", func(t *testing.T) {
+		require.NoError(t, service.ToggleCommentRead(context.Background(), int32(player.ID), game.ID, post1.ID, comment1.ID, true))
+		require.NoError(t, service.ToggleCommentRead(context.Background(), int32(player.ID), game.ID, post2.ID, comment2.ID, true))
+
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		require.NoError(t, err)
+		assert.Len(t, reads, 2, "should return one entry per post")
+
+		postMap := make(map[int32][]int32)
+		for _, r := range reads {
+			postMap[r.PostID] = r.ReadCommentIDs
+		}
+		assert.Contains(t, postMap[post1.ID], comment1.ID)
+		assert.Contains(t, postMap[post2.ID], comment2.ID)
+	})
+}

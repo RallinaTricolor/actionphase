@@ -111,7 +111,7 @@ func TestUserPreferencesService_UpdateUserPreferences_InvalidTheme(t *testing.T)
 	ctx := context.Background()
 
 	// Test validation for invalid theme values
-	invalidThemes := []string{"invalid", "DARK", "Light", "system", ""}
+	invalidThemes := []string{"invalid", "DARK", "Light", "system"}
 
 	for _, theme := range invalidThemes {
 		t.Run(theme, func(t *testing.T) {
@@ -149,7 +149,7 @@ func TestUserPreferencesService_UpdateUserPreferences_ValidThemes(t *testing.T) 
 
 	for _, theme := range validThemes {
 		t.Run(theme, func(t *testing.T) {
-			prefs := PreferencesData{Theme: theme}
+			prefs := PreferencesData{Theme: theme, CommentReadMode: "auto"}
 			updated, err := service.UpdateUserPreferences(ctx, user.ID, prefs)
 			require.NoError(t, err, "should accept valid theme: %s", theme)
 			assert.Equal(t, theme, updated.Theme)
@@ -158,6 +158,84 @@ func TestUserPreferencesService_UpdateUserPreferences_ValidThemes(t *testing.T) 
 			retrieved, err := service.GetUserPreferences(ctx, user.ID)
 			require.NoError(t, err)
 			assert.Equal(t, theme, retrieved.Theme)
+		})
+	}
+}
+
+func TestUserPreferencesService_CommentReadMode_Default(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping database test in short mode")
+	}
+
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "user_preferences", "users")
+
+	service := NewUserPreferencesService(testDB.Pool)
+	ctx := context.Background()
+
+	queries := models.New(testDB.Pool)
+	user, err := queries.CreateUser(ctx, models.CreateUserParams{
+		Username: "readmode_default_user",
+		Email:    "readmode_default@example.com",
+		Password: "testpass",
+	})
+	require.NoError(t, err)
+
+	// Preferences never set — should default to "auto"
+	prefs, err := service.GetUserPreferences(ctx, user.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "auto", prefs.CommentReadMode, "default comment_read_mode should be 'auto'")
+}
+
+func TestUserPreferencesService_CommentReadMode_ValidValues(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping database test in short mode")
+	}
+
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "user_preferences", "users")
+
+	service := NewUserPreferencesService(testDB.Pool)
+	ctx := context.Background()
+
+	queries := models.New(testDB.Pool)
+	user, err := queries.CreateUser(ctx, models.CreateUserParams{
+		Username: "readmode_valid_user",
+		Email:    "readmode_valid@example.com",
+		Password: "testpass",
+	})
+	require.NoError(t, err)
+
+	for _, mode := range []string{"auto", "manual"} {
+		t.Run(mode, func(t *testing.T) {
+			prefs := PreferencesData{Theme: "auto", CommentReadMode: mode}
+			updated, err := service.UpdateUserPreferences(ctx, user.ID, prefs)
+			require.NoError(t, err)
+			assert.Equal(t, mode, updated.CommentReadMode)
+		})
+	}
+}
+
+func TestUserPreferencesService_CommentReadMode_InvalidValue(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping database test in short mode")
+	}
+
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "user_preferences", "users")
+
+	service := NewUserPreferencesService(testDB.Pool)
+	ctx := context.Background()
+
+	for _, mode := range []string{"none", "Auto", "MANUAL", "highlight"} {
+		t.Run(mode, func(t *testing.T) {
+			prefs := PreferencesData{Theme: "auto", CommentReadMode: mode}
+			_, err := service.UpdateUserPreferences(ctx, 1, prefs)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid comment_read_mode")
 		})
 	}
 }

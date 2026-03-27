@@ -270,6 +270,17 @@ func (q *Queries) DeleteComment(ctx context.Context, arg DeleteCommentParams) er
 	return err
 }
 
+const deleteManualCommentReadsForGame = `-- name: DeleteManualCommentReadsForGame :exec
+DELETE FROM user_comment_reads
+WHERE game_id = $1
+`
+
+// Delete all manual read records for a game (called when game is completed/archived)
+func (q *Queries) DeleteManualCommentReadsForGame(ctx context.Context, gameID int32) error {
+	_, err := q.db.Exec(ctx, deleteManualCommentReadsForGame, gameID)
+	return err
+}
+
 const deletePost = `-- name: DeletePost :one
 UPDATE messages
 SET is_deleted = true
@@ -681,6 +692,77 @@ func (q *Queries) GetGamePosts(ctx context.Context, arg GetGamePostsParams) ([]G
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getManualReadCommentIDsForGame = `-- name: GetManualReadCommentIDsForGame :many
+SELECT post_id, comment_id
+FROM user_comment_reads
+WHERE user_id = $1 AND game_id = $2
+ORDER BY post_id, comment_id
+`
+
+type GetManualReadCommentIDsForGameParams struct {
+	UserID int32 `json:"user_id"`
+	GameID int32 `json:"game_id"`
+}
+
+type GetManualReadCommentIDsForGameRow struct {
+	PostID    int32 `json:"post_id"`
+	CommentID int32 `json:"comment_id"`
+}
+
+// Returns (post_id, comment_id) pairs for all manually read comments in a game
+// Used to batch-load read state for the entire common room view
+func (q *Queries) GetManualReadCommentIDsForGame(ctx context.Context, arg GetManualReadCommentIDsForGameParams) ([]GetManualReadCommentIDsForGameRow, error) {
+	rows, err := q.db.Query(ctx, getManualReadCommentIDsForGame, arg.UserID, arg.GameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetManualReadCommentIDsForGameRow
+	for rows.Next() {
+		var i GetManualReadCommentIDsForGameRow
+		if err := rows.Scan(&i.PostID, &i.CommentID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getManualReadCommentIDsForPost = `-- name: GetManualReadCommentIDsForPost :many
+SELECT comment_id
+FROM user_comment_reads
+WHERE user_id = $1 AND post_id = $2
+`
+
+type GetManualReadCommentIDsForPostParams struct {
+	UserID int32 `json:"user_id"`
+	PostID int32 `json:"post_id"`
+}
+
+// Returns comment IDs explicitly marked as read by the user under a specific post
+func (q *Queries) GetManualReadCommentIDsForPost(ctx context.Context, arg GetManualReadCommentIDsForPostParams) ([]int32, error) {
+	rows, err := q.db.Query(ctx, getManualReadCommentIDsForPost, arg.UserID, arg.PostID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var comment_id int32
+		if err := rows.Scan(&comment_id); err != nil {
+			return nil, err
+		}
+		items = append(items, comment_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1675,6 +1757,34 @@ func (q *Queries) ListAllPrivateConversations(ctx context.Context, arg ListAllPr
 	return items, nil
 }
 
+const markCommentRead = `-- name: MarkCommentRead :exec
+
+INSERT INTO user_comment_reads (user_id, comment_id, post_id, game_id)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (user_id, comment_id) DO NOTHING
+`
+
+type MarkCommentReadParams struct {
+	UserID    int32 `json:"user_id"`
+	CommentID int32 `json:"comment_id"`
+	PostID    int32 `json:"post_id"`
+	GameID    int32 `json:"game_id"`
+}
+
+// ============================================================================
+// MANUAL READ TRACKING (per-comment, user-controlled)
+// ============================================================================
+// Insert a manual read record; ignore if already exists (idempotent)
+func (q *Queries) MarkCommentRead(ctx context.Context, arg MarkCommentReadParams) error {
+	_, err := q.db.Exec(ctx, markCommentRead,
+		arg.UserID,
+		arg.CommentID,
+		arg.PostID,
+		arg.GameID,
+	)
+	return err
+}
+
 const markPostRead = `-- name: MarkPostRead :one
 
 INSERT INTO user_common_room_reads (
@@ -1741,6 +1851,22 @@ type RemoveReactionParams struct {
 
 func (q *Queries) RemoveReaction(ctx context.Context, arg RemoveReactionParams) error {
 	_, err := q.db.Exec(ctx, removeReaction, arg.MessageID, arg.UserID, arg.ReactionType)
+	return err
+}
+
+const unmarkCommentRead = `-- name: UnmarkCommentRead :exec
+DELETE FROM user_comment_reads
+WHERE user_id = $1 AND comment_id = $2
+`
+
+type UnmarkCommentReadParams struct {
+	UserID    int32 `json:"user_id"`
+	CommentID int32 `json:"comment_id"`
+}
+
+// Remove a manual read record
+func (q *Queries) UnmarkCommentRead(ctx context.Context, arg UnmarkCommentReadParams) error {
+	_, err := q.db.Exec(ctx, unmarkCommentRead, arg.UserID, arg.CommentID)
 	return err
 }
 

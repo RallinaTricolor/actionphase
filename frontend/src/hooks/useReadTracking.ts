@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import type { MarkPostReadRequest, ReadMarker } from '../types/messages';
+import type { MarkPostReadRequest, ReadMarker, ManualCommentReads } from '../types/messages';
 import { useMemo } from 'react';
 
 /**
@@ -158,4 +158,62 @@ export function usePostUnreadCommentIDs(gameId: number | undefined, postId: numb
     const postData = unreadComments.find(pc => pc.post_id === postId);
     return postData?.unread_comment_ids || [];
   }, [unreadComments, postId]);
+}
+
+/**
+ * Hook to fetch all comment IDs manually marked as read by the user in a game
+ */
+export function useManualReadCommentIDs(gameId: number | undefined) {
+  return useQuery({
+    queryKey: ['manualReadCommentIDs', gameId],
+    queryFn: async () => {
+      if (!gameId) throw new Error('Game ID required');
+      const response = await apiClient.messages.getManualReadCommentIDs(gameId);
+      return response.data as ManualCommentReads[];
+    },
+    enabled: !!gameId,
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Helper hook to get manually read comment IDs for a specific post
+ */
+export function usePostManualReadCommentIDs(gameId: number | undefined, postId: number | undefined) {
+  const { data: manualReads = [] } = useManualReadCommentIDs(gameId);
+
+  return useMemo(() => {
+    if (!postId) return [];
+    const postData = manualReads.find(mr => mr.post_id === postId);
+    return postData?.read_comment_ids || [];
+  }, [manualReads, postId]);
+}
+
+/**
+ * Mutation to toggle a single comment's manual read state
+ */
+export function useToggleCommentRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      gameId,
+      postId,
+      commentId,
+      read,
+    }: {
+      gameId: number;
+      postId: number;
+      commentId: number;
+      read: boolean;
+    }) => {
+      await apiClient.messages.toggleCommentRead(gameId, postId, commentId, read);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['manualReadCommentIDs', variables.gameId],
+      });
+    },
+  });
 }

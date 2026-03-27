@@ -848,6 +848,12 @@ type PostUnreadComments struct {
 	UnreadCommentIDs []int32 // IDs of comments that are unread (greater than last_read_comment_id)
 }
 
+// ManualCommentReads contains the comment IDs manually marked as read by a user for a post
+type ManualCommentReads struct {
+	PostID         int32
+	ReadCommentIDs []int32
+}
+
 // NotificationServiceInterface defines the contract for notification operations.
 // Handles creating, retrieving, and managing user notifications.
 //

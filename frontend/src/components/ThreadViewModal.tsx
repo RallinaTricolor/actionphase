@@ -14,6 +14,9 @@ interface ThreadViewModalProps {
   onCreateReply: (parentId: number, characterId: number, content: string) => Promise<void>;
   currentUserId?: number;
   unreadCommentIDs?: number[];
+  manualReadCommentIDs?: number[];
+  commentReadMode?: 'auto' | 'manual';
+  onToggleRead?: (commentId: number, currentlyRead: boolean) => void;
   // New props for parent chain context (deep-link enhancement)
   parentChain?: Message[]; // Array of parent messages (oldest → target)
   hasFullThread?: boolean; // Whether we fetched all the way to root
@@ -36,6 +39,9 @@ export function ThreadViewModal({
   onCreateReply,
   currentUserId,
   unreadCommentIDs = [],
+  manualReadCommentIDs = [],
+  commentReadMode = 'auto',
+  onToggleRead,
   parentChain,
   hasFullThread = true,
   targetCommentId,
@@ -140,6 +146,9 @@ export function ThreadViewModal({
                     depth={0}
                     maxDepth={10}
                     unreadCommentIDs={unreadCommentIDs}
+                    manualReadCommentIDs={manualReadCommentIDs}
+                    commentReadMode={commentReadMode}
+                    onToggleRead={onToggleRead}
                     onOpenThread={(nestedComment) => setNestedModalComment(nestedComment)}
                     readOnly={readOnly}
                   />
@@ -160,6 +169,9 @@ export function ThreadViewModal({
                 depth={0}
                 maxDepth={10}
                 unreadCommentIDs={unreadCommentIDs}
+                manualReadCommentIDs={manualReadCommentIDs}
+                commentReadMode={commentReadMode}
+                onToggleRead={onToggleRead}
                 onOpenThread={(nestedComment) => setNestedModalComment(nestedComment)}
               />
             )}
@@ -179,6 +191,9 @@ export function ThreadViewModal({
           onCreateReply={onCreateReply}
           currentUserId={currentUserId}
           unreadCommentIDs={unreadCommentIDs}
+          manualReadCommentIDs={manualReadCommentIDs}
+          commentReadMode={commentReadMode}
+          onToggleRead={onToggleRead}
           readOnly={readOnly}
         />
       )}

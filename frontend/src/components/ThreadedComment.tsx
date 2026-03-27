@@ -28,7 +28,10 @@ interface ThreadedCommentProps {
   currentUserId?: number;
   depth?: number;
   maxDepth?: number; // Maximum nesting depth before showing "Continue thread" button
-  unreadCommentIDs?: number[]; // IDs of comments that are "new since last visit"
+  unreadCommentIDs?: number[]; // IDs of comments that are "new since last visit" (auto mode)
+  manualReadCommentIDs?: number[]; // IDs of comments explicitly marked as read (manual mode)
+  commentReadMode?: 'auto' | 'manual'; // Which read tracking mode is active
+  onToggleRead?: (commentId: number, currentlyRead: boolean) => void; // Callback to toggle manual read state
   onOpenThread?: (comment: Message) => void; // Callback to open thread modal with comment object
   readOnly?: boolean; // Disable all interactive features (for history view)
   parentComment?: Message | CommentTreeNode | null; // Parent comment for smart character defaulting in nested replies
@@ -47,6 +50,9 @@ export const ThreadedComment = memo(function ThreadedComment({
   depth = 0,
   maxDepth = 5,
   unreadCommentIDs = [],
+  manualReadCommentIDs = [],
+  commentReadMode = 'auto',
+  onToggleRead,
   onOpenThread,
   readOnly = false,
   parentComment = null,
@@ -90,7 +96,10 @@ export const ThreadedComment = memo(function ThreadedComment({
   const isAuthor = currentUserId === comment.author_id;
   // Single source of truth: reply_count (initialized from preloaded children, updated on mutations)
   const hasReplies = (comment.reply_count || 0) > 0;
-  const isUnread = unreadCommentIDs.includes(comment.id);
+  const isManuallyRead = commentReadMode === 'manual' && manualReadCommentIDs.includes(comment.id);
+  const isUnread = commentReadMode === 'manual'
+    ? !isManuallyRead
+    : unreadCommentIDs.includes(comment.id);
 
   // Update local comment state when prop changes (from cache invalidation)
   useEffect(() => {
@@ -423,7 +432,7 @@ export const ThreadedComment = memo(function ThreadedComment({
     <div
       id={`comment-${comment.id}${variant ? `-${variant}` : ''}`}
       data-testid="threaded-comment"
-      className={`${getIndentPadding()} ${depth > 0 ? 'border-l-2 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2' : 'py-2'} border-b border-theme-subtle`}
+      className={`${getIndentPadding()} ${depth > 0 ? 'border-l-2 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2' : 'py-2'} border-b border-theme-subtle${isManuallyRead ? ' opacity-50' : ''}`}
     >
       {/* Comment Header and Content */}
       <div className={`${isUnread ? 'border border-semantic-warning rounded-lg p-3' : ''}`}>
@@ -627,6 +636,26 @@ export const ThreadedComment = memo(function ThreadedComment({
             )}
           </Button>
 
+          {commentReadMode === 'manual' && !readOnly && !comment.is_deleted && (
+            <Button
+              variant="ghost"
+              onClick={() => onToggleRead?.(comment.id, isManuallyRead)}
+              className="p-2 md:p-0 min-h-[44px] md:min-h-0 h-auto text-xs"
+              title={isManuallyRead ? 'Mark as unread' : 'Mark as read'}
+              aria-label={isManuallyRead ? 'Mark as unread' : 'Mark as read'}
+              data-testid="toggle-read-button"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {isManuallyRead ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                )}
+              </svg>
+              <span className="hidden md:inline">{isManuallyRead ? 'Unread' : 'Read'}</span>
+            </Button>
+          )}
+
           {isAuthor && !isEditing && !comment.is_deleted && !readOnly && (
             <Button
               variant="ghost"
@@ -814,6 +843,9 @@ export const ThreadedComment = memo(function ThreadedComment({
                                 depth={depth + 1}
                                 maxDepth={maxDepth}
                                 unreadCommentIDs={unreadCommentIDs}
+                                manualReadCommentIDs={manualReadCommentIDs}
+                                commentReadMode={commentReadMode}
+                                onToggleRead={onToggleRead}
                                 onOpenThread={onOpenThread}
                                 readOnly={readOnly}
                                 parentComment={comment}
@@ -854,6 +886,9 @@ export const ThreadedComment = memo(function ThreadedComment({
                                 depth={depth + 1}
                                 maxDepth={maxDepth}
                                 unreadCommentIDs={unreadCommentIDs}
+                                manualReadCommentIDs={manualReadCommentIDs}
+                                commentReadMode={commentReadMode}
+                                onToggleRead={onToggleRead}
                                 onOpenThread={onOpenThread}
                                 readOnly={readOnly}
                                 parentComment={comment}

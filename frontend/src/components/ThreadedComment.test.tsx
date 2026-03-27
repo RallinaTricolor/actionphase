@@ -1,0 +1,195 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { ThreadedComment } from './ThreadedComment';
+import type { Message } from '../types/messages';
+import { MemoryRouter } from 'react-router-dom';
+
+// Mock heavy dependencies
+vi.mock('../hooks/useAdminMode', () => ({
+  useAdminMode: () => ({ adminModeEnabled: false, isAdmin: false }),
+}));
+
+vi.mock('../hooks/useGamePermissions', () => ({
+  useGamePermissions: () => ({ isGM: false, isPlayer: true }),
+}));
+
+vi.mock('../hooks/useCommentMutations', () => ({
+  useUpdateComment: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteComment: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock('./MarkdownPreview', () => ({
+  MarkdownPreview: ({ content }: { content: string }) => <div data-testid="markdown-preview">{content}</div>,
+}));
+
+vi.mock('./CommentEditor', () => ({
+  CommentEditor: () => <div data-testid="comment-editor" />,
+}));
+
+vi.mock('./CharacterAvatar', () => ({
+  default: ({ characterName }: { characterName: string }) => <div data-testid="character-avatar">{characterName}</div>,
+}));
+
+vi.mock('./ConfirmModal', () => ({
+  ConfirmModal: () => null,
+}));
+
+vi.mock('../services/LoggingService', () => ({
+  logger: { debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock('../hooks/usePostCollapseState', () => ({
+  usePostCollapseState: () => [false, vi.fn()],
+}));
+
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showSuccess: vi.fn(), showError: vi.fn() }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+const baseComment: Message = {
+  id: 42,
+  game_id: 1,
+  author_id: 99,
+  character_id: 10,
+  character_name: 'Test Hero',
+  author_username: 'testuser',
+  content: 'This is a test comment',
+  message_type: 'comment',
+  parent_id: 1,
+  thread_depth: 1,
+  visibility: 'game',
+  is_edited: false,
+  is_deleted: false,
+  created_at: '2026-01-01T00:00:00Z',
+  reply_count: 0,
+};
+
+function renderComment(props: Partial<Parameters<typeof ThreadedComment>[0]> = {}) {
+  return render(
+    <MemoryRouter>
+      <ThreadedComment
+        comment={baseComment}
+        gameId={1}
+        postId={1}
+        characters={[]}
+        controllableCharacters={[]}
+        onCreateReply={vi.fn()}
+        currentUserId={99}
+        {...props}
+      />
+    </MemoryRouter>
+  );
+}
+
+describe('ThreadedComment — manual read mode', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('auto mode (default)', () => {
+    it('does not show the Mark as Read button', () => {
+      renderComment({ commentReadMode: 'auto' });
+      expect(screen.queryByTestId('toggle-read-button')).toBeNull();
+    });
+
+    it('does not apply opacity-50 to unread comments', () => {
+      const { container } = renderComment({
+        commentReadMode: 'auto',
+        unreadCommentIDs: [42],
+      });
+      const wrapper = container.firstChild as HTMLElement;
+      expect(wrapper.className).not.toContain('opacity-50');
+    });
+  });
+
+  describe('manual mode — comment NOT marked as read', () => {
+    it('shows a "Read" button', () => {
+      renderComment({
+        commentReadMode: 'manual',
+        manualReadCommentIDs: [],
+        onToggleRead: vi.fn(),
+      });
+      const btn = screen.getByTestId('toggle-read-button');
+      expect(btn).toBeInTheDocument();
+      expect(btn).toHaveAttribute('aria-label', 'Mark as read');
+    });
+
+    it('does not apply opacity-50 fading', () => {
+      const { container } = renderComment({
+        commentReadMode: 'manual',
+        manualReadCommentIDs: [],
+      });
+      const wrapper = container.firstChild as HTMLElement;
+      expect(wrapper.className).not.toContain('opacity-50');
+    });
+
+    it('calls onToggleRead with (commentId, false) when Read button is clicked', async () => {
+      const user = userEvent.setup();
+      const onToggleRead = vi.fn();
+      renderComment({
+        commentReadMode: 'manual',
+        manualReadCommentIDs: [],
+        onToggleRead,
+      });
+      await user.click(screen.getByTestId('toggle-read-button'));
+      expect(onToggleRead).toHaveBeenCalledWith(42, false);
+    });
+  });
+
+  describe('manual mode — comment IS marked as read', () => {
+    it('shows an "Unread" button', () => {
+      renderComment({
+        commentReadMode: 'manual',
+        manualReadCommentIDs: [42],
+        onToggleRead: vi.fn(),
+      });
+      const btn = screen.getByTestId('toggle-read-button');
+      expect(btn).toHaveAttribute('aria-label', 'Mark as unread');
+    });
+
+    it('applies opacity-50 fading', () => {
+      const { container } = renderComment({
+        commentReadMode: 'manual',
+        manualReadCommentIDs: [42],
+      });
+      const wrapper = container.firstChild as HTMLElement;
+      expect(wrapper.className).toContain('opacity-50');
+    });
+
+    it('calls onToggleRead with (commentId, true) when Unread button is clicked', async () => {
+      const user = userEvent.setup();
+      const onToggleRead = vi.fn();
+      renderComment({
+        commentReadMode: 'manual',
+        manualReadCommentIDs: [42],
+        onToggleRead,
+      });
+      await user.click(screen.getByTestId('toggle-read-button'));
+      expect(onToggleRead).toHaveBeenCalledWith(42, true);
+    });
+  });
+
+  describe('manual mode — readOnly', () => {
+    it('hides the Mark as Read button when readOnly=true', () => {
+      renderComment({
+        commentReadMode: 'manual',
+        manualReadCommentIDs: [],
+        readOnly: true,
+      });
+      expect(screen.queryByTestId('toggle-read-button')).toBeNull();
+    });
+  });
+
+  describe('manual mode — deleted comment', () => {
+    it('hides the Mark as Read button for deleted comments', () => {
+      renderComment({
+        comment: { ...baseComment, is_deleted: true },
+        commentReadMode: 'manual',
+        manualReadCommentIDs: [],
+      });
+      expect(screen.queryByTestId('toggle-read-button')).toBeNull();
+    });
+  });
+});

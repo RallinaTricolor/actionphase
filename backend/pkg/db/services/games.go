@@ -195,6 +195,15 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 					"game_id", gameID)
 			}
 		}
+
+		// Clean up manual comment read records — they serve no purpose once a game is archived
+		if err := queries.DeleteManualCommentReadsForGame(ctx, gameID); err != nil {
+			if gs.Logger != nil {
+				gs.Logger.Warn(ctx, "Failed to clean up manual comment reads for completed game",
+					"error", err,
+					"game_id", gameID)
+			}
+		}
 	}
 
 	// When a game transitions to character_creation, automatically create "Gamemaster" NPC

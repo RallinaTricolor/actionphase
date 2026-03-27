@@ -478,6 +478,40 @@ GROUP BY posts.id
 ORDER BY posts.created_at DESC;
 
 -- ============================================================================
+-- MANUAL READ TRACKING (per-comment, user-controlled)
+-- ============================================================================
+
+-- name: MarkCommentRead :exec
+-- Insert a manual read record; ignore if already exists (idempotent)
+INSERT INTO user_comment_reads (user_id, comment_id, post_id, game_id)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (user_id, comment_id) DO NOTHING;
+
+-- name: UnmarkCommentRead :exec
+-- Remove a manual read record
+DELETE FROM user_comment_reads
+WHERE user_id = $1 AND comment_id = $2;
+
+-- name: GetManualReadCommentIDsForPost :many
+-- Returns comment IDs explicitly marked as read by the user under a specific post
+SELECT comment_id
+FROM user_comment_reads
+WHERE user_id = $1 AND post_id = $2;
+
+-- name: GetManualReadCommentIDsForGame :many
+-- Returns (post_id, comment_id) pairs for all manually read comments in a game
+-- Used to batch-load read state for the entire common room view
+SELECT post_id, comment_id
+FROM user_comment_reads
+WHERE user_id = $1 AND game_id = $2
+ORDER BY post_id, comment_id;
+
+-- name: DeleteManualCommentReadsForGame :exec
+-- Delete all manual read records for a game (called when game is completed/archived)
+DELETE FROM user_comment_reads
+WHERE game_id = $1;
+
+-- ============================================================================
 -- AUDIENCE PARTICIPATION (Private Message Access)
 -- ============================================================================
 

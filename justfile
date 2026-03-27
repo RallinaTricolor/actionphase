@@ -115,6 +115,18 @@ migrate:
 migrate_test:
   migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" up
 
+# Drop and recreate test database, then apply all migrations from scratch
+# Use this when the test DB gets into a dirty/broken migration state
+reset_test_db:
+  #!/usr/bin/env bash
+  echo "Dropping test database..."
+  PGPASSWORD=example psql -h localhost -p 5432 -U postgres -d postgres -c "DROP DATABASE IF EXISTS actionphase_test;"
+  echo "Creating test database..."
+  PGPASSWORD=example psql -h localhost -p 5432 -U postgres -d postgres -c "CREATE DATABASE actionphase_test;"
+  echo "Applying migrations..."
+  just migrate_test
+  echo "✅ Test database reset complete"
+
 # ═══════════════════════════════════════════════════════════════════════════
 # TEST DATA COMMANDS
 # ═══════════════════════════════════════════════════════════════════════════
