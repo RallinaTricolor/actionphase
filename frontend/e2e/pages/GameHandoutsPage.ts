@@ -50,9 +50,9 @@ export class GameHandoutsPage {
     // Wait for modal to appear
     await this.page.waitForSelector('text=Create New Handout', { timeout: 5000 });
 
-    // Fill handout form using accessible labels
+    // Fill handout form
     await this.page.getByLabel('Title').fill(title);
-    await this.page.getByLabel('Content').fill(content);
+    await this.page.getByTestId('handout-content-input').fill(content);
 
     // Set status (published or draft)
     const status = isPublic ? 'published' : 'draft';
@@ -143,9 +143,9 @@ export class GameHandoutsPage {
     // Wait for edit modal
     await this.page.waitForSelector('text=Edit Handout', { timeout: 5000 });
 
-    // Fill form using accessible labels
+    // Fill form
     await this.page.getByLabel('Title').fill(newTitle);
-    await this.page.getByLabel('Content').fill(newContent);
+    await this.page.getByTestId('handout-content-input').fill(newContent);
 
     const saveButton = this.page.locator('form').getByRole('button', { name: /Save|Update/ });
     await saveButton.click();

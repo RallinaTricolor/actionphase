@@ -39,8 +39,8 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
 
     // Section nav buttons should be visible
-    await expect(page.getByRole('button', { name: 'abilities' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'inventory' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'abilities', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'inventory', exact: true })).toBeVisible();
 
     // Abilities sub-tabs should be visible by default
     await expect(page.getByRole('button', { name: /Abilities/ })).toBeVisible();

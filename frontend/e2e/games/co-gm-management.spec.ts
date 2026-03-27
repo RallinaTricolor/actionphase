@@ -492,7 +492,7 @@ test.describe.serial('Co-GM Management', () => {
     // Verify modal opens with all form fields accessible to co-GM
     await expect(page.getByRole('heading', { name: 'Create New Handout' })).toBeVisible();
     await expect(page.getByLabel('Title')).toBeVisible();
-    await expect(page.getByLabel('Content')).toBeVisible();
+    await expect(page.getByTestId('handout-content-input')).toBeVisible();
     await expect(page.getByLabel('Status')).toBeVisible();
 
     // Verify co-GM can select published status (GM permission)
