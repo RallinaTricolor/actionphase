@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import MarkdownPreview from './MarkdownPreview';
 
 describe('MarkdownPreview', () => {
@@ -371,6 +371,54 @@ describe('MarkdownPreview', () => {
 
       // Should render something without crashing
       expect(container.querySelector('.markdown-preview')).toBeInTheDocument();
+    });
+  });
+
+  describe('Inline Image Expansion', () => {
+    it('renders an expand button next to image URLs', () => {
+      render(<MarkdownPreview content="[photo](https://example.com/pic.png)" />);
+      expect(screen.getByRole('button', { name: 'Expand image' })).toBeInTheDocument();
+    });
+
+    it('does not render an expand button for non-image URLs', () => {
+      render(<MarkdownPreview content="[link](https://example.com/page)" />);
+      expect(screen.queryByRole('button', { name: 'Expand image' })).not.toBeInTheDocument();
+    });
+
+    it('detects common image extensions', () => {
+      const extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif', 'bmp'];
+      for (const ext of extensions) {
+        const { unmount } = render(
+          <MarkdownPreview content={`[img](https://example.com/file.${ext})`} />
+        );
+        expect(screen.getByRole('button', { name: 'Expand image' })).toBeInTheDocument();
+        unmount();
+      }
+    });
+
+    it('shows the image and changes button label after clicking expand', () => {
+      const { getByRole, getByAltText } = render(
+        <MarkdownPreview content="[photo](https://example.com/pic.png)" />
+      );
+      fireEvent.click(getByRole('button', { name: 'Expand image' }));
+      expect(getByAltText('')).toBeInTheDocument();
+      expect(getByRole('button', { name: 'Collapse image' })).toBeInTheDocument();
+    });
+
+    it('hides the image after collapsing', () => {
+      const { getByRole, queryByAltText } = render(
+        <MarkdownPreview content="[photo](https://example.com/pic.png)" />
+      );
+      const button = getByRole('button', { name: 'Expand image' });
+      fireEvent.click(button);
+      fireEvent.click(button);
+      expect(queryByAltText('')).not.toBeInTheDocument();
+    });
+
+    it('still renders the link itself for image URLs', () => {
+      render(<MarkdownPreview content="[photo](https://example.com/pic.png)" />);
+      const link = screen.getByRole('link', { name: 'photo' });
+      expect(link).toHaveAttribute('href', 'https://example.com/pic.png');
     });
   });
 

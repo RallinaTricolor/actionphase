@@ -12,6 +12,61 @@ const ALLOWED_COLORS = new Set([
   'red', 'green', 'blue', 'purple', 'orange', 'gold', 'gray', 'teal', 'pink',
 ]);
 
+const IMAGE_URL_PATTERN = /\.(png|jpe?g|gif|webp|svg|avif|bmp)(\?.*)?$/i;
+
+function isImageUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const { pathname } = new URL(url);
+    return IMAGE_URL_PATTERN.test(pathname);
+  } catch {
+    return IMAGE_URL_PATTERN.test(url);
+  }
+}
+
+function ImageLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const [expanded, setExpanded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+
+  return (
+    <span className="inline">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-interactive-primary hover:text-interactive-primary-hover underline"
+      >
+        {children}
+      </a>
+      <button
+        type="button"
+        onClick={() => { setExpanded(e => !e); setLoadError(false); }}
+        className="inline-flex items-center justify-center ml-1 w-4 h-4 text-xs text-content-tertiary hover:text-interactive-primary transition-colors align-middle"
+        title={expanded ? 'Collapse image' : 'Expand image'}
+        aria-label={expanded ? 'Collapse image' : 'Expand image'}
+      >
+        {expanded ? '▲' : '🖼'}
+      </button>
+      {expanded && !loadError && (
+        <span className="block mt-1">
+          <img
+            src={href}
+            alt=""
+            className="max-h-96 rounded border border-border-primary"
+            style={{ maxWidth: '100%' }}
+            onError={() => setLoadError(true)}
+          />
+        </span>
+      )}
+      {expanded && loadError && (
+        <span className="block mt-1 text-xs text-content-tertiary italic">
+          Image could not be loaded.
+        </span>
+      )}
+    </span>
+  );
+}
+
 interface MentionedCharacter {
   id: number;
   name: string;
@@ -188,7 +243,11 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           },
 
           // Secure link handling - open in new tab with security attributes
+          // Image URLs get an inline expand toggle button
           a({ children, href, ...props }) {
+            if (isImageUrl(href)) {
+              return <ImageLink href={href!}>{children}</ImageLink>;
+            }
             return (
               <a
                 href={href}
