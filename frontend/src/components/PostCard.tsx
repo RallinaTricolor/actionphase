@@ -120,9 +120,12 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
   // Local state to preserve unread IDs and prevent auto-clearing
   const [localUnreadCommentIDs, setLocalUnreadCommentIDs] = useState<number[]>([]);
 
-  // Manual read tracking
-  const commentReadMode = useCommentReadMode();
-  const manualReadCommentIDs = usePostManualReadCommentIDs(gameId, post.id);
+  // Manual read tracking — suppressed in read-only (history) view since fading
+  // has no workflow value when users can no longer change the state
+  const commentReadModeRaw = useCommentReadMode();
+  const commentReadMode = readOnly ? 'auto' : commentReadModeRaw;
+  const manualReadCommentIDsRaw = usePostManualReadCommentIDs(gameId, post.id);
+  const manualReadCommentIDs = readOnly ? [] : manualReadCommentIDsRaw;
   const toggleCommentReadMutation = useToggleCommentRead();
 
   const handleToggleRead = useCallback((commentId: number, currentlyRead: boolean) => {

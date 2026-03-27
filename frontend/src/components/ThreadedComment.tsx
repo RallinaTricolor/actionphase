@@ -97,9 +97,7 @@ export const ThreadedComment = memo(function ThreadedComment({
   // Single source of truth: reply_count (initialized from preloaded children, updated on mutations)
   const hasReplies = (comment.reply_count || 0) > 0;
   const isManuallyRead = commentReadMode === 'manual' && manualReadCommentIDs.includes(comment.id);
-  const isUnread = commentReadMode === 'manual'
-    ? !isManuallyRead
-    : unreadCommentIDs.includes(comment.id);
+  const isUnread = commentReadMode !== 'manual' && unreadCommentIDs.includes(comment.id);
 
   // Update local comment state when prop changes (from cache invalidation)
   useEffect(() => {
