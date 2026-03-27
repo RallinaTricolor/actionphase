@@ -947,6 +947,29 @@ WITH recent_comments AS (
     ORDER BY m.created_at DESC
     LIMIT $2 OFFSET $3
 ),
+root_posts AS (
+    SELECT rc.id as comment_id, m.id as post_id
+    FROM recent_comments rc
+    JOIN messages m ON m.id = rc.parent_id AND m.message_type = 'post'
+    UNION ALL
+    SELECT rc.id as comment_id, m2.id as post_id
+    FROM recent_comments rc
+    JOIN messages m1 ON m1.id = rc.parent_id AND m1.message_type = 'comment'
+    JOIN messages m2 ON m2.id = m1.parent_id AND m2.message_type = 'post'
+    UNION ALL
+    SELECT rc.id as comment_id, m3.id as post_id
+    FROM recent_comments rc
+    JOIN messages m1 ON m1.id = rc.parent_id AND m1.message_type = 'comment'
+    JOIN messages m2 ON m2.id = m1.parent_id AND m2.message_type = 'comment'
+    JOIN messages m3 ON m3.id = m2.parent_id AND m3.message_type = 'post'
+    UNION ALL
+    SELECT rc.id as comment_id, m4.id as post_id
+    FROM recent_comments rc
+    JOIN messages m1 ON m1.id = rc.parent_id AND m1.message_type = 'comment'
+    JOIN messages m2 ON m2.id = m1.parent_id AND m2.message_type = 'comment'
+    JOIN messages m3 ON m3.id = m2.parent_id AND m3.message_type = 'comment'
+    JOIN messages m4 ON m4.id = m3.parent_id AND m4.message_type = 'post'
+),
 parent_messages AS (
     SELECT
         m.id,
@@ -970,6 +993,7 @@ SELECT
     rc.id,
     rc.game_id,
     rc.parent_id,
+    rp.post_id,
     rc.author_id,
     rc.character_id,
     rc.content,
@@ -990,6 +1014,7 @@ SELECT
     pm.character_name as parent_character_name,
     pm.character_avatar_url as parent_character_avatar_url
 FROM recent_comments rc
+LEFT JOIN root_posts rp ON rp.comment_id = rc.id
 LEFT JOIN parent_messages pm ON rc.parent_id = pm.id
 ORDER BY rc.created_at DESC
 `
@@ -1004,6 +1029,7 @@ type ListRecentCommentsWithParentsRow struct {
 	ID                       int32              `json:"id"`
 	GameID                   int32              `json:"game_id"`
 	ParentID                 pgtype.Int4        `json:"parent_id"`
+	PostID                   pgtype.Int4        `json:"post_id"`
 	AuthorID                 int32              `json:"author_id"`
 	CharacterID              int32              `json:"character_id"`
 	Content                  string             `json:"content"`
@@ -1026,6 +1052,7 @@ type ListRecentCommentsWithParentsRow struct {
 }
 
 // Get recent comments with their parent comments/posts for New Comments view
+// Walk up the message tree to find the root post for each comment
 func (q *Queries) ListRecentCommentsWithParents(ctx context.Context, arg ListRecentCommentsWithParentsParams) ([]ListRecentCommentsWithParentsRow, error) {
 	rows, err := q.db.Query(ctx, listRecentCommentsWithParents, arg.GameID, arg.Limit, arg.Offset)
 	if err != nil {
@@ -1039,6 +1066,7 @@ func (q *Queries) ListRecentCommentsWithParents(ctx context.Context, arg ListRec
 			&i.ID,
 			&i.GameID,
 			&i.ParentID,
+			&i.PostID,
 			&i.AuthorID,
 			&i.CharacterID,
 			&i.Content,

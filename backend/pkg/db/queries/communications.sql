@@ -262,6 +262,30 @@ WITH recent_comments AS (
     ORDER BY m.created_at DESC
     LIMIT $2 OFFSET $3
 ),
+-- Walk up the message tree to find the root post for each comment
+root_posts AS (
+    SELECT rc.id as comment_id, m.id as post_id
+    FROM recent_comments rc
+    JOIN messages m ON m.id = rc.parent_id AND m.message_type = 'post'
+    UNION ALL
+    SELECT rc.id as comment_id, m2.id as post_id
+    FROM recent_comments rc
+    JOIN messages m1 ON m1.id = rc.parent_id AND m1.message_type = 'comment'
+    JOIN messages m2 ON m2.id = m1.parent_id AND m2.message_type = 'post'
+    UNION ALL
+    SELECT rc.id as comment_id, m3.id as post_id
+    FROM recent_comments rc
+    JOIN messages m1 ON m1.id = rc.parent_id AND m1.message_type = 'comment'
+    JOIN messages m2 ON m2.id = m1.parent_id AND m2.message_type = 'comment'
+    JOIN messages m3 ON m3.id = m2.parent_id AND m3.message_type = 'post'
+    UNION ALL
+    SELECT rc.id as comment_id, m4.id as post_id
+    FROM recent_comments rc
+    JOIN messages m1 ON m1.id = rc.parent_id AND m1.message_type = 'comment'
+    JOIN messages m2 ON m2.id = m1.parent_id AND m2.message_type = 'comment'
+    JOIN messages m3 ON m3.id = m2.parent_id AND m3.message_type = 'comment'
+    JOIN messages m4 ON m4.id = m3.parent_id AND m4.message_type = 'post'
+),
 parent_messages AS (
     SELECT
         m.id,
@@ -285,6 +309,7 @@ SELECT
     rc.id,
     rc.game_id,
     rc.parent_id,
+    rp.post_id,
     rc.author_id,
     rc.character_id,
     rc.content,
@@ -305,6 +330,7 @@ SELECT
     pm.character_name as parent_character_name,
     pm.character_avatar_url as parent_character_avatar_url
 FROM recent_comments rc
+LEFT JOIN root_posts rp ON rp.comment_id = rc.id
 LEFT JOIN parent_messages pm ON rc.parent_id = pm.id
 ORDER BY rc.created_at DESC;
 

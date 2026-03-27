@@ -632,6 +632,7 @@ func (s *MessageService) ListRecentCommentsWithParents(ctx context.Context, game
 			ID:                 row.ID,
 			GameID:             row.GameID,
 			ParentID:           pgInt4ToInt32Ptr(row.ParentID),
+			PostID:             pgInt4ToInt32Ptr(row.PostID),
 			AuthorID:           row.AuthorID,
 			CharacterID:        row.CharacterID,
 			Content:            row.Content,

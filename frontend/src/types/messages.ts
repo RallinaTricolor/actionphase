@@ -106,6 +106,7 @@ export interface CommentWithParent {
   id: number;
   game_id: number;
   parent_id?: number | null;
+  post_id?: number | null;
   author_id: number;
   character_id: number;
   content: string;

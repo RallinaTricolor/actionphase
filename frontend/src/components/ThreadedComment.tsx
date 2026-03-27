@@ -432,10 +432,10 @@ export const ThreadedComment = memo(function ThreadedComment({
     <div
       id={`comment-${comment.id}${variant ? `-${variant}` : ''}`}
       data-testid="threaded-comment"
-      className={`${getIndentPadding()} ${depth > 0 ? 'border-l-2 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2' : 'py-2'} border-b border-theme-subtle${isManuallyRead ? ' opacity-50' : ''}`}
+      className={`${getIndentPadding()} ${depth > 0 ? 'border-l-2 ' + borderColor : ''} ${bgColor} ${depth > 0 ? 'py-3 my-2' : 'py-2'} border-b border-theme-subtle`}
     >
       {/* Comment Header and Content */}
-      <div className={`${isUnread ? 'border border-semantic-warning rounded-lg p-3' : ''}`}>
+      <div className={`${isUnread ? 'border border-semantic-warning rounded-lg p-3' : ''}${isManuallyRead ? ' opacity-50' : ''}`}>
         <div className="flex items-center gap-1.5 md:gap-2 mb-1">
           <CharacterAvatar
             avatarUrl={comment.character_avatar_url}

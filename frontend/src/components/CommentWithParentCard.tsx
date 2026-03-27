@@ -3,15 +3,19 @@ import { formatDistanceToNow } from 'date-fns';
 import type { CommentWithParent } from '../types/messages';
 import { ParentCommentPreview } from './ParentCommentPreview';
 import { MarkdownPreview } from './MarkdownPreview';
-import { Card, CardBody, Badge } from './ui';
+import { Card, CardBody, Badge, Button } from './ui';
 import CharacterAvatar from './CharacterAvatar';
 import { useGameContext } from '../contexts/GameContext';
+import type { CommentReadMode } from '../lib/api/auth';
 
 interface CommentWithParentCardProps {
   comment: CommentWithParent;
   gameId: number;
   onNavigateToParent?: () => void;
   onNavigateToComment?: () => void;
+  commentReadMode?: CommentReadMode;
+  isRead?: boolean;
+  onToggleRead?: (currentlyRead: boolean) => void;
 }
 
 /**
@@ -23,6 +27,9 @@ export function CommentWithParentCard({
   gameId,
   onNavigateToParent,
   onNavigateToComment,
+  commentReadMode,
+  isRead = false,
+  onToggleRead,
 }: CommentWithParentCardProps) {
   const { allGameCharacters } = useGameContext();
 
@@ -38,9 +45,10 @@ export function CommentWithParentCard({
   });
 
   const isEdited = comment.edit_count > 0;
+  const showReadButton = commentReadMode === 'manual' && !comment.is_deleted && onToggleRead;
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className={`hover:shadow-md transition-shadow${isRead ? ' opacity-50' : ''}`}>
       <CardBody>
         {/* Parent context preview */}
         <ParentCommentPreview
@@ -65,7 +73,7 @@ export function CommentWithParentCard({
               size="sm"
             />
             <div className="flex flex-col flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Link to={`/characters/${comment.character_id}`} className="font-medium text-text-heading hover:underline">
                   {comment.character_name || 'Unknown'}
                 </Link>
@@ -89,21 +97,34 @@ export function CommentWithParentCard({
           )}
         </div>
 
-        {/* Navigate to full thread link */}
-        {onNavigateToComment && !comment.is_deleted && (
-          <div className="mt-3 pt-3 border-t border-border-primary">
-            <a
-              href={`/games/${gameId}?tab=common-room&comment=${comment.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigateToComment();
-              }}
-              className="text-sm text-interactive-primary hover:text-accent-secondary font-medium"
-            >
-              View in thread →
-            </a>
+        {/* Footer actions */}
+        {(onNavigateToComment && !comment.is_deleted) || showReadButton ? (
+          <div className="mt-3 pt-3 border-t border-border-primary flex items-center justify-between">
+            {onNavigateToComment && !comment.is_deleted ? (
+              <a
+                href={`/games/${gameId}?tab=common-room&comment=${comment.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigateToComment();
+                }}
+                className="text-sm text-interactive-primary hover:text-accent-secondary font-medium"
+              >
+                View in thread →
+              </a>
+            ) : <span />}
+            {showReadButton && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onToggleRead(isRead)}
+                aria-label={isRead ? 'Mark as unread' : 'Mark as read'}
+                data-testid="toggle-read-button"
+              >
+                {isRead ? 'Unread' : 'Read'}
+              </Button>
+            )}
           </div>
-        )}
+        ) : null}
       </CardBody>
     </Card>
   );

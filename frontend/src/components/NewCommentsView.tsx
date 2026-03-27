@@ -1,9 +1,11 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { useRecentComments } from '../hooks/useRecentComments';
 import { CommentWithParentCard } from './CommentWithParentCard';
 import { Spinner, Alert, Button } from './ui';
+import { useManualReadCommentIDs, useToggleCommentRead } from '../hooks/useReadTracking';
+import { useCommentReadMode } from '../hooks/useUserPreferences';
 
 interface NewCommentsViewProps {
   gameId: number;
@@ -25,6 +27,30 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
     isFetchingNextPage,
     refetch,
   } = useRecentComments(gameId);
+
+  const commentReadMode = useCommentReadMode();
+  const { data: manualReads = [] } = useManualReadCommentIDs(gameId);
+  const toggleReadMutation = useToggleCommentRead();
+
+  // Flatten all manually-read comment IDs across all posts into a single Set for O(1) lookup
+  const readCommentIdSet = useMemo(() => {
+    const ids = new Set<number>();
+    for (const entry of manualReads) {
+      for (const id of entry.read_comment_ids) {
+        ids.add(id);
+      }
+    }
+    return ids;
+  }, [manualReads]);
+
+  const handleToggleRead = useCallback((commentId: number, postId: number, currentlyRead: boolean) => {
+    toggleReadMutation.mutate({
+      gameId,
+      postId,
+      commentId,
+      read: !currentlyRead,
+    });
+  }, [gameId, toggleReadMutation]);
 
   // Infinite scroll sentinel ref
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -137,6 +163,9 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
           gameId={gameId}
           onNavigateToParent={() => handleNavigateToParent(comment)}
           onNavigateToComment={() => handleNavigateToComment(comment)}
+          commentReadMode={commentReadMode}
+          isRead={readCommentIdSet.has(comment.id)}
+          onToggleRead={(comment.post_id ?? comment.parent_id) ? (currentlyRead) => handleToggleRead(comment.id, (comment.post_id ?? comment.parent_id)!, currentlyRead) : undefined}
         />
       ))}
 

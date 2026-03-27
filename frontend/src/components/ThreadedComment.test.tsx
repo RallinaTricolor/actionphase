@@ -149,13 +149,17 @@ describe('ThreadedComment — manual read mode', () => {
       expect(btn).toHaveAttribute('aria-label', 'Mark as unread');
     });
 
-    it('applies opacity-50 fading', () => {
+    it('applies opacity-50 fading to comment content but not child replies', () => {
       const { container } = renderComment({
         commentReadMode: 'manual',
         manualReadCommentIDs: [42],
       });
-      const wrapper = container.firstChild as HTMLElement;
-      expect(wrapper.className).toContain('opacity-50');
+      const outerWrapper = container.firstChild as HTMLElement;
+      // Outer wrapper should NOT have opacity-50 (so child replies are not affected)
+      expect(outerWrapper.className).not.toContain('opacity-50');
+      // Inner content div should have opacity-50 (fades only this comment's content)
+      const innerContent = outerWrapper.firstChild as HTMLElement;
+      expect(innerContent.className).toContain('opacity-50');
     });
 
     it('calls onToggleRead with (commentId, true) when Unread button is clicked', async () => {

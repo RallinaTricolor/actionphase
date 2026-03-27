@@ -789,6 +789,7 @@ type CommentWithParent struct {
 	ID                 int32
 	GameID             int32
 	ParentID           *int32
+	PostID             *int32
 	AuthorID           int32
 	CharacterID        int32
 	Content            string

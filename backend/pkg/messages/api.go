@@ -1341,6 +1341,7 @@ func commentsWithParentsToResponse(comments []core.CommentWithParent, showUserna
 			"id":                   comment.ID,
 			"game_id":              comment.GameID,
 			"parent_id":            comment.ParentID,
+			"post_id":              comment.PostID,
 			"author_id":            comment.AuthorID,
 			"character_id":         comment.CharacterID,
 			"content":              comment.Content,

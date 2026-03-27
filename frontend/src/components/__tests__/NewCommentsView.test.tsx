@@ -9,6 +9,16 @@ import type { CommentWithParent } from '../../types/messages';
 // Mock the useRecentComments hook
 vi.mock('../../hooks/useRecentComments');
 
+// Mock read tracking hooks
+vi.mock('../../hooks/useReadTracking', () => ({
+  useManualReadCommentIDs: () => ({ data: [] }),
+  useToggleCommentRead: () => ({ mutate: vi.fn() }),
+}));
+
+vi.mock('../../hooks/useUserPreferences', () => ({
+  useCommentReadMode: () => 'auto',
+}));
+
 // Mock navigate function
 const mockNavigate = vi.fn();
 
