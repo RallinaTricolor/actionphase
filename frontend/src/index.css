@@ -705,6 +705,9 @@
   }
 
   /* Ensure adequate touch targets (minimum 44x44px for accessibility) */
+  /* `a` is intentionally excluded — inline text links (e.g. character names) should not
+     get a 44px min-height. Interactive links that need large tap targets should use
+     the Button component instead. */
   button,
   input,
   select,

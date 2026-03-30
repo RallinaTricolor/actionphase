@@ -6,6 +6,7 @@ import { ActiveSessions } from '../components/ActiveSessions';
 import { ChangeUsernameForm } from '../components/ChangeUsernameForm';
 import { ChangeEmailForm } from '../components/ChangeEmailForm';
 import { SettingsSidebar } from '../components/SettingsSidebar';
+import { Radio } from '@/components/ui';
 import { useUserPreferences, useUpdateUserPreferences } from '../hooks/useUserPreferences';
 import type { CommentReadMode } from '../lib/api/auth';
 
@@ -264,45 +265,33 @@ export function SettingsPage() {
                   Comment Read Tracking
                 </label>
                 <div className="space-y-2">
-                  <label
+                  <div
                     className="flex items-center p-3 border border-theme-default rounded-lg cursor-pointer hover:bg-surface-raised"
                     data-testid="read-mode-auto"
                   >
-                    <input
-                      type="radio"
+                    <Radio
                       name="comment_read_mode"
                       value="auto"
+                      label="Automatic"
+                      helperText="Highlight new comments since your last visit"
                       checked={(preferences?.comment_read_mode ?? 'auto') === 'auto'}
                       onChange={() => handleCommentReadModeChange('auto')}
-                      className="h-4 w-4 text-interactive-primary focus:ring-2 focus:ring-interactive-primary"
                     />
-                    <div className="ml-3">
-                      <div className="text-sm font-medium text-content-primary">Automatic</div>
-                      <div className="text-sm text-content-tertiary">
-                        Highlight new comments since your last visit
-                      </div>
-                    </div>
-                  </label>
+                  </div>
 
-                  <label
+                  <div
                     className="flex items-center p-3 border border-theme-default rounded-lg cursor-pointer hover:bg-surface-raised"
                     data-testid="read-mode-manual"
                   >
-                    <input
-                      type="radio"
+                    <Radio
                       name="comment_read_mode"
                       value="manual"
+                      label="Manual"
+                      helperText="Mark individual comments as read yourself; read comments fade out"
                       checked={(preferences?.comment_read_mode ?? 'auto') === 'manual'}
                       onChange={() => handleCommentReadModeChange('manual')}
-                      className="h-4 w-4 text-interactive-primary focus:ring-2 focus:ring-interactive-primary"
                     />
-                    <div className="ml-3">
-                      <div className="text-sm font-medium text-content-primary">Manual</div>
-                      <div className="text-sm text-content-tertiary">
-                        Mark individual comments as read yourself; read comments fade out
-                      </div>
-                    </div>
-                  </label>
+                  </div>
                 </div>
               </div>
 

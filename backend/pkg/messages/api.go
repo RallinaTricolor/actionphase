@@ -62,6 +62,12 @@ func (r *UpdatePostRequest) Bind(req *http.Request) error {
 	return nil
 }
 
+// ManualReadCommentIDsResponse represents the manual read comment IDs for a post
+type ManualReadCommentIDsResponse struct {
+	PostID         int32   `json:"post_id"`
+	ReadCommentIDs []int32 `json:"read_comment_ids"`
+}
+
 // Response Types
 type MessageResponse struct {
 	ID                    int32      `json:"id"`
@@ -965,11 +971,11 @@ func (h *Handler) GetManualReadCommentIDs(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	response := make([]map[string]interface{}, 0, len(manualReads))
+	response := make([]ManualReadCommentIDsResponse, 0, len(manualReads))
 	for _, mr := range manualReads {
-		response = append(response, map[string]interface{}{
-			"post_id":          mr.PostID,
-			"read_comment_ids": mr.ReadCommentIDs,
+		response = append(response, ManualReadCommentIDsResponse{
+			PostID:         mr.PostID,
+			ReadCommentIDs: mr.ReadCommentIDs,
 		})
 	}
 

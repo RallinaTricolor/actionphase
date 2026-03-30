@@ -610,6 +610,15 @@ type MessageServiceInterface interface {
 
 	// CountCharacterPostsAndComments returns the total count of public messages by a character
 	CountCharacterPostsAndComments(ctx context.Context, characterID int32) (int64, error)
+
+	// ToggleCommentRead marks or unmarks a single comment as manually read by the current user
+	ToggleCommentRead(ctx context.Context, userID, gameID, postID, commentID int32, markAsRead bool) error
+
+	// GetManualReadCommentIDsForGame retrieves all comment IDs manually marked as read by a user in a game
+	GetManualReadCommentIDsForGame(ctx context.Context, userID, gameID int32) ([]*ManualCommentReads, error)
+
+	// DeleteManualCommentReadsForGame removes all manual comment read records for a game (e.g. on game reset)
+	DeleteManualCommentReadsForGame(ctx context.Context, gameID int32) error
 }
 
 // CreatePhaseRequest represents the parameters needed to create a new game phase

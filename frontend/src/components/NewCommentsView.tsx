@@ -165,7 +165,7 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
           onNavigateToComment={() => handleNavigateToComment(comment)}
           commentReadMode={commentReadMode}
           isRead={readCommentIdSet.has(comment.id)}
-          onToggleRead={(comment.post_id ?? comment.parent_id) ? (currentlyRead) => handleToggleRead(comment.id, (comment.post_id ?? comment.parent_id)!, currentlyRead) : undefined}
+          onToggleRead={comment.post_id ? (currentlyRead) => handleToggleRead(comment.id, comment.post_id!, currentlyRead) : undefined}
         />
       ))}
 
