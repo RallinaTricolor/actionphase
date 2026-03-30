@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 
 /**
  * Page Object Model for the Settings page
@@ -102,6 +102,28 @@ export class SettingsPage {
   async requestEmailChange(newEmail: string, password: string) {
     await this.fillEmailForm(newEmail, password);
     await this.submitEmailChange();
+  }
+
+  // Reading Section
+
+  async clickReadingSection() {
+    await this.page.click('button:has-text("Reading")');
+    await this.page.waitForSelector('[data-testid="read-mode-auto"]', { state: 'visible' });
+    // Wait for the preferences query to resolve so radio checked state reflects server data
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  async selectCommentReadMode(mode: 'auto' | 'manual') {
+    await this.page.getByTestId(`read-mode-${mode}`).locator('input[type="radio"]').click();
+    await expect(
+      this.page.getByTestId(`read-mode-${mode}`).locator('input[type="radio"]')
+    ).toBeChecked();
+    // Wait for the preference mutation to complete before proceeding
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  getCommentReadModeRadio(mode: 'auto' | 'manual') {
+    return this.page.getByTestId(`read-mode-${mode}`).locator('input[type="radio"]');
   }
 
   // Assertions helpers

@@ -71,6 +71,7 @@ export const Layout = ({ children }: LayoutProps) => {
                 {/* Desktop: User Dropdown Menu - Hidden on Mobile */}
                 <div
                   className="hidden md:block relative"
+                  data-testid="user-menu-trigger"
                   onMouseEnter={() => setIsUserMenuOpen(true)}
                   onMouseLeave={() => setIsUserMenuOpen(false)}
                 >

@@ -81,32 +81,27 @@ export async function login(
  * @param page - Playwright page object
  */
 export async function logout(page: Page) {
-  // Find the user dropdown container (has a button with an SVG user icon and username)
-  const userDropdown = page.locator('nav .relative').last();
+  // Hover the user menu trigger to open the dropdown
+  const userMenuTrigger = page.getByTestId('user-menu-trigger');
+  await userMenuTrigger.hover();
 
-  // Hover over the dropdown to open it
-  await userDropdown.hover();
-
-  // Wait a moment for the dropdown animation
-  await page.waitForTimeout(200);
+  // Wait for the Logout button to appear in the dropdown
+  const logoutButton = page.locator('button:has-text("Logout")');
+  await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
 
   // Use Promise.all to handle the logout click and response concurrently
   // This ensures we catch the response even if navigation happens immediately
   await Promise.all([
-    // Wait for the logout API call
     page.waitForResponse(
       response => response.url().includes('/api/v1/auth/logout') && response.status() === 200
     ),
-    // Click the logout button (triggers the API call and navigation)
-    page.locator('button:has-text("Logout")').click()
+    logoutButton.click(),
   ]);
 
   // Wait for redirect to login page
   await page.waitForURL('/login', { timeout: 5000 });
 
-  // The backend logout endpoint has now cleared the JWT cookie
-  // For good measure in Playwright tests, also manually clear the JWT cookie
-  // to ensure a clean state for the next login
+  // Clear the JWT cookie for clean state
   const cookies = await page.context().cookies();
   const jwtCookie = cookies.find(cookie => cookie.name === 'jwt');
   if (jwtCookie) {
