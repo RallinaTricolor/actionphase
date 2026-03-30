@@ -460,26 +460,22 @@ export const ThreadedComment = memo(function ThreadedComment({
                 <span className="ml-2 text-xs bg-semantic-warning-subtle text-content-primary px-2 py-0.5 rounded font-semibold">NEW</span>
               )}
             </div>
-            {/* Mobile: vertical layout */}
+            {/* Mobile: compact layout */}
             <div className="md:hidden">
-              <div className="flex items-center gap-1 flex-wrap">
-                <Link to={`/characters/${comment.character_id}`} className="font-semibold text-xs text-content-primary truncate hover:underline" data-testid="comment-author">{comment.character_name}</Link>
+              <div className="flex items-center gap-1 flex-wrap text-xs">
+                <Link to={`/characters/${comment.character_id}`} className="font-semibold text-content-primary hover:underline" data-testid="comment-author">{comment.character_name}</Link>
                 {isAuthor && (
-                  <span className="text-xs bg-interactive-primary-subtle text-content-primary px-1 py-0.5 rounded flex-shrink-0">You</span>
+                  <span className="bg-interactive-primary-subtle text-content-primary px-1 py-0.5 rounded">You</span>
                 )}
                 {isUnread && (
-                  <span className="text-xs bg-semantic-warning-subtle text-content-primary px-1.5 py-0.5 rounded font-semibold flex-shrink-0">NEW</span>
+                  <span className="bg-semantic-warning-subtle text-content-primary px-1.5 py-0.5 rounded font-semibold">NEW</span>
                 )}
               </div>
-              {comment.author_username && (
-                <div className="text-xs text-content-secondary">
-                  @{comment.author_username}
-                </div>
-              )}
-              <div className="text-xs text-content-tertiary">
-                {formatDate(comment.created_at)}
+              <div className="text-xs text-content-secondary">
+                {comment.author_username && <span>@{comment.author_username} · </span>}
+                <span className="text-content-tertiary">{formatDate(comment.created_at)}</span>
                 {comment.is_edited && !comment.is_deleted && (
-                  <span className="ml-1" title={comment.edited_at ? `Last edited ${formatDate(comment.edited_at)}` : undefined}>
+                  <span className="ml-1 text-content-tertiary" title={comment.edited_at ? `Last edited ${formatDate(comment.edited_at)}` : undefined}>
                     (edited{comment.edit_count && comment.edit_count > 1 ? ` ${comment.edit_count}x` : ''})
                   </span>
                 )}

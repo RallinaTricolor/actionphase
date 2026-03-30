@@ -706,7 +706,6 @@
 
   /* Ensure adequate touch targets (minimum 44x44px for accessibility) */
   button,
-  a,
   input,
   select,
   textarea {
