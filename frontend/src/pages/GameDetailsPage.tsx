@@ -122,7 +122,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
 
   // Custom hooks for tab management
   const { tabs, activeTab, setActiveTab } = useGameTabs({
-    gameState: game?.state || 'setup',
+    gameState: game?.state,
     isGM,
     participantCount: participants.length,
     currentPhaseType: currentPhaseData?.phase?.phase_type,

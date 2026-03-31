@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, waitFor, render, screen, act } from '@testing-library/react';
+import { useState } from 'react';
 import { MemoryRouter, useSearchParams, useNavigate } from 'react-router-dom';
 import { useGameTabs } from './useGameTabs';
 
@@ -746,6 +747,50 @@ describe('useGameTabs', () => {
 
       await waitFor(() => {
         expect(result.current.activeTab).toBe('info');
+      });
+    });
+  });
+
+  describe('Bug: refreshing page with valid URL tab redirects to default when game data loads after render', () => {
+    it('should preserve ?tab=people on refresh for character_creation game even when game loads after initial render', async () => {
+      // Regression: GameDetailsPage passes game?.state (undefined while loading).
+      // Before fix: undefined fell into else-branch producing [handouts, info] tabs,
+      // so 'people' was treated as invalid and got redirected to 'handouts'.
+      // After fix: undefined returns empty tab list, effect waits until real state arrives.
+      function LazyGameTabSpy() {
+        const navigate = useNavigate();
+        // Simulate undefined→'character_creation' transition (game data loading)
+        const [gameState, setGameState] = useState<Parameters<typeof useGameTabs>[0]['gameState']>(undefined);
+        const { activeTab } = useGameTabs({
+          gameState,
+          isGM: true,
+          participantCount: 3,
+          currentPhaseType: undefined,
+          isAudience: false,
+          isParticipant: false,
+          hasCharacters: false,
+        });
+        return (
+          <div>
+            <span data-testid="active-tab">{activeTab}</span>
+            <button onClick={() => setGameState('character_creation')}>load-game</button>
+            <button onClick={() => navigate('?tab=people')}>nav-to-people</button>
+          </div>
+        );
+      }
+
+      render(
+        <MemoryRouter initialEntries={['/games/1?tab=people']}>
+          <LazyGameTabSpy />
+        </MemoryRouter>
+      );
+
+      // Simulate game data arriving
+      act(() => { screen.getByRole('button', { name: 'load-game' }).click(); });
+
+      // Should land on 'people', not be redirected to 'handouts'
+      await waitFor(() => {
+        expect(screen.getByTestId('active-tab').textContent).toBe('people');
       });
     });
   });

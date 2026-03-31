@@ -4,7 +4,7 @@ import type { Tab } from '../components/TabNavigation';
 import type { GameState } from '../types/games';
 
 interface UseGameTabsOptions {
-  gameState: GameState;
+  gameState: GameState | undefined;
   isGM: boolean;
   participantCount: number;
   currentPhaseType?: string;
@@ -62,6 +62,10 @@ export function useGameTabs({
   // Phase-aware tab configuration
   const tabs: Tab[] = useMemo(() => {
     const tabList: Tab[] = [];
+
+    if (!gameState) {
+      return tabList; // Game not loaded yet — return empty so effect waits
+    }
 
     if (gameState === 'recruitment') {
       if (isGM) {
