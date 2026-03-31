@@ -228,13 +228,11 @@ export function HandoutView({ gameId, handout, isGM, onClose, onEdit }: HandoutV
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-2">
                           <p className="text-sm text-content-tertiary">
-                            {new Date(comment.created_at || '').toLocaleString()}
+                            {comment.edit_count > 0 && comment.updated_at
+                              ? `Edited ${new Date(comment.updated_at).toLocaleString()}`
+                              : new Date(comment.created_at || '').toLocaleString()
+                            }
                           </p>
-                          {comment.edit_count > 0 && (
-                            <Badge variant="neutral" size="sm">
-                              Edited {comment.edit_count} {comment.edit_count === 1 ? 'time' : 'times'}
-                            </Badge>
-                          )}
                         </div>
                         {/* Edit/Delete Buttons - GM Only */}
                         {isGM && (

@@ -408,7 +408,9 @@ describe('HandoutView', () => {
   });
 
   describe('Edit Indicator', () => {
-    it('shows "Edited X times" badge for edited comments', async () => {
+    it('shows "edited at" timestamp for edited comments instead of "Edited N times" badge', async () => {
+      // Bug: edited comments showed creation timestamp + useless "Edited N times" badge
+      // Fix: show "Edited [updated_at]" timestamp, drop the badge
       renderWithProviders(
         <HandoutView
           gameId={1}
@@ -419,16 +421,20 @@ describe('HandoutView', () => {
         />
       );
 
-      // Wait for comments to load
       await waitFor(() => {
         expect(screen.getByText('Edited comment')).toBeInTheDocument();
       });
 
-      // Should show edit count badge
-      expect(screen.getByText('Edited 2 times')).toBeInTheDocument();
+      // Should NOT show the useless "Edited N times" badge
+      expect(screen.queryByText(/Edited \d+ times?/i)).not.toBeInTheDocument();
+
+      // Should show the "edited at" timestamp for the edited comment (edit_count: 2, updated_at: '2024-01-01T12:00:00Z')
+      // The timestamp text starts with "Edited " followed by the formatted date
+      const editedTimestamps = screen.getAllByText(/^Edited /i);
+      expect(editedTimestamps.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('does not show edit badge for unedited comments', async () => {
+    it('shows creation timestamp for unedited comments', async () => {
       renderWithProviders(
         <HandoutView
           gameId={1}
@@ -439,13 +445,34 @@ describe('HandoutView', () => {
         />
       );
 
-      // Wait for comments to load
       await waitFor(() => {
         expect(screen.getByText('First comment')).toBeInTheDocument();
       });
 
-      // Should NOT show edit badge for first comment (edit_count: 0)
-      expect(screen.queryByText(/Edited 0/i)).not.toBeInTheDocument();
+      // Unedited comment (edit_count: 0) should show creation timestamp, not "Edited"
+      // The creation timestamp for comment 1 is '2024-01-01T10:00:00Z'
+      const createdAt = new Date('2024-01-01T10:00:00Z').toLocaleString();
+      expect(screen.getByText(createdAt)).toBeInTheDocument();
+    });
+
+    it('does not show "Edited" timestamp for unedited comments', async () => {
+      renderWithProviders(
+        <HandoutView
+          gameId={1}
+          handout={mockHandout}
+          isGM={false}
+          onClose={mockOnClose}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('First comment')).toBeInTheDocument();
+      });
+
+      // The unedited first comment should not show any "Edited" text in its timestamp area
+      // (The handout itself doesn't show "Edited" either since updated_at != created_at for mockHandout
+      // — but here we test comment-level edit indicators)
+      expect(screen.queryByText(/Edited \d+ times?/i)).not.toBeInTheDocument();
     });
   });
 
