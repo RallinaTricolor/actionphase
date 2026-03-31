@@ -341,6 +341,233 @@ describe('GameDetailsPage', () => {
     })
   })
 
+  describe('Tab Navigation - URL preservation on page load/refresh', () => {
+    // These tests cover the integration between GameDetailsPage (which passes game?.state)
+    // and useGameTabs (which must not redirect valid URL tabs before game data arrives).
+    // Bugs in this area were previously only caught by manual testing.
+
+    it('should respect ?tab=info on refresh for a recruitment game (non-default tab)', async () => {
+      // Default tab for a non-GM in recruitment is 'info', so also test handouts
+      setupDefaultHandlers(mockGame, mockParticipants, 100)
+
+      renderWithProviders(
+        <GameProvider gameId={1}>
+          <GameDetailsPage gameId={1} />
+        </GameProvider>,
+        { initialEntries: ['/games/1?tab=handouts'] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Game')).toBeInTheDocument()
+      })
+
+      // The handouts tab must be active — NOT redirected to info (the default)
+      await waitFor(() => {
+        const handoutsTab = screen.getByRole('tab', { name: /handouts/i })
+        expect(handoutsTab).toHaveAttribute('aria-selected', 'true')
+      }, { timeout: 3000 })
+    })
+
+    it('should respect ?tab=handouts on refresh for a character_creation game (non-default tab)', async () => {
+      // Default for character_creation is 'people'. This test verifies handouts URL is preserved.
+      const charCreationGame = { ...mockGame, state: 'character_creation' as const }
+      setupDefaultHandlers(charCreationGame, mockParticipants, 999)
+
+      renderWithProviders(
+        <GameProvider gameId={1}>
+          <GameDetailsPage gameId={1} />
+        </GameProvider>,
+        { initialEntries: ['/games/1?tab=handouts'] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Game')).toBeInTheDocument()
+      })
+
+      // Must stay on handouts, not redirect to people
+      await waitFor(() => {
+        const handoutsTab = screen.getByRole('tab', { name: /handouts/i })
+        expect(handoutsTab).toHaveAttribute('aria-selected', 'true')
+      }, { timeout: 3000 })
+    })
+
+    it('should respect ?tab=people on refresh for a character_creation game', async () => {
+      // This is the exact scenario reported: refreshing with ?tab=people redirected to handouts
+      const charCreationGame = { ...mockGame, state: 'character_creation' as const }
+      setupDefaultHandlers(charCreationGame, mockParticipants, 999)
+
+      renderWithProviders(
+        <GameProvider gameId={1}>
+          <GameDetailsPage gameId={1} />
+        </GameProvider>,
+        { initialEntries: ['/games/1?tab=people'] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Game')).toBeInTheDocument()
+      })
+
+      // Must stay on people, not redirect to handouts or any other default
+      await waitFor(() => {
+        const peopleTab = screen.getByRole('tab', { name: /people/i })
+        expect(peopleTab).toHaveAttribute('aria-selected', 'true')
+      }, { timeout: 3000 })
+    })
+
+    it('should respect ?tab=info on refresh for a setup game (non-default tab)', async () => {
+      // Default for setup is 'handouts'. Verify info URL is preserved.
+      const setupGame = { ...mockGame, state: 'setup' as const }
+      setupDefaultHandlers(setupGame, [], 999)
+
+      renderWithProviders(
+        <GameProvider gameId={1}>
+          <GameDetailsPage gameId={1} />
+        </GameProvider>,
+        { initialEntries: ['/games/1?tab=info'] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Game')).toBeInTheDocument()
+      })
+
+      await waitFor(() => {
+        const infoTab = screen.getByRole('tab', { name: /game info/i })
+        expect(infoTab).toHaveAttribute('aria-selected', 'true')
+      }, { timeout: 3000 })
+    })
+
+    it('should respect ?tab=people on refresh for an in_progress game while phase data is loading', async () => {
+      // in_progress has a phase-loading guard — people must not be redirected to phase default
+      // while currentPhase is still fetching
+      const inProgressGame = { ...mockGame, state: 'in_progress' as const }
+
+      // Delay the phase response to simulate loading
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:id/details', () =>
+          HttpResponse.json(inProgressGame)
+        ),
+        http.get('http://localhost:3000/api/v1/games/:id/participants', () =>
+          HttpResponse.json(mockParticipants)
+        ),
+        http.get('http://localhost:3000/api/v1/auth/me', () =>
+          HttpResponse.json({ id: 2, username: 'player1', email: 'player1@example.com' })
+        ),
+        http.get('http://localhost:3000/api/v1/games/:id/application/mine', () =>
+          HttpResponse.json({ error: 'Not found' }, { status: 404 })
+        ),
+        http.get('http://localhost:3000/api/v1/games/:id/current-phase', async () => {
+          // Simulate a slow phase fetch
+          await new Promise(resolve => setTimeout(resolve, 50))
+          return HttpResponse.json({
+            phase: { id: 1, game_id: 1, phase_number: 1, phase_type: 'action',
+              title: 'Phase 1', description: '', deadline: null,
+              is_active: true, created_at: '', updated_at: '' }
+          })
+        }),
+        http.get('http://localhost:3000/api/v1/games/:id/characters/controllable', () =>
+          HttpResponse.json([])
+        ),
+        http.get('http://localhost:3000/api/v1/games/:id/deadlines', () =>
+          HttpResponse.json([])
+        ),
+        http.get('http://localhost:3000/api/v1/games/:id/polls', () =>
+          HttpResponse.json([])
+        ),
+      )
+
+      renderWithProviders(
+        <GameProvider gameId={1}>
+          <GameDetailsPage gameId={1} />
+        </GameProvider>,
+        { initialEntries: ['/games/1?tab=people'] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Game')).toBeInTheDocument()
+      })
+
+      // Once phase loads and tabs stabilise, people tab must still be active
+      await waitFor(() => {
+        const peopleTab = screen.getByRole('tab', { name: /people/i })
+        expect(peopleTab).toHaveAttribute('aria-selected', 'true')
+      }, { timeout: 3000 })
+    })
+  })
+
+  describe('Tab Navigation - Link-style switching updates view', () => {
+    // Clicking a tab renders an <a> / <Link> — it changes the URL without calling
+    // setActiveTab directly. The view must update from URL alone.
+
+    it('should switch view when clicking from default tab to another tab', async () => {
+      const charCreationGame = { ...mockGame, state: 'character_creation' as const }
+      setupDefaultHandlers(charCreationGame, mockParticipants, 999)
+
+      renderWithProviders(
+        <GameProvider gameId={1}>
+          <GameDetailsPage gameId={1} />
+        </GameProvider>,
+        { initialEntries: ['/games/1'] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Game')).toBeInTheDocument()
+      })
+
+      // Wait for tabs to appear
+      const handoutsTab = await waitFor(() =>
+        screen.getByRole('tab', { name: /handouts/i }), { timeout: 3000 }
+      )
+
+      // Click handouts tab (Link navigation — updates URL, not direct state)
+      fireEvent.click(handoutsTab)
+
+      // Handouts tab must become active
+      await waitFor(() => {
+        expect(handoutsTab).toHaveAttribute('aria-selected', 'true')
+      })
+    })
+
+    it('should switch back after clicking a second tab', async () => {
+      const charCreationGame = { ...mockGame, state: 'character_creation' as const }
+      setupDefaultHandlers(charCreationGame, mockParticipants, 999)
+
+      renderWithProviders(
+        <GameProvider gameId={1}>
+          <GameDetailsPage gameId={1} />
+        </GameProvider>,
+        { initialEntries: ['/games/1?tab=people'] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Game')).toBeInTheDocument()
+      })
+
+      const handoutsTab = await waitFor(() =>
+        screen.getByRole('tab', { name: /handouts/i }), { timeout: 3000 }
+      )
+      const peopleTab = screen.getByRole('tab', { name: /people/i })
+
+      // Start on people
+      await waitFor(() => {
+        expect(peopleTab).toHaveAttribute('aria-selected', 'true')
+      })
+
+      // Click handouts
+      fireEvent.click(handoutsTab)
+      await waitFor(() => {
+        expect(handoutsTab).toHaveAttribute('aria-selected', 'true')
+        expect(peopleTab).toHaveAttribute('aria-selected', 'false')
+      })
+
+      // Click back to people
+      fireEvent.click(peopleTab)
+      await waitFor(() => {
+        expect(peopleTab).toHaveAttribute('aria-selected', 'true')
+        expect(handoutsTab).toHaveAttribute('aria-selected', 'false')
+      })
+    })
+  })
+
   describe('Tab Navigation - Recruitment State', () => {
     it('should show correct tabs for GM during recruitment', async () => {
       setupDefaultHandlers(mockGame, mockParticipants, 999)
