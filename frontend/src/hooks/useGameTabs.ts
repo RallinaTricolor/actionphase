@@ -211,8 +211,7 @@ export function useGameTabs({
 
     // Don't run if game data hasn't loaded yet - wait for actual game state
     // This prevents redirecting URL params before we know what tabs should exist
-    // Also skip 'setup' state as it's transient during loading
-    if (!gameState || gameState === 'setup') {
+    if (!gameState) {
       return;
     }
 

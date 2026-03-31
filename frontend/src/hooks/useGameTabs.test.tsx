@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, waitFor, render, screen, act } from '@testing-library/react';
-import { MemoryRouter, useSearchParams } from 'react-router-dom';
+import { MemoryRouter, useSearchParams, useNavigate } from 'react-router-dom';
 import { useGameTabs } from './useGameTabs';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -679,6 +679,73 @@ describe('useGameTabs', () => {
       // Switching TO messages should not clear conversation
       await waitFor(() => {
         expect(screen.getByTestId('conversation').textContent).toBe('42');
+      });
+    });
+  });
+
+  describe('Bug: tab switching in setup state does not update view', () => {
+    // Helper: renders component that exposes activeTab and lets us simulate a Link-style navigation
+    // (URL change without calling setActiveTab directly — exactly what <Link> does)
+    function SetupTabSpy({ tabArgs }: { tabArgs: Parameters<typeof useGameTabs>[0] }) {
+      const navigate = useNavigate();
+      const { activeTab } = useGameTabs(tabArgs);
+      return (
+        <div>
+          <span data-testid="active-tab">{activeTab}</span>
+          {/* Simulate <Link to="?tab=info"> click — changes URL only, does NOT call setActiveTab */}
+          <button onClick={() => navigate('?tab=info')}>link-to-info</button>
+          <button onClick={() => navigate('?tab=handouts')}>link-to-handouts</button>
+        </div>
+      );
+    }
+
+    const setupTabArgs: Parameters<typeof useGameTabs>[0] = {
+      gameState: 'setup',
+      isGM: true,
+      participantCount: 0,
+      currentPhaseType: undefined,
+      isAudience: false,
+      isParticipant: false,
+      hasCharacters: false,
+    };
+
+    it('should update activeTab when URL changes via Link navigation in setup state', async () => {
+      // Reproduce the exact bug: <Link> changes URL but view does not update
+      // because useEffect exited early when gameState === 'setup'
+      render(
+        <MemoryRouter initialEntries={['/games/1?tab=handouts']}>
+          <SetupTabSpy tabArgs={setupTabArgs} />
+        </MemoryRouter>
+      );
+
+      // Initially on handouts
+      await waitFor(() => {
+        expect(screen.getByTestId('active-tab').textContent).toBe('handouts');
+      });
+
+      // Simulate clicking <Link to="?tab=info"> — URL changes, setActiveTab is NOT called
+      act(() => { screen.getByRole('button', { name: 'link-to-info' }).click(); });
+
+      // activeTab must update to 'info' without a full page reload
+      await waitFor(() => {
+        expect(screen.getByTestId('active-tab').textContent).toBe('info');
+      });
+    });
+
+    it('should read initial URL tab param in setup state', async () => {
+      // If user navigates directly to ?tab=info in setup state, it should be respected
+      const wrapperWithInfo = ({ children }: { children: React.ReactNode }) => (
+        <MemoryRouter initialEntries={['/games/1?tab=info']}>{children}</MemoryRouter>
+      );
+
+      const { result } = renderHook(
+        () =>
+          useGameTabs(setupTabArgs),
+        { wrapper: wrapperWithInfo }
+      );
+
+      await waitFor(() => {
+        expect(result.current.activeTab).toBe('info');
       });
     });
   });
