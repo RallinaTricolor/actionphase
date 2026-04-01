@@ -98,7 +98,7 @@ test.describe('GM Creates Game & Recruits Players', () => {
 
     // Verify we're on game details page
     await assertTextVisible(page, gameTitle);
-    await expect(page).toHaveURL(`/games/${gameId}`);
+    await expect(page).toHaveURL(new RegExp(`/games/${gameId}`));
 
     // Open edit modal to verify settings persisted
     const settingsPage = new GameSettingsPage(page);
