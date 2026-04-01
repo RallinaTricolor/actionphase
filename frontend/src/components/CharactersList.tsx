@@ -269,6 +269,9 @@ export function CharactersList({
                   </div>
                 )}
                 {/* All other characters sorted alphabetically */}
+                {otherVisibleCharacters.length > 0 && myCharacters.length > 0 && (
+                  <h3 className="text-md font-medium text-content-primary mb-3">Characters</h3>
+                )}
                 <div className="space-y-3">
                   {[...otherVisibleCharacters]
                     .sort((a, b) => a.name.localeCompare(b.name))
