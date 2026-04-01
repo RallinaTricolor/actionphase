@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
@@ -57,12 +56,6 @@ func (ps *PhaseService) CreatePhase(ctx context.Context, req core.CreatePhaseReq
 		}
 	}
 
-	// Set default start time if not provided
-	startTime := time.Now()
-	if req.StartTime != nil {
-		startTime = *req.StartTime
-	}
-
 	// Convert times to pgtype.Timestamptz
 	params := models.CreateGamePhaseParams{
 		GameID:      req.GameID,
@@ -70,7 +63,12 @@ func (ps *PhaseService) CreatePhase(ctx context.Context, req core.CreatePhaseReq
 		PhaseNumber: phaseNumber,
 		Title:       req.Title,
 		Description: pgtype.Text{String: req.Description, Valid: req.Description != ""},
-		StartTime:   pgtype.Timestamptz{Time: startTime, Valid: true},
+	}
+
+	// Only set start_time when explicitly provided — it means "auto-activate at this time".
+	// NULL = no scheduled activation. activated_at tracks when the phase actually became active.
+	if req.StartTime != nil {
+		params.StartTime = pgtype.Timestamptz{Time: *req.StartTime, Valid: true}
 	}
 
 	if req.EndTime != nil {

@@ -398,6 +398,52 @@ func TestPhaseService_RunScheduledActivations_SkipsAlreadyActivePhase(t *testing
 	assert.Equal(t, phase.ID, active.ID)
 }
 
+// Regression test: phases created without an explicit auto-activate time must never
+// be activated by the scheduler — even though they were previously assigned start_time=NOW()
+// as a default at creation, causing the scheduler to pick them up instead of the intended phase.
+func TestPhaseService_RunScheduledActivations_OnlyActivatesScheduledPhase(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+	phaseService := &PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	queries := models.New(testDB.Pool)
+
+	gm := testDB.CreateTestUser(t, "sched_regression_gm", "sched_regression_gm@example.com")
+	game := testDB.CreateTestGameWithState(t, int32(gm.ID), "Regression Game", "in_progress")
+
+	// Phase A: explicitly scheduled to auto-activate (start_time set to a future time that has now passed)
+	scheduledStart := time.Now().Add(-1 * time.Minute)
+	phaseA, err := queries.CreateGamePhase(context.Background(), models.CreateGamePhaseParams{
+		GameID:      game.ID,
+		PhaseType:   "action",
+		PhaseNumber: 1,
+		Title:       "Phase A - Scheduled",
+		StartTime:   pgtype.Timestamptz{Time: scheduledStart, Valid: true},
+	})
+	require.NoError(t, err)
+
+	// Phase B: created with no auto-activate time (start_time = NULL, as the fixed code produces)
+	phaseB, err := queries.CreateGamePhase(context.Background(), models.CreateGamePhaseParams{
+		GameID:      game.ID,
+		PhaseType:   "common_room",
+		PhaseNumber: 2,
+		Title:       "Phase B - No Schedule",
+		// StartTime intentionally omitted — NULL
+	})
+	require.NoError(t, err)
+	assert.False(t, phaseB.StartTime.Valid, "phase B should have NULL start_time")
+
+	activated, err := phaseService.RunScheduledActivations(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, activated)
+
+	active, err := queries.GetActivePhase(context.Background(), game.ID)
+	require.NoError(t, err)
+	assert.Equal(t, phaseA.ID, active.ID, "phase A (scheduled) should be active")
+	assert.NotEqual(t, phaseB.ID, active.ID, "phase B (no schedule) must not be activated by the scheduler")
+}
+
 func TestPhaseService_RunScheduledActivations_ActivatesAcrossMultipleGames(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
