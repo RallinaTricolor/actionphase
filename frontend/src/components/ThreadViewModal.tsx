@@ -11,7 +11,7 @@ interface ThreadViewModalProps {
   characters: Character[];
   controllableCharacters: Character[];
   onClose: () => void;
-  onCreateReply: (parentId: number, characterId: number, content: string) => Promise<void>;
+  onCreateReply: (parentId: number, characterId: number, content: string, rootPostId: number) => Promise<void>;
   currentUserId?: number;
   unreadCommentIDs?: number[];
   manualReadCommentIDs?: number[];

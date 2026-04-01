@@ -23,7 +23,7 @@ interface ThreadedCommentProps {
   postId: number; // The root post ID (required for API calls)
   characters: Character[]; // All game characters (for autocomplete)
   controllableCharacters: Character[]; // Characters the user can control (for "Reply as" dropdown)
-  onCreateReply: (parentId: number, characterId: number, content: string) => Promise<void>;
+  onCreateReply: (parentId: number, characterId: number, content: string, rootPostId: number) => Promise<void>;
   onCommentDeleted?: () => void; // Callback when a comment is deleted (to trigger parent reload)
   currentUserId?: number;
   depth?: number;
@@ -335,7 +335,7 @@ export const ThreadedComment = memo(function ThreadedComment({
       setIsReplying(false);
 
       logger.debug('Creating reply to comment', { commentId: comment.id, gameId, postId, characterId: selectedCharacterId });
-      await onCreateReply(comment.id, selectedCharacterId, optimisticReply.content);
+      await onCreateReply(comment.id, selectedCharacterId, optimisticReply.content, postId);
       logger.debug('Reply created successfully', { commentId: comment.id, gameId, postId });
 
       // Show success toast

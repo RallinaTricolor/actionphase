@@ -945,4 +945,180 @@ describe('CommonRoom', () => {
       });
     });
   });
+
+  describe('Manual read mode - own comment auto-marked read', () => {
+    const rootPost: Message = {
+      id: 10,
+      game_id: 1,
+      character_id: 1,
+      character_name: 'Test Character',
+      author_id: 1,
+      author_username: 'testuser',
+      content: 'Root post',
+      message_type: 'post',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+      comment_count: 0,
+    };
+
+    const topLevelComment: Message = {
+      id: 20,
+      game_id: 1,
+      character_id: 1,
+      character_name: 'Test Character',
+      author_id: 1,
+      author_username: 'testuser',
+      content: 'A top-level comment',
+      message_type: 'comment',
+      parent_id: 10,
+      thread_depth: 1,
+      is_edited: false,
+      is_deleted: false,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    };
+
+    function setupManualModeHandlers(overrides: Parameters<typeof server.use>[0][] = []) {
+      server.use(
+        http.get('/api/v1/auth/preferences', () =>
+          HttpResponse.json({ preferences: { comment_read_mode: 'manual', theme: 'auto' } })
+        ),
+        http.get('/api/v1/games/:gameId/posts', () =>
+          HttpResponse.json([rootPost])
+        ),
+        http.get('/api/v1/games/:gameId/unread-comment-ids', () =>
+          HttpResponse.json([])
+        ),
+        http.get('/api/v1/games/:gameId/manual-read-comment-ids', () =>
+          HttpResponse.json([])
+        ),
+        http.get('/api/v1/games/:gameId/posts/:postId/comments-with-threads', () =>
+          HttpResponse.json({
+            comments: [topLevelComment],
+            total_top_level: 1,
+            returned_top_level: 1,
+            returned_total: 1,
+            has_more: false,
+            limit: 200,
+            offset: 0,
+          })
+        ),
+        http.post('/api/v1/games/:gameId/posts/:postId/mark-read', () =>
+          HttpResponse.json({}, { status: 204 })
+        ),
+        ...overrides,
+      );
+    }
+
+    it('auto-marks own top-level comment as read using the root post ID', async () => {
+      const newCommentId = 99;
+      let toggleReadParams: { postId: string; commentId: string; read: boolean } | null = null;
+
+      setupManualModeHandlers([
+        http.post('/api/v1/games/:gameId/posts/:postId/comments', ({ params }) => {
+          // Only intercept comment creation on the root post
+          return HttpResponse.json({
+            ...topLevelComment,
+            id: newCommentId,
+            parent_id: Number(params.postId),
+          }, { status: 201 });
+        }),
+        http.post('/api/v1/games/:gameId/posts/:postId/comments/:commentId/toggle-read', async ({ params, request }) => {
+          const body = await request.json() as { read: boolean };
+          toggleReadParams = {
+            postId: params.postId as string,
+            commentId: params.commentId as string,
+            read: body.read,
+          };
+          return new HttpResponse(null, { status: 204 });
+        }),
+      ]);
+
+      const user = userEvent.setup();
+      renderWithProviders(<CommonRoom gameId={1} phaseId={1} isCurrentPhase={true} />, { gameId: 1 });
+
+      // Wait for post to load and Add Comment button to appear
+      await waitFor(() => {
+        expect(screen.getByText('Root post')).toBeInTheDocument();
+      });
+      await waitFor(() => {
+        expect(screen.getAllByRole('button', { name: /add comment/i }).length).toBeGreaterThan(0);
+      });
+
+      await user.click(screen.getAllByRole('button', { name: /add comment/i })[0]);
+      await user.type(screen.getByPlaceholderText(/write a comment\.\.\./i), 'My reply');
+      await user.click(screen.getAllByRole('button', { name: /^comment$/i })[0]);
+
+      await waitFor(() => {
+        expect(toggleReadParams).not.toBeNull();
+      });
+
+      // toggle-read must use the root post ID (10), not any comment ID
+      expect(toggleReadParams!.postId).toBe(String(rootPost.id));
+      expect(toggleReadParams!.commentId).toBe(String(newCommentId));
+      expect(toggleReadParams!.read).toBe(true);
+    });
+
+    it('does NOT auto-mark own comment as read in auto mode', async () => {
+      let toggleReadCalled = false;
+
+      server.use(
+        http.get('/api/v1/auth/preferences', () =>
+          HttpResponse.json({ preferences: { comment_read_mode: 'auto', theme: 'auto' } })
+        ),
+        http.get('/api/v1/games/:gameId/posts', () =>
+          HttpResponse.json([rootPost])
+        ),
+        http.get('/api/v1/games/:gameId/unread-comment-ids', () =>
+          HttpResponse.json([])
+        ),
+        http.get('/api/v1/games/:gameId/manual-read-comment-ids', () =>
+          HttpResponse.json([])
+        ),
+        http.get('/api/v1/games/:gameId/posts/:postId/comments-with-threads', () =>
+          HttpResponse.json({
+            comments: [],
+            total_top_level: 0,
+            returned_top_level: 0,
+            returned_total: 0,
+            has_more: false,
+            limit: 200,
+            offset: 0,
+          })
+        ),
+        http.post('/api/v1/games/:gameId/posts/:postId/mark-read', () =>
+          HttpResponse.json({}, { status: 204 })
+        ),
+        http.post('/api/v1/games/:gameId/posts/:postId/comments', () =>
+          HttpResponse.json({ ...topLevelComment, id: 99 }, { status: 201 })
+        ),
+        http.post('/api/v1/games/:gameId/posts/:postId/comments/:commentId/toggle-read', () => {
+          toggleReadCalled = true;
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      const user = userEvent.setup();
+      renderWithProviders(<CommonRoom gameId={1} phaseId={1} isCurrentPhase={true} />, { gameId: 1 });
+
+      await waitFor(() => {
+        expect(screen.getByText('Root post')).toBeInTheDocument();
+      });
+      await waitFor(() => {
+        expect(screen.getAllByRole('button', { name: /add comment/i }).length).toBeGreaterThan(0);
+      });
+
+      await user.click(screen.getAllByRole('button', { name: /add comment/i })[0]);
+      await user.type(screen.getByPlaceholderText(/write a comment\.\.\./i), 'My reply');
+      await user.click(screen.getAllByRole('button', { name: /^comment$/i })[0]);
+
+      // Wait for the comment form to close (submission complete)
+      await waitFor(() => {
+        expect(screen.queryByPlaceholderText(/write a comment\.\.\./i)).not.toBeInTheDocument();
+      });
+
+      // toggle-read should never have been called in auto mode
+      expect(toggleReadCalled).toBe(false);
+    });
+  });
 });

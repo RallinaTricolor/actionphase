@@ -709,7 +709,7 @@ describe('PostCard', () => {
       await user.click(screen.getByRole('button', { name: /^comment$/i }));
 
       await waitFor(() => {
-        expect(mockOnCreateComment).toHaveBeenCalledWith(1, 1, 'My test comment');
+        expect(mockOnCreateComment).toHaveBeenCalledWith(1, 1, 'My test comment', 1);
       });
     });
 
@@ -734,7 +734,7 @@ describe('PostCard', () => {
       await user.click(screen.getByRole('button', { name: /^comment$/i }));
 
       await waitFor(() => {
-        expect(mockOnCreateComment).toHaveBeenCalledWith(1, 1, 'Test comment');
+        expect(mockOnCreateComment).toHaveBeenCalledWith(1, 1, 'Test comment', 1);
       });
     });
 
@@ -862,7 +862,7 @@ describe('PostCard', () => {
       await user.click(screen.getByRole('button', { name: /^comment$/i }));
 
       await waitFor(() => {
-        expect(mockOnCreateComment).toHaveBeenCalledWith(1, 2, 'Test');
+        expect(mockOnCreateComment).toHaveBeenCalledWith(1, 2, 'Test', 1);
       });
     });
   });
@@ -1376,7 +1376,7 @@ describe('PostCard', () => {
 
       // Verify submission
       await waitFor(() => {
-        expect(mockOnCreateComment).toHaveBeenCalledWith(1, 2, 'This is my reply to the GM post');
+        expect(mockOnCreateComment).toHaveBeenCalledWith(1, 2, 'This is my reply to the GM post', 1);
       });
 
       // Form should close
@@ -1659,4 +1659,5 @@ describe('PostCard', () => {
       expect(screen.getByRole('button', { name: /saving\.\.\./i })).toBeInTheDocument();
     });
   });
+
 });

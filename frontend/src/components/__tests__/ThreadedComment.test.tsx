@@ -856,6 +856,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -873,7 +874,7 @@ describe('ThreadedComment', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockOnCreateReply).toHaveBeenCalledWith(1, 1, 'Test reply');
+        expect(mockOnCreateReply).toHaveBeenCalledWith(1, 1, 'Test reply', 1);
       });
     });
 
@@ -885,6 +886,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -901,7 +903,7 @@ describe('ThreadedComment', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockOnCreateReply).toHaveBeenCalledWith(1, 1, 'Test reply');
+        expect(mockOnCreateReply).toHaveBeenCalledWith(1, 1, 'Test reply', 1);
       });
     });
 
@@ -1389,6 +1391,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1426,7 +1429,7 @@ describe('ThreadedComment', () => {
 
       // Verify submission
       await waitFor(() => {
-        expect(mockOnCreateReply).toHaveBeenCalledWith(1, 2, 'My detailed reply');
+        expect(mockOnCreateReply).toHaveBeenCalledWith(1, 2, 'My detailed reply', 1);
       });
 
       // Replies should be visible again after submission
@@ -1443,6 +1446,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1468,7 +1472,7 @@ describe('ThreadedComment', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockOnCreateReply).toHaveBeenCalledWith(1, 1, 'Nested reply');
+        expect(mockOnCreateReply).toHaveBeenCalledWith(1, 1, 'Nested reply', 1);
       });
     });
   });

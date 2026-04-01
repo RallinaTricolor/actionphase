@@ -23,7 +23,7 @@ interface PostCardProps {
   gameId: number;
   characters: Character[]; // All game characters (for autocomplete)
   controllableCharacters: Character[]; // Characters the user can control (for "Reply as" dropdown)
-  onCreateComment: (postId: number, characterId: number, content: string) => Promise<void>;
+  onCreateComment: (parentId: number, characterId: number, content: string, rootPostId: number) => Promise<void>;
   onPostUpdated?: (updatedPost: Message) => void; // Callback when post is edited
   currentUserId?: number;
   'data-testid'?: string;
@@ -53,7 +53,7 @@ const CommentList = memo(function CommentList({
   postId: number;
   characters: Character[];
   controllableCharacters: Character[];
-  onCreateComment: (postId: number, characterId: number, content: string) => Promise<void>;
+  onCreateComment: (parentId: number, characterId: number, content: string, rootPostId: number) => Promise<void>;
   loadComments: () => Promise<void>;
   currentUserId?: number;
   localUnreadCommentIDs: number[];
@@ -288,12 +288,13 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
 
     try {
       setIsSubmitting(true);
-      await onCreateComment(post.id, selectedCharacterId, replyContent.trim());
+      await onCreateComment(post.id, selectedCharacterId, replyContent.trim(), post.id);
       setReplyContent('');
       setIsCommenting(false);
       // Ensure comments are shown and reload to display the new one
       setShowComments(true);
       await loadComments();
+
     } catch (_err) {
       logger.error('Failed to submit comment', { error: _err, gameId, postId: post.id, characterId: selectedCharacterId });
     } finally {

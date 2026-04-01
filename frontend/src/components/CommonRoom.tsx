@@ -15,6 +15,8 @@ import { RecentResultsSection } from './RecentResultsSection';
 import { usePreviousPhaseResults } from '../hooks/usePreviousPhaseResults';
 import { getRootPostId } from '../utils/commentUtils';
 import { usePollsByPhase } from '../hooks';
+import { useCommentReadMode } from '../hooks/useUserPreferences';
+import { useToggleCommentRead } from '../hooks/useReadTracking';
 import { logger } from '@/services/LoggingService';
 
 // Lazy load PollsTab component
@@ -38,6 +40,9 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
 
   // Read character data from GameContext — single source of truth
   const { userCharacters, allGameCharacters } = useGameContext();
+
+  const commentReadMode = useCommentReadMode();
+  const toggleCommentReadMutation = useToggleCommentRead();
 
   // URL search params for deep linking to comments and sub-tab navigation
   const [searchParams, setSearchParams] = useSearchParams();
@@ -246,17 +251,32 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     }
   };
 
-  const handleCreateComment = async (postId: number, characterId: number, content: string) => {
+  const handleCreateComment = async (parentId: number, characterId: number, content: string, rootPostId: number) => {
     try {
-      await apiClient.messages.createComment(gameId, postId, {
+      const response = await apiClient.messages.createComment(gameId, parentId, {
         character_id: characterId,
         content,
         phase_id: phaseId
       });
       // Don't reload all posts - let the individual PostCard/ThreadedComment handle the update
       // This prevents jarring full-page reloads when commenting deep in a thread
+
+      // In manual read mode, auto-mark the user's own comment as read immediately.
+      // The user just wrote it — it shouldn't appear as something they need to read.
+      if (commentReadMode === 'manual' && currentUserId) {
+        toggleCommentReadMutation.mutate({
+          gameId,
+          postId: rootPostId,
+          commentId: response.data.id,
+          read: true,
+        }, {
+          onError: (err) => {
+            logger.error('Failed to auto-mark own comment as read', { error: err, gameId, commentId: response.data.id });
+          },
+        });
+      }
     } catch (_err) {
-      logger.error('Failed to create comment', { error: _err, gameId, postId, characterId });
+      logger.error('Failed to create comment', { error: _err, gameId, parentId, characterId });
       throw new Error('Failed to create comment. Please try again.');
     }
   };
