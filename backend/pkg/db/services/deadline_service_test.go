@@ -342,6 +342,48 @@ func TestDeadlineService_DeleteDeadline(t *testing.T) {
 	core.AssertError(t, err, "Expected error when deleting non-existent deadline")
 }
 
+func TestDeadlineService_GetAllGameDeadlines_InactivePhaseExcluded(t *testing.T) {
+	suite := NewTestSuite(t).
+		WithCleanup("deadlines").
+		Setup()
+	defer suite.Cleanup()
+
+	gm := suite.Factory().NewUser().WithUsername("deadline_phase_gm").WithEmail("deadline_phase_gm@test.com").Create()
+	game := suite.Factory().NewGame().WithGM(gm.ID).Create()
+	deadlineService := suite.DeadlineService()
+
+	futureDeadline := time.Now().Add(48 * time.Hour)
+
+	// Create an inactive phase with a future deadline
+	suite.Factory().NewPhase().InGame(game).WithDeadlineIn(48 * time.Hour).Create()
+
+	// Create an active phase with a future deadline
+	suite.Factory().NewPhase().InGame(game).WithDeadlineIn(48 * time.Hour).Active().Create()
+
+	// Create an arbitrary deadline for baseline
+	_, err := deadlineService.CreateDeadline(context.Background(), core.CreateDeadlineRequest{
+		GameID:    game.ID,
+		Title:     "Custom Deadline",
+		Deadline:  futureDeadline,
+		CreatedBy: gm.ID,
+	})
+	core.AssertNoError(t, err, "Failed to create custom deadline")
+
+	unified, err := deadlineService.GetAllGameDeadlines(context.Background(), game.ID, false)
+	core.AssertNoError(t, err, "Failed to get all game deadlines")
+
+	// Should have: 1 custom deadline + 1 active phase = 2 total
+	// The inactive phase must NOT appear
+	core.AssertEqual(t, 2, len(unified), "Expected 2 deadlines (custom + active phase only)")
+
+	for _, d := range unified {
+		if d.DeadlineType == "phase" && d.PhaseID != nil {
+			// Verify only the active phase is present — we can't easily check is_active here
+			// but verifying count=2 (not 3) proves the inactive phase is excluded
+		}
+	}
+}
+
 func TestDeadlineService_GetUpcomingDeadlines(t *testing.T) {
 	suite := NewTestSuite(t).
 		WithCleanup("deadlines").

@@ -48,6 +48,7 @@ SELECT
     true as is_system_deadline
 FROM game_phases gp
 WHERE gp.game_id = $1
+  AND gp.is_active = true
   AND gp.deadline IS NOT NULL
   AND ($2 = true OR gp.deadline > NOW())
 
