@@ -7,12 +7,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Helper function for creating int32 pointers
@@ -21,6 +25,7 @@ func int32Ptr(i int32) *int32 {
 }
 
 // setupMessageAPITestRouter creates a test router with message routes
+// Note: call t.Setenv("REQUIRE_EMAIL_VERIFICATION", "false") before this if testing CreatePost/CreateComment
 func setupMessageAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
 	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
@@ -38,7 +43,24 @@ func setupMessageAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mu
 				r.Use(core.RequireAuthenticationMiddleware(userService))
 
 				// Post routes
+				r.With(core.RequireEmailVerificationMiddleware(app.Pool)).Post("/{gameId}/posts", messageHandler.CreatePost)
 				r.Patch("/{gameId}/posts/{postId}", messageHandler.UpdatePost)
+				r.With(core.RequireEmailVerificationMiddleware(app.Pool)).Post("/{gameId}/posts/{postId}/comments", messageHandler.CreateComment)
+				r.Delete("/{gameId}/posts/{postId}/comments/{commentId}", messageHandler.DeleteComment)
+				r.Get("/{gameId}/posts/{postId}/comments-with-threads", messageHandler.GetPostCommentsWithThreads)
+				r.Post("/{gameId}/posts/{postId}/comments/{commentId}/toggle-read", messageHandler.ToggleCommentRead)
+				r.Get("/{gameId}/manual-read-comment-ids", messageHandler.GetManualReadCommentIDs)
+			})
+		})
+
+		r.Route("/characters", func(r chi.Router) {
+			messageHandler2 := Handler{App: app}
+			r.Group(func(r chi.Router) {
+				r.Use(jwtauth.Verifier(tokenAuth))
+				r.Use(jwtauth.Authenticator(tokenAuth))
+				r.Use(core.RequireAuthenticationMiddleware(userService))
+
+				r.Get("/{id}/comments", messageHandler2.GetCharacterComments)
 			})
 		})
 	})
@@ -227,5 +249,622 @@ func TestMessageAPI_UpdatePost(t *testing.T) {
 		// The service-layer test verifies edit_count tracking
 		core.AssertEqual(t, true, secondEdit.IsEdited, "Should be marked as edited")
 		core.AssertEqual(t, "Second edit", secondEdit.Content, "Should have latest content")
+	})
+}
+
+// TestMessageAPI_CreatePost tests POST /api/v1/games/{gameId}/posts
+func TestMessageAPI_CreatePost(t *testing.T) {
+	t.Setenv("REQUIRE_EMAIL_VERIFICATION", "false")
+
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupMessageAPITestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	gmChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(gm.ID)),
+		Name:          "GM Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	playerChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Player Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	t.Run("GM creates post successfully", func(t *testing.T) {
+		body := CreatePostRequest{
+			CharacterID: gmChar.ID,
+			Content:     "A post from the GM.",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/posts", game.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "A post from the GM.", response["content"])
+		assert.Equal(t, "post", response["message_type"])
+	})
+
+	t.Run("non-GM player cannot create post", func(t *testing.T) {
+		body := CreatePostRequest{
+			CharacterID: playerChar.ID,
+			Content:     "Player trying to post.",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/posts", game.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+}
+
+// TestMessageAPI_CreateComment tests POST /api/v1/games/{gameId}/posts/{postId}/comments
+func TestMessageAPI_CreateComment(t *testing.T) {
+	t.Setenv("REQUIRE_EMAIL_VERIFICATION", "false")
+
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupMessageAPITestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	messageService := &messages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	gmChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(gm.ID)),
+		Name:          "GM Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	playerChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Player Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Create a post to comment on
+	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID:      game.ID,
+		AuthorID:    int32(gm.ID),
+		CharacterID: gmChar.ID,
+		Content:     "A GM announcement.",
+		Visibility:  "game",
+	})
+	require.NoError(t, err)
+
+	t.Run("player creates comment on post", func(t *testing.T) {
+		body := CreateCommentRequest{
+			CharacterID: playerChar.ID,
+			Content:     "Great post!",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/posts/%d/comments", game.ID, post.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "Great post!", response["content"])
+		assert.Equal(t, "comment", response["message_type"])
+	})
+
+	t.Run("GM creates comment on post", func(t *testing.T) {
+		body := CreateCommentRequest{
+			CharacterID: gmChar.ID,
+			Content:     "GM response.",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/posts/%d/comments", game.ID, post.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusCreated, rec.Code)
+	})
+
+	t.Run("returns 404 for non-existent post", func(t *testing.T) {
+		body := CreateCommentRequest{
+			CharacterID: playerChar.ID,
+			Content:     "Commenting on nothing.",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/posts/99999/comments", game.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.NotEqual(t, http.StatusOK, rec.Code)
+	})
+}
+
+// TestMessageAPI_DeleteComment tests DELETE /api/v1/games/{gameId}/posts/{postId}/comments/{commentId}
+func TestMessageAPI_DeleteComment(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	otherPlayer := testDB.CreateTestUser(t, "other", "other@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+	otherToken, err := core.CreateTestJWTTokenForUser(app, otherPlayer)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	messageService := &messages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(otherPlayer.ID), "player")
+	require.NoError(t, err)
+
+	gmChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(gm.ID)),
+		Name:          "GM Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	playerChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player.ID)),
+		Name:          "Player Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID:      game.ID,
+		AuthorID:    int32(gm.ID),
+		CharacterID: gmChar.ID,
+		Content:     "Post to comment on.",
+		Visibility:  "game",
+	})
+	require.NoError(t, err)
+
+	comment, err := messageService.CreateComment(context.Background(), core.CreateCommentRequest{
+		GameID:      game.ID,
+		AuthorID:    int32(player.ID),
+		CharacterID: playerChar.ID,
+		Content:     "Player's comment.",
+		ParentID:    post.ID,
+		Visibility:  "game",
+	})
+	require.NoError(t, err)
+
+	// Create router AFTER t.Setenv since RequireEmailVerificationMiddleware reads env at setup time
+	t.Setenv("REQUIRE_EMAIL_VERIFICATION", "false")
+	router := setupMessageAPITestRouter(app, testDB)
+
+	t.Run("other player cannot delete someone else's comment", func(t *testing.T) {
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/posts/%d/comments/%d", game.ID, post.ID, comment.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+otherToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+
+	t.Run("GM can delete any comment", func(t *testing.T) {
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/posts/%d/comments/%d", game.ID, post.ID, comment.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "Comment deleted successfully", response["message"])
+	})
+
+	t.Run("author can delete own comment", func(t *testing.T) {
+		newComment, err := messageService.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: playerChar.ID,
+			Content:     "Another comment to delete.",
+			ParentID:    post.ID,
+			Visibility:  "game",
+		})
+		require.NoError(t, err)
+
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/posts/%d/comments/%d", game.ID, post.ID, newComment.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+}
+
+// TestMessageAPI_GetPostCommentsWithThreads tests GET /api/v1/games/{gameId}/posts/{postId}/comments-with-threads
+func TestMessageAPI_GetPostCommentsWithThreads(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupMessageAPITestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	messageService := &messages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	gmChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(gm.ID)), Name: "GM Char", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	playerChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player.ID)), Name: "Player Char", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID: game.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Post with comments.", Visibility: "game",
+	})
+	require.NoError(t, err)
+	_, err = messageService.CreateComment(context.Background(), core.CreateCommentRequest{
+		GameID: game.ID, ParentID: post.ID, AuthorID: int32(player.ID), CharacterID: playerChar.ID, Content: "A reply.", Visibility: "game",
+	})
+	require.NoError(t, err)
+
+	t.Run("player retrieves comments with threads", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/posts/%d/comments-with-threads", game.ID, post.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.NotNil(t, response["comments"])
+	})
+
+	t.Run("GM retrieves comments with threads", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/posts/%d/comments-with-threads", game.ID, post.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("returns 400 for invalid limit parameter", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/posts/%d/comments-with-threads?limit=999", game.ID, post.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+}
+
+// TestMessageAPI_ToggleCommentRead tests POST /api/v1/games/{gameId}/posts/{postId}/comments/{commentId}/toggle-read
+func TestMessageAPI_ToggleCommentRead(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupMessageAPITestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	messageService := &messages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	gmChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(gm.ID)), Name: "GM Char", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	playerChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player.ID)), Name: "Player Char", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID: game.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Announcement.", Visibility: "game",
+	})
+	require.NoError(t, err)
+	comment, err := messageService.CreateComment(context.Background(), core.CreateCommentRequest{
+		GameID: game.ID, ParentID: post.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Response.", Visibility: "game",
+	})
+	require.NoError(t, err)
+
+	_ = playerChar
+
+	t.Run("player marks comment as read", func(t *testing.T) {
+		body := map[string]bool{"read": true}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST",
+			fmt.Sprintf("/api/v1/games/%d/posts/%d/comments/%d/toggle-read", game.ID, post.ID, comment.ID),
+			bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+	})
+
+	t.Run("player marks comment as unread (idempotent toggle)", func(t *testing.T) {
+		body := map[string]bool{"read": false}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST",
+			fmt.Sprintf("/api/v1/games/%d/posts/%d/comments/%d/toggle-read", game.ID, post.ID, comment.ID),
+			bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+	})
+}
+
+// TestMessageAPI_GetManualReadCommentIDs tests GET /api/v1/games/{gameId}/manual-read-comment-ids
+func TestMessageAPI_GetManualReadCommentIDs(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupMessageAPITestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	messageService := &messages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	gmChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(gm.ID)), Name: "GM Char", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID: game.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Post.", Visibility: "game",
+	})
+	require.NoError(t, err)
+	comment, err := messageService.CreateComment(context.Background(), core.CreateCommentRequest{
+		GameID: game.ID, ParentID: post.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Comment.", Visibility: "game",
+	})
+	require.NoError(t, err)
+
+	// Mark the comment as manually read
+	err = messageService.ToggleCommentRead(context.Background(), int32(player.ID), game.ID, post.ID, comment.ID, true)
+	require.NoError(t, err)
+
+	t.Run("returns comment IDs marked as read by player", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/manual-read-comment-ids", game.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		// Response is an array of {post_id, read_comment_ids} objects grouped by post
+		var response []map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		// Should have one entry (the post that contains the manually-read comment)
+		require.Len(t, response, 1)
+		readIDs := response[0]["read_comment_ids"].([]interface{})
+		assert.Len(t, readIDs, 1)
+		assert.Equal(t, float64(comment.ID), readIDs[0])
+	})
+
+	t.Run("returns empty array for game with no manual reads", func(t *testing.T) {
+		otherGM := testDB.CreateTestUser(t, "othergm", "othergm@example.com")
+		otherGMToken, err := core.CreateTestJWTTokenForUser(app, otherGM)
+		require.NoError(t, err)
+		emptyGame := testDB.CreateTestGame(t, int32(otherGM.ID), "Empty Game")
+
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/manual-read-comment-ids", emptyGame.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+otherGMToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response []map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Len(t, response, 0)
+	})
+}
+
+// TestMessageAPI_GetCharacterComments tests GET /api/v1/characters/{id}/comments
+func TestMessageAPI_GetCharacterComments(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupMessageAPITestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	messageService := &messages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	playerChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player.ID)), Name: "Player Char", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	gmChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(gm.ID)), Name: "GM Char", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Create a post and have playerChar comment on it
+	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID: game.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Announcement.", Visibility: "game",
+	})
+	require.NoError(t, err)
+	_, err = messageService.CreateComment(context.Background(), core.CreateCommentRequest{
+		GameID: game.ID, ParentID: post.ID, AuthorID: int32(player.ID), CharacterID: playerChar.ID,
+		Content: "Character's comment.", Visibility: "game",
+	})
+	require.NoError(t, err)
+
+	t.Run("retrieves comments by character", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/characters/%d/comments", playerChar.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		items := response["messages"].([]interface{})
+		assert.Len(t, items, 1)
+	})
+
+	t.Run("returns empty list for character with no posts or comments", func(t *testing.T) {
+		otherChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID: game.ID, UserID: int32Ptr(int32(gm.ID)), Name: "Silent Char", CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/characters/%d/comments", otherChar.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		items := response["messages"].([]interface{})
+		assert.Len(t, items, 0)
 	})
 }

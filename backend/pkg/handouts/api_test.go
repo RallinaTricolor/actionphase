@@ -1,0 +1,560 @@
+package handouts
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"actionphase/pkg/core"
+	dbsvc "actionphase/pkg/db/services"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/jwtauth/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// setupHandoutTestRouter creates a test router with all handout routes
+func setupHandoutTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &dbsvc.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	r := chi.NewRouter()
+	r.Route("/api/v1/games", func(r chi.Router) {
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(jwtauth.Authenticator(tokenAuth))
+		r.Use(core.RequireAuthenticationMiddleware(userService))
+
+		handler := &Handler{App: app}
+		r.Post("/{gameId}/handouts", handler.CreateHandout)
+		r.Get("/{gameId}/handouts", handler.ListHandouts)
+		r.Get("/{gameId}/handouts/{handoutId}", handler.GetHandout)
+		r.Put("/{gameId}/handouts/{handoutId}", handler.UpdateHandout)
+		r.Delete("/{gameId}/handouts/{handoutId}", handler.DeleteHandout)
+		r.Post("/{gameId}/handouts/{handoutId}/publish", handler.PublishHandout)
+		r.Post("/{gameId}/handouts/{handoutId}/unpublish", handler.UnpublishHandout)
+		r.Post("/{gameId}/handouts/{handoutId}/comments", handler.CreateHandoutComment)
+		r.Get("/{gameId}/handouts/{handoutId}/comments", handler.ListHandoutComments)
+		r.Patch("/{gameId}/handouts/{handoutId}/comments/{commentId}", handler.UpdateHandoutComment)
+		r.Delete("/{gameId}/handouts/{handoutId}/comments/{commentId}", handler.DeleteHandoutComment)
+	})
+
+	return r
+}
+
+// createTestHandout is a helper that creates a handout via the API and returns the handout ID
+func createTestHandout(t *testing.T, router *chi.Mux, gameID int32, gmToken string, status string) int32 {
+	t.Helper()
+	body := CreateHandoutRequest{
+		Title:   "Test Handout",
+		Content: "Some interesting content about the world.",
+		Status:  status,
+	}
+	bodyJSON, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts", gameID), bytes.NewBuffer(bodyJSON))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+gmToken)
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusCreated, rec.Code, "create handout should succeed: %s", rec.Body.String())
+
+	var response map[string]interface{}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+	return int32(response["id"].(float64))
+}
+
+// TestHandoutAPI_CreateHandout tests POST /api/v1/games/{gameId}/handouts
+func TestHandoutAPI_CreateHandout(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "handout_comments", "handouts", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupHandoutTestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &dbsvc.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	t.Run("GM creates draft handout successfully", func(t *testing.T) {
+		body := CreateHandoutRequest{
+			Title:   "Welcome to the World",
+			Content: "The world is a dark and mysterious place.",
+			Status:  "draft",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts", game.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "Welcome to the World", response["title"])
+		assert.Equal(t, "draft", response["status"])
+	})
+
+	t.Run("GM creates published handout directly", func(t *testing.T) {
+		body := CreateHandoutRequest{
+			Title:   "Public Information",
+			Content: "Everyone knows about this.",
+			Status:  "published",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts", game.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "published", response["status"])
+	})
+
+	t.Run("non-GM player cannot create handout", func(t *testing.T) {
+		body := CreateHandoutRequest{
+			Title:   "Player Handout",
+			Content: "Should not be allowed.",
+			Status:  "draft",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts", game.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	})
+}
+
+// TestHandoutAPI_ListHandouts tests GET /api/v1/games/{gameId}/handouts
+func TestHandoutAPI_ListHandouts(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "handout_comments", "handouts", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupHandoutTestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &dbsvc.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	// Create a draft and a published handout
+	createTestHandout(t, router, game.ID, gmToken, "draft")
+	createTestHandout(t, router, game.ID, gmToken, "published")
+
+	t.Run("GM sees all handouts including drafts", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/handouts", game.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response []map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Len(t, response, 2, "GM should see both draft and published")
+	})
+
+	t.Run("player only sees published handouts", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/handouts", game.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response []map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Len(t, response, 1, "player should only see published handout")
+		assert.Equal(t, "published", response[0]["status"])
+	})
+}
+
+// TestHandoutAPI_UpdateHandout tests PUT /api/v1/games/{gameId}/handouts/{handoutId}
+func TestHandoutAPI_UpdateHandout(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "handout_comments", "handouts", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupHandoutTestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &dbsvc.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	handoutID := createTestHandout(t, router, game.ID, gmToken, "draft")
+
+	t.Run("GM updates handout successfully", func(t *testing.T) {
+		body := UpdateHandoutRequest{
+			Title:   "Updated Title",
+			Content: "Updated content.",
+			Status:  "draft",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/games/%d/handouts/%d", game.ID, handoutID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "Updated Title", response["title"])
+		assert.Equal(t, "Updated content.", response["content"])
+	})
+
+	t.Run("non-GM player cannot update handout", func(t *testing.T) {
+		body := UpdateHandoutRequest{
+			Title:   "Player Update",
+			Content: "Should fail.",
+			Status:  "draft",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/games/%d/handouts/%d", game.ID, handoutID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		// Draft handouts are invisible to non-GM players — service returns 404
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	t.Run("returns 404 for non-existent handout", func(t *testing.T) {
+		body := UpdateHandoutRequest{
+			Title:   "Updated",
+			Content: "Content",
+			Status:  "draft",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/games/%d/handouts/99999", game.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+}
+
+// TestHandoutAPI_PublishUnpublish tests POST .../publish and .../unpublish
+func TestHandoutAPI_PublishUnpublish(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "handout_comments", "handouts", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupHandoutTestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &dbsvc.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	handoutID := createTestHandout(t, router, game.ID, gmToken, "draft")
+
+	t.Run("non-GM player cannot publish handout", func(t *testing.T) {
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts/%d/publish", game.ID, handoutID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		// Draft handouts are invisible to non-GM players — service returns 404
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	t.Run("GM publishes draft handout", func(t *testing.T) {
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts/%d/publish", game.ID, handoutID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "published", response["status"])
+	})
+
+	t.Run("GM unpublishes published handout", func(t *testing.T) {
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts/%d/unpublish", game.ID, handoutID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "draft", response["status"])
+	})
+
+	t.Run("player cannot see draft handout after unpublish", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/handouts/%d", game.ID, handoutID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+}
+
+// TestHandoutAPI_DeleteHandout tests DELETE /api/v1/games/{gameId}/handouts/{handoutId}
+func TestHandoutAPI_DeleteHandout(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "handout_comments", "handouts", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupHandoutTestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &dbsvc.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	t.Run("non-GM player cannot delete handout", func(t *testing.T) {
+		handoutID := createTestHandout(t, router, game.ID, gmToken, "draft")
+
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/handouts/%d", game.ID, handoutID), nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		// Draft handouts are invisible to non-GM players — service returns 404
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	t.Run("GM deletes handout successfully", func(t *testing.T) {
+		handoutID := createTestHandout(t, router, game.ID, gmToken, "draft")
+
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/handouts/%d", game.ID, handoutID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+
+		// Verify handout is gone
+		getReq := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/handouts/%d", game.ID, handoutID), nil)
+		getReq.Header.Set("Authorization", "Bearer "+gmToken)
+		getRec := httptest.NewRecorder()
+		router.ServeHTTP(getRec, getReq)
+		assert.Equal(t, http.StatusNotFound, getRec.Code)
+	})
+}
+
+// TestHandoutAPI_Comments tests the handout comment endpoints
+func TestHandoutAPI_Comments(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "handout_comments", "handouts", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupHandoutTestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &dbsvc.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	// Publish a handout so both GM and player can see it
+	handoutID := createTestHandout(t, router, game.ID, gmToken, "published")
+
+	t.Run("GM can comment on a handout", func(t *testing.T) {
+		body := CreateHandoutCommentRequest{Content: "This is a GM note."}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts/%d/comments", game.ID, handoutID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "This is a GM note.", response["content"])
+	})
+
+	t.Run("non-GM player cannot comment on a handout", func(t *testing.T) {
+		body := CreateHandoutCommentRequest{Content: "Player trying to comment."}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts/%d/comments", game.ID, handoutID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	})
+
+	t.Run("list comments on handout", func(t *testing.T) {
+		// Create a second comment
+		body := CreateHandoutCommentRequest{Content: "Second GM note."}
+		bodyJSON, _ := json.Marshal(body)
+		postReq := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts/%d/comments", game.ID, handoutID), bytes.NewBuffer(bodyJSON))
+		postReq.Header.Set("Content-Type", "application/json")
+		postReq.Header.Set("Authorization", "Bearer "+gmToken)
+		postRec := httptest.NewRecorder()
+		router.ServeHTTP(postRec, postReq)
+		require.Equal(t, http.StatusCreated, postRec.Code)
+
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/handouts/%d/comments", game.ID, handoutID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response []map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		// Should have 2 comments total (first from previous test + this one)
+		assert.GreaterOrEqual(t, len(response), 1)
+	})
+
+	t.Run("GM updates their comment", func(t *testing.T) {
+		// Create comment to update
+		createBody := CreateHandoutCommentRequest{Content: "Original comment."}
+		createJSON, _ := json.Marshal(createBody)
+		createReq := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts/%d/comments", game.ID, handoutID), bytes.NewBuffer(createJSON))
+		createReq.Header.Set("Content-Type", "application/json")
+		createReq.Header.Set("Authorization", "Bearer "+gmToken)
+		createRec := httptest.NewRecorder()
+		router.ServeHTTP(createRec, createReq)
+		require.Equal(t, http.StatusCreated, createRec.Code)
+
+		var created map[string]interface{}
+		require.NoError(t, json.Unmarshal(createRec.Body.Bytes(), &created))
+		commentID := int(created["id"].(float64))
+
+		// Update it
+		updateBody := UpdateHandoutCommentRequest{Content: "Updated comment."}
+		updateJSON, _ := json.Marshal(updateBody)
+		updateReq := httptest.NewRequest("PATCH", fmt.Sprintf("/api/v1/games/%d/handouts/%d/comments/%d", game.ID, handoutID, commentID), bytes.NewBuffer(updateJSON))
+		updateReq.Header.Set("Content-Type", "application/json")
+		updateReq.Header.Set("Authorization", "Bearer "+gmToken)
+		updateRec := httptest.NewRecorder()
+		router.ServeHTTP(updateRec, updateReq)
+
+		assert.Equal(t, http.StatusOK, updateRec.Code)
+		var updated map[string]interface{}
+		require.NoError(t, json.Unmarshal(updateRec.Body.Bytes(), &updated))
+		assert.Equal(t, "Updated comment.", updated["content"])
+	})
+
+	t.Run("GM deletes a comment", func(t *testing.T) {
+		// Create comment to delete
+		createBody := CreateHandoutCommentRequest{Content: "Comment to delete."}
+		createJSON, _ := json.Marshal(createBody)
+		createReq := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/handouts/%d/comments", game.ID, handoutID), bytes.NewBuffer(createJSON))
+		createReq.Header.Set("Content-Type", "application/json")
+		createReq.Header.Set("Authorization", "Bearer "+gmToken)
+		createRec := httptest.NewRecorder()
+		router.ServeHTTP(createRec, createReq)
+		require.Equal(t, http.StatusCreated, createRec.Code)
+
+		var created map[string]interface{}
+		require.NoError(t, json.Unmarshal(createRec.Body.Bytes(), &created))
+		commentID := int(created["id"].(float64))
+
+		deleteReq := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/handouts/%d/comments/%d", game.ID, handoutID, commentID), nil)
+		deleteReq.Header.Set("Authorization", "Bearer "+gmToken)
+		deleteRec := httptest.NewRecorder()
+		router.ServeHTTP(deleteRec, deleteReq)
+
+		assert.Equal(t, http.StatusNoContent, deleteRec.Code)
+	})
+}

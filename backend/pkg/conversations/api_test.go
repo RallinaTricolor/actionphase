@@ -635,3 +635,441 @@ func TestConversationAPI_DeleteMessage(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
 }
+
+// TestConversationAPI_GetUserConversations tests GET /games/{gameId}/conversations
+func TestConversationAPI_GetUserConversations(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "conversations", "characters", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupConversationAPITestRouter(app, testDB)
+
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+	player3 := testDB.CreateTestUser(t, "player3", "player3@example.com")
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+
+	player1Token, err := core.CreateTestJWTTokenForUser(app, player1)
+	core.AssertNoError(t, err, "Should create player1 token")
+	player3Token, err := core.CreateTestJWTTokenForUser(app, player3)
+	core.AssertNoError(t, err, "Should create player3 token")
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	core.AssertNoError(t, err, "Should add player1")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
+	core.AssertNoError(t, err, "Should add player2")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player3.ID), "player")
+	core.AssertNoError(t, err, "Should add player3")
+
+	playerChar1, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player1.ID)),
+		Name:          "Player 1 Character",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Should create player1 character")
+
+	playerChar2, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player2.ID)),
+		Name:          "Player 2 Character",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Should create player2 character")
+
+	conversationService := db.NewConversationService(testDB.Pool)
+	_, err = conversationService.CreateConversation(context.Background(), db.CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Conversation Between P1 and P2",
+		CreatedByUserID: int32(player1.ID),
+		ParticipantIDs:  []int32{playerChar1.ID, playerChar2.ID},
+	})
+	core.AssertNoError(t, err, "Should create conversation")
+
+	t.Run("player sees their own conversations", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/conversations/", game.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+player1Token)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		convs := response["conversations"].([]interface{})
+		assert.Len(t, convs, 1)
+	})
+
+	t.Run("player without conversations sees empty list", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/conversations/", game.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+player3Token)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		convs := response["conversations"].([]interface{})
+		assert.Len(t, convs, 0)
+	})
+}
+
+// TestConversationAPI_GetConversation tests GET /games/{gameId}/conversations/{conversationId}
+func TestConversationAPI_GetConversation(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "conversations", "characters", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupConversationAPITestRouter(app, testDB)
+
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+	player3 := testDB.CreateTestUser(t, "player3", "player3@example.com")
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+
+	player1Token, err := core.CreateTestJWTTokenForUser(app, player1)
+	core.AssertNoError(t, err, "Should create player1 token")
+	player3Token, err := core.CreateTestJWTTokenForUser(app, player3)
+	core.AssertNoError(t, err, "Should create player3 token")
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	core.AssertNoError(t, err, "Should add player1")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
+	core.AssertNoError(t, err, "Should add player2")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player3.ID), "player")
+	core.AssertNoError(t, err, "Should add player3")
+
+	playerChar1, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player1.ID)),
+		Name:          "Player 1 Character",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Should create player1 character")
+
+	playerChar2, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player2.ID)),
+		Name:          "Player 2 Character",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Should create player2 character")
+
+	conversationService := db.NewConversationService(testDB.Pool)
+	conversation, err := conversationService.CreateConversation(context.Background(), db.CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Secret Conversation",
+		CreatedByUserID: int32(player1.ID),
+		ParticipantIDs:  []int32{playerChar1.ID, playerChar2.ID},
+	})
+	core.AssertNoError(t, err, "Should create conversation")
+
+	t.Run("participant can get conversation details", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/conversations/%d", game.ID, conversation.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+player1Token)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		conv := response["conversation"].(map[string]interface{})
+		assert.Equal(t, "Secret Conversation", conv["title"])
+		assert.NotNil(t, response["participants"])
+	})
+
+	t.Run("non-participant cannot get conversation details", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/conversations/%d", game.ID, conversation.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+player3Token)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+}
+
+// TestConversationAPI_MarkAsRead tests POST /games/{gameId}/conversations/{conversationId}/read
+func TestConversationAPI_MarkAsRead(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "conversations", "characters", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupConversationAPITestRouter(app, testDB)
+
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+
+	player1Token, err := core.CreateTestJWTTokenForUser(app, player1)
+	core.AssertNoError(t, err, "Should create player1 token")
+	player2Token, err := core.CreateTestJWTTokenForUser(app, player2)
+	core.AssertNoError(t, err, "Should create player2 token")
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	core.AssertNoError(t, err, "Should add player1")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
+	core.AssertNoError(t, err, "Should add player2")
+
+	playerChar1, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player1.ID)),
+		Name:          "Player 1 Character",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Should create player1 character")
+
+	playerChar2, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        int32Ptr(int32(player2.ID)),
+		Name:          "Player 2 Character",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Should create player2 character")
+
+	conversationService := db.NewConversationService(testDB.Pool)
+	conversation, err := conversationService.CreateConversation(context.Background(), db.CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Conversation",
+		CreatedByUserID: int32(player1.ID),
+		ParticipantIDs:  []int32{playerChar1.ID, playerChar2.ID},
+	})
+	core.AssertNoError(t, err, "Should create conversation")
+
+	// Player2 sends a message that player1 hasn't read
+	_, err = conversationService.SendMessage(context.Background(), db.SendMessageRequest{
+		ConversationID:    conversation.ID,
+		SenderUserID:      int32(player2.ID),
+		SenderCharacterID: playerChar2.ID,
+		Content:           "Unread message",
+	})
+	core.AssertNoError(t, err, "Should send message")
+
+	t.Run("participant marks conversation as read", func(t *testing.T) {
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations/%d/read", game.ID, conversation.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+player1Token)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, true, response["success"])
+	})
+
+	t.Run("mark as read is idempotent", func(t *testing.T) {
+		// Marking already-read conversation as read should also succeed
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations/%d/read", game.ID, conversation.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+player2Token)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+}
+
+// TestConversationAPI_AddParticipant tests POST /api/v1/games/{gameId}/conversations/{conversationId}/participants
+func TestConversationAPI_AddParticipant(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "conversations", "characters", "game_participants", "phases", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupConversationAPITestRouter(app, testDB)
+
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+	player3 := testDB.CreateTestUser(t, "player3", "player3@example.com")
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+
+	player1Token, err := core.CreateTestJWTTokenForUser(app, player1)
+	require.NoError(t, err)
+	player3Token, err := core.CreateTestJWTTokenForUser(app, player3)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player3.ID), "player")
+	require.NoError(t, err)
+
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	char1, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player1.ID)), Name: "Char1", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	char2, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player2.ID)), Name: "Char2", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	char3, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player3.ID)), Name: "Char3", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Activate a common room phase (required for messaging and participant operations)
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phase, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+		GameID:    game.ID,
+		PhaseType: "common_room",
+	})
+	require.NoError(t, err)
+	err = phaseService.ActivatePhase(context.Background(), phase.ID, int32(gm.ID))
+	require.NoError(t, err)
+
+	// Create a conversation between player1 and player2
+	conversationService := db.NewConversationService(testDB.Pool)
+	conversation, err := conversationService.CreateConversation(context.Background(), db.CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Private Chat",
+		CreatedByUserID: int32(player1.ID),
+		ParticipantIDs:  []int32{char1.ID, char2.ID},
+	})
+	require.NoError(t, err)
+
+	t.Run("participant can add a new character to conversation", func(t *testing.T) {
+		body := map[string]int32{"character_id": char3.ID}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations/%d/participants", game.ID, conversation.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+player1Token)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, true, response["success"])
+	})
+
+	t.Run("non-participant cannot add to conversation", func(t *testing.T) {
+		// player3 is now a participant (added above), use a fresh conversation
+		otherConv, err := conversationService.CreateConversation(context.Background(), db.CreateConversationRequest{
+			GameID:          game.ID,
+			Title:           "Other Chat",
+			CreatedByUserID: int32(player1.ID),
+			ParticipantIDs:  []int32{char1.ID, char2.ID},
+		})
+		require.NoError(t, err)
+
+		body := map[string]int32{"character_id": char3.ID}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations/%d/participants", game.ID, otherConv.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+player3Token)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+}
+
+// TestConversationAPI_UpdateMessage tests PATCH /api/v1/games/{gameId}/conversations/{conversationId}/messages/{messageId}
+func TestConversationAPI_UpdateMessage(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "conversations", "characters", "game_participants", "phases", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupConversationAPITestRouter(app, testDB)
+
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+
+	player1Token, err := core.CreateTestJWTTokenForUser(app, player1)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
+	require.NoError(t, err)
+
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	char1, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player1.ID)), Name: "Char1", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	char2, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player2.ID)), Name: "Char2", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Activate a common room phase
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phase, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+		GameID:    game.ID,
+		PhaseType: "common_room",
+	})
+	require.NoError(t, err)
+	err = phaseService.ActivatePhase(context.Background(), phase.ID, int32(gm.ID))
+	require.NoError(t, err)
+
+	conversationService := db.NewConversationService(testDB.Pool)
+	conversation, err := conversationService.CreateConversation(context.Background(), db.CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Chat",
+		CreatedByUserID: int32(player1.ID),
+		ParticipantIDs:  []int32{char1.ID, char2.ID},
+	})
+	require.NoError(t, err)
+
+	// Player1 sends a message
+	msg, err := conversationService.SendMessage(context.Background(), db.SendMessageRequest{
+		ConversationID:    conversation.ID,
+		SenderUserID:      int32(player1.ID),
+		SenderCharacterID: char1.ID,
+		Content:           "Original content",
+	})
+	require.NoError(t, err)
+
+	t.Run("sender can edit their message", func(t *testing.T) {
+		body := map[string]string{"content": "Edited content"}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("PATCH", fmt.Sprintf("/api/v1/games/%d/conversations/%d/messages/%d", game.ID, conversation.ID, msg.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+player1Token)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "Edited content", response["content"])
+	})
+}

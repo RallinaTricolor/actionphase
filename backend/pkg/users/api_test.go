@@ -33,6 +33,7 @@ func setupUserAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 				r.Use(core.RequireAuthenticationMiddleware(userService))
 
 				r.Get("/{id}/profile", userHandler.GetUserProfile)
+				r.Get("/username/{username}/profile", userHandler.GetUserProfileByUsername)
 				r.Patch("/me/profile", userHandler.UpdateUserProfile)
 				r.Post("/me/avatar", userHandler.UploadUserAvatar)
 				r.Delete("/me/avatar", userHandler.DeleteUserAvatar)
@@ -402,4 +403,46 @@ func TestUserAPI_Unauthenticated(t *testing.T) {
 			core.AssertEqual(t, 401, w.Code, "Unauthenticated request should return 401")
 		})
 	}
+}
+
+// TestUserAPI_GetUserProfileByUsername tests GET /api/v1/users/username/{username}/profile
+func TestUserAPI_GetUserProfileByUsername(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupUserAPITestRouter(app, testDB)
+
+	viewer := testDB.CreateTestUser(t, "viewer", "viewer@example.com")
+	target := testDB.CreateTestUser(t, "targetuser", "target@example.com")
+
+	viewerToken, err := core.CreateTestJWTTokenForUser(app, viewer)
+	core.AssertNoError(t, err, "Should create viewer token")
+
+	t.Run("authenticated user retrieves profile by username", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/users/username/"+target.Username+"/profile", nil)
+		req.Header.Set("Authorization", "Bearer "+viewerToken)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 200, w.Code, "Should return 200 OK")
+		var response map[string]interface{}
+		if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+		userObj := response["user"].(map[string]interface{})
+		core.AssertEqual(t, target.Username, userObj["username"].(string), "Should return target user")
+	})
+
+	t.Run("returns 404 for non-existent username", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/users/username/nobody_at_all_xyz/profile", nil)
+		req.Header.Set("Authorization", "Bearer "+viewerToken)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, 404, w.Code, "Should return 404 for unknown username")
+	})
 }
