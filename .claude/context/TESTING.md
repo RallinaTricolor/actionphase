@@ -1,143 +1,125 @@
-# Testing Context - Read Before Writing Tests
+# Testing Context — Read Before Writing Tests
 
-**IMPORTANT: Always read this file before writing or modifying tests.**
+## The Core Principle: Verification & Validation
 
-## Testing Philosophy
+Every test must serve one or both of these purposes:
 
-**Tests are MANDATORY for all new features and bug fixes.**
+**Verification** — "Did we build it correctly?" Guards against regressions when code changes. A future refactor, a renamed struct field, a removed middleware — these break things silently. Tests catch them.
 
-ActionPhase follows Test-Driven Development (TDD) where practical:
-1. Write failing tests first (when possible)
-2. Implement the feature
-3. Verify tests pass
-4. Refactor with confidence
+**Validation** — "Did we build the right thing?" Confirms the feature does what users actually need. A handler that returns 200 with the wrong data, an authorization check that passes when it shouldn't, a state mutation that succeeds but leaves the DB wrong — these only surface in production without validation tests.
 
-**For bug fixes: ALWAYS add a regression test that reproduces the bug before fixing it.**
+**A test earns its place if a future developer can look at the failure and understand *what behavior broke*, not just that *something changed*.**
 
-## Current Test Coverage Status
+If a test only asserts "returns 200 and some JSON" on a simple read endpoint with no auth logic or conditional behavior, it adds noise without guarding anything real. Don't write it.
 
-**Last updated: October 27, 2025**
-**Last verified: October 27, 2025**
+---
 
-📊 **For current test metrics, see: [Test Coverage Reference](/docs/testing/TEST_COVERAGE_REFERENCE.md)**
+## What Deserves Tests (Decision Criteria)
 
-### Quick Summary
-- **Total Tests**: 1,489 passing (Backend: 467, Frontend: 1,022)
-- **Backend Coverage**: 75.0% line coverage
-- **Frontend Coverage**: ~60% estimated coverage
-- **Status**: Production-ready with mature testing patterns
+Ask these questions, roughly in order:
 
-### Detailed Reports
-- **Comprehensive breakdown**: [COVERAGE_STATUS.md](/docs/testing/COVERAGE_STATUS.md)
-- **Testing strategy**: [ADR-007](/docs/adrs/007-testing-strategy.md)
+1. **If this were silently wrong, would users be harmed or deceived?**
+   - Authorization returning the wrong result → security issue. Always test.
+   - State transition producing wrong DB state → data corruption. Always test.
 
-## Testing Strategy by Layer
+2. **If someone refactors this, what fails silently?**
+   - Response field names/types the frontend depends on → test the shape.
+   - Business rules embedded in a handler (not just in a service) → test the handler.
+   - Middleware applied in the wrong order → test the auth boundary explicitly.
 
-### Backend Testing
+3. **Is the behavior non-obvious from reading the code?**
+   - "Only the author can edit, but the GM can also delete" → test both paths.
+   - "Outsiders get 403, banned users get 401" → test the distinction.
 
-#### 1. Unit Tests (Fast, No Database)
-**Use mocks for external dependencies**
+4. **Would this path be caught immediately by manual testing if broken?**
+   - A 500 on game creation → obvious. Low priority.
+   - A published result being readable by a player who shouldn't see it → subtle. High priority.
 
-```go
-func TestServiceMethod(t *testing.T) {
-    tests := []struct {
-        name    string
-        input   interface{}
-        want    interface{}
-        wantErr bool
-    }{
-        {"success case", validInput, expectedOutput, false},
-        {"error case", invalidInput, nil, true},
-    }
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            // Test implementation with mocks
-        })
-    }
-}
-```
+**Categories that reliably clear the bar:**
+- Access control (who can/can't — assert the 403, not just the 200)
+- State mutations verified against DB (re-query after the HTTP call)
+- Response shape for fields the frontend uses (specific field names, not just status codes)
+- Behavioral distinctions (draft vs published, active vs inactive, GM vs player)
+- Error paths with business meaning (not-found, forbidden, invalid state transition)
 
-**Run**: `just test-mocks` or `SKIP_DB_TESTS=true just test`
+**Categories that rarely clear the bar:**
+- Simple read endpoints: parse ID → call service → return JSON (no auth, no conditional logic)
+- Infrastructure code: config loading, logger setup, CORS middleware
+- External service wrappers: email sending, S3 uploads (test the integration, not the wrapper)
+- Mock implementations and test helpers (these show up in coverage but are not production code)
 
-#### 2. Integration Tests (With Database)
-**Use test database with transaction rollback**
+---
 
-```go
-func TestServiceWithDB(t *testing.T) {
-    // Setup test database
-    db := setupTestDB(t)
-    defer db.Close()
+## Previous Mistake to Avoid
 
-    tx, _ := db.Begin(context.Background())
-    defer tx.Rollback(context.Background())
+An earlier version of this document listed `pkg/conversations`, `pkg/handouts`, `pkg/notifications`, and `pkg/phases` as packages where HTTP handler tests should be **skipped**, on the grounds that "business logic lives in the service layer." This was wrong. Those packages contain:
 
-    // Run test within transaction
-    service := NewService(tx)
-    result, err := service.Method(ctx, input)
+- Authorization checks that gate user access
+- Response shapes the frontend depends on
+- State transitions with DB consequences
 
-    // Assertions
-    assert.NoError(t, err)
-    assert.Equal(t, expected, result)
-}
-```
+We now have tests for all of them. The lesson: **the right question is never "is this a thin handler?" but "does this handler make decisions whose failure would be silent or harmful?"**
 
-**Run**: `SKIP_DB_TESTS=false just test-integration`
+---
 
-#### 3. API Endpoint Tests (HTTP Integration Tests)
-**Test complete HTTP request/response cycle**
+## HTTP Handler Test Pattern
 
-**When to Write HTTP Handler Tests:**
-
-HTTP handler tests verify the HTTP layer independently of the service layer. Write these tests for:
-- ✅ Complex authorization flows (GM-only operations, character ownership checks)
-- ✅ Request validation and error response formats
-- ✅ HTTP status codes and headers
-- ✅ Multi-step authorization (e.g., user → character → conversation access)
-
-**When NOT to Write HTTP Handler Tests:**
-
-❌ **Handler-only packages** (thin wrappers around services) - Examples:
-  - `pkg/conversations` - Only HTTP handlers, business logic in `pkg/db/services/conversations`
-  - `pkg/handouts` - Only HTTP handlers
-  - `pkg/notifications` - Only HTTP handlers
-  - `pkg/phases` - Only HTTP handlers
-
-**Why this is acceptable:**
-- Business logic is tested in the service layer
-- HTTP integration/E2E tests cover the complete flow
-- Handler code primarily: parses HTTP, validates requests, calls services, formats responses
-
-**Test Pattern (see `pkg/messages/api_test.go` for reference):**
+This is the standard pattern. Every integration test follows it.
 
 ```go
 func TestHandler_Endpoint(t *testing.T) {
     testDB := core.NewTestDatabase(t)
     defer testDB.Close()
-    defer testDB.CleanupTables(t, "table1", "table2", "users")
+    defer testDB.CleanupTables(t, "affected_table", "users")
 
     app := core.NewTestApp(testDB.Pool)
     router := setupTestRouter(app, testDB)
 
-    // Create test data (users, games, etc.)
     gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
     player := testDB.CreateTestUser(t, "player", "player@example.com")
+    outsider := testDB.CreateTestUser(t, "outsider", "outsider@example.com")
 
-    t.Run("authorized request succeeds", func(t *testing.T) {
-        req := httptest.NewRequest("POST", "/api/v1/endpoint", body)
-        req.Header.Set("Content-Type", "application/json")
-        // Set authenticated user in context
-        req = setAuthContext(req, gm)
+    game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+    // ... set up additional state
 
+    gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+    require.NoError(t, err)
+    playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+    require.NoError(t, err)
+
+    t.Run("GM succeeds and DB state is correct", func(t *testing.T) {
+        req := httptest.NewRequest("POST", "/api/v1/...", body)
+        req.Header.Set("Authorization", "Bearer "+gmToken)
         rec := httptest.NewRecorder()
         router.ServeHTTP(rec, req)
 
         assert.Equal(t, http.StatusOK, rec.Code)
+
+        // Validate response shape — specific fields, not just status
+        var response map[string]interface{}
+        require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+        assert.Equal(t, expectedValue, response["field_name"])
+
+        // Validate DB state actually changed (for mutations)
+        var dbValue string
+        err := testDB.Pool.QueryRow(ctx, "SELECT col FROM table WHERE id = $1", id).Scan(&dbValue)
+        require.NoError(t, err)
+        assert.Equal(t, expectedValue, dbValue)
     })
 
-    t.Run("unauthorized request fails", func(t *testing.T) {
-        req := httptest.NewRequest("POST", "/api/v1/endpoint", body)
-        req = setAuthContext(req, player) // Wrong user
+    t.Run("non-GM gets 403", func(t *testing.T) {
+        req := httptest.NewRequest("POST", "/api/v1/...", body)
+        req.Header.Set("Authorization", "Bearer "+playerToken)
+        rec := httptest.NewRecorder()
+        router.ServeHTTP(rec, req)
 
+        assert.Equal(t, http.StatusForbidden, rec.Code)
+    })
+
+    t.Run("outsider gets 403", func(t *testing.T) {
+        // Separate from player test — outsider is not a game participant at all
+        req := httptest.NewRequest("POST", "/api/v1/...", body)
+        req.Header.Set("Authorization", "Bearer "+outsiderToken)
         rec := httptest.NewRecorder()
         router.ServeHTTP(rec, req)
 
@@ -146,377 +128,146 @@ func TestHandler_Endpoint(t *testing.T) {
 }
 ```
 
-**Test HTTP Layer Concerns:**
-- Authentication and authorization
-- Input validation and error responses
-- HTTP status codes
-- Request/response formats
-- Edge cases (empty body, malformed JSON, missing headers)
+Key things every handler test should include:
+- At least one assertion on response body content (not just status code)
+- For mutations: a re-query of the DB to verify state changed
+- Distinct test cases for different roles (GM, player, outsider) where the handler behaves differently
+- The unauthenticated case (no token → 401) for any authenticated endpoint
 
-#### 3. E2E Tests (Playwright)
-**⚠️ CRITICAL: READ BEFORE WRITING E2E TESTS**
+---
 
-**E2E Test Isolation - One Fixture Per Test File**
+## Service Layer Test Pattern
 
-E2E fixtures support parallel execution - each test file has a dedicated game fixture.
+For business logic in `pkg/db/services/`:
 
-**Before reusing a fixture, ask:**
-1. Was this fixture created for a specific test file?
-2. Do the participants/characters match my test's needs?
-3. Will my test modify state that could break other tests?
-
-**✅ When in doubt, CREATE a new dedicated fixture** (see `.claude/context/TEST_DATA.md` for step-by-step guide)
-
-**Example**: `character-avatar.spec.ts` initially used `COMMON_ROOM_MISC` (wrong - only has Player 5). Created dedicated `CHARACTER_AVATARS` fixture (Game #168) with Players 1-4 instead.
-
-**THE GOLDEN RULE: E2E tests are the LAST step, not the first.**
-
-E2E tests have long feedback loops (~20-30 seconds) and limited debugging visibility. They are expensive to run and debug. **NEVER write E2E tests until lower-level tests pass.**
-
-**MANDATORY Pre-E2E Test Checklist:**
-```bash
-# 1. Backend unit test MUST pass
-SKIP_DB_TESTS=true go test ./pkg/db/services -run TestFeature -v
-
-# 2. API endpoint MUST return correct data
-curl -X POST http://localhost:3000/api/v1/endpoint -d '...' | jq '.field'
-
-# 3. Frontend component MUST render correctly
-npm test -- ComponentName.test.tsx
-
-# 4. System verification MUST pass
-curl -sf http://localhost:3000/health  # Backend
-curl -sf http://localhost:5173         # Frontend
-```
-
-**Only after ALL four pass, write E2E test.**
-
-**E2E Test Structure Rules:**
-
-1. **One Concern Per Test**
-   ```typescript
-   // ❌ BAD: Multiple concerns
-   test('feature works', async () => {
-     // autocomplete + submission + rendering + validation
-   });
-
-   // ✅ GOOD: Single concern
-   test('autocomplete appears when typing trigger character', async () => {
-     await input.pressSequentially('@');
-     await expect(dropdown).toBeVisible();
-   });
-   ```
-
-2. **Synchronous Execution (No Background &)**
-   ```bash
-   # ❌ BAD: Background execution - cannot see output
-   npx playwright test feature.spec.ts &
-
-   # ✅ GOOD: Foreground with output capture
-   npx playwright test feature.spec.ts --reporter=list 2>&1 | tee /tmp/e2e.log
-   ```
-
-3. **Explicit Waits (Not Arbitrary Timeouts)**
-   ```typescript
-   // ❌ BAD: Arbitrary timeout
-   await page.waitForTimeout(3000);
-
-   // ✅ GOOD: Wait for specific condition
-   await page.waitForSelector('[data-testid="element"]', { state: 'visible' });
-   await page.waitForResponse(resp => resp.url().includes('/api/'));
-   ```
-
-4. **Semantic Selectors with data-testid**
-   ```typescript
-   // ❌ BAD: Generic/fragile selectors
-   const button = page.locator('button').first();
-   const element = page.locator('.class-name');
-
-   // ✅ GOOD: Explicit test IDs
-   const submitBtn = page.locator('[data-testid="submit-button"]');
-   const mention = page.locator('[data-mention-id="123"]');
-   ```
-
-5. **Debugging Visibility**
-   ```typescript
-   // Add to test setup
-   page.on('console', msg => console.log(`BROWSER: ${msg.text()}`));
-   page.on('pageerror', err => console.log(`ERROR: ${err.message}`));
-   page.on('response', resp => {
-     if (resp.url().includes('/api/')) {
-       console.log(`API: ${resp.status()} ${resp.url()}`);
-     }
-   });
-   ```
-
-**E2E Development Workflow:**
-```typescript
-// Step 1: Just navigation (verify routing works)
-test('can navigate to page', async ({ page }) => {
-  await page.goto('http://localhost:5173/path');
-  await expect(page.locator('h1')).toContainText('Expected Title');
-});
-
-// Step 2: Add interaction (once Step 1 passes)
-test('can type in input', async ({ page }) => {
-  await page.goto('http://localhost:5173/path');
-  await page.fill('[data-testid="input"]', 'test');
-  await expect(page.locator('[data-testid="input"]')).toHaveValue('test');
-});
-
-// Step 3: Add behavior (once Step 2 passes)
-test('shows result when submitting', async ({ page }) => {
-  // ... build on previous steps
-});
-```
-
-**Common E2E Failures & Solutions:**
-
-| Failure | Likely Cause | Fix |
-|---------|-------------|-----|
-| Element not found | Generic selector, element not rendered | Use data-testid, verify component test passes |
-| Timeout waiting | API slow, data not loaded | Wait for API response, check network logs |
-| Flaky test | Race condition, async state | Use explicit waits, verify event handlers |
-| Element not visible | Wrong selector, CSS hiding element | Inspect screenshot, verify element exists in DOM |
-
-**See**: `.claude/planning/AI_E2E_TESTING_STRATEGY.md` for comprehensive guide
-
-**Run**: `npx playwright test --reporter=list`
-
-### Frontend Testing
-
-#### 1. Component Tests (React Testing Library)
-**Test user interactions, not implementation details**
-
-```typescript
-describe('ComponentName', () => {
-  it('renders with initial state', () => {
-    render(<ComponentName />);
-    expect(screen.getByText('Expected Text')).toBeInTheDocument();
-  });
-
-  it('handles user interaction', async () => {
-    render(<ComponentName />);
-    await userEvent.click(screen.getByRole('button'));
-    expect(screen.getByText('Updated Text')).toBeInTheDocument();
-  });
-
-  it('handles error state', () => {
-    render(<ComponentName error={mockError} />);
-    expect(screen.getByText(/error/i)).toBeInTheDocument();
-  });
-});
-```
-
-**Run**: `just test-frontend`
-
-#### 2. Custom Hook Tests
-**Use @testing-library/react-hooks**
-
-```typescript
-import { renderHook, act } from '@testing-library/react-hooks';
-
-describe('useCustomHook', () => {
-  it('returns initial state', () => {
-    const { result } = renderHook(() => useCustomHook());
-    expect(result.current.value).toBe(initialValue);
-  });
-
-  it('updates state on action', () => {
-    const { result } = renderHook(() => useCustomHook());
-    act(() => {
-      result.current.action();
-    });
-    expect(result.current.value).toBe(updatedValue);
-  });
-});
-```
-
-## Test Requirements by Task Type
-
-### New Features
-1. **Write tests FIRST** (TDD approach)
-2. Unit tests for business logic
-3. Integration tests for database operations
-4. Component tests for UI elements
-5. Coverage goal: 80%+ for critical paths
-
-### Bug Fixes (MANDATORY Process)
-1. **Write failing test** that reproduces the bug
-2. Verify test fails
-3. Fix the bug
-4. Verify test now passes
-5. Commit test and fix together
-
-**Example**:
-```bash
-# 1. Write test that reproduces bug
-go test ./pkg/db/services -run TestBugFix -v  # Should FAIL
-
-# 2. Fix the bug in code
-
-# 3. Verify test passes
-go test ./pkg/db/services -run TestBugFix -v  # Should PASS
-```
-
-### Refactoring
-1. Ensure existing tests pass BEFORE refactoring
-2. Add new tests for uncovered edge cases
-3. Run full test suite after refactoring
-4. Tests should pass without modification
-
-## Test Data & Fixtures
-
-**Location**: `/backend/pkg/db/test_fixtures/`
-
-- `00_reset.sql` - Clean database state
-- `01_users.sql` - Test users
-- `02_games_recruiting.sql` - Games in recruitment
-- `03_games_running.sql` - Active games
-- `04_characters.sql` - Test characters
-- `05_actions.sql` - Test actions
-- `06_results.sql` - Test results
-
-**Read**: `.claude/context/TEST_DATA.md` for detailed fixture information
-
-## Common Testing Patterns
-
-### Backend: Table-Driven Tests
 ```go
-tests := []struct {
-    name    string
-    input   RequestType
-    want    ResponseType
-    wantErr bool
-}{
-    {
-        name: "valid input",
-        input: RequestType{Field: "value"},
-        want: ResponseType{Result: "expected"},
-        wantErr: false,
-    },
-    {
-        name: "invalid input",
-        input: RequestType{Field: ""},
-        want: ResponseType{},
-        wantErr: true,
-    },
+func TestService_Operation(t *testing.T) {
+    testDB := core.NewTestDatabase(t)
+    defer testDB.Close()
+
+    service := &SomeService{DB: testDB.Pool}
+
+    user := testDB.CreateTestUser(t, "user", "user@example.com")
+    game := testDB.CreateTestGame(t, int32(user.ID), "Game")
+
+    t.Run("succeeds with valid input", func(t *testing.T) {
+        result, err := service.Operation(context.Background(), ValidRequest{...})
+        require.NoError(t, err)
+        // Assert specific fields — not just "no error"
+        assert.Equal(t, expectedField, result.Field)
+    })
+
+    t.Run("returns error for invalid state", func(t *testing.T) {
+        _, err := service.Operation(context.Background(), InvalidRequest{...})
+        require.Error(t, err)
+        // Where meaningful, assert the error type or message
+        assert.Contains(t, err.Error(), "expected fragment")
+    })
 }
 ```
 
-### Backend: Mock Interfaces
-```go
-type MockService struct {
-    GetUserFunc func(ctx context.Context, id int) (*User, error)
-}
+---
 
-func (m *MockService) GetUser(ctx context.Context, id int) (*User, error) {
-    if m.GetUserFunc != nil {
-        return m.GetUserFunc(ctx, id)
-    }
-    return nil, errors.New("not implemented")
-}
-```
+## Bug Fix Process (Mandatory)
 
-### Frontend: MSW for API Mocking
-```typescript
-import { rest } from 'msw';
-import { setupServer } from 'msw/node';
+1. Write a test that reproduces the bug — it must **fail** before the fix
+2. Fix the bug
+3. Verify the test **passes** after the fix
+4. Commit test and fix together
 
-const server = setupServer(
-  rest.get('/api/v1/games', (req, res, ctx) => {
-    return res(ctx.json({ data: mockGames }));
-  })
-);
+The test should live at the layer where the bug lives:
+- Logic bug in a service → service test
+- Wrong HTTP status code or authorization → handler test
+- Wrong response shape or field → handler test with body assertion
+- Frontend state mutation → component test
 
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
-```
+Do not write a unit test for a bug that only manifests end-to-end. Write the test at the right level.
 
-### Frontend: Query Client Wrapper
-```typescript
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+---
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
-};
-```
+## Coverage as a Signal, Not a Target
 
-## Test Commands Reference
+Coverage numbers are useful for finding **where tests are absent**, not for measuring test quality. A package at 30% might have excellent tests for its 3 critical paths and no tests for 10 trivial ones. A package at 80% might have tests that assert nothing meaningful.
 
-### Backend
+When reviewing coverage output:
+- Zero-coverage functions are worth examining — ask "would this fail silently?"
+- Low-coverage functions with complex conditional logic are worth examining
+- Low-coverage functions that are simple pass-through wrappers can usually be left alone
+
+Run coverage to **find gaps to evaluate**, not to hit a number:
 ```bash
-# Fast unit tests (no database)
-just test-mocks
+TEST_DATABASE_URL="postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" \
+  SKIP_DB_TESTS=false go test -p=1 ./... -coverprofile=/tmp/coverage.out -covermode=atomic
+go tool cover -func=/tmp/coverage.out | grep "0.0%"
+```
 
-# Integration tests (requires database)
-SKIP_DB_TESTS=false just test-integration
+---
 
-# All tests
+## Test Commands
+
+```bash
+# Backend — all tests
 just test
 
-# With coverage
-just test-coverage
+# Backend — fast unit tests (no DB)
+just test-mocks
 
-# Race detection
-just test-race
+# Backend — integration tests only
+just test-integration
 
-# Specific package
-go test ./pkg/db/services -v
+# Backend — specific package
+TEST_DATABASE_URL="postgres://..." SKIP_DB_TESTS=false go test -p=1 ./pkg/games/... -v
 
-# Specific test
-go test ./pkg/db/services -run TestSpecificTest -v
-```
+# Backend — specific test
+TEST_DATABASE_URL="postgres://..." SKIP_DB_TESTS=false go test -p=1 ./pkg/games/... -run TestGameAPI_ListAll -v
 
-### Frontend
-```bash
-# All tests
+# Frontend — all
 just test-frontend
 
-# Watch mode
+# Frontend — watch mode
 just test-frontend-watch
 
-# With coverage
-just test-frontend-coverage
-
-# Specific test file
-npm test -- ComponentName.test.tsx
+# E2E — headless
+just e2e
 ```
 
-## Next Steps for Test Improvement
+---
 
-**See**: `/docs/TEST_COVERAGE_ANALYSIS.md` for comprehensive 8-week improvement plan
+## E2E Tests: Last, Not First
 
-**Immediate priorities**:
-1. Fix schema drift in test database
-2. Add regression tests for recent bug fixes
-3. Test critical services (messages, conversations, game_applications)
-4. Establish MSW setup for frontend
-5. Test critical user flows
+E2E tests (Playwright) are slow (~20-30s each), hard to debug, and provide poor failure messages. They are the **last layer**, written only after all lower-level tests pass.
 
-## References
+**Required before writing any E2E test:**
+1. Backend unit/integration test passes
+2. API endpoint verified working (curl)
+3. Frontend component test passes
+4. Both servers running
 
-- **Detailed Strategy**: `/docs/adrs/007-testing-strategy.md`
-- **Coverage Analysis**: `/docs/TEST_COVERAGE_ANALYSIS.md`
-- **Implementation Guide**: `.claude/reference/TESTING_GUIDE.md`
-- **Test Fixtures**: `.claude/context/TEST_DATA.md`
+**E2E tests are valuable for:**
+- Full user journeys that cross multiple layers (login → submit action → see result)
+- Flows where the integration between frontend state and backend API has caused bugs
+- Regression tests for bugs that were first caught manually in the UI
 
-## Quick Checklist Before Committing
+**E2E tests are not valuable for:**
+- Anything already covered by a component test
+- Simple API correctness (use curl or a handler test)
+- Authorization rules (handler tests are faster and more precise)
 
-- [ ] All new features have tests
-- [ ] Bug fixes include regression tests
-- [ ] All tests pass locally
-- [ ] Coverage maintained or improved
-- [ ] No commented-out test code
-- [ ] Test names clearly describe what they test
+See `.claude/planning/E2E_TESTING_PLAN.md` for the current E2E plan and fixture guide.
+
+---
+
+## Quick Reference: Test File Locations
+
+| What | Where |
+|------|-------|
+| HTTP handler tests | `pkg/<feature>/api_*_test.go` (same package) |
+| Service tests | `pkg/db/services/*_test.go` |
+| Middleware tests | `pkg/http/middleware/*_test.go` |
+| Frontend component tests | `frontend/src/components/**/*.test.tsx` |
+| E2E tests | `frontend/e2e/**/*.spec.ts` |
+
+Reference implementations (good tests to copy patterns from):
+- Handler tests: `pkg/admin/api_test.go`, `pkg/phases/api_lifecycle_test.go`
+- Service tests: `pkg/db/services/actions/submissions_test.go`
+- E2E: `frontend/e2e/` (any recent spec file)

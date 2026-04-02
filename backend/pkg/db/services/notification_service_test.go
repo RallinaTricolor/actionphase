@@ -371,3 +371,164 @@ func TestNotificationService_DeleteOldReadNotifications(t *testing.T) {
 	require.Len(t, notifications, 1)
 	assert.Equal(t, recentNotif.ID, notifications[0].ID, "Only the recent notification should remain")
 }
+
+// TestNotificationService_NotifyApplicationStatusChange validates that approved and rejected
+// applications produce distinct notification types and titles. A wrong branch means players
+// see the wrong status text and the wrong notification type is stored.
+func TestNotificationService_NotifyApplicationStatusChange(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	app := core.NewTestApp(testDB.Pool)
+	service := &NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	ctx := context.Background()
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	t.Run("approved application creates correct notification type and title", func(t *testing.T) {
+		err := service.NotifyApplicationStatusChange(ctx, int32(player.ID), game.ID, game.Title, true)
+		require.NoError(t, err)
+
+		notifs, err := service.GetUserNotifications(ctx, int32(player.ID), 10, 0)
+		require.NoError(t, err)
+		require.GreaterOrEqual(t, len(notifs), 1)
+
+		var found bool
+		for _, n := range notifs {
+			if n.Type == core.NotificationTypeApplicationApproved {
+				assert.Contains(t, n.Title, "approved")
+				assert.Contains(t, n.Title, game.Title)
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "approval notification should exist with correct type")
+	})
+
+	t.Run("rejected application creates correct notification type and title", func(t *testing.T) {
+		err := service.NotifyApplicationStatusChange(ctx, int32(player.ID), game.ID, game.Title, false)
+		require.NoError(t, err)
+
+		notifs, err := service.GetUserNotifications(ctx, int32(player.ID), 10, 0)
+		require.NoError(t, err)
+		require.GreaterOrEqual(t, len(notifs), 1)
+
+		var found bool
+		for _, n := range notifs {
+			if n.Type == core.NotificationTypeApplicationRejected {
+				assert.Contains(t, n.Title, "rejected")
+				assert.Contains(t, n.Title, game.Title)
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "rejection notification should exist with correct type")
+	})
+}
+
+// TestNotificationService_NotifyCharacterStatusChange validates approved vs rejected branches
+// produce correct notification types. A wrong branch means players see "approved" when their
+// character actually needs revision.
+func TestNotificationService_NotifyCharacterStatusChange(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	app := core.NewTestApp(testDB.Pool)
+	service := &NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	ctx := context.Background()
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+	charID := int32(999)
+
+	t.Run("approval produces approved notification type", func(t *testing.T) {
+		err := service.NotifyCharacterStatusChange(ctx, int32(player.ID), game.ID, charID, "HeroChar", true)
+		require.NoError(t, err)
+
+		notifs, err := service.GetUserNotifications(ctx, int32(player.ID), 10, 0)
+		require.NoError(t, err)
+
+		var found bool
+		for _, n := range notifs {
+			if n.Type == core.NotificationTypeCharacterApproved {
+				assert.Contains(t, n.Title, "HeroChar")
+				assert.Contains(t, n.Title, "approved")
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "character approval notification should exist with correct type")
+	})
+
+	t.Run("rejection produces rejected notification type with revision message", func(t *testing.T) {
+		err := service.NotifyCharacterStatusChange(ctx, int32(player.ID), game.ID, charID, "HeroChar", false)
+		require.NoError(t, err)
+
+		notifs, err := service.GetUserNotifications(ctx, int32(player.ID), 10, 0)
+		require.NoError(t, err)
+
+		var found bool
+		for _, n := range notifs {
+			if n.Type == core.NotificationTypeCharacterRejected {
+				assert.Contains(t, n.Title, "HeroChar")
+				assert.Contains(t, n.Title, "revision")
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "character rejection notification should exist with 'revision' in title")
+	})
+}
+
+// TestNotificationService_NotifyCommonRoomPost validates that the bulk notification
+// excludes the poster and notifies other participants. If excludeUserID is ignored,
+// the poster receives a spurious notification about their own post.
+func TestNotificationService_NotifyCommonRoomPost(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	app := core.NewTestApp(testDB.Pool)
+	service := &NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	ctx := context.Background()
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+	_, err := gameService.AddGameParticipant(ctx, game.ID, int32(player1.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(player2.ID), "player")
+	require.NoError(t, err)
+
+	postID := int32(1)
+
+	// player1 is the poster — should be excluded
+	err = service.NotifyCommonRoomPost(ctx, game.ID, postID, "A New Post", int32(player1.ID))
+	require.NoError(t, err)
+
+	t.Run("poster does not receive notification about their own post", func(t *testing.T) {
+		notifs, err := service.GetUserNotifications(ctx, int32(player1.ID), 10, 0)
+		require.NoError(t, err)
+		for _, n := range notifs {
+			assert.NotEqual(t, core.NotificationTypeCommonRoomPost, n.Type,
+				"poster should not receive a notification about their own post")
+		}
+	})
+
+	t.Run("other participants receive the post notification", func(t *testing.T) {
+		notifs, err := service.GetUserNotifications(ctx, int32(player2.ID), 10, 0)
+		require.NoError(t, err)
+
+		var found bool
+		for _, n := range notifs {
+			if n.Type == core.NotificationTypeCommonRoomPost {
+				assert.Contains(t, n.Title, "A New Post")
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "non-poster participants should receive the post notification")
+	})
+}

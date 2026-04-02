@@ -1524,3 +1524,125 @@ func TestConversationService_UpdatePrivateMessage(t *testing.T) {
 
 	_ = time.Now() // keep time import used
 }
+
+// TestConversationService_CanUserAccessConversation tests the access control logic for private conversations.
+// This is a security-critical function: a wrong result means a user reads private messages they shouldn't.
+// Tests cover all access paths: GM, co-GM, audience, character controller, and denied outsider.
+func TestConversationService_CanUserAccessConversation(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+
+	service := NewConversationService(testDB.Pool)
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+	audience := testDB.CreateTestUser(t, "audience", "audience@example.com")
+	outsider := testDB.CreateTestUser(t, "outsider", "outsider@example.com")
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(audience.ID), "audience")
+	require.NoError(t, err)
+
+	p1ID := int32(player1.ID)
+	p2ID := int32(player2.ID)
+	char1, err := charService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID: game.ID, UserID: &p1ID, Name: "Char1", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	char2, err := charService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID: game.ID, UserID: &p2ID, Name: "Char2", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	// Create a private conversation between char1 and char2
+	conv, err := service.CreateConversation(context.Background(), CreateConversationRequest{
+		GameID:          game.ID,
+		Title:           "Private chat",
+		CreatedByUserID: int32(player1.ID),
+		ParticipantIDs:  []int32{char1.ID, char2.ID},
+	})
+	require.NoError(t, err)
+
+	t.Run("GM can access conversation", func(t *testing.T) {
+		canAccess, err := service.CanUserAccessConversation(context.Background(), conv.ID, int32(gm.ID), false)
+		require.NoError(t, err)
+		assert.True(t, canAccess, "GM should always have access to conversations in their game")
+	})
+
+	t.Run("player controlling a participant character can access", func(t *testing.T) {
+		canAccess, err := service.CanUserAccessConversation(context.Background(), conv.ID, int32(player1.ID), false)
+		require.NoError(t, err)
+		assert.True(t, canAccess, "player controlling char1 should have access")
+	})
+
+	t.Run("audience member can access", func(t *testing.T) {
+		canAccess, err := service.CanUserAccessConversation(context.Background(), conv.ID, int32(audience.ID), false)
+		require.NoError(t, err)
+		assert.True(t, canAccess, "audience member should have access to all game conversations")
+	})
+
+	t.Run("outsider (not in game) cannot access", func(t *testing.T) {
+		canAccess, err := service.CanUserAccessConversation(context.Background(), conv.ID, int32(outsider.ID), false)
+		require.NoError(t, err)
+		assert.False(t, canAccess, "outsider should not have access to any game conversations")
+	})
+
+	t.Run("player not controlling any participant character cannot access", func(t *testing.T) {
+		// Create a third player with no characters in this conversation
+		player3 := testDB.CreateTestUser(t, "player3", "player3@example.com")
+		_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player3.ID), "player")
+		require.NoError(t, err)
+		p3ID := int32(player3.ID)
+		_, err = charService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID: game.ID, UserID: &p3ID, Name: "Char3", CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		canAccess, err := service.CanUserAccessConversation(context.Background(), conv.ID, int32(player3.ID), false)
+		require.NoError(t, err)
+		assert.False(t, canAccess, "player with no participant in this conversation should not have access")
+	})
+
+	t.Run("NPC controller gains access via character assignment", func(t *testing.T) {
+		npcController := testDB.CreateTestUser(t, "npccontroller", "npc@example.com")
+		_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(npcController.ID), "player")
+		require.NoError(t, err)
+
+		// Create an NPC and add it to a new conversation
+		npc, err := charService.CreateCharacter(context.Background(), CreateCharacterRequest{
+			GameID: game.ID, UserID: nil, Name: "NPC", CharacterType: "npc",
+		})
+		require.NoError(t, err)
+
+		npcConv, err := service.CreateConversation(context.Background(), CreateConversationRequest{
+			GameID:          game.ID,
+			Title:           "NPC chat",
+			CreatedByUserID: int32(gm.ID),
+			ParticipantIDs:  []int32{char1.ID, npc.ID},
+		})
+		require.NoError(t, err)
+
+		// Before assignment: npcController cannot access
+		canAccess, err := service.CanUserAccessConversation(context.Background(), npcConv.ID, int32(npcController.ID), false)
+		require.NoError(t, err)
+		assert.False(t, canAccess, "user should not have access before being assigned the NPC")
+
+		// Assign NPC to npcController
+		err = charService.AssignNPCToUser(context.Background(), npc.ID, int32(npcController.ID), int32(gm.ID))
+		require.NoError(t, err)
+
+		// After assignment: npcController can access
+		canAccess, err = service.CanUserAccessConversation(context.Background(), npcConv.ID, int32(npcController.ID), false)
+		require.NoError(t, err)
+		assert.True(t, canAccess, "user assigned to NPC in the conversation should have access")
+	})
+}
