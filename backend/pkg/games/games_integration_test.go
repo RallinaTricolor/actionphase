@@ -671,6 +671,11 @@ func setupGameTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 				// Audience management
 				r.Get("/{id}/audience", gameHandler.ListAudienceMembers)
 				r.Put("/{id}/settings/auto-accept-audience", gameHandler.UpdateAutoAcceptAudience)
+				r.Get("/{id}/characters/audience-npcs", gameHandler.ListAudienceNPCs)
+				r.Get("/{id}/private-messages/all", gameHandler.ListAllPrivateConversations)
+				r.Get("/{id}/private-messages/participants", gameHandler.GetConversationParticipants)
+				r.Get("/{id}/private-messages/conversations/{conversationId}", gameHandler.GetAudienceConversationMessages)
+				r.Get("/{id}/action-submissions/all", gameHandler.ListAllActionSubmissions)
 			})
 		})
 	})
