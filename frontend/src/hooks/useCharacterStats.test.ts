@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { useCharacterStats } from './useCharacterStats';
@@ -14,6 +14,8 @@ vi.mock('../lib/api', () => ({
   },
 }));
 
+import { apiClient } from '../lib/api';
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -23,24 +25,38 @@ function createWrapper() {
 }
 
 describe('useCharacterStats', () => {
-  it('uses correct query key', () => {
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useCharacterStats(42), { wrapper });
-    // The hook should not be undefined and should start in loading or success state
-    expect(result.current).toBeDefined();
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('is disabled when characterId is undefined', () => {
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useCharacterStats(undefined), { wrapper });
-    // When disabled, data should be undefined and it should not be loading
-    expect(result.current.data).toBeUndefined();
-    expect(result.current.isPending).toBe(true); // disabled query is in pending state
+  it('returns stats data when characterId is provided', async () => {
+    const { result } = renderHook(() => useCharacterStats(42), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toEqual({ public_messages: 5, private_messages: 2 });
+    expect(apiClient.characters.getCharacterStats).toHaveBeenCalledWith(42);
   });
 
-  it('is disabled when characterId is 0 (falsy)', () => {
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useCharacterStats(0), { wrapper });
+  it('does not fetch when characterId is undefined', () => {
+    const { result } = renderHook(() => useCharacterStats(undefined), {
+      wrapper: createWrapper(),
+    });
+
+    // Query is disabled — stays pending without fetching
     expect(result.current.data).toBeUndefined();
+    expect(result.current.isPending).toBe(true);
+    expect(apiClient.characters.getCharacterStats).not.toHaveBeenCalled();
+  });
+
+  it('does not fetch when characterId is 0', () => {
+    const { result } = renderHook(() => useCharacterStats(0), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.data).toBeUndefined();
+    expect(apiClient.characters.getCharacterStats).not.toHaveBeenCalled();
   });
 });
