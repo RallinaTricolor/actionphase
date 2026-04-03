@@ -6,9 +6,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestGameAPI_ApplicationManagement tests application management endpoints
@@ -341,5 +346,170 @@ func TestGameAPI_ParticipantManagementAdvanced(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		core.AssertEqual(t, 401, w.Code, "Should return 401 Unauthorized")
+	})
+}
+
+// TestGameAPI_RemovePlayer_DeactivatesCharacters verifies that removing a player
+// also deactivates their characters — the transactional side effect of RemovePlayer.
+func TestGameAPI_RemovePlayer_DeactivatesCharacters(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupGameTestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Removal Test Game",
+		Description: "Test game for player removal",
+		GMUserID:    int32(gm.ID),
+		IsPublic:    true,
+	})
+	require.NoError(t, err)
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	// Create a character for the player (new characters start as "pending")
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	playerID := int32(player.ID)
+	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &playerID,
+		Name:          "Player's Character",
+		CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	assert.NotEqual(t, "inactive", char.Status.String, "character should not start as inactive")
+
+	// GM removes the player
+	req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/participants/%d", game.ID, player.ID), nil)
+	req.Header.Set("Authorization", "Bearer "+gmToken)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusNoContent, rec.Code)
+
+	// Verify the character was deactivated as part of the transaction
+	updated, err := characterService.GetCharacter(context.Background(), char.ID)
+	require.NoError(t, err)
+	assert.False(t, updated.IsActive, "character should be deactivated (is_active=false) when player is removed")
+}
+
+// TestGameAPI_ReviewGameApplication_ApprovesAndRejects verifies both branches of
+// application review — status field in response and DB state for each outcome.
+func TestGameAPI_ReviewGameApplication_ApprovesAndRejects(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_applications", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupGameTestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+	player3 := testDB.CreateTestUser(t, "player3", "player3@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player1)
+	require.NoError(t, err)
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title:       "Application Review Game",
+		Description: "Test game for application review",
+		GMUserID:    int32(gm.ID),
+		IsPublic:    true,
+	})
+	require.NoError(t, err)
+
+	// Game must be in recruitment state to accept applications
+	_, err = gameService.UpdateGameState(context.Background(), game.ID, "recruitment")
+	require.NoError(t, err)
+
+	appService := &db.GameApplicationService{DB: testDB.Pool}
+
+	t.Run("GM approves application — status becomes approved in response and DB", func(t *testing.T) {
+		application, err := appService.CreateGameApplication(context.Background(), core.CreateGameApplicationRequest{
+			GameID:  game.ID,
+			UserID:  int32(player1.ID),
+			Role:    "player",
+			Message: "I want to join",
+		})
+		require.NoError(t, err)
+
+		body := map[string]string{"action": "approve"}
+		bodyJSON, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/games/%d/applications/%d/review", game.ID, application.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "approved", response["status"])
+
+		// Verify DB state
+		updated, err := appService.GetGameApplication(context.Background(), application.ID)
+		require.NoError(t, err)
+		assert.Equal(t, "approved", updated.Status.String)
+	})
+
+	t.Run("GM rejects application — status becomes rejected in response and DB", func(t *testing.T) {
+		application, err := appService.CreateGameApplication(context.Background(), core.CreateGameApplicationRequest{
+			GameID:  game.ID,
+			UserID:  int32(player2.ID),
+			Role:    "player",
+			Message: "Please let me in",
+		})
+		require.NoError(t, err)
+
+		body := map[string]string{"action": "reject"}
+		bodyJSON, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/games/%d/applications/%d/review", game.ID, application.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "rejected", response["status"])
+
+		// Verify DB state
+		updated, err := appService.GetGameApplication(context.Background(), application.ID)
+		require.NoError(t, err)
+		assert.Equal(t, "rejected", updated.Status.String)
+	})
+
+	t.Run("non-GM player cannot review applications", func(t *testing.T) {
+		application, err := appService.CreateGameApplication(context.Background(), core.CreateGameApplicationRequest{
+			GameID:  game.ID,
+			UserID:  int32(player3.ID),
+			Role:    "player",
+			Message: "Another try",
+		})
+		require.NoError(t, err)
+
+		body := map[string]string{"action": "approve"}
+		bodyJSON, _ := json.Marshal(body)
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/games/%d/applications/%d/review", game.ID, application.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
 	})
 }

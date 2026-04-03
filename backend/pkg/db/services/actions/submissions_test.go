@@ -240,6 +240,64 @@ func TestActionSubmissionService_SubmitAction(t *testing.T) {
 	})
 }
 
+func TestActionSubmissionService_SubmitAction_PastDeadlineBlocked(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+
+	actionService := &ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}}
+	phaseService := &phases.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	gm := testDB.CreateTestUser(t, "deadline_gm", "deadline_gm@example.com")
+	player := testDB.CreateTestUser(t, "deadline_player", "deadline_player@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Deadline Test Game")
+
+	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	// Create action phase with a future deadline
+	futureDeadline := time.Now().Add(72 * time.Hour)
+	phase, err := phaseService.TransitionToNextPhase(context.Background(), game.ID, int32(gm.ID), core.TransitionPhaseRequest{
+		PhaseType: "action",
+		Title:     "Deadline Phase",
+		Deadline:  &futureDeadline,
+	})
+	require.NoError(t, err)
+
+	t.Run("submission succeeds before deadline", func(t *testing.T) {
+		_, err := actionService.SubmitAction(context.Background(), core.SubmitActionRequest{
+			GameID:  game.ID,
+			PhaseID: phase.ID,
+			UserID:  int32(player.ID),
+			Content: "Before deadline action",
+			IsDraft: false,
+		})
+		require.NoError(t, err)
+	})
+
+	// Move deadline to the past
+	pastDeadline := time.Now().Add(-1 * time.Hour)
+	_, err = phaseService.ExtendPhaseDeadline(context.Background(), phase.ID, pastDeadline)
+	require.NoError(t, err)
+
+	t.Run("submission is blocked after deadline passes", func(t *testing.T) {
+		latePlayer := testDB.CreateTestUser(t, "late_player", "late_player@example.com")
+		_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(latePlayer.ID), "player")
+		require.NoError(t, err)
+
+		_, err = actionService.SubmitAction(context.Background(), core.SubmitActionRequest{
+			GameID:  game.ID,
+			PhaseID: phase.ID,
+			UserID:  int32(latePlayer.ID),
+			Content: "Late submission attempt",
+			IsDraft: false,
+		})
+		require.Error(t, err, "Should block submission after deadline")
+	})
+}
+
 func TestActionSubmissionService_GetActionSubmission(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()

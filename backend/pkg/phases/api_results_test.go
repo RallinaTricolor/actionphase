@@ -296,6 +296,62 @@ func TestPhaseAPI_UpdateActionResult(t *testing.T) {
 	})
 }
 
+// TestPhaseAPI_UpdatePublishedResultBlocked tests that published results cannot be edited
+func TestPhaseAPI_UpdatePublishedResultBlocked(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "action_results", "action_submissions", "phases", "characters", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupFullPhaseAPITestRouter(app, testDB)
+
+	gm, player, gmToken, _, game, phase := setupResultsTestState(t, testDB, app)
+
+	actionService := &actionsvc.ActionSubmissionService{
+		DB:                  testDB.Pool,
+		Logger:              app.ObsLogger,
+		NotificationService: &dbsvc.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger},
+	}
+
+	result, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
+		GameID:      game.ID,
+		PhaseID:     phase.ID,
+		UserID:      int32(player.ID),
+		GMUserID:    int32(gm.ID),
+		Content:     "Original published content.",
+		IsPublished: false,
+	})
+	require.NoError(t, err)
+
+	// Publish the result
+	err = actionService.PublishActionResult(context.Background(), result.ID, int32(gm.ID))
+	require.NoError(t, err)
+
+	t.Run("GM cannot edit a published result", func(t *testing.T) {
+		body := map[string]interface{}{
+			"content": "Attempted overwrite.",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/games/%d/results/%d", game.ID, result.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		// Service returns "result not found or already published" → handler returns 500
+		assert.NotEqual(t, http.StatusOK, rec.Code)
+
+		// Verify content was not changed in the DB
+		var dbContent string
+		err := testDB.Pool.QueryRow(context.Background(),
+			"SELECT content FROM action_results WHERE id = $1", result.ID).Scan(&dbContent)
+		require.NoError(t, err)
+		assert.Equal(t, "Original published content.", dbContent)
+	})
+}
+
 // TestPhaseAPI_PublishActionResult tests POST /api/v1/games/{gameId}/results/{resultId}/publish
 func TestPhaseAPI_PublishActionResult(t *testing.T) {
 	testDB := core.NewTestDatabase(t)

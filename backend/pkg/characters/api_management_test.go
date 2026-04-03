@@ -34,6 +34,7 @@ func setupCharacterManagementTestRouter(app *core.App, testDB *core.TestDatabase
 		handler := &Handler{App: app}
 		r.Put("/{id}/rename", handler.RenameCharacter)
 		r.Delete("/{id}", handler.DeleteCharacter)
+		r.Post("/{id}/approve", handler.ApproveCharacter)
 	})
 	return router
 }
@@ -221,5 +222,113 @@ func TestCharacterAPI_DeleteCharacter(t *testing.T) {
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+}
+
+// TestCharacterAPI_ApproveCharacter tests POST /api/v1/characters/{id}/approve
+func TestCharacterAPI_ApproveCharacter(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupCharacterManagementTestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	t.Run("GM approves character — status becomes approved in DB", func(t *testing.T) {
+		char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        game.ID,
+			UserID:        int32Ptr(int32(player.ID)),
+			Name:          "Pending Character",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		body := ApproveCharacterRequest{Status: "approved"}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/characters/%d/approve", char.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "approved", response["status"])
+
+		// Verify DB state changed
+		updated, err := characterService.GetCharacter(context.Background(), char.ID)
+		require.NoError(t, err)
+		assert.Equal(t, "approved", updated.Status.String)
+	})
+
+	t.Run("GM rejects character — status becomes rejected in DB", func(t *testing.T) {
+		char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        game.ID,
+			UserID:        int32Ptr(int32(player.ID)),
+			Name:          "Rejected Character",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		body := ApproveCharacterRequest{Status: "rejected"}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/characters/%d/approve", char.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "rejected", response["status"])
+
+		// Verify DB state changed
+		updated, err := characterService.GetCharacter(context.Background(), char.ID)
+		require.NoError(t, err)
+		assert.Equal(t, "rejected", updated.Status.String)
+	})
+
+	t.Run("non-GM player cannot approve a character", func(t *testing.T) {
+		char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+			GameID:        game.ID,
+			UserID:        int32Ptr(int32(player.ID)),
+			Name:          "Auth Test Character",
+			CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+
+		body := ApproveCharacterRequest{Status: "approved"}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/characters/%d/approve", char.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code)
 	})
 }
