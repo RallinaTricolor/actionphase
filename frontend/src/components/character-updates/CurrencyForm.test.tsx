@@ -4,6 +4,29 @@ import userEvent from '@testing-library/user-event';
 import { CurrencyForm } from './CurrencyForm';
 
 describe('CurrencyForm', () => {
+  describe('Submit guard', () => {
+    it('does not call onSubmit when currency type is empty', async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <CurrencyForm
+          onSubmit={onSubmit}
+          onCancel={vi.fn()}
+          submitLabel="Add Currency"
+        />
+      );
+
+      // Leave type empty, only fill amount
+      const amountInput = screen.getByLabelText(/^amount$/i);
+      await user.clear(amountInput);
+      await user.type(amountInput, '10');
+
+      await user.click(screen.getByRole('button', { name: /add currency/i }));
+
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Decimal support', () => {
     it('accepts decimal amount', async () => {
       const onSubmit = vi.fn();

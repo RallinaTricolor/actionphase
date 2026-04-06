@@ -38,12 +38,22 @@ Also read the implementation file being tested (same name, without `.test.` / `_
 
 Answer each question with Yes or No, and for each No, quote the specific test that is the weakest evidence:
 
-**Q1 — Specific value assertions**
-Does at least one test assert a specific value, not just `.toBeDefined()`, `.toBeInTheDocument()` on a heading/label, or `expect(something).toBeTruthy()`?
+**Q1 — Tests guard real behavior**
+Does at least one test assert an output that would be *wrong if the implementation had a bug* — not just that an input was echoed back?
 
-Acceptable: `expect(result.current.data).toEqual({ public_messages: 5 })`, `expect(screen.getByText('You are GM')).toBeInTheDocument()` (because the text is role-specific behavior, not just "something rendered")
+Not acceptable (tautological — only proves React works):
+- `expect(input).toHaveValue('npc')` immediately after `selectOptions(input, 'npc')`
+- `expect(result.current).toBeDefined()`
+- `expect(screen.getByText('Loading')).toBeInTheDocument()`
+- `expect(input).toHaveValue('typed text')` immediately after `user.type(input, 'typed text')`
 
-Not acceptable: `expect(result.current).toBeDefined()`, `expect(screen.getByText('Loading')).toBeInTheDocument()`
+Acceptable (guards a real contract):
+- `expect(apiClient.createCharacter).toHaveBeenCalledWith(gameId, { character_type: 'npc' })` — guards the API contract the backend depends on
+- `expect(screen.getByText('You are GM')).toBeInTheDocument()` — guards role-specific conditional rendering
+- `expect(screen.getByText('5 characters')).toBeInTheDocument()` — guards a computed value (character counter logic)
+- `expect(submitButton).toBeDisabled()` when name is empty — guards a validation rule
+
+The test to ask: *If I introduced a bug in the implementation, would this assertion catch it?* If the test only verifies that React reflects what was just typed/selected, it catches nothing.
 
 **Q2 — Absence assertions for authorization**
 If the file tests a component or hook with role-based or state-based conditional behavior: does at least one test assert that something is *absent* or *forbidden* for a role/state that should not see it?

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
@@ -46,6 +47,8 @@ describe('ThreadViewModal', () => {
   };
 
   beforeEach(() => {
+    mockOnClose.mockClear();
+    mockOnCreateReply.mockClear();
     // Setup MSW handlers for API calls made by components
     server.use(
       http.get('/api/v1/games/:gameId/details', () => {
@@ -215,6 +218,26 @@ describe('ThreadViewModal', () => {
 
       const closeButton = screen.getByRole('button', { name: /close/i });
       expect(closeButton).toBeInTheDocument();
+    });
+
+    it('should call onClose when close button is clicked', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <ThreadViewModal
+          gameId={mockGameId}
+          postId={mockPostId}
+          comment={mockComment}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onClose={mockOnClose}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      const closeButton = screen.getByRole('button', { name: /close/i });
+      await user.click(closeButton);
+      expect(mockOnClose).toHaveBeenCalledOnce();
     });
   });
 });

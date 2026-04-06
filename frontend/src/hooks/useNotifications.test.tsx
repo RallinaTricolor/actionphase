@@ -344,7 +344,7 @@ describe('useNotifications hooks', () => {
   });
 
   describe('Query keys', () => {
-    it('uses different query keys for different hook types', () => {
+    it('uses different query keys for different hook types', async () => {
       server.use(
         http.get('http://localhost:3000/api/v1/notifications', () => {
           return HttpResponse.json({
@@ -361,12 +361,20 @@ describe('useNotifications hooks', () => {
       const { result: _notificationsResult } = renderHook(() => useNotifications(), { wrapper });
       const { result: _unreadCountResult } = renderHook(() => useUnreadCount(), { wrapper });
 
-      // They should use different query keys
-      // This ensures they can be invalidated separately
-      // (Actual verification would require inspecting the queryClient cache)
+      await waitFor(() => {
+        expect(_notificationsResult.current.isSuccess).toBe(true);
+        expect(_unreadCountResult.current.isSuccess).toBe(true);
+      });
+
+      // They should use different query keys — verified by inspecting the cache
+      const cache = queryClient.getQueryCache();
+      const queries = cache.getAll();
+      const keys = queries.map(q => JSON.stringify(q.queryKey));
+      // The two query keys must be distinct
+      expect(new Set(keys).size).toBe(keys.length);
     });
 
-    it('uses different query keys for different params', () => {
+    it('uses different query keys for different params', async () => {
       server.use(
         http.get('http://localhost:3000/api/v1/notifications', () => {
           return HttpResponse.json({
@@ -386,8 +394,17 @@ describe('useNotifications hooks', () => {
         { wrapper }
       );
 
-      // They should be cached separately
-      // (Actual verification would require inspecting the queryClient cache)
+      await waitFor(() => {
+        expect(_result1.current.isSuccess).toBe(true);
+        expect(_result2.current.isSuccess).toBe(true);
+      });
+
+      // They should be cached separately — two distinct query entries
+      const cache = queryClient.getQueryCache();
+      const queries = cache.getAll();
+      expect(queries.length).toBeGreaterThanOrEqual(2);
+      const keys = queries.map(q => JSON.stringify(q.queryKey));
+      expect(new Set(keys).size).toBe(keys.length);
     });
   });
 });

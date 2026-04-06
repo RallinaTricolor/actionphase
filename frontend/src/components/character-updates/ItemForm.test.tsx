@@ -4,6 +4,29 @@ import userEvent from '@testing-library/user-event';
 import { ItemForm } from './ItemForm';
 
 describe('ItemForm', () => {
+  describe('Submit guard', () => {
+    it('does not call onSubmit when item name is empty', async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <ItemForm
+          onSubmit={onSubmit}
+          onCancel={vi.fn()}
+          submitLabel="Add Item"
+        />
+      );
+
+      // Leave name empty, only fill value
+      const valueInput = screen.getByLabelText(/^value$/i);
+      await user.clear(valueInput);
+      await user.type(valueInput, '10');
+
+      await user.click(screen.getByRole('button', { name: /add item/i }));
+
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Decimal support', () => {
     it('accepts decimal value for item value field', async () => {
       const onSubmit = vi.fn();

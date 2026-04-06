@@ -143,6 +143,18 @@ describe('DeadlineStrip', () => {
     });
   });
 
+  describe('GM Actions', () => {
+    it('should not show Add Deadline button for non-GM when deadlines exist', () => {
+      render(<DeadlineStrip {...defaultProps} isGM={false} gameState="in_progress" />);
+      expect(screen.queryByRole('button', { name: /add deadline/i })).not.toBeInTheDocument();
+    });
+
+    it('should show Add Deadline button for GM', () => {
+      render(<DeadlineStrip {...defaultProps} isGM={true} gameState="in_progress" />);
+      expect(screen.getByRole('button', { name: /add deadline/i })).toBeInTheDocument();
+    });
+  });
+
   describe('Deadline Display', () => {
     it('should render deadline cards when deadlines exist (in allowed game state)', () => {
       render(<DeadlineStrip {...defaultProps} gameState="in_progress" />);

@@ -303,6 +303,8 @@ describe('CommonRoom', () => {
         // Content should load without CreatePostForm visible
         expect(screen.queryByText(/failed to load/i)).not.toBeInTheDocument();
       });
+
+      expect(screen.queryByRole('button', { name: /create gm post/i })).not.toBeInTheDocument();
     });
 
     it('hides CreatePostForm for past phases even for GM', async () => {
@@ -311,6 +313,8 @@ describe('CommonRoom', () => {
       await waitFor(() => {
         expect(screen.queryByText(/failed to load/i)).not.toBeInTheDocument();
       });
+
+      expect(screen.queryByRole('button', { name: /create gm post/i })).not.toBeInTheDocument();
     });
   });
 

@@ -632,6 +632,14 @@ describe('useGameListing', () => {
       });
 
       expect(typeof result.current.setPage).toBe('function');
+
+      act(() => {
+        result.current.setPage(3);
+      });
+
+      await waitFor(() => {
+        expect(result.current.filters.page).toBe(3);
+      });
     });
 
     it('provides setPageSize function', async () => {
@@ -648,6 +656,14 @@ describe('useGameListing', () => {
       });
 
       expect(typeof result.current.setPageSize).toBe('function');
+
+      act(() => {
+        result.current.setPageSize(50);
+      });
+
+      await waitFor(() => {
+        expect(result.current.filters.page_size).toBe(50);
+      });
     });
 
     it('returns metadata with pagination fields', async () => {

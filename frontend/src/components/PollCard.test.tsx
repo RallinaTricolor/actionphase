@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { setupServer } from 'msw/node';
 import type { Character } from '../types/characters';
@@ -115,6 +115,13 @@ describe('PollCard', () => {
 
       // Players cannot see results on active polls
       expect(screen.queryByRole('button', { name: /show results/i })).not.toBeInTheDocument();
+    });
+
+    it('toggles button text to "Hide Results" after GM clicks Show Results', () => {
+      renderWithProviders(<PollCard poll={mockPoll} gameId={100} isGM={true} isAudience={false} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /show results/i }));
+      expect(screen.getByRole('button', { name: /hide results/i })).toBeInTheDocument();
     });
 
     it('auto-loads results for expired polls (GM)', async () => {

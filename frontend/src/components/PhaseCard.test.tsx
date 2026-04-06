@@ -99,4 +99,15 @@ describe('PhaseCard scheduled indicator', () => {
     );
     expect(screen.getByText('Currently Active')).toBeInTheDocument();
   });
+
+  it('does not show "Currently Active" indicator for inactive phases', () => {
+    render(
+      <PhaseCard
+        {...defaultProps}
+        isActive={false}
+        phase={{ ...basePhase, is_active: false }}
+      />
+    );
+    expect(screen.queryByText('Currently Active')).not.toBeInTheDocument();
+  });
 });

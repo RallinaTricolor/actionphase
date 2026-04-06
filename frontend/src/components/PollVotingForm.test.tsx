@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Character } from '../types/characters';
 import { PollVotingForm } from './PollVotingForm';
@@ -200,6 +200,52 @@ describe('PollVotingForm', () => {
       const select = screen.getByRole('combobox');
       const options = select.querySelectorAll('option');
       expect(options).toHaveLength(3); // placeholder + Character 2 + Character 3
+    });
+  });
+
+  describe('Form submission', () => {
+    it('calls onSuccess after successful vote submission', async () => {
+      const { useSubmitVote } = await import('../hooks');
+      const mockMutateAsync = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(useSubmitVote).mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+      } as ReturnType<typeof useSubmitVote>);
+
+      const mockOnSuccessFn = vi.fn();
+      renderWithProviders(
+        <PollVotingForm
+          poll={mockPoll}
+          onSuccess={mockOnSuccessFn}
+          onCancel={mockOnCancel}
+        />
+      );
+
+      // Select an option
+      fireEvent.click(screen.getByLabelText('Option A'));
+
+      // Submit the form
+      fireEvent.submit(screen.getByRole('button', { name: /submit vote/i }).closest('form')!);
+
+      await waitFor(() => {
+        expect(mockOnSuccessFn).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('shows validation error when submitting without selecting an option', async () => {
+      renderWithProviders(
+        <PollVotingForm
+          poll={mockPoll}
+          onSuccess={mockOnSuccess}
+          onCancel={mockOnCancel}
+        />
+      );
+
+      fireEvent.submit(screen.getByRole('button', { name: /submit vote/i }).closest('form')!);
+
+      await waitFor(() => {
+        expect(screen.getByText(/please select an option/i)).toBeInTheDocument();
+      });
     });
   });
 
