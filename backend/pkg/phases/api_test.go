@@ -483,6 +483,13 @@ func TestPhaseAPI_GetPhases(t *testing.T) {
 		err := json.Unmarshal(rec.Body.Bytes(), &response)
 		require.NoError(t, err)
 		assert.Len(t, response, 2)
+		// Verify field values on returned phases, not just count
+		phaseTypes := make([]string, 0, len(response))
+		for _, p := range response {
+			phaseTypes = append(phaseTypes, p.PhaseType)
+		}
+		assert.Contains(t, phaseTypes, "common_room", "common_room phase should appear in results")
+		assert.Contains(t, phaseTypes, "action", "action phase should appear in results")
 	})
 
 	t.Run("returns empty array when no phases", func(t *testing.T) {

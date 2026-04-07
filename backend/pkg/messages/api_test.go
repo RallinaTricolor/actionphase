@@ -847,6 +847,8 @@ func TestMessageAPI_GetCharacterComments(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
 		items := response["messages"].([]interface{})
 		assert.Len(t, items, 1)
+		item := items[0].(map[string]interface{})
+		assert.Equal(t, "Character's comment.", item["content"])
 	})
 
 	t.Run("returns empty list for character with no posts or comments", func(t *testing.T) {

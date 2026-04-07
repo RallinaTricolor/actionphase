@@ -268,6 +268,7 @@ func TestActionSubmissionService_GetGameActions(t *testing.T) {
 
 		// Verify metadata fields are populated (username should be available)
 		assert.NotEmpty(t, actions[0].Username, "Username field should be populated")
+		assert.Equal(t, player.Username, actions[0].Username, "Username should match the submitting player")
 	})
 }
 

@@ -487,6 +487,17 @@ func TestConversationAPI_GetConversationMessages(t *testing.T) {
 
 		messages := response["messages"].([]interface{})
 		assert.Len(t, messages, 2)
+		// Verify the correct messages were returned (not just any 2)
+		contents := make([]string, 0, len(messages))
+		for _, m := range messages {
+			if msg, ok := m.(map[string]interface{}); ok {
+				if c, ok := msg["content"].(string); ok {
+					contents = append(contents, c)
+				}
+			}
+		}
+		assert.Contains(t, contents, "Message 1")
+		assert.Contains(t, contents, "Message 2")
 	})
 
 	t.Run("rejects non-participant from viewing messages", func(t *testing.T) {

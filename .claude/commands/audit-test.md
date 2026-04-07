@@ -55,6 +55,19 @@ Acceptable (guards a real contract):
 
 The test to ask: *If I introduced a bug in the implementation, would this assertion catch it?* If the test only verifies that React reflects what was just typed/selected, it catches nothing.
 
+**Q1b — List responses verify field values, not just counts**
+If a test asserts on a list response (array, slice, collection): does at least one test verify a specific field value on a returned item (e.g. username, ID, title) — not just the length or that the array is non-empty?
+
+Not acceptable:
+- `assert.GreaterOrEqual(t, len(response), 1, "should include the admin user")` — a bug returning a different user's data would pass
+- `assert.True(t, len(usersArray) >= 2)` — no verification of *which* users were returned
+
+Acceptable:
+- `assert.Equal(t, targetUser.Username, response["username"])` — verifies the correct record was returned
+- `assert.Equal(t, "alice", users[0].name)` — verifies order and identity of specific items
+
+If the file contains no list/collection assertions, mark Q1b as N/A.
+
 **Q2 — Absence assertions for authorization**
 If the file tests a component or hook with role-based or state-based conditional behavior: does at least one test assert that something is *absent* or *forbidden* for a role/state that should not see it?
 

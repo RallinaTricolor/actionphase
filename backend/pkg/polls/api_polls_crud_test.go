@@ -348,6 +348,9 @@ func TestPollCRUD_ListGamePolls(t *testing.T) {
 		var response []interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
 		assert.Len(t, response, 2)
+		// Verify field value on a returned item, not just count
+		firstPoll := response[0].(map[string]interface{})
+		assert.Equal(t, "Which route should we take?", firstPoll["question"])
 	})
 
 	t.Run("player lists game polls", func(t *testing.T) {

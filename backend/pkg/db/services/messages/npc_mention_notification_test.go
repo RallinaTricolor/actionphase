@@ -96,6 +96,9 @@ func TestNotifyCharacterMentions_AudienceControlledNPC(t *testing.T) {
 		}
 	}
 	require.NotNil(t, mentionNotif, "Audience member should have a character_mention notification")
+	assert.Equal(t, int32(audienceMember.ID), mentionNotif.UserID, "Notification should be for the audience member, not the GM")
+	require.NotNil(t, mentionNotif.GameID)
+	assert.Equal(t, game.ID, *mentionNotif.GameID, "Notification should reference the correct game")
 }
 
 // TestNotifyCharacterMentions_UnassignedNPC verifies that unassigned NPCs still notify the GM.

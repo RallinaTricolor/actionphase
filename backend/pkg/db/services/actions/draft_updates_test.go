@@ -283,6 +283,15 @@ func TestActionSubmissionService_GetDraftCharacterUpdates(t *testing.T) {
 		retrieved, err := actionService.GetDraftCharacterUpdates(context.Background(), result.ID)
 		require.NoError(t, err)
 		assert.Len(t, retrieved, 3)
+
+		// Verify the correct fields were returned (not just any 3 drafts)
+		fieldNames := make([]string, 0, len(retrieved))
+		for _, d := range retrieved {
+			fieldNames = append(fieldNames, d.FieldName)
+		}
+		assert.Contains(t, fieldNames, "strength")
+		assert.Contains(t, fieldNames, "lockpicking")
+		assert.Contains(t, fieldNames, "mysterious_key")
 	})
 }
 

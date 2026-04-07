@@ -219,6 +219,15 @@ func TestHandoutService_ListHandouts(t *testing.T) {
 
 			core.AssertNoError(t, err, "Failed to list handouts")
 			core.AssertEqual(t, tc.expectedCount, len(handouts), "Handout count mismatch")
+
+			// Verify all returned handouts belong to the correct game
+			for _, h := range handouts {
+				core.AssertEqual(t, game.ID, h.GameID, "Returned handout belongs to wrong game")
+				// Non-GM should only see published handouts
+				if !tc.isGM {
+					core.AssertEqual(t, "published", h.Status, "Non-GM should only see published handouts")
+				}
+			}
 		})
 	}
 }

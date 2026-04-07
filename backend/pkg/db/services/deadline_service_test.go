@@ -223,6 +223,11 @@ func TestDeadlineService_GetGameDeadlines(t *testing.T) {
 			deadlines, err := deadlineService.GetGameDeadlines(context.Background(), tc.gameID, tc.includeExpired)
 			core.AssertNoError(t, err, "Failed to get game deadlines")
 			core.AssertEqual(t, tc.expectedCount, len(deadlines), "Deadline count mismatch")
+
+			// Verify the correct game's deadlines were returned
+			if len(deadlines) > 0 {
+				core.AssertEqual(t, tc.gameID, deadlines[0].GameID, "Returned deadline belongs to wrong game")
+			}
 		})
 	}
 }

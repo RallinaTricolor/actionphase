@@ -368,8 +368,14 @@ func TestAccountService_RequestEmailChange(t *testing.T) {
 		})
 		core.AssertNoError(t, err, "Email change request should succeed")
 
-		// Email verification token should be created (verified by no error)
-		// Full verification would require checking the email_verification_tokens table
+		// Verify a verification token was actually created in the DB for the new email
+		var count int
+		queryErr := testDB.Pool.QueryRow(context.Background(),
+			"SELECT COUNT(*) FROM email_verification_tokens WHERE user_id = $1 AND email = $2",
+			user.ID, "newemail@example.com",
+		).Scan(&count)
+		core.AssertNoError(t, queryErr, "Should be able to query verification tokens")
+		core.AssertEqual(t, 1, count, "A verification token should be created for the new email")
 	})
 
 	t.Run("rejects_incorrect_password", func(t *testing.T) {

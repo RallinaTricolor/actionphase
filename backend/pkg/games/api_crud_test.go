@@ -127,6 +127,18 @@ func TestGetFilteredGames_PaginationCustomValues(t *testing.T) {
 			core.AssertEqual(t, tt.expectedPage, response.Metadata.Page, "Page number should match")
 			core.AssertEqual(t, tt.expectedPageSize, response.Metadata.PageSize, "Page size should match")
 			core.AssertEqual(t, tt.expectedCount, len(response.Games), "Game count should match")
+
+			// For the large page size case, verify the fixture game is in the results
+			if tt.name == "Large page size" {
+				found := false
+				for _, g := range response.Games {
+					if g.Title == "Test Game" {
+						found = true
+						break
+					}
+				}
+				core.AssertTrue(t, found, "Fixture game 'Test Game' should appear in results")
+			}
 		})
 	}
 }

@@ -88,6 +88,14 @@ func TestNotificationAPI_GetNotifications(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
 		data := response["data"].([]interface{})
 		assert.Len(t, data, 2)
+		// Verify field values on returned notifications, not just count
+		titles := make([]string, 0, len(data))
+		for _, item := range data {
+			n := item.(map[string]interface{})
+			titles = append(titles, n["title"].(string))
+		}
+		assert.Contains(t, titles, "Notification 1", "Notification 1 should appear in results")
+		assert.Contains(t, titles, "Notification 2", "Notification 2 should appear in results")
 		pagination := response["pagination"].(map[string]interface{})
 		assert.NotNil(t, pagination["limit"])
 	})

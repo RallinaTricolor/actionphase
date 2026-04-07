@@ -220,6 +220,7 @@ func TestPhaseAPI_GetGameActionResults(t *testing.T) {
 		var response []map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
 		assert.Len(t, response, 1)
+		assert.Equal(t, "An important result.", response[0]["content"])
 	})
 
 	t.Run("non-GM player cannot view all results during active game", func(t *testing.T) {

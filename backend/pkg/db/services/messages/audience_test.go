@@ -296,6 +296,10 @@ func TestGetAudienceConversationMessages(t *testing.T) {
 		core.AssertTrue(t, messages != nil, "Messages should not be nil")
 		// Should have at least one message
 		core.AssertTrue(t, len(messages) >= 1, "Should have at least one message")
+		// Verify the message content matches what was sent
+		if len(messages) > 0 {
+			core.AssertEqual(t, "Test conversation message", messages[0].Content, "Message content should match what was sent")
+		}
 	})
 }
 

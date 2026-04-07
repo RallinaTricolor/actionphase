@@ -111,7 +111,16 @@ func TestAdminAPI_ListAdmins(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var response []interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
-		assert.GreaterOrEqual(t, len(response), 1, "should include the admin user")
+		require.GreaterOrEqual(t, len(response), 1, "should include the admin user")
+		usernames := make([]string, 0, len(response))
+		for _, item := range response {
+			if u, ok := item.(map[string]interface{}); ok {
+				if name, ok := u["username"].(string); ok {
+					usernames = append(usernames, name)
+				}
+			}
+		}
+		assert.Contains(t, usernames, adminUser.Username, "admin user should appear in the list")
 	})
 }
 
@@ -250,7 +259,16 @@ func TestAdminAPI_ListBannedUsers(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var response []interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
-		assert.GreaterOrEqual(t, len(response), 1)
+		require.GreaterOrEqual(t, len(response), 1)
+		usernames := make([]string, 0, len(response))
+		for _, item := range response {
+			if u, ok := item.(map[string]interface{}); ok {
+				if name, ok := u["username"].(string); ok {
+					usernames = append(usernames, name)
+				}
+			}
+		}
+		assert.Contains(t, usernames, bannedUser.Username, "banned user should appear in the list")
 	})
 }
 

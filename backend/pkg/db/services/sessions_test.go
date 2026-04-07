@@ -31,6 +31,7 @@ func TestSessionService_SessionByToken(t *testing.T) {
 	retrievedSession, err := sessionService.SessionByToken("test-token-123")
 	core.AssertNoError(t, err, "Failed to retrieve session by token")
 	core.AssertNotEqual(t, 0, retrievedSession.ID, "Session ID should be set")
+	core.AssertEqual(t, fixtures.TestUser.ID, retrievedSession.User.ID, "Retrieved session should belong to the correct user")
 }
 
 func TestSessionService_SessionByToken_NotFound(t *testing.T) {

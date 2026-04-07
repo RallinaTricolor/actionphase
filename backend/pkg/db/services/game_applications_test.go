@@ -269,6 +269,13 @@ func TestGameApplicationService_GetGameApplications(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Len(t, applications, 2)
+		userIDs := make([]int32, 0, len(applications))
+		for _, a := range applications {
+			assert.Equal(t, game.ID, a.GameID, "application should belong to correct game")
+			userIDs = append(userIDs, a.UserID)
+		}
+		assert.Contains(t, userIDs, int32(player1.ID), "player1 application should be present")
+		assert.Contains(t, userIDs, int32(player2.ID), "player2 application should be present")
 	})
 
 	t.Run("retrieves applications by status", func(t *testing.T) {

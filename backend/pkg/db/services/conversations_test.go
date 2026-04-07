@@ -325,7 +325,7 @@ func TestConversationService_GetUserConversations(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create multiple conversations for player1
-	_, err = service.CreateConversation(context.Background(), CreateConversationRequest{
+	conv1, err := service.CreateConversation(context.Background(), CreateConversationRequest{
 		GameID:          game.ID,
 		Title:           "Conversation 1",
 		CreatedByUserID: int32(player1.ID),
@@ -333,7 +333,7 @@ func TestConversationService_GetUserConversations(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = service.CreateConversation(context.Background(), CreateConversationRequest{
+	conv2, err := service.CreateConversation(context.Background(), CreateConversationRequest{
 		GameID:          game.ID,
 		Title:           "Conversation 2",
 		CreatedByUserID: int32(player1.ID),
@@ -346,6 +346,12 @@ func TestConversationService_GetUserConversations(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(conversations), 2)
+		convIDs := make([]int32, 0, len(conversations))
+		for _, c := range conversations {
+			convIDs = append(convIDs, c.ID)
+		}
+		assert.Contains(t, convIDs, conv1.ID, "should include Conversation 1")
+		assert.Contains(t, convIDs, conv2.ID, "should include Conversation 2")
 	})
 
 	t.Run("filters by game", func(t *testing.T) {

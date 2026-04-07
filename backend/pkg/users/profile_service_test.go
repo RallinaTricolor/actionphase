@@ -144,6 +144,15 @@ func TestGetUserGames(t *testing.T) {
 					core.AssertNotEqual(t, "", game.Title, "Game title should be set")
 					core.AssertNotEqual(t, "", game.GMUsername, "GM username should be set")
 				}
+				// Verify the fixture game appears in results by title
+				found := false
+				for _, game := range games {
+					if game.Title == "Test Game" {
+						found = true
+						break
+					}
+				}
+				core.AssertEqual(t, true, found, "Fixture game 'Test Game' should appear in results")
 			},
 		},
 		{

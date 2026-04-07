@@ -12,6 +12,9 @@ import (
 	"testing"
 	"time"
 
+	ratelimitmw "actionphase/pkg/middleware"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
 )
@@ -426,7 +429,9 @@ func TestAuthAPI_ContentTypeHandling(t *testing.T) {
 	}
 }
 
-// TestAuthAPI_RateLimiting tests request rate limiting behavior (if implemented)
+// TestAuthAPI_RateLimiting tests that rate limiting middleware is wired to login/register.
+// In development mode (isDevelopment=true), StrictRateLimit allows burst of 20,
+// so 10 rapid requests should all pass through to the handler (returning 401/400, not 429).
 func TestAuthAPI_RateLimiting(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
@@ -434,13 +439,13 @@ func TestAuthAPI_RateLimiting(t *testing.T) {
 
 	app := core.NewTestApp(testDB.Pool)
 
-	router := setupAuthAPITestRouter(app, testDB)
+	router := setupAuthAPITestRouterWithRateLimit(app, testDB)
 
-	// Test rapid successive login attempts
-	t.Run("rapid_login_attempts", func(t *testing.T) {
+	// Test rapid successive login attempts — dev-mode rate limit allows burst of 20
+	t.Run("rapid_login_attempts_pass_through_in_dev_mode", func(t *testing.T) {
 		loginPayload := `{"username":"nonexistent","password":"wrongpassword"}`
 
-		successCount := 0
+		processedCount := 0
 		for i := 0; i < 10; i++ {
 			req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBufferString(loginPayload))
 			req.Header.Set("Content-Type", "application/json")
@@ -448,15 +453,38 @@ func TestAuthAPI_RateLimiting(t *testing.T) {
 
 			router.ServeHTTP(w, req)
 
-			// Count how many requests succeeded (got processed, even if they failed authentication)
-			if w.Code == 401 || w.Code == 400 { // These are "processed" responses
-				successCount++
+			// In dev mode (burst=20), all 10 requests reach the handler (401 = bad credentials)
+			if w.Code == 401 || w.Code == 400 {
+				processedCount++
 			}
 		}
 
-		// All requests should be processed since rate limiting isn't implemented yet
-		// This test serves as a placeholder for when rate limiting is added
-		core.AssertEqual(t, 10, successCount, "All requests should be processed (no rate limiting implemented)")
+		core.AssertEqual(t, 10, processedCount, "All requests should reach the handler in dev-mode rate limiting (burst=20 > 10 requests)")
+	})
+
+	// Production mode: burst=3, so 5 rapid requests should exhaust the burst and return 429
+	t.Run("production_mode_rate_limit_triggers_429", func(t *testing.T) {
+		prodRouter := setupAuthAPITestRouterWithRateLimitProduction(app, testDB)
+		loginPayload := `{"username":"nonexistent","password":"wrongpassword"}`
+
+		codes := make([]int, 5)
+		for i := 0; i < 5; i++ {
+			req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBufferString(loginPayload))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			prodRouter.ServeHTTP(w, req)
+			codes[i] = w.Code
+		}
+
+		// First 3 requests hit the handler (burst=3), subsequent ones should be rate-limited
+		got429 := false
+		for _, code := range codes {
+			if code == http.StatusTooManyRequests {
+				got429 = true
+				break
+			}
+		}
+		core.AssertTrue(t, got429, "Production rate limit should return 429 after burst of 3 is exhausted")
 	})
 }
 
@@ -484,6 +512,57 @@ func setupAuthAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 				r.Get("/preferences", authHandler.V1GetPreferences)
 				r.Put("/preferences", authHandler.V1UpdatePreferences)
 				r.Get("/users/search", authHandler.V1SearchUsers)
+			})
+		})
+	})
+
+	return r
+}
+
+// setupAuthAPITestRouterWithRateLimitProduction creates a test router with StrictRateLimit
+// in production mode (0.1 rps, burst 3) to verify 429 behavior under load.
+func setupAuthAPITestRouterWithRateLimitProduction(app *core.App, testDB *core.TestDatabase) *chi.Mux {
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	r := chi.NewRouter()
+
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Route("/auth", func(r chi.Router) {
+			authHandler := Handler{App: app}
+			r.With(ratelimitmw.StrictRateLimit(false)).Post("/register", authHandler.V1Register)
+			r.With(ratelimitmw.StrictRateLimit(false)).Post("/login", authHandler.V1Login)
+			r.Group(func(r chi.Router) {
+				r.Use(jwtauth.Verifier(tokenAuth))
+				r.Use(jwtauth.Authenticator(tokenAuth))
+				r.Use(core.RequireAuthenticationMiddleware(userService))
+				r.Get("/refresh", authHandler.V1Refresh)
+			})
+		})
+	})
+
+	return r
+}
+
+// setupAuthAPITestRouterWithRateLimit creates a test router with StrictRateLimit applied
+// in development mode (relaxed limits: 10 rps, burst 20), matching production wiring.
+func setupAuthAPITestRouterWithRateLimit(app *core.App, testDB *core.TestDatabase) *chi.Mux {
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	r := chi.NewRouter()
+
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Route("/auth", func(r chi.Router) {
+			authHandler := Handler{App: app}
+			r.With(ratelimitmw.StrictRateLimit(true)).Post("/register", authHandler.V1Register)
+			r.With(ratelimitmw.StrictRateLimit(true)).Post("/login", authHandler.V1Login)
+			r.Group(func(r chi.Router) {
+				r.Use(jwtauth.Verifier(tokenAuth))
+				r.Use(jwtauth.Authenticator(tokenAuth))
+				r.Use(core.RequireAuthenticationMiddleware(userService))
+				r.Get("/refresh", authHandler.V1Refresh)
+				r.Get("/me", authHandler.V1Me)
 			})
 		})
 	})

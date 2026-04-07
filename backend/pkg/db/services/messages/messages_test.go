@@ -337,6 +337,9 @@ func TestMessageService_GetGamePosts(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Len(t, posts, 3)
+		for _, post := range posts {
+			assert.Equal(t, game.ID, post.GameID, "returned post should belong to the correct game")
+		}
 	})
 
 	t.Run("respects pagination", func(t *testing.T) {
