@@ -30,7 +30,8 @@ func (s *SessionService) SessionByToken(token string) (*core.Session, error) {
 		return nil, err
 	}
 	return &core.Session{
-		ID: int(dbSession.ID),
+		ID:   int(dbSession.ID),
+		User: &core.User{ID: int(dbSession.UserID)},
 	}, nil
 }
 
