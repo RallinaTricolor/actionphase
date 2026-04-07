@@ -737,6 +737,16 @@ test.describe('Common Room Flow', () => {
     await expect(commentContainer.getByText('(edited)').first()).toBeVisible({ timeout: 3000 });
   });
 
+  test('Player cannot create posts in Common Room', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+    const gameId = await getFixtureGameId(page, 'COMMON_ROOM_CREATE_POST');
+    const commonRoom = new CommonRoomPage(page);
+    await commonRoom.goto(gameId);
+
+    // Players should not see the Create Post form or button
+    await expect(commonRoom.createPostHeading).not.toBeVisible({ timeout: 10000 });
+  });
+
   test('GM can edit their own post', async ({ page }) => {
     // Test that GMs can edit their own posts
     // Validates Issue 8.4: GM Can't Edit Common Room Posts

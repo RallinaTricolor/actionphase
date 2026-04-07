@@ -112,6 +112,17 @@ test.describe.serial('Complete Phase Lifecycle', () => {
     await expect(page.getByRole('heading', { name: 'Submitted Actions' })).toBeVisible({ timeout: 10000 });
   });
 
+  test('player cannot see phase management tab', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+
+    const gameId = await getFixtureGameId(page, 'E2E_LIFECYCLE');
+    await navigateToGame(page, gameId);
+    await page.waitForLoadState('networkidle');
+
+    // Players should not see the Phases management tab
+    await expect(page.getByTestId('tab-phases')).not.toBeVisible({ timeout: 10000 });
+  });
+
   test('complete lifecycle: verify history shows all created phases', async ({ page }) => {
     // Previous tests created and activated an action phase
     // This test verifies the complete history is visible

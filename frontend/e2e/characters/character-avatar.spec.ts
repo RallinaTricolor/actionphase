@@ -121,6 +121,21 @@ test.describe('Character Avatar Feature', () => {
     await expect(uploadButton).toBeVisible();
   });
 
+  test('Non-owner player cannot upload avatar for another player character', async ({ page }) => {
+    await loginAs(page, 'PLAYER_2');
+    const gameId = await getFixtureGameId(page, 'CHARACTER_AVATARS');
+
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
+    await gamePage.goToCharacters();
+
+    // Player 2 opens Player 1's character sheet (Edit Sheet should not be visible for other players' chars)
+    // If Edit Sheet is not available, verify upload button is also not available
+    const player1CharCard = page.locator('div').filter({ hasText: 'E2E Test Char 1' }).filter({ hasText: 'test_player1' });
+    const uploadButtonInOtherCard = player1CharCard.locator('button[title="Upload Avatar"]');
+    await expect(uploadButtonInOtherCard).not.toBeVisible();
+  });
+
   test('GM can upload avatar for any character', async ({ page }) => {
     await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'CHARACTER_AVATARS');

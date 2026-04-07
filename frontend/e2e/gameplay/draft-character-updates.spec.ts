@@ -214,6 +214,18 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await expect(page.getByText('0 Unpublished')).toBeVisible({ timeout: 5000 });
   });
 
+  test('player cannot see Update Character Sheet button', async ({ page }) => {
+    await loginAs(page, 'PLAYER_3');
+    const gameId = await getFixtureGameId(page, 'E2E_GM_EDITING_RESULTS');
+    const gamePage = new GameDetailsPage(page);
+
+    await gamePage.goto(gameId);
+    await page.waitForLoadState('networkidle');
+
+    // Players should not see the Update Character Sheet button (GM-only)
+    await expect(page.getByRole('button', { name: 'Update Character Sheet' })).not.toBeVisible({ timeout: 10000 });
+  });
+
   test('published ability appears on the player character sheet', async ({ browser }) => {
     test.setTimeout(90000);
     // GM adds ability and publishes

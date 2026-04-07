@@ -156,6 +156,23 @@ test.describe('Character Creation Flow', () => {
     await assertTextVisible(page, 'NPCs');
   });
 
+  test('Player cannot create NPC characters', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+    const gameId = await getFixtureGameId(page, 'E2E_CHARACTER_CREATION');
+
+    const charPage = new CharacterWorkflowPage(page, gameId);
+    await charPage.goto();
+    await page.waitForLoadState('networkidle');
+
+    // Click create character to open the form
+    await page.click('button[data-testid="create-character-button"]');
+    await page.waitForSelector('#name', { timeout: 5000 });
+
+    // NPC option should not be available in character type dropdown for players
+    const npcOption = page.locator('#character_type option[value="npc"]');
+    await expect(npcOption).not.toBeAttached();
+  });
+
   test('Player can create character using E2E fixture (optimized)', async ({ page }) => {
     // This test uses the E2E_CHARACTER_CREATION fixture
     // which is already in character_creation state with an approved player

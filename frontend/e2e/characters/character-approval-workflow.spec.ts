@@ -48,6 +48,9 @@ test.describe('Character Approval Workflow', () => {
       expect(await characterPage.hasCharacter(characterName)).toBe(true);
       const status = await characterPage.getCharacterStatus(characterName);
       expect(status).toBe('pending');
+
+      // Player should not see an Approve button for their own pending character
+      await expect(playerPage.getByRole('button', { name: 'Approve' })).not.toBeVisible();
     } finally {
       await gmContext.close();
       await playerContext.close();

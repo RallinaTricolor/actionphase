@@ -32,9 +32,16 @@ Pop the FIRST line from the queue (remove it from the file). This is the file yo
 
 Read the entire test file. Do not summarize or skim. You need the full content to apply the checklist accurately.
 
-Also read the implementation file being tested (same name, without `.test.` / `_test.go`). This gives you context for what behavior should be verified.
+- For **backend** and **frontend** tests: also read the implementation file being tested (same name, without `_test.go` / `.test.ts/tsx`). This gives you context for what behavior should be verified.
+- For **e2e** tests: there is no single implementation file to read. Instead, note what fixture game and user roles the test uses — this is your context.
 
 **Step 3 — Apply the V&V checklist**
+
+The checklist differs by layer. Check the `layer` field in `meta.txt` and apply the correct section.
+
+---
+
+### Checklist: Backend and Frontend
 
 Answer each question with Yes or No, and for each No, quote the specific test that is the weakest evidence:
 
@@ -78,6 +85,55 @@ If the file tests any user interaction (click, submit, type): does at least one 
 
 If the file has no interactions, mark Q3 as N/A.
 
+---
+
+### Checklist: E2E
+
+E2E tests drive a real browser against a real backend. Tautology (Q1 for unit tests) is not the main risk — the risks are shallow workflows, missing persistence checks, and absent negative cases.
+
+Answer each question with Yes or No, and for each No, quote the specific test that is the weakest evidence:
+
+**EQ1 — Workflows reach a meaningful end state**
+Does at least one test verify the *result* of a workflow — not just that a button was clicked or a form submitted?
+
+Not acceptable (stops too early):
+- Test clicks "Submit Action" then only asserts `await assertTextVisible(page, 'Action Submission')` — proves the page loaded, not that the action was saved
+- Test creates a character then only asserts the form closed — doesn't verify the character actually appears
+
+Acceptable (verifies end state):
+- After submitting an action: `expect(await actionPage.hasSubmittedAction()).toBe(true)` and content is visible
+- After creating a character: `expect(await charPage.hasCharacter(characterName)).toBe(true)`
+- After editing a game setting: the new title is visible after navigating back
+
+**EQ2 — Data identity is verified, not just presence**
+If a test asserts something is visible after an action (text, element, row): does it verify *which specific item* it is — not just that some item exists?
+
+Not acceptable:
+- `await assertTextVisible(page, 'Action Submission')` — proves the section header exists, not that the right action loaded
+- `await expect(page.locator('text=E2E Test Char 1')).toBeVisible()` immediately after navigating — could just be fixture data, not the item the test created
+
+Acceptable:
+- `expect(savedContent).toContain(newActionContent)` where `newActionContent` contains a unique timestamp — verifies the specific content that was just saved
+- `expect(await charPage.hasCharacter(characterName)).toBe(true)` where `characterName` has a unique `Date.now()` suffix — verifies the exact character created in this test run
+
+If the test only reads fixture data (no creates/updates), mark EQ2 as N/A.
+
+**EQ3 — Negative cases exist for role/permission boundaries**
+If the test file covers a feature with role-based access (GM vs player, owner vs non-owner): does at least one test assert that a restricted user *cannot* see or perform the restricted action?
+
+Not acceptable (positive-only):
+- File tests "GM can create phase" but never tests that a player cannot
+- File tests "player can edit their own character" but never tests that they cannot edit another player's character
+
+Acceptable:
+- `await expect(submitButton).not.toBeVisible()` for a role that should not have access
+- `expect(response.status).toBe(403)` after a player attempts a direct API call that only GMs can make
+- `await expect(editButtonInPlayer1Card).not.toBeVisible()` when logged in as Player 2
+
+If the test file covers a feature with no role/permission boundaries (e.g. a health check), mark EQ3 as N/A.
+
+---
+
 **Step 4 — Determine verdict**
 
 - **PASS** — All applicable questions answered Yes
@@ -103,9 +159,10 @@ If tests fail after your fix, diagnose and fix before logging the result.
 Append one row to `.claude/audit/results.md`:
 
 ```markdown
-| `path/to/file.test.ts` | PASS | All three checklist items satisfied |
+| `path/to/file.test.ts` | PASS | All checklist items satisfied |
 | `path/to/other.test.ts` | FIXED | Q1: added data assertion to `useCharacterStats` |
-| `path/to/another.test.ts` | SKIP | E2E spec — not running tests, assertions look correct |
+| `path/to/another.spec.ts` | FIXED | EQ2: added unique timestamp to verify saved content identity |
+| `path/to/smoke.spec.ts` | PASS | EQ1/EQ2 N/A (read-only health check); EQ3 N/A (no role boundaries) |
 ```
 
 Use a relative path from the repo root.

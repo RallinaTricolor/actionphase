@@ -30,6 +30,16 @@ test.describe.serial('GM Edits Game Settings', () => {
     await page.close();
   });
 
+  test('Player cannot edit game settings', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
+
+    // Players should not see the edit game settings button/kebab menu
+    await expect(page.getByLabel('Game actions')).not.toBeVisible({ timeout: 10000 });
+  });
+
   test('GM can edit game title and description', async ({ page }) => {
     // Login as GM
     await loginAs(page, 'GM');

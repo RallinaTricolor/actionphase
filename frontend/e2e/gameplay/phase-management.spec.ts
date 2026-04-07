@@ -133,6 +133,17 @@ test.describe('Phase Management Flow', () => {
     await expect(phaseCard).not.toBeVisible({ timeout: 5000 });
   });
 
+  test('Player cannot access phase management', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION');
+
+    await page.goto(`/games/${gameId}`);
+    await page.waitForLoadState('networkidle');
+
+    // Player should not see the Phases tab at all
+    await expect(page.getByRole('tab', { name: 'Phases' })).not.toBeVisible({ timeout: 10000 });
+  });
+
   test('GM can cancel phase deletion', async ({ page }) => {
     // Login as GM
     await loginAs(page, 'GM');

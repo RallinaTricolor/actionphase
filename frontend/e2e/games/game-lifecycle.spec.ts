@@ -137,6 +137,17 @@ test.describe('Game Lifecycle Management', () => {
     await expect(gameActionsMenu).toBeVisible();
   });
 
+  test('Player cannot see game lifecycle management controls', async ({ page }) => {
+    await loginAs(page, 'PLAYER_1');
+    const gameId = await getFixtureGameId(page, 'E2E_GAME_LIFECYCLE_PAUSE');
+
+    const gamePage = new GameDetailsPage(page);
+    await gamePage.goto(gameId);
+
+    // Player should not see the game actions menu that contains lifecycle controls
+    await expect(page.getByLabel('Game actions')).not.toBeVisible({ timeout: 10000 });
+  });
+
   test('GM can delete cancelled game', async ({ page }) => {
     // Testing game deletion and verification it no longer appears in games list
     await loginAs(page, 'GM');
