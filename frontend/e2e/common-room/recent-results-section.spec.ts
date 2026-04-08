@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
+import { assertTabSelected } from '../utils/navigation';
 
 test.describe('Recent Results Section in Common Room', () => {
   test.beforeEach(async ({ page, context }) => {
@@ -138,8 +139,8 @@ test.describe('Recent Results Section in Common Room', () => {
     await page.goto("http://localhost:5173/games/" + gameId + "?tab=common-room");
     await page.waitForLoadState('networkidle');
 
-    // Common Room tab should be active (use role selector to avoid strict mode violation)
-    await expect(page.getByRole('tab', { name: /Common Room/i, selected: true })).toBeVisible();
+    // Common Room tab should be active
+    await assertTabSelected(page, 'Common Room');
 
     // Recent Results Section should NOT appear
     await expect(page.getByText('Recent Action Results')).not.toBeVisible();

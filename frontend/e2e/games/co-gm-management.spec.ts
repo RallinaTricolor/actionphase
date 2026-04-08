@@ -3,6 +3,7 @@ import { loginAs } from '../fixtures/auth-helpers';
 import { getWorkerGameId, getWorkerUsername } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { MessagingPage } from '../pages/MessagingPage';
+import { navigateToGameTab, assertTabVisible, assertTabNotVisible } from '../utils/navigation';
 
 /**
  * Co-GM Management E2E Tests
@@ -31,8 +32,7 @@ test.describe.serial('Co-GM Management', () => {
     await gamePage.goto(gameId);
 
     // Navigate to People tab > Participants sub-tab
-    await page.getByRole('tab', { name: 'People' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'People');
     await page.getByRole('button', { name: /Game Participants/ }).click();
 
     // Wait for co-GM section and find TestAudience1's actions button
@@ -64,8 +64,7 @@ test.describe.serial('Co-GM Management', () => {
     await gamePage.goto(gameId);
 
     // Navigate to People tab > Participants sub-tab
-    await page.getByRole('tab', { name: 'People' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'People');
     await page.getByRole('button', { name: /Game Participants/ }).click();
 
     // Wait for participant data to load and find the audience heading
@@ -120,12 +119,11 @@ test.describe.serial('Co-GM Management', () => {
     await gamePage.goto(gameId);
 
     // Verify co-GM sees GM-only tabs
-    await expect(page.getByRole('tab', { name: 'Phases' })).toBeVisible();
+    await assertTabVisible(page, 'Phases');
     // Note: Applications tab only shows during recruitment, game is in_progress so won't be visible
 
     // Navigate to Phases tab (GM-only feature)
-    await page.getByRole('tab', { name: 'Phases' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'Phases');
     await expect(page.getByRole('heading', { name: 'Phase Management' })).toBeVisible();
 
     // Verify co-GM can see phase management UI
@@ -151,8 +149,7 @@ test.describe.serial('Co-GM Management', () => {
     await gamePage.goto(gameId);
 
     // Navigate to People tab > Participants sub-tab
-    await page.getByRole('tab', { name: 'People' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'People');
     await page.getByRole('button', { name: /Game Participants/ }).click();
 
     // Wait for participant data to load
@@ -181,8 +178,7 @@ test.describe.serial('Co-GM Management', () => {
     await gamePage.goto(gameId);
 
     // Navigate to People tab > Participants sub-tab
-    await page.getByRole('tab', { name: 'People' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'People');
     await page.getByRole('button', { name: /Game Participants/ }).click();
 
     // Wait for co-GM section to load
@@ -219,11 +215,11 @@ test.describe.serial('Co-GM Management', () => {
     await gamePage.goto(gameId);
 
     // Verify former co-GM no longer sees GM-only tabs
-    await expect(page.getByRole('tab', { name: 'Phases' })).not.toBeVisible();
+    await assertTabNotVisible(page, 'Phases');
 
     // Verify only sees player/audience tabs (not GM tabs)
-    await expect(page.getByRole('tab', { name: 'People' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Audience' })).toBeVisible();
+    await assertTabVisible(page, 'People');
+    await assertTabVisible(page, 'Audience');
   });
 
   test('Co-GM badge removed from header after demotion', async ({ page }) => {
@@ -259,8 +255,7 @@ test.describe.serial('Co-GM Management', () => {
     await gamePage.goto(gameId);
 
     // Navigate to People tab > Participants sub-tab
-    await page.getByRole('tab', { name: 'People' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'People');
     await page.getByRole('button', { name: /Game Participants/ }).click();
 
     // Wait for audience section
@@ -306,11 +301,10 @@ test.describe.serial('Co-GM Management', () => {
     await expect(page.getByText(/Co-GM:.*TestAudience2/).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
     // Wait for Phases tab to appear (GM-only tab, confirms co-GM permissions)
-    await expect(page.getByRole('tab', { name: 'Phases' })).toBeVisible({ timeout: 10000 });
+    await assertTabVisible(page, 'Phases');
 
     // Navigate to Phases tab
-    await page.getByRole('tab', { name: 'Phases' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'Phases');
 
     // Click "New Phase" button
     await page.getByRole('button', { name: 'New Phase' }).click();
@@ -341,8 +335,7 @@ test.describe.serial('Co-GM Management', () => {
     await gamePage.goto(gameId);
 
     // Navigate to Phases tab
-    await page.getByRole('tab', { name: 'Phases' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'Phases');
 
     // Verify co-GM can see the phase they created
     await expect(page.getByRole('heading', { name: 'Co-GM Test Phase' })).toBeVisible();
@@ -405,8 +398,7 @@ test.describe.serial('Co-GM Management', () => {
     await gamePage.goto(gameId);
 
     // Navigate to Phases tab and activate the action phase
-    await page.getByRole('tab', { name: 'Phases' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'Phases');
 
     // Find "Test Phase 1" (Phase 2, the action phase) card and click its Activate button
     // Use both "Phase 2" text and heading to uniquely identify the correct phase card
@@ -430,8 +422,7 @@ test.describe.serial('Co-GM Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Navigate to Actions tab (GM-only, now visible because action phase is active)
-    await page.getByRole('tab', { name: 'Actions' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'Actions');
 
     // Verify co-GM can see the actions interface
     await expect(page.getByRole('heading', { name: 'Submitted Actions' })).toBeVisible();
@@ -452,8 +443,7 @@ test.describe.serial('Co-GM Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Navigate to Phases tab
-    await page.getByRole('tab', { name: 'Phases' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'Phases');
 
     // Verify co-GM can see phase management interface
     await expect(page.getByRole('heading', { name: 'Phase Management' })).toBeVisible();
@@ -481,8 +471,7 @@ test.describe.serial('Co-GM Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Navigate to Handouts tab
-    await page.getByRole('tab', { name: 'Handouts' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'Handouts');
 
     // Verify co-GM can access handout creation form (GM-only feature)
     const createButton = page.getByRole('button', { name: 'Create Handout' });
@@ -518,8 +507,7 @@ test.describe.serial('Co-GM Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Navigate to People tab
-    await page.getByRole('tab', { name: 'People' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'People');
 
     // Click on Game Participants sub-tab
     await page.getByRole('button', { name: /Game Participants/ }).click();
@@ -546,8 +534,7 @@ test.describe.serial('Co-GM Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Navigate to People tab > Characters sub-tab
-    await page.getByRole('tab', { name: 'People' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'People');
     await page.getByRole('button', { name: 'Characters' }).click();
 
     // Click "Create Character" button
@@ -592,11 +579,10 @@ test.describe.serial('Co-GM Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify co-GM can see Audience tab (GM-only during in_progress)
-    await expect(page.getByRole('tab', { name: 'Audience' })).toBeVisible();
+    await assertTabVisible(page, 'Audience');
 
     // Navigate to Audience tab
-    await page.getByRole('tab', { name: 'Audience' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'Audience');
 
     // Verify co-GM can see audience content area
     // The audience tab shows private messages and action submissions
@@ -620,8 +606,7 @@ test.describe.serial('Co-GM Management', () => {
 
     // Navigate to Actions tab where GMs manage action results
     // (visible because action phase is active from previous test)
-    await page.getByRole('tab', { name: 'Actions' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'Actions');
 
     // Verify co-GM can see the Action Results heading (GM-only view)
     // This is the key permission check - only GMs and co-GMs can access action results
@@ -641,8 +626,7 @@ test.describe.serial('Co-GM Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Navigate to People tab > Characters
-    await page.getByRole('tab', { name: 'People' }).click();
-    await page.waitForLoadState('networkidle');
+    await navigateToGameTab(page, 'People');
     await page.getByRole('button', { name: 'Characters' }).click();
 
     // Verify co-GM can see the Characters heading (GM-only permission check)

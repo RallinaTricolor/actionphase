@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import { navigateToGameTab } from '../utils/navigation';
 
 /**
  * Page Object for Action Results (History)
@@ -22,11 +23,8 @@ export class ActionResultsPage {
     await this.page.goto(`/games/${this.gameId}`);
     await this.page.waitForLoadState('networkidle');
 
-    // Click on History tab using data-testid
-    const historyTab = this.page.getByTestId('tab-history');
-    await historyTab.waitFor({ state: 'visible', timeout: 5000 });
-    await historyTab.click();
-    await this.page.waitForLoadState('networkidle');
+    // Navigate to History tab (handles mobile select and desktop tabs)
+    await navigateToGameTab(this.page, 'History');
   }
 
   /**
@@ -214,9 +212,14 @@ export class ActionResultsPage {
    */
   async isHistoryAvailable(): Promise<boolean> {
     try {
-      const historyTab = this.page.getByTestId('tab-history');
-      await historyTab.waitFor({ state: 'visible', timeout: 3000 });
-      return true;
+      const mobileSelect = this.page.locator('select#tab-select');
+      const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+      if (isMobile) {
+        return await mobileSelect.locator('option', { hasText: 'History' }).count() > 0;
+      } else {
+        await this.page.getByTestId('tab-history').waitFor({ state: 'visible', timeout: 3000 });
+        return true;
+      }
     } catch {
       return false;
     }

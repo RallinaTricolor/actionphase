@@ -94,7 +94,7 @@ test.describe('Player with Multiple Characters', () => {
 
       // Verify comment shows "Aria Moonwhisper"
       const comment1 = playerPage.locator('[data-testid="threaded-comment"]').filter({ hasText: comment1Content }).first();
-      await expect(comment1.getByText('Aria Moonwhisper').first()).toBeVisible();
+      await expect(comment1.getByText('Aria Moonwhisper').locator('visible=true').first()).toBeVisible();
 
       // Add comment as Kael
       const comment2Content = `Comment as Kael ${Date.now()}: Second perspective`;
@@ -103,7 +103,7 @@ test.describe('Player with Multiple Characters', () => {
 
       // Verify comment shows "Kael Shadowblade"
       const comment2 = playerPage.locator('[data-testid="threaded-comment"]').filter({ hasText: comment2Content }).first();
-      await expect(comment2.getByText('Kael Shadowblade').first()).toBeVisible();
+      await expect(comment2.getByText('Kael Shadowblade').locator('visible=true').first()).toBeVisible();
     } finally {
       await gmContext.close();
       await playerContext.close();
@@ -156,7 +156,7 @@ test.describe('Player with Multiple Characters', () => {
       // Verify the comment was created with the correct character
       await playerCommonRoom.verifyCommentExists(commentContent);
       const comment = playerPage.locator('[data-testid="threaded-comment"]').filter({ hasText: commentContent }).first();
-      await expect(comment.getByText('Theron Brightshield').first()).toBeVisible();
+      await expect(comment.getByText('Theron Brightshield').locator('visible=true').first()).toBeVisible();
     } finally {
       await gmContext.close();
       await playerContext.close();
@@ -196,7 +196,7 @@ test.describe('Player with Multiple Characters', () => {
 
       // Verify it shows Aria
       const commentContainer = playerPage.locator('[data-testid="threaded-comment"]').filter({ hasText: commentContent }).locator('visible=true').first();
-      await expect(commentContainer.getByText('Aria Moonwhisper').first()).toBeVisible();
+      await expect(commentContainer.getByText('Aria Moonwhisper').locator('visible=true').first()).toBeVisible();
 
       // Edit the comment and change to Kael
       const editButton = commentContainer.getByRole('button', { name: 'Edit' }).locator('visible=true').first();
@@ -215,13 +215,13 @@ test.describe('Player with Multiple Characters', () => {
       await playerPage.waitForLoadState('networkidle');
 
       // Verify the character name updated immediately to Kael
-      await expect(commentContainer.getByText('Kael Shadowblade').first()).toBeVisible({ timeout: 5000 });
+      await expect(commentContainer.getByText('Kael Shadowblade').locator('visible=true').first()).toBeVisible({ timeout: 5000 });
 
       // Verify Aria is no longer showing
       await expect(commentContainer.getByText('Aria Moonwhisper').first()).not.toBeVisible();
 
       // Verify (edited) marker appears
-      await expect(commentContainer.getByText('(edited)').first()).toBeVisible({ timeout: 3000 });
+      await expect(commentContainer.getByText('(edited)').locator('visible=true').first()).toBeVisible({ timeout: 3000 });
     } finally {
       await gmContext.close();
       await playerContext.close();

@@ -1,4 +1,5 @@
 import { Page, Locator } from '@playwright/test';
+import { navigateToGameTab } from '../utils/navigation';
 
 /**
  * Page Object for Game Applications
@@ -34,11 +35,8 @@ export class GameApplicationsPage {
     await this.page.goto(`/games/${this.gameId}`);
     await this.page.waitForLoadState('networkidle');
 
-    // Click on Applications tab using data-testid
-    const applicationsTab = this.page.getByTestId('tab-applications');
-    await applicationsTab.waitFor({ state: 'visible', timeout: 5000 });
-    await applicationsTab.click();
-    await this.page.waitForLoadState('networkidle');
+    // Navigate to Applications tab (handles mobile select and desktop tabs)
+    await navigateToGameTab(this.page, 'Applications');
   }
 
   /**

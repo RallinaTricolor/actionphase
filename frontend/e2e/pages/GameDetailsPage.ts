@@ -225,21 +225,41 @@ export class GameDetailsPage {
    * Handles both game states:
    * - character_creation: Direct "Characters" tab
    * - in_progress: "People" tab with "Characters" sub-navigation
+   * Also handles mobile (select dropdown) vs desktop (role="tab") navigation.
    */
   async goToCharacters() {
-    // Check if there's a direct Characters tab
-    const directTab = this.page.getByRole('tab', { name: 'Characters' });
-    const hasDirectTab = await directTab.count() > 0;
+    const mobileSelect = this.page.locator('select#tab-select');
+    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
 
-    if (hasDirectTab) {
-      // Direct Characters tab exists (character_creation state)
-      await directTab.click();
-      await this.page.waitForLoadState('networkidle');
+    if (isMobile) {
+      // Check if "Characters" option exists in the select
+      const charactersOption = mobileSelect.locator('option', { hasText: 'Characters' });
+      const hasDirectOption = await charactersOption.count() > 0;
+
+      if (hasDirectOption) {
+        const optionValue = await charactersOption.first().getAttribute('value');
+        await mobileSelect.selectOption(optionValue!);
+        await this.page.waitForLoadState('networkidle');
+      } else {
+        // Navigate via People tab (in_progress state)
+        await this.goToTab('People');
+        await this.page.getByRole('button', { name: 'Characters' }).click();
+        await this.page.waitForLoadState('networkidle');
+      }
     } else {
-      // Navigate via People tab (in_progress state)
-      await this.goToTab('People');
-      await this.page.getByRole('button', { name: 'Characters' }).click();
-      await this.page.waitForLoadState('networkidle');
+      // Desktop: check for direct Characters tab
+      const directTab = this.page.getByRole('tab', { name: 'Characters' });
+      const hasDirectTab = await directTab.count() > 0;
+
+      if (hasDirectTab) {
+        await directTab.click();
+        await this.page.waitForLoadState('networkidle');
+      } else {
+        // Navigate via People tab (in_progress state)
+        await this.goToTab('People');
+        await this.page.getByRole('button', { name: 'Characters' }).click();
+        await this.page.waitForLoadState('networkidle');
+      }
     }
   }
 
@@ -364,10 +384,22 @@ export class GameDetailsPage {
 
   /**
    * Verify a specific tab is active
+   * Handles mobile (select#tab-select) and desktop (role="tab" with selected state).
    */
   async verifyActiveTab(tabName: string) {
-    const activeTab = this.page.getByRole('tab', { name: tabName, selected: true });
-    await waitForVisible(activeTab);
+    const mobileSelect = this.page.locator('select#tab-select');
+    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+
+    if (isMobile) {
+      const checkedOption = mobileSelect.locator('option:checked');
+      const optionText = await checkedOption.textContent();
+      if (!optionText?.includes(tabName)) {
+        throw new Error(`Expected active tab "${tabName}" but selected option text is "${optionText}"`);
+      }
+    } else {
+      const activeTab = this.page.getByRole('tab', { name: tabName, selected: true });
+      await waitForVisible(activeTab);
+    }
   }
 
   /**

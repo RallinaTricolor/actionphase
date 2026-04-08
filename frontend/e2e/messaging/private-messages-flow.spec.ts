@@ -65,12 +65,8 @@ test.describe('Private Messages Flow', () => {
       await player2Messaging.sendMessage(replyContent);
 
       // === Player 1 sees the reply ===
-      // Reload to fetch new messages
-      await player1Page.reload();
-      await player1Page.waitForLoadState('networkidle');
-
-      // Navigate back to Messages and open conversation
-      await player1Messaging.navigateToMessages();
+      // Navigate fresh to Messages tab (avoids mobile issue where tab bar is hidden in conversation view)
+      await player1Messaging.goto(gameId);
       await player1Messaging.openConversation(conversationTitle);
 
       // Verify Player 2's reply is visible

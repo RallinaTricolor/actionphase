@@ -1,4 +1,5 @@
 import { Page, Locator } from '@playwright/test';
+import { navigateToGameTab } from '../utils/navigation';
 
 /**
  * Page Object for Conversation/Messaging interactions
@@ -38,8 +39,11 @@ export class ConversationPage {
     await this.page.goto(`/games/${gameId}`);
     await this.page.waitForLoadState('networkidle');
 
-    // Navigate to Conversations tab
-    const conversationsTab = this.page.locator('button:has-text("Conversations"), a:has-text("Conversations")');
+    // Navigate to Messages tab first (handles mobile select and desktop tabs),
+    // then click the Conversations sub-tab within the Messages view
+    await navigateToGameTab(this.page, 'Messages');
+    const conversationsTab = this.page.getByRole('button', { name: 'Conversations' }).locator('visible=true').first();
+    await conversationsTab.waitFor({ state: 'visible', timeout: 5000 });
     await conversationsTab.click();
     await this.page.waitForLoadState('networkidle');
   }

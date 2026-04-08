@@ -3,6 +3,7 @@ import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { CharacterWorkflowPage } from '../pages/CharacterWorkflowPage';
+import { navigateToGameTab } from '../utils/navigation';
 
 /**
  * E2E Tests for Character Approval Workflow
@@ -215,10 +216,7 @@ test.describe('Character Approval Workflow', () => {
       await gmPage.goto(`/games/${gameId}`);
       await gmPage.waitForLoadState('networkidle');
 
-      const peopleTab = gmPage.getByRole('tab', { name: /People/i });
-      await expect(peopleTab).toBeVisible({ timeout: 5000 });
-      await peopleTab.click();
-      await gmPage.waitForLoadState('networkidle');
+      await navigateToGameTab(gmPage, 'People');
 
       // Verify approved character is visible
       await expect(gmPage.getByText(characterName).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
@@ -229,10 +227,7 @@ test.describe('Character Approval Workflow', () => {
       await playerPage.goto(`/games/${gameId}`);
       await playerPage.waitForLoadState('networkidle');
 
-      const playerPeopleTab = playerPage.getByRole('tab', { name: /People/i });
-      await expect(playerPeopleTab).toBeVisible({ timeout: 5000 });
-      await playerPeopleTab.click();
-      await playerPage.waitForLoadState('networkidle');
+      await navigateToGameTab(playerPage, 'People');
 
       await expect(playerPage.getByText(characterName).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
     } finally {

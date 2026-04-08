@@ -36,12 +36,22 @@ test.describe('Concurrent Editing', () => {
       await expect(player1Page.getByRole('heading', { level: 1 }).or(player1Page.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
       await expect(player2Page.getByRole('heading', { level: 1 }).or(player2Page.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();
 
-      // Both should have tabs visible
-      const player1TabCount = await player1Page.getByRole('tab').count();
-      const player2TabCount = await player2Page.getByRole('tab').count();
+      // Both should have tab navigation visible (mobile: select dropdown; desktop: role=tab)
+      const p1MobileSelect = player1Page.locator('select#tab-select');
+      const p1IsMobile = await p1MobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+      if (p1IsMobile) {
+        await expect(p1MobileSelect).toBeVisible();
+      } else {
+        expect(await player1Page.getByRole('tab').count()).toBeGreaterThan(0);
+      }
 
-      expect(player1TabCount).toBeGreaterThan(0);
-      expect(player2TabCount).toBeGreaterThan(0);
+      const p2MobileSelect = player2Page.locator('select#tab-select');
+      const p2IsMobile = await p2MobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+      if (p2IsMobile) {
+        await expect(p2MobileSelect).toBeVisible();
+      } else {
+        expect(await player2Page.getByRole('tab').count()).toBeGreaterThan(0);
+      }
 
     } finally {
       await player1Context.close();
@@ -83,8 +93,8 @@ test.describe('Concurrent Editing', () => {
       await editButton.click();
       await gmPage.waitForLoadState('networkidle');
 
-      // GM should see edit form (check for form inputs)
-      await expect(gmPage.getByRole('textbox').locator('visible=true').first().or(gmPage.getByRole('combobox').locator('visible=true').first())).toBeVisible();
+      // GM should see edit form (check for game title input)
+      await expect(gmPage.getByTestId('game-title')).toBeVisible();
 
       // Player should still see game normally (not affected by GM editing)
       await expect(playerPage.getByRole('heading', { level: 1 }).or(playerPage.getByRole('heading', { level: 2 })).locator('visible=true').first()).toBeVisible();

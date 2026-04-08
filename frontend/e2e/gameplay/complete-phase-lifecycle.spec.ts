@@ -4,7 +4,7 @@ import { getFixtureGameId } from '../fixtures/game-helpers';
 import { PhaseManagementPage } from '../pages/PhaseManagementPage';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { HistoryPage } from '../pages/HistoryPage';
-import { navigateToGame } from '../utils/navigation';
+import { navigateToGame, navigateToGameTab, assertTabVisible, assertTabNotVisible } from '../utils/navigation';
 
 /**
  * E2E Tests for Complete Phase Lifecycle
@@ -69,12 +69,11 @@ test.describe.serial('Complete Phase Lifecycle', () => {
     await navigateToGame(page, gameId);
     await page.waitForLoadState('networkidle');
 
-    // During action phase, players should see "Submit Action" tab using data-testid
-    await expect(page.getByTestId('tab-actions')).toBeVisible({ timeout: 10000 });
+    // During action phase, players should see "Submit Action" tab
+    await assertTabVisible(page, 'Submit Action');
 
-    // Click Submit Action tab using data-testid
-    await page.getByTestId('tab-actions').click();
-    await page.waitForLoadState('networkidle');
+    // Navigate to Submit Action tab
+    await navigateToGameTab(page, 'Submit Action');
 
     // Should see action submission form
     await expect(page.getByRole('heading', { name: 'Action Submission' })).toBeVisible({ timeout: 10000 });
@@ -100,10 +99,10 @@ test.describe.serial('Complete Phase Lifecycle', () => {
     await gamePage.goto(gameId);
 
     // During action phase, GM should see "Actions" tab
-    await expect(page.getByTestId('tab-actions')).toBeVisible({ timeout: 10000 });
+    await assertTabVisible(page, 'Actions');
 
     // GM should also still see phase management
-    await expect(page.getByTestId('tab-phases')).toBeVisible();
+    await assertTabVisible(page, 'Phases');
 
     // Navigate to Actions tab using POM
     await gamePage.goToActions();
@@ -120,7 +119,7 @@ test.describe.serial('Complete Phase Lifecycle', () => {
     await page.waitForLoadState('networkidle');
 
     // Players should not see the Phases management tab
-    await expect(page.getByTestId('tab-phases')).not.toBeVisible({ timeout: 10000 });
+    await assertTabNotVisible(page, 'Phases');
   });
 
   test('complete lifecycle: verify history shows all created phases', async ({ page }) => {

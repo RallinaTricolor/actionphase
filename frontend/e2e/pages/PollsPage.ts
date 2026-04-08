@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { navigateToGameTab } from '../utils/navigation';
 
 /**
  * Page Object for Common Room Polls
@@ -30,11 +31,8 @@ export class PollsPage {
     await this.page.goto(`/games/${this.gameId}`);
     await this.page.waitForLoadState('networkidle');
 
-    // Navigate to Common Room tab
-    const commonRoomTab = this.page.getByTestId('tab-common-room');
-    await expect(commonRoomTab).toBeVisible({ timeout: 10000 });
-    await commonRoomTab.click();
-    await this.page.waitForLoadState('networkidle');
+    // Navigate to Common Room tab (handles mobile select and desktop tabs)
+    await navigateToGameTab(this.page, 'Common Room');
 
     // Click Polls sub-tab
     const pollsSubTab = this.page.getByRole('button', { name: /Polls/ });

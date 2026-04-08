@@ -116,9 +116,13 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
       const timer = setTimeout(async () => {
         // Try to find comment with various ID patterns (base, -desktop, -mobile)
         // Root comments use base ID, nested comments may have -desktop/-mobile suffix
-        const element = document.getElementById(`comment-${commentIdParam}`) ||
-                      document.getElementById(`comment-${commentIdParam}-desktop`) ||
-                      document.getElementById(`comment-${commentIdParam}-mobile`);
+        const baseEl = document.getElementById(`comment-${commentIdParam}`);
+        const desktopEl = document.getElementById(`comment-${commentIdParam}-desktop`);
+        const mobileEl = document.getElementById(`comment-${commentIdParam}-mobile`);
+        // Prefer the visible element so scrollIntoView works (hidden elements don't scroll)
+        const element = [baseEl, mobileEl, desktopEl].find(
+          el => el && el.offsetParent !== null
+        ) || baseEl || desktopEl || mobileEl;
 
         if (element) {
           // Comment is visible in the DOM - scroll to it

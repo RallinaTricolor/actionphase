@@ -22,12 +22,17 @@ export class SettingsPage {
 
   /**
    * Navigate to the Account Information section via sidebar navigation
-   * Works on both desktop (button) and mobile (select dropdown)
+   * Works on both desktop (sidebar button) and mobile (select#section-select dropdown)
    */
   async clickAccountInformation() {
-    // Wait for page to load and click the Account Information navigation button
-    await this.page.waitForSelector('button:has-text("Account Information")', { state: 'visible' });
-    await this.page.click('button:has-text("Account Information")');
+    const mobileSelect = this.page.locator('select#section-select');
+    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+    if (isMobile) {
+      await mobileSelect.selectOption('account');
+    } else {
+      await this.page.waitForSelector('button:has-text("Account Information")', { state: 'visible' });
+      await this.page.click('button:has-text("Account Information")');
+    }
   }
 
   // Change Username Form
@@ -107,7 +112,13 @@ export class SettingsPage {
   // Reading Section
 
   async clickReadingSection() {
-    await this.page.click('button:has-text("Reading")');
+    const mobileSelect = this.page.locator('select#section-select');
+    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+    if (isMobile) {
+      await mobileSelect.selectOption('reading');
+    } else {
+      await this.page.click('button:has-text("Reading")');
+    }
     await this.page.waitForSelector('[data-testid="read-mode-auto"]', { state: 'visible' });
     // Wait for the preferences query to resolve so radio checked state reflects server data
     await this.page.waitForLoadState('networkidle');

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
-import { navigateToGameAndTab } from '../utils/navigation';
+import { navigateToGameAndTab, navigateViaNavLink } from '../utils/navigation';
 import { MessagingPage } from '../pages/MessagingPage';
 
 /**
@@ -35,7 +35,7 @@ test.describe('Unsaved Changes Warning', () => {
       await postTextarea.fill('This is an unsaved GM post draft');
 
       // Navigate away via nav link (React Router in-app navigation)
-      await page.getByRole('link', { name: 'Dashboard' }).click();
+      await navigateViaNavLink(page, 'Dashboard');
 
       // Warning dialog should appear
       await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
@@ -55,7 +55,7 @@ test.describe('Unsaved Changes Warning', () => {
       await postTextarea.fill(draftText);
 
       // Attempt navigation
-      await page.getByRole('link', { name: 'Dashboard' }).click();
+      await navigateViaNavLink(page, 'Dashboard');
       await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
 
       // Click Stay
@@ -82,7 +82,7 @@ test.describe('Unsaved Changes Warning', () => {
       await postTextarea.fill('Text I am OK abandoning');
 
       // Attempt navigation
-      await page.getByRole('link', { name: 'Dashboard' }).click();
+      await navigateViaNavLink(page, 'Dashboard');
       await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
 
       // Click Leave
@@ -103,7 +103,7 @@ test.describe('Unsaved Changes Warning', () => {
       await expect(page.locator('textarea[placeholder*="Phase Title"]')).toBeVisible({ timeout: 5000 });
 
       // Navigate away without typing
-      await page.getByRole('link', { name: 'Dashboard' }).click();
+      await navigateViaNavLink(page, 'Dashboard');
       await page.waitForLoadState('networkidle');
 
       // Should navigate directly with no dialog
@@ -126,7 +126,7 @@ test.describe('Unsaved Changes Warning', () => {
       await actionTextarea.fill('My brilliant plan that I have not yet saved');
 
       // Navigate away
-      await page.getByRole('link', { name: 'Dashboard' }).click();
+      await navigateViaNavLink(page, 'Dashboard');
 
       await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
     });
@@ -143,7 +143,7 @@ test.describe('Unsaved Changes Warning', () => {
       const draftAction = 'My carefully drafted action plan';
       await actionTextarea.fill(draftAction);
 
-      await page.getByRole('link', { name: 'Dashboard' }).click();
+      await navigateViaNavLink(page, 'Dashboard');
       await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
 
       await page.getByRole('button', { name: 'Stay' }).click();
@@ -169,13 +169,19 @@ test.describe('Unsaved Changes Warning', () => {
       const conversationTitle = `Unsaved Warning Test ${Date.now()}`;
       await messaging.createConversation(conversationTitle, ['E2E Test Char 2']);
 
+      // On mobile the reply form is collapsed — click Reply to expand it
+      const replyButton = page.getByRole('button', { name: 'Reply' }).locator('visible=true').first();
+      if (await replyButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await replyButton.click();
+      }
+
       // The textarea should now be visible in the open conversation
       const messageTextarea = page.getByPlaceholder(/Type your message/i);
       await expect(messageTextarea).toBeVisible({ timeout: 5000 });
       await messageTextarea.fill('An unsaved private message draft');
 
       // Navigate away
-      await page.getByRole('link', { name: 'Dashboard' }).click();
+      await navigateViaNavLink(page, 'Dashboard');
 
       await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
     });

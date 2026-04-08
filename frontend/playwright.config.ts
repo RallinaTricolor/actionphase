@@ -47,11 +47,16 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
+    // Mobile-only for this branch (mobile_e2e)
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 5'] },
     },
-// Firefox and WebKit can be added later if needed
+    // Desktop and other browsers can be re-enabled after mobile support is complete
+    // {
+    //   name: 'chromium',
+    //   use: { ...devices['Desktop Chrome'] },
+    // },
     // {
     //   name: 'firefox',
     //   use: { ...devices['Desktop Firefox'] },

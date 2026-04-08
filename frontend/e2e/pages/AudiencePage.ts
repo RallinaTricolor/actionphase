@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test';
 import { waitForVisible } from '../utils/waits';
 import { assertTextVisible } from '../utils/assertions';
+import { navigateToGameTab } from '../utils/navigation';
 
 /**
  * Page Object Model for Audience Tab
@@ -22,10 +23,8 @@ export class AudiencePage {
     await this.page.goto(`http://localhost:5173/games/${gameId}`);
     await this.page.waitForLoadState('networkidle');
 
-    // Click Audience tab
-    const audienceTab = this.page.getByRole('tab', { name: 'Audience' });
-    await audienceTab.click();
-    await this.page.waitForLoadState('networkidle');
+    // Navigate to Audience tab (handles mobile select and desktop tabs)
+    await navigateToGameTab(this.page, 'Audience');
 
     // Click "Private Messages" sub-tab (default is already selected, but ensure we're there)
     const privateMessagesTab = this.page.getByRole('button', { name: 'Private Messages' });

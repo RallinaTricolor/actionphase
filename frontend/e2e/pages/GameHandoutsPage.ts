@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import { navigateToGameTab } from '../utils/navigation';
 
 /**
  * Page Object for Game Handouts
@@ -30,11 +31,8 @@ export class GameHandoutsPage {
     await this.page.goto(`/games/${this.gameId}`);
     await this.page.waitForLoadState('networkidle');
 
-    // Click on Handouts tab
-    const handoutsTab = this.page.locator('button:has-text("Handouts"), a:has-text("Handouts")');
-    await handoutsTab.waitFor({ state: 'visible', timeout: 5000 });
-    await handoutsTab.click();
-    await this.page.waitForLoadState('networkidle');
+    // Navigate to Handouts tab (handles mobile select and desktop tabs)
+    await navigateToGameTab(this.page, 'Handouts');
   }
 
   /**

@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import { navigateToGameTab } from '../utils/navigation';
 
 /**
  * Page Object for Participants/People View
@@ -124,8 +125,12 @@ export class ParticipantsPage {
    * Navigate to participants tab from game details
    */
   async goToParticipantsTab() {
-    const participantsTab = this.page.getByTestId('tab-participants').or(this.page.getByTestId('tab-people'));
-    await participantsTab.click();
-    await this.page.waitForLoadState('networkidle');
+    // Try "Participants" first (recruitment state), fall back to "People" (in_progress)
+    const mobileSelect = this.page.locator('select#tab-select');
+    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+    const hasParticipants = isMobile
+      ? await mobileSelect.locator('option', { hasText: 'Participants' }).count() > 0
+      : await this.page.getByTestId('tab-participants').isVisible({ timeout: 2000 }).catch(() => false);
+    await navigateToGameTab(this.page, hasParticipants ? 'Participants' : 'People');
   }
 }

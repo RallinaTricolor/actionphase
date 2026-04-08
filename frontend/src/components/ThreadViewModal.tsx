@@ -60,9 +60,13 @@ export function ThreadViewModal({
       const timer = setTimeout(() => {
         // Try to find comment with various ID patterns (base, -desktop, -mobile)
         // Root comments use base ID, nested comments may have -desktop/-mobile suffix
-        const element = document.getElementById(`comment-${targetCommentId}`) ||
-                        document.getElementById(`comment-${targetCommentId}-desktop`) ||
-                        document.getElementById(`comment-${targetCommentId}-mobile`);
+        const baseEl = document.getElementById(`comment-${targetCommentId}`);
+        const desktopEl = document.getElementById(`comment-${targetCommentId}-desktop`);
+        const mobileEl = document.getElementById(`comment-${targetCommentId}-mobile`);
+        // Prefer the visible element so scrollIntoView works (hidden elements don't scroll)
+        const element = [baseEl, mobileEl, desktopEl].find(
+          el => el && el.offsetParent !== null
+        ) || baseEl || desktopEl || mobileEl;
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }

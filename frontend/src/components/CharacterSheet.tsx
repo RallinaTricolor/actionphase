@@ -312,19 +312,21 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
         </div>
 
         {/* Module Tabs - Filter out modules user cannot view */}
-        <TabNavigation
-          tabs={CHARACTER_MODULES.filter((module) => {
-            // Bio is always visible (public information)
-            if (module.type === 'bio') return true;
-            // Private modules visible to editors (GM, owner), audience members, and all participants in completed games
-            return canViewPrivate;
-          }).map((module): Tab => ({
-            id: module.type,
-            label: module.name
-          }))}
-          activeTab={activeModule}
-          onTabChange={setActiveModule}
-        />
+        <div data-testid="character-sheet-module-tabs">
+          <TabNavigation
+            tabs={CHARACTER_MODULES.filter((module) => {
+              // Bio is always visible (public information)
+              if (module.type === 'bio') return true;
+              // Private modules visible to editors (GM, owner), audience members, and all participants in completed games
+              return canViewPrivate;
+            }).map((module): Tab => ({
+              id: module.type,
+              label: module.name
+            }))}
+            activeTab={activeModule}
+            onTabChange={setActiveModule}
+          />
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-8">

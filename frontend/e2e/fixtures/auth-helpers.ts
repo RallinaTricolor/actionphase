@@ -78,15 +78,25 @@ export async function login(
 
 /**
  * Logout the current user
+ * Handles both mobile (hamburger menu) and desktop (hover user menu) navigation.
  * @param page - Playwright page object
  */
 export async function logout(page: Page) {
-  // Hover the user menu trigger to open the dropdown
-  const userMenuTrigger = page.getByTestId('user-menu-trigger');
-  await userMenuTrigger.hover();
+  // Detect viewport: mobile shows hamburger (md:hidden), desktop shows user-menu-trigger (hidden md:block)
+  const hamburger = page.locator('button[aria-label="Menu"]');
+  const isMobile = await hamburger.isVisible({ timeout: 2000 }).catch(() => false);
 
-  // Wait for the Logout button to appear in the dropdown
-  const logoutButton = page.locator('button:has-text("Logout")');
+  if (isMobile) {
+    // Mobile: click hamburger to open the mobile drawer
+    await hamburger.click();
+  } else {
+    // Desktop: hover user-menu-trigger to open the dropdown
+    const userMenuTrigger = page.getByTestId('user-menu-trigger');
+    await userMenuTrigger.hover();
+  }
+
+  // Wait for the Logout button to appear (in either drawer or dropdown)
+  const logoutButton = page.locator('button:has-text("Logout")').locator('visible=true').first();
   await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
 
   // Use Promise.all to handle the logout click and response concurrently

@@ -1,10 +1,14 @@
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 
 /**
  * Navigation Utilities for E2E Tests
  *
  * Centralized navigation functions to reduce repetition and improve reliability.
  * These functions replace direct page.goto + waitForTimeout patterns.
+ *
+ * Mobile vs Desktop handling:
+ * - Tabs: mobile uses select#tab-select, desktop uses role="tab" elements
+ * - Nav links: mobile requires opening hamburger menu first
  */
 
 /**
@@ -21,13 +25,26 @@ export async function navigateToGame(page: Page, gameId: number) {
 
 /**
  * Navigate to a tab on the game details page
- * CRITICAL: Uses getByRole('tab') for proper accessibility and reliability
+ * Handles both mobile (select#tab-select dropdown) and desktop (role="tab" elements)
  * @param page - Playwright page object
  * @param tabName - Name of the tab to navigate to
  */
 export async function navigateToGameTab(page: Page, tabName: string) {
-  // Click the tab using proper role selector
-  await page.getByRole('tab', { name: tabName }).click();
+  // Mobile uses a select dropdown; desktop uses a tablist with role="tab"
+  const mobileSelect = page.locator('select#tab-select');
+  const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+
+  if (isMobile) {
+    // Find option by label substring (handles badge counts like "Applications (3)")
+    const option = mobileSelect.locator('option', { hasText: tabName });
+    const optionValue = await option.first().getAttribute('value');
+    if (!optionValue) {
+      throw new Error(`Tab "${tabName}" not found in mobile select`);
+    }
+    await mobileSelect.selectOption(optionValue);
+  } else {
+    await page.getByRole('tab', { name: tabName }).click();
+  }
 
   // Wait for network activity to settle (important for tabs that load data)
   await page.waitForLoadState('networkidle');
@@ -44,7 +61,7 @@ export async function navigateToGameTab(page: Page, tabName: string) {
     'Characters': 'h2:has-text("Characters")',
     'Actions': 'h2:has-text("Actions")',
     'Submit Action': '', // Variable content, networkidle is sufficient
-    'Messages': 'h2:has-text("Messages")',
+    'Messages': '', // Variable content (heading hidden when conversation is open), networkidle is sufficient
     'History': 'h2:has-text("History")',
     'Handouts': '', // Variable content
     'Audience': '', // Variable content
@@ -103,4 +120,91 @@ export async function navigateToGamesList(page: Page) {
 export async function reloadPage(page: Page) {
   await page.reload();
   await page.waitForLoadState('networkidle');
+}
+
+/**
+ * Click a nav link via in-app React Router navigation (not page.goto).
+ * On mobile, opens the hamburger menu first so the link is visible.
+ * Use this instead of page.goto when the navigation must go through React Router
+ * (e.g., to trigger unsaved-changes dialogs).
+ * @param page - Playwright page object
+ * @param linkName - Text of the nav link (e.g., 'Dashboard', 'Games')
+ */
+export async function navigateViaNavLink(page: Page, linkName: string) {
+  // Wait for page to finish loading before checking nav state
+  await page.waitForLoadState('networkidle');
+
+  const hamburger = page.locator('button[aria-label="Menu"]');
+  // Wait up to 5s for the nav to render before deciding mobile vs desktop
+  const isMobile = await hamburger.isVisible({ timeout: 5000 }).catch(() => false);
+
+  if (isMobile) {
+    await hamburger.click();
+    // Wait for the visible nav link in the mobile drawer (desktop link is hidden via CSS)
+    const visibleLink = page.getByRole('link', { name: linkName }).locator('visible=true').first();
+    await visibleLink.waitFor({ state: 'visible', timeout: 3000 });
+    await visibleLink.click();
+  } else {
+    await page.getByRole('link', { name: linkName }).click();
+  }
+}
+
+/**
+ * Assert that a tab is visible/available for navigation.
+ * Mobile: checks that select#tab-select has an option containing tabName.
+ * Desktop: checks that getByRole('tab', {name}) is visible.
+ * @param page - Playwright page object
+ * @param tabName - Display name of the tab
+ */
+export async function assertTabVisible(page: Page, tabName: string) {
+  const mobileSelect = page.locator('select#tab-select');
+  const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+
+  if (isMobile) {
+    const option = mobileSelect.locator('option', { hasText: tabName });
+    await expect(option.first()).toBeAttached();
+  } else {
+    await expect(page.getByRole('tab', { name: tabName })).toBeVisible();
+  }
+}
+
+/**
+ * Assert that a tab is NOT visible/available for navigation.
+ * Mobile: checks that select#tab-select has no option containing tabName.
+ * Desktop: checks that getByRole('tab', {name}) is not visible.
+ * @param page - Playwright page object
+ * @param tabName - Display name of the tab
+ */
+export async function assertTabNotVisible(page: Page, tabName: string) {
+  const mobileSelect = page.locator('select#tab-select');
+  const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+
+  if (isMobile) {
+    const option = mobileSelect.locator('option', { hasText: tabName });
+    await expect(option).toHaveCount(0);
+  } else {
+    await expect(page.getByRole('tab', { name: tabName })).not.toBeVisible();
+  }
+}
+
+/**
+ * Assert that a tab is currently selected/active.
+ * Mobile: checks that the selected option text includes tabName.
+ * Desktop: checks that getByRole('tab', {name, selected:true}) is visible.
+ * @param page - Playwright page object
+ * @param tabName - Display name of the tab
+ */
+export async function assertTabSelected(page: Page, tabName: string) {
+  const mobileSelect = page.locator('select#tab-select');
+  const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+
+  if (isMobile) {
+    const checkedOption = mobileSelect.locator('option:checked');
+    const optionText = await checkedOption.textContent();
+    if (!optionText?.includes(tabName)) {
+      throw new Error(`Expected active tab "${tabName}" but selected option text is "${optionText}"`);
+    }
+  } else {
+    await expect(page.getByRole('tab', { name: tabName, selected: true })).toBeVisible();
+  }
 }

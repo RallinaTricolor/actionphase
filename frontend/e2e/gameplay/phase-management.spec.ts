@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { PhaseManagementPage } from '../pages/PhaseManagementPage';
+import { assertTabNotVisible } from '../utils/navigation';
 
 /**
  * Journey 4: GM Manages Phases
@@ -141,7 +142,7 @@ test.describe('Phase Management Flow', () => {
     await page.waitForLoadState('networkidle');
 
     // Player should not see the Phases tab at all
-    await expect(page.getByRole('tab', { name: 'Phases' })).not.toBeVisible({ timeout: 10000 });
+    await assertTabNotVisible(page, 'Phases');
   });
 
   test('GM can cancel phase deletion', async ({ page }) => {

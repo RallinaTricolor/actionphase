@@ -3,6 +3,7 @@ import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId, getWorkerUsername } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { GameApplicationsPage } from '../pages/GameApplicationsPage';
+import { assertTabVisible, navigateToGameTab } from '../utils/navigation';
 
 /**
  * E2E Tests for Game Application Workflow
@@ -103,7 +104,8 @@ test.describe('Game Application Workflow', () => {
     await expect(applyButton).not.toBeVisible();
 
     // Should see participant tabs (user is now a participant)
-    await expect(page.getByRole('tab', { name: 'Participants' }).or(page.getByRole('tab', { name: 'Game Info' })).first()).toBeVisible({ timeout: 10000 });
+    // Game Info tab is visible for applicants; Participants shows after approval in recruitment state
+    await assertTabVisible(page, 'Game Info');
   });
 
   test('GM can reject application with confirmation', async ({ page }) => {
@@ -250,9 +252,8 @@ test.describe('Game Application Workflow', () => {
     await gamePage.goto(gameId);
     await page.waitForLoadState('networkidle');
 
-    // Click on Game Info tab
-    const infoTab = page.getByRole('tab', { name: 'Game Info' }).or(page.getByRole('tab', { name: 'Info' }));
-    await infoTab.click();
+    // Navigate to Game Info tab
+    await navigateToGameTab(page, 'Game Info');
 
     // === STEP 3: Verify public applicants section is visible ===
     // Should see "Applicants" heading
@@ -264,7 +265,7 @@ test.describe('Game Application Workflow', () => {
 
     // At least one of the applicants should be visible
     await expect(
-      page.locator(`text=${player2Username}`).or(page.locator(`text=${player3Username}`)).first()
+      page.locator(`text=${player2Username}`).or(page.locator(`text=${player3Username}`)).locator('visible=true').first()
     ).toBeVisible({ timeout: 5000 });
 
     // === STEP 4: Verify NO status badges are shown (pending/approved/rejected) ===

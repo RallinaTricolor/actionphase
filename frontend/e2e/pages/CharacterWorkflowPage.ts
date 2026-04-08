@@ -1,4 +1,5 @@
 import { Page, Locator } from '@playwright/test';
+import { navigateToGameTab } from '../utils/navigation';
 
 /**
  * Page Object for Character Workflow
@@ -30,18 +31,19 @@ export class CharacterWorkflowPage {
     await this.page.goto(`/games/${this.gameId}`);
     await this.page.waitForLoadState('networkidle');
 
-    // During character_creation and in_progress, use the People tab
-    // During other states, try to find a standalone Characters tab (legacy/fallback)
-    const peopleTab = this.page.getByTestId('tab-people');
-    const charactersTab = this.page.getByTestId('tab-characters');
+    // Try "People" tab first (character_creation and in_progress states).
+    // Fall back to standalone "Characters" tab (legacy/other states).
+    // navigateToGameTab handles mobile select vs desktop tab automatically.
+    const mobileSelect = this.page.locator('select#tab-select');
+    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
 
-    try {
-      await peopleTab.waitFor({ state: 'visible', timeout: 2000 });
-      await peopleTab.click();
-      await this.page.waitForLoadState('networkidle');
+    const hasPeopleTab = isMobile
+      ? await mobileSelect.locator('option', { hasText: 'People' }).count() > 0
+      : await this.page.getByTestId('tab-people').isVisible({ timeout: 2000 }).catch(() => false);
 
+    if (hasPeopleTab) {
+      await navigateToGameTab(this.page, 'People');
       // Within People tab, click on the "Characters" sub-tab
-      // This button has the text "Characters" and is in the sub-tab navigation
       const charactersSubTab = this.page.getByRole('button', { name: 'Characters', exact: false });
       try {
         await charactersSubTab.waitFor({ state: 'visible', timeout: 2000 });
@@ -49,17 +51,13 @@ export class CharacterWorkflowPage {
         await this.page.waitForLoadState('networkidle');
       } catch {
         // Characters sub-tab not found - might already be on it or in a different state
-        // Continue anyway
       }
-    } catch {
-      // People tab not found, try standalone Characters tab (legacy/fallback)
+    } else {
+      // Fallback: standalone Characters tab (legacy/other states)
       try {
-        await charactersTab.waitFor({ state: 'visible', timeout: 5000 });
-        await charactersTab.click();
-        await this.page.waitForLoadState('networkidle');
+        await navigateToGameTab(this.page, 'Characters');
       } catch {
-        // Neither tab found - might be on a different game state
-        // Continue anyway, let the test fail with a more descriptive error
+        // Neither tab found - let the test fail with a descriptive error
       }
     }
   }

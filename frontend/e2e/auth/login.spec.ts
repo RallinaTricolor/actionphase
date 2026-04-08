@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs, logout, isAuthenticated, login } from '../fixtures/auth-helpers';
 import { assertUrl } from '../utils/assertions';
+import { navigateViaNavLink } from '../utils/navigation';
 
 /**
  * Journey 1: User Authentication Flow
@@ -125,13 +126,13 @@ test.describe('User Authentication', () => {
     await loginAs(page, 'PLAYER_4');
     await assertUrl(page, '/dashboard');
 
-    // Navigate to games page
-    await page.click('a[href="/games"]');
+    // Navigate to games page (hamburger menu on mobile, direct link on desktop)
+    await navigateViaNavLink(page, 'Games');
 
     // Should be on games page
     await assertUrl(page, '/games');
 
     // Should still be authenticated (navbar visible)
-    await expect(page.locator('nav a[href="/dashboard"]').first()).toBeVisible();
+    await expect(page.locator('nav').first()).toBeVisible();
   });
 });

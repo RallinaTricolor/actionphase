@@ -1,4 +1,5 @@
 import { Page, Locator } from '@playwright/test';
+import { navigateToGameTab } from '../utils/navigation';
 
 /**
  * Page Object for Action Submission
@@ -42,11 +43,8 @@ export class ActionSubmissionPage {
     await this.page.goto(`/games/${this.gameId}`);
     await this.page.waitForLoadState('networkidle');
 
-    // Click on Actions tab using data-testid
-    const actionsTab = this.page.getByTestId('tab-actions');
-    await actionsTab.waitFor({ state: 'visible', timeout: 5000 });
-    await actionsTab.click();
-    await this.page.waitForLoadState('networkidle');
+    // Navigate to Submit Action tab (player view; GM view uses 'Actions')
+    await navigateToGameTab(this.page, 'Submit Action');
   }
 
   /**

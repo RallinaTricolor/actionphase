@@ -1,5 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { navigateToGameAndTab } from '../utils/navigation';
+import { navigateToGameAndTab, navigateToGameTab } from '../utils/navigation';
 import { waitForVisible } from '../utils/waits';
 
 /**
@@ -158,6 +158,16 @@ export class MessagingPage {
    * @param message - Message text
    */
   async sendMessage(message: string) {
+    // On mobile, the reply form is collapsed behind a "Reply" button.
+    // If the textarea isn't already visible, click Reply to expand it.
+    const isTextareaVisible = await this.messageTextarea.isVisible({ timeout: 1000 }).catch(() => false);
+    if (!isTextareaVisible) {
+      const replyButton = this.page.getByRole('button', { name: 'Reply' }).locator('visible=true').first();
+      await replyButton.waitFor({ state: 'visible', timeout: 5000 });
+      await replyButton.click();
+      await this.messageTextarea.waitFor({ state: 'visible', timeout: 5000 });
+    }
+
     await this.messageTextarea.fill(message);
     await this.sendButton.click();
     await this.page.waitForLoadState('networkidle');
@@ -217,8 +227,8 @@ export class MessagingPage {
    * Navigate to Messages tab using button/tab click
    */
   async navigateToMessages() {
-    await this.page.getByTestId('tab-messages').click();
-    await this.page.waitForLoadState('networkidle');
+    // Navigate to Messages tab (handles mobile select and desktop tabs)
+    await navigateToGameTab(this.page, 'Messages');
   }
 
   /**

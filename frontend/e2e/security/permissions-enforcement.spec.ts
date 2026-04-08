@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
-import { navigateToGame } from '../utils/navigation';
+import { navigateToGame, navigateToGameTab, assertTabNotVisible } from '../utils/navigation';
 
 /**
  * E2E Tests for Permissions & Access Control
@@ -28,8 +28,7 @@ test.describe('Permissions & Access Control', () => {
       await navigateToGame(page, gameId);
 
       // Verify Phases tab is not visible to players at all
-      const phasesTab = page.getByRole('tab', { name: 'Phases' }).or(page.getByRole('button', { name: 'Phases' }));
-      await expect(phasesTab).not.toBeVisible();
+      await assertTabNotVisible(page, 'Phases');
     });
 
     test('player cannot edit game settings', async ({ page }) => {
@@ -38,12 +37,9 @@ test.describe('Permissions & Access Control', () => {
       const gameId = await getFixtureGameId(page, 'E2E_ACTION');
       await navigateToGame(page, gameId);
 
-      // Look for Settings tab or Edit Game button
-      const settingsTab = page.getByRole('tab', { name: 'Settings' });
-      const editGameButton = page.getByRole('button', { name: /Edit Game|Game Settings/ });
-
       // Verify player cannot see or access settings
-      await expect(settingsTab).not.toBeVisible();
+      await assertTabNotVisible(page, 'Settings');
+      const editGameButton = page.getByRole('button', { name: /Edit Game|Game Settings/ });
       await expect(editGameButton).toHaveCount(0);
     });
   });
@@ -64,11 +60,8 @@ test.describe('Permissions & Access Control', () => {
         // Wait for tab parameter to be set (useGameTabs sets default tab)
         await player1Page.waitForFunction(() => window.location.search.includes('tab='), { timeout: 5000 });
 
-        // Navigate to People tab (use 'tab' role, not 'button')
-        const peopleTab = player1Page.getByRole('tab', { name: /People/ });
-        await peopleTab.waitFor({ state: 'visible', timeout: 5000 });
-        await peopleTab.click();
-        await player1Page.waitForLoadState('networkidle');
+        // Navigate to People tab
+        await navigateToGameTab(player1Page, 'People');
 
         // Player 1 should see edit button for their own character
         const player1EditButton = player1Page.getByRole('button', { name: 'Edit' }).locator('visible=true').first();
@@ -80,10 +73,7 @@ test.describe('Permissions & Access Control', () => {
 
         // Wait for tab parameter to be set and navigate to People tab
         await player2Page.waitForFunction(() => window.location.search.includes('tab='), { timeout: 5000 });
-        const player2PeopleTab = player2Page.getByRole('tab', { name: /People/ });
-        await player2PeopleTab.waitFor({ state: 'visible', timeout: 5000 });
-        await player2PeopleTab.click();
-        await player2Page.waitForLoadState('networkidle');
+        await navigateToGameTab(player2Page, 'People');
 
         // Look for Player 1's character (E2E Test Char 1)
         // Filter to visible element (viewport-agnostic)
@@ -120,8 +110,7 @@ test.describe('Permissions & Access Control', () => {
       await navigateToGame(page, gameId);
 
       // Navigate to People/Characters tab
-      await page.getByRole('tab', { name: /People|Characters/ }).click();
-      await page.waitForLoadState('networkidle');
+      await navigateToGameTab(page, 'People');
 
       // Click Edit Sheet for Player 1's character to open modal
       const editButton = page.getByRole('button', { name: 'Edit Sheet' }).locator('visible=true').first();
@@ -160,14 +149,16 @@ test.describe('Permissions & Access Control', () => {
       const gameId = await getFixtureGameId(page, 'E2E_ACTION');
       await navigateToGame(page, gameId);
 
-      // Try to access Actions tab
-      const actionsTab = page.getByRole('tab', { name: 'Actions' }).or(page.getByRole('button', { name: 'Actions' }));
+      // Try to access Actions tab — NPCs cannot submit actions, only Player Characters can.
+      // Audience might see the tab but should not see submit button.
+      const mobileSelect = page.locator('select#tab-select');
+      const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+      const hasActionsTab = isMobile
+        ? await mobileSelect.locator('option', { hasText: 'Actions' }).count() > 0
+        : await page.getByRole('tab', { name: 'Actions' }).isVisible();
 
-      // NPCs cannot submit actions - only Player Characters can
-      // Audience might see the tab but should not see submit button
-      if (await actionsTab.isVisible()) {
-        await actionsTab.click();
-        await page.waitForLoadState('networkidle');
+      if (hasActionsTab) {
+        await navigateToGameTab(page, 'Actions');
 
         const submitButton = page.getByRole('button', { name: /Submit Action|Create Action/ });
         await expect(submitButton).not.toBeVisible();
@@ -187,8 +178,7 @@ test.describe('Permissions & Access Control', () => {
       await navigateToGame(page, gameId);
 
       // Navigate to Common Room
-      await page.getByRole('tab', { name: 'Common Room' }).click();
-      await page.waitForLoadState('networkidle');
+      await navigateToGameTab(page, 'Common Room');
 
       // Should not see "Create Post" or "New Post" button if no characters
       const createPostButton = page.getByRole('button', { name: /Create Post|New Post/ });
@@ -286,8 +276,7 @@ test.describe('Permissions & Access Control', () => {
       await navigateToGame(page, gameId);
 
       // Navigate to History tab (history / results)
-      await page.getByRole('tab', { name: 'History' }).click();
-      await page.waitForLoadState('networkidle');
+      await navigateToGameTab(page, 'History');
 
       // Wait for history heading
       await page.getByRole('heading', { name: 'History', level: 2 }).waitFor({ timeout: 5000 });
@@ -306,8 +295,7 @@ test.describe('Permissions & Access Control', () => {
       await navigateToGame(page, gameId);
 
       // Navigate to People/Characters tab
-      await page.getByRole('tab', { name: /People|Characters/ }).click();
-      await page.waitForLoadState('networkidle');
+      await navigateToGameTab(page, 'People');
 
       // Look for their own character
       const ownCharacter = page.getByText('E2E Test Char 1').locator('visible=true').first();
@@ -327,8 +315,7 @@ test.describe('Permissions & Access Control', () => {
       await navigateToGame(page, gameId);
 
       // Navigate to People/Characters tab
-      await page.getByRole('tab', { name: /People|Characters/ }).click();
-      await page.waitForLoadState('networkidle');
+      await navigateToGameTab(page, 'People');
 
       // GM should see all characters and have access to management actions
       // This would depend on whether there are pending characters in the fixture
