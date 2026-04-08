@@ -158,13 +158,14 @@ export class MessagingPage {
    * @param message - Message text
    */
   async sendMessage(message: string) {
-    // On mobile, the reply form is collapsed behind a "Reply" button.
-    // If the textarea isn't already visible, click Reply to expand it.
-    const isTextareaVisible = await this.messageTextarea.isVisible({ timeout: 1000 }).catch(() => false);
-    if (!isTextareaVisible) {
-      const replyButton = this.page.getByRole('button', { name: 'Reply' }).locator('visible=true').first();
-      await replyButton.waitFor({ state: 'visible', timeout: 5000 });
-      await replyButton.click();
+    // On mobile, the reply form is collapsed behind a "Reply" button (sm:hidden).
+    // Wait for either the visible Reply button or visible textarea to appear, then act.
+    const replyButton = this.page.getByRole('button', { name: 'Reply' }).locator('visible=true');
+    const visibleTextarea = this.page.locator('textarea[placeholder*="Type your message"]').locator('visible=true');
+    // Poll until one of them is visible (Reply button only exists on mobile + common_room phase)
+    await expect(replyButton.or(visibleTextarea).first()).toBeVisible({ timeout: 5000 });
+    if (await replyButton.count() > 0) {
+      await replyButton.first().click();
       await this.messageTextarea.waitFor({ state: 'visible', timeout: 5000 });
     }
 

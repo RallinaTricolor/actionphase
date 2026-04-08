@@ -474,12 +474,26 @@ test-fe mode="run" file="":
 # E2E TESTING
 # ═══════════════════════════════════════════════════════════════════════════
 
-# Run E2E tests (default: headless)
+# Run E2E tests on both mobile and desktop (default)
 e2e:
   @echo "🔄 Applying E2E test fixtures..."
   @just load-e2e
   @echo ""
-  cd frontend && npm run test:e2e
+  cd frontend && npx playwright test
+
+# Run E2E tests on mobile only (Pixel 5)
+e2e-mobile:
+  @echo "🔄 Applying E2E test fixtures..."
+  @just load-e2e
+  @echo ""
+  cd frontend && npx playwright test --project=mobile-chrome
+
+# Run E2E tests on desktop only (Chrome)
+e2e-desktop:
+  @echo "🔄 Applying E2E test fixtures..."
+  @just load-e2e
+  @echo ""
+  cd frontend && npx playwright test --project=chromium
 
 # E2E testing with options
 e2e-test mode="headless" file="":

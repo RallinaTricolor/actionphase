@@ -95,7 +95,7 @@ test.describe('Manual Comment Read Tracking', () => {
     await commonRoom.goto(sharedGameId);
 
     const postCard = commonRoom.getPostCard(sharedPostContent);
-    const commentsButton = postCard.locator('button').filter({ hasText: /Show Comments/ }).locator('visible=true').first();
+    const commentsButton = postCard.locator('button').filter({ hasText: /Expand Comments/ }).locator('visible=true').first();
     if (await commentsButton.isVisible().catch(() => false)) {
       await commentsButton.click();
       await page.waitForLoadState('networkidle');
@@ -120,7 +120,7 @@ test.describe('Manual Comment Read Tracking', () => {
     await commonRoom.goto(sharedGameId);
 
     const postCard = commonRoom.getPostCard(sharedPostContent);
-    const commentsButton = postCard.locator('button').filter({ hasText: /Show Comments/ }).locator('visible=true').first();
+    const commentsButton = postCard.locator('button').filter({ hasText: /Expand Comments/ }).locator('visible=true').first();
     if (await commentsButton.isVisible().catch(() => false)) {
       await commentsButton.click();
       await page.waitForLoadState('networkidle');
@@ -134,7 +134,7 @@ test.describe('Manual Comment Read Tracking', () => {
     // Reload and verify state persisted server-side
     await commonRoom.goto(sharedGameId);
     const reloadedPostCard = commonRoom.getPostCard(sharedPostContent);
-    const reloadedCommentsButton = reloadedPostCard.locator('button').filter({ hasText: /Show Comments/ }).locator('visible=true').first();
+    const reloadedCommentsButton = reloadedPostCard.locator('button').filter({ hasText: /Expand Comments/ }).locator('visible=true').first();
     if (await reloadedCommentsButton.isVisible().catch(() => false)) {
       await reloadedCommentsButton.click();
       await page.waitForLoadState('networkidle');
@@ -161,7 +161,7 @@ test.describe('Manual Comment Read Tracking', () => {
     await commonRoom.goto(sharedGameId);
 
     const postCard = commonRoom.getPostCard(sharedPostContent);
-    const commentsButton = postCard.locator('button').filter({ hasText: /Show Comments/ }).locator('visible=true').first();
+    const commentsButton = postCard.locator('button').filter({ hasText: /Expand Comments/ }).locator('visible=true').first();
     if (await commentsButton.isVisible().catch(() => false)) {
       await commentsButton.click();
       await page.waitForLoadState('networkidle');

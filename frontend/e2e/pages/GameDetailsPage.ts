@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { navigateToGame, navigateToGameTab } from '../utils/navigation';
 import { waitForVisible } from '../utils/waits';
 import { assertTextVisible, assertUrl } from '../utils/assertions';
@@ -74,10 +74,13 @@ export class GameDetailsPage {
    * Click a menu item from the game actions dropdown
    */
   async clickMenuButton(text: string) {
-    await this.openGameActionsMenu();
-    // Wait for the specific menu item to be visible before clicking
-    const menuButton = this.page.getByRole('button', { name: text });
-    await menuButton.waitFor({ state: 'visible', timeout: 5000 });
+    // Ensure the kebab button is interactive before clicking
+    const kebab = this.page.getByLabel('Game actions');
+    await kebab.waitFor({ state: 'visible', timeout: 10000 });
+    await kebab.click();
+    // Wait for the specific menu item to appear (dropdown is conditionally rendered)
+    const menuButton = this.page.getByRole('button', { name: text }).locator('visible=true').first();
+    await expect(menuButton).toBeVisible({ timeout: 5000 });
     await menuButton.click();
     await this.page.waitForLoadState('networkidle');
   }

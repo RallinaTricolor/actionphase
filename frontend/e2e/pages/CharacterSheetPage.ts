@@ -196,11 +196,10 @@ export class CharacterSheetPage {
    * Works with both mobile dropdown and desktop tabs
    */
   async goToBioModule() {
-    await this.waitForModuleTabsReady();
-    const mobileSelect = this.moduleSelect;
-    if (await mobileSelect.count() > 0) {
-      await mobileSelect.scrollIntoViewIfNeeded();
-      await mobileSelect.selectOption('bio');
+    const isMobile = await this.waitForModuleTabsReady();
+    if (isMobile) {
+      await this.moduleSelect.scrollIntoViewIfNeeded();
+      await this.moduleSelect.selectOption('bio');
     } else {
       await this.page.getByRole('tab', { name: 'Public Profile' }).click();
     }
@@ -212,11 +211,10 @@ export class CharacterSheetPage {
    * Works with both mobile dropdown and desktop tabs
    */
   async goToAbilitiesModule() {
-    await this.waitForModuleTabsReady();
-    const mobileSelect = this.moduleSelect;
-    if (await mobileSelect.count() > 0) {
-      await mobileSelect.scrollIntoViewIfNeeded();
-      await mobileSelect.selectOption('abilities');
+    const isMobile = await this.waitForModuleTabsReady();
+    if (isMobile) {
+      await this.moduleSelect.scrollIntoViewIfNeeded();
+      await this.moduleSelect.selectOption('abilities');
     } else {
       await this.page.getByRole('tab', { name: 'Abilities & Skills' }).click();
     }
@@ -228,11 +226,10 @@ export class CharacterSheetPage {
    * Works with both mobile dropdown and desktop tabs
    */
   async goToInventoryModule() {
-    await this.waitForModuleTabsReady();
-    const mobileSelect = this.moduleSelect;
-    if (await mobileSelect.count() > 0) {
-      await mobileSelect.scrollIntoViewIfNeeded();
-      await mobileSelect.selectOption('inventory');
+    const isMobile = await this.waitForModuleTabsReady();
+    if (isMobile) {
+      await this.moduleSelect.scrollIntoViewIfNeeded();
+      await this.moduleSelect.selectOption('inventory');
     } else {
       await this.page.getByRole('tab', { name: 'Inventory' }).click();
     }
@@ -240,12 +237,13 @@ export class CharacterSheetPage {
   }
 
   /**
-   * Wait for the character sheet module tabs container to appear in the DOM.
-   * The character sheet renders async after the modal opens, so we must wait
-   * before checking for the mobile select vs desktop tabs.
+   * Wait for the character sheet module tabs container to appear in the DOM,
+   * then return whether we're on a mobile viewport (select visible vs tabs visible).
    */
-  private async waitForModuleTabsReady() {
+  private async waitForModuleTabsReady(): Promise<boolean> {
     await this.page.getByTestId('character-sheet-module-tabs').waitFor({ state: 'attached', timeout: 5000 });
+    // The select is inside md:hidden — only visible on mobile viewports
+    return await this.moduleSelect.isVisible({ timeout: 2000 }).catch(() => false);
   }
 
   /**
@@ -373,8 +371,9 @@ export class CharacterSheetPage {
     const moduleId = moduleIdMap[moduleName];
 
     // Check mobile dropdown (scoped to character sheet module tabs to avoid matching game-level select)
+    // Use isVisible() not count() — the select exists in DOM on desktop too but is hidden via md:hidden
     const mobileSelect = this.moduleSelect;
-    if (await mobileSelect.count() > 0) {
+    if (await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
       // Check if the option exists in the dropdown
       const option = mobileSelect.locator(`option[value="${moduleId}"]`);
       return await option.count() > 0;

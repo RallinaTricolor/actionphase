@@ -118,7 +118,7 @@ test.describe('Common Room Flow', () => {
       const buttonText = await commentsButton.textContent();
 
       // If comments are hidden, click to show them
-      if (buttonText?.includes('Show Comments')) {
+      if (buttonText?.includes('Expand')) {
         await commentsButton.click();
         await gmPage.waitForLoadState('networkidle');
       }
@@ -175,7 +175,7 @@ test.describe('Common Room Flow', () => {
       const postCard = player1CommonRoom.getPostCard(postContent);
       const commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
       const buttonText = await commentsButton.textContent();
-      if (buttonText?.includes('Show Comments')) {
+      if (buttonText?.includes('Expand')) {
         await commentsButton.click();
         await player1Page.waitForLoadState('networkidle');
       }
@@ -280,7 +280,7 @@ test.describe('Common Room Flow', () => {
       const postCard = gmCommonRoom.getPostCard(postContent);
       const commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
       const buttonText = await commentsButton.textContent();
-      if (buttonText?.includes('Show Comments')) {
+      if (buttonText?.includes('Expand')) {
         await commentsButton.click();
         await gmPage.waitForLoadState('networkidle');
       }
@@ -360,7 +360,7 @@ test.describe('Common Room Flow', () => {
         const commentsToggle = postCard.locator('button', { hasText: /Comments/ }).filter({ visible: true }).first();
         await commentsToggle.waitFor({ state: 'visible', timeout: 10000 });
         const toggleText = await commentsToggle.textContent();
-        if (toggleText?.includes('Show')) {
+        if (toggleText?.includes('Expand')) {
           await commentsToggle.click();
           await currentPage.waitForLoadState('networkidle');
         }

@@ -85,7 +85,12 @@ export class GameApplicationsPage {
    * Get list of pending application usernames
    */
   async getPendingApplications(): Promise<string[]> {
-    // Wait for pending section to be visible, then wait for cards to load (React Query may lag)
+    // Wait for loading to complete, then wait for the pending section and cards
+    await this.page.waitForSelector('text="Loading applications..."', {
+      state: 'hidden',
+      timeout: 10000,
+    }).catch(() => {});
+    await this.page.getByTestId('applications-list').waitFor({ state: 'visible', timeout: 10000 });
     await this.applicationsPendingSection.waitFor({ state: 'visible', timeout: 5000 });
     await this.applicationsPendingSection.getByTestId('application-card').first().waitFor({ state: 'visible', timeout: 10000 });
 
@@ -193,11 +198,14 @@ export class GameApplicationsPage {
    */
   async getPendingApplicationsCount(): Promise<number> {
     try {
-      await this.applicationsPendingSection.waitFor({ state: 'visible', timeout: 3000 });
-      const cards = await this.applicationsPendingSection
-        .getByTestId('application-card')
-        .all();
-      return cards.length;
+      await this.page.waitForSelector('text="Loading applications..."', {
+        state: 'hidden',
+        timeout: 10000,
+      }).catch(() => {});
+      await this.page.getByTestId('applications-list').waitFor({ state: 'visible', timeout: 10000 });
+      const sectionCount = await this.applicationsPendingSection.count();
+      if (sectionCount === 0) return 0;
+      return await this.applicationsPendingSection.getByTestId('application-card').count();
     } catch {
       return 0;
     }
@@ -208,11 +216,19 @@ export class GameApplicationsPage {
    */
   async getReviewedApplicationsCount(): Promise<number> {
     try {
-      await this.applicationsReviewedSection.waitFor({ state: 'visible', timeout: 3000 });
-      const cards = await this.applicationsReviewedSection
-        .getByTestId('application-card')
-        .all();
-      return cards.length;
+      // Wait for loading spinner to disappear (ensures data is fully loaded)
+      await this.page.waitForSelector('text="Loading applications..."', {
+        state: 'hidden',
+        timeout: 10000,
+      }).catch(() => {
+        // If spinner never appeared, that's fine — data may have loaded immediately
+      });
+      // Now wait for the applications-list container (only present after loading)
+      await this.page.getByTestId('applications-list').waitFor({ state: 'visible', timeout: 10000 });
+      const reviewedSection = this.page.getByTestId('applications-reviewed-section');
+      const sectionCount = await reviewedSection.count();
+      if (sectionCount === 0) return 0;
+      return await reviewedSection.getByTestId('application-card').count();
     } catch {
       return 0;
     }

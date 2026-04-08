@@ -47,7 +47,7 @@ test.describe('Unread Comment Tracking', () => {
     const commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
     const buttonText = await commentsButton.textContent();
 
-    if (buttonText?.includes('Show Comments')) {
+    if (buttonText?.includes('Expand')) {
       await commentsButton.click();
       await page.waitForLoadState('networkidle');
       // Wait a bit for mark-as-read mutation
@@ -62,12 +62,10 @@ test.describe('Unread Comment Tracking', () => {
     // The backend tests cover the complex multi-user scenarios
     // This E2E test validates the UI displays the badges correctly
 
-    // Verify no NEW badges are showing initially (on first visit)
-    const newBadgesInitial = page.locator('span:has-text("NEW")').locator('visible=true');
-    const initialCount = await newBadgesInitial.count();
-
-    // First visit should have no unread indicators
-    expect(initialCount).toBe(0);
+    // Verify no NEW badges on the newly created post (first visit — no unread indicators)
+    // Scope to this post card only; other posts in the game may have unread comments
+    const newBadgesInPost = postCard.locator('span:has-text("NEW")').locator('visible=true');
+    expect(await newBadgesInPost.count()).toBe(0);
   });
 
   test('Unread tracking persists across page reloads', async ({ page }) => {
@@ -91,7 +89,7 @@ test.describe('Unread Comment Tracking', () => {
     const commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
     const buttonText = await commentsButton.textContent();
 
-    if (buttonText?.includes('Show Comments')) {
+    if (buttonText?.includes('Expand')) {
       await commentsButton.click();
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1000); // Wait for mark-as-read
@@ -107,11 +105,10 @@ test.describe('Unread Comment Tracking', () => {
     // This proves the read state persisted to database
     await commonRoom.verifyPostExists(postContent);
 
-    const newBadgesAfterReload = page.locator('span:has-text("NEW")').locator('visible=true');
-    const countAfterReload = await newBadgesAfterReload.count();
-
-    // Should still have no unread indicators (state persisted)
-    expect(countAfterReload).toBe(0);
+    // Scope to this post card only; other posts in the game may have unread comments
+    const reloadedPostCard = commonRoom.getPostCard(postContent);
+    const newBadgesAfterReload = reloadedPostCard.locator('span:has-text("NEW")').locator('visible=true');
+    expect(await newBadgesAfterReload.count()).toBe(0);
   });
 
   test('NEW badge appears when comment is added via API', async ({ page }) => {
@@ -137,7 +134,7 @@ test.describe('Unread Comment Tracking', () => {
     const commentsButton = postCard.locator('button', { hasText: /Comments/ }).locator('visible=true').first();
     const buttonText = await commentsButton.textContent();
 
-    if (buttonText?.includes('Show Comments')) {
+    if (buttonText?.includes('Expand')) {
       await commentsButton.click();
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1500); // Wait for mark-as-read mutation
@@ -147,10 +144,9 @@ test.describe('Unread Comment Tracking', () => {
     // For now, we'll rely on the backend test coverage for the complex multi-user scenarios
     // This test validates the UI infrastructure is in place
 
-    // Verify infrastructure works: no NEW badges on first visit
-    const newBadges = page.locator('span:has-text("NEW")').locator('visible=true');
-    const badgeCount = await newBadges.count();
-    expect(badgeCount).toBe(0);
+    // Verify infrastructure works: no NEW badges on first visit (scoped to this post)
+    const newBadges = postCard.locator('span:has-text("NEW")').locator('visible=true');
+    expect(await newBadges.count()).toBe(0);
 
     // The complex scenario (GM adds comment → Player sees NEW badge) is covered by backend tests
     // This E2E test validates the UI renders correctly when the data is present
