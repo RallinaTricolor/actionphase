@@ -21,7 +21,7 @@ run_psql() {
 
 # Reset and load common data
 echo "  Resetting database..."
-run_psql "$SCRIPT_DIR/common/00_reset.sql" 2>/dev/null || true
+run_psql "$SCRIPT_DIR/common/00_reset.sql"
 
 echo "  Creating test users..."
 run_psql "$SCRIPT_DIR/common/01_users.sql"
