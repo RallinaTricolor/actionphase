@@ -474,12 +474,10 @@ test-fe mode="run" file="":
 # E2E TESTING
 # ═══════════════════════════════════════════════════════════════════════════
 
-# Run E2E tests on both mobile and desktop (default)
+# Run E2E tests on both desktop and mobile (sequential to avoid fixture conflicts)
 e2e:
-  @echo "🔄 Applying E2E test fixtures..."
-  @just load-e2e
-  @echo ""
-  cd frontend && npx playwright test
+  @just e2e-desktop
+  @just e2e-mobile
 
 # Run E2E tests on mobile only (Pixel 5)
 e2e-mobile:
