@@ -816,7 +816,7 @@ describe('CommonRoom', () => {
         getElementByIdSpy.mockRestore();
       });
 
-      it('checks multiple element ID patterns until element is found', async () => {
+      it('checks multiple element ID patterns and scrolls to the found element', async () => {
         const getElementByIdSpy = vi.spyOn(document, 'getElementById');
         const mockElement = {
           scrollIntoView: vi.fn(),
@@ -824,7 +824,6 @@ describe('CommonRoom', () => {
         };
 
         getElementByIdSpy.mockImplementation((id) => {
-          // Return element for -desktop variant (short-circuits at second check)
           if (id === 'comment-123-desktop') {
             return mockElement as any;
           }
@@ -840,16 +839,15 @@ describe('CommonRoom', () => {
           expect(screen.queryByText(/Loading Common Room.../i)).not.toBeInTheDocument();
         });
 
-        // Should check base pattern first, then -desktop (finds element), stops before -mobile
+        // Component checks all three ID patterns (base, -desktop, -mobile) and picks the found one
         await waitFor(() => {
           const calls = getElementByIdSpy.mock.calls.map(call => call[0]);
           expect(calls).toContain('comment-123');
           expect(calls).toContain('comment-123-desktop');
-          // Should NOT check -mobile because element was found at -desktop
-          expect(calls).not.toContain('comment-123-mobile');
+          expect(calls).toContain('comment-123-mobile');
         }, { timeout: 500 });
 
-        // Should have scrolled to the found element
+        // Should have scrolled to the found element (-desktop variant)
         expect(mockElement.scrollIntoView).toHaveBeenCalled();
 
         getElementByIdSpy.mockRestore();
