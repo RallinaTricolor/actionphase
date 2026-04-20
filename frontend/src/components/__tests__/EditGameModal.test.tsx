@@ -565,6 +565,7 @@ describe('EditGameModal', () => {
           is_public: true,
           is_anonymous: true,
           auto_accept_audience: true,
+          allow_group_conversations: expect.any(Boolean),
         });
       });
     });

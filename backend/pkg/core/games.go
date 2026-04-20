@@ -32,8 +32,9 @@ type EnrichedGameListItem struct {
 	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          *int32     `json:"max_players,omitempty"`
 	IsPublic            bool       `json:"is_public"`
-	IsAnonymous         bool       `json:"is_anonymous"`
-	AutoAcceptAudience  bool       `json:"auto_accept_audience"`
+	IsAnonymous             bool       `json:"is_anonymous"`
+	AutoAcceptAudience      bool       `json:"auto_accept_audience"`
+	AllowGroupConversations bool       `json:"allow_group_conversations"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
 	CurrentPlayers      int32      `json:"current_players"`

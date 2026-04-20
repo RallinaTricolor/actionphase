@@ -82,6 +82,18 @@ func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	gameService := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+	game, err := gameService.GetGame(ctx, int32(gameID))
+	if err != nil {
+		h.App.Logger.Error("Failed to get game for conversation validation", "error", err, "game_id", gameID)
+		render.Render(w, r, core.HandleDBErrorWithID(err, "game", gameID))
+		return
+	}
+	if !game.AllowGroupConversations && len(data.CharacterIDs) > 2 {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("group conversations are not allowed in this game")))
+		return
+	}
+
 	conversationService := db.NewConversationService(h.App.Pool)
 	conv, err := conversationService.CreateConversation(ctx, db.CreateConversationRequest{
 		GameID:          int32(gameID),

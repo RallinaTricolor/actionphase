@@ -217,21 +217,22 @@ type EmailVerificationToken struct {
 }
 
 type Game struct {
-	ID                  int32              `json:"id"`
-	Title               string             `json:"title"`
-	Description         pgtype.Text        `json:"description"`
-	GmUserID            int32              `json:"gm_user_id"`
-	State               pgtype.Text        `json:"state"`
-	Genre               pgtype.Text        `json:"genre"`
-	StartDate           pgtype.Timestamptz `json:"start_date"`
-	EndDate             pgtype.Timestamptz `json:"end_date"`
-	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
-	MaxPlayers          pgtype.Int4        `json:"max_players"`
-	IsPublic            pgtype.Bool        `json:"is_public"`
-	IsAnonymous         bool               `json:"is_anonymous"`
-	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	ID                      int32              `json:"id"`
+	Title                   string             `json:"title"`
+	Description             pgtype.Text        `json:"description"`
+	GmUserID                int32              `json:"gm_user_id"`
+	State                   pgtype.Text        `json:"state"`
+	Genre                   pgtype.Text        `json:"genre"`
+	StartDate               pgtype.Timestamptz `json:"start_date"`
+	EndDate                 pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline     pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers              pgtype.Int4        `json:"max_players"`
+	IsPublic                pgtype.Bool        `json:"is_public"`
+	IsAnonymous             bool               `json:"is_anonymous"`
+	AutoAcceptAudience      bool               `json:"auto_accept_audience"`
+	AllowGroupConversations bool               `json:"allow_group_conversations"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GameApplication struct {

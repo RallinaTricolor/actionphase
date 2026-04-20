@@ -10,14 +10,16 @@ interface NewConversationModalProps {
   characters: Character[]; // User's controllable characters
   allCharacters: Character[]; // All game characters (from GameContext)
   isAnonymous: boolean;
+  allowGroupConversations: boolean;
   onClose: () => void;
   onConversationCreated: (conversationId: number) => void;
 }
 
-export function NewConversationModal({ gameId, characters, allCharacters, isAnonymous, onClose, onConversationCreated }: NewConversationModalProps) {
+export function NewConversationModal({ gameId, characters, allCharacters, isAnonymous, allowGroupConversations, onClose, onConversationCreated }: NewConversationModalProps) {
   const [title, setTitle] = useState('');
   const [yourCharacterId, setYourCharacterId] = useState<number | null>(null);
   const [selectedParticipants, setSelectedParticipants] = useState<Set<number>>(new Set());
+  const [singleParticipant, setSingleParticipant] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,8 +71,13 @@ export function NewConversationModal({ gameId, characters, allCharacters, isAnon
       return;
     }
 
-    if (selectedParticipants.size === 0) {
+    if (allowGroupConversations && selectedParticipants.size === 0) {
       setError('Please select at least one participant');
+      return;
+    }
+
+    if (!allowGroupConversations && !singleParticipant) {
+      setError('Please select a participant');
       return;
     }
 
@@ -79,7 +86,9 @@ export function NewConversationModal({ gameId, characters, allCharacters, isAnon
       setError(null);
 
       // Include your character + all selected participants
-      const allParticipantIds = [yourCharacterId, ...Array.from(selectedParticipants)];
+      const allParticipantIds = allowGroupConversations
+        ? [yourCharacterId, ...Array.from(selectedParticipants)]
+        : [yourCharacterId, singleParticipant!];
 
       const response = await apiClient.conversations.createConversation(gameId, {
         title: title.trim(),
@@ -165,48 +174,66 @@ export function NewConversationModal({ gameId, characters, allCharacters, isAnon
 
         {/* Participants Section */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-content-primary mb-2">
-            Participants (select at least 1)
-          </label>
-          <div className="space-y-2 max-h-60 overflow-y-auto border border-theme-default rounded-md p-2">
-            {availableParticipants.length === 0 ? (
-              <p className="text-sm text-content-tertiary text-center py-4">
-                No other characters available
-              </p>
-            ) : (
-              availableParticipants.map((character) => (
-                <label
-                  key={character.id}
-                  className={`flex items-start gap-3 p-2 rounded transition-colors cursor-pointer ${
-                    selectedParticipants.has(character.id)
-                      ? 'bg-interactive-primary-subtle border border-interactive-primary'
-                      : 'hover:surface-raised border border-transparent'
-                  }`}
-                >
-                  <Checkbox
-                    id={`participant-${character.id}`}
-                    checked={selectedParticipants.has(character.id)}
-                    onChange={() => handleToggleParticipant(character.id)}
-                    disabled={creating}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium text-content-primary">{character.name}</div>
-                    {!isAnonymous && (
-                      <div className="text-xs text-content-tertiary">{character.character_type.replace('_', ' ')}</div>
-                    )}
-                    {!isAnonymous && character.username && (
-                      <div className="text-xs text-content-tertiary">Played by {character.username}</div>
-                    )}
-                  </div>
-                </label>
-              ))
-            )}
-          </div>
-          {selectedParticipants.size > 0 && (
-            <p className="text-xs text-content-tertiary mt-2">
-              {selectedParticipants.size} participant{selectedParticipants.size !== 1 ? 's' : ''} selected
-            </p>
+          {allowGroupConversations ? (
+            <>
+              <label className="block text-sm font-medium text-content-primary mb-2">
+                Participants (select at least 1)
+              </label>
+              <div className="space-y-2 max-h-60 overflow-y-auto border border-theme-default rounded-md p-2">
+                {availableParticipants.length === 0 ? (
+                  <p className="text-sm text-content-tertiary text-center py-4">
+                    No other characters available
+                  </p>
+                ) : (
+                  availableParticipants.map((character) => (
+                    <label
+                      key={character.id}
+                      className={`flex items-start gap-3 p-2 rounded transition-colors cursor-pointer ${
+                        selectedParticipants.has(character.id)
+                          ? 'bg-interactive-primary-subtle border border-interactive-primary'
+                          : 'hover:surface-raised border border-transparent'
+                      }`}
+                    >
+                      <Checkbox
+                        id={`participant-${character.id}`}
+                        checked={selectedParticipants.has(character.id)}
+                        onChange={() => handleToggleParticipant(character.id)}
+                        disabled={creating}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-content-primary">{character.name}</div>
+                        {!isAnonymous && (
+                          <div className="text-xs text-content-tertiary">{character.character_type.replace('_', ' ')}</div>
+                        )}
+                        {!isAnonymous && character.username && (
+                          <div className="text-xs text-content-tertiary">Played by {character.username}</div>
+                        )}
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+              {selectedParticipants.size > 0 && (
+                <p className="text-xs text-content-tertiary mt-2">
+                  {selectedParticipants.size} participant{selectedParticipants.size !== 1 ? 's' : ''} selected
+                </p>
+              )}
+            </>
+          ) : (
+            <Select
+              label="Participant *"
+              value={singleParticipant ?? ''}
+              onChange={(e) => setSingleParticipant(Number(e.target.value) || null)}
+              disabled={creating}
+            >
+              <option value="">Select a participant...</option>
+              {availableParticipants.map((char) => (
+                <option key={char.id} value={char.id}>
+                  {char.name}{!isAnonymous ? ` (${char.character_type.replace('_', ' ')})` : ''}{!isAnonymous && char.username ? ` - ${char.username}` : ''}
+                </option>
+              ))}
+            </Select>
           )}
         </div>
 
@@ -222,7 +249,7 @@ export function NewConversationModal({ gameId, characters, allCharacters, isAnon
           <Button
             variant="primary"
             onClick={handleCreate}
-            disabled={creating || !title.trim() || !yourCharacterId || selectedParticipants.size === 0 || characters.length === 0}
+            disabled={creating || !title.trim() || !yourCharacterId || (allowGroupConversations ? selectedParticipants.size === 0 : !singleParticipant) || characters.length === 0}
             className="flex-1"
           >
             {creating ? 'Creating...' : 'Create Conversation'}

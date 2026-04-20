@@ -21,6 +21,7 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
     max_players: 6,
     is_anonymous: false,
     auto_accept_audience: false,
+    allow_group_conversations: true,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,6 +52,7 @@ export const CreateGameForm = ({ onSuccess, onCancel }: CreateGameFormProps) => 
         max_players: formData.max_players === '' ? undefined : Number(formData.max_players),
         is_anonymous: formData.is_anonymous,
         auto_accept_audience: formData.auto_accept_audience,
+        allow_group_conversations: formData.allow_group_conversations ?? true,
       };
 
       const response = await apiClient.games.createGame(gameData);

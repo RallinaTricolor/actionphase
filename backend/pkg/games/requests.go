@@ -15,8 +15,9 @@ type CreateGameRequest struct {
 	EndDate             *core.LocalDateTime `json:"end_date,omitempty"`
 	RecruitmentDeadline *core.LocalDateTime `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          int32               `json:"max_players,omitempty"`
-	IsAnonymous         bool                `json:"is_anonymous"`
-	AutoAcceptAudience  bool                `json:"auto_accept_audience"`
+	IsAnonymous             bool                `json:"is_anonymous"`
+	AutoAcceptAudience      bool                `json:"auto_accept_audience"`
+	AllowGroupConversations bool                `json:"allow_group_conversations"`
 }
 
 func (r *CreateGameRequest) Bind(req *http.Request) error {
@@ -41,9 +42,10 @@ type UpdateGameRequest struct {
 	EndDate             *time.Time `json:"end_date,omitempty"`
 	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          int32      `json:"max_players,omitempty"`
-	IsPublic            bool       `json:"is_public"`
-	IsAnonymous         bool       `json:"is_anonymous"`
-	AutoAcceptAudience  bool       `json:"auto_accept_audience"`
+	IsPublic                bool       `json:"is_public"`
+	IsAnonymous             bool       `json:"is_anonymous"`
+	AutoAcceptAudience      bool       `json:"auto_accept_audience"`
+	AllowGroupConversations bool       `json:"allow_group_conversations"`
 }
 
 func (r *UpdateGameRequest) Bind(req *http.Request) error {

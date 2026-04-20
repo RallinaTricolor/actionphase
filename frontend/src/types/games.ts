@@ -11,6 +11,7 @@ export interface Game {
   max_players?: number;
   is_anonymous?: boolean;
   auto_accept_audience?: boolean;
+  allow_group_conversations?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -58,12 +59,14 @@ export interface CreateGameRequest {
   max_players?: number;
   is_anonymous?: boolean;
   auto_accept_audience?: boolean;
+  allow_group_conversations?: boolean;
 }
 
 export interface UpdateGameRequest extends CreateGameRequest {
   is_public: boolean;
   is_anonymous?: boolean;
   auto_accept_audience?: boolean;
+  allow_group_conversations?: boolean;
 }
 
 export interface ApplyToGameRequest {

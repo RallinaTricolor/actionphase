@@ -86,9 +86,10 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 		EndDate:             endDate,
 		RecruitmentDeadline: recruitmentDeadline,
 		MaxPlayers:          pgtype.Int4{Int32: req.MaxPlayers, Valid: req.MaxPlayers > 0},
-		IsPublic:            pgtype.Bool{Bool: req.IsPublic, Valid: true},
-		IsAnonymous:         req.IsAnonymous,
-		AutoAcceptAudience:  req.AutoAcceptAudience,
+		IsPublic:                pgtype.Bool{Bool: req.IsPublic, Valid: true},
+		IsAnonymous:             req.IsAnonymous,
+		AutoAcceptAudience:      req.AutoAcceptAudience,
+		AllowGroupConversations: req.AllowGroupConversations,
 	})
 
 	if err != nil {
@@ -354,9 +355,10 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 		EndDate:             endDate,
 		RecruitmentDeadline: recruitmentDeadline,
 		MaxPlayers:          pgtype.Int4{Int32: req.MaxPlayers, Valid: req.MaxPlayers > 0},
-		IsPublic:            pgtype.Bool{Bool: req.IsPublic, Valid: true},
-		IsAnonymous:         req.IsAnonymous,
-		AutoAcceptAudience:  req.AutoAcceptAudience,
+		IsPublic:                pgtype.Bool{Bool: req.IsPublic, Valid: true},
+		IsAnonymous:             req.IsAnonymous,
+		AutoAcceptAudience:      req.AutoAcceptAudience,
+		AllowGroupConversations: req.AllowGroupConversations,
 	})
 
 	return &updatedGame, err
@@ -672,9 +674,10 @@ func enrichedGameFromRow(row models.GetFilteredGamesRow) *core.EnrichedGameListI
 		RecruitmentDeadline:  timestamptzToTimePtr(row.RecruitmentDeadline),
 		MaxPlayers:           nullInt4ToInt32Ptr(row.MaxPlayers),
 		IsPublic:             boolToBool(row.IsPublic),
-		IsAnonymous:          row.IsAnonymous,
-		AutoAcceptAudience:   row.AutoAcceptAudience,
-		CreatedAt:            timestamptzToTime(row.CreatedAt),
+		IsAnonymous:             row.IsAnonymous,
+		AutoAcceptAudience:      row.AutoAcceptAudience,
+		AllowGroupConversations: row.AllowGroupConversations,
+		CreatedAt:               timestamptzToTime(row.CreatedAt),
 		UpdatedAt:            timestamptzToTime(row.UpdatedAt),
 		CurrentPlayers:       int32(row.CurrentPlayers),
 		UserRelationship:     interfaceToStringPtr(row.UserRelationship),

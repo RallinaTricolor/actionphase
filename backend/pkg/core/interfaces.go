@@ -292,23 +292,25 @@ type CreateGameRequest struct {
 	RecruitmentDeadline *time.Time
 	MaxPlayers          int32
 	IsPublic            bool
-	IsAnonymous         bool
-	AutoAcceptAudience  bool
+	IsAnonymous              bool
+	AutoAcceptAudience       bool
+	AllowGroupConversations  bool
 }
 
 // UpdateGameRequest represents the parameters needed to update an existing game
 type UpdateGameRequest struct {
-	ID                  int32
-	Title               string
-	Description         string
-	Genre               string
-	StartDate           *time.Time
-	EndDate             *time.Time
-	RecruitmentDeadline *time.Time
-	MaxPlayers          int32
-	IsPublic            bool
-	IsAnonymous         bool
-	AutoAcceptAudience  bool
+	ID                      int32
+	Title                   string
+	Description             string
+	Genre                   string
+	StartDate               *time.Time
+	EndDate                 *time.Time
+	RecruitmentDeadline     *time.Time
+	MaxPlayers              int32
+	IsPublic                bool
+	IsAnonymous             bool
+	AutoAcceptAudience      bool
+	AllowGroupConversations bool
 }
 
 // PhaseServiceInterface defines the contract for game phase management operations.

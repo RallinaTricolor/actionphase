@@ -10,6 +10,7 @@ export interface GameFormData {
   end_date: string;
   is_anonymous?: boolean;
   auto_accept_audience?: boolean;
+  allow_group_conversations?: boolean;
 }
 
 interface GameFormFieldsProps {
@@ -113,6 +114,14 @@ export const GameFormFields = ({ formData, onChange }: GameFormFieldsProps) => {
         label="Auto-Accept Audience Members (audience applications are automatically approved)"
         checked={formData.auto_accept_audience || false}
         onChange={(e) => onChange('auto_accept_audience', e.target.checked)}
+      />
+
+      {/* Allow Group Conversations */}
+      <Checkbox
+        id="allow_group_conversations"
+        label="Allow Group Conversations (players can create private messages with 3+ participants)"
+        checked={formData.allow_group_conversations ?? true}
+        onChange={(e) => onChange('allow_group_conversations', e.target.checked)}
       />
     </>
   );

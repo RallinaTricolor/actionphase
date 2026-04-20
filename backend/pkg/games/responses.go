@@ -17,10 +17,11 @@ type GameResponse struct {
 	EndDate             *time.Time `json:"end_date,omitempty"`
 	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          int32      `json:"max_players,omitempty"`
-	IsAnonymous         bool       `json:"is_anonymous"`
-	AutoAcceptAudience  bool       `json:"auto_accept_audience"`
-	CreatedAt           time.Time  `json:"created_at"`
-	UpdatedAt           time.Time  `json:"updated_at"`
+	IsAnonymous             bool       `json:"is_anonymous"`
+	AutoAcceptAudience      bool       `json:"auto_accept_audience"`
+	AllowGroupConversations bool       `json:"allow_group_conversations"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
 }
 
 func (rd *GameResponse) Render(w http.ResponseWriter, r *http.Request) error {
@@ -40,11 +41,12 @@ type GameWithDetailsResponse struct {
 	EndDate             *time.Time `json:"end_date,omitempty"`
 	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers          int32      `json:"max_players,omitempty"`
-	IsAnonymous         bool       `json:"is_anonymous"`
-	AutoAcceptAudience  bool       `json:"auto_accept_audience"`
-	CurrentPlayers      int64      `json:"current_players"`
-	CreatedAt           time.Time  `json:"created_at"`
-	UpdatedAt           time.Time  `json:"updated_at"`
+	IsAnonymous             bool       `json:"is_anonymous"`
+	AutoAcceptAudience      bool       `json:"auto_accept_audience"`
+	AllowGroupConversations bool       `json:"allow_group_conversations"`
+	CurrentPlayers          int64      `json:"current_players"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
 }
 
 func (rd *GameWithDetailsResponse) Render(w http.ResponseWriter, r *http.Request) error {
@@ -83,10 +85,11 @@ type EnrichedGameListItemResponse struct {
 	EndDate              *time.Time `json:"end_date,omitempty"`
 	RecruitmentDeadline  *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers           *int32     `json:"max_players,omitempty"`
-	IsPublic             bool       `json:"is_public"`
-	IsAnonymous          bool       `json:"is_anonymous"`
-	AutoAcceptAudience   bool       `json:"auto_accept_audience"`
-	CreatedAt            time.Time  `json:"created_at"`
+	IsPublic                 bool       `json:"is_public"`
+	IsAnonymous              bool       `json:"is_anonymous"`
+	AutoAcceptAudience       bool       `json:"auto_accept_audience"`
+	AllowGroupConversations  bool       `json:"allow_group_conversations"`
+	CreatedAt                time.Time  `json:"created_at"`
 	UpdatedAt            time.Time  `json:"updated_at"`
 	CurrentPlayers       int32      `json:"current_players"`
 	UserRelationship     *string    `json:"user_relationship,omitempty"`

@@ -14,13 +14,14 @@ interface PrivateMessagesProps {
   gameId: number;
   characters: Character[];
   isAnonymous: boolean;
+  allowGroupConversations: boolean;
   currentPhaseType?: string; // Current game phase type (common_room, action, results, etc.)
 }
 
 /**
  * Inner component that uses ConversationContext
  */
-function PrivateMessagesInner({ gameId, characters, isAnonymous, currentPhaseType }: PrivateMessagesProps) {
+function PrivateMessagesInner({ gameId, characters, isAnonymous, allowGroupConversations, currentPhaseType }: PrivateMessagesProps) {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const { allGameCharacters } = useGameContext();
   const {
@@ -150,6 +151,7 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, currentPhaseTyp
           characters={characters}
           allCharacters={allGameCharacters}
           isAnonymous={isAnonymous}
+          allowGroupConversations={allowGroupConversations}
           onClose={() => setShowNewConversationModal(false)}
           onConversationCreated={handleConversationCreated}
         />

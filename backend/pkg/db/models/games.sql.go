@@ -194,24 +194,25 @@ func (q *Queries) CreateAudienceApplication(ctx context.Context, arg CreateAudie
 const createGame = `-- name: CreateGame :one
 INSERT INTO games (
     title, description, gm_user_id, genre, start_date, end_date,
-    recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience
+    recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, allow_group_conversations
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, allow_group_conversations, created_at, updated_at
 `
 
 type CreateGameParams struct {
-	Title               string             `json:"title"`
-	Description         pgtype.Text        `json:"description"`
-	GmUserID            int32              `json:"gm_user_id"`
-	Genre               pgtype.Text        `json:"genre"`
-	StartDate           pgtype.Timestamptz `json:"start_date"`
-	EndDate             pgtype.Timestamptz `json:"end_date"`
-	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
-	MaxPlayers          pgtype.Int4        `json:"max_players"`
-	IsPublic            pgtype.Bool        `json:"is_public"`
-	IsAnonymous         bool               `json:"is_anonymous"`
-	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
+	Title                   string             `json:"title"`
+	Description             pgtype.Text        `json:"description"`
+	GmUserID                int32              `json:"gm_user_id"`
+	Genre                   pgtype.Text        `json:"genre"`
+	StartDate               pgtype.Timestamptz `json:"start_date"`
+	EndDate                 pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline     pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers              pgtype.Int4        `json:"max_players"`
+	IsPublic                pgtype.Bool        `json:"is_public"`
+	IsAnonymous             bool               `json:"is_anonymous"`
+	AutoAcceptAudience      bool               `json:"auto_accept_audience"`
+	AllowGroupConversations bool               `json:"allow_group_conversations"`
 }
 
 func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, error) {
@@ -227,6 +228,7 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		arg.IsPublic,
 		arg.IsAnonymous,
 		arg.AutoAcceptAudience,
+		arg.AllowGroupConversations,
 	)
 	var i Game
 	err := row.Scan(
@@ -243,6 +245,7 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		&i.IsPublic,
 		&i.IsAnonymous,
 		&i.AutoAcceptAudience,
+		&i.AllowGroupConversations,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -324,7 +327,7 @@ func (q *Queries) GetActiveParticipants(ctx context.Context, gameID int32) ([]Ge
 }
 
 const getGame = `-- name: GetGame :one
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at FROM games WHERE id = $1
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, allow_group_conversations, created_at, updated_at FROM games WHERE id = $1
 `
 
 func (q *Queries) GetGame(ctx context.Context, id int32) (Game, error) {
@@ -344,6 +347,7 @@ func (q *Queries) GetGame(ctx context.Context, id int32) (Game, error) {
 		&i.IsPublic,
 		&i.IsAnonymous,
 		&i.AutoAcceptAudience,
+		&i.AllowGroupConversations,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -454,7 +458,7 @@ func (q *Queries) GetGameParticipants(ctx context.Context, gameID int32) ([]GetG
 
 const getGameWithDetails = `-- name: GetGameWithDetails :one
 SELECT
-    g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.is_anonymous, g.auto_accept_audience, g.created_at, g.updated_at,
+    g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.is_anonymous, g.auto_accept_audience, g.allow_group_conversations, g.created_at, g.updated_at,
     u.username as gm_username,
     COALESCE(pc.player_count, 0) as current_players
 FROM games g
@@ -469,23 +473,24 @@ WHERE g.id = $1
 `
 
 type GetGameWithDetailsRow struct {
-	ID                  int32              `json:"id"`
-	Title               string             `json:"title"`
-	Description         pgtype.Text        `json:"description"`
-	GmUserID            int32              `json:"gm_user_id"`
-	State               pgtype.Text        `json:"state"`
-	Genre               pgtype.Text        `json:"genre"`
-	StartDate           pgtype.Timestamptz `json:"start_date"`
-	EndDate             pgtype.Timestamptz `json:"end_date"`
-	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
-	MaxPlayers          pgtype.Int4        `json:"max_players"`
-	IsPublic            pgtype.Bool        `json:"is_public"`
-	IsAnonymous         bool               `json:"is_anonymous"`
-	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	GmUsername          pgtype.Text        `json:"gm_username"`
-	CurrentPlayers      int64              `json:"current_players"`
+	ID                      int32              `json:"id"`
+	Title                   string             `json:"title"`
+	Description             pgtype.Text        `json:"description"`
+	GmUserID                int32              `json:"gm_user_id"`
+	State                   pgtype.Text        `json:"state"`
+	Genre                   pgtype.Text        `json:"genre"`
+	StartDate               pgtype.Timestamptz `json:"start_date"`
+	EndDate                 pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline     pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers              pgtype.Int4        `json:"max_players"`
+	IsPublic                pgtype.Bool        `json:"is_public"`
+	IsAnonymous             bool               `json:"is_anonymous"`
+	AutoAcceptAudience      bool               `json:"auto_accept_audience"`
+	AllowGroupConversations bool               `json:"allow_group_conversations"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	GmUsername              pgtype.Text        `json:"gm_username"`
+	CurrentPlayers          int64              `json:"current_players"`
 }
 
 func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWithDetailsRow, error) {
@@ -505,6 +510,7 @@ func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWith
 		&i.IsPublic,
 		&i.IsAnonymous,
 		&i.AutoAcceptAudience,
+		&i.AllowGroupConversations,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.GmUsername,
@@ -514,7 +520,7 @@ func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWith
 }
 
 const getGamesByGM = `-- name: GetGamesByGM :many
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at FROM games WHERE gm_user_id = $1 ORDER BY created_at DESC
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, allow_group_conversations, created_at, updated_at FROM games WHERE gm_user_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, error) {
@@ -540,6 +546,7 @@ func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, err
 			&i.IsPublic,
 			&i.IsAnonymous,
 			&i.AutoAcceptAudience,
+			&i.AllowGroupConversations,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -554,7 +561,7 @@ func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, err
 }
 
 const getGamesByUser = `-- name: GetGamesByUser :many
-SELECT g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.is_anonymous, g.auto_accept_audience, g.created_at, g.updated_at, gp.role as user_role, u.username as gm_username
+SELECT g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.is_public, g.is_anonymous, g.auto_accept_audience, g.allow_group_conversations, g.created_at, g.updated_at, gp.role as user_role, u.username as gm_username
 FROM games g
 JOIN game_participants gp ON g.id = gp.game_id
 JOIN users u ON g.gm_user_id = u.id
@@ -563,23 +570,24 @@ ORDER BY g.updated_at DESC
 `
 
 type GetGamesByUserRow struct {
-	ID                  int32              `json:"id"`
-	Title               string             `json:"title"`
-	Description         pgtype.Text        `json:"description"`
-	GmUserID            int32              `json:"gm_user_id"`
-	State               pgtype.Text        `json:"state"`
-	Genre               pgtype.Text        `json:"genre"`
-	StartDate           pgtype.Timestamptz `json:"start_date"`
-	EndDate             pgtype.Timestamptz `json:"end_date"`
-	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
-	MaxPlayers          pgtype.Int4        `json:"max_players"`
-	IsPublic            pgtype.Bool        `json:"is_public"`
-	IsAnonymous         bool               `json:"is_anonymous"`
-	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	UserRole            string             `json:"user_role"`
-	GmUsername          string             `json:"gm_username"`
+	ID                      int32              `json:"id"`
+	Title                   string             `json:"title"`
+	Description             pgtype.Text        `json:"description"`
+	GmUserID                int32              `json:"gm_user_id"`
+	State                   pgtype.Text        `json:"state"`
+	Genre                   pgtype.Text        `json:"genre"`
+	StartDate               pgtype.Timestamptz `json:"start_date"`
+	EndDate                 pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline     pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers              pgtype.Int4        `json:"max_players"`
+	IsPublic                pgtype.Bool        `json:"is_public"`
+	IsAnonymous             bool               `json:"is_anonymous"`
+	AutoAcceptAudience      bool               `json:"auto_accept_audience"`
+	AllowGroupConversations bool               `json:"allow_group_conversations"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	UserRole                string             `json:"user_role"`
+	GmUsername              string             `json:"gm_username"`
 }
 
 func (q *Queries) GetGamesByUser(ctx context.Context, userID int32) ([]GetGamesByUserRow, error) {
@@ -605,6 +613,7 @@ func (q *Queries) GetGamesByUser(ctx context.Context, userID int32) ([]GetGamesB
 			&i.IsPublic,
 			&i.IsAnonymous,
 			&i.AutoAcceptAudience,
+			&i.AllowGroupConversations,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.UserRole,
@@ -621,7 +630,7 @@ func (q *Queries) GetGamesByUser(ctx context.Context, userID int32) ([]GetGamesB
 }
 
 const getGamesNeedingStateUpdate = `-- name: GetGamesNeedingStateUpdate :many
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at FROM games
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, allow_group_conversations, created_at, updated_at FROM games
 WHERE (state = 'recruitment' AND recruitment_deadline IS NOT NULL AND recruitment_deadline < NOW())
    OR (state = 'in_progress' AND end_date IS NOT NULL AND end_date < NOW())
 `
@@ -649,6 +658,7 @@ func (q *Queries) GetGamesNeedingStateUpdate(ctx context.Context) ([]Game, error
 			&i.IsPublic,
 			&i.IsAnonymous,
 			&i.AutoAcceptAudience,
+			&i.AllowGroupConversations,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -723,7 +733,7 @@ func (q *Queries) GetParticipantRole(ctx context.Context, arg GetParticipantRole
 }
 
 const getRecruitingGames = `-- name: GetRecruitingGames :many
-SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.is_anonymous, games.auto_accept_audience, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username,
+SELECT games.id, games.title, games.description, games.gm_user_id, games.state, games.genre, games.start_date, games.end_date, games.recruitment_deadline, games.max_players, games.is_public, games.is_anonymous, games.auto_accept_audience, games.allow_group_conversations, games.created_at, games.updated_at, COALESCE(users.username, 'Unknown') as gm_username,
        COALESCE(participant_count.count, 0) as current_players
 FROM games
 LEFT JOIN users ON games.gm_user_id = users.id
@@ -740,23 +750,24 @@ ORDER BY games.created_at DESC
 `
 
 type GetRecruitingGamesRow struct {
-	ID                  int32              `json:"id"`
-	Title               string             `json:"title"`
-	Description         pgtype.Text        `json:"description"`
-	GmUserID            int32              `json:"gm_user_id"`
-	State               pgtype.Text        `json:"state"`
-	Genre               pgtype.Text        `json:"genre"`
-	StartDate           pgtype.Timestamptz `json:"start_date"`
-	EndDate             pgtype.Timestamptz `json:"end_date"`
-	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
-	MaxPlayers          pgtype.Int4        `json:"max_players"`
-	IsPublic            pgtype.Bool        `json:"is_public"`
-	IsAnonymous         bool               `json:"is_anonymous"`
-	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	GmUsername          string             `json:"gm_username"`
-	CurrentPlayers      int64              `json:"current_players"`
+	ID                      int32              `json:"id"`
+	Title                   string             `json:"title"`
+	Description             pgtype.Text        `json:"description"`
+	GmUserID                int32              `json:"gm_user_id"`
+	State                   pgtype.Text        `json:"state"`
+	Genre                   pgtype.Text        `json:"genre"`
+	StartDate               pgtype.Timestamptz `json:"start_date"`
+	EndDate                 pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline     pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers              pgtype.Int4        `json:"max_players"`
+	IsPublic                pgtype.Bool        `json:"is_public"`
+	IsAnonymous             bool               `json:"is_anonymous"`
+	AutoAcceptAudience      bool               `json:"auto_accept_audience"`
+	AllowGroupConversations bool               `json:"allow_group_conversations"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	GmUsername              string             `json:"gm_username"`
+	CurrentPlayers          int64              `json:"current_players"`
 }
 
 func (q *Queries) GetRecruitingGames(ctx context.Context) ([]GetRecruitingGamesRow, error) {
@@ -782,6 +793,7 @@ func (q *Queries) GetRecruitingGames(ctx context.Context) ([]GetRecruitingGamesR
 			&i.IsPublic,
 			&i.IsAnonymous,
 			&i.AutoAcceptAudience,
+			&i.AllowGroupConversations,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.GmUsername,
@@ -938,23 +950,24 @@ const updateGame = `-- name: UpdateGame :one
 UPDATE games
 SET title = $2, description = $3, genre = $4, start_date = $5,
     end_date = $6, recruitment_deadline = $7, max_players = $8,
-    is_public = $9, is_anonymous = $10, auto_accept_audience = $11, updated_at = NOW()
+    is_public = $9, is_anonymous = $10, auto_accept_audience = $11, allow_group_conversations = $12, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, allow_group_conversations, created_at, updated_at
 `
 
 type UpdateGameParams struct {
-	ID                  int32              `json:"id"`
-	Title               string             `json:"title"`
-	Description         pgtype.Text        `json:"description"`
-	Genre               pgtype.Text        `json:"genre"`
-	StartDate           pgtype.Timestamptz `json:"start_date"`
-	EndDate             pgtype.Timestamptz `json:"end_date"`
-	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
-	MaxPlayers          pgtype.Int4        `json:"max_players"`
-	IsPublic            pgtype.Bool        `json:"is_public"`
-	IsAnonymous         bool               `json:"is_anonymous"`
-	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
+	ID                      int32              `json:"id"`
+	Title                   string             `json:"title"`
+	Description             pgtype.Text        `json:"description"`
+	Genre                   pgtype.Text        `json:"genre"`
+	StartDate               pgtype.Timestamptz `json:"start_date"`
+	EndDate                 pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline     pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers              pgtype.Int4        `json:"max_players"`
+	IsPublic                pgtype.Bool        `json:"is_public"`
+	IsAnonymous             bool               `json:"is_anonymous"`
+	AutoAcceptAudience      bool               `json:"auto_accept_audience"`
+	AllowGroupConversations bool               `json:"allow_group_conversations"`
 }
 
 func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, error) {
@@ -970,6 +983,7 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		arg.IsPublic,
 		arg.IsAnonymous,
 		arg.AutoAcceptAudience,
+		arg.AllowGroupConversations,
 	)
 	var i Game
 	err := row.Scan(
@@ -986,6 +1000,7 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		&i.IsPublic,
 		&i.IsAnonymous,
 		&i.AutoAcceptAudience,
+		&i.AllowGroupConversations,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -999,7 +1014,7 @@ WITH game_update AS (
         end_date = $6, recruitment_deadline = $7, max_players = $8,
         is_public = $9, is_anonymous = $10, updated_at = NOW()
     WHERE games.id = $1
-    RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at
+    RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, allow_group_conversations, created_at, updated_at
 ),
 gm_participant AS (
     INSERT INTO game_participants (game_id, user_id, role)
@@ -1007,7 +1022,7 @@ gm_participant AS (
     ON CONFLICT (game_id, user_id) DO NOTHING
     RETURNING id, game_id, user_id, role, status, joined_at, removed_at, removed_by_user_id
 )
-SELECT gu.id, gu.title, gu.description, gu.gm_user_id, gu.state, gu.genre, gu.start_date, gu.end_date, gu.recruitment_deadline, gu.max_players, gu.is_public, gu.is_anonymous, gu.auto_accept_audience, gu.created_at, gu.updated_at FROM game_update gu
+SELECT gu.id, gu.title, gu.description, gu.gm_user_id, gu.state, gu.genre, gu.start_date, gu.end_date, gu.recruitment_deadline, gu.max_players, gu.is_public, gu.is_anonymous, gu.auto_accept_audience, gu.allow_group_conversations, gu.created_at, gu.updated_at FROM game_update gu
 `
 
 type UpdateGameAndAddGMParams struct {
@@ -1024,21 +1039,22 @@ type UpdateGameAndAddGMParams struct {
 }
 
 type UpdateGameAndAddGMRow struct {
-	ID                  int32              `json:"id"`
-	Title               string             `json:"title"`
-	Description         pgtype.Text        `json:"description"`
-	GmUserID            int32              `json:"gm_user_id"`
-	State               pgtype.Text        `json:"state"`
-	Genre               pgtype.Text        `json:"genre"`
-	StartDate           pgtype.Timestamptz `json:"start_date"`
-	EndDate             pgtype.Timestamptz `json:"end_date"`
-	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
-	MaxPlayers          pgtype.Int4        `json:"max_players"`
-	IsPublic            pgtype.Bool        `json:"is_public"`
-	IsAnonymous         bool               `json:"is_anonymous"`
-	AutoAcceptAudience  bool               `json:"auto_accept_audience"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	ID                      int32              `json:"id"`
+	Title                   string             `json:"title"`
+	Description             pgtype.Text        `json:"description"`
+	GmUserID                int32              `json:"gm_user_id"`
+	State                   pgtype.Text        `json:"state"`
+	Genre                   pgtype.Text        `json:"genre"`
+	StartDate               pgtype.Timestamptz `json:"start_date"`
+	EndDate                 pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline     pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers              pgtype.Int4        `json:"max_players"`
+	IsPublic                pgtype.Bool        `json:"is_public"`
+	IsAnonymous             bool               `json:"is_anonymous"`
+	AutoAcceptAudience      bool               `json:"auto_accept_audience"`
+	AllowGroupConversations bool               `json:"allow_group_conversations"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 }
 
 func (q *Queries) UpdateGameAndAddGM(ctx context.Context, arg UpdateGameAndAddGMParams) (UpdateGameAndAddGMRow, error) {
@@ -1069,6 +1085,7 @@ func (q *Queries) UpdateGameAndAddGM(ctx context.Context, arg UpdateGameAndAddGM
 		&i.IsPublic,
 		&i.IsAnonymous,
 		&i.AutoAcceptAudience,
+		&i.AllowGroupConversations,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1095,7 +1112,7 @@ const updateGameState = `-- name: UpdateGameState :one
 UPDATE games
 SET state = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, created_at, updated_at
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, is_public, is_anonymous, auto_accept_audience, allow_group_conversations, created_at, updated_at
 `
 
 type UpdateGameStateParams struct {
@@ -1120,6 +1137,7 @@ func (q *Queries) UpdateGameState(ctx context.Context, arg UpdateGameStateParams
 		&i.IsPublic,
 		&i.IsAnonymous,
 		&i.AutoAcceptAudience,
+		&i.AllowGroupConversations,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

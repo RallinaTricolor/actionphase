@@ -149,6 +149,7 @@ SELECT
   g.is_public,
   g.is_anonymous,
   g.auto_accept_audience,
+  g.allow_group_conversations,
   g.created_at,
   g.updated_at,
 
@@ -262,28 +263,29 @@ type GetFilteredGamesParams struct {
 }
 
 type GetFilteredGamesRow struct {
-	ID                   int32              `json:"id"`
-	Title                string             `json:"title"`
-	Description          pgtype.Text        `json:"description"`
-	GmUserID             int32              `json:"gm_user_id"`
-	GmUsername           string             `json:"gm_username"`
-	State                pgtype.Text        `json:"state"`
-	Genre                pgtype.Text        `json:"genre"`
-	StartDate            pgtype.Timestamptz `json:"start_date"`
-	EndDate              pgtype.Timestamptz `json:"end_date"`
-	RecruitmentDeadline  pgtype.Timestamptz `json:"recruitment_deadline"`
-	MaxPlayers           pgtype.Int4        `json:"max_players"`
-	IsPublic             pgtype.Bool        `json:"is_public"`
-	IsAnonymous          bool               `json:"is_anonymous"`
-	AutoAcceptAudience   bool               `json:"auto_accept_audience"`
-	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
-	CurrentPlayers       int64              `json:"current_players"`
-	UserRelationship     interface{}        `json:"user_relationship"`
-	CurrentPhaseType     interface{}        `json:"current_phase_type"`
-	CurrentPhaseDeadline pgtype.Timestamptz `json:"current_phase_deadline"`
-	DeadlineUrgency      string             `json:"deadline_urgency"`
-	HasRecentActivity    bool               `json:"has_recent_activity"`
+	ID                      int32              `json:"id"`
+	Title                   string             `json:"title"`
+	Description             pgtype.Text        `json:"description"`
+	GmUserID                int32              `json:"gm_user_id"`
+	GmUsername              string             `json:"gm_username"`
+	State                   pgtype.Text        `json:"state"`
+	Genre                   pgtype.Text        `json:"genre"`
+	StartDate               pgtype.Timestamptz `json:"start_date"`
+	EndDate                 pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline     pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers              pgtype.Int4        `json:"max_players"`
+	IsPublic                pgtype.Bool        `json:"is_public"`
+	IsAnonymous             bool               `json:"is_anonymous"`
+	AutoAcceptAudience      bool               `json:"auto_accept_audience"`
+	AllowGroupConversations bool               `json:"allow_group_conversations"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	CurrentPlayers          int64              `json:"current_players"`
+	UserRelationship        interface{}        `json:"user_relationship"`
+	CurrentPhaseType        interface{}        `json:"current_phase_type"`
+	CurrentPhaseDeadline    pgtype.Timestamptz `json:"current_phase_deadline"`
+	DeadlineUrgency         string             `json:"deadline_urgency"`
+	HasRecentActivity       bool               `json:"has_recent_activity"`
 }
 
 // Get games with filters, sorting, and user participation enrichment
@@ -323,6 +325,7 @@ func (q *Queries) GetFilteredGames(ctx context.Context, arg GetFilteredGamesPara
 			&i.IsPublic,
 			&i.IsAnonymous,
 			&i.AutoAcceptAudience,
+			&i.AllowGroupConversations,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CurrentPlayers,

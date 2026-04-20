@@ -97,6 +97,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -116,6 +117,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -138,6 +140,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -157,6 +160,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -176,6 +180,7 @@ describe('NewConversationModal', () => {
           characters={singleCharacter}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -199,6 +204,7 @@ describe('NewConversationModal', () => {
           characters={singleCharacter}
           allCharacters={allCharacters}
           isAnonymous={true}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -214,6 +220,7 @@ describe('NewConversationModal', () => {
           characters={[]}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -229,6 +236,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -244,6 +252,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -273,6 +282,7 @@ describe('NewConversationModal', () => {
           characters={singleCharacter}
           allCharacters={singleCharacter} // Only Alice in the game
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -293,6 +303,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -312,6 +323,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -331,6 +343,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -363,6 +376,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -392,6 +406,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -420,6 +435,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -448,6 +464,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -476,6 +493,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -508,6 +526,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -558,6 +577,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -610,6 +630,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -658,6 +679,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -697,6 +719,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -718,6 +741,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -756,6 +780,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -809,6 +834,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -847,6 +873,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -866,6 +893,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -895,6 +923,7 @@ describe('NewConversationModal', () => {
           characters={[]}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -914,6 +943,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -941,6 +971,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -958,6 +989,7 @@ describe('NewConversationModal', () => {
           characters={userCharacters}
           allCharacters={allCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           onClose={mockOnClose}
           onConversationCreated={mockOnConversationCreated}
         />
@@ -967,6 +999,142 @@ describe('NewConversationModal', () => {
       const participantsList = screen.getAllByRole('checkbox')[0].closest('div[class*="space-y-2"]')
       expect(participantsList).toHaveTextContent('player character')
       expect(participantsList).toHaveTextContent('npc')
+    })
+  })
+
+  describe('Group Conversations Disabled (allowGroupConversations=false)', () => {
+    it('renders a single Select dropdown instead of checkboxes', () => {
+      renderWithProviders(
+        <NewConversationModal
+          gameId={mockGameId}
+          characters={userCharacters}
+          allCharacters={allCharacters}
+          isAnonymous={false}
+          allowGroupConversations={false}
+          onClose={mockOnClose}
+          onConversationCreated={mockOnConversationCreated}
+        />
+      )
+
+      // Should have a participant dropdown (combobox for "your character" + one for participant)
+      const selects = screen.getAllByRole('combobox')
+      expect(selects.length).toBeGreaterThanOrEqual(1)
+
+      // Should not render any participant checkboxes
+      const checkboxes = screen.queryAllByRole('checkbox')
+      expect(checkboxes).toHaveLength(0)
+    })
+
+    it('shows participant label for the single select', () => {
+      renderWithProviders(
+        <NewConversationModal
+          gameId={mockGameId}
+          characters={userCharacters}
+          allCharacters={allCharacters}
+          isAnonymous={false}
+          allowGroupConversations={false}
+          onClose={mockOnClose}
+          onConversationCreated={mockOnConversationCreated}
+        />
+      )
+
+      expect(screen.getByText(/Participant \*/i)).toBeInTheDocument()
+    })
+
+    it('disables create button when no participant is selected', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(
+        <NewConversationModal
+          gameId={mockGameId}
+          characters={[userCharacters[0]]}
+          allCharacters={allCharacters}
+          isAnonymous={false}
+          allowGroupConversations={false}
+          onClose={mockOnClose}
+          onConversationCreated={mockOnConversationCreated}
+        />
+      )
+
+      const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
+      await user.type(titleInput, 'Direct Message')
+
+      const createButton = screen.getByRole('button', { name: 'Create Conversation' })
+      expect(createButton).toBeDisabled()
+    })
+
+    it('enables create button after selecting a single participant', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(
+        <NewConversationModal
+          gameId={mockGameId}
+          characters={[userCharacters[0]]}
+          allCharacters={allCharacters}
+          isAnonymous={false}
+          allowGroupConversations={false}
+          onClose={mockOnClose}
+          onConversationCreated={mockOnConversationCreated}
+        />
+      )
+
+      const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
+      await user.type(titleInput, 'Direct Message')
+
+      // Select a participant from the dropdown (the participant select, not the character select)
+      const selects = screen.getAllByRole('combobox')
+      const participantSelect = selects[selects.length - 1]
+      await user.selectOptions(participantSelect, String(allCharacters[2].id)) // Charlie
+
+      const createButton = screen.getByRole('button', { name: 'Create Conversation' })
+      expect(createButton).toBeEnabled()
+    })
+
+    it('sends only two character IDs when group conversations are disabled', async () => {
+      const user = userEvent.setup()
+      let requestBody: unknown = null
+
+      server.use(
+        http.post('/api/v1/games/:gameId/conversations', async ({ request }) => {
+          requestBody = await request.json()
+          return HttpResponse.json({
+            id: 101,
+            game_id: mockGameId,
+            title: 'Direct Message',
+            conversation_type: 'direct',
+            created_by_user_id: 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, { status: 201 })
+        })
+      )
+
+      renderWithProviders(
+        <NewConversationModal
+          gameId={mockGameId}
+          characters={[userCharacters[0]]}
+          allCharacters={allCharacters}
+          isAnonymous={false}
+          allowGroupConversations={false}
+          onClose={mockOnClose}
+          onConversationCreated={mockOnConversationCreated}
+        />
+      )
+
+      const titleInput = screen.getByPlaceholderText('e.g., Planning the heist')
+      await user.type(titleInput, 'Direct Message')
+
+      const selects = screen.getAllByRole('combobox')
+      const participantSelect = selects[selects.length - 1]
+      await user.selectOptions(participantSelect, '3') // Charlie (id: 3)
+
+      const createButton = screen.getByRole('button', { name: 'Create Conversation' })
+      await user.click(createButton)
+
+      await waitFor(() => {
+        expect(requestBody).toEqual({
+          title: 'Direct Message',
+          character_ids: [1, 3], // Exactly 2: your character + 1 participant
+        })
+      })
     })
   })
 })

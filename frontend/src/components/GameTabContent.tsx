@@ -259,6 +259,7 @@ export function GameTabContent({
           gameId={gameId}
           characters={userCharacters}
           isAnonymous={game.is_anonymous || false}
+          allowGroupConversations={game.allow_group_conversations ?? true}
           currentPhaseType={currentPhaseData?.phase?.phase_type}
         />
       </div>
