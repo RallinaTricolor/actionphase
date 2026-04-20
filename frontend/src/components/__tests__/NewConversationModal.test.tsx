@@ -1016,13 +1016,13 @@ describe('NewConversationModal', () => {
         />
       )
 
-      // Should have a participant dropdown (combobox for "your character" + one for participant)
-      const selects = screen.getAllByRole('combobox')
-      expect(selects.length).toBeGreaterThanOrEqual(1)
-
       // Should not render any participant checkboxes
-      const checkboxes = screen.queryAllByRole('checkbox')
-      expect(checkboxes).toHaveLength(0)
+      expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+
+      // The participant dropdown should contain the available characters as options
+      // (Charlie and NPC are available; Alice/Bob are in userCharacters and one will be auto-selected as sender)
+      expect(screen.getByRole('option', { name: /Charlie/i })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: /The Mysterious NPC/i })).toBeInTheDocument()
     })
 
     it('shows participant label for the single select', () => {

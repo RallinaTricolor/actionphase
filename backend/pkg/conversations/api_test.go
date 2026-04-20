@@ -190,6 +190,104 @@ func TestConversationAPI_CreateConversation(t *testing.T) {
 	})
 }
 
+// TestConversationAPI_CreateConversation_GroupRestriction tests that the allow_group_conversations
+// setting is enforced when creating conversations.
+func TestConversationAPI_CreateConversation_GroupRestriction(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "conversations", "characters", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupConversationAPITestRouter(app, testDB)
+
+	player1 := testDB.CreateTestUser(t, "player1r", "player1r@example.com")
+	player2 := testDB.CreateTestUser(t, "player2r", "player2r@example.com")
+	player3 := testDB.CreateTestUser(t, "player3r", "player3r@example.com")
+	gm := testDB.CreateTestUser(t, "gmr", "gmr@example.com")
+
+	player1Token, err := core.CreateTestJWTTokenForUser(app, player1)
+	core.AssertNoError(t, err, "Should create player1 token")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	phaseService := &phasesvc.PhaseService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	// Create game and immediately disable group conversations
+	game := testDB.CreateTestGame(t, int32(gm.ID), "No Group Convos Game")
+	_, err = gameService.UpdateGame(context.Background(), core.UpdateGameRequest{
+		ID:                      game.ID,
+		Title:                   game.Title,
+		Description:             game.Description.String,
+		IsPublic:                true,
+		AllowGroupConversations: false,
+	})
+	core.AssertNoError(t, err, "Should update game to disable group conversations")
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player1.ID), "player")
+	core.AssertNoError(t, err, "Should add player1")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player2.ID), "player")
+	core.AssertNoError(t, err, "Should add player2")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player3.ID), "player")
+	core.AssertNoError(t, err, "Should add player3")
+
+	phase, err := phaseService.CreatePhase(context.Background(), core.CreatePhaseRequest{
+		GameID: game.ID, PhaseType: "common_room", PhaseNumber: 1,
+		Title: "Common Room", Description: "Test",
+	})
+	core.AssertNoError(t, err, "Should create phase")
+	err = phaseService.ActivatePhase(context.Background(), phase.ID, int32(gm.ID))
+	core.AssertNoError(t, err, "Should activate phase")
+
+	char1, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player1.ID)),
+		Name: "Char 1", CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Should create char1")
+	char2, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player2.ID)),
+		Name: "Char 2", CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Should create char2")
+	char3, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player3.ID)),
+		Name: "Char 3", CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Should create char3")
+
+	t.Run("rejects 3-participant conversation when group conversations disabled", func(t *testing.T) {
+		reqBody := CreateConversationRequest{
+			Title:        "Group Chat",
+			CharacterIDs: []int32{char1.ID, char2.ID, char3.ID},
+		}
+		reqJSON, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations", game.ID), bytes.NewBuffer(reqJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+player1Token)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), "group conversations are not allowed")
+	})
+
+	t.Run("allows 2-participant conversation when group conversations disabled", func(t *testing.T) {
+		reqBody := CreateConversationRequest{
+			Title:        "Direct Message",
+			CharacterIDs: []int32{char1.ID, char2.ID},
+		}
+		reqJSON, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/conversations", game.ID), bytes.NewBuffer(reqJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+player1Token)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusCreated, rec.Code)
+	})
+}
+
 // TestConversationAPI_SendMessage tests POST /games/{gameId}/conversations/{conversationId}/messages
 func TestConversationAPI_SendMessage(t *testing.T) {
 	testDB := core.NewTestDatabase(t)

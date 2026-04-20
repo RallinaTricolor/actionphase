@@ -12,6 +12,104 @@ import (
 	"testing"
 )
 
+// TestCreateGame_AllowGroupConversations tests that allow_group_conversations persists on create and update
+func TestCreateGame_AllowGroupConversations(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	testDB.CleanupTables(t, "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupGameTestRouter(app, testDB)
+	fixtures := testDB.SetupFixtures(t)
+
+	accessToken, err := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
+	core.AssertNoError(t, err, "Test token creation should succeed")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	t.Run("persists true when explicitly set on create", func(t *testing.T) {
+		requestBody := CreateGameRequest{
+			Title:                   "Test Game With Groups",
+			Description:             "Testing allow_group_conversations=true",
+			AllowGroupConversations: true,
+		}
+		bodyBytes, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/games/", bytes.NewBuffer(bodyBytes))
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusCreated, w.Code, "Should return 201")
+		var response GameResponse
+		json.NewDecoder(w.Body).Decode(&response)
+		core.AssertEqual(t, true, response.AllowGroupConversations, "allow_group_conversations should be true in response")
+
+		game, err := gameService.GetGame(context.Background(), response.ID)
+		core.AssertNoError(t, err, "Should retrieve game")
+		core.AssertEqual(t, true, game.AllowGroupConversations, "allow_group_conversations should be true in DB")
+	})
+
+	t.Run("persists false when explicitly set on create", func(t *testing.T) {
+		requestBody := CreateGameRequest{
+			Title:                   "Test Game No Groups",
+			Description:             "Testing allow_group_conversations=false",
+			AllowGroupConversations: false,
+		}
+		bodyBytes, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/games/", bytes.NewBuffer(bodyBytes))
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusCreated, w.Code, "Should return 201")
+		var response GameResponse
+		json.NewDecoder(w.Body).Decode(&response)
+		core.AssertEqual(t, false, response.AllowGroupConversations, "allow_group_conversations should be false in response")
+
+		game, err := gameService.GetGame(context.Background(), response.ID)
+		core.AssertNoError(t, err, "Should retrieve game")
+		core.AssertEqual(t, false, game.AllowGroupConversations, "allow_group_conversations should be false in DB")
+	})
+
+	t.Run("can be toggled via update", func(t *testing.T) {
+		game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+			Title:                   "Toggle Test Game",
+			Description:             "Testing toggle",
+			GMUserID:                int32(fixtures.TestUser.ID),
+			IsPublic:                true,
+			AllowGroupConversations: true,
+		})
+		core.AssertNoError(t, err, "Game creation should succeed")
+
+		// Disable group conversations
+		requestBody := UpdateGameRequest{
+			Title:                   game.Title,
+			Description:             game.Description.String,
+			IsPublic:                true,
+			AllowGroupConversations: false,
+		}
+		bodyBytes, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/games/"+strconv.Itoa(int(game.ID)), bytes.NewBuffer(bodyBytes))
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Should return 200")
+		var response GameResponse
+		json.NewDecoder(w.Body).Decode(&response)
+		core.AssertEqual(t, false, response.AllowGroupConversations, "allow_group_conversations should be false after update")
+
+		updated, err := gameService.GetGame(context.Background(), game.ID)
+		core.AssertNoError(t, err, "Should retrieve updated game")
+		core.AssertEqual(t, false, updated.AllowGroupConversations, "allow_group_conversations should be false in DB after update")
+	})
+}
+
 // TestCreateGame_WithSettings tests game creation with is_anonymous and auto_accept_audience settings
 // This test verifies the fix for Issues 2.1 and 2.2 - settings persistence
 func TestCreateGame_WithSettings(t *testing.T) {
