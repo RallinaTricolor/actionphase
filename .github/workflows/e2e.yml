@@ -1,11 +1,7 @@
 name: E2E Tests
 
 on:
-  # Run on push to main/master branches
-  push:
-    branches: [master, main]
-
-  # Allow manual triggering for any branch
+  # Manual triggering only — E2E tests are run locally before merging
   workflow_dispatch:
     inputs:
       test_suite:
@@ -189,43 +185,3 @@ jobs:
           if [ -f /tmp/backend.pid ]; then kill $(cat /tmp/backend.pid) || true; fi
           if [ -f /tmp/frontend.pid ]; then kill $(cat /tmp/frontend.pid) || true; fi
 
-  # Optional: Create issue on failure (only for push events, not manual triggers)
-  notify-on-failure:
-    name: Notify on Failure
-    runs-on: ubuntu-latest
-    needs: e2e-tests
-    if: failure() && github.event_name == 'push'
-
-    steps:
-      - name: Create issue on failure
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const title = '🚨 E2E Tests Failed on Main';
-            const body = `
-            The E2E test suite has failed after merge to ${context.ref}.
-
-            **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            **Commit:** ${context.sha}
-            **Date:** ${new Date().toISOString()}
-
-            Please investigate the failure and review the test artifacts.
-            `;
-
-            // Check if similar issue already exists
-            const issues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'e2e-failure,automated'
-            });
-
-            if (issues.data.length === 0) {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: title,
-                body: body,
-                labels: ['e2e-failure', 'automated', 'needs-triage']
-              });
-            }
