@@ -446,12 +446,12 @@
   font-weight: 500;
 }
 
+
 .prose :where(a):hover:not(:where([class~="not-prose"] *)) {
   color: rgb(var(--color-interactive-primary-hover));
 }
 
 .prose :where(strong):not(:where([class~="not-prose"] *)) {
-  color: rgb(var(--color-content-primary));
   font-weight: 600;
 }
 
@@ -732,6 +732,7 @@
 [data-color="gray"]   { color: #6b7280; }
 [data-color="teal"]   { color: #0d9488; }
 [data-color="pink"]   { color: #db2777; }
+
 
 .dark [data-color="red"]    { color: #f87171; }
 .dark [data-color="green"]  { color: #4ade80; }

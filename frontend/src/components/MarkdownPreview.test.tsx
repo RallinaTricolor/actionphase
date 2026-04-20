@@ -489,5 +489,51 @@ describe('MarkdownPreview', () => {
       );
       expect(container.querySelector('[data-color]')).not.toBeInTheDocument();
     });
+
+    it('renders bold text inside color tags', () => {
+      const { container } = render(
+        <MarkdownPreview content="[color:red]**bold**[/color]" />
+      );
+      const span = container.querySelector('[data-color="red"]');
+      expect(span).toBeInTheDocument();
+      const strong = span?.querySelector('strong');
+      expect(strong).toBeInTheDocument();
+      expect(strong?.textContent).toBe('bold');
+    });
+
+    it('renders italic text inside color tags', () => {
+      const { container } = render(
+        <MarkdownPreview content="[color:red]*italic*[/color]" />
+      );
+      const span = container.querySelector('[data-color="red"]');
+      expect(span).toBeInTheDocument();
+      const em = span?.querySelector('em');
+      expect(em).toBeInTheDocument();
+      expect(em?.textContent).toBe('italic');
+    });
+  });
+
+  describe('Bold links', () => {
+    it('renders bold link text with link styling (color) when link is inside bold markers', () => {
+      const { container } = render(
+        <MarkdownPreview content="**[Link](https://example.com)**" />
+      );
+      const link = container.querySelector('a');
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveTextContent('Link');
+      // The link should have the interactive-primary class, not be overridden by strong's color
+      expect(link).toHaveClass('text-interactive-primary');
+    });
+
+    it('renders bold link text with link styling (color) when bold is inside link text', () => {
+      const { container } = render(
+        <MarkdownPreview content="[**Link**](https://example.com)" />
+      );
+      const link = container.querySelector('a');
+      expect(link).toBeInTheDocument();
+      // The strong inside the link should not override the link's color
+      const strong = link?.querySelector('strong');
+      expect(strong).toBeInTheDocument();
+    });
   });
 });

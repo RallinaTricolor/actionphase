@@ -361,12 +361,12 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
 
           // Style inline elements
           strong: ({ children, ...props }) => (
-            <strong className="!text-content-primary" {...props}>
+            <strong {...props}>
               {children}
             </strong>
           ),
           em: ({ children, ...props }) => (
-            <em className="!text-content-primary" {...props}>
+            <em {...props}>
               {children}
             </em>
           ),
