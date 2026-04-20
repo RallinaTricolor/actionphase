@@ -5,6 +5,7 @@ import { SkillCard } from './SkillCard';
 import { AddAbilityModal } from './AddAbilityModal';
 import { AddSkillModal } from './AddSkillModal';
 import { Button } from './ui';
+import { generateId } from '../utils/generateId';
 
 // Defensive helper to ensure all items have ID fields
 // This protects against data corruption from draft merge bugs
@@ -15,7 +16,7 @@ const ensureIds = <T extends { id?: string }>(
   return items.map(item => {
     if (!item.id) {
       console.warn(`${itemType} missing id field (data corruption), generating:`, item);
-      return { ...item, id: crypto.randomUUID() };
+      return { ...item, id: generateId() };
     }
     return item as T & { id: string };
   });
@@ -43,8 +44,6 @@ export const AbilitiesManager: React.FC<AbilitiesManagerProps> = ({
   const [activeTab, setActiveTab] = useState<'abilities' | 'skills'>('abilities');
   const [showAddAbility, setShowAddAbility] = useState(false);
   const [showAddSkill, setShowAddSkill] = useState(false);
-
-  const generateId = () => crypto.randomUUID();
 
   const addAbility = (abilityData: Omit<CharacterAbility, 'id'>) => {
     const newAbility: CharacterAbility = {

@@ -5,6 +5,7 @@ import { CurrencyCard } from './CurrencyCard';
 import { AddItemModal } from './AddItemModal';
 import { AddCurrencyModal } from './AddCurrencyModal';
 import { Button } from './ui';
+import { generateId } from '../utils/generateId';
 
 // Defensive helper to ensure all items have ID fields
 // This protects against data corruption from draft merge bugs
@@ -15,7 +16,7 @@ const ensureIds = <T extends { id?: string }>(
   return items.map(item => {
     if (!item.id) {
       console.warn(`${itemType} missing id field (data corruption), generating:`, item);
-      return { ...item, id: crypto.randomUUID() };
+      return { ...item, id: generateId() };
     }
     return item as T & { id: string };
   });
@@ -43,8 +44,6 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
   const [activeTab, setActiveTab] = useState<'items' | 'currency'>('items');
   const [showAddItem, setShowAddItem] = useState(false);
   const [showAddCurrency, setShowAddCurrency] = useState(false);
-
-  const generateId = () => crypto.randomUUID();
 
   const addItem = (itemData: Omit<InventoryItem, 'id'>) => {
     const newItem: InventoryItem = {
