@@ -309,7 +309,8 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                 {conversation.conversation.title || 'Untitled Conversation'}
               </h2>
               <p className="text-xs text-content-secondary truncate">
-                {conversation.participants?.map(p => p.character_name || p.username).join(', ') || 'None'}
+                {[...new Map(conversation.participants?.map(p => [p.character_id ?? `u${p.user_id}`, p]) ?? []).values()]
+                  .map(p => p.character_name || p.username).join(', ') || 'None'}
               </p>
             </div>
             <Button

@@ -180,6 +180,34 @@ describe('MessageThread', () => {
       });
     });
 
+    it('deduplicates participant names when same character appears multiple times (e.g. GM + co-GM both added for NPC)', async () => {
+      server.use(
+        http.get('/api/v1/games/:gameId/conversations/:conversationId', () => {
+          return HttpResponse.json({
+            conversation: { id: 1, game_id: 1, title: 'Test Conversation', created_at: '2024-01-01T00:00:00Z' },
+            participants: [
+              { character_id: 10, user_id: 1, character_name: 'Captain Obed Marsh', username: 'TestGM' },
+              { character_id: 10, user_id: 2, character_name: 'Captain Obed Marsh', username: 'TestCoGM' },
+              { character_id: 20, user_id: 3, character_name: 'Detective Marcus Kane', username: 'TestPlayer1' },
+            ],
+          });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
+      );
+
+      await waitFor(() => {
+        // The header participant line should show each character only once
+        const header = screen.getByText(/captain obed marsh/i);
+        // Should appear exactly once in header (not twice)
+        expect(header.textContent).not.toMatch(/captain obed marsh.*captain obed marsh/i);
+        expect(header.textContent).toMatch(/captain obed marsh/i);
+        expect(header.textContent).toMatch(/detective marcus kane/i);
+      });
+    });
+
     it('shows untitled when conversation has no title', async () => {
       server.use(
         http.get('/api/v1/games/:gameId/conversations/:conversationId', () => {
