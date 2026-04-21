@@ -18,7 +18,7 @@ Each deadline card shows:
 
 Hover over the info icon on a deadline card to read its description, if one was added.
 
-Active deadlines are sorted with the soonest first. Expired deadlines remain visible in a collapsed section at the bottom of the strip — click **View All** to expand it. They stay until a GM deletes them.
+Deadlines are sorted with the soonest first. Expired deadlines are automatically removed from the strip.
 
 ---
 

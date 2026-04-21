@@ -15,7 +15,7 @@ Each game you're in appears as a card showing:
 - **Current phase** — The active phase name and type, with its deadline if one is set
 - **Indicators** — Unread message count, pending applications (GMs), and whether you have an action to submit
 
-Cards with an **Urgent** badge have an approaching deadline with an action still needed from you. An **Urgent Actions Required** section appears at the top of the dashboard when any game needs immediate attention, with a link to each urgent game.
+Cards with an **Urgent** badge have an approaching deadline with an action still needed from you. An **Urgent Actions Required** section appears at the top of the dashboard when any of your player games needs immediate attention, with a link to each urgent game.
 
 ### Upcoming Deadlines
 
@@ -39,7 +39,12 @@ Go to the **Games** page from the navigation. Games are listed with their title,
 
 ## Applying to a Game
 
-When you find a game in **Recruiting** state, click **Apply to Join**. Fill in any information the application requests and submit. Your application will show as **Pending** until the GM reviews it.
+When you find a game in **Recruiting** state, click **Apply to Join**. The form has two fields:
+
+- **Role** — Choose **Player** to actively participate or **Audience** to follow along without playing
+- **Application Message** — Optional note to the GM introducing yourself or your character ideas
+
+Submit and your application shows as **Pending** until the GM reviews it.
 
 Once a game has moved past Recruitment, you can still join as an **audience member** by clicking **Join as Audience**. See [Audience](./audience) for what audience members can see.
 
@@ -79,7 +84,7 @@ The bell icon in the navigation bar shows unread notifications. Click it for a d
 
 - New private messages
 - Replies to your comments
-- Character mentions (when your character is mentioned in a post)
+- Character mentions (when your character is @mentioned in a comment)
 - Action results published by the GM
 - New phases and polls
 - Application and character approval decisions

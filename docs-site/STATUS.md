@@ -38,7 +38,7 @@ This file tracks the status of all feature documentation.
 
 | Feature | File | Status | Last Updated | Notes |
 |---------|------|--------|--------------|-------|
-| GM Workflows | guide/gm-workflows.md | Audited | 2026-04-20 | Create/schedule phases, deadlines, game lifecycle |
+| Phases | guide/phases.md | Complete | 2026-04-21 | Phase types, create/activate/edit/delete, action phase workflow — split from gm-workflows.md |
 
 ## Statuses
 

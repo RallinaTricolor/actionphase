@@ -6,7 +6,7 @@ Every game moves through a series of states that determine what players and GMs 
 
 ### Setup
 
-The game has been created but is not yet visible to other players. Only the GM can see it. The GM configures the game (title, description, settings) before moving it forward.
+The game has been created. The GM configures the game (title, description, settings) before moving it forward. Players cannot apply or create characters yet.
 
 **GM:** Move the game from Setup to Recruitment when you're ready to accept applications.
 
@@ -39,7 +39,9 @@ The game has ended. All content is preserved as a public archive — anyone can 
 
 ### Cancelled
 
-The game was cancelled before or during play. Content is preserved but is not public — only participants and audience members retain access. No new content can be created.
+The game was cancelled before or during play. Content is preserved and the game remains as visible as it was before cancellation. No new content can be created.
+
+**GM:** Cancelled games can be permanently deleted from the game actions menu. This removes all game data and cannot be undone.
 
 ## State Transitions
 
@@ -51,4 +53,11 @@ Setup → Recruitment → Character Creation → In Progress ⇄ Paused
 
 Cancellation is available from any non-terminal state (Setup, Recruitment, Character Creation, In Progress, Paused). Completion is only available from **In Progress**. Completed and Cancelled are terminal — no further transitions are possible.
 
-**GM:** All state transitions are initiated by the GM from the game management controls.
+**GM:** All state transitions are initiated by the GM from the game actions menu (⋮) on the game page:
+
+1. **Start Recruitment** — Opens the game for player applications
+2. **Begin Character Creation** — Closes applications; approved players can now submit characters
+3. **Start Game** — Moves to **In Progress** and enables phase creation
+4. **Pause / Resume** — Temporarily suspends the game without ending it
+5. **Complete Game** — Ends the game; all content is preserved read-only
+6. **Cancel Game** — Cancels the game; all content is preserved read-only

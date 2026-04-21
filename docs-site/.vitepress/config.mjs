@@ -50,7 +50,7 @@ export default defineConfig({
         {
           text: 'Running a Game',
           items: [
-            { text: 'GM Workflows', link: '/guide/gm-workflows' },
+            { text: 'Phases', link: '/guide/phases' },
           ]
         },
         {

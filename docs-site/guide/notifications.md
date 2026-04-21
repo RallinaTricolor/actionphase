@@ -22,17 +22,11 @@ Click **View all notifications** in the dropdown, or go to **Notifications** in 
 |-------|----------------|
 | New private message | Recipients of the conversation |
 | Reply to your comment | You |
-| Character mentioned in a post | Player(s) whose character was mentioned |
-| Action result published | The player whose action was resolved |
-| New GM post in Common Room | All participants |
+| Character @mentioned in a comment | Player(s) whose character was mentioned |
 | New phase created | All participants |
 | New poll created | All participants |
+| New handout published | All participants |
 | Application approved | Applicant |
-| Application rejected | Applicant |
-| Character approved | Character's player |
-| Character rejected | Character's player |
-| Game state changed | All participants |
-| Player submits an action | GM |
 
 ## Read Tracking
 
