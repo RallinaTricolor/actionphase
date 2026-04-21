@@ -65,7 +65,7 @@ Currency is private — only the character's player, the GM, and audience member
 
 ## What Players Can Edit
 
-Players can edit their **Public Profile** and **Private Notes** directly. **Abilities, Skills, Items, and Currency are GM-controlled** — only the GM can add, edit, or remove them. Changes to these sections come through published action results.
+Players can edit their **Public Profile** and **Private Notes** directly. **Abilities, Skills, Items, and Currency are GM-controlled** — only the GM can add, edit, or remove them. The GM can update these sections at any time, or bundle changes into published action results.
 
 ## Avatar
 
