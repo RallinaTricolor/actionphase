@@ -18,25 +18,28 @@ This file tracks the status of all feature documentation.
 | Game States | guide/game-states.md | Audited | 2026-04-20 | State machine, transitions, what each state means |
 | Game Settings | guide/game-settings.md | Audited | 2026-04-20 | Anonymous mode, auto-accept audience, group convos |
 | Player Applications | guide/player-applications.md | Audited | 2026-04-20 | Apply, review, approve/reject, participants tab, co-GMs |
-| Deadlines | guide/deadlines.md | Complete | 2026-04-20 | Phase deadlines, custom deadlines, extend |
+| Deadlines | guide/deadlines.md | Audited | 2026-04-20 | Phase deadlines, custom deadlines, extend |
 
 ## Playing
 
 | Feature | File | Status | Last Updated | Notes |
 |---------|------|--------|--------------|-------|
 | Characters | guide/characters.md | Audited | 2026-04-20 | Creation, sheet, approval, draft updates, NPCs |
-| Common Room | guide/common-room.md | Complete | 2026-04-20 | Posts, threads, polls, new comments tab |
-| Handouts | guide/handouts.md | Complete | 2026-04-20 | Create, edit, publish, distribute, GM updates |
-| Private Messages | guide/private-messages.md | Complete | 2026-04-20 | Character-to-character PMs, group conversations |
-| Action Phases | guide/action-phases.md | Complete | 2026-04-20 | Submit actions, results, draft character updates |
-| Audience | guide/audience.md | Complete | 2026-04-20 | Self-join, audience view, NPC assignment |
-| History Tab | guide/history.md | Complete | 2026-04-20 | Phase list, sub-tabs for action phases |
+| Character Sheet Detail | guide/character-sheet.md | Audited | 2026-04-21 | Abilities, skills, inventory, currency — player perspective |
+| Character Public Profile | guide/character-profile.md | Audited | 2026-04-21 | Public activity feed, stats, /characters/:id page |
+| Public Game Archive | guide/public-archive.md | Audited | 2026-04-21 | Completed games viewable without login |
+| Common Room | guide/common-room.md | Audited | 2026-04-20 | Posts, threads, polls, new comments tab |
+| Handouts | guide/handouts.md | Audited | 2026-04-20 | Create, edit, publish, distribute, GM updates |
+| Private Messages | guide/private-messages.md | Audited | 2026-04-20 | Character-to-character PMs, group conversations |
+| Action Phases | guide/action-phases.md | Audited | 2026-04-20 | Submit actions, results, draft character updates |
+| Audience | guide/audience.md | Audited | 2026-04-20 | Self-join, audience view, NPC assignment |
+| History Tab | guide/history.md | Audited | 2026-04-20 | Phase list, sub-tabs for action phases |
 
 ## Running a Game
 
 | Feature | File | Status | Last Updated | Notes |
 |---------|------|--------|--------------|-------|
-| GM Workflows | guide/gm-workflows.md | Complete | 2026-04-20 | Create/schedule phases, deadlines, game lifecycle |
+| GM Workflows | guide/gm-workflows.md | Audited | 2026-04-20 | Create/schedule phases, deadlines, game lifecycle |
 
 ## Statuses
 

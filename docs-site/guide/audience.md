@@ -4,7 +4,9 @@ Audience members observe a game without being participants. They can see private
 
 ## Joining as Audience
 
-Once a game has moved past the Recruitment state (during Character Creation, In Progress, or after Completion), a **Join as Audience** button appears on the game page. Click it to join immediately — no GM approval required.
+Once a game has moved past the Recruitment state (during Character Creation, In Progress, or after Completion), a **Join as Audience** button appears on the game page. Click it to submit an audience application.
+
+Whether you're added immediately or need GM approval depends on the game's settings. If the GM has enabled **Auto-Accept Audience**, you're added immediately. Otherwise, the GM must approve your application.
 
 ## Audience View
 
@@ -21,14 +23,14 @@ Both tabs are read-only. Audience members cannot post, vote, submit actions, or 
 
 ## Audience Management
 
-Audience members and their access are visible in the game's Participants panel. You can remove an audience member's access from there if needed.
+Audience members appear in the **People** tab alongside players. You can approve or reject pending audience applications, and remove existing audience members from there if needed.
 
-## Assigning Audience NPCs
+## Assigning NPCs to Audience Members
 
-Audience members can be assigned to control NPC characters within the game. To assign an NPC to an audience member:
+Audience members can be assigned to control NPC characters within the game. To assign an NPC:
 
-1. Open the **Assign NPC** modal from the game management area.
-2. Select the NPC character.
+1. Go to the **People** tab and find the NPC character.
+2. Click the **Assign** button on the NPC's character card.
 3. Select the audience member to assign it to.
 
-The audience member can then submit actions for that NPC during action phases.
+The audience member can then participate in conversations as that NPC character.

@@ -38,6 +38,8 @@ export default defineConfig({
           text: 'Playing',
           items: [
             { text: 'Characters', link: '/guide/characters' },
+            { text: 'Character Sheet', link: '/guide/character-sheet' },
+            { text: 'Character Profiles', link: '/guide/character-profile' },
             { text: 'Common Room', link: '/guide/common-room' },
             { text: 'Handouts', link: '/guide/handouts' },
             { text: 'Private Messages', link: '/guide/private-messages' },
@@ -50,6 +52,12 @@ export default defineConfig({
           text: 'Running a Game',
           items: [
             { text: 'GM Workflows', link: '/guide/gm-workflows' },
+          ]
+        },
+        {
+          text: 'Other',
+          items: [
+            { text: 'Public Game Archive', link: '/guide/public-archive' },
           ]
         }
       ],

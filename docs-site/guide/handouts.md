@@ -8,9 +8,9 @@ Published handouts appear in the **Handouts** section of the game. Click **View*
 
 Handouts support Markdown formatting, so they can include headers, lists, tables, and other structured content.
 
-### Comments and Clarifications
+### Updates & Comments
 
-Each handout has a comments section where the GM can post clarifications or updates. These appear below the main handout content.
+Each handout has an **Updates & Comments** section where the GM can post clarifications or updates. These appear below the main handout content and are visible to all players.
 
 ---
 

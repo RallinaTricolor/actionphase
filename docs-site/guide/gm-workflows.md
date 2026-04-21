@@ -6,10 +6,17 @@ This page covers the controls available to GMs for managing the game structure, 
 
 From the **Games** page, click **Create Game**. Fill in:
 
-- **Title** — The name of your game
-- **Description** — Visible to players browsing for games (supports Markdown)
+- **Title** — The name of your game (required)
+- **Description** — Visible to players browsing for games (required, supports Markdown)
+- **Genre** — Optional genre label (e.g., "Fantasy", "Sci-Fi")
+- **Maximum Players** — Optional cap on player slots
+- **Recruitment Deadline** — Optional date/time when applications close
+- **Start Date / End Date** — Optional informational dates shown on the game listing
+- **Anonymous Mode** — Hides character ownership and NPC status from players
+- **Auto-Accept Audience Members** — Audience applications are automatically approved without GM review
+- **Allow Group Conversations** — Players can create private messages with 3 or more participants
 
-After creation, your game starts in **Setup** state. You can edit the game details at any time before the game completes using **Edit Game** from the game actions menu (⋮).
+After creation, your game starts in **Setup** state. You can edit the game details at any time before the game completes or is cancelled using **Edit Game** from the game actions menu (⋮).
 
 ## Advancing Game States
 

@@ -10,7 +10,7 @@ To reply to a post or comment, click the reply button below it, select which cha
 
 ### New Comments Tab
 
-The **New Comments** tab shows all comments added since your last visit, collected in one place. This is a quick way to catch up without scrolling through every thread.
+The **New Comments** tab shows recent comments across the game in reverse chronological order, each displayed with its parent context. Use it to quickly catch up on activity without scrolling through every thread.
 
 ### Viewing Threads
 
@@ -18,7 +18,7 @@ Long threads are collapsible. Click any post to expand or collapse its replies. 
 
 ## Polls
 
-The **Polls** tab shows all polls for the current phase. Polls with an unvoted badge have responses waiting for you.
+The **Polls** tab shows all polls for the current phase. Polls you haven't voted on are marked accordingly.
 
 **Voting:** Click **Vote Now** on an active poll. Select your option (or write a custom response if the GM enabled that). You can change your vote before the deadline by clicking **Change Vote**.
 
@@ -40,12 +40,12 @@ Go to the **Polls** tab and click **Create Poll**:
 - **Description** — Optional context, supports Markdown
 - **Deadline** — When voting closes
 - **Vote As** — Whether participants vote as their player account or as their character
-- **Options** — Add at least two choices. Use the **+** button to add more.
+- **Options** — Add at least two choices. Use **Add Option** to add more.
 - **Show individual votes** — If enabled, participants can see who voted for what
 - **Allow "Other" responses** — If enabled, participants can write in a custom answer
 
 Polls cannot be edited after creation. They can be deleted (with confirmation).
 
-## Moderating Posts
+## Moderating Comments
 
-GMs can delete any post or comment. Deleted content is removed immediately.
+GMs can delete any comment. Deleted comments are replaced with a `[Comment deleted]` placeholder to preserve thread structure — the replies remain visible.

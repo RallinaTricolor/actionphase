@@ -50,4 +50,4 @@ Or enter a custom number of hours (1–720). The modal shows the current deadlin
 
 ## Deleting a Deadline
 
-Hover over a custom deadline card and click the trash icon. Phase deadlines and poll deadlines cannot be deleted from the deadline strip — edit or delete the phase or poll itself instead.
+Hover over a custom deadline card and click the trash icon. Phase deadlines cannot be deleted from the deadline strip — edit or delete the phase itself instead. Poll deadlines can be deleted directly.

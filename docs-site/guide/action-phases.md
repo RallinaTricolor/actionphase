@@ -30,30 +30,24 @@ If your character sheet was updated as part of the result, those changes appear 
 
 ## Viewing Submissions
 
-The **All Submissions** view is accessible from the **Audience** tab (visible to the GM and audience members). It shows every player's submission for each phase. Use the phase selector to switch between past action phases.
+The **Submitted Actions** list is on the **Actions** tab. It shows every player's submission for the current or selected phase. Use the phase filter to switch between past action phases.
 
-Each submission card shows:
-- Character name and player username
-- Submission timestamp and status
-- The action text (expandable for long submissions)
-- The result (if one has been written)
+Each submission card shows the character name, player username, submission timestamp, and the action text (expandable for long submissions).
 
 ## Writing Results
 
-To write a result for a submission, click **Send Result** on the submission card. Write the result in the text editor and submit. Results are always created as drafts first — they are not visible to the player until you publish them.
+To write a result for a submission, click **Send Result to [player]** on the submission card. Write the result in the text editor and click **Create Draft Result**. Results are always created as drafts first — they are not visible to the player until you publish them.
 
 ## Publishing Results
 
-Each result is published individually. Click **Publish** on a saved result (or on the submission card). A confirmation dialog appears, noting how many character sheet draft updates will also be applied when you publish.
+The **Results** section (below the submissions list) shows all draft and published results. Click **Publish Result** on a draft result to send it to the player. A confirmation dialog appears, noting how many character sheet updates will also be applied when you publish.
 
 Once published, the result is immediately visible to the player and cannot be undone.
 
-## Character Sheet Draft Updates
+You can also publish all unpublished results at once using the **Publish All Results** button that appears when draft results are ready.
 
-Before publishing a result, you can prepare character sheet changes as part of that result:
+## Character Sheet Updates
 
-1. When viewing a submission with a saved result, open the **Draft Character Updates** section.
-2. Add updates specifying the module (Abilities, Skills, Inventory, Currency), field name, value, and operation (Upsert or Delete).
-3. Save the drafts.
+Before publishing a result, you can prepare character sheet changes as part of that result. Click the character sheet edit button on the result card to open the **Update Character Sheet** modal.
 
-Draft updates are visible to the player as pending on their character sheet. When you publish the result, all associated drafts are applied to the character sheet automatically.
+The modal lets you edit the character's Abilities and Inventory sections directly. Changes are saved as drafts and applied to the character sheet automatically when you publish the result.
