@@ -24,6 +24,8 @@ After the GM publishes your result, it appears alongside your submitted action. 
 
 If your character sheet was updated as part of the result, those changes appear on your character sheet immediately.
 
+When the game moves into a Common Room phase after an action phase, your most recent results appear at the top of the Common Room for easy reference. This panel collapses automatically after you've visited the page once.
+
 ---
 
 ## GM: Viewing Submissions
@@ -43,6 +45,8 @@ The **Results** section (below the submissions list) shows all draft and publish
 Once published, the result is immediately visible to the player and cannot be undone.
 
 You can also publish all unpublished results at once using the **Publish All Results** button that appears when draft results are ready.
+
+If you attempt to activate a new phase while draft results exist, a prompt will appear asking whether you want to publish them before proceeding or activate without publishing.
 
 ## GM: Character Sheet Updates
 

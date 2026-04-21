@@ -31,8 +31,8 @@ This file tracks the status of all feature documentation.
 | Common Room | guide/common-room.md | Audited | 2026-04-20 | Posts, threads, polls, new comments tab |
 | Handouts | guide/handouts.md | Audited | 2026-04-20 | Create, edit, publish, distribute, GM updates |
 | Private Messages | guide/private-messages.md | Audited | 2026-04-20 | Character-to-character PMs, group conversations |
-| Action Phases | guide/action-phases.md | Audited | 2026-04-20 | Submit actions, results, draft character updates |
-| Audience | guide/audience.md | Audited | 2026-04-20 | Self-join, audience view, NPC assignment |
+| Action Phases | guide/action-phases.md | Completed | 2026-04-20 | Submit actions, results, draft character updates |
+| Audience | guide/audience.md | Completed | 2026-04-20 | Self-join, audience view, NPC assignment |
 | History Tab | guide/history.md | Audited | 2026-04-20 | Phase list, sub-tabs for action phases |
 
 ## Running a Game
