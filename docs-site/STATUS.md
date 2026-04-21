@@ -45,7 +45,7 @@ This file tracks the status of all feature documentation.
 
 - **Draft** — Content written, not yet reviewed
 - **In Review** — Currently being audited against the codebase
-- **Complete** — Verified correct against the implementation; ready for human review
+- **Audited** — Verified correct against the implementation; ready for human review
 - **Complete** — Human-reviewed and approved
 - **Stale** — Known to be out of date; needs update
 
