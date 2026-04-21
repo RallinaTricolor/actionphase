@@ -11,14 +11,46 @@ Character creation is available once the game enters the **Character Creation** 
 
 ## The Character Sheet
 
-Click on your character from the People tab to open its character sheet. The sheet has four tabs:
+Open your character sheet by clicking your character's name in the **People** tab. The sheet has four tabs:
 
-- **Public Profile** — Character description and other public-facing information
+- **Public Profile** — Character description visible to all players
 - **Private Notes** — Your private notes, visible only to you, the GM, and audience members
-- **Abilities & Skills** — Character abilities and trained skills
-- **Inventory** — Equipment, items, and currency/resources
+- **Abilities & Skills** — Special powers and trained skills (GM-controlled)
+- **Inventory** — Equipment, items, and currency/resources (GM-controlled)
 
-Other players can see the Public Profile tab of approved characters. The remaining tabs (Private Notes, Abilities & Skills, Inventory) are visible only to the character's owner, the GM, and audience members — not other players.
+The **Public Profile** tab is always visible to everyone. The other three tabs are only visible to the character's player, the GM, and audience members. In a completed game, all participants can view the full sheet.
+
+### Public Profile
+
+The **Character Description** field holds your character's public-facing information — appearance, personality, backstory, and anything else other players can know. Supports Markdown. Edit it by clicking **Edit** on the field.
+
+### Private Notes
+
+A single **Private Notes & Secrets** field for anything you don't want other players to see — motivations, secrets, things your character knows. Supports Markdown. Visible only to you, the GM, and audience members.
+
+### Abilities & Skills
+
+The **Abilities & Skills** tab has two sub-tabs:
+
+**Abilities** — Each ability has a name, type (Learned or Innate), and description.
+
+**Skills** — Each skill has a name, numeric level, optional category (e.g., "Combat", "Social"), and description.
+
+### Inventory
+
+The **Inventory** tab has two sub-tabs:
+
+**Items** — Each item has a name, quantity, optional category, value, weight, and description.
+
+**Currency/Resources** — Tracks named resources (e.g., "Gold", "Credits", "XP") with a current amount and optional notes. Currency is private — only the character's player, the GM, and audience members can see it.
+
+## Avatar
+
+Click the camera icon on the character avatar to upload a new image. Click the trash icon to remove it.
+
+## Renaming a Character
+
+Players can rename their own character by clicking the pencil icon next to the name. GMs can rename any character.
 
 ---
 
@@ -35,7 +67,7 @@ GMs can create both player characters and NPC characters from the **Create Chara
 
 ## GM: Editing Character Sheets
 
-As GM, you can edit any character's Abilities & Skills and Inventory directly from their character sheet at any time. Players can edit their own Public Profile and Private Notes but cannot directly edit their Abilities, Skills, Inventory, or Currency — those are GM-controlled.
+As GM, you can edit any character's Abilities & Skills and Inventory directly from their character sheet at any time. Players can edit their own Public Profile and Private Notes but cannot edit Abilities, Skills, Inventory, or Currency — those are GM-controlled.
 
 ## GM: Draft Character Updates
 
@@ -56,4 +88,3 @@ GMs can delete characters from the character card. Characters that have existing
 ## GM: Assigning NPCs
 
 To assign an NPC to an audience member so they can control it during action phases, click **Assign NPC** on the NPC's character card and select the audience member.
-
