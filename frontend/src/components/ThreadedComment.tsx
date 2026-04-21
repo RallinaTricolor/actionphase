@@ -166,8 +166,10 @@ export const ThreadedComment = memo(function ThreadedComment({
   }, [gameId, comment.id, postId, hasPreloadedChildren]);
 
   // Load replies immediately when component mounts if there are replies (and no pre-loaded children)
+  // Skip when shouldShowContinueButton is true: children at this depth are never rendered,
+  // so fetching them would be wasted API calls (common in history view with deep threads).
   useEffect(() => {
-    if (hasReplies && !hasLoadedRef.current && !hasPreloadedChildren) {
+    if (hasReplies && !hasLoadedRef.current && !hasPreloadedChildren && !shouldShowContinueButton) {
       loadReplies();
     }
   }, [hasReplies, hasPreloadedChildren, loadReplies]);

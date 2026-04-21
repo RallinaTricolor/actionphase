@@ -1995,4 +1995,46 @@ describe('ThreadedComment', () => {
       expect(replyButtons).toHaveLength(0);
     });
   });
+
+  describe('API call efficiency', () => {
+    it('does not fetch replies when shouldShowContinueButton is true (depth === maxDepth - 1)', async () => {
+      // This is the regression test for the history-view API call flood bug.
+      // When PostCard loads all comments via getPostCommentsWithThreads up to max_depth,
+      // comments at depth (maxDepth - 1) have reply_count > 0 (replies exist deeper)
+      // but their children are not returned by the backend (depth cutoff).
+      // Without the fix, each such comment fires getPostComments() on mount,
+      // causing 50+ simultaneous API calls in threads with many deep replies.
+      let loadCount = 0;
+      server.use(
+        http.get('/api/v1/games/:gameId/posts/:postId/comments', () => {
+          loadCount++;
+          return HttpResponse.json(mockReplies);
+        })
+      );
+
+      const maxDepth = 5;
+      const commentAtContinueDepth: Message = {
+        ...mockCommentWithReplies, // reply_count: 2, but no preloaded children
+        id: 99,
+      };
+
+      renderWithProviders(
+        <ThreadedComment
+          comment={commentAtContinueDepth}
+          gameId={mockGameId}
+          postId={10}
+          characters={mockCharacters}
+          controllableCharacters={[]}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+          depth={maxDepth - 1} // shouldShowContinueButton = true
+          maxDepth={maxDepth}
+        />
+      );
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(loadCount).toBe(0);
+    });
+  });
 });
