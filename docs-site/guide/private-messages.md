@@ -25,6 +25,6 @@ You can **read** your message history at any time during the game. You can only 
 
 ---
 
-> [!NOTE] GM Only
+## GM: Message Visibility
 
 As GM, your Messages tab shows all conversations involving any of your characters. You can start conversations with any player character. All message history is preserved for the duration of the game.

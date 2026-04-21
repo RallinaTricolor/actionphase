@@ -21,6 +21,6 @@ Players see only their own submission and result. Action text and results are co
 
 ---
 
-> [!NOTE] GM Only
+## GM: History View
 
 GMs see all players' submissions and results, not just their own. The History tab shows the same data available in the All Submissions view during an active phase, preserved after the phase ends.

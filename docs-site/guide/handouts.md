@@ -14,9 +14,7 @@ Each handout has an **Updates & Comments** section where the GM can post clarifi
 
 ---
 
-> [!NOTE] GM Only
-
-## Creating a Handout
+## GM: Creating a Handout
 
 Click **Create Handout** from the Handouts section. The creation form includes:
 
@@ -24,7 +22,7 @@ Click **Create Handout** from the Handouts section. The creation form includes:
 - **Content** — The body of the handout, supports Markdown
 - **Status** — Start as **Draft** to work on the handout before sharing, or set to **Published** to share immediately
 
-## Managing Handouts
+## GM: Managing Handouts
 
 From the Handouts list, each handout card shows:
 
@@ -34,7 +32,7 @@ From the Handouts list, each handout card shows:
 
 Drafts are only visible to GMs. Players see the handout list only when it contains published handouts.
 
-## Adding Comments
+## GM: Adding Comments
 
 Open any handout and scroll to the Comments section to post a clarification or update. This is useful for answering player questions about a handout's content without editing the original.
 

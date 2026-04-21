@@ -21,9 +21,7 @@ Deadlines are sorted with the soonest first. Expired deadlines appear in a separ
 
 ---
 
-> [!NOTE] GM Only
-
-## Creating a Custom Deadline
+## GM: Creating a Custom Deadline
 
 From the game page header deadline strip, click **Add Deadline**:
 
@@ -31,13 +29,13 @@ From the game page header deadline strip, click **Add Deadline**:
 - **Description** — Optional additional context, shown in a tooltip on the deadline card
 - **Date and time** — When the deadline expires
 
-## Editing a Deadline
+## GM: Editing a Deadline
 
 Hover over any custom deadline card and click the pencil icon to edit its title, description, or date.
 
 Custom deadlines can be edited. Phase deadlines can only be changed by editing the phase itself.
 
-## Extending a Deadline
+## GM: Extending a Deadline
 
 Hover over an active deadline card and click the clock icon to extend it. Choose from preset options:
 
@@ -48,6 +46,6 @@ Hover over an active deadline card and click the clock icon to extend it. Choose
 
 Or enter a custom number of hours (1–720). The modal shows the current deadline and the new deadline so you can confirm before extending.
 
-## Deleting a Deadline
+## GM: Deleting a Deadline
 
 Hover over a custom deadline card and click the trash icon. Phase deadlines cannot be deleted from the deadline strip — edit or delete the phase itself instead. Poll deadlines can be deleted directly.

@@ -24,24 +24,22 @@ Other players can see the Public Profile tab of approved characters. The remaini
 
 ---
 
-> [!NOTE] GM Only
-
-## Approving Characters
+## GM: Approving Characters
 
 Player-submitted characters appear in the **People** tab with a **Pending** label. Click a character to open it, then:
 
 - **Publish** — Approves the character and makes it active
 - **Reject** — Declines the character submission; the player can submit a new one
 
-## Creating Characters
+## GM: Creating Characters
 
 GMs can create both player characters and NPC characters from the **Create Character** button in the People tab. When creating a character as GM, you can assign it to a specific player account (for player characters) or leave it unassigned (for NPCs).
 
-## Editing Character Sheets
+## GM: Editing Character Sheets
 
 As GM, you can edit any character's Abilities & Skills and Inventory directly from their character sheet at any time. Players can edit their own Public Profile and Private Notes but cannot directly edit their Abilities, Skills, Inventory, or Currency — those are GM-controlled.
 
-## Draft Character Updates
+## GM: Draft Character Updates
 
 To prepare character sheet changes that will take effect when you publish action results:
 
@@ -53,14 +51,14 @@ Draft updates are not visible to the player. When you publish the result, all as
 
 See [Action Phases](./action-phases) for the full publish flow.
 
-## Deleting Characters
+## GM: Deleting Characters
 
 GMs can delete characters from the character card. Characters that have existing messages or action submissions cannot be deleted.
 
-## Assigning NPCs
+## GM: Assigning NPCs
 
 To assign an NPC to an audience member so they can control it during action phases, click **Assign NPC** on the NPC's character card and select the audience member.
 
-## Character Death
+## GM: Character Death
 
 To mark a character as dead, use the **Mark as Dead** option from the character's management controls. Dead characters remain visible in the game history but cannot submit actions or receive new updates.

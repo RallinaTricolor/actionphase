@@ -2,8 +2,7 @@
 
 This guide covers every feature in ActionPhase — what it does, how to use it, and what GMs can control that players cannot.
 
-> [!NOTE] GM Controls
-> Throughout this guide, sections marked **GM Only** describe controls that only the game's GM(s) can access.
+Throughout this guide, sections with headings prefixed **GM:** describe controls that only the game's GM(s) can access.
 
 ## Getting Oriented
 

@@ -26,13 +26,11 @@ The **Polls** tab shows all polls for the current phase. Polls you haven't voted
 
 ---
 
-> [!NOTE] GM Only
-
-## Creating Posts
+## GM: Creating Posts
 
 Click **Create New GM Post** at the top of the Posts tab. Select which character or persona you're posting as, write your message (Markdown supported), and submit.
 
-## Creating Polls
+## GM: Creating Polls
 
 Go to the **Polls** tab and click **Create Poll**:
 
@@ -46,6 +44,6 @@ Go to the **Polls** tab and click **Create Poll**:
 
 Polls cannot be edited after creation. They can be deleted (with confirmation).
 
-## Moderating Comments
+## GM: Moderating Comments
 
 GMs can delete any comment. Deleted comments are replaced with a `[Comment deleted]` placeholder to preserve thread structure — the replies remain visible.

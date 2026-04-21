@@ -26,19 +26,17 @@ If your character sheet was updated as part of the result, those changes appear 
 
 ---
 
-> [!NOTE] GM Only
-
-## Viewing Submissions
+## GM: Viewing Submissions
 
 The **Submitted Actions** list is on the **Actions** tab. It shows every player's submission for the current or selected phase. Use the phase filter to switch between past action phases.
 
 Each submission card shows the character name, player username, submission timestamp, and the action text (expandable for long submissions).
 
-## Writing Results
+## GM: Writing Results
 
 To write a result for a submission, click **Send Result to [player]** on the submission card. Write the result in the text editor and click **Create Draft Result**. Results are always created as drafts first — they are not visible to the player until you publish them.
 
-## Publishing Results
+## GM: Publishing Results
 
 The **Results** section (below the submissions list) shows all draft and published results. Click **Publish Result** on a draft result to send it to the player. A confirmation dialog appears, noting how many character sheet updates will also be applied when you publish.
 
@@ -46,7 +44,7 @@ Once published, the result is immediately visible to the player and cannot be un
 
 You can also publish all unpublished results at once using the **Publish All Results** button that appears when draft results are ready.
 
-## Character Sheet Updates
+## GM: Character Sheet Updates
 
 Before publishing a result, you can prepare character sheet changes as part of that result. Click the character sheet edit button on the result card to open the **Update Character Sheet** modal.
 

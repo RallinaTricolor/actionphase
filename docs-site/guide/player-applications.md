@@ -22,9 +22,7 @@ Once a game has moved to **Character Creation**, **In Progress**, or **Completed
 
 ---
 
-> [!NOTE] GM Only
-
-## Reviewing Applications
+## GM: Reviewing Applications
 
 Pending applications appear in the **Applications tab**, grouped under **Pending Review**.
 
@@ -35,7 +33,7 @@ For each pending application you can:
 
 Reviewed applications move to the **Reviewed Applications** section below for reference.
 
-## Managing Participants
+## GM: Managing Participants
 
 The **Game Participants** sub-tab in the People tab shows the full game roster organized by role: Players, Co-GMs, and Audience.
 
@@ -49,11 +47,11 @@ Actions available on each participant:
 
 When a player is removed, their character is moved to an **Inactive Characters** section. From there, you can **Reassign** the character to any current participant.
 
-## Adding Players Directly
+## GM: Adding Players Directly
 
 Use **Add Player** in the Game Participants sub-tab to invite someone directly without going through the application flow. Search for their username and add them. This button is only available while the game is active (not completed or cancelled).
 
-## Co-GMs
+## GM: Co-GMs
 
 To make someone a Co-GM, they must first be an audience member. From the Game Participants list, use **Promote to Co-GM** on an audience member.
 
@@ -61,6 +59,6 @@ Co-GMs can manage phases, approve characters, and write action results — but t
 
 To remove Co-GM status, use **Demote from Co-GM**, which returns them to audience.
 
-## Approving Audience Applications
+## GM: Approving Audience Applications
 
 If your game has **Auto-Accept Audience** disabled, audience applications appear in the Participants tab under a **Pending Audience Applications** section. Approve or reject each one individually.

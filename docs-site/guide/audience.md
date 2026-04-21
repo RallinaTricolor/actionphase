@@ -19,13 +19,11 @@ Both tabs are read-only. Audience members cannot post, vote, submit actions, or 
 
 ---
 
-> [!NOTE] GM Only
-
-## Audience Management
+## GM: Audience Management
 
 Audience members appear in the **People** tab alongside players. You can approve or reject pending audience applications, and remove existing audience members from there if needed.
 
-## Assigning NPCs to Audience Members
+## GM: Assigning NPCs to Audience Members
 
 Audience members can be assigned to control NPC characters within the game. To assign an NPC:
 

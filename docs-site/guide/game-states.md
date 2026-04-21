@@ -8,8 +8,7 @@ Every game moves through a series of states that determine what players and GMs 
 
 The game has been created but is not yet visible to other players. Only the GM can see it. The GM configures the game (title, description, settings) before moving it forward.
 
-> [!NOTE] GM Only
-> Move the game from Setup to Recruitment when you're ready to accept applications.
+**GM:** Move the game from Setup to Recruitment when you're ready to accept applications.
 
 ### Recruitment
 
@@ -32,8 +31,7 @@ Messages, Handouts, People, History, and the Audience tab (for GM and audience m
 
 The GM has temporarily paused the game. During this state the game page shows only the Handouts and Game Info tabs — the full tab set is not available. No new phases can be started and action submissions are not accepted.
 
-> [!NOTE] GM Only
-> Resume the game from the game management controls to return to **In Progress**.
+**GM:** Resume the game from the game management controls to return to **In Progress**.
 
 ### Completed
 
@@ -53,5 +51,4 @@ Setup → Recruitment → Character Creation → In Progress ⇄ Paused
 
 Cancellation is available from any non-terminal state (Setup, Recruitment, Character Creation, In Progress, Paused). Completion is only available from **In Progress**. Completed and Cancelled are terminal — no further transitions are possible.
 
-> [!NOTE] GM Only
-> All state transitions are initiated by the GM from the game management controls.
+**GM:** All state transitions are initiated by the GM from the game management controls.
