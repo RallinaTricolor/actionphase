@@ -27,7 +27,7 @@ This file tracks the status of all feature documentation.
 | Characters | guide/characters.md | Complete | 2026-04-21 | Creation, sheet detail, approval, draft updates, NPCs — merged from character-sheet.md |
 | Character Public Profile | guide/character-profile.md | Complete | 2026-04-21 | Public activity feed, stats, /characters/:id page |
 | Public Game Archive | guide/public-archive.md | Audited | 2026-04-21 | Completed games viewable without login |
-| Common Room | guide/common-room.md | Audited | 2026-04-20 | Posts, threads, polls, new comments tab |
+| Common Room | guide/common-room.md | Complete | 2026-04-20 | Posts, threads, polls, new comments tab |
 | Handouts | guide/handouts.md | Audited | 2026-04-20 | Create, edit, publish, distribute, GM updates |
 | Private Messages | guide/private-messages.md | Audited | 2026-04-20 | Character-to-character PMs, group conversations |
 | Action Phases | guide/action-phases.md | Complete | 2026-04-20 | Submit actions, results, draft character updates |
