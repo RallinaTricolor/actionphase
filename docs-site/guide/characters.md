@@ -8,8 +8,6 @@ Character creation is available once the game enters the **Character Creation** 
 
 - **Pending** — Submitted, awaiting GM review
 - **Approved** — Accepted and participating in the game
-- **Rejected** — Not accepted; you can create a new character and resubmit
-- **Dead** — Character has died during the game (read-only)
 
 ## The Character Sheet
 
@@ -28,8 +26,8 @@ Other players can see the Public Profile tab of approved characters. The remaini
 
 Player-submitted characters appear in the **People** tab with a **Pending** label. Click a character to open it, then:
 
-- **Publish** — Approves the character and makes it active
-- **Reject** — Declines the character submission; the player can submit a new one
+- **Publish** — Approves the character and makes it active in the game
+- **Delete** — Removes the character; the player can create and submit a new one
 
 ## GM: Creating Characters
 
@@ -59,6 +57,3 @@ GMs can delete characters from the character card. Characters that have existing
 
 To assign an NPC to an audience member so they can control it during action phases, click **Assign NPC** on the NPC's character card and select the audience member.
 
-## GM: Character Death
-
-To mark a character as dead, use the **Mark as Dead** option from the character's management controls. Dead characters remain visible in the game history but cannot submit actions or receive new updates.

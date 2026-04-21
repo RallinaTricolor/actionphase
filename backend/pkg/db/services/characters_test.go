@@ -232,22 +232,6 @@ func TestCharacterService_ApproveRejectCharacter(t *testing.T) {
 		core.AssertEqual(t, "approved", approved.Status.String, "Character should be approved")
 	})
 
-	// Create another character for rejection test
-	character2, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
-		GameID:        fixtures.TestGame.ID,
-		UserID:        core.Int32Ptr(int32(fixtures.TestUser.ID)),
-		Name:          "Test Character 2",
-		CharacterType: "player_character",
-	})
-	core.AssertNoError(t, err, "Failed to create second test character")
-
-	// Test rejection
-	t.Run("reject character", func(t *testing.T) {
-		rejected, err := characterService.RejectCharacter(context.Background(), character2.ID)
-		core.AssertNoError(t, err, "Failed to reject character")
-		core.AssertEqual(t, "rejected", rejected.Status.String, "Character should be rejected")
-	})
-
 	// Test approval of nonexistent character
 	t.Run("approve nonexistent character", func(t *testing.T) {
 		_, err := characterService.ApproveCharacter(context.Background(), 99999)

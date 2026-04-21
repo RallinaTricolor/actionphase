@@ -2,7 +2,6 @@ package characters
 
 import (
 	"actionphase/pkg/core"
-	models "actionphase/pkg/db/models"
 	services "actionphase/pkg/db/services"
 	"fmt"
 	"net/http"
@@ -31,8 +30,8 @@ func (h *Handler) ApproveCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate status
-	if data.Status != "approved" && data.Status != "rejected" {
-		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("status must be 'approved' or 'rejected'")))
+	if data.Status != "approved" {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("status must be 'approved'")))
 		return
 	}
 
@@ -68,12 +67,7 @@ func (h *Handler) ApproveCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update character status
-	var updatedCharacter *models.Character
-	if data.Status == "approved" {
-		updatedCharacter, err = characterService.ApproveCharacter(ctx, int32(characterID))
-	} else {
-		updatedCharacter, err = characterService.RejectCharacter(ctx, int32(characterID))
-	}
+	updatedCharacter, err := characterService.ApproveCharacter(ctx, int32(characterID))
 
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to update character status", "error", err)

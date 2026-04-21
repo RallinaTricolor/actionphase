@@ -7,7 +7,7 @@ export interface Character {
   username?: string;
   name: string;
   character_type?: 'player_character' | 'npc';
-  status: 'pending' | 'approved' | 'rejected' | 'active' | 'dead';
+  status: 'pending' | 'approved';
   avatar_url?: string | null;
   is_active: boolean;
   original_owner_user_id?: number;
@@ -47,7 +47,7 @@ export interface CharacterDataRequest {
 }
 
 export interface ApproveCharacterRequest {
-  status: 'approved' | 'rejected';
+  status: 'approved';
 }
 
 export interface AssignNPCRequest {

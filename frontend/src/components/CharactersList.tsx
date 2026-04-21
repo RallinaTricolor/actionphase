@@ -66,7 +66,7 @@ export function CharactersList({
   const participants = participantsData || [];
 
   const approveCharacterMutation = useMutation({
-    mutationFn: ({ characterId, status }: { characterId: number; status: 'approved' | 'rejected' }) =>
+    mutationFn: ({ characterId, status }: { characterId: number; status: 'approved' }) =>
       apiClient.characters.approveCharacter(characterId, { status }),
     onSuccess: () => {
       refetchAllGameCharacters();
@@ -87,7 +87,7 @@ export function CharactersList({
     }
   });
 
-  const handleApproveCharacter = (characterId: number, status: 'approved' | 'rejected') => {
+  const handleApproveCharacter = (characterId: number, status: 'approved') => {
     approveCharacterMutation.mutate({ characterId, status });
   };
 
@@ -105,10 +105,10 @@ export function CharactersList({
     : characters.filter(char => {
         // Always show approved characters
         if (char.status === 'approved') return true;
-        // Always show user's own characters (even if pending/rejected)
+        // Always show user's own characters (even if pending)
         // Use ownership hook instead of user_id comparison (works in anonymous mode)
         if (isUserCharacterById(char.id)) return true;
-        // Hide other players' pending/rejected characters
+        // Hide other players' pending characters
         return false;
       });
 
@@ -193,12 +193,6 @@ export function CharactersList({
         return 'success';
       case 'pending':
         return 'warning';
-      case 'rejected':
-        return 'danger';
-      case 'active':
-        return 'primary';
-      case 'dead':
-        return 'neutral';
       default:
         return 'neutral';
     }
@@ -504,7 +498,7 @@ interface CharacterCardProps {
   userRole: string;
   gameState?: string;
   isAnonymous?: boolean;
-  onApprove: (characterId: number, status: 'approved' | 'rejected') => void;
+  onApprove: (characterId: number, status: 'approved') => void;
   onAssignNPC?: (character: Character) => void;
   onDelete?: (character: Character) => void;
   getStatusBadgeVariant: (status: string) => BadgeVariant;
