@@ -16,9 +16,9 @@ This file tracks the status of all feature documentation.
 | Feature | File | Status | Last Updated | Notes |
 |---------|------|--------|--------------|-------|
 | Game States | guide/game-states.md | Audited | 2026-04-20 | State machine, transitions, what each state means |
-| Game Settings | guide/game-settings.md | Audited | 2026-04-20 | Anonymous mode, auto-accept audience, group convos |
+| Game Settings | guide/game-settings.md | Complete | 2026-04-20 | Anonymous mode, auto-accept audience, group convos |
 | Player Applications | guide/player-applications.md | Audited | 2026-04-20 | Apply, review, approve/reject, participants tab, co-GMs |
-| Deadlines | guide/deadlines.md | Audited | 2026-04-20 | Phase deadlines, custom deadlines, extend |
+| Deadlines | guide/deadlines.md | Complete | 2026-04-20 | Phase deadlines, custom deadlines, extend |
 
 ## Playing
 

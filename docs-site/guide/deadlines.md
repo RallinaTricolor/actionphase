@@ -1,8 +1,9 @@
 # Deadlines
 
-Deadlines are countdowns visible to all game participants. There are two kinds:
+Deadlines are countdowns visible to all game participants. There are three kinds:
 
 - **Phase deadlines** — Set when creating or editing a phase. Tied to the phase lifecycle.
+- **Poll deadlines** — Set when creating a poll. Controls when voting closes.
 - **Custom deadlines** — Standalone deadlines GMs create for any purpose (character submission cutoffs, response windows, event timers, etc.)
 
 Both types appear in the **deadline strip** in the game page header, and in the dashboard's upcoming deadlines sidebar.
@@ -17,7 +18,7 @@ Each deadline card shows:
 
 Hover over the info icon on a deadline card to read its description, if one was added.
 
-Deadlines are sorted with the soonest first. Expired deadlines appear in a separate section below active ones.
+Active deadlines are sorted with the soonest first. Expired deadlines remain visible in a collapsed section at the bottom of the strip — click **View All** to expand it. They stay until a GM deletes them.
 
 ---
 
