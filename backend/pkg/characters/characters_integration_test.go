@@ -94,7 +94,11 @@ func TestCharacterAPI_CompleteCharacterLifecycle(t *testing.T) {
 		core.AssertNoError(t, err, "Failed to unmarshal response")
 
 		core.AssertEqual(t, "Aragorn", response.Name, "Character name mismatch")
-		core.AssertEqual(t, "player_character", response.CharacterType, "Character type mismatch")
+		if response.CharacterType == nil {
+			t.Errorf("CharacterType should not be nil")
+		} else {
+			core.AssertEqual(t, "player_character", *response.CharacterType, "Character type mismatch")
+		}
 		core.AssertEqual(t, "pending", response.Status, "Character should start as pending")
 
 		createdCharacterID = response.ID
@@ -399,7 +403,11 @@ func TestCharacterAPI_NPCManagement(t *testing.T) {
 		core.AssertNoError(t, err, "Failed to unmarshal response")
 
 		core.AssertEqual(t, "Gandalf", response.Name, "NPC name mismatch")
-		core.AssertEqual(t, "npc", response.CharacterType, "NPC type mismatch")
+		if response.CharacterType == nil {
+			t.Errorf("CharacterType should not be nil")
+		} else {
+			core.AssertEqual(t, "npc", *response.CharacterType, "NPC type mismatch")
+		}
 
 		npcCharacterID = response.ID
 	})

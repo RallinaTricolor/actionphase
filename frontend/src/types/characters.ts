@@ -6,7 +6,7 @@ export interface Character {
   user_id?: number;
   username?: string;
   name: string;
-  character_type: 'player_character' | 'npc';
+  character_type?: 'player_character' | 'npc';
   status: 'pending' | 'approved' | 'rejected' | 'active' | 'dead';
   avatar_url?: string | null;
   is_active: boolean;

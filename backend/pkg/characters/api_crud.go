@@ -137,12 +137,13 @@ func (h *Handler) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert to response format
+	// Convert to response format (CreateCharacter — always include character_type)
+	charType := character.CharacterType
 	response := &CharacterResponse{
 		ID:            character.ID,
 		GameID:        character.GameID,
 		Name:          character.Name,
-		CharacterType: character.CharacterType,
+		CharacterType: &charType,
 		Status:        character.Status.String,
 		CreatedAt:     character.CreatedAt.Time,
 		UpdatedAt:     character.UpdatedAt.Time,
@@ -189,10 +190,27 @@ func (h *Handler) GetCharacter(w http.ResponseWriter, r *http.Request) {
 	authUser := core.GetAuthenticatedUser(ctx)
 	var isGM bool
 	var isOwner bool
+	var userRole string
 	if authUser != nil {
 		isGM = core.IsUserGameMaster(r, authUser.ID, authUser.IsAdmin, *game, h.App.Pool)
 		if character.UserID.Valid {
 			isOwner = character.UserID.Int32 == authUser.ID
+		}
+		if isGM {
+			userRole = "gm"
+		} else {
+			participants, err := gameService.GetGameParticipants(ctx, character.GameID)
+			if err == nil {
+				for _, p := range participants {
+					if p.UserID == authUser.ID {
+						userRole = p.Role
+						break
+					}
+				}
+			}
+			if userRole == "" {
+				userRole = "player"
+			}
 		}
 	}
 
@@ -206,15 +224,24 @@ func (h *Handler) GetCharacter(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Determine if requester can see character_type in anonymous games.
+	// GMs, co-GMs, and audience always can; regular players cannot.
+	canSeeCharacterType := !game.IsAnonymous ||
+		userRole == "gm" || userRole == "co_gm" || userRole == "audience"
+
 	// Convert to response format
 	response := &CharacterResponse{
-		ID:            character.ID,
-		GameID:        character.GameID,
-		Name:          character.Name,
-		CharacterType: character.CharacterType,
-		Status:        character.Status.String,
-		CreatedAt:     character.CreatedAt.Time,
-		UpdatedAt:     character.UpdatedAt.Time,
+		ID:        character.ID,
+		GameID:    character.GameID,
+		Name:      character.Name,
+		Status:    character.Status.String,
+		CreatedAt: character.CreatedAt.Time,
+		UpdatedAt: character.UpdatedAt.Time,
+	}
+
+	if canSeeCharacterType {
+		charType := character.CharacterType
+		response.CharacterType = &charType
 	}
 
 	if character.UserID.Valid {

@@ -112,7 +112,9 @@ export function CharacterPage() {
               <div>
                 <h1 className="text-2xl font-bold text-text-heading">{characterData.name}</h1>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary">{characterData.character_type === 'npc' ? 'NPC' : 'Player Character'}</Badge>
+                  {characterData.character_type && (
+                    <Badge variant="secondary">{characterData.character_type === 'npc' ? 'NPC' : 'Player Character'}</Badge>
+                  )}
                   {characterData.status && (
                     <Badge variant={characterData.status === 'active' ? 'success' : 'secondary'}>
                       {characterData.status}

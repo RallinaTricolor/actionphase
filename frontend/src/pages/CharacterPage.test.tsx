@@ -358,4 +358,50 @@ describe('CharacterPage', () => {
 
     expect(screen.getByText(/invalid character id/i)).toBeInTheDocument();
   });
+
+  it('shows character type badge when character_type is present', () => {
+    vi.mocked(useQuery).mockReturnValue({
+      data: { ...mockCharacter, character_type: 'player_character' },
+      isLoading: false,
+      isError: false,
+    } as Partial<UseQueryResult<Character>>);
+
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+      data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+      isLoading: false,
+      isError: false,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+
+    renderCharacterPage();
+
+    expect(screen.getByText('Player Character')).toBeInTheDocument();
+  });
+
+  it('hides character type badge when character_type is absent (anonymous mode)', () => {
+    const { character_type: _, ...characterWithoutType } = mockCharacter;
+    vi.mocked(useQuery).mockReturnValue({
+      data: characterWithoutType as Character,
+      isLoading: false,
+      isError: false,
+    } as Partial<UseQueryResult<Character>>);
+
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+      data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+      isLoading: false,
+      isError: false,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+
+    renderCharacterPage();
+
+    expect(screen.queryByText('Player Character')).not.toBeInTheDocument();
+    expect(screen.queryByText('NPC')).not.toBeInTheDocument();
+    // Character name still renders
+    expect(screen.getByText('Aelindra')).toBeInTheDocument();
+  });
 });
