@@ -21,10 +21,4 @@ Notifications appear in the notification bell when you receive a new message.
 
 ## Availability
 
-You can **read** your message history at any time during the game. You can only **send** new messages during Common Room phases — the **+ New** button and reply input are disabled during Action phases and other phase types.
-
----
-
-## GM: Message Visibility
-
-As GM, your Messages tab shows all conversations involving any of your characters. You can start conversations with any player character. All message history is preserved for the duration of the game.
+You can **read** your message history at any time during the game. You can only **send** new messages during Common Room phases — the **+ New** button and reply input are disabled during Action phases.

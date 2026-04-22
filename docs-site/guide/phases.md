@@ -4,7 +4,7 @@ Phases are the units of gameplay within an **In Progress** game. The GM creates 
 
 ## Phase Types
 
-- **Common Room** — Players read GM posts and comment. Polls can be run.
+- **Common Room** — Players read GM posts and comment. Private messages can be sent. Polls can be run.
 - **Action Phase** — Players submit private actions. The GM writes and publishes results.
 
 ## Creating a Phase
@@ -30,14 +30,3 @@ Click **Edit** on any phase to update its title, description, auto-activate time
 ## Deleting a Phase
 
 A phase can be deleted only if it has no associated content (submissions, results, messages, polls, or threads). If content exists, the phase cannot be deleted.
-
----
-
-## GM: Action Phase Workflow
-
-1. Create an **Action Phase** and activate it.
-2. Players submit their private actions.
-3. Once you're ready to respond, open each player's action and click **Send Result** to write and publish a result.
-4. When all results are published, create and activate the next phase (typically a Common Room).
-
-See [Action Phases](./action-phases) for the player-side view of submissions and results.

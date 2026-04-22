@@ -23,7 +23,7 @@ Click **View all notifications** in the dropdown, or go to **Notifications** in 
 | New private message | Recipients of the conversation |
 | Reply to your comment | You |
 | Character @mentioned in a comment | Player(s) whose character was mentioned |
-| New phase created | All participants |
+| Phase activated | All participants |
 | New poll created | All participants |
 | New handout published | All participants |
 | Application approved | Applicant |

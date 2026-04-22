@@ -18,7 +18,9 @@ Each game card in the history shows:
 
 ## Privacy
 
-Games played under **Anonymous Mode** hide character names from profile pages — the game still appears in the history with role and state, but no character details are shown. The card is labelled **Anonymous Game**.
+**Anonymous Mode** hides character names from profile pages while a game is in progress — the game still appears in the history with role and state, but no character details are shown. The card is labelled **Anonymous Game**.
+
+When a game completes, anonymous mode is automatically lifted and character details become visible on profile pages like any other game.
 
 ## Finding Someone's Profile
 

@@ -23,13 +23,3 @@ The **Comment Read Tracking** setting controls how new comments are highlighted 
 
 - **Automatic** — Comments added since your last visit are highlighted automatically.
 - **Manual** — You mark individual comments as read yourself. Read comments fade out.
-
-## Account Security
-
-**Change Password** — Enter your current password, then your new password twice to confirm. New passwords must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a special character.
-
-**Active Sessions** — View all devices currently logged into your account. You can revoke any individual session, or revoke all other sessions at once.
-
-## Account Information
-
-Change your **username** or **email address** from this section. Username and email are separate from the Profile section, which only contains bio and avatar.

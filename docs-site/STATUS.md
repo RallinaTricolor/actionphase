@@ -6,18 +6,18 @@ This file tracks the status of all feature documentation.
 
 | Feature | File | Status | Last Updated | Notes |
 |---------|------|--------|--------------|-------|
-| Getting Started | guide/getting-started.md | Audited | 2026-04-20 | Dashboard, finding games, onboarding flow |
-| Notifications | guide/notifications.md | Audited | 2026-04-20 | Bell, notifications page, what triggers each type |
-| User Settings | guide/user-settings.md | Audited | 2026-04-20 | Read tracking, theme, account security |
-| User Profiles | guide/user-profiles.md | Audited | 2026-04-20 | Public profile pages, game history, privacy |
+| Getting Started | guide/getting-started.md | Complete | 2026-04-20 | Dashboard, finding games, onboarding flow |
+| Notifications | guide/notifications.md | Complete | 2026-04-20 | Bell, notifications page, what triggers each type |
+| User Settings | guide/user-settings.md | Complete | 2026-04-20 | Read tracking, theme, account security |
+| User Profiles | guide/user-profiles.md | Complete | 2026-04-20 | Public profile pages, game history, privacy |
 
 ## Games
 
 | Feature | File | Status | Last Updated | Notes |
 |---------|------|--------|--------------|-------|
-| Game States | guide/game-states.md | Audited | 2026-04-20 | State machine, transitions, what each state means |
+| Game States | guide/game-states.md | Complete | 2026-04-20 | State machine, transitions, what each state means |
 | Game Settings | guide/game-settings.md | Complete | 2026-04-20 | Anonymous mode, auto-accept audience, group convos |
-| Player Applications | guide/player-applications.md | Audited | 2026-04-20 | Apply, review, approve/reject, participants tab, co-GMs |
+| Player Applications | guide/player-applications.md | Complete | 2026-04-20 | Apply, review, approve/reject, participants tab, co-GMs |
 | Deadlines | guide/deadlines.md | Complete | 2026-04-20 | Phase deadlines, custom deadlines, extend |
 
 ## Playing
@@ -26,13 +26,13 @@ This file tracks the status of all feature documentation.
 |---------|------|--------|--------------|-------|
 | Characters | guide/characters.md | Complete | 2026-04-21 | Creation, sheet detail, approval, draft updates, NPCs — merged from character-sheet.md |
 | Character Public Profile | guide/character-profile.md | Complete | 2026-04-21 | Public activity feed, stats, /characters/:id page |
-| Public Game Archive | guide/public-archive.md | Audited | 2026-04-21 | Completed games viewable without login |
+| Public Game Archive | guide/public-archive.md | Complete | 2026-04-21 | Completed games viewable without login |
 | Common Room | guide/common-room.md | Complete | 2026-04-20 | Posts, threads, polls, new comments tab |
-| Handouts | guide/handouts.md | Audited | 2026-04-20 | Create, edit, publish, distribute, GM updates |
-| Private Messages | guide/private-messages.md | Audited | 2026-04-20 | Character-to-character PMs, group conversations |
+| Handouts | guide/handouts.md | Complete | 2026-04-20 | Create, edit, publish, distribute, GM updates |
+| Private Messages | guide/private-messages.md | Complete | 2026-04-20 | Character-to-character PMs, group conversations |
 | Action Phases | guide/action-phases.md | Complete | 2026-04-20 | Submit actions, results, draft character updates |
 | Audience | guide/audience.md | Complete | 2026-04-20 | Self-join, audience view, NPC assignment |
-| History Tab | guide/history.md | Audited | 2026-04-20 | Phase list, sub-tabs for action phases |
+| History Tab | guide/history.md | Complete | 2026-04-20 | Phase list, sub-tabs for action phases |
 
 ## Running a Game
 
