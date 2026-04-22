@@ -45,7 +45,7 @@ func setupPollTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 func TestPollResultsAccess(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "common_room_poll_responses", "common_room_poll_options", "common_room_polls", "game_audience", "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_audience", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupPollTestRouter(app, testDB)
@@ -201,7 +201,7 @@ func TestPollResultsAccess(t *testing.T) {
 func TestPollResultsAccess_NotInGame(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "common_room_poll_responses", "common_room_poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupPollTestRouter(app, testDB)
@@ -303,7 +303,7 @@ func setupGetPollTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 func TestGetPoll_VotedCharacterIDs(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "common_room_poll_responses", "common_room_poll_options", "common_room_polls", "characters", "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "characters", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupGetPollTestRouter(app, testDB)
@@ -426,7 +426,7 @@ func TestGetPoll_VotedCharacterIDs(t *testing.T) {
 func TestPollVoting_GMAndCoGMBlocked(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "common_room_poll_responses", "common_room_poll_options", "common_room_polls", "co_gms", "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "co_gms", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupPollVoteTestRouter(app, testDB)
@@ -559,7 +559,7 @@ func setupListPollsByPhaseTestRouter(app *core.App, testDB *core.TestDatabase) *
 func TestListPollsByPhase(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "common_room_poll_responses", "common_room_poll_options", "common_room_polls", "game_phases", "game_participants", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_phases", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupListPollsByPhaseTestRouter(app, testDB)

@@ -248,6 +248,44 @@ func TestNotificationAPI_MarkAllAsRead(t *testing.T) {
 	})
 }
 
+// TestNotificationAPI_GetNotification_Ownership tests GET /api/v1/notifications/{id} ownership enforcement
+func TestNotificationAPI_GetNotification_Ownership(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "notifications", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupNotificationTestRouter(app, testDB)
+
+	user := testDB.CreateTestUser(t, "owner", "owner@example.com")
+	otherUser := testDB.CreateTestUser(t, "spy", "spy@example.com")
+
+	token, err := core.CreateTestJWTTokenForUser(app, user)
+	require.NoError(t, err)
+	otherToken, err := core.CreateTestJWTTokenForUser(app, otherUser)
+	require.NoError(t, err)
+
+	notifID := createTestNotification(t, app, testDB, int32(user.ID), "Private notification")
+
+	t.Run("owner can GET their notification", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/notifications/%d", notifID), nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("other user cannot GET someone else's notification", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/notifications/%d", notifID), nil)
+		req.Header.Set("Authorization", "Bearer "+otherToken)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		// Should be 404 (not found in their scope) or 403
+		assert.NotEqual(t, http.StatusOK, rec.Code,
+			"other user should not be able to read someone else's notification")
+	})
+}
+
 // TestNotificationAPI_DeleteNotification tests DELETE /api/v1/notifications/{id}
 func TestNotificationAPI_DeleteNotification(t *testing.T) {
 	testDB := core.NewTestDatabase(t)

@@ -4,20 +4,24 @@ import (
 	"context"
 	"time"
 
-	"actionphase/pkg/core"
 	"actionphase/pkg/observability"
 )
+
+// ActivationRunner is the minimal interface the scheduler needs.
+type ActivationRunner interface {
+	RunScheduledActivations(ctx context.Context) (int, error)
+}
 
 // Scheduler runs periodic background tasks for the ActionPhase application.
 // Currently handles: automatic phase activation based on scheduled start times.
 type Scheduler struct {
-	phaseService core.PhaseServiceInterface
+	phaseService ActivationRunner
 	logger       *observability.Logger
 	interval     time.Duration
 }
 
 // New creates a Scheduler. interval controls how often scheduled activations are checked.
-func New(phaseService core.PhaseServiceInterface, logger *observability.Logger, interval time.Duration) *Scheduler {
+func New(phaseService ActivationRunner, logger *observability.Logger, interval time.Duration) *Scheduler {
 	return &Scheduler{
 		phaseService: phaseService,
 		logger:       logger,

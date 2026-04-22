@@ -4,6 +4,7 @@ import (
 	"actionphase/pkg/core"
 	services "actionphase/pkg/db/services"
 	"actionphase/pkg/observability"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDashboardAPI_GetUserDashboard_Integration(t *testing.T) {
@@ -211,4 +214,90 @@ func TestDashboardAPI_GetUserDashboard_WithUrgentGame(t *testing.T) {
 	core.AssertTrue(t, strings.Contains(body, `"is_urgent":true`), "Game should be marked as urgent")
 	core.AssertTrue(t, strings.Contains(body, `"deadline_status":"critical"`), "Should have critical deadline status")
 	core.AssertTrue(t, strings.Contains(body, `"has_pending_action":true`), "Should have pending action")
+}
+
+func newDashboardApp(testDB *core.TestDatabase) *core.App {
+	return &core.App{
+		Pool:      testDB.Pool,
+		ObsLogger: observability.NewLogger("test", "info"),
+		Config: &core.Config{
+			JWT: core.JWTConfig{Algorithm: "HS256", Secret: "test-secret-key-for-testing-only"},
+		},
+	}
+}
+
+func makeDashboardRouter(app *core.App, testDB *core.TestDatabase) (*chi.Mux, *jwtauth.JWTAuth) {
+	tokenAuth := jwtauth.New("HS256", []byte(app.Config.JWT.Secret), nil)
+	userService := &services.UserService{DB: testDB.Pool, Logger: app.ObsLogger}
+	r := chi.NewRouter()
+	r.Use(jwtauth.Verifier(tokenAuth))
+	r.Use(jwtauth.Authenticator(tokenAuth))
+	r.Use(core.RequireAuthenticationMiddleware(userService))
+	r.Get("/", (&Handler{App: app}).GetUserDashboard)
+	return r, tokenAuth
+}
+
+func makeToken(tokenAuth *jwtauth.JWTAuth, user *core.User) string {
+	_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{
+		"sub":      fmt.Sprintf("%d", user.ID),
+		"username": user.Username,
+		"exp":      time.Now().Add(24 * time.Hour).Unix(),
+	})
+	return tokenString
+}
+
+func TestDashboardAPI_GMGame(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	app := newDashboardApp(testDB)
+	r, tokenAuth := makeDashboardRouter(app, testDB)
+	factory := core.NewTestDataFactory(testDB, t)
+
+	gm := testDB.CreateTestUser(t, "gm_dash_test", "gm_dash_test@example.com")
+	factory.NewGame().WithTitle("GM's Own Game").WithGM(int32(gm.ID)).WithState("in_progress").Create()
+
+	gmToken := makeToken(tokenAuth, gm)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer "+gmToken)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp core.DashboardData
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.True(t, resp.HasGames)
+	require.Len(t, resp.GMGames, 1)
+	assert.Equal(t, "GM's Own Game", resp.GMGames[0].Title)
+	assert.Equal(t, "gm", resp.GMGames[0].UserRole)
+}
+
+func TestDashboardAPI_ResponseShape(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	app := newDashboardApp(testDB)
+	r, tokenAuth := makeDashboardRouter(app, testDB)
+
+	user := testDB.CreateTestUser(t, "shape_test_user", "shape_test_user@example.com")
+	token := makeToken(tokenAuth, user)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Contains(t, resp, "has_games")
+	assert.Contains(t, resp, "player_games")
+	assert.Contains(t, resp, "gm_games")
+	assert.Contains(t, resp, "mixed_role_games")
+	assert.Contains(t, resp, "unread_notifications")
 }
