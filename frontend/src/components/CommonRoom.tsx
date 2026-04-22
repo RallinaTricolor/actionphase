@@ -215,7 +215,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     return () => {
       scrollAttemptedRef.current = null;
     };
-  }, [commentIdParam, loading, searchParams, setSearchParams, gameId, navigate, activeTab]);
+  }, [commentIdParam, loading, searchParams, setSearchParams, gameId, navigate, activeTab, phaseId]);
 
   const loadData = useCallback(async () => {
     try {

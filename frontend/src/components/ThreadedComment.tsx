@@ -172,7 +172,7 @@ export const ThreadedComment = memo(function ThreadedComment({
     if (hasReplies && !hasLoadedRef.current && !hasPreloadedChildren && !shouldShowContinueButton) {
       loadReplies();
     }
-  }, [hasReplies, hasPreloadedChildren, loadReplies]);
+  }, [hasReplies, hasPreloadedChildren, loadReplies, shouldShowContinueButton]);
 
   const handleCopyLink = async () => {
     const phaseId = 'phase_id' in comment ? comment.phase_id : undefined;

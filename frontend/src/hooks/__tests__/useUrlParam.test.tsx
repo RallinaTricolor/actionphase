@@ -92,7 +92,7 @@ describe('useUrlParam', () => {
   describe('number param with custom deserializer', () => {
     const numOptions = {
       deserialize: (s: string) => parseInt(s, 10) || null,
-      serialize: (v: number | null) => (v == null ? '' : String(v)),
+      serialize: (v: number | null) => (v === null || v === undefined ? '' : String(v)),
     } as const;
 
     it('returns null when param is absent', () => {

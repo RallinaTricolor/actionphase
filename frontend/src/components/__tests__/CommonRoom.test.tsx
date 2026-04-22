@@ -545,7 +545,7 @@ describe('CommonRoom', () => {
         const getElementByIdSpy = vi.spyOn(document, 'getElementById');
         getElementByIdSpy.mockImplementation((id) => {
           if (id === 'comment-123') {
-            return mockElement as any;
+            return mockElement as unknown as HTMLElement;
           }
           return null;
         });
@@ -635,7 +635,7 @@ describe('CommonRoom', () => {
 
         getElementByIdSpy.mockImplementation((id) => {
           if (id === 'comment-123') {
-            return mockElement as any;
+            return mockElement as unknown as HTMLElement;
           }
           return null;
         });
@@ -785,7 +785,7 @@ describe('CommonRoom', () => {
         const getElementByIdSpy = vi.spyOn(document, 'getElementById');
         getElementByIdSpy.mockImplementation((id) => {
           if (id === 'comment-123') {
-            return mockElement as any;
+            return mockElement as unknown as HTMLElement;
           }
           return null;
         });
@@ -825,7 +825,7 @@ describe('CommonRoom', () => {
 
         getElementByIdSpy.mockImplementation((id) => {
           if (id === 'comment-123-desktop') {
-            return mockElement as any;
+            return mockElement as unknown as HTMLElement;
           }
           return null;
         });

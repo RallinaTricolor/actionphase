@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useUrlParam } from '../hooks/useUrlParam';
 import { useAllPrivateConversations, useAudienceConversationMessages, useConversationParticipants } from '../hooks/useAudience';
 import { Badge } from './ui/Badge';
@@ -284,8 +284,9 @@ function MessageViewer({
 }) {
   const { allGameCharacters } = useGameContext();
 
-  const getAvatarUrl = (characterId: number | undefined): string | null =>
-    allGameCharacters.find(c => c.id === characterId)?.avatar_url ?? null;
+  const getAvatarUrl = useCallback((characterId: number | undefined): string | null =>
+    allGameCharacters.find(c => c.id === characterId)?.avatar_url ?? null,
+  [allGameCharacters]);
 
   // Format date for dividers
   const formatDateDivider = (date: Date): string => {
@@ -392,7 +393,7 @@ function MessageViewer({
     });
 
     return groups;
-  }, [messages]);
+  }, [messages, getAvatarUrl]);
 
   // Loading state
   if (isLoading) {

@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchCommentWithParents } from '../threadUtils';
 import { apiClient } from '../../lib/api';
 import { AxiosError } from 'axios';
+import type { AxiosResponse } from 'axios';
 import type { Message } from '../../types/messages';
+
+function mockResponse<T>(data: T): AxiosResponse<T> {
+  return { data } as AxiosResponse<T>;
+}
 
 // Mock the API client
 vi.mock('../../lib/api', () => ({
@@ -63,8 +68,8 @@ describe('threadUtils - Retry Logic', () => {
     it('fetches comment successfully on first attempt', async () => {
       const getMessageMock = vi.mocked(apiClient.messages.getMessage);
       getMessageMock
-        .mockResolvedValueOnce({ data: mockMessage } as any)
-        .mockResolvedValueOnce({ data: mockParentMessage } as any);
+        .mockResolvedValueOnce(mockResponse(mockMessage))
+        .mockResolvedValueOnce(mockResponse(mockParentMessage));
 
       const promise = fetchCommentWithParents(1, 123, 3);
 
@@ -85,13 +90,13 @@ describe('threadUtils - Retry Logic', () => {
 
       // First call: 500 error
       const error500 = new AxiosError('Server error');
-      error500.response = { status: 500, data: {} } as any;
+      error500.response = { status: 500, data: {} } as AxiosError['response'];
 
       // Second call (retry): Success
       getMessageMock
         .mockRejectedValueOnce(error500)
-        .mockResolvedValueOnce({ data: mockMessage } as any)
-        .mockResolvedValueOnce({ data: mockParentMessage } as any);
+        .mockResolvedValueOnce(mockResponse(mockMessage))
+        .mockResolvedValueOnce(mockResponse(mockParentMessage));
 
       const promise = fetchCommentWithParents(1, 123, 3);
 
@@ -112,7 +117,7 @@ describe('threadUtils - Retry Logic', () => {
 
       // Create 404 error
       const error404 = new AxiosError('Not found');
-      error404.response = { status: 404, data: {} } as any;
+      error404.response = { status: 404, data: {} } as AxiosError['response'];
 
       getMessageMock.mockRejectedValueOnce(error404);
 
@@ -139,8 +144,8 @@ describe('threadUtils - Retry Logic', () => {
       getMessageMock
         .mockRejectedValueOnce(networkError)
         .mockRejectedValueOnce(networkError)
-        .mockResolvedValueOnce({ data: mockMessage } as any)
-        .mockResolvedValueOnce({ data: mockParentMessage } as any);
+        .mockResolvedValueOnce(mockResponse(mockMessage))
+        .mockResolvedValueOnce(mockResponse(mockParentMessage));
 
       const promise = fetchCommentWithParents(1, 123, 3);
 
@@ -189,18 +194,13 @@ describe('threadUtils - Retry Logic', () => {
     it('handles partial parent chain when middle message fails', async () => {
       const getMessageMock = vi.mocked(apiClient.messages.getMessage);
 
-      const middleMessage: Message = {
-        ...mockMessage,
-        id: 50,
-        parent_id: 100,
-      };
 
       // First message succeeds, parent fails
       const error500 = new AxiosError('Server error');
-      error500.response = { status: 500, data: {} } as any;
+      error500.response = { status: 500, data: {} } as AxiosError['response'];
 
       getMessageMock
-        .mockResolvedValueOnce({ data: mockMessage } as any) // Child succeeds
+        .mockResolvedValueOnce(mockResponse(mockMessage)) // Child succeeds
         .mockRejectedValueOnce(error500) // Parent fails attempt 1
         .mockRejectedValueOnce(error500) // Parent fails attempt 2
         .mockRejectedValueOnce(error500); // Parent fails attempt 3
@@ -225,7 +225,7 @@ describe('threadUtils - Retry Logic', () => {
 
       // Create 403 error
       const error403 = new AxiosError('Forbidden');
-      error403.response = { status: 403, data: {} } as any;
+      error403.response = { status: 403, data: {} } as AxiosError['response'];
 
       getMessageMock.mockRejectedValueOnce(error403);
 
@@ -249,8 +249,8 @@ describe('threadUtils - Retry Logic', () => {
 
       getMessageMock
         .mockRejectedValueOnce(timeoutError)
-        .mockResolvedValueOnce({ data: mockMessage } as any)
-        .mockResolvedValueOnce({ data: mockParentMessage } as any);
+        .mockResolvedValueOnce(mockResponse(mockMessage))
+        .mockResolvedValueOnce(mockResponse(mockParentMessage));
 
       const promise = fetchCommentWithParents(1, 123, 3);
 
@@ -269,12 +269,10 @@ describe('threadUtils - Retry Logic', () => {
 
       const msg1: Message = { ...mockMessage, id: 1, parent_id: 2 };
       const msg2: Message = { ...mockMessage, id: 2, parent_id: 3 };
-      const msg3: Message = { ...mockMessage, id: 3, parent_id: 4 };
-      const msg4: Message = { ...mockMessage, id: 4, parent_id: null };
 
       getMessageMock
-        .mockResolvedValueOnce({ data: msg1 } as any)
-        .mockResolvedValueOnce({ data: msg2 } as any);
+        .mockResolvedValueOnce(mockResponse(msg1))
+        .mockResolvedValueOnce(mockResponse(msg2));
 
       const promise = fetchCommentWithParents(1, 1, 1); // maxDepth = 1
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '@/services/LoggingService';
 
 const STORAGE_KEY = 'postCollapseState';
 
@@ -24,7 +25,7 @@ export function usePostCollapseState(
         return parsed[postId] !== undefined ? parsed[postId] : defaultCollapsed;
       }
     } catch (error) {
-      console.error('Failed to read post collapse state from localStorage:', error);
+      logger.error('Failed to read post collapse state from localStorage:', error);
     }
     return defaultCollapsed;
   });
@@ -37,7 +38,7 @@ export function usePostCollapseState(
       current[postId] = isCollapsed;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     } catch (error) {
-      console.error('Failed to save post collapse state to localStorage:', error);
+      logger.error('Failed to save post collapse state to localStorage:', error);
     }
   }, [postId, isCollapsed]);
 

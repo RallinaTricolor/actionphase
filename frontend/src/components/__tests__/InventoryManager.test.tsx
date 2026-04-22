@@ -2,6 +2,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { InventoryManager } from '../InventoryManager';
 import type { InventoryItem, CurrencyEntry } from '../../types/characters';
+import { logger } from '@/services/LoggingService';
+
+vi.mock('@/services/LoggingService', () => ({
+  logger: { warn: vi.fn(), error: vi.fn(), debug: vi.fn(), info: vi.fn() }
+}));
 
 // Mock the modals since they're not relevant for these tests
 vi.mock('../AddItemModal', () => ({
@@ -36,7 +41,7 @@ describe('InventoryManager - Data Corruption Handling', () => {
 
   describe('handles corrupted currency data without IDs', () => {
     it('generates IDs defensively and logs warning', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
+      vi.mocked(logger.warn).mockClear();
 
       // Corrupted data from backend (missing id fields)
       const corruptedCurrency = [
@@ -57,11 +62,11 @@ describe('InventoryManager - Data Corruption Handling', () => {
       );
 
       // Verify warning was logged for corrupted data
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Currency missing id field'),
         expect.any(Object)
       );
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(2); // Once per corrupted item
+      expect(logger.warn).toHaveBeenCalledTimes(2); // Once per corrupted item
 
       // Switch to currency tab
       fireEvent.click(screen.getByText(/Currency/));
@@ -70,12 +75,9 @@ describe('InventoryManager - Data Corruption Handling', () => {
       expect(screen.getByText('Gold')).toBeInTheDocument();
       expect(screen.getByText('Silver')).toBeInTheDocument();
 
-      consoleWarnSpy.mockRestore();
     });
 
     it('deletion still works correctly after defensive ID generation', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
-
       // Corrupted data from backend (missing id fields)
       const corruptedCurrency = [
         { type: 'Gold', amount: 100 } as CurrencyEntry,
@@ -124,13 +126,12 @@ describe('InventoryManager - Data Corruption Handling', () => {
       expect(types).toContain('Bronze');
       expect(types).not.toContain('Silver');
 
-      consoleWarnSpy.mockRestore();
     });
   });
 
   describe('handles corrupted item data without IDs', () => {
     it('generates IDs defensively and logs warning', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
+      vi.mocked(logger.warn).mockClear();
 
       // Corrupted data from backend (missing id fields)
       const corruptedItems = [
@@ -151,22 +152,19 @@ describe('InventoryManager - Data Corruption Handling', () => {
       );
 
       // Verify warning was logged for corrupted data
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Item missing id field'),
         expect.any(Object)
       );
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(2); // Once per corrupted item
+      expect(logger.warn).toHaveBeenCalledTimes(2); // Once per corrupted item
 
       // Verify items are still displayed (defensive IDs generated)
       expect(screen.getByText('Sword')).toBeInTheDocument();
       expect(screen.getByText('Shield')).toBeInTheDocument();
 
-      consoleWarnSpy.mockRestore();
     });
 
     it('deletion still works correctly after defensive ID generation', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
-
       // Corrupted data from backend (missing id fields)
       const corruptedItems = [
         { name: 'Sword', quantity: 1 } as InventoryItem,
@@ -210,14 +208,12 @@ describe('InventoryManager - Data Corruption Handling', () => {
       expect(names).toContain('Sword');
       expect(names).toContain('Potion');
       expect(names).not.toContain('Shield');
-
-      consoleWarnSpy.mockRestore();
     });
   });
 
   describe('handles valid data (with IDs) normally', () => {
     it('does not log warnings when data has IDs', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
+      vi.mocked(logger.warn).mockClear();
 
       const validCurrency: CurrencyEntry[] = [
         { id: 'currency-1', type: 'Gold', amount: 100 },
@@ -235,9 +231,7 @@ describe('InventoryManager - Data Corruption Handling', () => {
       );
 
       // No warnings should be logged for valid data
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
-
-      consoleWarnSpy.mockRestore();
+      expect(logger.warn).not.toHaveBeenCalled();
     });
   });
 });

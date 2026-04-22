@@ -33,7 +33,7 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, allowGroupConve
 
   const [conversationParam, setConversationParam] = useUrlParam<number | null>('conversation', null, {
     deserialize: (s) => parseInt(s, 10) || null,
-    serialize: (v) => v == null ? '' : String(v),
+    serialize: (v) => v === null || v === undefined ? '' : String(v),
     replace: true,
   });
 

@@ -1,9 +1,10 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { apiClient } from '../lib/api';
 import { useToast } from './ToastContext';
 import { logger } from '@/services/LoggingService';
-import type { ConversationListItem, ConversationWithDetails, PrivateMessage } from '../types/conversations';
+import type { ConversationListItem, ConversationWithDetails, PrivateMessage, CreateConversationRequest } from '../types/conversations';
 
 interface ConversationContextType {
   // State
@@ -29,7 +30,7 @@ interface ConversationContextType {
   sendMessage: (gameId: number, conversationId: number, data: { character_id: number; content: string }) => Promise<void>;
   deleteMessage: (gameId: number, conversationId: number, messageId: number) => Promise<void>;
   editMessage: (gameId: number, conversationId: number, messageId: number, content: string) => Promise<void>;
-  createConversation: (gameId: number, data: any) => Promise<number>;
+  createConversation: (gameId: number, data: CreateConversationRequest) => Promise<number>;
 
   // Utility
   resetConversationState: () => void;
@@ -244,7 +245,7 @@ export function ConversationProvider({ children }: ConversationProviderProps) {
     }
   }, [loadMessages, showError]);
 
-  const createConversation = useCallback(async (gameId: number, data: any) => {
+  const createConversation = useCallback(async (gameId: number, data: CreateConversationRequest) => {
     try {
       const response = await apiClient.conversations.createConversation(gameId, data);
       const newConversationId = response.data.id;

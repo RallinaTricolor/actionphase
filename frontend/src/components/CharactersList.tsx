@@ -35,7 +35,7 @@ export function CharactersList({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useUrlParam<number | null>('character', null, {
     deserialize: (s) => parseInt(s, 10) || null,
-    serialize: (v) => v == null ? '' : String(v),
+    serialize: (v) => v === null || v === undefined ? '' : String(v),
     replace: true,
   });
   const [npcToAssign, setNpcToAssign] = useState<Character | null>(null);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '../lib/api';
@@ -13,7 +13,7 @@ import { useUrlParam } from '../hooks/useUrlParam';
 
 const phaseParamOptions = {
   deserialize: (s: string) => parseInt(s, 10) || null,
-  serialize: (v: number | null) => (v == null ? '' : String(v)),
+  serialize: (v: number | null) => (v === null || v === undefined ? '' : String(v)),
 } as const;
 
 interface HistoryViewProps {
@@ -46,7 +46,7 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience =
     enabled: !!gameId,
   });
 
-  const phases = phasesData || [];
+  const phases = useMemo(() => phasesData || [], [phasesData]);
 
   // Fetch action results (use appropriate endpoint based on isGM)
   // Only fetch results/submissions once a phase is selected — avoids loading all data on tab open
@@ -116,7 +116,7 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience =
     if (selectedPhase && selectedPhase.phase_type === 'action' && activeTab === 'polls') {
       setActiveTab('submissions');
     }
-  }, [selectedPhase, activeTab]);
+  }, [selectedPhase, activeTab, setActiveTab]);
 
   // Auto-navigate to the correct phase when a ?comment deep-link is present.
   // This happens when a notification URL like ?tab=history&comment=99 lands here.

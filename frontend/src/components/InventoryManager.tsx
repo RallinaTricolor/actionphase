@@ -6,6 +6,7 @@ import { AddItemModal } from './AddItemModal';
 import { AddCurrencyModal } from './AddCurrencyModal';
 import { Button } from './ui';
 import { generateId } from '../utils/generateId';
+import { logger } from '@/services/LoggingService';
 
 // Defensive helper to ensure all items have ID fields
 // This protects against data corruption from draft merge bugs
@@ -15,7 +16,7 @@ const ensureIds = <T extends { id?: string }>(
 ): (T & { id: string })[] => {
   return items.map(item => {
     if (!item.id) {
-      console.warn(`${itemType} missing id field (data corruption), generating:`, item);
+      logger.warn(`${itemType} missing id field (data corruption), generating:`, item);
       return { ...item, id: generateId() };
     }
     return item as T & { id: string };

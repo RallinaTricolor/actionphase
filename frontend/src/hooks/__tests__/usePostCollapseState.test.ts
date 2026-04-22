@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { usePostCollapseState } from '../usePostCollapseState';
+import { logger } from '@/services/LoggingService';
+
+vi.mock('@/services/LoggingService', () => ({
+  logger: { warn: vi.fn(), error: vi.fn(), debug: vi.fn(), info: vi.fn() }
+}));
 
 describe('usePostCollapseState', () => {
   beforeEach(() => {
@@ -54,7 +59,7 @@ describe('usePostCollapseState', () => {
   });
 
   it('handles localStorage errors gracefully', () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(logger.error).mockClear();
 
     // Mock localStorage.setItem to throw error
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
@@ -67,10 +72,9 @@ describe('usePostCollapseState', () => {
       result.current[1](true); // Should not crash
     });
 
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalled();
 
     setItemSpy.mockRestore();
-    consoleErrorSpy.mockRestore();
   });
 
   it('updates localStorage when state changes', () => {
