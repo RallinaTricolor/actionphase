@@ -301,6 +301,53 @@ func createTestGameInState(t *testing.T, testDB *core.TestDatabase, gameService 
 	return game.ID
 }
 
+func TestGameService_CurrentPlayersExcludesAudience(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games", "game_participants", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	ctx := context.Background()
+
+	game, err := gameService.CreateGame(ctx, core.CreateGameRequest{
+		Title:       "Audience Count Test Game",
+		Description: "Test that audience members are excluded from player count",
+		GMUserID:    int32(fixtures.TestUser.ID),
+		MaxPlayers:  5,
+		IsPublic:    true,
+	})
+	require.NoError(t, err)
+
+	player := testDB.CreateTestUser(t, "count_test_player", "count_player@test.com")
+	audience := testDB.CreateTestUser(t, "count_test_audience", "count_audience@test.com")
+
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(audience.ID), "audience")
+	require.NoError(t, err)
+
+	userID := int32(fixtures.TestUser.ID)
+	result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+		UserID:   &userID,
+		PageSize: 100,
+		Page:     1,
+	})
+	require.NoError(t, err)
+
+	var found *core.EnrichedGameListItem
+	for _, g := range result.Games {
+		if g.ID == game.ID {
+			found = g
+			break
+		}
+	}
+	require.NotNil(t, found, "game should appear in listing")
+	assert.Equal(t, int32(1), found.CurrentPlayers,
+		"current_players should count only players, not audience members")
+}
+
 // Helper function for bool pointers
 func boolPtr(b bool) *bool {
 	return &b

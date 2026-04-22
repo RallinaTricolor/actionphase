@@ -20,7 +20,7 @@ SELECT
   g.updated_at,
 
   -- Computed fields
-  (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') as current_players,
+  (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active' AND role = 'player') as current_players,
 
   -- User participation status (empty string if not logged in)
   COALESCE(
@@ -82,7 +82,7 @@ WHERE
     $4::boolean IS NOT true OR
     (
       g.state = 'recruitment' AND
-      (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') < g.max_players)
+      (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active' AND role = 'player') < g.max_players)
     )
   )
 
@@ -156,7 +156,7 @@ WHERE
     $4::boolean IS NOT true OR
     (
       g.state = 'recruitment' AND
-      (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active') < g.max_players)
+      (g.max_players IS NULL OR (SELECT COUNT(*) FROM game_participants WHERE game_id = g.id AND status = 'active' AND role = 'player') < g.max_players)
     )
   )
 
