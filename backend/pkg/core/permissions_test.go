@@ -581,7 +581,7 @@ func TestCanUserControlNPC(t *testing.T) {
 		Name:          "Player Character",
 		CharacterType: "player_character",
 		UserID:        pgtype.Int4{Int32: int32(playerUser.ID), Valid: true},
-		Status:        pgtype.Text{String: "active", Valid: true},
+		Status:        pgtype.Text{String: "approved", Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create player character: %v", err)
@@ -593,7 +593,7 @@ func TestCanUserControlNPC(t *testing.T) {
 		Name:          "Unassigned NPC",
 		CharacterType: "npc",
 		UserID:        pgtype.Int4{Valid: false}, // NULL
-		Status:        pgtype.Text{String: "active", Valid: true},
+		Status:        pgtype.Text{String: "approved", Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create unassigned NPC: %v", err)
@@ -605,7 +605,7 @@ func TestCanUserControlNPC(t *testing.T) {
 		Name:          "Assigned NPC",
 		CharacterType: "npc",
 		UserID:        pgtype.Int4{Valid: false}, // NULL
-		Status:        pgtype.Text{String: "active", Valid: true},
+		Status:        pgtype.Text{String: "approved", Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create assigned NPC: %v", err)
