@@ -188,7 +188,7 @@ describe('GameDetailsPage', () => {
       await waitFor(() => {
         expect(screen.getByText('Test Game')).toBeInTheDocument()
         expect(screen.getByText('A test game description')).toBeInTheDocument()
-        expect(screen.getAllByText(/GM: game_master/i).length).toBeGreaterThanOrEqual(1)
+        expect(screen.getAllByRole('link', { name: 'game_master' }).length).toBeGreaterThanOrEqual(1)
         expect(screen.getAllByText(/Genre: Fantasy/i).length).toBeGreaterThanOrEqual(1)
       })
     })
