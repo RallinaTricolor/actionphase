@@ -79,7 +79,7 @@ func createTestPoll(t *testing.T, router *chi.Mux, gameID int32, gmToken string)
 func TestPollCRUD_CreatePoll(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupPollCRUDTestRouter(app, testDB)
@@ -174,7 +174,7 @@ func TestPollCRUD_CreatePoll(t *testing.T) {
 func TestPollCRUD_UpdatePoll(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupPollCRUDTestRouter(app, testDB)
@@ -254,7 +254,7 @@ func TestPollCRUD_UpdatePoll(t *testing.T) {
 func TestPollCRUD_DeletePoll(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupPollCRUDTestRouter(app, testDB)
@@ -311,7 +311,7 @@ func TestPollCRUD_DeletePoll(t *testing.T) {
 func TestPollCRUD_ListGamePolls(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupPollCRUDTestRouter(app, testDB)

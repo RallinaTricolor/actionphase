@@ -63,7 +63,7 @@ func createTestNotification(t *testing.T, app *core.App, testDB *core.TestDataba
 func TestNotificationAPI_GetNotifications(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "notifications", "users")
+	defer testDB.CleanupTables(t, "notifications", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupNotificationTestRouter(app, testDB)
@@ -119,7 +119,7 @@ func TestNotificationAPI_GetNotifications(t *testing.T) {
 func TestNotificationAPI_GetUnreadCount(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "notifications", "users")
+	defer testDB.CleanupTables(t, "notifications", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupNotificationTestRouter(app, testDB)
@@ -162,7 +162,7 @@ func TestNotificationAPI_GetUnreadCount(t *testing.T) {
 func TestNotificationAPI_MarkAsRead(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "notifications", "users")
+	defer testDB.CleanupTables(t, "notifications", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupNotificationTestRouter(app, testDB)
@@ -214,7 +214,7 @@ func TestNotificationAPI_MarkAsRead(t *testing.T) {
 func TestNotificationAPI_MarkAllAsRead(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "notifications", "users")
+	defer testDB.CleanupTables(t, "notifications", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupNotificationTestRouter(app, testDB)
@@ -252,7 +252,7 @@ func TestNotificationAPI_MarkAllAsRead(t *testing.T) {
 func TestNotificationAPI_GetNotification_Ownership(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "notifications", "users")
+	defer testDB.CleanupTables(t, "notifications", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupNotificationTestRouter(app, testDB)
@@ -290,7 +290,7 @@ func TestNotificationAPI_GetNotification_Ownership(t *testing.T) {
 func TestNotificationAPI_DeleteNotification(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "notifications", "users")
+	defer testDB.CleanupTables(t, "notifications", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupNotificationTestRouter(app, testDB)

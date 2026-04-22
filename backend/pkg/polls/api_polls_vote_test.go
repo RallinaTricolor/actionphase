@@ -102,7 +102,7 @@ func submitVoteReq(t *testing.T, router *chi.Mux, pollID int32, optionID int32, 
 func TestPollVote_Player_Succeeds_AndStateUpdated(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupVoteRouter(app, testDB)
@@ -123,7 +123,7 @@ func TestPollVote_Player_Succeeds_AndStateUpdated(t *testing.T) {
 func TestPollVote_GM_CannotVote_403(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupVoteRouter(app, testDB)
@@ -137,7 +137,7 @@ func TestPollVote_GM_CannotVote_403(t *testing.T) {
 func TestPollVote_Outsider_CannotVote_403(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupVoteRouter(app, testDB)
@@ -151,7 +151,7 @@ func TestPollVote_Outsider_CannotVote_403(t *testing.T) {
 func TestPollVote_AudienceMember_CannotVote_403(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_audience", "game_participants", "games", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_audience", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupVoteRouter(app, testDB)
@@ -194,7 +194,7 @@ func TestPollVote_AudienceMember_CannotVote_403(t *testing.T) {
 func TestPollVote_AfterDeadline_400(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupVoteRouter(app, testDB)
@@ -232,7 +232,7 @@ func TestPollVote_AfterDeadline_400(t *testing.T) {
 func TestPollVote_ChangeVote_UpdatesRecord(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "users")
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupVoteRouter(app, testDB)
