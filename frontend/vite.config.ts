@@ -23,6 +23,16 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/docs': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/v1/docs': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   optimizeDeps: {

@@ -15,12 +15,13 @@ Throughout this guide, sections with headings prefixed **GM:** describe controls
 
 - [Game States](./game-states) — What each game state means and how games progress
 - [Game Settings](./game-settings) — Anonymous mode, audience settings, and other GM configuration
-- [Player Applications](./player-applications) — Applying to games and managing participants
+- [Player Applications](./player-applications) — Applying to games, managing participants, and Co-GMs
 - [Deadlines](./deadlines) — Phase deadlines and custom deadline management
 
 ## Playing
 
 - [Characters](./characters) — Creating and managing character sheets
+- [Character Profiles](./character-profile) — Public character profile pages
 - [Common Room](./common-room) — Posts, threads, and polls during a game
 - [Handouts](./handouts) — Distributing reference materials to players
 - [Private Messages](./private-messages) — Direct messages between characters
@@ -30,4 +31,4 @@ Throughout this guide, sections with headings prefixed **GM:** describe controls
 
 ## Running a Game
 
-- [GM Workflows](./gm-workflows) — Creating phases, managing the game lifecycle
+- [Phases](./phases) — Creating and managing phases through the game lifecycle

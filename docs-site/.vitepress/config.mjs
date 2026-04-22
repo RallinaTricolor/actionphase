@@ -9,8 +9,6 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/guide/' },
-      { text: 'Developer', link: '/developer/' },
-      { text: 'API (Swagger)', link: 'javascript:window.open("/api/v1/docs/", "_blank")' }
     ],
 
     sidebar: {
@@ -60,35 +58,6 @@ export default defineConfig({
           ]
         }
       ],
-      '/developer/': [
-        {
-          text: 'Getting Started',
-          items: [
-            { text: 'Developer Guide', link: '/developer/' },
-            { text: 'Onboarding', link: '/developer/getting-started/onboarding' }
-          ]
-        },
-        {
-          text: 'Architecture',
-          items: [
-            { text: 'System Overview', link: '/developer/architecture/overview' },
-            { text: 'Components', link: '/developer/architecture/components' },
-            { text: 'ADRs', link: '/developer/architecture/adrs/' }
-          ]
-        },
-        {
-          text: 'API',
-          items: [
-            { text: 'API Reference', link: '/developer/api/reference' }
-          ]
-        },
-        {
-          text: 'Testing',
-          items: [
-            { text: 'Testing Guide', link: '/developer/testing/overview' }
-          ]
-        }
-      ]
     },
 
     search: {
