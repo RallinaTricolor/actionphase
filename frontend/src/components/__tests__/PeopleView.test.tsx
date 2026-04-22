@@ -1,12 +1,22 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { PeopleView } from '../PeopleView';
+import { apiClient } from '../../lib/api';
 import type { GameParticipant } from '../../types/games';
 
 const renderInRouter = (ui: React.ReactElement) =>
   render(<MemoryRouter>{ui}</MemoryRouter>);
+
+// Mock the API client
+vi.mock('../../lib/api', () => ({
+  apiClient: {
+    games: {
+      getGameApplications: vi.fn(),
+    },
+  },
+}));
 
 // Mock the child components that have complex dependencies
 vi.mock('../CharactersList', () => ({
@@ -28,6 +38,14 @@ vi.mock('../InactiveCharactersList', () => ({
 vi.mock('../AudienceMemberBadge', () => ({
   AudienceMemberBadge: () => <span>Audience</span>,
 }));
+
+vi.mock('../ParticipantActionsMenu', () => ({
+  ParticipantActionsMenu: () => <div>Actions Menu</div>,
+}));
+
+beforeEach(() => {
+  vi.mocked(apiClient.games.getGameApplications).mockResolvedValue({ data: [] } as never);
+});
 
 describe('PeopleView - Leave Game Button', () => {
   const mockPlayerParticipant: GameParticipant = {
@@ -284,5 +302,46 @@ describe('PeopleView - Leave Game Button', () => {
       const leaveButton = screen.getByRole('button', { name: /leave game/i });
       expect(leaveButton).toBeDisabled();
     });
+  });
+});
+
+describe('PeopleView - Pending audience applications with no participants', () => {
+  it('should show pending audience applications even when there are no participants', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(apiClient.games.getGameApplications).mockResolvedValue({
+      data: [
+        {
+          id: 10,
+          game_id: 1,
+          user_id: 5,
+          username: 'audienceApplicant',
+          role: 'audience',
+          status: 'pending',
+          applied_at: '2024-01-01T00:00:00Z',
+          message: 'I want to watch!',
+        },
+      ],
+    } as never);
+
+    renderInRouter(
+      <PeopleView
+        gameId={1}
+        participants={[]} // No participants at all
+        isGM={true}
+        currentUserId={3}
+        gmUserId={3}
+        gameState="recruitment"
+      />
+    );
+
+    const participantsTab = screen.getByRole('button', { name: /participants/i });
+    await user.click(participantsTab);
+
+    // The pending audience application section must be visible
+    await waitFor(() => {
+      expect(screen.getByText(/pending audience applications/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText('audienceApplicant')).toBeInTheDocument();
   });
 });

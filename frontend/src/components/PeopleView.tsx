@@ -145,7 +145,7 @@ export function PeopleView({
             )}
           </div>
 
-          {participants.length === 0 ? (
+          {participants.length === 0 && pendingAudienceApplications.length === 0 ? (
             <p className="text-content-tertiary">No participants yet.</p>
           ) : (
             <div className="space-y-4">
