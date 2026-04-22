@@ -179,3 +179,5 @@ logs/
 nginx/conf.d/
 scripts/renew-ssl.sh
 ssl/
+
+mailmap.txt
