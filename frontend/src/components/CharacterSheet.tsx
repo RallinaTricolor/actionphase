@@ -287,7 +287,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                   {/* Hide character type badge only for players in anonymous mode (GMs and audience can see it) */}
                   {!(isAnonymous && userRole === 'player') && (
                     <Badge variant="primary" size="sm">
-                      {character.character_type.replace('_', ' ')}
+                      {character.character_type?.replace('_', ' ')}
                     </Badge>
                   )}
                   <Badge variant={character.status === 'approved' ? 'success' : 'warning'} size="sm">

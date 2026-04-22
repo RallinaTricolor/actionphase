@@ -20,12 +20,12 @@ export function usePostCollapseState(
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed = JSON.parse(stored) as Record<string, boolean>;
         // Return stored value if exists, otherwise default
         return parsed[postId] !== undefined ? parsed[postId] : defaultCollapsed;
       }
     } catch (error) {
-      logger.error('Failed to read post collapse state from localStorage:', error);
+      logger.error('Failed to read post collapse state from localStorage:', { error });
     }
     return defaultCollapsed;
   });
@@ -34,11 +34,11 @@ export function usePostCollapseState(
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      const current = stored ? JSON.parse(stored) : {};
+      const current: Record<string, boolean> = stored ? JSON.parse(stored) as Record<string, boolean> : {};
       current[postId] = isCollapsed;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     } catch (error) {
-      logger.error('Failed to save post collapse state to localStorage:', error);
+      logger.error('Failed to save post collapse state to localStorage:', { error });
     }
   }, [postId, isCollapsed]);
 

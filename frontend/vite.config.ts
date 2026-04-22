@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'node:url'
 
@@ -56,11 +56,13 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    deps: {
-      // react-datepicker ships an ES module that imports named exports from
-      // react/jsx-runtime, which jsdom can't resolve without transformation.
-      // Inlining it forces Vitest to transform it through the Vite pipeline.
-      inline: ['react-datepicker'],
+    server: {
+      deps: {
+        // react-datepicker ships an ES module that imports named exports from
+        // react/jsx-runtime, which jsdom can't resolve without transformation.
+        // Inlining it forces Vitest to transform it through the Vite pipeline.
+        inline: ['react-datepicker'],
+      },
     },
   },
 })

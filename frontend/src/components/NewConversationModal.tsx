@@ -112,8 +112,7 @@ export function NewConversationModal({ gameId, characters, allCharacters, isAnon
   const availableParticipants = allCharacters.filter(
     char =>
       char.id !== yourCharacterId &&  // Don't show the character we're sending from
-      char.status !== 'pending' &&
-      char.status !== 'rejected'
+      char.status === 'approved'
   );
 
   return (
@@ -150,7 +149,7 @@ export function NewConversationModal({ gameId, characters, allCharacters, isAnon
             <div className="p-3 bg-interactive-primary-subtle border border-interactive-primary rounded">
               <div className="font-medium text-content-primary">{characters[0].name}</div>
               {!isAnonymous && (
-                <div className="text-xs text-content-secondary">{characters[0].character_type.replace('_', ' ')}</div>
+                <div className="text-xs text-content-secondary">{characters[0].character_type?.replace('_', ' ')}</div>
               )}
               {!isAnonymous && characters[0].username && (
                 <div className="text-xs text-content-tertiary">Played by {characters[0].username}</div>
@@ -165,7 +164,7 @@ export function NewConversationModal({ gameId, characters, allCharacters, isAnon
               <option value="">Select your character...</option>
               {characters.map((char) => (
                 <option key={char.id} value={char.id}>
-                  {char.name}{!isAnonymous ? ` (${char.character_type.replace('_', ' ')})` : ''}{!isAnonymous && char.username ? ` - ${char.username}` : ''}
+                  {char.name}{!isAnonymous ? ` (${char.character_type?.replace('_', ' ')})` : ''}{!isAnonymous && char.username ? ` - ${char.username}` : ''}
                 </option>
               ))}
             </Select>
@@ -204,7 +203,7 @@ export function NewConversationModal({ gameId, characters, allCharacters, isAnon
                       <div className="flex-1">
                         <div className="font-medium text-content-primary">{character.name}</div>
                         {!isAnonymous && (
-                          <div className="text-xs text-content-tertiary">{character.character_type.replace('_', ' ')}</div>
+                          <div className="text-xs text-content-tertiary">{character.character_type?.replace('_', ' ')}</div>
                         )}
                         {!isAnonymous && character.username && (
                           <div className="text-xs text-content-tertiary">Played by {character.username}</div>
@@ -230,7 +229,7 @@ export function NewConversationModal({ gameId, characters, allCharacters, isAnon
               <option value="">Select a participant...</option>
               {availableParticipants.map((char) => (
                 <option key={char.id} value={char.id}>
-                  {char.name}{!isAnonymous ? ` (${char.character_type.replace('_', ' ')})` : ''}{!isAnonymous && char.username ? ` - ${char.username}` : ''}
+                  {char.name}{!isAnonymous ? ` (${char.character_type?.replace('_', ' ')})` : ''}{!isAnonymous && char.username ? ` - ${char.username}` : ''}
                 </option>
               ))}
             </Select>

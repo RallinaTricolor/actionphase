@@ -481,10 +481,11 @@ const canSeePlayerNames = (isAnonymous: boolean, userRole: string): boolean => {
 
 // Helper to format character type for display
 // Handles special case of "NPC" being fully capitalized
-const formatCharacterType = (characterType: string): string => {
+const formatCharacterType = (characterType: string | undefined): string => {
   if (characterType === 'npc') {
     return 'NPC';
   }
+  if (!characterType) return '';
   // Convert snake_case to Title Case (e.g., "player_character" -> "Player Character")
   return characterType
     .split('_')

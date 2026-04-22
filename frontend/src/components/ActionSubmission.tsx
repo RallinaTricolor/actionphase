@@ -206,7 +206,7 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
                 <option value="">Select a character (or leave blank)</option>
                 {availableCharacters.map((character) => (
                   <option key={character.id} value={character.id}>
-                    {character.name} ({character.character_type.replace('_', ' ')})
+                    {character.name} ({character.character_type?.replace('_', ' ')})
                   </option>
                 ))}
               </Select>

@@ -116,7 +116,7 @@ export function CharacterPage() {
                     <Badge variant="secondary">{characterData.character_type === 'npc' ? 'NPC' : 'Player Character'}</Badge>
                   )}
                   {characterData.status && (
-                    <Badge variant={characterData.status === 'active' ? 'success' : 'secondary'}>
+                    <Badge variant={characterData.status === 'approved' ? 'success' : 'secondary'}>
                       {characterData.status}
                     </Badge>
                   )}
