@@ -26,7 +26,7 @@ Learn about the system design:
 ## Tech Stack
 
 **Backend**:
-- Go 1.24 with Chi router
+- Go 1.25 with Chi router
 - PostgreSQL 17
 - sqlc for type-safe SQL
 - JWT authentication

@@ -18,7 +18,7 @@ A modern turn-based gaming platform built with Go and React.
 ## Tech Stack
 
 **Backend:**
-- Go 1.24+ with Chi router
+- Go 1.25+ with Chi router
 - PostgreSQL 17 with sqlc
 - JWT authentication
 - Clean Architecture patterns
@@ -34,7 +34,7 @@ A modern turn-based gaming platform built with Go and React.
 
 ### Prerequisites
 
-- Go 1.24+
+- Go 1.25+
 - Node.js 20+
 - PostgreSQL 17
 - Docker & Docker Compose (for database)

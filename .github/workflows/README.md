@@ -14,7 +14,7 @@ Runs on all pushes and pull requests to `master` and `go_rewrite` branches.
    - Go format check (`gofmt`)
    - Go vet analysis
    - Runs on: `ubuntu-latest`
-   - Go version: 1.24.0
+   - Go version: 1.25.0
 
 2. **backend-test** - Backend testing with PostgreSQL
    - Sets up PostgreSQL 16 service container
@@ -23,7 +23,7 @@ Runs on all pushes and pull requests to `master` and `go_rewrite` branches.
    - Runs integration tests (with database, sequential)
    - Runs race detector tests
    - Runs on: `ubuntu-latest` with PostgreSQL service
-   - Go version: 1.24.0
+   - Go version: 1.25.0
 
 3. **frontend-lint** - Frontend code quality checks
    - ESLint linting
