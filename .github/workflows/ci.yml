@@ -18,7 +18,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.0'
+          go-version: '1.25.0'
 
       - name: Set up Node.js for docs
         uses: actions/setup-node@v4
@@ -83,9 +83,25 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.0'
+          go-version: '1.25.0'
           cache: true
           cache-dependency-path: backend/go.sum
+
+      - name: Set up Node.js for docs
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Build documentation
+        run: |
+          cd docs-site
+          npm ci
+          npm run docs:build
+          rm -rf ../backend/pkg/docs/dist
+          mkdir -p ../backend/pkg/docs/dist
+          cp -r .vitepress/dist/* ../backend/pkg/docs/dist/
 
       - name: Install golang-migrate
         run: |
@@ -261,7 +277,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.0'
+          go-version: '1.25.0'
           cache: true
           cache-dependency-path: backend/go.sum
 
