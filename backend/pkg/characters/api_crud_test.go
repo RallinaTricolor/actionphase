@@ -313,7 +313,7 @@ func TestCharacterAPI_PendingCharacterVisibilityByRole(t *testing.T) {
 	var approvedCharID int32
 	err = testDB.Pool.QueryRow(context.Background(),
 		"INSERT INTO characters (game_id, user_id, name, status, character_type) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-		fixtures.TestGame.ID, regularPlayer.ID, "Approved Test Character", "active", "player_character",
+		fixtures.TestGame.ID, regularPlayer.ID, "Approved Test Character", "approved", "player_character",
 	).Scan(&approvedCharID)
 	core.AssertNoError(t, err, "Creating approved character should succeed")
 
@@ -451,7 +451,7 @@ func TestCharacterAPI_PlayerCannotSeeOtherPlayersPendingCharacters(t *testing.T)
 	var player1ApprovedCharID int32
 	err = testDB.Pool.QueryRow(context.Background(),
 		"INSERT INTO characters (game_id, user_id, name, status, character_type) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-		fixtures.TestGame.ID, player1.ID, "Player 1 Approved Character", "active", "player_character",
+		fixtures.TestGame.ID, player1.ID, "Player 1 Approved Character", "approved", "player_character",
 	).Scan(&player1ApprovedCharID)
 	core.AssertNoError(t, err, "Creating player1's approved character should succeed")
 
