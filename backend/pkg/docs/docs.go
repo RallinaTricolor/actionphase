@@ -102,7 +102,7 @@ func (h *Handler) serveSwaggerUI(w http.ResponseWriter, r *http.Request) {
                 ],
                 layout: "StandaloneLayout",
                 validatorUrl: null,
-                tryItOutEnabled: true,
+                tryItOutEnabled: false,
                 requestInterceptor: function(request) {
                     // Add any request modifications here
                     return request;
@@ -172,7 +172,7 @@ func GetSwaggerUIHTML(specURL string) string {
                 plugins: [SwaggerUIBundle.plugins.DownloadUrl],
                 layout: "StandaloneLayout",
                 validatorUrl: null,
-                tryItOutEnabled: true,
+                tryItOutEnabled: false,
                 docExpansion: "list",
                 filter: true,
                 showExtensions: true,
