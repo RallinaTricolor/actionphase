@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useUrlParam } from '../hooks/useUrlParam';
 import { CharactersList } from './CharactersList';
 import CharacterAvatar from './CharacterAvatar';
@@ -231,7 +232,7 @@ export function PeopleView({
                                 {/* Content */}
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <div className="font-medium text-content-primary">{participant.username}</div>
+                                    <Link to={`/users/${participant.username}`} className="font-medium text-content-primary hover:underline">{participant.username}</Link>
                                     {participant.role === 'audience' && <AudienceMemberBadge />}
                                     {isCurrentUser && <span className="text-xs text-content-tertiary">(You)</span>}
                                   </div>

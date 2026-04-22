@@ -345,3 +345,35 @@ describe('PeopleView - Pending audience applications with no participants', () =
     expect(screen.getByText('audienceApplicant')).toBeInTheDocument();
   });
 });
+
+describe('PeopleView - participant profile links', () => {
+  const mockPlayer: GameParticipant = {
+    id: 1,
+    game_id: 1,
+    user_id: 1,
+    username: 'playerOne',
+    role: 'player',
+    status: 'active',
+    joined_at: '2024-01-01T00:00:00Z',
+  };
+
+  it('links participant username to their user profile', async () => {
+    const user = userEvent.setup();
+
+    renderInRouter(
+      <PeopleView
+        gameId={1}
+        participants={[mockPlayer]}
+        isGM={false}
+        currentUserId={99}
+        gameState="in_progress"
+      />
+    );
+
+    const participantsTab = screen.getByRole('button', { name: /participants/i });
+    await user.click(participantsTab);
+
+    const link = screen.getByRole('link', { name: /playerOne/i });
+    expect(link).toHaveAttribute('href', '/users/playerOne');
+  });
+});

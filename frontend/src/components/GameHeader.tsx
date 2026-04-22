@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
 import type { GameListItem, GameWithDetails, GameParticipant } from '../types/games';
 import { Badge } from './ui';
@@ -102,11 +103,11 @@ export function GameHeader({
           <div className="flex flex-col gap-1 md:hidden">
           {/* Row 1: GM info */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span>GM: {game.gm_username}</span>
+            <span>GM: <Link to={`/users/${game.gm_username}`} className="hover:underline">{game.gm_username}</Link></span>
             {coGM && (
               <>
                 <span className="text-content-tertiary">•</span>
-                <span>Co-GM: {coGM.username}</span>
+                <span>Co-GM: <Link to={`/users/${coGM.username}`} className="hover:underline">{coGM.username}</Link></span>
               </>
             )}
           </div>
@@ -132,11 +133,11 @@ export function GameHeader({
 
         {/* Desktop: Single line (original layout) */}
         <div className="hidden md:flex md:items-center md:gap-2 md:flex-wrap">
-          <span>GM: {game.gm_username}</span>
+          <span>GM: <Link to={`/users/${game.gm_username}`} className="hover:underline">{game.gm_username}</Link></span>
           {coGM && (
             <>
               <span className="text-content-tertiary">•</span>
-              <span>Co-GM: {coGM.username}</span>
+              <span>Co-GM: <Link to={`/users/${coGM.username}`} className="hover:underline">{coGM.username}</Link></span>
             </>
           )}
           {game.genre && (

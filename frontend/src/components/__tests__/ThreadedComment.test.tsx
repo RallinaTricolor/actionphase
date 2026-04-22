@@ -159,6 +159,26 @@ describe('ThreadedComment', () => {
       expect(screen.getAllByText(/@otheruser/)[0]).toBeInTheDocument();
     });
 
+    it('links the author username to their user profile', () => {
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockComment}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      // The @username text should be wrapped in a link to /users/:username
+      const usernameLinks = screen.getAllByRole('link', { name: /@otheruser/ });
+      expect(usernameLinks.length).toBeGreaterThan(0);
+      usernameLinks.forEach(link => {
+        expect(link).toHaveAttribute('href', '/users/otheruser');
+      });
+    });
+
     it('renders timestamp', () => {
       renderWithProviders(
         <ThreadedComment
