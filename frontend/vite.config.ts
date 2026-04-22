@@ -54,4 +54,13 @@ export default defineConfig({
     // Increase chunk size warning limit since we're now splitting intentionally
     chunkSizeWarningLimit: 1000,
   },
+  test: {
+    environment: 'jsdom',
+    deps: {
+      // react-datepicker ships an ES module that imports named exports from
+      // react/jsx-runtime, which jsdom can't resolve without transformation.
+      // Inlining it forces Vitest to transform it through the Vite pipeline.
+      inline: ['react-datepicker'],
+    },
+  },
 })
