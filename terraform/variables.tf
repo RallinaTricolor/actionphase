@@ -37,7 +37,7 @@ variable "s3_avatars_bucket" {
 variable "github_repo" {
   description = "GitHub repository URL for ActionPhase"
   type        = string
-  default     = "https://github.com/jhouser/actionphase.git"
+  default     = "https://github.com/RallinaTricolor/actionphase.git"
 }
 
 variable "domain" {

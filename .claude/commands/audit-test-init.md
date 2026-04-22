@@ -30,9 +30,9 @@ And stop.
 
 Use Glob to find test files for the selected layer:
 
-- `frontend` → `/Users/jhouser/Personal/actionphase/frontend/src/**/*.test.{ts,tsx}`
-- `backend` → `/Users/jhouser/Personal/actionphase/backend/**/*_test.go` (exclude `vendor/`)
-- `e2e` → `/Users/jhouser/Personal/actionphase/frontend/e2e/**/*.spec.ts`
+- `frontend` → `/path/to/actionphase/frontend/src/**/*.test.{ts,tsx}`
+- `backend` → `/path/to/actionphase/backend/**/*_test.go` (exclude `vendor/`)
+- `e2e` → `/path/to/actionphase/frontend/e2e/**/*.spec.ts`
 
 Sort the results alphabetically.
 

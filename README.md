@@ -1,8 +1,7 @@
 # ActionPhase
 
-[![CI](https://github.com/jhouser/actionphase/actions/workflows/ci.yml/badge.svg)](https://github.com/{jhouser}/actionphase/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/jhouser/actionphase/branch/master/graph/badge.svg)](https://codecov.io/gh/{jhouser}/actionphase)
-[![Go Report Card](https://goreportcard.com/badge/github.com/jhouser/actionphase)](https://goreportcard.com/report/github.com/{jhouser}/actionphase)
+[![CI](https://github.com/RallinaTricolor/actionphase/actions/workflows/ci.yml/badge.svg)](https://github.com/RallinaTricolor/actionphase/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/RallinaTricolor/actionphase/branch/master/graph/badge.svg)](https://codecov.io/gh/RallinaTricolor/actionphase)
 
 A modern turn-based gaming platform built with Go and React.
 
@@ -45,7 +44,7 @@ A modern turn-based gaming platform built with Go and React.
 
 ```bash
 # Clone the repository
-git clone https://github.com/{jhouser}/actionphase.git
+git clone https://github.com/RallinaTricolor/actionphase.git
 cd actionphase
 
 # Complete setup (database, .env, dependencies)
@@ -205,4 +204,4 @@ Built with Clean Architecture principles, TDD practices, and modern development 
 
 **Status**: Active Development
 
-For questions or issues, please [open an issue](https://github.com/{jhouser}/actionphase/issues).
+For questions or issues, please [open an issue](https://github.com/RallinaTricolor/actionphase/issues).

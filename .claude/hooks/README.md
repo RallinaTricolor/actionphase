@@ -80,7 +80,7 @@ echo '{"prompt": "I need to add a new API endpoint"}' | \
   npx tsx .claude/hooks/skill-activation-prompt.ts
 
 # Test file tracking (requires CLAUDE_PROJECT_DIR)
-export CLAUDE_PROJECT_DIR=/Users/jhouser/Personal/actionphase
+export CLAUDE_PROJECT_DIR=/path/to/actionphase
 echo '{"tool_name": "Edit", "tool_input": {"file_path": "/path/to/file.tsx"}, "session_id": "test"}' | \
   ./.claude/hooks/post-tool-use-tracker.sh
 

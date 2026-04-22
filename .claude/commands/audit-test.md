@@ -148,8 +148,8 @@ If the verdict is FIX NEEDED:
 - Add the missing assertions directly to the existing test, or add a new focused test if the gap requires a new scenario
 - Do NOT rewrite passing tests, rename things, or "clean up" surrounding code
 - Run the tests to confirm they pass:
-  - Frontend: `cd /Users/jhouser/Personal/actionphase/frontend && npx vitest run [file]`
-  - Backend: `cd /Users/jhouser/Personal/actionphase/backend && TEST_DATABASE_URL="postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" SKIP_DB_TESTS=false go test -p=1 ./[package]/... -v`
+  - Frontend: `cd /path/to/actionphase/frontend && npx vitest run [file]`
+  - Backend: `cd /path/to/actionphase/backend && TEST_DATABASE_URL="postgres://postgres:example@localhost:5432/actionphase_test?sslmode=disable" SKIP_DB_TESTS=false go test -p=1 ./[package]/... -v`
   - E2E: skip running (too slow); note that tests were added but not run
 
 If tests fail after your fix, diagnose and fix before logging the result.

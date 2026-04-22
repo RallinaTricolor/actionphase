@@ -115,7 +115,7 @@ ActionPhase is a modern gaming platform with Clean Architecture principles:
 **ALWAYS verify your working directory before running commands:**
 ```bash
 pwd  # Check current directory
-# Expected: /Users/jhouser/Personal/actionphase/frontend OR /backend
+# Expected: /path/to/actionphase/frontend OR /backend
 ```
 - Frontend commands run from `/frontend`
 - Backend commands run from root `/`
