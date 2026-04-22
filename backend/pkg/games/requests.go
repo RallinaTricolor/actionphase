@@ -8,13 +8,13 @@ import (
 
 // CreateGameRequest represents the request to create a new game
 type CreateGameRequest struct {
-	Title               string              `json:"title" validate:"required,min=3,max=255"`
-	Description         string              `json:"description" validate:"required,min=10"`
-	Genre               string              `json:"genre,omitempty"`
-	StartDate           *core.LocalDateTime `json:"start_date,omitempty"`
-	EndDate             *core.LocalDateTime `json:"end_date,omitempty"`
-	RecruitmentDeadline *core.LocalDateTime `json:"recruitment_deadline,omitempty"`
-	MaxPlayers          int32               `json:"max_players,omitempty"`
+	Title                   string              `json:"title" validate:"required,min=3,max=255"`
+	Description             string              `json:"description" validate:"required,min=10"`
+	Genre                   string              `json:"genre,omitempty"`
+	StartDate               *core.LocalDateTime `json:"start_date,omitempty"`
+	EndDate                 *core.LocalDateTime `json:"end_date,omitempty"`
+	RecruitmentDeadline     *core.LocalDateTime `json:"recruitment_deadline,omitempty"`
+	MaxPlayers              int32               `json:"max_players,omitempty"`
 	IsAnonymous             bool                `json:"is_anonymous"`
 	AutoAcceptAudience      bool                `json:"auto_accept_audience"`
 	AllowGroupConversations bool                `json:"allow_group_conversations"`
@@ -35,13 +35,13 @@ func (r *UpdateGameStateRequest) Bind(req *http.Request) error {
 
 // UpdateGameRequest represents the request to update game details
 type UpdateGameRequest struct {
-	Title               string     `json:"title" validate:"required,min=3,max=255"`
-	Description         string     `json:"description" validate:"required,min=10"`
-	Genre               string     `json:"genre,omitempty"`
-	StartDate           *time.Time `json:"start_date,omitempty"`
-	EndDate             *time.Time `json:"end_date,omitempty"`
-	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
-	MaxPlayers          int32      `json:"max_players,omitempty"`
+	Title                   string     `json:"title" validate:"required,min=3,max=255"`
+	Description             string     `json:"description" validate:"required,min=10"`
+	Genre                   string     `json:"genre,omitempty"`
+	StartDate               *time.Time `json:"start_date,omitempty"`
+	EndDate                 *time.Time `json:"end_date,omitempty"`
+	RecruitmentDeadline     *time.Time `json:"recruitment_deadline,omitempty"`
+	MaxPlayers              int32      `json:"max_players,omitempty"`
 	IsPublic                bool       `json:"is_public"`
 	IsAnonymous             bool       `json:"is_anonymous"`
 	AutoAcceptAudience      bool       `json:"auto_accept_audience"`

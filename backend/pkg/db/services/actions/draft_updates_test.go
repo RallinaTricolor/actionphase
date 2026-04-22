@@ -815,7 +815,6 @@ func TestActionSubmissionService_PublishAllPhaseResults_WithDrafts(t *testing.T)
 	})
 }
 
-
 // TestDraftPublish_DirectWrite verifies that publishing a result writes each draft's
 // field_value directly to character_data without any merging logic.
 // The GM saves the complete desired final state as draft rows; publish is a simple replace.

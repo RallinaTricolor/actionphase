@@ -20,24 +20,24 @@ type GameListingFilters struct {
 // EnrichedGameListItem extends GameListItem with user context and urgency
 type EnrichedGameListItem struct {
 	// Base game fields
-	ID                  int32      `json:"id"`
-	Title               string     `json:"title"`
-	Description         string     `json:"description"`
-	GMUserID            int32      `json:"gm_user_id"`
-	GMUsername          string     `json:"gm_username"`
-	State               string     `json:"state"`
-	Genre               *string    `json:"genre,omitempty"`
-	StartDate           *time.Time `json:"start_date,omitempty"`
-	EndDate             *time.Time `json:"end_date,omitempty"`
-	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
-	MaxPlayers          *int32     `json:"max_players,omitempty"`
-	IsPublic            bool       `json:"is_public"`
+	ID                      int32      `json:"id"`
+	Title                   string     `json:"title"`
+	Description             string     `json:"description"`
+	GMUserID                int32      `json:"gm_user_id"`
+	GMUsername              string     `json:"gm_username"`
+	State                   string     `json:"state"`
+	Genre                   *string    `json:"genre,omitempty"`
+	StartDate               *time.Time `json:"start_date,omitempty"`
+	EndDate                 *time.Time `json:"end_date,omitempty"`
+	RecruitmentDeadline     *time.Time `json:"recruitment_deadline,omitempty"`
+	MaxPlayers              *int32     `json:"max_players,omitempty"`
+	IsPublic                bool       `json:"is_public"`
 	IsAnonymous             bool       `json:"is_anonymous"`
 	AutoAcceptAudience      bool       `json:"auto_accept_audience"`
 	AllowGroupConversations bool       `json:"allow_group_conversations"`
-	CreatedAt           time.Time  `json:"created_at"`
-	UpdatedAt           time.Time  `json:"updated_at"`
-	CurrentPlayers      int32      `json:"current_players"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
+	CurrentPlayers          int32      `json:"current_players"`
 
 	// Enrichment fields
 	UserRelationship     *string    `json:"user_relationship,omitempty"` // 'gm', 'participant', 'applied', 'none'

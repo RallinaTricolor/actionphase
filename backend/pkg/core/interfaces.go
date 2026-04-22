@@ -283,18 +283,18 @@ type GameApplicationServiceInterface interface {
 
 // CreateGameRequest represents the parameters needed to create a new game
 type CreateGameRequest struct {
-	Title               string
-	Description         string
-	GMUserID            int32
-	Genre               string
-	StartDate           *time.Time
-	EndDate             *time.Time
-	RecruitmentDeadline *time.Time
-	MaxPlayers          int32
-	IsPublic            bool
-	IsAnonymous              bool
-	AutoAcceptAudience       bool
-	AllowGroupConversations  bool
+	Title                   string
+	Description             string
+	GMUserID                int32
+	Genre                   string
+	StartDate               *time.Time
+	EndDate                 *time.Time
+	RecruitmentDeadline     *time.Time
+	MaxPlayers              int32
+	IsPublic                bool
+	IsAnonymous             bool
+	AutoAcceptAudience      bool
+	AllowGroupConversations bool
 }
 
 // UpdateGameRequest represents the parameters needed to update an existing game

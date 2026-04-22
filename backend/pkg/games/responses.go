@@ -7,16 +7,16 @@ import (
 
 // GameResponse represents a basic game response
 type GameResponse struct {
-	ID                  int32      `json:"id"`
-	Title               string     `json:"title"`
-	Description         string     `json:"description"`
-	GMUserID            int32      `json:"gm_user_id"`
-	State               string     `json:"state"`
-	Genre               string     `json:"genre,omitempty"`
-	StartDate           *time.Time `json:"start_date,omitempty"`
-	EndDate             *time.Time `json:"end_date,omitempty"`
-	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
-	MaxPlayers          int32      `json:"max_players,omitempty"`
+	ID                      int32      `json:"id"`
+	Title                   string     `json:"title"`
+	Description             string     `json:"description"`
+	GMUserID                int32      `json:"gm_user_id"`
+	State                   string     `json:"state"`
+	Genre                   string     `json:"genre,omitempty"`
+	StartDate               *time.Time `json:"start_date,omitempty"`
+	EndDate                 *time.Time `json:"end_date,omitempty"`
+	RecruitmentDeadline     *time.Time `json:"recruitment_deadline,omitempty"`
+	MaxPlayers              int32      `json:"max_players,omitempty"`
 	IsAnonymous             bool       `json:"is_anonymous"`
 	AutoAcceptAudience      bool       `json:"auto_accept_audience"`
 	AllowGroupConversations bool       `json:"allow_group_conversations"`
@@ -30,17 +30,17 @@ func (rd *GameResponse) Render(w http.ResponseWriter, r *http.Request) error {
 
 // GameWithDetailsResponse represents a game response with additional details
 type GameWithDetailsResponse struct {
-	ID                  int32      `json:"id"`
-	Title               string     `json:"title"`
-	Description         string     `json:"description"`
-	GMUserID            int32      `json:"gm_user_id"`
-	GMUsername          string     `json:"gm_username,omitempty"`
-	State               string     `json:"state"`
-	Genre               string     `json:"genre,omitempty"`
-	StartDate           *time.Time `json:"start_date,omitempty"`
-	EndDate             *time.Time `json:"end_date,omitempty"`
-	RecruitmentDeadline *time.Time `json:"recruitment_deadline,omitempty"`
-	MaxPlayers          int32      `json:"max_players,omitempty"`
+	ID                      int32      `json:"id"`
+	Title                   string     `json:"title"`
+	Description             string     `json:"description"`
+	GMUserID                int32      `json:"gm_user_id"`
+	GMUsername              string     `json:"gm_username,omitempty"`
+	State                   string     `json:"state"`
+	Genre                   string     `json:"genre,omitempty"`
+	StartDate               *time.Time `json:"start_date,omitempty"`
+	EndDate                 *time.Time `json:"end_date,omitempty"`
+	RecruitmentDeadline     *time.Time `json:"recruitment_deadline,omitempty"`
+	MaxPlayers              int32      `json:"max_players,omitempty"`
 	IsAnonymous             bool       `json:"is_anonymous"`
 	AutoAcceptAudience      bool       `json:"auto_accept_audience"`
 	AllowGroupConversations bool       `json:"allow_group_conversations"`
@@ -74,29 +74,29 @@ func (rd *GameApplicationResponse) Render(w http.ResponseWriter, r *http.Request
 
 // EnrichedGameListItemResponse represents an enriched game list item with user context
 type EnrichedGameListItemResponse struct {
-	ID                   int32      `json:"id"`
-	Title                string     `json:"title"`
-	Description          string     `json:"description"`
-	GMUserID             int32      `json:"gm_user_id"`
-	GMUsername           string     `json:"gm_username"`
-	State                string     `json:"state"`
-	Genre                *string    `json:"genre,omitempty"`
-	StartDate            *time.Time `json:"start_date,omitempty"`
-	EndDate              *time.Time `json:"end_date,omitempty"`
-	RecruitmentDeadline  *time.Time `json:"recruitment_deadline,omitempty"`
-	MaxPlayers           *int32     `json:"max_players,omitempty"`
-	IsPublic                 bool       `json:"is_public"`
-	IsAnonymous              bool       `json:"is_anonymous"`
-	AutoAcceptAudience       bool       `json:"auto_accept_audience"`
-	AllowGroupConversations  bool       `json:"allow_group_conversations"`
-	CreatedAt                time.Time  `json:"created_at"`
-	UpdatedAt            time.Time  `json:"updated_at"`
-	CurrentPlayers       int32      `json:"current_players"`
-	UserRelationship     *string    `json:"user_relationship,omitempty"`
-	CurrentPhaseType     *string    `json:"current_phase_type,omitempty"`
-	CurrentPhaseDeadline *time.Time `json:"current_phase_deadline,omitempty"`
-	DeadlineUrgency      string     `json:"deadline_urgency"`
-	HasRecentActivity    bool       `json:"has_recent_activity"`
+	ID                      int32      `json:"id"`
+	Title                   string     `json:"title"`
+	Description             string     `json:"description"`
+	GMUserID                int32      `json:"gm_user_id"`
+	GMUsername              string     `json:"gm_username"`
+	State                   string     `json:"state"`
+	Genre                   *string    `json:"genre,omitempty"`
+	StartDate               *time.Time `json:"start_date,omitempty"`
+	EndDate                 *time.Time `json:"end_date,omitempty"`
+	RecruitmentDeadline     *time.Time `json:"recruitment_deadline,omitempty"`
+	MaxPlayers              *int32     `json:"max_players,omitempty"`
+	IsPublic                bool       `json:"is_public"`
+	IsAnonymous             bool       `json:"is_anonymous"`
+	AutoAcceptAudience      bool       `json:"auto_accept_audience"`
+	AllowGroupConversations bool       `json:"allow_group_conversations"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
+	CurrentPlayers          int32      `json:"current_players"`
+	UserRelationship        *string    `json:"user_relationship,omitempty"`
+	CurrentPhaseType        *string    `json:"current_phase_type,omitempty"`
+	CurrentPhaseDeadline    *time.Time `json:"current_phase_deadline,omitempty"`
+	DeadlineUrgency         string     `json:"deadline_urgency"`
+	HasRecentActivity       bool       `json:"has_recent_activity"`
 }
 
 // GameListingMetadataResponse represents metadata about the game listing
