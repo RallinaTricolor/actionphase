@@ -254,30 +254,6 @@ func (cs *CharacterService) ApproveCharacter(ctx context.Context, characterID in
 	return &character, nil
 }
 
-func (cs *CharacterService) RejectCharacter(ctx context.Context, characterID int32) (*models.Character, error) {
-	defer cs.Logger.LogOperation(ctx, "reject_character", "character_id", characterID)()
-
-	queries := models.New(cs.DB)
-	character, err := queries.UpdateCharacterStatus(ctx, models.UpdateCharacterStatusParams{
-		ID:     characterID,
-		Status: pgtype.Text{String: "rejected", Valid: true},
-	})
-
-	if err != nil {
-		cs.Logger.LogError(ctx, err, "Failed to reject character", "character_id", characterID)
-		return nil, err
-	}
-
-	cs.Logger.Info(ctx, "Character rejected",
-		"character_id", character.ID,
-		"character_name", character.Name,
-		"game_id", character.GameID,
-		"status", character.Status.String,
-	)
-
-	return &character, nil
-}
-
 func (cs *CharacterService) AssignNPCToUser(ctx context.Context, characterID, assignedUserID, assignedByUserID int32) error {
 	defer cs.Logger.LogOperation(ctx, "assign_npc_to_user",
 		"character_id", characterID,

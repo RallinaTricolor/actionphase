@@ -443,9 +443,7 @@
 .prose :where(a):not(:where([class~="not-prose"] *)) {
   color: rgb(var(--color-interactive-primary));
   text-decoration: underline;
-  font-weight: 500;
 }
-
 
 .prose :where(a):hover:not(:where([class~="not-prose"] *)) {
   color: rgb(var(--color-interactive-primary-hover));
@@ -453,6 +451,11 @@
 
 .prose :where(strong):not(:where([class~="not-prose"] *)) {
   font-weight: 600;
+}
+
+.prose :where(strong a, a strong):not(:where([class~="not-prose"] *)) {
+  font-weight: 600;
+  color: rgb(var(--color-interactive-primary));
 }
 
 .prose :where(ol):not(:where([class~="not-prose"] *)) {

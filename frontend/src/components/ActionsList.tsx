@@ -250,7 +250,14 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
                   size="sm"
                 />
               </div>
-              <h4 className="font-medium text-base text-content-primary truncate">{action.username}</h4>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-base text-content-primary truncate">
+                  {action.character_name || action.username}
+                </h4>
+                {action.character_name && action.username && (
+                  <span className="text-xs text-content-tertiary">{action.username}</span>
+                )}
+              </div>
             </div>
             <svg
               className={`w-5 h-5 text-content-tertiary transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
@@ -261,13 +268,6 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
-          {action.character_name && (
-            <div className="ml-10">
-              <Badge variant="secondary" className="truncate max-w-full">
-                as {action.character_name}
-              </Badge>
-            </div>
-          )}
           <div className="flex flex-col gap-1 text-xs text-content-secondary ml-10">
             {action.phase_type && action.phase_number && (
               <span>
@@ -292,11 +292,11 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2">
-                <h4 className="font-medium text-content-primary">{action.username}</h4>
-                {action.character_name && (
-                  <Badge variant="secondary">
-                    as {action.character_name}
-                  </Badge>
+                <h4 className="font-medium text-content-primary">
+                  {action.character_name || action.username}
+                </h4>
+                {action.character_name && action.username && (
+                  <span className="text-sm text-content-tertiary">{action.username}</span>
                 )}
               </div>
               <div className="flex items-center space-x-2 mt-1">
@@ -344,7 +344,7 @@ function ActionCard({ action, gameId, isExpanded, onToggleExpand }: ActionCardPr
                 onClick={() => setShowResultForm(true)}
                 className="w-full bg-semantic-success hover:bg-semantic-success-hover"
               >
-                Send Result to {action.username}
+                Send Result to {action.character_name || action.username}
               </Button>
             ) : (
               <div>

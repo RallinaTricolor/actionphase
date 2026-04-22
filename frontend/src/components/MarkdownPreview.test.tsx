@@ -514,26 +514,36 @@ describe('MarkdownPreview', () => {
   });
 
   describe('Bold links', () => {
-    it('renders bold link text with link styling (color) when link is inside bold markers', () => {
+    it('renders a plain link without a strong element', () => {
+      const { container } = render(
+        <MarkdownPreview content="[Link](https://example.com)" />
+      );
+      const link = container.querySelector('a');
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveTextContent('Link');
+      expect(link?.querySelector('strong')).not.toBeInTheDocument();
+    });
+
+    it('renders **[Link](url)** as a link wrapped in strong', () => {
       const { container } = render(
         <MarkdownPreview content="**[Link](https://example.com)**" />
       );
       const link = container.querySelector('a');
       expect(link).toBeInTheDocument();
       expect(link).toHaveTextContent('Link');
-      // The link should have the interactive-primary class, not be overridden by strong's color
-      expect(link).toHaveClass('text-interactive-primary');
+      // Link should be inside a strong element
+      expect(link?.closest('strong')).toBeInTheDocument();
     });
 
-    it('renders bold link text with link styling (color) when bold is inside link text', () => {
+    it('renders [**Link**](url) as a strong element inside a link', () => {
       const { container } = render(
         <MarkdownPreview content="[**Link**](https://example.com)" />
       );
       const link = container.querySelector('a');
       expect(link).toBeInTheDocument();
-      // The strong inside the link should not override the link's color
-      const strong = link?.querySelector('strong');
-      expect(strong).toBeInTheDocument();
+      expect(link).toHaveTextContent('Link');
+      // Strong should be inside the link
+      expect(link?.querySelector('strong')).toBeInTheDocument();
     });
   });
 });

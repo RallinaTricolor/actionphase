@@ -2,7 +2,6 @@ package characters
 
 import (
 	"actionphase/pkg/core"
-	models "actionphase/pkg/db/models"
 	services "actionphase/pkg/db/services"
 	"fmt"
 	"net/http"
@@ -31,8 +30,8 @@ func (h *Handler) ApproveCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate status
-	if data.Status != "approved" && data.Status != "rejected" {
-		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("status must be 'approved' or 'rejected'")))
+	if data.Status != "approved" {
+		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("status must be 'approved'")))
 		return
 	}
 
@@ -68,12 +67,7 @@ func (h *Handler) ApproveCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update character status
-	var updatedCharacter *models.Character
-	if data.Status == "approved" {
-		updatedCharacter, err = characterService.ApproveCharacter(ctx, int32(characterID))
-	} else {
-		updatedCharacter, err = characterService.RejectCharacter(ctx, int32(characterID))
-	}
+	updatedCharacter, err := characterService.ApproveCharacter(ctx, int32(characterID))
 
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to update character status", "error", err)
@@ -82,11 +76,12 @@ func (h *Handler) ApproveCharacter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert to response format
+	charType0 := updatedCharacter.CharacterType
 	response := &CharacterResponse{
 		ID:            updatedCharacter.ID,
 		GameID:        updatedCharacter.GameID,
 		Name:          updatedCharacter.Name,
-		CharacterType: updatedCharacter.CharacterType,
+		CharacterType: &charType0,
 		Status:        updatedCharacter.Status.String,
 		CreatedAt:     updatedCharacter.CreatedAt.Time,
 		UpdatedAt:     updatedCharacter.UpdatedAt.Time,
@@ -252,11 +247,12 @@ func (h *Handler) ReassignCharacter(w http.ResponseWriter, r *http.Request) {
 	h.App.ObsLogger.Info(ctx, "Character reassigned", "character_id", characterID, "new_owner", data.NewOwnerUserID, "reassigned_by", authUser.ID)
 
 	// Convert to response format
+	charType1 := updatedCharacter.CharacterType
 	response := &CharacterResponse{
 		ID:            updatedCharacter.ID,
 		GameID:        updatedCharacter.GameID,
 		Name:          updatedCharacter.Name,
-		CharacterType: updatedCharacter.CharacterType,
+		CharacterType: &charType1,
 		Status:        updatedCharacter.Status.String,
 		CreatedAt:     updatedCharacter.CreatedAt.Time,
 		UpdatedAt:     updatedCharacter.UpdatedAt.Time,
@@ -402,11 +398,12 @@ func (h *Handler) RenameCharacter(w http.ResponseWriter, r *http.Request) {
 		"renamed_by", authUser.ID)
 
 	// Convert to response format
+	charType2 := updatedCharacter.CharacterType
 	response := &CharacterResponse{
 		ID:            updatedCharacter.ID,
 		GameID:        updatedCharacter.GameID,
 		Name:          updatedCharacter.Name,
-		CharacterType: updatedCharacter.CharacterType,
+		CharacterType: &charType2,
 		Status:        updatedCharacter.Status.String,
 		CreatedAt:     updatedCharacter.CreatedAt.Time,
 		UpdatedAt:     updatedCharacter.UpdatedAt.Time,

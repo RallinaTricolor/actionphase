@@ -8,80 +8,56 @@ export default defineConfig({
 
   themeConfig: {
     nav: [
-      { text: 'User Guide', link: '/user/' },
-      { text: 'GM Guide', link: '/user/gm-guide/' },
-      { text: 'Developer', link: '/developer/' },
-      { text: 'API (Swagger)', link: 'javascript:window.open("/api/v1/docs/", "_blank")' }
+      { text: 'Guide', link: '/guide/' },
     ],
 
     sidebar: {
-      '/user/': [
+      '/guide/': [
         {
-          text: 'Getting Started',
+          text: 'Getting Oriented',
           items: [
-            { text: 'Welcome', link: '/user/' },
-            { text: 'Creating an Account', link: '/user/getting-started/creating-account' },
-            { text: 'Joining a Game', link: '/user/getting-started/joining-game' },
-            { text: 'Your First Character', link: '/user/getting-started/first-character' }
+            { text: 'Overview', link: '/guide/' },
+            { text: 'Getting Started', link: '/guide/getting-started' },
+            { text: 'Notifications', link: '/guide/notifications' },
+            { text: 'User Settings', link: '/guide/user-settings' },
+            { text: 'User Profiles', link: '/guide/user-profiles' },
           ]
         },
         {
-          text: 'Game Guide',
+          text: 'Games',
           items: [
-            { text: 'Game Phases', link: '/user/game-guide/game-phases' },
-            { text: 'Common Room', link: '/user/game-guide/common-room' },
-            { text: 'Action Phase', link: '/user/game-guide/action-phase' },
-            { text: 'Character Management', link: '/user/game-guide/character-management' },
-            { text: 'Private Messages', link: '/user/game-guide/private-messages' }
+            { text: 'Game States', link: '/guide/game-states' },
+            { text: 'Game Settings', link: '/guide/game-settings' },
+            { text: 'Player Applications', link: '/guide/player-applications' },
+            { text: 'Deadlines', link: '/guide/deadlines' },
           ]
         },
         {
-          text: 'GM Guide',
+          text: 'Playing',
           items: [
-            { text: 'Getting Started', link: '/user/gm-guide/getting-started' },
-            { text: 'Managing Players', link: '/user/gm-guide/managing-players' },
-            { text: 'Character Approval', link: '/user/gm-guide/character-approval' },
-            { text: 'Phase Management', link: '/user/gm-guide/phase-management' },
-            { text: 'Running Games', link: '/user/gm-guide/running-games' },
-            { text: 'Best Practices', link: '/user/gm-guide/best-practices' }
+            { text: 'Characters', link: '/guide/characters' },
+            { text: 'Character Profiles', link: '/guide/character-profile' },
+            { text: 'Common Room', link: '/guide/common-room' },
+            { text: 'Handouts', link: '/guide/handouts' },
+            { text: 'Private Messages', link: '/guide/private-messages' },
+            { text: 'Action Phases', link: '/guide/action-phases' },
+            { text: 'Audience', link: '/guide/audience' },
+            { text: 'History', link: '/guide/history' },
           ]
         },
         {
-          text: 'Help',
+          text: 'Running a Game',
           items: [
-            { text: 'FAQ', link: '/user/faq' }
+            { text: 'Phases', link: '/guide/phases' },
+          ]
+        },
+        {
+          text: 'Other',
+          items: [
+            { text: 'Public Game Archive', link: '/guide/public-archive' },
           ]
         }
       ],
-      '/developer/': [
-        {
-          text: 'Getting Started',
-          items: [
-            { text: 'Developer Guide', link: '/developer/' },
-            { text: 'Onboarding', link: '/developer/getting-started/onboarding' }
-          ]
-        },
-        {
-          text: 'Architecture',
-          items: [
-            { text: 'System Overview', link: '/developer/architecture/overview' },
-            { text: 'Components', link: '/developer/architecture/components' },
-            { text: 'ADRs', link: '/developer/architecture/adrs/' }
-          ]
-        },
-        {
-          text: 'API',
-          items: [
-            { text: 'API Reference', link: '/developer/api/reference' }
-          ]
-        },
-        {
-          text: 'Testing',
-          items: [
-            { text: 'Testing Guide', link: '/developer/testing/overview' }
-          ]
-        }
-      ]
     },
 
     search: {

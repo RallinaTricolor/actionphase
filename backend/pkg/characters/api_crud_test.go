@@ -2,16 +2,19 @@ package characters
 
 import (
 	"actionphase/pkg/core"
+	dbmodels "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // setupCharacterTestRouter creates a test router with auth middleware
@@ -30,6 +33,14 @@ func setupCharacterTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux
 			handler := &Handler{App: app}
 			r.Post("/characters", handler.CreateCharacter)
 			r.Get("/characters", handler.GetGameCharacters)
+		})
+		r.Route("/characters/{id}", func(r chi.Router) {
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
+
+			handler := &Handler{App: app}
+			r.Get("/", handler.GetCharacter)
 		})
 	})
 
@@ -84,7 +95,11 @@ func TestCharacterAPI_GMCanCreatePlayerCharacters(t *testing.T) {
 			description:    "GM should be able to create player character for another player",
 			validateFn: func(t *testing.T, response *CharacterResponse) {
 				core.AssertEqual(t, "Test Character for Player", response.Name, "Character name should match")
-				core.AssertEqual(t, "player_character", response.CharacterType, "Character type should be player_character")
+				if response.CharacterType == nil {
+					t.Errorf("CharacterType should not be nil")
+				} else {
+					core.AssertEqual(t, "player_character", *response.CharacterType, "Character type should be player_character")
+				}
 				if response.UserID == nil {
 					t.Errorf("UserID should be set")
 				} else {
@@ -113,7 +128,11 @@ func TestCharacterAPI_GMCanCreatePlayerCharacters(t *testing.T) {
 			description:    "GM should be able to create NPC without user_id",
 			validateFn: func(t *testing.T, response *CharacterResponse) {
 				core.AssertEqual(t, "Test NPC", response.Name, "NPC name should match")
-				core.AssertEqual(t, "npc", response.CharacterType, "Character type should be npc")
+				if response.CharacterType == nil {
+					t.Errorf("CharacterType should not be nil")
+				} else {
+					core.AssertEqual(t, "npc", *response.CharacterType, "Character type should be npc")
+				}
 			},
 		},
 	}
@@ -183,7 +202,11 @@ func TestCharacterAPI_PlayerCanOnlyCreateOwnCharacter(t *testing.T) {
 			description:    "Player should be able to create character for themselves",
 			validateFn: func(t *testing.T, response *CharacterResponse) {
 				core.AssertEqual(t, "My Character", response.Name, "Character name should match")
-				core.AssertEqual(t, "player_character", response.CharacterType, "Character type should be player_character")
+				if response.CharacterType == nil {
+					t.Errorf("CharacterType should not be nil")
+				} else {
+					core.AssertEqual(t, "player_character", *response.CharacterType, "Character type should be player_character")
+				}
 				if response.UserID == nil {
 					t.Errorf("UserID should be set")
 				} else {
@@ -530,6 +553,128 @@ func TestCharacterAPI_PlayerCannotSeeOtherPlayersPendingCharacters(t *testing.T)
 		}
 		if !seesPlayer1Approved {
 			t.Errorf("Player2 should see Player1's approved character (ID: %d)", player1ApprovedCharID)
+		}
+	})
+}
+
+// TestGetCharacter_AnonymousMode tests that character_type is hidden from regular players
+// when the game has anonymous mode enabled, but visible to GMs, co-GMs, and audience members.
+func TestGetCharacter_AnonymousMode(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupCharacterTestRouter(app, testDB)
+
+	queries := dbmodels.New(testDB.Pool)
+	ctx := context.Background()
+
+	gmUser := testDB.CreateTestUser(t, "anon_gm", "anon_gm@example.com")
+	playerUser := testDB.CreateTestUser(t, "anon_player", "anon_player@example.com")
+	coGMUser := testDB.CreateTestUser(t, "anon_cogm", "anon_cogm@example.com")
+	audienceUser := testDB.CreateTestUser(t, "anon_audience", "anon_audience@example.com")
+
+	// Create anonymous game directly (CreateTestGame doesn't set IsAnonymous)
+	anonGame, err := queries.CreateGame(ctx, dbmodels.CreateGameParams{
+		Title:       "Anonymous Test Game",
+		Description: pgtype.Text{String: "Test", Valid: true},
+		GmUserID:    int32(gmUser.ID),
+		IsAnonymous: true,
+		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
+	})
+	core.AssertNoError(t, err, "Creating anonymous game should succeed")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err = gameService.AddGameParticipant(ctx, anonGame.ID, int32(playerUser.ID), "player")
+	core.AssertNoError(t, err, "Adding player should succeed")
+	_, err = gameService.AddGameParticipant(ctx, anonGame.ID, int32(coGMUser.ID), "co_gm")
+	core.AssertNoError(t, err, "Adding co-GM should succeed")
+	_, err = gameService.AddGameParticipant(ctx, anonGame.ID, int32(audienceUser.ID), "audience")
+	core.AssertNoError(t, err, "Adding audience member should succeed")
+
+	playerUserID := int32(playerUser.ID)
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	char, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
+		GameID:        anonGame.ID,
+		UserID:        &playerUserID,
+		Name:          "Mysterious Figure",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Creating character should succeed")
+
+	gmToken, _ := createTestAuthToken(app, gmUser)
+	playerToken, _ := createTestAuthToken(app, playerUser)
+	coGMToken, _ := createTestAuthToken(app, coGMUser)
+	audienceToken, _ := createTestAuthToken(app, audienceUser)
+
+	charURL := "/api/v1/characters/" + strconv.Itoa(int(char.ID)) + "/"
+
+	t.Run("player cannot see character_type in anonymous game", func(t *testing.T) {
+		req := httptest.NewRequest("GET", charURL, nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Expected 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		if _, ok := response["character_type"]; ok {
+			t.Errorf("character_type should not be present in anonymous game response for regular players, got: %v", response["character_type"])
+		}
+	})
+
+	t.Run("gm can see character_type in anonymous game", func(t *testing.T) {
+		req := httptest.NewRequest("GET", charURL, nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Expected 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		if _, ok := response["character_type"]; !ok {
+			t.Errorf("character_type should be present for GM in anonymous game")
+		}
+	})
+
+	t.Run("co-gm can see character_type in anonymous game", func(t *testing.T) {
+		req := httptest.NewRequest("GET", charURL, nil)
+		req.Header.Set("Authorization", "Bearer "+coGMToken)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Expected 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		if _, ok := response["character_type"]; !ok {
+			t.Errorf("character_type should be present for co-GM in anonymous game")
+		}
+	})
+
+	t.Run("audience can see character_type in anonymous game", func(t *testing.T) {
+		req := httptest.NewRequest("GET", charURL, nil)
+		req.Header.Set("Authorization", "Bearer "+audienceToken)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Expected 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		if _, ok := response["character_type"]; !ok {
+			t.Errorf("character_type should be present for audience in anonymous game")
 		}
 	})
 }

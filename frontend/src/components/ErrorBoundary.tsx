@@ -52,6 +52,13 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // Chunk load failures happen when the browser has cached JS from an old deployment.
+    // Auto-reload fetches the new index.html and correct chunk URLs.
+    if (isChunkLoadError(error)) {
+      window.location.reload();
+      return;
+    }
+
     const appError = createAppError(error, {
       type: ErrorType.COMPONENT_ERROR,
       severity: ErrorSeverity.HIGH,
@@ -240,7 +247,15 @@ export function withErrorBoundary<P extends object>(
   return WrappedComponent;
 }
 
-// Utility function to generate unique error IDs
+function isChunkLoadError(error: Error): boolean {
+  return (
+    error.name === 'ChunkLoadError' ||
+    error.message.includes('Failed to fetch dynamically imported module') ||
+    error.message.includes('dynamically imported module') ||
+    error.message.includes('Importing a module script failed')
+  );
+}
+
 function generateErrorId(): string {
   return `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }

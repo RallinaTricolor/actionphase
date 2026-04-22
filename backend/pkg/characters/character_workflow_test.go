@@ -82,31 +82,23 @@ func TestCharacterWorkflow_CompleteApprovalFlow(t *testing.T) {
 		core.AssertEqual(t, "Updated heroic character background", data[0].FieldValue.String, "Data should be updated")
 	})
 
-	t.Run("character rejection workflow", func(t *testing.T) {
-		// Create another character for rejection
+	t.Run("GM deletes unwanted character instead of rejecting", func(t *testing.T) {
+		// Create a character that the GM wants to decline
 		character, err := characterService.CreateCharacter(context.Background(), services.CreateCharacterRequest{
 			GameID:        game.ID,
 			UserID:        core.Int32Ptr(int32(playerUser.ID)),
-			Name:          "Rejected Character",
+			Name:          "Unwanted Character",
 			CharacterType: "player_character",
 		})
-		core.AssertNoError(t, err, "Failed to create character for rejection")
+		core.AssertNoError(t, err, "Failed to create character")
 
-		// GM rejects character
-		rejected, err := characterService.RejectCharacter(context.Background(), character.ID)
-		core.AssertNoError(t, err, "GM should be able to reject character")
-		core.AssertEqual(t, "rejected", rejected.Status.String, "Character should be rejected")
+		// GM deletes the character (replaces rejection)
+		err = characterService.DeleteCharacter(context.Background(), character.ID)
+		core.AssertNoError(t, err, "GM should be able to delete a pending character")
 
-		// Player can still edit rejected character (in case they want to resubmit)
-		err = characterService.SetCharacterData(context.Background(), services.CharacterDataRequest{
-			CharacterID: character.ID,
-			ModuleType:  "bio",
-			FieldName:   "background",
-			FieldValue:  "Revised character background",
-			FieldType:   "text",
-			IsPublic:    true,
-		})
-		core.AssertNoError(t, err, "Player should be able to edit rejected character")
+		// Character no longer exists
+		_, err = characterService.GetCharacter(context.Background(), character.ID)
+		core.AssertError(t, err, "Deleted character should not be retrievable")
 	})
 }
 

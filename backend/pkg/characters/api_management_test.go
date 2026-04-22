@@ -280,16 +280,16 @@ func TestCharacterAPI_ApproveCharacter(t *testing.T) {
 		assert.Equal(t, "approved", updated.Status.String)
 	})
 
-	t.Run("GM rejects character — status becomes rejected in DB", func(t *testing.T) {
+	t.Run("GM sends rejected status — returns 400", func(t *testing.T) {
 		char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 			GameID:        game.ID,
 			UserID:        int32Ptr(int32(player.ID)),
-			Name:          "Rejected Character",
+			Name:          "Rejected Status Character",
 			CharacterType: "player_character",
 		})
 		require.NoError(t, err)
 
-		body := ApproveCharacterRequest{Status: "rejected"}
+		body := map[string]string{"status": "rejected"}
 		bodyJSON, _ := json.Marshal(body)
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/characters/%d/approve", char.ID), bytes.NewBuffer(bodyJSON))
@@ -299,15 +299,7 @@ func TestCharacterAPI_ApproveCharacter(t *testing.T) {
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 
-		assert.Equal(t, http.StatusOK, rec.Code)
-		var response map[string]interface{}
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
-		assert.Equal(t, "rejected", response["status"])
-
-		// Verify DB state changed
-		updated, err := characterService.GetCharacter(context.Background(), char.ID)
-		require.NoError(t, err)
-		assert.Equal(t, "rejected", updated.Status.String)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
 	t.Run("non-GM player cannot approve a character", func(t *testing.T) {
