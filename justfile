@@ -18,7 +18,7 @@ help:
 
 # Launch Claude Code editor
 claude:
-    CLAUDE_CONFIG_DIR="~/.claude-personal" ~/.local/bin/claude
+    CLAUDE_CONFIG_DIR="$HOME/.claude-personal" ~/.local/bin/claude
 
 # ═══════════════════════════════════════════════════════════════════════════
 # DATABASE COMMANDS
