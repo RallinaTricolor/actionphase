@@ -16,6 +16,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"actionphase/pkg/core"
+	dbsvc "actionphase/pkg/db/services"
 	phasesvc "actionphase/pkg/db/services/phases"
 	"actionphase/pkg/http"
 	"actionphase/pkg/observability"
@@ -169,6 +170,27 @@ func main() {
 	sched := scheduler.New(phaseService, obs.Logger, time.Minute)
 	cancelScheduler := sched.Start(ctx)
 	defer cancelScheduler()
+
+	// Periodically delete expired sessions to prevent accumulation
+	sessionService := &dbsvc.SessionService{DB: pool, Logger: obs.Logger}
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		// Run once on startup to clean up any accumulated expired sessions
+		if err := sessionService.CleanupExpiredSessions(ctx); err != nil {
+			obs.Logger.LogError(ctx, err, "Startup expired session cleanup failed")
+		}
+		for {
+			select {
+			case <-ticker.C:
+				if err := sessionService.CleanupExpiredSessions(ctx); err != nil {
+					obs.Logger.LogError(ctx, err, "Periodic expired session cleanup failed")
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	// Start HTTP server
 	logger.Info("Starting HTTP server",

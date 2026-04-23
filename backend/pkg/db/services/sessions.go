@@ -145,6 +145,17 @@ func (s *SessionService) InvalidateAllUserSessions(ctx context.Context, userID i
 	return nil
 }
 
+// CleanupExpiredSessions deletes all sessions whose expiry timestamp is in the past.
+func (s *SessionService) CleanupExpiredSessions(ctx context.Context) error {
+	q := db.New(s.DB)
+	if err := q.DeleteExpiredSessions(ctx); err != nil {
+		s.Logger.LogError(ctx, err, "Failed to delete expired sessions")
+		return err
+	}
+	s.Logger.Info(ctx, "Expired sessions cleaned up")
+	return nil
+}
+
 // UpdateSessionToken updates the token for an existing session
 func (s *SessionService) UpdateSessionToken(sessionID int32, token string) error {
 	ctx := context.Background()

@@ -8,7 +8,11 @@ WHERE data = $1 LIMIT 1;
 
 -- name: GetSessionsByUser :many
 SELECT * FROM sessions
-WHERE user_id = $1;
+WHERE user_id = $1 AND expires > NOW();
+
+-- name: DeleteExpiredSessions :exec
+DELETE FROM sessions
+WHERE expires <= NOW();
 
 -- name: CreateSession :one
 INSERT INTO sessions (

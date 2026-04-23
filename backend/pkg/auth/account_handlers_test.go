@@ -510,6 +510,64 @@ func TestV1ListSessions(t *testing.T) {
 	assert.GreaterOrEqual(t, len(response.Sessions), 1, "Should have at least one session")
 }
 
+func TestV1ListSessions_ExcludesExpired(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	pool := setupTestDB(t)
+	defer pool.Close()
+
+	app := core.NewTestApp(pool)
+	handler := Handler{App: app}
+	queries := db.New(pool)
+	ctx := context.Background()
+
+	userID := createTestUser(t, pool, "sessions_expiry@test.com", "sessionsexpiryuser", "TestPass123!")
+	defer queries.DeleteUser(ctx, userID)
+
+	// Create an active (non-expired) session
+	activeSession, err := queries.CreateSession(ctx, db.CreateSessionParams{
+		UserID:  userID,
+		Data:    "active-session-token",
+		Expires: pgtype.Timestamptz{Time: time.Now().Add(24 * time.Hour), Valid: true},
+	})
+	require.NoError(t, err)
+	defer queries.DeleteSession(ctx, activeSession.ID)
+
+	// Create an already-expired session
+	expiredSession, err := queries.CreateSession(ctx, db.CreateSessionParams{
+		UserID:  userID,
+		Data:    "expired-session-token",
+		Expires: pgtype.Timestamptz{Time: time.Now().Add(-1 * time.Hour), Valid: true},
+	})
+	require.NoError(t, err)
+	defer queries.DeleteSession(ctx, expiredSession.ID)
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/sessions", nil)
+	req = addAuthContextToRequest(t, req, pool, userID)
+
+	w := httptest.NewRecorder()
+	handler.V1ListSessions(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response SessionsListResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+
+	// Only the active session should appear
+	for _, s := range response.Sessions {
+		assert.NotEqual(t, expiredSession.ID, s.ID, "expired session must not appear in session list")
+	}
+	found := false
+	for _, s := range response.Sessions {
+		if s.ID == activeSession.ID {
+			found = true
+		}
+	}
+	assert.True(t, found, "active session must appear in session list")
+}
+
 func TestV1RevokeSession(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

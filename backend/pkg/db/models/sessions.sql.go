@@ -38,6 +38,16 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 	return i, err
 }
 
+const deleteExpiredSessions = `-- name: DeleteExpiredSessions :exec
+DELETE FROM sessions
+WHERE expires <= NOW()
+`
+
+func (q *Queries) DeleteExpiredSessions(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteExpiredSessions)
+	return err
+}
+
 const deleteSession = `-- name: DeleteSession :exec
 DELETE FROM sessions
 WHERE id = $1
@@ -105,7 +115,7 @@ func (q *Queries) GetSessionByToken(ctx context.Context, data string) (Session, 
 
 const getSessionsByUser = `-- name: GetSessionsByUser :many
 SELECT id, user_id, data, expires FROM sessions
-WHERE user_id = $1
+WHERE user_id = $1 AND expires > NOW()
 `
 
 func (q *Queries) GetSessionsByUser(ctx context.Context, userID int32) ([]Session, error) {
