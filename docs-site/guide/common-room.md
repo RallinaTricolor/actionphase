@@ -22,7 +22,7 @@ The **Polls** tab shows all polls for the current phase. Polls you haven't voted
 
 **Voting:** Click **Vote Now** on an active poll. Select your option (or write a custom response if the GM enabled that). You can change your vote before the deadline by clicking **Change Vote**.
 
-**Results:** Players can see results after the deadline closes. GMs and audience members can view results at any time. Results show vote counts per option and which option has the most votes. Who voted for what is hidden by default — the GM can enable individual vote visibility as a poll setting, in which case it becomes visible to players once voting closes.
+**Results:** Players can see results after the deadline closes. GMs and audience members can view results at any time. Results show vote counts per option and which option has the most votes. Who voted for what is hidden by default — the GM can enable individual vote visibility as a poll setting, in which case voter names (showing character name when available) become visible to players once voting closes.
 
 ---
 
@@ -37,7 +37,6 @@ Go to the **Polls** tab and click **Create Poll**:
 - **Question** — The question being asked (max 500 characters)
 - **Description** — Optional context, supports Markdown
 - **Deadline** — When voting closes
-- **Vote As** — Whether participants vote as their player account (one vote per player) or as their character (one vote per character — players controlling multiple characters each get a vote per character)
 - **Options** — Add at least two choices. Use **Add Option** to add more.
 - **Show individual votes** — If enabled, participants can see who voted for what, visible to players once voting closes
 - **Allow "Other" responses** — If enabled, participants can write in a custom answer

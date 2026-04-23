@@ -1411,7 +1411,7 @@ type OtherResponse struct {
 	VoteID        int32
 	OtherText     string
 	Username      string
-	CharacterName *string // If voted as character
+	CharacterName *string
 }
 
 // VoterInfo represents a user who voted (for individual vote display).

@@ -149,7 +149,12 @@ SELECT
     c.name as character_name
 FROM poll_votes pv
 JOIN users u ON pv.user_id = u.id
-LEFT JOIN characters c ON c.game_id = (SELECT game_id FROM common_room_polls WHERE id = pv.poll_id) AND c.user_id = pv.user_id
+LEFT JOIN characters c ON c.id = (
+    SELECT id FROM characters
+    WHERE game_id = (SELECT game_id FROM common_room_polls WHERE id = pv.poll_id)
+      AND user_id = pv.user_id
+    LIMIT 1
+)
 WHERE pv.poll_id = $1
 ORDER BY pv.created_at ASC;
 
@@ -164,7 +169,12 @@ SELECT
     c.name as character_name
 FROM poll_votes pv
 JOIN users u ON pv.user_id = u.id
-LEFT JOIN characters c ON c.game_id = (SELECT game_id FROM common_room_polls WHERE id = pv.poll_id) AND c.user_id = pv.user_id
+LEFT JOIN characters c ON c.id = (
+    SELECT id FROM characters
+    WHERE game_id = (SELECT game_id FROM common_room_polls WHERE id = pv.poll_id)
+      AND user_id = pv.user_id
+    LIMIT 1
+)
 WHERE pv.poll_id = $1
   AND pv.other_response IS NOT NULL
 ORDER BY pv.created_at ASC;

@@ -8,7 +8,6 @@ interface PollVotingFormProps {
   poll: PollWithOptions;
   onSuccess: () => void;
   onCancel: () => void;
-  isChangingVote?: boolean;
 }
 
 export function PollVotingForm({ poll, onSuccess, onCancel }: PollVotingFormProps) {

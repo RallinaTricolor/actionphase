@@ -17,7 +17,6 @@ interface PollCardProps {
 
 export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: PollCardProps) {
   const [showVotingForm, setShowVotingForm] = useState(false);
-  const [isChangingVote, setIsChangingVote] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Get delete mutation from usePolls hook
@@ -140,10 +139,8 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
           ) : fullPoll ? (
             <PollVotingForm
               poll={fullPoll}
-              isChangingVote={isChangingVote}
               onSuccess={() => {
                 setShowVotingForm(false);
-                setIsChangingVote(false);
                 // Only show results if user is allowed to view them
                 // Players can only see results on expired polls
                 // GMs and audience can see results anytime
@@ -153,7 +150,6 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
               }}
               onCancel={() => {
                 setShowVotingForm(false);
-                setIsChangingVote(false);
               }}
             />
           ) : null
@@ -173,22 +169,16 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
             {!poll.user_has_voted && !isGM && !isAudience && (
               <Button
                 variant="primary"
-                onClick={() => {
-                  setIsChangingVote(false);
-                  setShowVotingForm(true);
-                }}
+                onClick={() => setShowVotingForm(true)}
               >
                 Vote Now
               </Button>
             )}
-            {/* Show "Change Vote" button if user has already voted (player polls or partial character polls) */}
+            {/* Show "Change Vote" button if user has already voted */}
             {poll.user_has_voted && !isGM && !isAudience && (
               <Button
                 variant="secondary"
-                onClick={() => {
-                  setIsChangingVote(true);
-                  setShowVotingForm(true);
-                }}
+                onClick={() => setShowVotingForm(true)}
               >
                 Change Vote
               </Button>
