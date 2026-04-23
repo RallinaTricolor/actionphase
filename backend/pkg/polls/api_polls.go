@@ -22,7 +22,6 @@ type CreatePollRequest struct {
 	Question            string              `json:"question"`
 	Description         *string             `json:"description,omitempty"`
 	Deadline            time.Time           `json:"deadline"`
-	VoteAsType          string              `json:"vote_as_type"` // "player" or "character"
 	PhaseID             *int32              `json:"phase_id,omitempty"`
 	ShowIndividualVotes bool                `json:"show_individual_votes"`
 	AllowOtherOption    bool                `json:"allow_other_option"`
@@ -42,9 +41,6 @@ func (req *CreatePollRequest) Bind(r *http.Request) error {
 	}
 	if req.Deadline.Before(time.Now()) {
 		return fmt.Errorf("deadline must be in the future")
-	}
-	if req.VoteAsType != "player" && req.VoteAsType != "character" {
-		return fmt.Errorf("vote_as_type must be 'player' or 'character'")
 	}
 	if len(req.Options) < 2 {
 		return fmt.Errorf("at least 2 options are required")
@@ -74,7 +70,6 @@ func (req *UpdatePollRequest) Bind(r *http.Request) error {
 
 // SubmitVoteRequest is the API request for submitting a vote
 type SubmitVoteRequest struct {
-	CharacterID      *int32  `json:"character_id,omitempty"`
 	SelectedOptionID *int32  `json:"selected_option_id,omitempty"`
 	OtherResponse    *string `json:"other_response,omitempty"`
 }
@@ -96,9 +91,8 @@ type PollResponse struct {
 	// Additional response fields
 	Options               []db.PollOption `json:"options"`
 	HasVoted              bool            `json:"has_voted,omitempty"`
-	VotedCharacterIDs     []int32         `json:"voted_character_ids,omitempty"`      // Character IDs user has voted with (for character polls)
-	UserVoteOptionID      *int32          `json:"user_vote_option_id,omitempty"`      // The option ID the user voted for (player polls)
-	UserVoteOtherResponse *string         `json:"user_vote_other_response,omitempty"` // The "other" text if user chose that option
+	UserVoteOptionID      *int32          `json:"user_vote_option_id,omitempty"`
+	UserVoteOtherResponse *string         `json:"user_vote_other_response,omitempty"`
 }
 
 // PollResultsResponse is the API response for poll results
@@ -123,7 +117,6 @@ type OptionResult struct {
 type VoterInfo struct {
 	UserID        int32   `json:"user_id"`
 	Username      string  `json:"username"`
-	CharacterID   *int32  `json:"character_id,omitempty"`
 	CharacterName *string `json:"character_name,omitempty"`
 }
 
@@ -266,7 +259,6 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 		Question:            data.Question,
 		Description:         data.Description,
 		Deadline:            data.Deadline,
-		VoteAsType:          data.VoteAsType,
 		ShowIndividualVotes: data.ShowIndividualVotes,
 		AllowOtherOption:    data.AllowOtherOption,
 		Options:             options,
@@ -330,8 +322,7 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 // PollListItem represents a poll in the list response with vote status
 type PollListItem struct {
 	db.CommonRoomPoll
-	UserHasVoted      bool    `json:"user_has_voted"`
-	VotedCharacterIDs []int32 `json:"voted_character_ids,omitempty"` // Character IDs user has voted with (for character polls)
+	UserHasVoted bool `json:"user_has_voted"`
 }
 
 // ListGamePolls handles GET /games/{gameId}/polls
@@ -381,29 +372,15 @@ func (h *Handler) ListGamePolls(w http.ResponseWriter, r *http.Request) {
 	// Add user_has_voted field to each poll
 	pollListItems := make([]PollListItem, len(polls))
 	for i, poll := range polls {
-		// Check if user has voted at all (as player OR with any character)
-		hasVoted, err := pollService.HasUserVotedAny(ctx, poll.ID, userID)
+		hasVoted, err := pollService.HasUserVoted(ctx, poll.ID, userID)
 		if err != nil {
 			h.App.ObsLogger.LogError(ctx, err, "Failed to check if user voted", "poll_id", poll.ID)
-			// Don't fail the whole request, just set hasVoted to false
 			hasVoted = false
 		}
 
-		// For character-level polls, get list of character IDs user has voted with
-		var votedCharacterIDs []int32
-		if poll.VoteAsType == "character" {
-			votedCharacterIDs, err = pollService.GetVotedCharacterIDs(ctx, poll.ID, userID)
-			if err != nil {
-				h.App.ObsLogger.LogError(ctx, err, "Failed to get voted character IDs", "poll_id", poll.ID)
-				// Don't fail the whole request, just set to empty array
-				votedCharacterIDs = []int32{}
-			}
-		}
-
 		pollListItems[i] = PollListItem{
-			CommonRoomPoll:    poll,
-			UserHasVoted:      hasVoted,
-			VotedCharacterIDs: votedCharacterIDs,
+			CommonRoomPoll: poll,
+			UserHasVoted:   hasVoted,
 		}
 	}
 
@@ -451,30 +428,17 @@ func (h *Handler) GetPoll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user has voted (for character polls, we'll check for player-level vote)
-	hasVoted, err := pollService.HasUserVoted(ctx, int32(pollID), userID, nil)
+	hasVoted, err := pollService.HasUserVoted(ctx, int32(pollID), userID)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to check if user voted")
 		render.Render(w, r, core.ErrInternalError(err))
 		return
 	}
 
-	// For character-level polls, get list of character IDs user has voted with
-	var votedCharacterIDs []int32
-	if pollWithOptions.Poll.VoteAsType == "character" {
-		votedCharacterIDs, err = pollService.GetVotedCharacterIDs(ctx, int32(pollID), userID)
-		if err != nil {
-			h.App.ObsLogger.LogError(ctx, err, "Failed to get voted character IDs", "poll_id", pollID)
-			// Don't fail the whole request, just set to empty array
-			votedCharacterIDs = []int32{}
-		}
-	}
-
-	// For player-level polls where user has voted, fetch their selected option
 	var userVoteOptionID *int32
 	var userVoteOtherResponse *string
-	if hasVoted && pollWithOptions.Poll.VoteAsType == "player" {
-		vote, err := pollService.GetVote(ctx, int32(pollID), userID, nil)
+	if hasVoted {
+		vote, err := pollService.GetVote(ctx, int32(pollID), userID)
 		if err == nil && vote != nil {
 			if vote.SelectedOptionID.Valid {
 				optID := vote.SelectedOptionID.Int32
@@ -487,12 +451,10 @@ func (h *Handler) GetPoll(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Flatten the response structure
 	response := PollResponse{
 		CommonRoomPoll:        pollWithOptions.Poll,
 		Options:               pollWithOptions.Options,
 		HasVoted:              hasVoted,
-		VotedCharacterIDs:     votedCharacterIDs,
 		UserVoteOptionID:      userVoteOptionID,
 		UserVoteOtherResponse: userVoteOtherResponse,
 	}
@@ -587,7 +549,6 @@ func (h *Handler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 			voters[j] = VoterInfo{
 				UserID:        voter.UserID,
 				Username:      voter.Username,
-				CharacterID:   voter.CharacterID,
 				CharacterName: voter.CharacterName,
 			}
 		}
@@ -711,39 +672,10 @@ func (h *Handler) SubmitVote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate vote type matches poll settings
-	if poll.VoteAsType == "character" && data.CharacterID == nil {
-		h.App.ObsLogger.Error(ctx, "Character ID required for character voting")
-		render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("character_id is required for character voting")))
-		return
-	}
-
-	// If character voting, verify user owns the character
-	if data.CharacterID != nil {
-		characterService := &dbservices.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger}
-		char, err := characterService.GetCharacter(ctx, *data.CharacterID)
-		if err != nil {
-			h.App.ObsLogger.LogError(ctx, err, "Character not found")
-			render.Render(w, r, core.ErrNotFound("character"))
-			return
-		}
-		if !char.UserID.Valid || char.UserID.Int32 != userID {
-			h.App.ObsLogger.Error(ctx, "User does not own this character")
-			render.Render(w, r, core.ErrForbidden("you do not own this character"))
-			return
-		}
-		if char.GameID != poll.GameID {
-			h.App.ObsLogger.Error(ctx, "Character is not in this game")
-			render.Render(w, r, core.ErrInvalidRequest(fmt.Errorf("character is not in this game")))
-			return
-		}
-	}
-
 	// Submit vote
 	serviceReq := core.SubmitVoteRequest{
 		PollID:           int32(pollID),
 		UserID:           userID,
-		CharacterID:      data.CharacterID,
 		SelectedOptionID: data.SelectedOptionID,
 		OtherResponse:    data.OtherResponse,
 	}
@@ -928,29 +860,15 @@ func (h *Handler) ListPollsByPhase(w http.ResponseWriter, r *http.Request) {
 	// Add user_has_voted field to each poll
 	pollListItems := make([]PollListItem, len(polls))
 	for i, poll := range polls {
-		// Check if user has voted at all (as player OR with any character)
-		hasVoted, err := pollService.HasUserVotedAny(ctx, poll.ID, userID)
+		hasVoted, err := pollService.HasUserVoted(ctx, poll.ID, userID)
 		if err != nil {
 			h.App.ObsLogger.LogError(ctx, err, "Failed to check if user voted", "poll_id", poll.ID)
-			// Don't fail the whole request, just set hasVoted to false
 			hasVoted = false
 		}
 
-		// For character-level polls, get list of character IDs user has voted with
-		var votedCharacterIDs []int32
-		if poll.VoteAsType == "character" {
-			votedCharacterIDs, err = pollService.GetVotedCharacterIDs(ctx, poll.ID, userID)
-			if err != nil {
-				h.App.ObsLogger.LogError(ctx, err, "Failed to get voted character IDs", "poll_id", poll.ID)
-				// Don't fail the whole request, just set to empty array
-				votedCharacterIDs = []int32{}
-			}
-		}
-
 		pollListItems[i] = PollListItem{
-			CommonRoomPoll:    poll,
-			UserHasVoted:      hasVoted,
-			VotedCharacterIDs: votedCharacterIDs,
+			CommonRoomPoll: poll,
+			UserHasVoted:   hasVoted,
 		}
 	}
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { usePoll, usePollResults, useUserCharacters, usePolls } from '../hooks';
+import { usePoll, usePollResults, usePolls } from '../hooks';
 import { Card, CardHeader, CardBody, Button, Badge, Spinner } from './ui';
 import { MarkdownPreview } from './MarkdownPreview';
 import { PollVotingForm } from './PollVotingForm';
@@ -16,8 +16,6 @@ interface PollCardProps {
 }
 
 export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: PollCardProps) {
-  // Fetch user's characters for character-level polls
-  const { characters } = useUserCharacters(gameId);
   const [showVotingForm, setShowVotingForm] = useState(false);
   const [isChangingVote, setIsChangingVote] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -92,8 +90,6 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
 
             {/* Metadata row */}
             <div className="flex items-center gap-3 mt-2 text-sm text-text-secondary">
-              <span>Vote as: {poll.vote_as_type === 'player' ? 'Player' : 'Character'}</span>
-              <span>•</span>
               <span>
                 {deadlineInfo.isExpired ? 'Ended' : 'Ends'}: {deadlineInfo.text}
               </span>
@@ -104,17 +100,9 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
           <div className="flex items-center gap-2">
             {isExpired ? (
               <Badge variant="secondary">Expired</Badge>
-            ) : poll.vote_as_type === 'character' && poll.voted_character_ids && poll.voted_character_ids.length > 0 ? (
-              // Character poll: Show voting progress
-              poll.voted_character_ids.length >= characters.length ? (
-                <Badge variant="success">Voted ({poll.voted_character_ids.length}/{characters.length})</Badge>
-              ) : (
-                <Badge variant="primary">Voted ({poll.voted_character_ids.length}/{characters.length})</Badge>
-              )
             ) : poll.user_has_voted ? (
               <Badge variant="success">Voted</Badge>
             ) : !isGM && !isAudience ? (
-              // Only show "Not Voted" for players (GMs and audience can't vote)
               <Badge variant="warning">Not Voted</Badge>
             ) : null}
           </div>
@@ -139,9 +127,7 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
               <span className="text-text-primary">
                 {fullPoll.options?.find(o => o.id === fullPoll.user_vote_option_id)?.option_text ?? '—'}
               </span>
-            ) : (
-              <span className="text-text-secondary">—</span>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -184,8 +170,7 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
         {/* Action Buttons */}
         {!showVotingForm && !isExpired && (
           <div className="flex gap-2 mt-4">
-            {/* Show "Vote Now" if: user hasn't voted OR (character poll AND has more characters to vote with) */}
-            {(!poll.user_has_voted || (poll.vote_as_type === 'character' && (poll.voted_character_ids?.length || 0) < characters.length)) && !isGM && !isAudience && (
+            {!poll.user_has_voted && !isGM && !isAudience && (
               <Button
                 variant="primary"
                 onClick={() => {

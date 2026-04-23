@@ -11,11 +11,10 @@ INSERT INTO common_room_polls (
     question,
     description,
     deadline,
-    vote_as_type,
     show_individual_votes,
     allow_other_option
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING *;
 
 -- name: GetPoll :one
@@ -81,11 +80,10 @@ WHERE id = $1;
 INSERT INTO poll_votes (
     poll_id,
     user_id,
-    character_id,
     selected_option_id,
     other_response
 )
-VALUES ($1, $2, $3, $4, $5)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: UpdateVote :one
@@ -99,22 +97,7 @@ RETURNING *;
 -- name: GetVoteByPollAndUser :one
 SELECT * FROM poll_votes
 WHERE poll_id = $1
-  AND user_id = $2
-  AND (
-    -- Match exact character_id or both are NULL
-    (character_id = $3) OR
-    (character_id IS NULL AND $3::integer IS NULL)
-  );
-
--- name: GetUserVote :one
--- Get user's vote for a specific poll (character-specific or player-level)
-SELECT * FROM poll_votes
-WHERE poll_id = $1
-  AND user_id = $2
-  AND (
-    ($3::integer IS NOT NULL AND character_id = $3) OR
-    ($3::integer IS NULL AND character_id IS NULL)
-  );
+  AND user_id = $2;
 
 -- name: DeleteVote :exec
 DELETE FROM poll_votes
@@ -159,7 +142,6 @@ ORDER BY po.display_order ASC;
 SELECT
     pv.id,
     pv.user_id,
-    pv.character_id,
     pv.selected_option_id,
     pv.other_response,
     pv.created_at,
@@ -167,7 +149,7 @@ SELECT
     c.name as character_name
 FROM poll_votes pv
 JOIN users u ON pv.user_id = u.id
-LEFT JOIN characters c ON pv.character_id = c.id
+LEFT JOIN characters c ON c.game_id = (SELECT game_id FROM common_room_polls WHERE id = pv.poll_id) AND c.user_id = pv.user_id
 WHERE pv.poll_id = $1
 ORDER BY pv.created_at ASC;
 
@@ -176,14 +158,13 @@ ORDER BY pv.created_at ASC;
 SELECT
     pv.id,
     pv.user_id,
-    pv.character_id,
     pv.other_response,
     pv.created_at,
     u.username,
     c.name as character_name
 FROM poll_votes pv
 JOIN users u ON pv.user_id = u.id
-LEFT JOIN characters c ON pv.character_id = c.id
+LEFT JOIN characters c ON c.game_id = (SELECT game_id FROM common_room_polls WHERE id = pv.poll_id) AND c.user_id = pv.user_id
 WHERE pv.poll_id = $1
   AND pv.other_response IS NOT NULL
 ORDER BY pv.created_at ASC;
@@ -209,28 +190,8 @@ ORDER BY deadline DESC;
 
 -- name: HasUserVoted :one
 -- Check if user has already voted in a poll
--- Note: NULL character_id in both table and parameter means player-level vote
-SELECT EXISTS(
-    SELECT 1 FROM poll_votes
-    WHERE poll_id = @poll_id
-      AND user_id = @user_id
-      AND COALESCE(character_id, 0) = COALESCE(@character_id, 0)
-) as has_voted;
-
--- name: HasUserVotedAny :one
--- Check if user has voted in a poll at all (as player OR with any character)
--- Use this for the polls list view to show "Voted" badge
 SELECT EXISTS(
     SELECT 1 FROM poll_votes
     WHERE poll_id = @poll_id
       AND user_id = @user_id
 ) as has_voted;
-
--- name: GetUserVotedCharacterIDs :many
--- Get list of character IDs that a user has already voted with in a poll
--- Use this to show voting progress (e.g., "Voted 2/3") and filter dropdown
-SELECT character_id
-FROM poll_votes
-WHERE poll_id = @poll_id
-  AND user_id = @user_id
-  AND character_id IS NOT NULL;

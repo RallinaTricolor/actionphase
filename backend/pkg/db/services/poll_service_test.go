@@ -29,37 +29,19 @@ func TestPollService_CreatePollWithOptions(t *testing.T) {
 		errorMsg    string
 	}{
 		{
-			name: "create poll with player voting",
+			name: "create poll",
 			request: core.CreatePollRequest{
 				GameID:              game.ID,
 				CreatedByUserID:     user.ID,
 				Question:            "What should we do next?",
 				Description:         stringPtr("Choose the best option"),
 				Deadline:            time.Now().Add(24 * time.Hour),
-				VoteAsType:          "player",
 				ShowIndividualVotes: true,
 				AllowOtherOption:    true,
 				Options: []core.PollOptionInput{
 					{Text: "Option A", DisplayOrder: 1},
 					{Text: "Option B", DisplayOrder: 2},
 					{Text: "Option C", DisplayOrder: 3},
-				},
-			},
-			expectError: false,
-		},
-		{
-			name: "create poll with character voting",
-			request: core.CreatePollRequest{
-				GameID:              game.ID,
-				CreatedByUserID:     user.ID,
-				Question:            "Who should lead the mission?",
-				Deadline:            time.Now().Add(48 * time.Hour),
-				VoteAsType:          "character",
-				ShowIndividualVotes: false,
-				AllowOtherOption:    false,
-				Options: []core.PollOptionInput{
-					{Text: "Character 1", DisplayOrder: 1},
-					{Text: "Character 2", DisplayOrder: 2},
 				},
 			},
 			expectError: false,
@@ -81,7 +63,6 @@ func TestPollService_CreatePollWithOptions(t *testing.T) {
 				assert.Equal(t, tc.request.GameID, pollWithOptions.Poll.GameID)
 				assert.Equal(t, tc.request.CreatedByUserID, pollWithOptions.Poll.CreatedByUserID)
 				assert.Equal(t, tc.request.Question, pollWithOptions.Poll.Question)
-				assert.Equal(t, tc.request.VoteAsType, pollWithOptions.Poll.VoteAsType)
 				assert.Equal(t, tc.request.ShowIndividualVotes, pollWithOptions.Poll.ShowIndividualVotes.Bool)
 				assert.Equal(t, tc.request.AllowOtherOption, pollWithOptions.Poll.AllowOtherOption.Bool)
 
@@ -114,7 +95,6 @@ func TestPollService_GetPoll(t *testing.T) {
 		CreatedByUserID: user.ID,
 		Question:        "Test poll?",
 		Deadline:        time.Now().Add(24 * time.Hour),
-		VoteAsType:      "player",
 		Options: []core.PollOptionInput{
 			{Text: "Yes", DisplayOrder: 1},
 			{Text: "No", DisplayOrder: 2},
@@ -177,7 +157,6 @@ func TestPollService_GetPollWithOptions(t *testing.T) {
 		CreatedByUserID: user.ID,
 		Question:        "Multiple choice question?",
 		Deadline:        time.Now().Add(24 * time.Hour),
-		VoteAsType:      "player",
 		Options: []core.PollOptionInput{
 			{Text: "Option 1", DisplayOrder: 1},
 			{Text: "Option 2", DisplayOrder: 2},
@@ -220,7 +199,6 @@ func TestPollService_ListPollsByGame(t *testing.T) {
 		CreatedByUserID: user.ID,
 		Question:        "Active poll?",
 		Deadline:        time.Now().Add(24 * time.Hour),
-		VoteAsType:      "player",
 		Options: []core.PollOptionInput{
 			{Text: "Yes", DisplayOrder: 1},
 		},
@@ -234,7 +212,6 @@ func TestPollService_ListPollsByGame(t *testing.T) {
 		CreatedByUserID: user.ID,
 		Question:        "Expired poll?",
 		Deadline:        time.Now().Add(-24 * time.Hour),
-		VoteAsType:      "player",
 		Options: []core.PollOptionInput{
 			{Text: "Yes", DisplayOrder: 1},
 		},
@@ -285,7 +262,6 @@ func TestPollService_SubmitVote(t *testing.T) {
 		CreatedByUserID:  user.ID,
 		Question:         "Vote for option?",
 		Deadline:         time.Now().Add(24 * time.Hour),
-		VoteAsType:       "player",
 		AllowOtherOption: true,
 		Options: []core.PollOptionInput{
 			{Text: "Option A", DisplayOrder: 1},
@@ -364,7 +340,6 @@ func TestPollService_SubmitVote_UpdateExisting(t *testing.T) {
 		CreatedByUserID: user.ID,
 		Question:        "Change your vote?",
 		Deadline:        time.Now().Add(24 * time.Hour),
-		VoteAsType:      "player",
 		Options: []core.PollOptionInput{
 			{Text: "Option A", DisplayOrder: 1},
 			{Text: "Option B", DisplayOrder: 2},
@@ -414,7 +389,6 @@ func TestPollService_GetVote(t *testing.T) {
 		CreatedByUserID: user.ID,
 		Question:        "Test?",
 		Deadline:        time.Now().Add(24 * time.Hour),
-		VoteAsType:      "player",
 		Options: []core.PollOptionInput{
 			{Text: "Yes", DisplayOrder: 1},
 		},
@@ -432,14 +406,14 @@ func TestPollService_GetVote(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get the vote
-	retrievedVote, err := pollService.GetVote(ctx, pollWithOptions.Poll.ID, user.ID, nil)
+	retrievedVote, err := pollService.GetVote(ctx, pollWithOptions.Poll.ID, user.ID)
 	require.NoError(t, err)
 	require.NotNil(t, retrievedVote)
 	assert.Equal(t, submittedVote.ID, retrievedVote.ID)
 
 	// Get non-existent vote
 	otherUser := suite.Factory().NewUser().Create()
-	noVote, err := pollService.GetVote(ctx, pollWithOptions.Poll.ID, otherUser.ID, nil)
+	noVote, err := pollService.GetVote(ctx, pollWithOptions.Poll.ID, otherUser.ID)
 	require.NoError(t, err)
 	assert.Nil(t, noVote)
 }
@@ -461,7 +435,6 @@ func TestPollService_GetPollResults(t *testing.T) {
 		CreatedByUserID:     gmUser.ID,
 		Question:            "What's your favorite?",
 		Deadline:            time.Now().Add(24 * time.Hour),
-		VoteAsType:          "player",
 		ShowIndividualVotes: true,
 		AllowOtherOption:    true,
 		Options: []core.PollOptionInput{
@@ -545,7 +518,6 @@ func TestPollService_UpdatePoll(t *testing.T) {
 		CreatedByUserID:     user.ID,
 		Question:            "Original question?",
 		Deadline:            originalDeadline,
-		VoteAsType:          "player",
 		ShowIndividualVotes: false,
 		AllowOtherOption:    false,
 		Options: []core.PollOptionInput{
@@ -594,7 +566,6 @@ func TestPollService_DeletePoll(t *testing.T) {
 		CreatedByUserID: user.ID,
 		Question:        "To be deleted?",
 		Deadline:        time.Now().Add(24 * time.Hour),
-		VoteAsType:      "player",
 		Options: []core.PollOptionInput{
 			{Text: "Yes", DisplayOrder: 1},
 		},
@@ -635,7 +606,6 @@ func TestPollService_HasUserVoted(t *testing.T) {
 		CreatedByUserID: user.ID,
 		Question:        "Have you voted?",
 		Deadline:        time.Now().Add(24 * time.Hour),
-		VoteAsType:      "player",
 		Options: []core.PollOptionInput{
 			{Text: "Yes", DisplayOrder: 1},
 		},
@@ -647,7 +617,7 @@ func TestPollService_HasUserVoted(t *testing.T) {
 	voter := suite.Factory().NewUser().Create()
 
 	// Check before voting
-	hasVoted, err := pollService.HasUserVoted(ctx, pollWithOptions.Poll.ID, voter.ID, nil)
+	hasVoted, err := pollService.HasUserVoted(ctx, pollWithOptions.Poll.ID, voter.ID)
 	require.NoError(t, err)
 	assert.False(t, hasVoted)
 
@@ -660,165 +630,8 @@ func TestPollService_HasUserVoted(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check after voting
-	hasVoted, err = pollService.HasUserVoted(ctx, pollWithOptions.Poll.ID, voter.ID, nil)
+	hasVoted, err = pollService.HasUserVoted(ctx, pollWithOptions.Poll.ID, voter.ID)
 	require.NoError(t, err)
 	assert.True(t, hasVoted)
 }
 
-func TestPollService_GetVotedCharacterIDs(t *testing.T) {
-	suite := NewTestSuite(t).WithCleanup("polls").WithCleanup("characters").Setup()
-	defer suite.Cleanup()
-
-	pollService := suite.PollService()
-	ctx := context.Background()
-
-	// Create test data
-	gm := suite.Factory().NewUser().Create()
-	game := suite.Factory().NewGame().WithGM(gm.ID).Create()
-	player := suite.Factory().NewUser().Create()
-
-	// Create a character-level poll
-	pollReq := core.CreatePollRequest{
-		GameID:          game.ID,
-		CreatedByUserID: gm.ID,
-		Question:        "Which direction should we go?",
-		Deadline:        time.Now().Add(24 * time.Hour),
-		VoteAsType:      "character",
-		Options: []core.PollOptionInput{
-			{Text: "North", DisplayOrder: 1},
-			{Text: "South", DisplayOrder: 2},
-			{Text: "East", DisplayOrder: 3},
-		},
-	}
-
-	pollWithOptions, err := pollService.CreatePollWithOptions(ctx, pollReq)
-	require.NoError(t, err)
-
-	// Create characters for the player
-	char1 := suite.Factory().NewCharacter().InGame(game).OwnedBy(player).WithName("Character 1").Create()
-	char2 := suite.Factory().NewCharacter().InGame(game).OwnedBy(player).WithName("Character 2").Create()
-	char3 := suite.Factory().NewCharacter().InGame(game).OwnedBy(player).WithName("Character 3").Create()
-
-	testCases := []struct {
-		name            string
-		setupVotes      func()
-		expectedCharIDs []int32
-	}{
-		{
-			name:            "no votes yet",
-			setupVotes:      func() {},
-			expectedCharIDs: []int32{},
-		},
-		{
-			name: "voted with one character",
-			setupVotes: func() {
-				_, err := pollService.SubmitVote(ctx, core.SubmitVoteRequest{
-					PollID:           pollWithOptions.Poll.ID,
-					UserID:           player.ID,
-					CharacterID:      &char1.ID,
-					SelectedOptionID: &pollWithOptions.Options[0].ID,
-				})
-				require.NoError(t, err)
-			},
-			expectedCharIDs: []int32{char1.ID},
-		},
-		{
-			name: "voted with two characters",
-			setupVotes: func() {
-				// First vote already exists from previous test case
-				_, err := pollService.SubmitVote(ctx, core.SubmitVoteRequest{
-					PollID:           pollWithOptions.Poll.ID,
-					UserID:           player.ID,
-					CharacterID:      &char2.ID,
-					SelectedOptionID: &pollWithOptions.Options[1].ID,
-				})
-				require.NoError(t, err)
-			},
-			expectedCharIDs: []int32{char1.ID, char2.ID},
-		},
-		{
-			name: "voted with all three characters",
-			setupVotes: func() {
-				// Previous two votes exist
-				_, err := pollService.SubmitVote(ctx, core.SubmitVoteRequest{
-					PollID:           pollWithOptions.Poll.ID,
-					UserID:           player.ID,
-					CharacterID:      &char3.ID,
-					SelectedOptionID: &pollWithOptions.Options[2].ID,
-				})
-				require.NoError(t, err)
-			},
-			expectedCharIDs: []int32{char1.ID, char2.ID, char3.ID},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tc.setupVotes()
-
-			characterIDs, err := pollService.GetVotedCharacterIDs(ctx, pollWithOptions.Poll.ID, player.ID)
-			require.NoError(t, err)
-			require.NotNil(t, characterIDs)
-
-			assert.Equal(t, len(tc.expectedCharIDs), len(characterIDs), "Expected %d character IDs, got %d", len(tc.expectedCharIDs), len(characterIDs))
-
-			// Check that all expected character IDs are present
-			for _, expectedID := range tc.expectedCharIDs {
-				assert.Contains(t, characterIDs, expectedID, "Expected character ID %d to be in voted characters", expectedID)
-			}
-		})
-	}
-}
-
-func TestPollService_GetVotedCharacterIDs_DifferentUser(t *testing.T) {
-	suite := NewTestSuite(t).WithCleanup("polls").WithCleanup("characters").Setup()
-	defer suite.Cleanup()
-
-	pollService := suite.PollService()
-	ctx := context.Background()
-
-	// Create test data
-	gm := suite.Factory().NewUser().Create()
-	game := suite.Factory().NewGame().WithGM(gm.ID).Create()
-	player1 := suite.Factory().NewUser().Create()
-	player2 := suite.Factory().NewUser().Create()
-
-	// Create character-level poll
-	pollReq := core.CreatePollRequest{
-		GameID:          game.ID,
-		CreatedByUserID: gm.ID,
-		Question:        "Test poll?",
-		Deadline:        time.Now().Add(24 * time.Hour),
-		VoteAsType:      "character",
-		Options: []core.PollOptionInput{
-			{Text: "Option 1", DisplayOrder: 1},
-		},
-	}
-
-	pollWithOptions, err := pollService.CreatePollWithOptions(ctx, pollReq)
-	require.NoError(t, err)
-
-	// Create characters for both players
-	char1 := suite.Factory().NewCharacter().InGame(game).OwnedBy(player1).WithName("Character 1").Create()
-	_ = suite.Factory().NewCharacter().InGame(game).OwnedBy(player2).WithName("Character 2").Create() // char2 not used
-
-	// Player 1 votes with their character
-	_, err = pollService.SubmitVote(ctx, core.SubmitVoteRequest{
-		PollID:           pollWithOptions.Poll.ID,
-		UserID:           player1.ID,
-		CharacterID:      &char1.ID,
-		SelectedOptionID: &pollWithOptions.Options[0].ID,
-	})
-	require.NoError(t, err)
-
-	// Get voted character IDs for player 1
-	player1CharIDs, err := pollService.GetVotedCharacterIDs(ctx, pollWithOptions.Poll.ID, player1.ID)
-	require.NoError(t, err)
-	assert.Len(t, player1CharIDs, 1)
-	assert.Contains(t, player1CharIDs, char1.ID)
-
-	// Get voted character IDs for player 2 (should be empty)
-	player2CharIDs, err := pollService.GetVotedCharacterIDs(ctx, pollWithOptions.Poll.ID, player2.ID)
-	require.NoError(t, err)
-	assert.Empty(t, player2CharIDs, "Player 2 should have no voted characters")
-}

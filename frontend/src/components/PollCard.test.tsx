@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } from
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { setupServer } from 'msw/node';
-import type { Character } from '../types/characters';
 import { PollCard } from './PollCard';
 import type { Poll } from '../types/polls';
 
@@ -76,7 +75,6 @@ describe('PollCard', () => {
     created_by_user_id: 1,
     created_by_character_id: null,
     deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
-    vote_as_type: 'player',
     show_individual_votes: false,
     allow_other_option: false,
     is_expired: false,
@@ -265,151 +263,5 @@ describe('PollCard', () => {
     });
   });
 
-  describe('Character-level polls - voting progress badge', () => {
-    it('shows voting progress badge for character polls with partial votes', async () => {
-      const { useUserCharacters } = await import('../hooks');
-      vi.mocked(useUserCharacters).mockReturnValue({
-        characters: [
-          { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-          { id: 2, name: 'Char 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-          { id: 3, name: 'Char 3', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as Partial<Character>[],
-        isLoading: false,
-        error: null,
-      });
-
-      const characterPoll: Poll = {
-        ...mockPoll,
-        vote_as_type: 'character',
-        user_has_voted: true,
-        voted_character_ids: [1, 2], // Voted with 2 out of 3 characters
-      };
-
-      renderWithProviders(<PollCard poll={characterPoll} gameId={100} isGM={false} isAudience={false} />);
-
-      // Should show "Voted (2/3)"
-      expect(screen.getByText(/voted \(2\/3\)/i)).toBeInTheDocument();
-    });
-
-    it('shows success badge when all characters have voted', async () => {
-      const { useUserCharacters } = await import('../hooks');
-      vi.mocked(useUserCharacters).mockReturnValue({
-        characters: [
-          { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-          { id: 2, name: 'Char 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-          { id: 3, name: 'Char 3', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as Partial<Character>[],
-        isLoading: false,
-        error: null,
-      });
-
-      const characterPoll: Poll = {
-        ...mockPoll,
-        vote_as_type: 'character',
-        user_has_voted: true,
-        voted_character_ids: [1, 2, 3], // All characters voted
-      };
-
-      renderWithProviders(<PollCard poll={characterPoll} gameId={100} isGM={false} isAudience={false} />);
-
-      // Should show "Voted (3/3)" with success variant
-      expect(screen.getByText(/voted \(3\/3\)/i)).toBeInTheDocument();
-    });
-
-    it('shows "Not Voted" badge when no characters have voted', async () => {
-      const { useUserCharacters } = await import('../hooks');
-      vi.mocked(useUserCharacters).mockReturnValue({
-        characters: [
-          { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-          { id: 2, name: 'Char 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as Partial<Character>[],
-        isLoading: false,
-        error: null,
-      });
-
-      const characterPoll: Poll = {
-        ...mockPoll,
-        vote_as_type: 'character',
-        user_has_voted: false,
-        voted_character_ids: [],
-      };
-
-      renderWithProviders(<PollCard poll={characterPoll} gameId={100} isGM={false} isAudience={false} />);
-
-      expect(screen.getByText(/not voted/i)).toBeInTheDocument();
-    });
-  });
-
-  describe('Character-level polls - Vote Now button visibility', () => {
-    it('shows Vote Now button when user has more characters to vote with', async () => {
-      const { useUserCharacters } = await import('../hooks');
-      vi.mocked(useUserCharacters).mockReturnValue({
-        characters: [
-          { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-          { id: 2, name: 'Char 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-          { id: 3, name: 'Char 3', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as Partial<Character>[],
-        isLoading: false,
-        error: null,
-      });
-
-      const characterPoll: Poll = {
-        ...mockPoll,
-        vote_as_type: 'character',
-        user_has_voted: true,
-        voted_character_ids: [1, 2], // 2 voted, 1 remaining
-      };
-
-      renderWithProviders(<PollCard poll={characterPoll} gameId={100} isGM={false} isAudience={false} />);
-
-      // Vote Now button should still be visible because there's 1 more character to vote with
-      expect(screen.getByRole('button', { name: /vote now/i })).toBeInTheDocument();
-    });
-
-    it('hides Vote Now button when all characters have voted', async () => {
-      const { useUserCharacters } = await import('../hooks');
-      vi.mocked(useUserCharacters).mockReturnValue({
-        characters: [
-          { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-          { id: 2, name: 'Char 2', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as Partial<Character>[],
-        isLoading: false,
-        error: null,
-      });
-
-      const characterPoll: Poll = {
-        ...mockPoll,
-        vote_as_type: 'character',
-        user_has_voted: true,
-        voted_character_ids: [1, 2], // All characters voted
-      };
-
-      renderWithProviders(<PollCard poll={characterPoll} gameId={100} isGM={false} isAudience={false} />);
-
-      // Vote Now button should not be visible
-      expect(screen.queryByRole('button', { name: /vote now/i })).not.toBeInTheDocument();
-    });
-
-    it('shows Vote Now button for character polls when no votes yet', async () => {
-      const { useUserCharacters } = await import('../hooks');
-      vi.mocked(useUserCharacters).mockReturnValue({
-        characters: [
-          { id: 1, name: 'Char 1', game_id: 100, user_id: 1, status: 'approved', character_type: 'player_character' },
-        ] as Partial<Character>[],
-        isLoading: false,
-        error: null,
-      });
-
-      const characterPoll: Poll = {
-        ...mockPoll,
-        vote_as_type: 'character',
-        user_has_voted: false,
-        voted_character_ids: [],
-      };
-
-      renderWithProviders(<PollCard poll={characterPoll} gameId={100} isGM={false} isAudience={false} />);
-
-      expect(screen.getByRole('button', { name: /vote now/i })).toBeInTheDocument();
-    });
-  });
 });
+

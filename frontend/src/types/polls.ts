@@ -2,8 +2,8 @@
  * Polls Types
  *
  * Common Room Polling System allows GMs and players to create polls for games.
- * Polls can be voted on as a player or as a specific character, with optional
- * "other" text responses. Results can show vote counts or individual voters.
+ * Polls support optional "other" text responses. Results can show vote counts
+ * or individual voters (with character names when available).
  */
 
 export interface PollOption {
@@ -23,7 +23,6 @@ export interface Poll {
   question: string;
   description?: string;
   deadline: string; // ISO 8601 timestamp
-  vote_as_type: 'player' | 'character';
   show_individual_votes: boolean;
   allow_other_option: boolean;
   is_deleted: boolean;
@@ -32,20 +31,18 @@ export interface Poll {
   // Computed properties from backend
   is_expired?: boolean;
   user_has_voted?: boolean;
-  voted_character_ids?: number[]; // Character IDs user has voted with (for character polls)
 }
 
 export interface PollWithOptions extends Poll {
   options: PollOption[];
-  user_vote_option_id?: number;    // The option ID the user voted for (player polls)
-  user_vote_other_response?: string; // The "other" text if user chose that option
+  user_vote_option_id?: number;
+  user_vote_other_response?: string;
 }
 
 export interface PollVote {
   id: number;
   poll_id: number;
   user_id: number;
-  character_id?: number;
   selected_option_id?: number;
   other_response?: string;
   created_at: string;
@@ -55,7 +52,6 @@ export interface PollVote {
 export interface VoterInfo {
   user_id: number;
   username: string;
-  character_id?: number;
   character_name?: string;
   other_response?: string;
 }
@@ -92,7 +88,6 @@ export interface CreatePollRequest {
   question: string;
   description?: string;
   deadline: string; // ISO 8601 timestamp
-  vote_as_type: 'player' | 'character';
   show_individual_votes: boolean;
   allow_other_option: boolean;
   phase_id?: number;
@@ -111,5 +106,4 @@ export interface UpdatePollRequest {
 export interface SubmitVoteRequest {
   selected_option_id?: number;
   other_response?: string;
-  character_id?: number;
 }

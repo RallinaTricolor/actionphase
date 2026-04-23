@@ -89,7 +89,6 @@ test.describe.serial('Polls Flow', () => {
       question: 'What should the party do next?',
       description: 'Vote for the next adventure direction',
       deadline: tomorrow,
-      votingType: 'player',
       options: [
         'Explore the abandoned castle',
         'Investigate the mysterious forest',
@@ -98,8 +97,6 @@ test.describe.serial('Polls Flow', () => {
       allowOther: true
     });
 
-    // Verify poll details
-    await expect(page.getByText('Vote as: player')).toBeVisible();
     // GMs see "Show Results" and "Delete Poll" buttons instead of vote status badges
     await expect(page.getByRole('button', { name: 'Show Results' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Delete Poll' })).toBeVisible();
@@ -123,47 +120,6 @@ test.describe.serial('Polls Flow', () => {
     await expect(page.getByText('Investigate the mysterious forest')).toBeVisible();
   });
 
-  test('GM creates character-level poll successfully', async ({ page }) => {
-    await loginAs(page, 'GM');
-    const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    const pollsPage = new PollsPage(page, gameId);
-
-    await pollsPage.goto();
-
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    await pollsPage.createPoll({
-      question: 'Which faction should your character support?',
-      description: 'This is an in-character decision',
-      deadline: tomorrow,
-      votingType: 'character',
-      options: [
-        'The Merchants Guild',
-        'The Thieves Guild',
-        'The City Watch'
-      ],
-      showIndividualVotes: true
-    });
-
-    // Verify poll details
-    await expect(page.getByText('Vote as: Character')).toBeVisible();
-  });
-
-  test('Player votes as character and sees badge update', async ({ page }) => {
-    await loginAs(page, 'PLAYER_1');
-    const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    const pollsPage = new PollsPage(page, gameId);
-
-    await pollsPage.goto();
-
-    // Vote on character poll by question
-    await pollsPage.voteOnPoll('Which faction should your character support?', 'The Merchants Guild');
-
-    // Should now have 2 "Voted" badges (player poll + character poll)
-    expect(await pollsPage.getVotedBadgeCount()).toBe(2);
-  });
-
   // ==========================================================================
   // TEST CATEGORY 2: ERROR-FREE BEHAVIOR
   // ==========================================================================
@@ -171,7 +127,7 @@ test.describe.serial('Polls Flow', () => {
   // These tests explicitly check for bugs that were missed by only testing UI state
   // NOTE: These tests depend on polls created in Happy Path tests above
 
-  test('Player voting does not trigger 403 errors', async ({ page }) => {
+  test('Player voting does not trigger 403 errors or Loading results flash', async ({ page }) => {
     const { consoleErrors } = setupMonitoring(page);
 
     await loginAs(page, 'PLAYER_2');
@@ -180,31 +136,16 @@ test.describe.serial('Polls Flow', () => {
 
     await pollsPage.goto();
 
-    // Vote on player poll
     await pollsPage.voteOnPoll('What should the party do next?', 'Explore the abandoned castle');
+
+    // CRITICAL: "Loading results..." should NEVER appear for players on active polls
+    await expect(page.getByText('Loading results...')).not.toBeVisible({ timeout: 100 });
 
     // Wait a bit for any async errors to appear
     await page.waitForTimeout(500);
 
     // EXPLICIT check for 403 errors
-    checkPollErrors(consoleErrors, 'Player voting does not trigger 403 errors');
-  });
-
-  test('Player voting does not show Loading results flash', async ({ page }) => {
-    await loginAs(page, 'PLAYER_2');
-    const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    const pollsPage = new PollsPage(page, gameId);
-
-    await pollsPage.goto();
-
-    // Vote on character poll (the one remaining after voting on player poll in previous test)
-    const voteButtons = page.getByRole('button', { name: 'Vote Now' });
-    if (await voteButtons.count() > 0) {
-      await pollsPage.voteOnPoll('Which faction should your character support?', 'The City Watch');
-
-      // CRITICAL: "Loading results..." should NEVER appear for players on active polls
-      await expect(page.getByText('Loading results...')).not.toBeVisible({ timeout: 100 });
-    }
+    checkPollErrors(consoleErrors, 'Player voting does not trigger 403 errors or Loading results flash');
   });
 
   test('Players do not make /results API calls on active polls', async ({ page }) => {
@@ -229,25 +170,6 @@ test.describe.serial('Polls Flow', () => {
     }
   });
 
-  test('Character voting does not trigger errors', async ({ page }) => {
-    const { consoleErrors } = setupMonitoring(page);
-
-    await loginAs(page, 'PLAYER_3');
-    const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    const pollsPage = new PollsPage(page, gameId);
-
-    await pollsPage.goto();
-
-    // PLAYER_3 votes on character poll
-    await pollsPage.voteOnPoll('Which faction should your character support?', 'The Thieves Guild');
-
-    // Wait for any async errors
-    await page.waitForTimeout(500);
-
-    // Check for errors
-    checkPollErrors(consoleErrors, 'Character voting does not trigger errors');
-  });
-
   // ==========================================================================
   // TEST CATEGORY 3: STATE PERSISTENCE
   // ==========================================================================
@@ -268,8 +190,8 @@ test.describe.serial('Polls Flow', () => {
     // Wait for vote status to load (the badges are populated by API call)
     await page.waitForTimeout(1000);
 
-    // Verify badge shows "Voted" for previously voted polls (PLAYER_1 voted on both polls)
-    expect(await pollsPage.getVotedBadgeCount()).toBe(2);
+    // Verify badge shows "Voted" for previously voted poll
+    expect(await pollsPage.getVotedBadgeCount()).toBe(1);
 
     // Reload page (loses query params, so we need to navigate again)
     await page.reload();
@@ -287,8 +209,8 @@ test.describe.serial('Polls Flow', () => {
     // Wait for vote status to load (the badges are populated by API call)
     await page.waitForTimeout(1000);
 
-    // Badges should STILL show "Voted" (tests API contract persists across reload)
-    expect(await pollsPage.getVotedBadgeCount()).toBe(2);
+    // Badge should STILL show "Voted" (tests API contract persists across reload)
+    expect(await pollsPage.getVotedBadgeCount()).toBe(1);
   });
 
   test('Your vote summary persists after page reload', async ({ page }) => {
@@ -314,7 +236,7 @@ test.describe.serial('Polls Flow', () => {
     await expect(page.getByText('Investigate the mysterious forest')).toBeVisible();
   });
 
-  test('Character vote badge persists after page reload', async ({ page }) => {
+  test('Voted badge count remains correct after page reload', async ({ page }) => {
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
     const pollsPage = new PollsPage(page, gameId);
@@ -327,8 +249,8 @@ test.describe.serial('Polls Flow', () => {
     // Wait for vote status to load (the badges are populated by API call)
     await page.waitForTimeout(1000);
 
-    // Should have 2 "Voted" badges from previous tests
-    expect(await pollsPage.getVotedBadgeCount()).toBe(2);
+    // Should have 1 "Voted" badge from previous tests
+    expect(await pollsPage.getVotedBadgeCount()).toBe(1);
 
     // Reload page
     await page.reload();
@@ -342,8 +264,8 @@ test.describe.serial('Polls Flow', () => {
     // Wait for vote status to load after reload
     await page.waitForTimeout(1000);
 
-    // Should STILL have 2 "Voted" badges (validates Bug #5 fix)
-    expect(await pollsPage.getVotedBadgeCount()).toBe(2);
+    // Should STILL have 1 "Voted" badge (validates vote persistence)
+    expect(await pollsPage.getVotedBadgeCount()).toBe(1);
   });
 
   // ==========================================================================

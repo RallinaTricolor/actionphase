@@ -18,7 +18,6 @@ export function CreatePollForm({ gameId, currentPhaseId, onSuccess, onCancel }: 
   const [question, setQuestion] = useState('');
   const [description, setDescription] = useState('');
   const [deadline, setDeadline] = useState('');
-  const [voteAsType, setVoteAsType] = useState<'player' | 'character'>('player');
   const [showIndividualVotes, setShowIndividualVotes] = useState(false);
   const [allowOtherOption, setAllowOtherOption] = useState(false);
   const [options, setOptions] = useState<string[]>(['', '']);
@@ -69,7 +68,6 @@ export function CreatePollForm({ gameId, currentPhaseId, onSuccess, onCancel }: 
       question: question.trim(),
       description: description.trim() || undefined,
       deadline: deadlineISO,
-      vote_as_type: voteAsType,
       show_individual_votes: showIndividualVotes,
       allow_other_option: allowOtherOption,
       phase_id: currentPhaseId,
@@ -80,7 +78,7 @@ export function CreatePollForm({ gameId, currentPhaseId, onSuccess, onCancel }: 
       await createPollMutation.mutateAsync(request);
       onSuccess();
     } catch (_err) {
-      logger.error('Failed to create poll', { error: _err, gameId, question, voteAsType });
+      logger.error('Failed to create poll', { error: _err, gameId, question });
       setError(_err instanceof Error ? _err.message : 'Failed to create poll');
     }
   };
@@ -117,37 +115,6 @@ export function CreatePollForm({ gameId, currentPhaseId, onSuccess, onCancel }: 
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
           />
-
-          {/* Vote As Type */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-text-primary">
-              Vote As
-            </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="voteAsType"
-                  value="player"
-                  checked={voteAsType === 'player'}
-                  onChange={() => setVoteAsType('player')}
-                  className="text-accent-primary focus:ring-accent-primary"
-                />
-                <span className="text-sm text-text-secondary">Player</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="voteAsType"
-                  value="character"
-                  checked={voteAsType === 'character'}
-                  onChange={() => setVoteAsType('character')}
-                  className="text-accent-primary focus:ring-accent-primary"
-                />
-                <span className="text-sm text-text-secondary">Character</span>
-              </label>
-            </div>
-          </div>
 
           {/* Options */}
           <div className="space-y-2">

@@ -56,7 +56,6 @@ export class PollsPage {
     question: string;
     description?: string;
     deadline?: Date;
-    votingType: 'player' | 'character';
     options: string[];
     allowOther?: boolean;
     showIndividualVotes?: boolean;
@@ -122,13 +121,6 @@ export class PollsPage {
 
       // Wait a moment for the selection to be processed and calendar to close
       await this.page.waitForTimeout(500);
-    }
-
-    // Select voting type
-    if (options.votingType === 'character') {
-      await this.page.getByRole('radio', { name: 'Character' }).click();
-    } else {
-      await this.page.getByRole('radio', { name: 'Player' }).check();
     }
 
     // Add poll options

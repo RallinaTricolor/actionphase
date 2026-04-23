@@ -85,7 +85,6 @@ func (s *PollService) CreatePollWithOptions(ctx context.Context, req core.Create
 		Question:             req.Question,
 		Description:          description,
 		Deadline:             deadline,
-		VoteAsType:           req.VoteAsType,
 		ShowIndividualVotes:  showIndividualVotes,
 		AllowOtherOption:     allowOtherOption,
 	}
@@ -229,17 +228,9 @@ func (s *PollService) SubmitVote(ctx context.Context, req core.SubmitVoteRequest
 	s.Logger.Info(ctx, "Submitting vote",
 		"poll_id", req.PollID,
 		"user_id", req.UserID,
-		"character_id", req.CharacterID,
 	)
 
 	queries := db.New(s.DB)
-
-	// Convert optional fields
-	characterID := pgtype.Int4{}
-	if req.CharacterID != nil {
-		characterID.Int32 = *req.CharacterID
-		characterID.Valid = true
-	}
 
 	selectedOptionID := pgtype.Int4{}
 	if req.SelectedOptionID != nil {
@@ -255,9 +246,8 @@ func (s *PollService) SubmitVote(ctx context.Context, req core.SubmitVoteRequest
 
 	// Check if user has already voted
 	existingVoteParams := db.GetVoteByPollAndUserParams{
-		PollID:      req.PollID,
-		UserID:      req.UserID,
-		CharacterID: characterID,
+		PollID: req.PollID,
+		UserID: req.UserID,
 	}
 
 	existingVote, err := queries.GetVoteByPollAndUser(ctx, existingVoteParams)
@@ -303,7 +293,6 @@ func (s *PollService) SubmitVote(ctx context.Context, req core.SubmitVoteRequest
 	voteParams := db.SubmitVoteParams{
 		PollID:           req.PollID,
 		UserID:           req.UserID,
-		CharacterID:      characterID,
 		SelectedOptionID: selectedOptionID,
 		OtherResponse:    otherResponse,
 	}
@@ -327,19 +316,12 @@ func (s *PollService) SubmitVote(ctx context.Context, req core.SubmitVoteRequest
 }
 
 // GetVote retrieves a user's vote for a poll
-func (s *PollService) GetVote(ctx context.Context, pollID int32, userID int32, characterID *int32) (*db.PollVote, error) {
+func (s *PollService) GetVote(ctx context.Context, pollID int32, userID int32) (*db.PollVote, error) {
 	queries := db.New(s.DB)
 
-	charID := pgtype.Int4{}
-	if characterID != nil {
-		charID.Int32 = *characterID
-		charID.Valid = true
-	}
-
 	params := db.GetVoteByPollAndUserParams{
-		PollID:      pollID,
-		UserID:      userID,
-		CharacterID: charID,
+		PollID: pollID,
+		UserID: userID,
 	}
 
 	vote, err := queries.GetVoteByPollAndUser(ctx, params)
@@ -416,10 +398,6 @@ func (s *PollService) GetPollResults(ctx context.Context, pollID int32, canSeeIn
 						voterInfo := core.VoterInfo{
 							UserID:   vote.UserID,
 							Username: vote.Username,
-						}
-						if vote.CharacterID.Valid {
-							charID := vote.CharacterID.Int32
-							voterInfo.CharacterID = &charID
 						}
 						if vote.CharacterName.Valid {
 							charName := vote.CharacterName.String
@@ -542,18 +520,12 @@ func (s *PollService) DeletePoll(ctx context.Context, pollID int32) error {
 }
 
 // HasUserVoted checks if a user has already voted in a poll
-func (s *PollService) HasUserVoted(ctx context.Context, pollID int32, userID int32, characterID *int32) (bool, error) {
+func (s *PollService) HasUserVoted(ctx context.Context, pollID int32, userID int32) (bool, error) {
 	queries := db.New(s.DB)
 
-	charID := pgtype.Int4{Int32: 0, Valid: false}
-	if characterID != nil {
-		charID = pgtype.Int4{Int32: *characterID, Valid: true}
-	}
-
 	params := db.HasUserVotedParams{
-		PollID:      pollID,
-		UserID:      userID,
-		CharacterID: charID,
+		PollID: pollID,
+		UserID: userID,
 	}
 
 	hasVoted, err := queries.HasUserVoted(ctx, params)
@@ -562,48 +534,4 @@ func (s *PollService) HasUserVoted(ctx context.Context, pollID int32, userID int
 	}
 
 	return hasVoted, nil
-}
-
-// HasUserVotedAny checks if a user has voted in a poll at all (as player OR with any character)
-// Use this for the polls list view to show "Voted" badge
-func (s *PollService) HasUserVotedAny(ctx context.Context, pollID int32, userID int32) (bool, error) {
-	queries := db.New(s.DB)
-
-	params := db.HasUserVotedAnyParams{
-		PollID: pollID,
-		UserID: userID,
-	}
-
-	hasVoted, err := queries.HasUserVotedAny(ctx, params)
-	if err != nil {
-		return false, fmt.Errorf("failed to check if user voted: %w", err)
-	}
-
-	return hasVoted, nil
-}
-
-// GetVotedCharacterIDs returns the list of character IDs that a user has already voted with
-// Use this for character-level polls to show voting progress (e.g., "Voted 2/3")
-func (s *PollService) GetVotedCharacterIDs(ctx context.Context, pollID int32, userID int32) ([]int32, error) {
-	queries := db.New(s.DB)
-
-	params := db.GetUserVotedCharacterIDsParams{
-		PollID: pollID,
-		UserID: userID,
-	}
-
-	characterIDs, err := queries.GetUserVotedCharacterIDs(ctx, params)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get voted character IDs: %w", err)
-	}
-
-	// Convert pgtype.Int4 array to []int32
-	result := make([]int32, 0, len(characterIDs))
-	for _, charID := range characterIDs {
-		if charID.Valid {
-			result = append(result, charID.Int32)
-		}
-	}
-
-	return result, nil
 }

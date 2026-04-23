@@ -86,7 +86,7 @@ export function PollResults({ results, poll, isGM = false, isAudience = false, i
                   <div className="ml-4 text-xs text-text-secondary">
                     {option.voters.map((voter, idx) => (
                       <span key={idx}>
-                        {poll.vote_as_type === 'character' ? voter.character_name : voter.username}
+                        {voter.character_name || voter.username}
                         {voter.other_response && (
                           <span className="italic"> - "{voter.other_response}"</span>
                         )}
@@ -113,7 +113,7 @@ export function PollResults({ results, poll, isGM = false, isAudience = false, i
                 {results.other_responses.map((response) => (
                   <div key={response.vote_id} className="text-sm text-text-secondary">
                     <span className="font-medium text-text-primary">
-                      {poll.vote_as_type === 'character' ? response.character_name : response.username}:
+                      {response.character_name || response.username}:
                     </span>{' '}
                     <span className="italic">"{response.other_text}"</span>
                   </div>

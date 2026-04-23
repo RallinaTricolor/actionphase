@@ -169,7 +169,6 @@ type CommonRoomPoll struct {
 	Question             string             `json:"question"`
 	Description          pgtype.Text        `json:"description"`
 	Deadline             pgtype.Timestamptz `json:"deadline"`
-	VoteAsType           string             `json:"vote_as_type"`
 	ShowIndividualVotes  pgtype.Bool        `json:"show_individual_votes"`
 	AllowOtherOption     pgtype.Bool        `json:"allow_other_option"`
 	IsDeleted            pgtype.Bool        `json:"is_deleted"`
@@ -405,7 +404,6 @@ type PollVote struct {
 	ID               int32              `json:"id"`
 	PollID           int32              `json:"poll_id"`
 	UserID           int32              `json:"user_id"`
-	CharacterID      pgtype.Int4        `json:"character_id"`
 	SelectedOptionID pgtype.Int4        `json:"selected_option_id"`
 	OtherResponse    pgtype.Text        `json:"other_response"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`

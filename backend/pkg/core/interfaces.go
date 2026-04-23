@@ -1322,7 +1322,7 @@ type PollServiceInterface interface {
 
 	// GetVote retrieves a user's vote for a poll.
 	// Returns nil if user hasn't voted yet.
-	GetVote(ctx context.Context, pollID int32, userID int32, characterID *int32) (*models.PollVote, error)
+	GetVote(ctx context.Context, pollID int32, userID int32) (*models.PollVote, error)
 
 	// GetPollResults retrieves aggregated results for a poll.
 	// Returns vote counts per option and respects show_individual_votes setting.
@@ -1340,7 +1340,7 @@ type PollServiceInterface interface {
 
 	// HasUserVoted checks if a user has already voted in a poll.
 	// Useful for validation before rendering vote UI.
-	HasUserVoted(ctx context.Context, pollID int32, userID int32, characterID *int32) (bool, error)
+	HasUserVoted(ctx context.Context, pollID int32, userID int32) (bool, error)
 }
 
 // ==========================================
@@ -1356,7 +1356,6 @@ type CreatePollRequest struct {
 	Question             string
 	Description          *string // Optional
 	Deadline             time.Time
-	VoteAsType           string // "player" or "character"
 	ShowIndividualVotes  bool
 	AllowOtherOption     bool
 	Options              []PollOptionInput // List of poll options
@@ -1381,7 +1380,6 @@ type UpdatePollRequest struct {
 type SubmitVoteRequest struct {
 	PollID           int32
 	UserID           int32
-	CharacterID      *int32  // Only if vote_as_type is "character"
 	SelectedOptionID *int32  // Mutually exclusive with OtherResponse
 	OtherResponse    *string // Mutually exclusive with SelectedOptionID
 }
@@ -1420,7 +1418,6 @@ type OtherResponse struct {
 type VoterInfo struct {
 	UserID        int32
 	Username      string
-	CharacterID   *int32
 	CharacterName *string
 }
 

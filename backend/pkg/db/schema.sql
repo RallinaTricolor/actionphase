@@ -520,7 +520,6 @@ CREATE TABLE common_room_polls (
 
     -- Configuration
     deadline TIMESTAMPTZ NOT NULL,
-    vote_as_type VARCHAR(20) NOT NULL CHECK (vote_as_type IN ('player', 'character')),
     show_individual_votes BOOLEAN DEFAULT FALSE,
     allow_other_option BOOLEAN DEFAULT TRUE,
 
@@ -547,7 +546,6 @@ CREATE TABLE poll_votes (
     id SERIAL PRIMARY KEY,
     poll_id INTEGER NOT NULL REFERENCES common_room_polls(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    character_id INTEGER REFERENCES characters(id) ON DELETE SET NULL,
 
     -- Vote data
     selected_option_id INTEGER REFERENCES poll_options(id) ON DELETE CASCADE,
@@ -558,8 +556,7 @@ CREATE TABLE poll_votes (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
 
     -- Constraints
-    -- User can only vote once per poll (with or without character)
-    UNIQUE (poll_id, user_id, character_id),
+    UNIQUE (poll_id, user_id),
 
     -- Must select an option OR provide "other" response
     CHECK (

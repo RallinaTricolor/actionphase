@@ -67,7 +67,6 @@ func setupPollVoteData(t *testing.T, testDB *core.TestDatabase, app *core.App, r
 		CreatedByUserID: int32(gm.ID),
 		Question:        "Which option do you prefer?",
 		Deadline:        time.Now().Add(24 * time.Hour),
-		VoteAsType:      "player",
 		Options: []core.PollOptionInput{
 			{Text: "Option A", DisplayOrder: 1},
 			{Text: "Option B", DisplayOrder: 2},
@@ -175,7 +174,6 @@ func TestPollVote_AudienceMember_CannotVote_403(t *testing.T) {
 		CreatedByUserID: int32(gm.ID),
 		Question:        "Audience poll test",
 		Deadline:        time.Now().Add(24 * time.Hour),
-		VoteAsType:      "player",
 		Options: []core.PollOptionInput{
 			{Text: "A", DisplayOrder: 1},
 			{Text: "B", DisplayOrder: 2},
@@ -213,7 +211,6 @@ func TestPollVote_AfterDeadline_400(t *testing.T) {
 		CreatedByUserID: int32(gm.ID),
 		Question:        "Expired poll",
 		Deadline:        time.Now().Add(-1 * time.Hour), // past deadline
-		VoteAsType:      "player",
 		Options: []core.PollOptionInput{
 			{Text: "A", DisplayOrder: 1},
 			{Text: "B", DisplayOrder: 2},

@@ -21,12 +21,11 @@ INSERT INTO common_room_polls (
     question,
     description,
     deadline,
-    vote_as_type,
     show_individual_votes,
     allow_other_option
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, vote_as_type, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at
 `
 
 type CreatePollParams struct {
@@ -37,7 +36,6 @@ type CreatePollParams struct {
 	Question             string             `json:"question"`
 	Description          pgtype.Text        `json:"description"`
 	Deadline             pgtype.Timestamptz `json:"deadline"`
-	VoteAsType           string             `json:"vote_as_type"`
 	ShowIndividualVotes  pgtype.Bool        `json:"show_individual_votes"`
 	AllowOtherOption     pgtype.Bool        `json:"allow_other_option"`
 }
@@ -54,7 +52,6 @@ func (q *Queries) CreatePoll(ctx context.Context, arg CreatePollParams) (CommonR
 		arg.Question,
 		arg.Description,
 		arg.Deadline,
-		arg.VoteAsType,
 		arg.ShowIndividualVotes,
 		arg.AllowOtherOption,
 	)
@@ -68,7 +65,6 @@ func (q *Queries) CreatePoll(ctx context.Context, arg CreatePollParams) (CommonR
 		&i.Question,
 		&i.Description,
 		&i.Deadline,
-		&i.VoteAsType,
 		&i.ShowIndividualVotes,
 		&i.AllowOtherOption,
 		&i.IsDeleted,
@@ -129,7 +125,7 @@ func (q *Queries) DeleteVote(ctx context.Context, id int32) error {
 
 const getActivePollsForGame = `-- name: GetActivePollsForGame :many
 
-SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, vote_as_type, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at FROM common_room_polls
+SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at FROM common_room_polls
 WHERE game_id = $1
   AND is_deleted = FALSE
   AND deadline > NOW()
@@ -158,7 +154,6 @@ func (q *Queries) GetActivePollsForGame(ctx context.Context, gameID int32) ([]Co
 			&i.Question,
 			&i.Description,
 			&i.Deadline,
-			&i.VoteAsType,
 			&i.ShowIndividualVotes,
 			&i.AllowOtherOption,
 			&i.IsDeleted,
@@ -176,7 +171,7 @@ func (q *Queries) GetActivePollsForGame(ctx context.Context, gameID int32) ([]Co
 }
 
 const getExpiredPolls = `-- name: GetExpiredPolls :many
-SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, vote_as_type, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at FROM common_room_polls
+SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at FROM common_room_polls
 WHERE is_deleted = FALSE
   AND deadline <= NOW()
 ORDER BY deadline DESC
@@ -201,7 +196,6 @@ func (q *Queries) GetExpiredPolls(ctx context.Context) ([]CommonRoomPoll, error)
 			&i.Question,
 			&i.Description,
 			&i.Deadline,
-			&i.VoteAsType,
 			&i.ShowIndividualVotes,
 			&i.AllowOtherOption,
 			&i.IsDeleted,
@@ -241,14 +235,13 @@ const getOtherResponses = `-- name: GetOtherResponses :many
 SELECT
     pv.id,
     pv.user_id,
-    pv.character_id,
     pv.other_response,
     pv.created_at,
     u.username,
     c.name as character_name
 FROM poll_votes pv
 JOIN users u ON pv.user_id = u.id
-LEFT JOIN characters c ON pv.character_id = c.id
+LEFT JOIN characters c ON c.game_id = (SELECT game_id FROM common_room_polls WHERE id = pv.poll_id) AND c.user_id = pv.user_id
 WHERE pv.poll_id = $1
   AND pv.other_response IS NOT NULL
 ORDER BY pv.created_at ASC
@@ -257,7 +250,6 @@ ORDER BY pv.created_at ASC
 type GetOtherResponsesRow struct {
 	ID            int32              `json:"id"`
 	UserID        int32              `json:"user_id"`
-	CharacterID   pgtype.Int4        `json:"character_id"`
 	OtherResponse pgtype.Text        `json:"other_response"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	Username      string             `json:"username"`
@@ -277,7 +269,6 @@ func (q *Queries) GetOtherResponses(ctx context.Context, pollID int32) ([]GetOth
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.CharacterID,
 			&i.OtherResponse,
 			&i.CreatedAt,
 			&i.Username,
@@ -308,7 +299,7 @@ func (q *Queries) GetOtherVoteCount(ctx context.Context, pollID int32) (int64, e
 }
 
 const getPoll = `-- name: GetPoll :one
-SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, vote_as_type, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at FROM common_room_polls
+SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at FROM common_room_polls
 WHERE id = $1 AND is_deleted = FALSE
 `
 
@@ -324,7 +315,6 @@ func (q *Queries) GetPoll(ctx context.Context, id int32) (CommonRoomPoll, error)
 		&i.Question,
 		&i.Description,
 		&i.Deadline,
-		&i.VoteAsType,
 		&i.ShowIndividualVotes,
 		&i.AllowOtherOption,
 		&i.IsDeleted,
@@ -433,7 +423,6 @@ const getPollVotesWithDetails = `-- name: GetPollVotesWithDetails :many
 SELECT
     pv.id,
     pv.user_id,
-    pv.character_id,
     pv.selected_option_id,
     pv.other_response,
     pv.created_at,
@@ -441,7 +430,7 @@ SELECT
     c.name as character_name
 FROM poll_votes pv
 JOIN users u ON pv.user_id = u.id
-LEFT JOIN characters c ON pv.character_id = c.id
+LEFT JOIN characters c ON c.game_id = (SELECT game_id FROM common_room_polls WHERE id = pv.poll_id) AND c.user_id = pv.user_id
 WHERE pv.poll_id = $1
 ORDER BY pv.created_at ASC
 `
@@ -449,7 +438,6 @@ ORDER BY pv.created_at ASC
 type GetPollVotesWithDetailsRow struct {
 	ID               int32              `json:"id"`
 	UserID           int32              `json:"user_id"`
-	CharacterID      pgtype.Int4        `json:"character_id"`
 	SelectedOptionID pgtype.Int4        `json:"selected_option_id"`
 	OtherResponse    pgtype.Text        `json:"other_response"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
@@ -470,7 +458,6 @@ func (q *Queries) GetPollVotesWithDetails(ctx context.Context, pollID int32) ([]
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.CharacterID,
 			&i.SelectedOptionID,
 			&i.OtherResponse,
 			&i.CreatedAt,
@@ -487,99 +474,24 @@ func (q *Queries) GetPollVotesWithDetails(ctx context.Context, pollID int32) ([]
 	return items, nil
 }
 
-const getUserVote = `-- name: GetUserVote :one
-SELECT id, poll_id, user_id, character_id, selected_option_id, other_response, created_at, updated_at FROM poll_votes
+const getVoteByPollAndUser = `-- name: GetVoteByPollAndUser :one
+SELECT id, poll_id, user_id, selected_option_id, other_response, created_at, updated_at FROM poll_votes
 WHERE poll_id = $1
   AND user_id = $2
-  AND (
-    ($3::integer IS NOT NULL AND character_id = $3) OR
-    ($3::integer IS NULL AND character_id IS NULL)
-  )
 `
 
-type GetUserVoteParams struct {
-	PollID  int32 `json:"poll_id"`
-	UserID  int32 `json:"user_id"`
-	Column3 int32 `json:"column_3"`
-}
-
-// Get user's vote for a specific poll (character-specific or player-level)
-func (q *Queries) GetUserVote(ctx context.Context, arg GetUserVoteParams) (PollVote, error) {
-	row := q.db.QueryRow(ctx, getUserVote, arg.PollID, arg.UserID, arg.Column3)
-	var i PollVote
-	err := row.Scan(
-		&i.ID,
-		&i.PollID,
-		&i.UserID,
-		&i.CharacterID,
-		&i.SelectedOptionID,
-		&i.OtherResponse,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getUserVotedCharacterIDs = `-- name: GetUserVotedCharacterIDs :many
-SELECT character_id
-FROM poll_votes
-WHERE poll_id = $1
-  AND user_id = $2
-  AND character_id IS NOT NULL
-`
-
-type GetUserVotedCharacterIDsParams struct {
+type GetVoteByPollAndUserParams struct {
 	PollID int32 `json:"poll_id"`
 	UserID int32 `json:"user_id"`
 }
 
-// Get list of character IDs that a user has already voted with in a poll
-// Use this to show voting progress (e.g., "Voted 2/3") and filter dropdown
-func (q *Queries) GetUserVotedCharacterIDs(ctx context.Context, arg GetUserVotedCharacterIDsParams) ([]pgtype.Int4, error) {
-	rows, err := q.db.Query(ctx, getUserVotedCharacterIDs, arg.PollID, arg.UserID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []pgtype.Int4
-	for rows.Next() {
-		var character_id pgtype.Int4
-		if err := rows.Scan(&character_id); err != nil {
-			return nil, err
-		}
-		items = append(items, character_id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getVoteByPollAndUser = `-- name: GetVoteByPollAndUser :one
-SELECT id, poll_id, user_id, character_id, selected_option_id, other_response, created_at, updated_at FROM poll_votes
-WHERE poll_id = $1
-  AND user_id = $2
-  AND (
-    -- Match exact character_id or both are NULL
-    (character_id = $3) OR
-    (character_id IS NULL AND $3::integer IS NULL)
-  )
-`
-
-type GetVoteByPollAndUserParams struct {
-	PollID      int32       `json:"poll_id"`
-	UserID      int32       `json:"user_id"`
-	CharacterID pgtype.Int4 `json:"character_id"`
-}
-
 func (q *Queries) GetVoteByPollAndUser(ctx context.Context, arg GetVoteByPollAndUserParams) (PollVote, error) {
-	row := q.db.QueryRow(ctx, getVoteByPollAndUser, arg.PollID, arg.UserID, arg.CharacterID)
+	row := q.db.QueryRow(ctx, getVoteByPollAndUser, arg.PollID, arg.UserID)
 	var i PollVote
 	err := row.Scan(
 		&i.ID,
 		&i.PollID,
 		&i.UserID,
-		&i.CharacterID,
 		&i.SelectedOptionID,
 		&i.OtherResponse,
 		&i.CreatedAt,
@@ -593,49 +505,24 @@ SELECT EXISTS(
     SELECT 1 FROM poll_votes
     WHERE poll_id = $1
       AND user_id = $2
-      AND COALESCE(character_id, 0) = COALESCE($3, 0)
 ) as has_voted
 `
 
 type HasUserVotedParams struct {
-	PollID      int32       `json:"poll_id"`
-	UserID      int32       `json:"user_id"`
-	CharacterID pgtype.Int4 `json:"character_id"`
-}
-
-// Check if user has already voted in a poll
-// Note: NULL character_id in both table and parameter means player-level vote
-func (q *Queries) HasUserVoted(ctx context.Context, arg HasUserVotedParams) (bool, error) {
-	row := q.db.QueryRow(ctx, hasUserVoted, arg.PollID, arg.UserID, arg.CharacterID)
-	var has_voted bool
-	err := row.Scan(&has_voted)
-	return has_voted, err
-}
-
-const hasUserVotedAny = `-- name: HasUserVotedAny :one
-SELECT EXISTS(
-    SELECT 1 FROM poll_votes
-    WHERE poll_id = $1
-      AND user_id = $2
-) as has_voted
-`
-
-type HasUserVotedAnyParams struct {
 	PollID int32 `json:"poll_id"`
 	UserID int32 `json:"user_id"`
 }
 
-// Check if user has voted in a poll at all (as player OR with any character)
-// Use this for the polls list view to show "Voted" badge
-func (q *Queries) HasUserVotedAny(ctx context.Context, arg HasUserVotedAnyParams) (bool, error) {
-	row := q.db.QueryRow(ctx, hasUserVotedAny, arg.PollID, arg.UserID)
+// Check if user has already voted in a poll
+func (q *Queries) HasUserVoted(ctx context.Context, arg HasUserVotedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasUserVoted, arg.PollID, arg.UserID)
 	var has_voted bool
 	err := row.Scan(&has_voted)
 	return has_voted, err
 }
 
 const listPollsByGame = `-- name: ListPollsByGame :many
-SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, vote_as_type, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at FROM common_room_polls
+SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at FROM common_room_polls
 WHERE game_id = $1
   AND is_deleted = FALSE
   AND (
@@ -668,7 +555,6 @@ func (q *Queries) ListPollsByGame(ctx context.Context, arg ListPollsByGameParams
 			&i.Question,
 			&i.Description,
 			&i.Deadline,
-			&i.VoteAsType,
 			&i.ShowIndividualVotes,
 			&i.AllowOtherOption,
 			&i.IsDeleted,
@@ -686,7 +572,7 @@ func (q *Queries) ListPollsByGame(ctx context.Context, arg ListPollsByGameParams
 }
 
 const listPollsByPhase = `-- name: ListPollsByPhase :many
-SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, vote_as_type, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at FROM common_room_polls
+SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at FROM common_room_polls
 WHERE game_id = $1
   AND phase_id = $2
   AND is_deleted = FALSE
@@ -716,7 +602,6 @@ func (q *Queries) ListPollsByPhase(ctx context.Context, arg ListPollsByPhasePara
 			&i.Question,
 			&i.Description,
 			&i.Deadline,
-			&i.VoteAsType,
 			&i.ShowIndividualVotes,
 			&i.AllowOtherOption,
 			&i.IsDeleted,
@@ -749,18 +634,16 @@ const submitVote = `-- name: SubmitVote :one
 INSERT INTO poll_votes (
     poll_id,
     user_id,
-    character_id,
     selected_option_id,
     other_response
 )
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, poll_id, user_id, character_id, selected_option_id, other_response, created_at, updated_at
+VALUES ($1, $2, $3, $4)
+RETURNING id, poll_id, user_id, selected_option_id, other_response, created_at, updated_at
 `
 
 type SubmitVoteParams struct {
 	PollID           int32       `json:"poll_id"`
 	UserID           int32       `json:"user_id"`
-	CharacterID      pgtype.Int4 `json:"character_id"`
 	SelectedOptionID pgtype.Int4 `json:"selected_option_id"`
 	OtherResponse    pgtype.Text `json:"other_response"`
 }
@@ -772,7 +655,6 @@ func (q *Queries) SubmitVote(ctx context.Context, arg SubmitVoteParams) (PollVot
 	row := q.db.QueryRow(ctx, submitVote,
 		arg.PollID,
 		arg.UserID,
-		arg.CharacterID,
 		arg.SelectedOptionID,
 		arg.OtherResponse,
 	)
@@ -781,7 +663,6 @@ func (q *Queries) SubmitVote(ctx context.Context, arg SubmitVoteParams) (PollVot
 		&i.ID,
 		&i.PollID,
 		&i.UserID,
-		&i.CharacterID,
 		&i.SelectedOptionID,
 		&i.OtherResponse,
 		&i.CreatedAt,
@@ -799,7 +680,7 @@ SET question = $2,
     allow_other_option = $6,
     updated_at = NOW()
 WHERE id = $1 AND is_deleted = FALSE
-RETURNING id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, vote_as_type, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at
+RETURNING id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at
 `
 
 type UpdatePollParams struct {
@@ -830,7 +711,6 @@ func (q *Queries) UpdatePoll(ctx context.Context, arg UpdatePollParams) (CommonR
 		&i.Question,
 		&i.Description,
 		&i.Deadline,
-		&i.VoteAsType,
 		&i.ShowIndividualVotes,
 		&i.AllowOtherOption,
 		&i.IsDeleted,
@@ -846,7 +726,7 @@ SET selected_option_id = $2,
     other_response = $3,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, poll_id, user_id, character_id, selected_option_id, other_response, created_at, updated_at
+RETURNING id, poll_id, user_id, selected_option_id, other_response, created_at, updated_at
 `
 
 type UpdateVoteParams struct {
@@ -862,7 +742,6 @@ func (q *Queries) UpdateVote(ctx context.Context, arg UpdateVoteParams) (PollVot
 		&i.ID,
 		&i.PollID,
 		&i.UserID,
-		&i.CharacterID,
 		&i.SelectedOptionID,
 		&i.OtherResponse,
 		&i.CreatedAt,
