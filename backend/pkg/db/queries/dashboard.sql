@@ -79,6 +79,8 @@ SELECT
   m.content,
   m.created_at,
   g.title as game_title,
+  g.is_anonymous,
+  COALESCE(gp.role, 'gm') as viewer_role,
   author.username as author_name,
   character.name as character_name,
   m.message_type,

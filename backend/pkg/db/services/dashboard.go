@@ -170,16 +170,22 @@ func transformGameCard(game db.GetUserDashboardGamesRow) *core.DashboardGameCard
 	return card
 }
 
-// transformMessages converts database message rows to domain models
+// transformMessages converts database message rows to domain models.
+// Redacts author names for players in anonymous games (GMs and co-GMs retain visibility).
 func transformMessages(dbMessages []db.GetUserRecentMessagesRow) []*core.DashboardMessage {
 	messages := make([]*core.DashboardMessage, 0, len(dbMessages))
 
 	for _, msg := range dbMessages {
+		authorName := msg.AuthorName
+		if msg.IsAnonymous && msg.ViewerRole == "player" {
+			authorName = ""
+		}
+
 		message := &core.DashboardMessage{
 			MessageID:   msg.MessageID,
 			GameID:      msg.GameID,
 			GameTitle:   msg.GameTitle,
-			AuthorName:  msg.AuthorName,
+			AuthorName:  authorName,
 			Content:     core.TruncateContent(msg.Content, 100),
 			MessageType: string(msg.MessageType),
 			CreatedAt:   msg.CreatedAt.Time,

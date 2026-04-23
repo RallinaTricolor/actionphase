@@ -497,3 +497,74 @@ func TestDashboardService_GetUserDashboard_ExcludesCompletedGames(t *testing.T) 
 	core.AssertEqual(t, activeGame.ID, dashboardGM.GMGames[0].GameID, "GM should see the active game")
 	core.AssertEqual(t, "Active Game", dashboardGM.GMGames[0].Title, "GM should see 'Active Game'")
 }
+
+// TestDashboardService_RecentMessages_AnonymousMode verifies that player usernames are
+// redacted in recent activity messages when the game is in anonymous mode.
+// Anonymous mode hides which player controls which character, so a character is required.
+func TestDashboardService_RecentMessages_AnonymousMode(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "characters", "game_phases", "game_participants", "games", "users")
+
+	factory := core.NewTestDataFactory(testDB, t)
+	service := &DashboardService{DB: testDB.Pool}
+
+	gm := factory.NewUser().Create()
+	player := factory.NewUser().Create()
+	otherPlayer := factory.NewUser().WithUsername("visible_player").Create()
+
+	anonGame := factory.NewGame().WithGM(gm.ID).WithState("in_progress").WithAnonymous().Create()
+	factory.NewGameParticipant().ForGame(anonGame.ID).WithUser(player.ID).WithRole("player").Create()
+	factory.NewGameParticipant().ForGame(anonGame.ID).WithUser(otherPlayer.ID).WithRole("player").Create()
+
+	phase := factory.NewPhase().InGame(anonGame).CommonRoom().Active().Create()
+	character := factory.NewCharacter().InGame(anonGame).OwnedBy(otherPlayer).WithName("Mystery Knight").Create()
+	factory.NewPost().InGame(anonGame).InPhase(phase).ByAuthor(otherPlayer).ByCharacter(character).
+		WithContent("Anonymous game message").Create()
+
+	t.Run("player cannot see author username in anonymous game", func(t *testing.T) {
+		dashboard, err := service.GetUserDashboard(context.Background(), player.ID)
+		core.AssertNoError(t, err, "Failed to get dashboard")
+		core.AssertTrue(t, len(dashboard.RecentMessages) > 0, "Should have recent messages")
+		core.AssertEqual(t, "", dashboard.RecentMessages[0].AuthorName,
+			"Author name must be empty for player in anonymous game")
+	})
+
+	t.Run("GM can see author username in anonymous game", func(t *testing.T) {
+		dashboard, err := service.GetUserDashboard(context.Background(), gm.ID)
+		core.AssertNoError(t, err, "Failed to get GM dashboard")
+		core.AssertTrue(t, len(dashboard.RecentMessages) > 0, "GM should see recent messages")
+		core.AssertEqual(t, otherPlayer.Username, dashboard.RecentMessages[0].AuthorName,
+			"GM must see author name even in anonymous game")
+	})
+}
+
+// TestDashboardService_RecentMessages_NonAnonymousShowsUsername verifies that usernames
+// are visible in non-anonymous games (ensures no over-redaction).
+func TestDashboardService_RecentMessages_NonAnonymousShowsUsername(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "characters", "game_phases", "game_participants", "games", "users")
+
+	factory := core.NewTestDataFactory(testDB, t)
+	service := &DashboardService{DB: testDB.Pool}
+
+	gm := factory.NewUser().Create()
+	player := factory.NewUser().Create()
+	otherPlayer := factory.NewUser().WithUsername("known_player").Create()
+
+	game := factory.NewGame().WithGM(gm.ID).WithState("in_progress").Create()
+	factory.NewGameParticipant().ForGame(game.ID).WithUser(player.ID).WithRole("player").Create()
+	factory.NewGameParticipant().ForGame(game.ID).WithUser(otherPlayer.ID).WithRole("player").Create()
+
+	phase := factory.NewPhase().InGame(game).CommonRoom().Active().Create()
+	character := factory.NewCharacter().InGame(game).OwnedBy(otherPlayer).WithName("Named Hero").Create()
+	factory.NewPost().InGame(game).InPhase(phase).ByAuthor(otherPlayer).ByCharacter(character).
+		WithContent("Public game message").Create()
+
+	dashboard, err := service.GetUserDashboard(context.Background(), player.ID)
+	core.AssertNoError(t, err, "Failed to get dashboard")
+	core.AssertTrue(t, len(dashboard.RecentMessages) > 0, "Should have recent messages")
+	core.AssertEqual(t, otherPlayer.Username, dashboard.RecentMessages[0].AuthorName,
+		"Author name must be visible in non-anonymous game")
+}

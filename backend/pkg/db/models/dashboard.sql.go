@@ -181,6 +181,8 @@ SELECT
   m.content,
   m.created_at,
   g.title as game_title,
+  g.is_anonymous,
+  COALESCE(gp.role, 'gm') as viewer_role,
   author.username as author_name,
   character.name as character_name,
   m.message_type,
@@ -209,6 +211,8 @@ type GetUserRecentMessagesRow struct {
 	Content       string           `json:"content"`
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
 	GameTitle     string           `json:"game_title"`
+	IsAnonymous   bool             `json:"is_anonymous"`
+	ViewerRole    string           `json:"viewer_role"`
 	AuthorName    string           `json:"author_name"`
 	CharacterName pgtype.Text      `json:"character_name"`
 	MessageType   MessageType      `json:"message_type"`
@@ -231,6 +235,8 @@ func (q *Queries) GetUserRecentMessages(ctx context.Context, arg GetUserRecentMe
 			&i.Content,
 			&i.CreatedAt,
 			&i.GameTitle,
+			&i.IsAnonymous,
+			&i.ViewerRole,
 			&i.AuthorName,
 			&i.CharacterName,
 			&i.MessageType,

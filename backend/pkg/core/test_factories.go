@@ -111,6 +111,7 @@ type GameBuilder struct {
 	state               string
 	maxPlayers          int32
 	isPublic            bool
+	isAnonymous         bool
 	startDate           *time.Time
 	endDate             *time.Time
 	recruitmentDeadline *time.Time
@@ -166,6 +167,11 @@ func (b *GameBuilder) AsPrivate() *GameBuilder {
 	return b
 }
 
+func (b *GameBuilder) WithAnonymous() *GameBuilder {
+	b.isAnonymous = true
+	return b
+}
+
 func (b *GameBuilder) WithStartDate(startDate time.Time) *GameBuilder {
 	b.startDate = &startDate
 	return b
@@ -190,6 +196,7 @@ func (b *GameBuilder) Create() db.Game {
 		Genre:       pgtype.Text{String: b.genre, Valid: true},
 		MaxPlayers:  pgtype.Int4{Int32: b.maxPlayers, Valid: true},
 		IsPublic:    pgtype.Bool{Bool: b.isPublic, Valid: true},
+		IsAnonymous: b.isAnonymous,
 	}
 
 	if b.startDate != nil {

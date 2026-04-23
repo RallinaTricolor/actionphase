@@ -55,8 +55,10 @@ export function RecentActivityCard({ messages }: RecentActivityCardProps) {
                 </p>
                 <p className="text-xs text-content-tertiary">
                   {message.character_name
-                    ? `${message.author_name} as ${message.character_name}`
-                    : message.author_name}
+                    ? message.author_name
+                      ? `${message.author_name} as ${message.character_name}`
+                      : message.character_name
+                    : message.author_name || 'Unknown'}
                 </p>
               </div>
               <div className="ml-2 flex items-center text-xs text-content-tertiary">
