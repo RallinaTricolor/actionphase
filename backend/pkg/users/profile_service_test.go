@@ -267,6 +267,58 @@ func TestUpdateUserProfile(t *testing.T) {
 	}
 }
 
+// TestGetUserGames_ExcludesAudienceGames verifies that games where the user was only an
+// audience member are excluded from their profile game history.
+func TestGetUserGames_ExcludesAudienceGames(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "users")
+
+	factory := core.NewTestDataFactory(testDB, t)
+	service := &UserProfileService{DB: testDB.Pool}
+	ctx := context.Background()
+
+	gm := factory.NewUser().Create()
+	user := factory.NewUser().Create()
+
+	playerGame := factory.NewGame().WithTitle("Played Game").WithGM(gm.ID).WithState("completed").Create()
+	factory.NewGameParticipant().ForGame(playerGame.ID).WithUser(user.ID).WithRole("player").Create()
+
+	audienceGame := factory.NewGame().WithTitle("Watched Game").WithGM(gm.ID).WithState("in_progress").Create()
+	factory.NewGameParticipant().ForGame(audienceGame.ID).WithUser(user.ID).WithRole("audience").Create()
+
+	games, err := service.GetUserGames(ctx, user.ID, 10, 0)
+	core.AssertNoError(t, err, "GetUserGames should not error")
+
+	core.AssertEqual(t, 1, len(games), "Should return only the player game, not the audience game")
+	core.AssertEqual(t, "Played Game", games[0].Title, "Returned game should be the one played, not watched")
+}
+
+// TestCountUserProfileGames_ExcludesAudienceGames verifies the count also excludes audience games.
+func TestCountUserProfileGames_ExcludesAudienceGames(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "users")
+
+	factory := core.NewTestDataFactory(testDB, t)
+	service := &UserProfileService{DB: testDB.Pool}
+	ctx := context.Background()
+
+	gm := factory.NewUser().Create()
+	user := factory.NewUser().Create()
+
+	playerGame := factory.NewGame().WithTitle("Played Game").WithGM(gm.ID).Create()
+	factory.NewGameParticipant().ForGame(playerGame.ID).WithUser(user.ID).WithRole("player").Create()
+
+	audienceGame := factory.NewGame().WithTitle("Watched Game").WithGM(gm.ID).Create()
+	factory.NewGameParticipant().ForGame(audienceGame.ID).WithUser(user.ID).WithRole("audience").Create()
+
+	// GetUserProfile uses CountUserProfileGames internally for pagination metadata
+	resp, err := service.GetUserProfile(ctx, user.ID, 1, 12)
+	core.AssertNoError(t, err, "GetUserProfile should not error")
+	core.AssertEqual(t, 1, resp.Metadata.TotalCount, "Total count should exclude audience games")
+}
+
 // Helper function to create string pointer
 func stringPtr(s string) *string {
 	return &s
