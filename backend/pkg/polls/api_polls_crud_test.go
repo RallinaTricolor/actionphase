@@ -51,8 +51,8 @@ func setupPollCRUDTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux 
 func createTestPoll(t *testing.T, router *chi.Mux, gameID int32, gmToken string) int32 {
 	t.Helper()
 	body := CreatePollRequest{
-		Question:   "Which route should we take?",
-		Deadline:   time.Now().Add(24 * time.Hour),
+		Question: "Which route should we take?",
+		Deadline: time.Now().Add(24 * time.Hour),
 		Options: []PollOptionRequest{
 			{Text: "Forest path", DisplayOrder: 1},
 			{Text: "Mountain pass", DisplayOrder: 2},
@@ -99,8 +99,8 @@ func TestPollCRUD_CreatePoll(t *testing.T) {
 
 	t.Run("GM creates poll successfully", func(t *testing.T) {
 		body := CreatePollRequest{
-			Question:   "Which path to take?",
-			Deadline:   time.Now().Add(24 * time.Hour),
+			Question: "Which path to take?",
+			Deadline: time.Now().Add(24 * time.Hour),
 			Options: []PollOptionRequest{
 				{Text: "Option A", DisplayOrder: 1},
 				{Text: "Option B", DisplayOrder: 2},
@@ -126,8 +126,8 @@ func TestPollCRUD_CreatePoll(t *testing.T) {
 
 	t.Run("non-GM player cannot create poll", func(t *testing.T) {
 		body := CreatePollRequest{
-			Question:   "Should we rest?",
-			Deadline:   time.Now().Add(24 * time.Hour),
+			Question: "Should we rest?",
+			Deadline: time.Now().Add(24 * time.Hour),
 			Options: []PollOptionRequest{
 				{Text: "Yes", DisplayOrder: 1},
 				{Text: "No", DisplayOrder: 2},
@@ -147,8 +147,8 @@ func TestPollCRUD_CreatePoll(t *testing.T) {
 
 	t.Run("rejects poll with only one option", func(t *testing.T) {
 		body := CreatePollRequest{
-			Question:   "Which path?",
-			Deadline:   time.Now().Add(24 * time.Hour),
+			Question: "Which path?",
+			Deadline: time.Now().Add(24 * time.Hour),
 			Options: []PollOptionRequest{
 				{Text: "Only option", DisplayOrder: 1},
 			},

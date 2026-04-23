@@ -723,8 +723,8 @@ func TestCreatePoll_ValidationErrors(t *testing.T) {
 		{
 			name: "empty_question",
 			payload: CreatePollRequest{
-				Question:   "",
-				Deadline:   futureDeadline,
+				Question: "",
+				Deadline: futureDeadline,
 				Options: []PollOptionRequest{
 					{Text: "Option 1", DisplayOrder: 1},
 					{Text: "Option 2", DisplayOrder: 2},
@@ -737,8 +737,8 @@ func TestCreatePoll_ValidationErrors(t *testing.T) {
 		{
 			name: "past_deadline",
 			payload: CreatePollRequest{
-				Question:   "Valid Question",
-				Deadline:   pastDeadline,
+				Question: "Valid Question",
+				Deadline: pastDeadline,
 				Options: []PollOptionRequest{
 					{Text: "Option 1", DisplayOrder: 1},
 					{Text: "Option 2", DisplayOrder: 2},
@@ -751,9 +751,9 @@ func TestCreatePoll_ValidationErrors(t *testing.T) {
 		{
 			name: "no_options",
 			payload: CreatePollRequest{
-				Question:   "Valid Question",
-				Deadline:   futureDeadline,
-				Options:    []PollOptionRequest{},
+				Question: "Valid Question",
+				Deadline: futureDeadline,
+				Options:  []PollOptionRequest{},
 			},
 			expectedStatus: 400,
 			expectedError:  "at least 2 options are required",
@@ -762,8 +762,8 @@ func TestCreatePoll_ValidationErrors(t *testing.T) {
 		{
 			name: "only_one_option",
 			payload: CreatePollRequest{
-				Question:   "Valid Question",
-				Deadline:   futureDeadline,
+				Question: "Valid Question",
+				Deadline: futureDeadline,
 				Options: []PollOptionRequest{
 					{Text: "Only Option", DisplayOrder: 1},
 				},

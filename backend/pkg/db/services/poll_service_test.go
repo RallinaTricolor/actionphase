@@ -634,4 +634,3 @@ func TestPollService_HasUserVoted(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, hasVoted)
 }
-
