@@ -1,9 +1,11 @@
 package core
 
 import (
+	"actionphase/pkg/observability"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -400,20 +402,28 @@ func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
 	return defaultValue
 }
 
+// getEnvStringSlice reads a comma-separated environment variable into a slice.
+//
+// Entries are trimmed and empties dropped, so "a, b," yields ["a", "b"]. A
+// variable that is unset, empty, or holds only separators falls back to
+// defaultValue rather than an empty slice, since an accidental blank should not
+// silently mean "no entries" for allow-list style settings.
 func getEnvStringSlice(key string, defaultValue []string) []string {
-	if value := os.Getenv(key); value != "" {
-		// Simple comma-separated parsing - could be enhanced
-		result := []string{}
-		for _, v := range []string{value} {
-			if v != "" {
-				result = append(result, v)
-			}
-		}
-		if len(result) > 0 {
-			return result
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	result := []string{}
+	for _, v := range strings.Split(value, ",") {
+		if trimmed := strings.TrimSpace(v); trimmed != "" {
+			result = append(result, trimmed)
 		}
 	}
-	return defaultValue
+	if len(result) == 0 {
+		return defaultValue
+	}
+	return result
 }
 
 func contains(slice []string, item string) bool {
@@ -446,5 +456,17 @@ func getPoolDefaults(environment string) (int, int) {
 	default:
 		// Unknown environment - use development defaults
 		return 5, 1
+	}
+}
+
+// CORSConfig translates the app's CORS settings into the shape the
+// observability middleware consumes.
+//
+// The middleware lives in observability, which cannot import core (core imports
+// it), so the config-to-middleware direction has to be spelled out here.
+func (c *Config) CORSConfig() observability.CORSConfig {
+	return observability.CORSConfig{
+		Enabled:        c.App.CORSEnabled,
+		AllowedOrigins: c.App.CORSOrigins,
 	}
 }

@@ -26,9 +26,12 @@ func New(environment, logLevel string) *Observability {
 
 // MiddlewareStack returns a complete middleware stack for HTTP observability.
 // This includes request tracing, metrics collection, error recovery, and CORS.
-func (o *Observability) MiddlewareStack() []func(http.Handler) http.Handler {
+//
+// cors carries the allow-list from the loaded application config; the caller
+// translates it because core imports this package and cannot be imported back.
+func (o *Observability) MiddlewareStack(cors CORSConfig) []func(http.Handler) http.Handler {
 	return []func(http.Handler) http.Handler{
-		CORSMiddleware(),                            // Handle CORS first
+		CORSMiddleware(cors),                        // Handle CORS first
 		HealthCheckMiddleware("/health"),            // Health check bypass
 		ErrorRecoveryMiddleware(o.Logger),           // Panic recovery
 		RequestTracingMiddleware(o.Logger),          // Request tracing and correlation IDs
