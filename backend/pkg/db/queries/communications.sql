@@ -118,7 +118,7 @@ SELECT c.*,
             ) unique_participants),
            ''
        )::text as participant_names,
-       unread.unread_count::bigint,
+       unread.unread_count::bigint as unread_count,
        cr.last_read_message_id,
        cr.last_read_at
 FROM conversations c
