@@ -481,17 +481,6 @@ components:
             required:
                 - banner_url
             type: object
-        Bool:
-            additionalProperties: false
-            properties:
-                Bool:
-                    type: boolean
-                Valid:
-                    type: boolean
-            required:
-                - Bool
-                - Valid
-            type: object
         ChangeEmailRequest:
             additionalProperties: false
             properties:
@@ -939,62 +928,6 @@ components:
                 - character_name
                 - character_avatar_url
             type: object
-        CommonRoomPoll:
-            additionalProperties: false
-            properties:
-                allow_audience_voting:
-                    type: boolean
-                allow_other_option:
-                    $ref: '#/components/schemas/Bool'
-                created_at:
-                    $ref: '#/components/schemas/Timestamptz'
-                created_by_character_id:
-                    $ref: '#/components/schemas/Int4'
-                created_by_user_id:
-                    format: int32
-                    type: integer
-                deadline:
-                    $ref: '#/components/schemas/Timestamptz'
-                description:
-                    $ref: '#/components/schemas/Text'
-                game_id:
-                    format: int32
-                    type: integer
-                hide_results_from_players:
-                    type: boolean
-                id:
-                    format: int32
-                    type: integer
-                is_deleted:
-                    $ref: '#/components/schemas/Bool'
-                phase_id:
-                    $ref: '#/components/schemas/Int4'
-                question:
-                    type: string
-                show_individual_votes:
-                    $ref: '#/components/schemas/Bool'
-                show_running_totals_to_players:
-                    type: boolean
-                updated_at:
-                    $ref: '#/components/schemas/Timestamptz'
-            required:
-                - id
-                - game_id
-                - phase_id
-                - created_by_user_id
-                - created_by_character_id
-                - question
-                - description
-                - deadline
-                - show_individual_votes
-                - allow_other_option
-                - hide_results_from_players
-                - allow_audience_voting
-                - show_running_totals_to_players
-                - is_deleted
-                - created_at
-                - updated_at
-            type: object
         Community:
             additionalProperties: false
             properties:
@@ -1363,13 +1296,29 @@ components:
                 - created_at
                 - updated_at
             type: object
-        Conversation:
+        ConversationDetailOutputBody:
+            additionalProperties: false
+            properties:
+                conversation:
+                    $ref: '#/components/schemas/ConversationResponse'
+                participants:
+                    items:
+                        $ref: '#/components/schemas/ConversationParticipantResponse'
+                    type:
+                        - array
+                        - "null"
+            required:
+                - conversation
+                - participants
+            type: object
+        ConversationListItemResponse:
             additionalProperties: false
             properties:
                 conversation_type:
                     type: string
                 created_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 created_by_user_id:
                     format: int32
                     type: integer
@@ -1379,10 +1328,38 @@ components:
                 id:
                     format: int32
                     type: integer
+                last_message:
+                    type: string
+                last_message_at:
+                    format: date-time
+                    type:
+                        - string
+                        - "null"
+                last_read_at:
+                    format: date-time
+                    type:
+                        - string
+                        - "null"
+                last_read_message_id:
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
+                participant_count:
+                    format: int64
+                    type: integer
+                participant_names:
+                    type: string
                 title:
-                    $ref: '#/components/schemas/Text'
+                    type:
+                        - string
+                        - "null"
+                unread_count:
+                    format: int64
+                    type: integer
                 updated_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
             required:
                 - id
                 - game_id
@@ -1391,21 +1368,82 @@ components:
                 - created_by_user_id
                 - created_at
                 - updated_at
+                - participant_count
+                - last_message
+                - last_message_at
+                - participant_names
+                - unread_count
+                - last_read_message_id
+                - last_read_at
             type: object
-        ConversationDetailOutputBody:
+        ConversationMessageResponse:
             additionalProperties: false
             properties:
-                conversation:
-                    $ref: '#/components/schemas/Conversation'
-                participants:
-                    items:
-                        $ref: '#/components/schemas/GetConversationParticipantsRow'
+                content:
+                    type: string
+                conversation_id:
+                    format: int32
+                    type: integer
+                created_at:
+                    format: date-time
+                    type: string
+                deleted_at:
+                    format: date-time
                     type:
-                        - array
+                        - string
                         - "null"
+                edit_count:
+                    format: int32
+                    type: integer
+                edited_at:
+                    format: date-time
+                    type:
+                        - string
+                        - "null"
+                id:
+                    format: int32
+                    type: integer
+                is_deleted:
+                    type: boolean
+                is_edited:
+                    type: boolean
+                sender_avatar_url:
+                    type:
+                        - string
+                        - "null"
+                sender_character_id:
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
+                sender_character_name:
+                    type:
+                        - string
+                        - "null"
+                sender_user_id:
+                    format: int32
+                    type: integer
+                sender_username:
+                    type: string
+                updated_at:
+                    format: date-time
+                    type: string
             required:
-                - conversation
-                - participants
+                - id
+                - conversation_id
+                - sender_user_id
+                - sender_character_id
+                - content
+                - created_at
+                - updated_at
+                - deleted_at
+                - is_deleted
+                - is_edited
+                - edited_at
+                - edit_count
+                - sender_username
+                - sender_character_name
+                - sender_avatar_url
             type: object
         ConversationMessagesOutputBody:
             additionalProperties: false
@@ -1431,6 +1469,45 @@ components:
                 - id
                 - name
             type: object
+        ConversationParticipantResponse:
+            additionalProperties: false
+            properties:
+                character_id:
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
+                character_name:
+                    type:
+                        - string
+                        - "null"
+                conversation_id:
+                    format: int32
+                    type: integer
+                id:
+                    format: int32
+                    type: integer
+                joined_at:
+                    format: date-time
+                    type: string
+                last_read_at:
+                    format: date-time
+                    type: string
+                user_id:
+                    format: int32
+                    type: integer
+                username:
+                    type: string
+            required:
+                - id
+                - conversation_id
+                - user_id
+                - character_id
+                - joined_at
+                - last_read_at
+                - username
+                - character_name
+            type: object
         ConversationParticipantsOutputBody:
             additionalProperties: false
             properties:
@@ -1443,11 +1520,49 @@ components:
             required:
                 - participants
             type: object
+        ConversationResponse:
+            additionalProperties: false
+            properties:
+                conversation_type:
+                    type: string
+                created_at:
+                    format: date-time
+                    type: string
+                created_by_user_id:
+                    format: int32
+                    type: integer
+                game_id:
+                    format: int32
+                    type: integer
+                id:
+                    format: int32
+                    type: integer
+                title:
+                    type:
+                        - string
+                        - "null"
+                updated_at:
+                    format: date-time
+                    type: string
+            required:
+                - id
+                - game_id
+                - conversation_type
+                - title
+                - created_by_user_id
+                - created_at
+                - updated_at
+            type: object
         ConversationsListOutputBody:
             additionalProperties: false
             properties:
                 conversations:
                     description: Conversations visible to the caller
+                    items:
+                        $ref: '#/components/schemas/ConversationListItemResponse'
+                    type:
+                        - array
+                        - "null"
             required:
                 - conversations
             type: object
@@ -2667,33 +2782,13 @@ components:
                 - games
                 - metadata
             type: object
-        GameLootTable:
-            additionalProperties: false
-            properties:
-                created_at:
-                    $ref: '#/components/schemas/Timestamptz'
-                game_id:
-                    format: int32
-                    type: integer
-                id:
-                    format: int32
-                    type: integer
-                name:
-                    type: string
-                updated_at:
-                    $ref: '#/components/schemas/Timestamptz'
-            required:
-                - id
-                - game_id
-                - name
-                - created_at
-                - updated_at
-            type: object
-        GameLootTableContent:
+        GameLootTableContentResponse:
             additionalProperties: false
             properties:
                 data:
-                    $ref: '#/components/schemas/Text'
+                    type:
+                        - string
+                        - "null"
                 id:
                     format: int32
                     type: integer
@@ -2708,7 +2803,31 @@ components:
                 - name
                 - data
             type: object
-        GameParticipant:
+        GameLootTableResponse:
+            additionalProperties: false
+            properties:
+                created_at:
+                    format: date-time
+                    type: string
+                game_id:
+                    format: int32
+                    type: integer
+                id:
+                    format: int32
+                    type: integer
+                name:
+                    type: string
+                updated_at:
+                    format: date-time
+                    type: string
+            required:
+                - id
+                - game_id
+                - name
+                - created_at
+                - updated_at
+            type: object
+        GameParticipantResponse:
             additionalProperties: false
             properties:
                 game_id:
@@ -2720,15 +2839,24 @@ components:
                 is_former_player:
                     type: boolean
                 joined_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 removed_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type:
+                        - string
+                        - "null"
                 removed_by_user_id:
-                    $ref: '#/components/schemas/Int4'
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
                 role:
                     type: string
                 status:
-                    $ref: '#/components/schemas/Text'
+                    type:
+                        - string
+                        - "null"
                 user_id:
                     format: int32
                     type: integer
@@ -2902,92 +3030,6 @@ components:
                 - current_players
                 - created_at
                 - updated_at
-            type: object
-        GetConversationMessagesRow:
-            additionalProperties: false
-            properties:
-                content:
-                    type: string
-                conversation_id:
-                    format: int32
-                    type: integer
-                created_at:
-                    $ref: '#/components/schemas/Timestamptz'
-                deleted_at:
-                    $ref: '#/components/schemas/Timestamptz'
-                edit_count:
-                    format: int32
-                    type: integer
-                edited_at:
-                    $ref: '#/components/schemas/Timestamptz'
-                id:
-                    format: int32
-                    type: integer
-                is_deleted:
-                    $ref: '#/components/schemas/Bool'
-                is_edited:
-                    type: boolean
-                sender_avatar_url:
-                    $ref: '#/components/schemas/Text'
-                sender_character_id:
-                    $ref: '#/components/schemas/Int4'
-                sender_character_name:
-                    $ref: '#/components/schemas/Text'
-                sender_user_id:
-                    format: int32
-                    type: integer
-                sender_username:
-                    type: string
-                updated_at:
-                    $ref: '#/components/schemas/Timestamptz'
-            required:
-                - id
-                - conversation_id
-                - sender_user_id
-                - sender_character_id
-                - content
-                - created_at
-                - updated_at
-                - deleted_at
-                - is_deleted
-                - is_edited
-                - edited_at
-                - edit_count
-                - sender_username
-                - sender_character_name
-                - sender_avatar_url
-            type: object
-        GetConversationParticipantsRow:
-            additionalProperties: false
-            properties:
-                character_id:
-                    $ref: '#/components/schemas/Int4'
-                character_name:
-                    $ref: '#/components/schemas/Text'
-                conversation_id:
-                    format: int32
-                    type: integer
-                id:
-                    format: int32
-                    type: integer
-                joined_at:
-                    $ref: '#/components/schemas/Timestamptz'
-                last_read_at:
-                    $ref: '#/components/schemas/Timestamptz'
-                user_id:
-                    format: int32
-                    type: integer
-                username:
-                    type: string
-            required:
-                - id
-                - conversation_id
-                - user_id
-                - character_id
-                - joined_at
-                - last_read_at
-                - username
-                - character_name
             type: object
         HandoutCommentResponse:
             additionalProperties: false
@@ -3211,18 +3253,6 @@ components:
                 - current_owner_username
                 - original_owner_username
             type: object
-        Int4:
-            additionalProperties: false
-            properties:
-                Int32:
-                    format: int32
-                    type: integer
-                Valid:
-                    type: boolean
-            required:
-                - Int32
-                - Valid
-            type: object
         ListAudienceMembersResponse:
             additionalProperties: false
             properties:
@@ -3434,7 +3464,7 @@ components:
             properties:
                 messages:
                     items:
-                        $ref: '#/components/schemas/GetConversationMessagesRow'
+                        $ref: '#/components/schemas/ConversationMessageResponse'
                     type:
                         - array
                         - "null"
@@ -3726,18 +3756,25 @@ components:
                 allow_audience_voting:
                     type: boolean
                 allow_other_option:
-                    $ref: '#/components/schemas/Bool'
+                    type: boolean
                 created_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 created_by_character_id:
-                    $ref: '#/components/schemas/Int4'
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
                 created_by_user_id:
                     format: int32
                     type: integer
                 deadline:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 description:
-                    $ref: '#/components/schemas/Text'
+                    type:
+                        - string
+                        - "null"
                 game_id:
                     format: int32
                     type: integer
@@ -3747,21 +3784,24 @@ components:
                     format: int32
                     type: integer
                 is_deleted:
-                    $ref: '#/components/schemas/Bool'
+                    type: boolean
                 phase_id:
-                    $ref: '#/components/schemas/Int4'
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
                 question:
                     type: string
                 show_individual_votes:
-                    $ref: '#/components/schemas/Bool'
+                    type: boolean
                 show_running_totals_to_players:
                     type: boolean
                 updated_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 user_has_voted:
                     type: boolean
             required:
-                - user_has_voted
                 - id
                 - game_id
                 - phase_id
@@ -3778,12 +3818,27 @@ components:
                 - is_deleted
                 - created_at
                 - updated_at
+                - user_has_voted
             type: object
-        PollOption:
+        PollOptionRequest:
+            additionalProperties: false
+            properties:
+                display_order:
+                    description: Sort order within the poll
+                    format: int32
+                    type: integer
+                text:
+                    description: Option label
+                    type: string
+            required:
+                - text
+            type: object
+        PollOptionResponse:
             additionalProperties: false
             properties:
                 created_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 display_order:
                     format: int32
                     type: integer
@@ -3802,37 +3857,31 @@ components:
                 - display_order
                 - created_at
             type: object
-        PollOptionRequest:
-            additionalProperties: false
-            properties:
-                display_order:
-                    description: Sort order within the poll
-                    format: int32
-                    type: integer
-                text:
-                    description: Option label
-                    type: string
-            required:
-                - text
-            type: object
         PollResponse:
             additionalProperties: false
             properties:
                 allow_audience_voting:
                     type: boolean
                 allow_other_option:
-                    $ref: '#/components/schemas/Bool'
+                    type: boolean
                 created_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 created_by_character_id:
-                    $ref: '#/components/schemas/Int4'
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
                 created_by_user_id:
                     format: int32
                     type: integer
                 deadline:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 description:
-                    $ref: '#/components/schemas/Text'
+                    type:
+                        - string
+                        - "null"
                 game_id:
                     format: int32
                     type: integer
@@ -3844,30 +3893,33 @@ components:
                     format: int32
                     type: integer
                 is_deleted:
-                    $ref: '#/components/schemas/Bool'
+                    type: boolean
                 options:
                     items:
-                        $ref: '#/components/schemas/PollOption'
+                        $ref: '#/components/schemas/PollOptionResponse'
                     type:
                         - array
                         - "null"
                 phase_id:
-                    $ref: '#/components/schemas/Int4'
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
                 question:
                     type: string
                 show_individual_votes:
-                    $ref: '#/components/schemas/Bool'
+                    type: boolean
                 show_running_totals_to_players:
                     type: boolean
                 updated_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 user_vote_option_id:
                     format: int32
                     type: integer
                 user_vote_other_response:
                     type: string
             required:
-                - options
                 - id
                 - game_id
                 - phase_id
@@ -3884,6 +3936,7 @@ components:
                 - is_deleted
                 - created_at
                 - updated_at
+                - options
             type: object
         PollResultsResponse:
             additionalProperties: false
@@ -3901,7 +3954,7 @@ components:
                         - array
                         - "null"
                 poll:
-                    $ref: '#/components/schemas/CommonRoomPoll'
+                    $ref: '#/components/schemas/PollSummary'
                 show_individual_votes:
                     type: boolean
                 total_votes:
@@ -3914,23 +3967,97 @@ components:
                 - total_votes
                 - show_individual_votes
             type: object
-        PollVote:
+        PollSummary:
+            additionalProperties: false
+            properties:
+                allow_audience_voting:
+                    type: boolean
+                allow_other_option:
+                    type: boolean
+                created_at:
+                    format: date-time
+                    type: string
+                created_by_character_id:
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
+                created_by_user_id:
+                    format: int32
+                    type: integer
+                deadline:
+                    format: date-time
+                    type: string
+                description:
+                    type:
+                        - string
+                        - "null"
+                game_id:
+                    format: int32
+                    type: integer
+                hide_results_from_players:
+                    type: boolean
+                id:
+                    format: int32
+                    type: integer
+                is_deleted:
+                    type: boolean
+                phase_id:
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
+                question:
+                    type: string
+                show_individual_votes:
+                    type: boolean
+                show_running_totals_to_players:
+                    type: boolean
+                updated_at:
+                    format: date-time
+                    type: string
+            required:
+                - id
+                - game_id
+                - phase_id
+                - created_by_user_id
+                - created_by_character_id
+                - question
+                - description
+                - deadline
+                - show_individual_votes
+                - allow_other_option
+                - hide_results_from_players
+                - allow_audience_voting
+                - show_running_totals_to_players
+                - is_deleted
+                - created_at
+                - updated_at
+            type: object
+        PollVoteResponse:
             additionalProperties: false
             properties:
                 created_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 id:
                     format: int32
                     type: integer
                 other_response:
-                    $ref: '#/components/schemas/Text'
+                    type:
+                        - string
+                        - "null"
                 poll_id:
                     format: int32
                     type: integer
                 selected_option_id:
-                    $ref: '#/components/schemas/Int4'
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
                 updated_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 user_id:
                     format: int32
                     type: integer
@@ -4167,7 +4294,7 @@ components:
                 - conversations
                 - total
             type: object
-        PrivateMessage:
+        PrivateMessageResponse:
             additionalProperties: false
             properties:
                 content:
@@ -4176,28 +4303,39 @@ components:
                     format: int32
                     type: integer
                 created_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
                 deleted_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type:
+                        - string
+                        - "null"
                 edit_count:
                     format: int32
                     type: integer
                 edited_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type:
+                        - string
+                        - "null"
                 id:
                     format: int32
                     type: integer
                 is_deleted:
-                    $ref: '#/components/schemas/Bool'
+                    type: boolean
                 is_edited:
                     type: boolean
                 sender_character_id:
-                    $ref: '#/components/schemas/Int4'
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
                 sender_user_id:
                     format: int32
                     type: integer
                 updated_at:
-                    $ref: '#/components/schemas/Timestamptz'
+                    format: date-time
+                    type: string
             required:
                 - id
                 - conversation_id
@@ -4453,17 +4591,6 @@ components:
             required:
                 - success
             type: object
-        Text:
-            additionalProperties: false
-            properties:
-                String:
-                    type: string
-                Valid:
-                    type: boolean
-            required:
-                - String
-                - Valid
-            type: object
         ThreadedCommentResponse:
             additionalProperties: false
             properties:
@@ -4552,22 +4679,6 @@ components:
                 - is_deleted
                 - mentioned_character_ids
                 - created_at
-            type: object
-        Timestamptz:
-            additionalProperties: false
-            properties:
-                InfinityModifier:
-                    format: int32
-                    type: integer
-                Time:
-                    format: date-time
-                    type: string
-                Valid:
-                    type: boolean
-            required:
-                - Time
-                - InfinityModifier
-                - Valid
             type: object
         ToggleCommentReadRequest:
             additionalProperties: false
@@ -8892,7 +9003,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/Conversation'
+                                $ref: '#/components/schemas/ConversationResponse'
                     description: Created
                 default:
                     content:
@@ -9049,7 +9160,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/PrivateMessage'
+                                $ref: '#/components/schemas/PrivateMessageResponse'
                     description: Created
                 default:
                     content:
@@ -9141,7 +9252,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/PrivateMessage'
+                                $ref: '#/components/schemas/PrivateMessageResponse'
                     description: OK
                 default:
                     content:
@@ -9997,7 +10108,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/GameLootTable'
+                                $ref: '#/components/schemas/GameLootTableResponse'
                     description: OK
                 "400":
                     description: Missing name, or an item with a blank name or invalid JSON data
@@ -10077,7 +10188,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/GameLootTable'
+                                $ref: '#/components/schemas/GameLootTableResponse'
                     description: OK
                 "400":
                     description: Missing name, or an item with a blank name or invalid JSON data
@@ -10211,7 +10322,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/GameLootTableContent'
+                                $ref: '#/components/schemas/GameLootTableContentResponse'
                     description: OK
                 "400":
                     description: The loot table is empty
@@ -10549,7 +10660,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/GameParticipant'
+                                $ref: '#/components/schemas/GameParticipantResponse'
                     description: Created
                 "400":
                     description: Invalid request body
@@ -13008,7 +13119,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/PollVote'
+                                $ref: '#/components/schemas/PollVoteResponse'
                     description: OK
                 default:
                     content:

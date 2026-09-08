@@ -490,7 +490,7 @@ type myApplicationOutput struct {
 }
 
 type participantOutput struct {
-	Body *models.GameParticipant
+	Body *GameParticipantResponse
 }
 
 type audienceMembersOutput struct {
@@ -542,7 +542,7 @@ type lootTablesOutput struct {
 }
 
 type lootTableOutput struct {
-	Body *models.GameLootTable
+	Body *GameLootTableResponse
 }
 
 type lootContentsOutput struct {
@@ -550,7 +550,7 @@ type lootContentsOutput struct {
 }
 
 type lootContentOutput struct {
-	Body *models.GameLootTableContent
+	Body *GameLootTableContentResponse
 }
 
 type bannerOutput struct {
@@ -1369,7 +1369,7 @@ func (h *Handler) humaAddParticipantDirectly(ctx context.Context, in *addPartici
 	h.App.ObsLogger.Info(ctx, "Participant added directly to game",
 		"game_id", gameID, "added_user_id", in.Body.UserID, "role", in.Body.Role, "added_by", requestingUserID)
 
-	return &participantOutput{Body: participant}, nil
+	return &participantOutput{Body: toGameParticipantResponse(participant)}, nil
 }
 
 // humaPromoteToCoGM, humaDemoteFromCoGM and humaTransitionPlayerToAudience all
@@ -2366,7 +2366,7 @@ func (h *Handler) humaAddGameLootTable(ctx context.Context, in *addLootTableInpu
 		}
 	}
 
-	return &lootTableOutput{Body: newLootTable}, nil
+	return &lootTableOutput{Body: toGameLootTableResponse(newLootTable)}, nil
 }
 
 type updateLootTableInput struct {
@@ -2396,7 +2396,7 @@ func (h *Handler) humaUpdateGameLootTable(ctx context.Context, in *updateLootTab
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update loot table", "error", err, "table_id", in.TableID)
 	}
 
-	return &lootTableOutput{Body: lootTable}, nil
+	return &lootTableOutput{Body: toGameLootTableResponse(lootTable)}, nil
 }
 
 func (h *Handler) humaDeleteGameLootTable(ctx context.Context, in *tableScopedInput) (*emptyOKOutput, error) {
@@ -2566,7 +2566,7 @@ func (h *Handler) humaSetRandomLootForCharacter(ctx context.Context, in *randomL
 			"game_id", gameID, "character_id", in.CharacterID, "loot_table_id", in.TableID)
 	}
 
-	return &lootContentOutput{Body: &content}, nil
+	return &lootContentOutput{Body: toGameLootTableContentResponse(&content)}, nil
 }
 
 // Banner

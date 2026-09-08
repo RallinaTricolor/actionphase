@@ -15,13 +15,9 @@ import (
 
 // Input / output types
 //
-// The response bodies embed the sqlc models (db.CommonRoomPoll and friends)
-// exactly as the chi handlers did. Those marshal to clean scalars at runtime --
-// pgtype implements MarshalJSON -- but huma builds schemas by reflecting over
-// Go fields, so the *documented* shape of the nullable columns is wrapper-ish.
-// Replacing them with hand-written DTOs is tracked separately in
-// .claude/planning/sqlc-models-in-api-responses.md; this file is a behaviour-preserving
-// port and deliberately does not change any wire format.
+// The response bodies use the hand-written DTOs in responses.go rather than the
+// sqlc models, so the generated OpenAPI documents scalars instead of pgtype
+// wrapper objects. The emitted JSON is unchanged -- see the note in responses.go.
 
 type createPollInput struct {
 	GameID int32              `path:"gameID" doc:"Game ID"`
@@ -66,7 +62,7 @@ type submitVoteInput struct {
 }
 
 type voteOutput struct {
-	Body *db.PollVote
+	Body *PollVoteResponse
 }
 
 // RegisterHumaGamePolls registers the poll operations that hang off the
@@ -208,10 +204,7 @@ func (h *Handler) createPoll(ctx context.Context, in *createPollInput) (*pollOut
 
 	h.notifyPollCreated(ctx, in.GameID, userID, pollWithOptions)
 
-	return &pollOutput{Body: &PollResponse{
-		CommonRoomPoll: pollWithOptions.Poll,
-		Options:        pollWithOptions.Options,
-	}}, nil
+	return &pollOutput{Body: toPollResponse(pollWithOptions.Poll, pollWithOptions.Options)}, nil
 }
 
 // notifyPollCreated tells the other participants a poll went up. Notification
@@ -257,7 +250,7 @@ func (h *Handler) pollListItems(ctx context.Context, polls []db.CommonRoomPoll, 
 			h.App.ObsLogger.LogError(ctx, err, "Failed to check if user voted", "poll_id", poll.ID)
 			hasVoted = false
 		}
-		items[i] = PollListItem{CommonRoomPoll: poll, UserHasVoted: hasVoted}
+		items[i] = toPollListItem(poll, hasVoted)
 	}
 	return items
 }
@@ -364,13 +357,11 @@ func (h *Handler) getPoll(ctx context.Context, in *pollIDInput) (*pollOutput, er
 		}
 	}
 
-	return &pollOutput{Body: &PollResponse{
-		CommonRoomPoll:        pollWithOptions.Poll,
-		Options:               pollWithOptions.Options,
-		HasVoted:              hasVoted,
-		UserVoteOptionID:      userVoteOptionID,
-		UserVoteOtherResponse: userVoteOtherResponse,
-	}}, nil
+	resp := toPollResponse(pollWithOptions.Poll, pollWithOptions.Options)
+	resp.HasVoted = hasVoted
+	resp.UserVoteOptionID = userVoteOptionID
+	resp.UserVoteOtherResponse = userVoteOtherResponse
+	return &pollOutput{Body: resp}, nil
 }
 
 func (h *Handler) getPollResults(ctx context.Context, in *pollIDInput) (*pollResultsOutput, error) {
@@ -473,7 +464,7 @@ func (h *Handler) getPollResults(ctx context.Context, in *pollIDInput) (*pollRes
 	}
 
 	return &pollResultsOutput{Body: &PollResultsResponse{
-		Poll:                results.Poll,
+		Poll:                toPollSummary(results.Poll),
 		OptionResults:       optionResults,
 		OtherResponses:      otherResponses,
 		TotalVotes:          results.TotalVotes,
@@ -552,7 +543,7 @@ func (h *Handler) submitVote(ctx context.Context, in *submitVoteInput) (*voteOut
 		return nil, huma.Error500InternalServerError("Failed to submit vote")
 	}
 
-	return &voteOutput{Body: vote}, nil
+	return &voteOutput{Body: toPollVoteResponse(*vote)}, nil
 }
 
 func (h *Handler) updatePoll(ctx context.Context, in *updatePollInput) (*pollOutput, error) {
@@ -591,7 +582,7 @@ func (h *Handler) updatePoll(ctx context.Context, in *updatePollInput) (*pollOut
 
 	// The chi handler rendered the bare updated poll here (no options array),
 	// unlike create/get which wrap it in PollResponse.
-	return &pollOutput{Body: &PollResponse{CommonRoomPoll: *updatedPoll}}, nil
+	return &pollOutput{Body: toPollResponse(*updatedPoll, nil)}, nil
 }
 
 func (h *Handler) deletePoll(ctx context.Context, in *pollIDInput) (*struct{}, error) {

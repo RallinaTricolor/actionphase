@@ -40,18 +40,21 @@ export interface PrivateMessage {
 export interface ConversationListItem {
   id: number;
   game_id: number;
-  title?: string;
+  /** Null for untitled conversations; the API sends an explicit null, not an absent key. */
+  title: string | null;
   conversation_type: string;
   created_by_user_id: number;
   created_at: string;
   updated_at: string;
   participant_count: number;
-  participant_names?: string;
-  last_message?: string;
-  last_message_at?: string | null;
+  participant_names: string;
+  /** Empty string when the conversation has no messages yet. */
+  last_message: string;
+  last_message_at: string | null;
   unread_count: number;
-  last_read_message_id?: number;
-  last_read_at?: string;
+  /** Null until the caller has read something in this conversation. */
+  last_read_message_id: number | null;
+  last_read_at: string | null;
 }
 
 export interface ConversationWithDetails {

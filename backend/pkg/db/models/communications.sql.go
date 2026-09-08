@@ -862,7 +862,7 @@ SELECT c.id, c.game_id, c.conversation_type, c.title, c.created_by_user_id, c.cr
             ) unique_participants),
            ''
        )::text as participant_names,
-       unread.unread_count::bigint,
+       unread.unread_count::bigint as unread_count,
        cr.last_read_message_id,
        cr.last_read_at
 FROM conversations c
@@ -909,7 +909,7 @@ type GetUserUnreadConversationsRow struct {
 	LastMessage       string             `json:"last_message"`
 	LastMessageAt     pgtype.Timestamptz `json:"last_message_at"`
 	ParticipantNames  string             `json:"participant_names"`
-	UnreadUnreadCount int64              `json:"unread_unread_count"`
+	UnreadCount       int64              `json:"unread_count"`
 	LastReadMessageID pgtype.Int4        `json:"last_read_message_id"`
 	LastReadAt        pgtype.Timestamptz `json:"last_read_at"`
 }
@@ -937,7 +937,7 @@ func (q *Queries) GetUserUnreadConversations(ctx context.Context, arg GetUserUnr
 			&i.LastMessage,
 			&i.LastMessageAt,
 			&i.ParticipantNames,
-			&i.UnreadUnreadCount,
+			&i.UnreadCount,
 			&i.LastReadMessageID,
 			&i.LastReadAt,
 		); err != nil {
