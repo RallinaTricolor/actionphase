@@ -274,3 +274,42 @@ func (m *MockGameService) GetGameParticipants(ctx context.Context, gameID int32)
 	}
 	return nil, nil
 }
+
+// MockBotPreventionService provides a mock implementation of
+// BotPreventionServiceInterface for testing.
+//
+// A nil CheckRegistrationAttemptFunc allows the registration, so tests that do
+// not care about bot prevention can leave it unset.
+type MockBotPreventionService struct {
+	CheckRegistrationAttemptFunc       func(ctx context.Context, req *RegistrationCheckRequest) (*RegistrationCheckResult, error)
+	LogSuccessfulRegistrationFunc      func(ctx context.Context, req *RegistrationCheckRequest) error
+	CleanupOldRegistrationAttemptsFunc func(ctx context.Context) error
+
+	// LogSuccessfulRegistrationCalls counts LogSuccessfulRegistration calls, so
+	// tests can assert the pending-approval path does not reach it.
+	LogSuccessfulRegistrationCalls int
+}
+
+var _ BotPreventionServiceInterface = (*MockBotPreventionService)(nil)
+
+func (m *MockBotPreventionService) CheckRegistrationAttempt(ctx context.Context, req *RegistrationCheckRequest) (*RegistrationCheckResult, error) {
+	if m.CheckRegistrationAttemptFunc != nil {
+		return m.CheckRegistrationAttemptFunc(ctx, req)
+	}
+	return &RegistrationCheckResult{Allowed: true, CaptchaPassed: true}, nil
+}
+
+func (m *MockBotPreventionService) LogSuccessfulRegistration(ctx context.Context, req *RegistrationCheckRequest) error {
+	m.LogSuccessfulRegistrationCalls++
+	if m.LogSuccessfulRegistrationFunc != nil {
+		return m.LogSuccessfulRegistrationFunc(ctx, req)
+	}
+	return nil
+}
+
+func (m *MockBotPreventionService) CleanupOldRegistrationAttempts(ctx context.Context) error {
+	if m.CleanupOldRegistrationAttemptsFunc != nil {
+		return m.CleanupOldRegistrationAttemptsFunc(ctx)
+	}
+	return nil
+}

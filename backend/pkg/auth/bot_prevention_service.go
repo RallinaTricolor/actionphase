@@ -6,86 +6,103 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
+	"actionphase/pkg/core"
 	db "actionphase/pkg/db/models"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// BotPreventionService handles bot prevention mechanisms
+// Compile-time verification that BotPreventionService satisfies the interface.
+var _ core.BotPreventionServiceInterface = (*BotPreventionService)(nil)
+
+// BotPreventionService handles bot prevention mechanisms.
+//
+// Configuration arrives via core.BotPreventionConfig rather than being read
+// from the environment in the constructor, so the checks can be exercised at
+// any threshold without mutating process state.
 type BotPreventionService struct {
-	DB              *pgxpool.Pool
-	HCaptchaSecret  string
-	HCaptchaEnabled bool
-	IsDevelopment   bool
+	DB     *pgxpool.Pool
+	Config core.BotPreventionConfig
+
+	// IsDevelopment skips the rate-limit checks so E2E runs can register
+	// repeatedly against a shared database.
+	IsDevelopment bool
+
+	// HTTPClient performs hCaptcha verification. Defaults to a client bounded
+	// by Config.HCaptchaTimeout when nil.
+	HTTPClient *http.Client
+
+	// disposableAllowlist is the normalized form of
+	// Config.DisposableEmailAllowlist, built once at construction.
+	disposableAllowlist map[string]bool
 }
 
-// NewBotPreventionService creates a new bot prevention service
-func NewBotPreventionService(pool *pgxpool.Pool) *BotPreventionService {
-	hcaptchaSecret := os.Getenv("HCAPTCHA_SECRET")
-	hcaptchaEnabled := os.Getenv("HCAPTCHA_ENABLED")
-	environment := os.Getenv("ENVIRONMENT")
+// NewBotPreventionService creates a bot prevention service from configuration.
+func NewBotPreventionService(pool *pgxpool.Pool, cfg *core.Config) *BotPreventionService {
+	botCfg := cfg.BotPrevention
+
+	timeout := botCfg.HCaptchaTimeout
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+
+	allowlist := make(map[string]bool, len(botCfg.DisposableEmailAllowlist))
+	for _, domain := range botCfg.DisposableEmailAllowlist {
+		if trimmed := strings.ToLower(strings.TrimSpace(domain)); trimmed != "" {
+			allowlist[trimmed] = true
+		}
+	}
+
 	return &BotPreventionService{
-		DB:              pool,
-		HCaptchaSecret:  hcaptchaSecret,
-		HCaptchaEnabled: hcaptchaEnabled == "true",
-		IsDevelopment:   environment == "development",
+		DB:                  pool,
+		Config:              botCfg,
+		IsDevelopment:       cfg.IsDevelopment(),
+		HTTPClient:          &http.Client{Timeout: timeout},
+		disposableAllowlist: allowlist,
 	}
 }
 
-// RegistrationCheckRequest contains data for bot prevention checks
-type RegistrationCheckRequest struct {
-	Email         string
-	Username      string
-	IPAddress     string
-	UserAgent     string
-	HCaptchaToken string
-	HoneypotValue string
+// logAttempt records a registration attempt. Failures are deliberately
+// swallowed: a logging error must not turn a decided check into a 500. The
+// one exception is the rate-limit counters, which read these same rows -- a
+// dropped write there only ever loosens a limit, never tightens it.
+func (s *BotPreventionService) logAttempt(ctx context.Context, req *core.RegistrationCheckRequest, captchaPassed, honeypot bool, reason string, successful bool) {
+	queries := db.New(s.DB)
+	_, _ = queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
+		Email:             req.Email,
+		Username:          req.Username,
+		IpAddress:         req.IPAddress,
+		UserAgent:         pgtype.Text{String: req.UserAgent, Valid: req.UserAgent != ""},
+		CaptchaPassed:     captchaPassed,
+		HoneypotTriggered: honeypot,
+		BlockedReason:     pgtype.Text{String: reason, Valid: reason != ""},
+		Successful:        successful,
+	})
 }
 
-// RegistrationCheckResult contains the result of bot prevention checks
-type RegistrationCheckResult struct {
-	Allowed        bool
-	BlockedReason  string
-	CaptchaPassed  bool
-	HoneypotFailed bool
-}
-
-// CheckRegistrationAttempt performs all bot prevention checks
-func (s *BotPreventionService) CheckRegistrationAttempt(ctx context.Context, req *RegistrationCheckRequest) (*RegistrationCheckResult, error) {
+// CheckRegistrationAttempt performs all bot prevention checks.
+func (s *BotPreventionService) CheckRegistrationAttempt(ctx context.Context, req *core.RegistrationCheckRequest) (*core.RegistrationCheckResult, error) {
 	queries := db.New(s.DB)
 
-	result := &RegistrationCheckResult{
+	result := &core.RegistrationCheckResult{
 		Allowed: true,
 	}
 
 	// 1. Honeypot check (must be empty)
 	if req.HoneypotValue != "" {
 		result.Allowed = false
-		result.BlockedReason = "honeypot"
+		result.BlockedReason = core.BlockReasonHoneypot
 		result.HoneypotFailed = true
-
-		// Log the attempt
-		_, _ = queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
-			Email:             req.Email,
-			Username:          req.Username,
-			IpAddress:         req.IPAddress,
-			UserAgent:         pgtype.Text{String: req.UserAgent, Valid: req.UserAgent != ""},
-			CaptchaPassed:     false,
-			HoneypotTriggered: true,
-			BlockedReason:     pgtype.Text{String: "honeypot", Valid: true},
-			Successful:        false,
-		})
-
+		s.logAttempt(ctx, req, false, true, core.BlockReasonHoneypot, false)
 		return result, nil
 	}
 
 	// 2. hCaptcha verification (if enabled)
-	if s.HCaptchaEnabled {
+	if s.Config.HCaptchaEnabled {
 		captchaPassed, err := s.VerifyHCaptcha(ctx, req.HCaptchaToken, req.IPAddress)
 		if err != nil {
 			return nil, fmt.Errorf("failed to verify hCaptcha: %w", err)
@@ -95,27 +112,15 @@ func (s *BotPreventionService) CheckRegistrationAttempt(ctx context.Context, req
 
 		if !captchaPassed {
 			result.Allowed = false
-			result.BlockedReason = "captcha_failed"
-
-			// Log the attempt
-			_, _ = queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
-				Email:             req.Email,
-				Username:          req.Username,
-				IpAddress:         req.IPAddress,
-				UserAgent:         pgtype.Text{String: req.UserAgent, Valid: req.UserAgent != ""},
-				CaptchaPassed:     false,
-				HoneypotTriggered: false,
-				BlockedReason:     pgtype.Text{String: "captcha_failed", Valid: true},
-				Successful:        false,
-			})
-
+			result.BlockedReason = core.BlockReasonCaptchaFailed
+			s.logAttempt(ctx, req, false, false, core.BlockReasonCaptchaFailed, false)
 			return result, nil
 		}
 	} else {
 		result.CaptchaPassed = true // No captcha configured
 	}
 
-	// 3. Rate limiting by IP (max 5 attempts per hour) - Skip in development
+	// 3. Rate limiting by IP - Skip in development
 	if !s.IsDevelopment {
 		oneHourAgo := time.Now().Add(-1 * time.Hour)
 		ipAttempts, err := queries.CountRecentRegistrationAttemptsByIP(ctx, db.CountRecentRegistrationAttemptsByIPParams{
@@ -126,27 +131,15 @@ func (s *BotPreventionService) CheckRegistrationAttempt(ctx context.Context, req
 			return nil, fmt.Errorf("failed to count IP attempts: %w", err)
 		}
 
-		if ipAttempts >= 5 {
+		if ipAttempts >= int64(s.Config.IPAttemptLimit) {
 			result.Allowed = false
-			result.BlockedReason = "rate_limit_ip"
-
-			// Log the attempt
-			_, _ = queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
-				Email:             req.Email,
-				Username:          req.Username,
-				IpAddress:         req.IPAddress,
-				UserAgent:         pgtype.Text{String: req.UserAgent, Valid: req.UserAgent != ""},
-				CaptchaPassed:     result.CaptchaPassed,
-				HoneypotTriggered: false,
-				BlockedReason:     pgtype.Text{String: "rate_limit_ip", Valid: true},
-				Successful:        false,
-			})
-
+			result.BlockedReason = core.BlockReasonRateLimitIP
+			s.logAttempt(ctx, req, result.CaptchaPassed, false, core.BlockReasonRateLimitIP, false)
 			return result, nil
 		}
 	}
 
-	// 4. Rate limiting by email (max 3 attempts per day) - Skip in development
+	// 4. Rate limiting by email - Skip in development
 	if !s.IsDevelopment {
 		oneDayAgo := time.Now().Add(-24 * time.Hour)
 		emailAttempts, err := queries.CountRecentRegistrationAttemptsByEmail(ctx, db.CountRecentRegistrationAttemptsByEmailParams{
@@ -157,64 +150,39 @@ func (s *BotPreventionService) CheckRegistrationAttempt(ctx context.Context, req
 			return nil, fmt.Errorf("failed to count email attempts: %w", err)
 		}
 
-		if emailAttempts >= 3 {
+		if emailAttempts >= int64(s.Config.EmailAttemptLimit) {
 			result.Allowed = false
-			result.BlockedReason = "rate_limit_email"
-
-			// Log the attempt
-			_, _ = queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
-				Email:             req.Email,
-				Username:          req.Username,
-				IpAddress:         req.IPAddress,
-				UserAgent:         pgtype.Text{String: req.UserAgent, Valid: req.UserAgent != ""},
-				CaptchaPassed:     result.CaptchaPassed,
-				HoneypotTriggered: false,
-				BlockedReason:     pgtype.Text{String: "rate_limit_email", Valid: true},
-				Successful:        false,
-			})
-
+			result.BlockedReason = core.BlockReasonRateLimitEmail
+			s.logAttempt(ctx, req, result.CaptchaPassed, false, core.BlockReasonRateLimitEmail, false)
 			return result, nil
 		}
 	}
 
 	// 5. Disposable email detection
-	if IsDisposableEmail(req.Email) {
+	if s.Config.BlockDisposableEmails && s.IsDisposableEmail(req.Email) {
 		result.Allowed = false
-		result.BlockedReason = "disposable_email"
-
-		// Log the attempt
-		_, _ = queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
-			Email:             req.Email,
-			Username:          req.Username,
-			IpAddress:         req.IPAddress,
-			UserAgent:         pgtype.Text{String: req.UserAgent, Valid: req.UserAgent != ""},
-			CaptchaPassed:     result.CaptchaPassed,
-			HoneypotTriggered: false,
-			BlockedReason:     pgtype.Text{String: "disposable_email", Valid: true},
-			Successful:        false,
-		})
-
+		result.BlockedReason = core.BlockReasonDisposableEmail
+		s.logAttempt(ctx, req, result.CaptchaPassed, false, core.BlockReasonDisposableEmail, false)
 		return result, nil
 	}
 
-	// All checks passed - log the attempt as pending (not successful yet, user not created)
-	// This is important for rate limiting to work correctly
-	_, _ = queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
-		Email:             req.Email,
-		Username:          req.Username,
-		IpAddress:         req.IPAddress,
-		UserAgent:         pgtype.Text{String: req.UserAgent, Valid: req.UserAgent != ""},
-		CaptchaPassed:     result.CaptchaPassed,
-		HoneypotTriggered: false,
-		BlockedReason:     pgtype.Text{Valid: false}, // No block reason
-		Successful:        false,                     // Not successful yet - will be marked successful after user creation
-	})
+	// 6. Spammy username detection
+	if s.Config.BlockSpammyUsernames && IsSpammyUsername(req.Username) {
+		result.Allowed = false
+		result.BlockedReason = core.BlockReasonSpammyUsername
+		s.logAttempt(ctx, req, result.CaptchaPassed, false, core.BlockReasonSpammyUsername, false)
+		return result, nil
+	}
+
+	// All checks passed - log the attempt as pending (not successful yet, user
+	// not created). This is important for rate limiting to work correctly.
+	s.logAttempt(ctx, req, result.CaptchaPassed, false, "", false)
 
 	return result, nil
 }
 
-// LogSuccessfulRegistration logs a successful registration attempt
-func (s *BotPreventionService) LogSuccessfulRegistration(ctx context.Context, req *RegistrationCheckRequest) error {
+// LogSuccessfulRegistration logs a successful registration attempt.
+func (s *BotPreventionService) LogSuccessfulRegistration(ctx context.Context, req *core.RegistrationCheckRequest) error {
 	queries := db.New(s.DB)
 
 	_, err := queries.CreateRegistrationAttempt(ctx, db.CreateRegistrationAttemptParams{
@@ -231,26 +199,38 @@ func (s *BotPreventionService) LogSuccessfulRegistration(ctx context.Context, re
 	return err
 }
 
-// VerifyHCaptcha verifies an hCaptcha token
+// VerifyHCaptcha verifies an hCaptcha token.
+//
+// The request carries ctx and runs on a timeout-bounded client so a hung
+// hcaptcha.com cannot stall registration.
 func (s *BotPreventionService) VerifyHCaptcha(ctx context.Context, token string, remoteIP string) (bool, error) {
 	if token == "" {
 		return false, nil
 	}
 
-	// Prepare verification request
 	data := url.Values{}
-	data.Set("secret", s.HCaptchaSecret)
+	data.Set("secret", s.Config.HCaptchaSecret)
 	data.Set("response", token)
 	data.Set("remoteip", remoteIP)
 
-	// Send verification request to hCaptcha
-	resp, err := http.PostForm("https://hcaptcha.com/siteverify", data)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		"https://hcaptcha.com/siteverify", strings.NewReader(data.Encode()))
+	if err != nil {
+		return false, fmt.Errorf("failed to build hCaptcha verification request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	client := s.HTTPClient
+	if client == nil {
+		client = &http.Client{Timeout: 10 * time.Second}
+	}
+
+	resp, err := client.Do(httpReq)
 	if err != nil {
 		return false, fmt.Errorf("failed to send hCaptcha verification request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Parse response
 	var result struct {
 		Success bool `json:"success"`
 	}
@@ -262,36 +242,7 @@ func (s *BotPreventionService) VerifyHCaptcha(ctx context.Context, token string,
 	return result.Success, nil
 }
 
-// IsDisposableEmail checks if an email is from a known disposable email provider
-// This is a basic implementation - in production, use a comprehensive list or service
-func IsDisposableEmail(email string) bool {
-	// Extract domain from email
-	parts := strings.Split(email, "@")
-	if len(parts) != 2 {
-		return false
-	}
-
-	domain := strings.ToLower(parts[1])
-
-	// List of common disposable email domains
-	// In production, this should be a comprehensive list or external service
-	disposableDomains := map[string]bool{
-		"tempmail.com":      true,
-		"guerrillamail.com": true,
-		"10minutemail.com":  true,
-		"mailinator.com":    true,
-		"throwaway.email":   true,
-		"temp-mail.org":     true,
-		"getairmail.com":    true,
-		"fakeinbox.com":     true,
-		"trashmail.com":     true,
-		"dispostable.com":   true,
-	}
-
-	return disposableDomains[domain]
-}
-
-// CleanupOldRegistrationAttempts removes registration attempts older than 90 days
+// CleanupOldRegistrationAttempts removes registration attempts older than 90 days.
 func (s *BotPreventionService) CleanupOldRegistrationAttempts(ctx context.Context) error {
 	queries := db.New(s.DB)
 	ninetyDaysAgo := time.Now().Add(-90 * 24 * time.Hour)

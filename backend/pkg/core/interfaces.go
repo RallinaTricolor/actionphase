@@ -248,6 +248,52 @@ type FingerprintBanServiceInterface interface {
 	IsFingerprintBanned(ctx context.Context, fingerprint string) (bool, error)
 }
 
+// Registration bot-prevention block reasons. These are stored in the
+// registration_attempts.blocked_reason column and mapped to user-facing
+// messages by the register handler, so changing a value changes stored data.
+const (
+	BlockReasonHoneypot        = "honeypot"
+	BlockReasonCaptchaFailed   = "captcha_failed"
+	BlockReasonRateLimitIP     = "rate_limit_ip"
+	BlockReasonRateLimitEmail  = "rate_limit_email"
+	BlockReasonDisposableEmail = "disposable_email"
+	BlockReasonSpammyUsername  = "spammy_username"
+)
+
+// RegistrationCheckRequest carries the registration data the bot-prevention
+// checks inspect.
+type RegistrationCheckRequest struct {
+	Email         string
+	Username      string
+	IPAddress     string
+	UserAgent     string
+	HCaptchaToken string
+	HoneypotValue string
+}
+
+// RegistrationCheckResult reports the outcome of the bot-prevention checks.
+// BlockedReason is one of the BlockReason* constants and is only meaningful
+// when Allowed is false.
+type RegistrationCheckResult struct {
+	Allowed        bool
+	BlockedReason  string
+	CaptchaPassed  bool
+	HoneypotFailed bool
+}
+
+// BotPreventionServiceInterface defines the contract for registration bot
+// prevention: honeypot, captcha, rate limiting, disposable email and spammy
+// username checks, plus the attempt logging those checks depend on.
+//
+// CheckRegistrationAttempt records every attempt it evaluates, because the
+// rate-limit counts are derived from those same rows -- a caller that skips it
+// silently disables rate limiting.
+type BotPreventionServiceInterface interface {
+	CheckRegistrationAttempt(ctx context.Context, req *RegistrationCheckRequest) (*RegistrationCheckResult, error)
+	LogSuccessfulRegistration(ctx context.Context, req *RegistrationCheckRequest) error
+	CleanupOldRegistrationAttempts(ctx context.Context) error
+}
+
 // GameServiceInterface defines the contract for game management operations.
 // Handles complete game lifecycle from creation through completion, including
 // participant management and state transitions.

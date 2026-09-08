@@ -404,8 +404,7 @@ func (h *Handler) HumaRegister(ctx context.Context, in *registerInput) (*registe
 		}
 	}
 
-	botService := NewBotPreventionService(h.App.Pool)
-	checkRequest := &RegistrationCheckRequest{
+	checkRequest := &core.RegistrationCheckRequest{
 		Email:         in.Body.Email,
 		Username:      in.Body.Username,
 		IPAddress:     ipAddress,
@@ -414,7 +413,7 @@ func (h *Handler) HumaRegister(ctx context.Context, in *registerInput) (*registe
 		HoneypotValue: in.Body.HoneypotValue,
 	}
 
-	result, err := botService.CheckRegistrationAttempt(ctx, checkRequest)
+	result, err := h.BotPreventionService.CheckRegistrationAttempt(ctx, checkRequest)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Bot prevention check failed", "error", err, "email", in.Body.Email)
 		return nil, huma.Error500InternalServerError("Bot prevention check failed")
@@ -426,16 +425,18 @@ func (h *Handler) HumaRegister(ctx context.Context, in *registerInput) (*registe
 
 		var errorMsg string
 		switch result.BlockedReason {
-		case "honeypot":
+		case core.BlockReasonHoneypot:
 			errorMsg = "Invalid registration attempt detected"
-		case "captcha_failed":
+		case core.BlockReasonCaptchaFailed:
 			errorMsg = "CAPTCHA verification failed. Please try again."
-		case "rate_limit_ip":
+		case core.BlockReasonRateLimitIP:
 			errorMsg = "Too many registration attempts from this IP address. Please try again later."
-		case "rate_limit_email":
+		case core.BlockReasonRateLimitEmail:
 			errorMsg = "Too many registration attempts for this email. Please try again later."
-		case "disposable_email":
+		case core.BlockReasonDisposableEmail:
 			errorMsg = "Disposable email addresses are not allowed. Please use a permanent email address."
+		case core.BlockReasonSpammyUsername:
+			errorMsg = "This username is not allowed. Please choose a different username."
 		default:
 			errorMsg = "Registration not allowed at this time"
 		}
@@ -465,7 +466,7 @@ func (h *Handler) HumaRegister(ctx context.Context, in *registerInput) (*registe
 		}, nil
 	}
 
-	if err := botService.LogSuccessfulRegistration(ctx, checkRequest); err != nil {
+	if err := h.BotPreventionService.LogSuccessfulRegistration(ctx, checkRequest); err != nil {
 		// A logging failure must not fail the registration.
 		h.App.ObsLogger.Warn(ctx, "Failed to log successful registration", "error", err, "username", returnUser.Username)
 	}
