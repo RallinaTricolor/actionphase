@@ -112,9 +112,21 @@ test.describe('User Registration', () => {
     // Navigate to registration form
     await page.getByRole('button', { name: /Don't have an account\? Sign up/i }).click();
 
-    // Prefix matches reset script pattern (test_%@example.com) for cleanup
+    // Prefix matches reset script pattern (test_%@example.com) for cleanup.
+    //
+    // The username is base36 rather than a raw timestamp because the backend's
+    // spammy-username check rejects machine-generated shapes: a 10+ digit run
+    // (which Date.now() always is) and any character repeated 6+ times (which a
+    // digit-only suffix hits whenever the clock lands on a run of zeros or
+    // nines). Base36 is short enough to avoid both while staying unique, and
+    // the random suffix keeps parallel workers from colliding within a
+    // millisecond. The "z" separator guarantees a non-digit between the two
+    // groups -- without it, an epoch ending in digits followed by an all-digit
+    // random suffix can still add up to a 10+ digit run (~1 in 300k). The
+    // email keeps the plain timestamp -- only usernames are pattern-checked.
     const timestamp = Date.now();
-    const username = `TestE2EReg_${timestamp}`;
+    const unique = `${timestamp.toString(36)}z${Math.random().toString(36).slice(2, 6)}`;
+    const username = `TestE2EReg_${unique}`;
     const email = `test_e2ereg_${timestamp}@example.com`;
     const password = 'securepassword123';
 

@@ -14,6 +14,22 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// botPreventionTestConfig builds a config with production-like thresholds.
+// Environment is deliberately not "development" -- the rate-limit checks are
+// skipped there, which would make the rate-limit tests below vacuous.
+func botPreventionTestConfig() *core.Config {
+	return &core.Config{
+		App: core.AppConfig{Environment: "test"},
+		BotPrevention: core.BotPreventionConfig{
+			HCaptchaEnabled:       false,
+			IPAttemptLimit:        5,
+			EmailAttemptLimit:     3,
+			BlockDisposableEmails: true,
+			BlockSpammyUsernames:  true,
+		},
+	}
+}
+
 func setupBotPreventionTest(t *testing.T) (*pgxpool.Pool, func()) {
 	t.Helper()
 
@@ -40,11 +56,11 @@ func TestBotPreventionService_HoneypotDetection(t *testing.T) {
 	pool, cleanup := setupBotPreventionTest(t)
 	defer cleanup()
 
-	service := NewBotPreventionService(pool)
+	service := NewBotPreventionService(pool, botPreventionTestConfig())
 	ctx := context.Background()
 
 	// Test with honeypot triggered
-	req := &RegistrationCheckRequest{
+	req := &core.RegistrationCheckRequest{
 		Email:         "test@example.com",
 		Username:      "testuser",
 		IPAddress:     "192.168.1.1",
@@ -93,13 +109,13 @@ func TestBotPreventionService_IPRateLimiting(t *testing.T) {
 	pool, cleanup := setupBotPreventionTest(t)
 	defer cleanup()
 
-	service := NewBotPreventionService(pool)
+	service := NewBotPreventionService(pool, botPreventionTestConfig())
 	ctx := context.Background()
 	ipAddress := "192.168.1.100"
 
 	// Create 5 registration attempts from same IP
 	for i := 0; i < 5; i++ {
-		req := &RegistrationCheckRequest{
+		req := &core.RegistrationCheckRequest{
 			Email:         "test" + string(rune('1'+i)) + "@example.com",
 			Username:      "testuser" + string(rune('1'+i)),
 			IPAddress:     ipAddress,
@@ -122,7 +138,7 @@ func TestBotPreventionService_IPRateLimiting(t *testing.T) {
 	}
 
 	// 6th attempt should be blocked
-	req := &RegistrationCheckRequest{
+	req := &core.RegistrationCheckRequest{
 		Email:         "test6@example.com",
 		Username:      "testuser6",
 		IPAddress:     ipAddress,
@@ -153,13 +169,13 @@ func TestBotPreventionService_EmailRateLimiting(t *testing.T) {
 	pool, cleanup := setupBotPreventionTest(t)
 	defer cleanup()
 
-	service := NewBotPreventionService(pool)
+	service := NewBotPreventionService(pool, botPreventionTestConfig())
 	ctx := context.Background()
 	email := "test@example.com"
 
 	// Create 3 registration attempts with same email
 	for i := 0; i < 3; i++ {
-		req := &RegistrationCheckRequest{
+		req := &core.RegistrationCheckRequest{
 			Email:         email,
 			Username:      "testuser" + string(rune('1'+i)),
 			IPAddress:     "192.168.1." + string(rune('1'+i)),
@@ -182,7 +198,7 @@ func TestBotPreventionService_EmailRateLimiting(t *testing.T) {
 	}
 
 	// 4th attempt should be blocked
-	req := &RegistrationCheckRequest{
+	req := &core.RegistrationCheckRequest{
 		Email:         email,
 		Username:      "testuser4",
 		IPAddress:     "192.168.1.4",
@@ -213,19 +229,22 @@ func TestBotPreventionService_DisposableEmailDetection(t *testing.T) {
 	pool, cleanup := setupBotPreventionTest(t)
 	defer cleanup()
 
-	service := NewBotPreventionService(pool)
+	service := NewBotPreventionService(pool, botPreventionTestConfig())
 	ctx := context.Background()
 
 	disposableEmails := []string{
-		"test@tempmail.com",
+		"test@temp-mail.org",
 		"user@guerrillamail.com",
 		"temp@10minutemail.com",
 		"fake@mailinator.com",
-		"throw@throwaway.email",
+		"throw@yopmail.com",
+		// Mixed case must still block: the underlying list is all-lowercase
+		// and does a bare map lookup, so normalization is our job.
+		"bot@MAILINATOR.COM",
 	}
 
 	for i, email := range disposableEmails {
-		req := &RegistrationCheckRequest{
+		req := &core.RegistrationCheckRequest{
 			Email:         email,
 			Username:      "testuser",
 			IPAddress:     fmt.Sprintf("192.168.1.%d", i+10), // Use different IPs to avoid rate limiting
@@ -249,7 +268,7 @@ func TestBotPreventionService_DisposableEmailDetection(t *testing.T) {
 	}
 
 	// Test with valid email (use different IP to avoid rate limiting from previous tests)
-	req := &RegistrationCheckRequest{
+	req := &core.RegistrationCheckRequest{
 		Email:         "user@gmail.com",
 		Username:      "testuser",
 		IPAddress:     "192.168.1.99",
@@ -276,10 +295,10 @@ func TestBotPreventionService_AllChecksPass(t *testing.T) {
 	pool, cleanup := setupBotPreventionTest(t)
 	defer cleanup()
 
-	service := NewBotPreventionService(pool)
+	service := NewBotPreventionService(pool, botPreventionTestConfig())
 	ctx := context.Background()
 
-	req := &RegistrationCheckRequest{
+	req := &core.RegistrationCheckRequest{
 		Email:         "valid@gmail.com",
 		Username:      "validuser",
 		IPAddress:     "192.168.1.50",
@@ -319,10 +338,10 @@ func TestBotPreventionService_LogSuccessfulRegistration(t *testing.T) {
 	pool, cleanup := setupBotPreventionTest(t)
 	defer cleanup()
 
-	service := NewBotPreventionService(pool)
+	service := NewBotPreventionService(pool, botPreventionTestConfig())
 	ctx := context.Background()
 
-	req := &RegistrationCheckRequest{
+	req := &core.RegistrationCheckRequest{
 		Email:         "success@example.com",
 		Username:      "successuser",
 		IPAddress:     "192.168.1.200",
@@ -360,26 +379,73 @@ func TestBotPreventionService_LogSuccessfulRegistration(t *testing.T) {
 }
 
 func TestIsDisposableEmail(t *testing.T) {
+	// No DB is touched: IsDisposableEmail is a pure lookup over the embedded
+	// burner list plus the configured allowlist.
+	service := &BotPreventionService{
+		disposableAllowlist: map[string]bool{"allowed-by-operator.com": true},
+	}
+
 	tests := []struct {
+		name         string
 		email        string
 		isDisposable bool
 	}{
-		{"user@tempmail.com", true},
-		{"test@guerrillamail.com", true},
-		{"fake@10minutemail.com", true},
-		{"temp@mailinator.com", true},
-		{"user@throwaway.email", true},
-		{"valid@gmail.com", false},
-		{"work@company.com", false},
-		{"personal@outlook.com", false},
-		{"invalid-email", false}, // Invalid format
+		{"known burner", "test@guerrillamail.com", true},
+		{"known burner 2", "fake@10minutemail.com", true},
+		{"known burner 3", "temp@mailinator.com", true},
+		{"known burner 4", "user@temp-mail.org", true},
+
+		// The upstream list is all-lowercase and looked up directly, so
+		// without normalization one capital letter bypasses the whole check.
+		{"uppercase domain", "bot@MAILINATOR.COM", true},
+		{"mixed case domain", "bot@MailInator.com", true},
+		{"whitespace padded", "bot@ mailinator.com ", true},
+
+		// Real providers must never be blocked.
+		{"gmail", "valid@gmail.com", false},
+		{"outlook", "personal@outlook.com", false},
+		{"proton", "user@proton.me", false},
+		{"fastmail", "user@fastmail.com", false},
+		{"icloud", "user@icloud.com", false},
+		{"custom domain", "work@company.com", false},
+
+		// RFC 2606 / RFC 6761 reserved names. The upstream list flags
+		// example.com; this repo uses it in over a thousand fixtures and
+		// tests, and no bot can read mail there anyway.
+		{"example.com", "test_gm@example.com", false},
+		{"example.com uppercase", "user@EXAMPLE.COM", false},
+		{"example.org", "user@example.org", false},
+		{"example.net", "user@example.net", false},
+		{"dot test tld", "user@myhost.test", false},
+		{"dot invalid tld", "user@foo.invalid", false},
+		{"localhost", "user@localhost", false},
+
+		// The operator allowlist overrides the blocklist, which is the only
+		// recourse for an upstream false positive.
+		{"allowlisted", "user@allowed-by-operator.com", false},
+
+		// Malformed input stays fail-open, matching the pre-library behavior;
+		// address validity is settled earlier by user.Validate. The library's
+		// own IsBurnerEmail returns true for all of these.
+		{"no at sign", "invalid-email", false},
+		{"empty", "", false},
+		{"empty domain", "user@", false},
+
+		// The domain comes from the last "@", so an address whose local-part
+		// legally contains one (RFC 5321 quoted form) is still checked rather
+		// than skipped.
+		{"quoted local part", `"a@b"@mailinator.com`, true},
+		{"two at signs", "a@b@mailinator.com", true},
+		{"two at signs not burner", "a@b@gmail.com", false},
 	}
 
 	for _, tt := range tests {
-		result := IsDisposableEmail(tt.email)
-		if result != tt.isDisposable {
-			t.Errorf("IsDisposableEmail(%s) = %v, want %v", tt.email, result, tt.isDisposable)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			result := service.IsDisposableEmail(tt.email)
+			if result != tt.isDisposable {
+				t.Errorf("IsDisposableEmail(%q) = %v, want %v", tt.email, result, tt.isDisposable)
+			}
+		})
 	}
 }
 
@@ -391,11 +457,11 @@ func TestBotPreventionService_CleanupOldAttempts(t *testing.T) {
 	pool, cleanup := setupBotPreventionTest(t)
 	defer cleanup()
 
-	service := NewBotPreventionService(pool)
+	service := NewBotPreventionService(pool, botPreventionTestConfig())
 	ctx := context.Background()
 
 	// Create a registration attempt
-	req := &RegistrationCheckRequest{
+	req := &core.RegistrationCheckRequest{
 		Email:         "cleanup@example.com",
 		Username:      "cleanupuser",
 		IPAddress:     "192.168.1.99",

@@ -201,6 +201,19 @@ func (s *AccountService) ChangeUsername(ctx context.Context, userID int, req *Ch
 		return err
 	}
 
+	// Spam patterns are checked here as well as at registration. Without this,
+	// a bot registers under an innocuous name and renames to the handle it
+	// actually wanted; the 30-day cooldown slows that down but does not stop
+	// it. Unlike the registration path this is not gated on
+	// BlockSpammyUsernames -- that flag exists to let an operator open
+	// registration up, and a rename has no such pressure behind it.
+	if IsSpammyUsername(req.NewUsername) {
+		return &PasswordValidationError{
+			Field:  "username",
+			Reason: "username is not allowed",
+		}
+	}
+
 	queries := db.New(s.DB)
 
 	// Get user to check cooldown period and verify password

@@ -133,6 +133,30 @@ func TestAccountService_ChangeUsername(t *testing.T) {
 		}
 	})
 
+	t.Run("rejects_spammy_username", func(t *testing.T) {
+		// Registration is not the only way a spam handle gets created: a bot
+		// can register under an innocuous name and rename afterwards, so the
+		// rename path applies the same patterns.
+		spammyUsernames := []string{
+			"buy_backlinks",
+			"buyviagra",
+			"Free_BTC_Now",
+			"user1757308800123",
+			"aaaaaaaa",
+		}
+
+		for _, spammyUsername := range spammyUsernames {
+			err := accountService.ChangeUsername(context.Background(), user.ID, &ChangeUsernameRequest{
+				NewUsername:     spammyUsername,
+				CurrentPassword: "password123",
+			})
+			core.AssertTrue(t, err != nil, fmt.Sprintf("Should reject spammy username: %s", spammyUsername))
+			pwdErr, ok := err.(*PasswordValidationError)
+			core.AssertTrue(t, ok, "Should be PasswordValidationError")
+			core.AssertTrue(t, strings.Contains(pwdErr.Reason, "not allowed"), "Error should say the username is not allowed")
+		}
+	})
+
 	t.Run("accepts_username_with_valid_characters", func(t *testing.T) {
 		validUsernames := []string{
 			"user123",       // alphanumeric
