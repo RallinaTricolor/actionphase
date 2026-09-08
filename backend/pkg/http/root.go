@@ -149,6 +149,7 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 			IPBanService:           &db.IPBanService{DB: h.App.Pool, Logger: h.App.ObsLogger},
 			FingerprintBanService:  &db.FingerprintBanService{DB: h.App.Pool, Logger: h.App.ObsLogger},
 			DiscordService:         &db.DiscordAccountService{DB: h.App.Pool, Logger: h.App.ObsLogger},
+			BotPreventionService:   auth.NewBotPreventionService(h.App.Pool, h.App.Config),
 		}
 
 		// In development mode, rate limiting is relaxed for E2E testing.

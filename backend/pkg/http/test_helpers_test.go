@@ -34,6 +34,7 @@ func TestHandlerTestContext_Example(t *testing.T) {
 		SessionService:        &dbsvc.SessionService{DB: pool, Logger: ctx.App.ObsLogger},
 		IPBanService:          &dbsvc.IPBanService{DB: pool, Logger: ctx.App.ObsLogger},
 		FingerprintBanService: &dbsvc.FingerprintBanService{DB: pool, Logger: ctx.App.ObsLogger},
+		BotPreventionService:  auth.NewBotPreventionService(pool, ctx.App.Config),
 	}
 	// Auth is huma-registered. /me sits in its own group with Verifier only,
 	// matching production, so it answers 200 with a null user when anonymous.
@@ -119,6 +120,7 @@ func TestHandlerTestContext_ErrorResponses(t *testing.T) {
 		SessionService:        &dbsvc.SessionService{DB: pool, Logger: ctx.App.ObsLogger},
 		IPBanService:          &dbsvc.IPBanService{DB: pool, Logger: ctx.App.ObsLogger},
 		FingerprintBanService: &dbsvc.FingerprintBanService{DB: pool, Logger: ctx.App.ObsLogger},
+		BotPreventionService:  auth.NewBotPreventionService(pool, ctx.App.Config),
 	}
 	// Auth is huma-registered.
 	ctx.Router.Route("/api/v1/auth", func(r chi.Router) {

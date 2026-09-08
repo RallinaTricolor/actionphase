@@ -64,6 +64,7 @@ func newTestHandler(pool *pgxpool.Pool) Handler {
 		IPBanService:           &dbsvc.IPBanService{DB: pool, Logger: app.ObsLogger},
 		FingerprintBanService:  &dbsvc.FingerprintBanService{DB: pool, Logger: app.ObsLogger},
 		DiscordService:         &dbsvc.DiscordAccountService{DB: pool, Logger: app.ObsLogger},
+		BotPreventionService:   NewBotPreventionService(pool, app.Config),
 	}
 }
 

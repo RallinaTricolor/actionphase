@@ -310,7 +310,7 @@ func main() {
 		&authPruner{
 			password:      &authsvc.PasswordService{DB: pool, Logger: obs.Logger},
 			account:       &authsvc.AccountService{DB: pool, Logger: obs.Logger},
-			botPrevention: authsvc.NewBotPreventionService(pool),
+			botPrevention: authsvc.NewBotPreventionService(pool, config),
 		},
 		obs.Logger,
 		cleanup.DefaultInterval,

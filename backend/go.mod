@@ -16,6 +16,7 @@ require (
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/joho/godotenv v1.5.1
 	github.com/lestrrat-go/jwx/v2 v2.1.6
+	github.com/lindell/go-burner-email-providers v1.0.119
 	github.com/prometheus/client_golang v1.23.2
 	github.com/resend/resend-go/v2 v2.28.0
 	github.com/rs/zerolog v1.34.0
