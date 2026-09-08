@@ -91,7 +91,7 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 	r := chi.NewRouter()
 
 	// Add observability middleware stack first
-	observabilityMiddleware := h.App.Observability.MiddlewareStack()
+	observabilityMiddleware := h.App.Observability.MiddlewareStack(h.App.Config.CORSConfig())
 	for _, mw := range observabilityMiddleware {
 		r.Use(mw)
 	}
