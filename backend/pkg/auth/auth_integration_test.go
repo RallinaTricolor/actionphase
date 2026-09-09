@@ -233,7 +233,7 @@ func TestAuthFlow_InvalidCredentials(t *testing.T) {
 				"password": "validpassword",
 				// missing email
 			},
-			expectedStatus: 400,
+			expectedStatus: 422,
 			description:    "Registration without email should fail",
 		},
 		{
@@ -265,7 +265,7 @@ func TestAuthFlow_InvalidCredentials(t *testing.T) {
 			err := json.Unmarshal(w.Body.Bytes(), &response)
 			core.AssertNoError(t, err, "Error response should be valid JSON")
 
-			core.AssertNotEqual(t, "", response["status"], "Error response should have status field")
+			core.AssertNotEqual(t, "", response["title"], "Error response should have title field")
 		})
 	}
 }
@@ -337,7 +337,7 @@ func TestAuthFlow_DuplicateRegistration(t *testing.T) {
 		duplicateUser := testUser
 		duplicateUser.Email = "different@test.com" // different email, same username
 
-		payload, _ := json.Marshal(duplicateUser)
+		payload := registrationPayload(duplicateUser)
 		req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(payload))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
@@ -352,7 +352,7 @@ func TestAuthFlow_DuplicateRegistration(t *testing.T) {
 		duplicateUser := testUser
 		duplicateUser.Username = "differentuser" // different username, same email
 
-		payload, _ := json.Marshal(duplicateUser)
+		payload := registrationPayload(duplicateUser)
 		req := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(payload))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
@@ -386,7 +386,7 @@ func TestAuthFlow_RegistrationValidation(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Invalid email format should return 400")
+		core.AssertEqual(t, 422, w.Code, "Invalid email format should return 422")
 	})
 
 	t.Run("password_too_short", func(t *testing.T) {
@@ -403,7 +403,7 @@ func TestAuthFlow_RegistrationValidation(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Password too short should return 400")
+		core.AssertEqual(t, 422, w.Code, "Password too short should return 422")
 	})
 
 	t.Run("password_too_long", func(t *testing.T) {
@@ -426,7 +426,7 @@ func TestAuthFlow_RegistrationValidation(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Password too long should return 400")
+		core.AssertEqual(t, 422, w.Code, "Password too long should return 422")
 	})
 
 	t.Run("empty_username", func(t *testing.T) {
@@ -443,7 +443,7 @@ func TestAuthFlow_RegistrationValidation(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Empty username should return 400")
+		core.AssertEqual(t, 422, w.Code, "Empty username should return 422")
 	})
 
 	t.Run("empty_email", func(t *testing.T) {
@@ -460,7 +460,7 @@ func TestAuthFlow_RegistrationValidation(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Empty email should return 400")
+		core.AssertEqual(t, 422, w.Code, "Empty email should return 422")
 	})
 
 	t.Run("empty_password", func(t *testing.T) {
@@ -477,7 +477,7 @@ func TestAuthFlow_RegistrationValidation(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Empty password should return 400")
+		core.AssertEqual(t, 422, w.Code, "Empty password should return 422")
 	})
 
 	t.Run("username_with_invalid_characters", func(t *testing.T) {
@@ -494,7 +494,7 @@ func TestAuthFlow_RegistrationValidation(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Username with invalid characters should return 400")
+		core.AssertEqual(t, 422, w.Code, "Username with invalid characters should return 422")
 	})
 
 	t.Run("username_too_short", func(t *testing.T) {
@@ -511,7 +511,7 @@ func TestAuthFlow_RegistrationValidation(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Username too short should return 400")
+		core.AssertEqual(t, 422, w.Code, "Username too short should return 422")
 	})
 
 	t.Run("username_too_long", func(t *testing.T) {
@@ -531,7 +531,7 @@ func TestAuthFlow_RegistrationValidation(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Username too long should return 400")
+		core.AssertEqual(t, 422, w.Code, "Username too long should return 422")
 	})
 
 	t.Run("invalid_json", func(t *testing.T) {
@@ -559,9 +559,10 @@ func TestAuthFlow_RegistrationValidation(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		// Server might still accept it, or might reject - check actual behavior
-		// For now, we're documenting the behavior
-		core.AssertTrue(t, w.Code == 400 || w.Code == 201, "Missing content-type should be handled")
+		// Huma requires a content-type it can decode; without one the body is
+		// never parsed, which is a request-level problem rather than a
+		// validation one.
+		core.AssertEqual(t, 422, w.Code, "Missing content-type should be rejected")
 	})
 }
 
@@ -997,7 +998,7 @@ func TestAuthFlow_SessionManagement(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		// Should return 400 Bad Request
-		core.AssertEqual(t, 400, w.Code, "Revoke with invalid session ID should return 400")
+		core.AssertEqual(t, 422, w.Code, "Revoke with invalid session ID should return 422")
 	})
 
 	t.Run("revoke_session_not_belonging_to_user", func(t *testing.T) {
@@ -1153,7 +1154,7 @@ func TestAuthFlow_BotPrevention(t *testing.T) {
 
 		var response map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &response)
-		errorMsg := response["error"].(string)
+		errorMsg := response["detail"].(string)
 		core.AssertTrue(t, strings.Contains(errorMsg, "Invalid registration attempt"), "Error should mention invalid registration")
 	})
 
@@ -1161,7 +1162,7 @@ func TestAuthFlow_BotPrevention(t *testing.T) {
 		// Registration with disposable email domain
 		payload := map[string]string{
 			"username":       "validuser",
-			"email":          "test@tempmail.com", // Disposable email domain
+			"email":          "test@temp-mail.org", // Disposable email domain
 			"password":       "testpassword123",
 			"honeypot_value": "", // Honeypot empty (correct)
 		}
@@ -1177,7 +1178,7 @@ func TestAuthFlow_BotPrevention(t *testing.T) {
 
 		var response map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &response)
-		errorMsg := response["error"].(string)
+		errorMsg := response["detail"].(string)
 		core.AssertTrue(t, strings.Contains(errorMsg, "Disposable email"), "Error should mention disposable email")
 	})
 
@@ -1186,7 +1187,10 @@ func TestAuthFlow_BotPrevention(t *testing.T) {
 			"guerrillamail.com",
 			"10minutemail.com",
 			"mailinator.com",
-			"throwaway.email",
+			"yopmail.com",
+			// Mixed case must block too: the embedded list is all-lowercase
+			// and looked up directly, so normalization happens in our wrapper.
+			"MAILINATOR.COM",
 		}
 
 		for _, domain := range disposableDomains {
@@ -1215,8 +1219,13 @@ func TestAuthFlow_BotPrevention(t *testing.T) {
 
 		// Registration with valid data and no bot indicators
 		// Use unique username to avoid collisions
-		uniqueUsername := fmt.Sprintf("legituser_%d", time.Now().UnixNano())
-		uniqueEmail := fmt.Sprintf("legit_%d@example.com", time.Now().UnixNano())
+		// Base36 rather than the raw nanosecond count: a 19-digit run is
+		// exactly the machine-generated shape the spammy-username check
+		// blocks, so a decimal timestamp here would make a "valid
+		// registration" fixture that no real user resembles.
+		unique := strconv.FormatInt(time.Now().UnixNano(), 36)
+		uniqueUsername := fmt.Sprintf("legituser_%s", unique)
+		uniqueEmail := fmt.Sprintf("legit_%s@example.com", unique)
 
 		payload := map[string]string{
 			"username":       uniqueUsername,
@@ -1236,7 +1245,7 @@ func TestAuthFlow_BotPrevention(t *testing.T) {
 		if w.Code != 201 {
 			var errorResponse map[string]interface{}
 			json.Unmarshal(w.Body.Bytes(), &errorResponse)
-			t.Logf("Registration failed with error: %v", errorResponse["error"])
+			t.Logf("Registration failed with error: %v", errorResponse["detail"])
 		}
 		core.AssertEqual(t, 201, w.Code, "Valid registration should succeed")
 
@@ -1257,7 +1266,7 @@ func TestAuthFlow_BotPrevention(t *testing.T) {
 		// Honeypot should trigger first
 		payload := map[string]string{
 			"username":       "botuser",
-			"email":          "bot@tempmail.com", // Also disposable
+			"email":          "bot@mailinator.com", // Also disposable
 			"password":       "testpassword123",
 			"honeypot_value": "I am a bot", // Honeypot triggered
 		}
@@ -1273,7 +1282,7 @@ func TestAuthFlow_BotPrevention(t *testing.T) {
 
 		var response map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &response)
-		errorMsg := response["error"].(string)
+		errorMsg := response["detail"].(string)
 		// Should mention honeypot, not disposable email (honeypot checked first)
 		core.AssertTrue(t, strings.Contains(errorMsg, "Invalid registration attempt"), "Error should mention invalid registration (honeypot)")
 	})
@@ -1282,7 +1291,7 @@ func TestAuthFlow_BotPrevention(t *testing.T) {
 		// Test with uppercase domain
 		payload := map[string]string{
 			"username":       "testuser",
-			"email":          "test@TEMPMAIL.COM", // Uppercase disposable domain
+			"email":          "test@MAILINATOR.COM", // Uppercase disposable domain
 			"password":       "testpassword123",
 			"honeypot_value": "",
 		}
@@ -1298,7 +1307,7 @@ func TestAuthFlow_BotPrevention(t *testing.T) {
 
 		var response map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &response)
-		errorMsg := response["error"].(string)
+		errorMsg := response["detail"].(string)
 		core.AssertTrue(t, strings.Contains(strings.ToLower(errorMsg), "disposable email"), "Error should mention disposable email")
 	})
 }
@@ -1327,7 +1336,7 @@ func TestAuthFlow_EmailVerification(t *testing.T) {
 
 		var response map[string]interface{}
 		json.Unmarshal(verifyW.Body.Bytes(), &response)
-		errorMsg := response["error"].(string)
+		errorMsg := response["detail"].(string)
 		core.AssertTrue(t, strings.Contains(strings.ToLower(errorMsg), "invalid"), "Error should mention invalid token")
 	})
 
@@ -1388,7 +1397,7 @@ func TestAuthFlow_PasswordReset(t *testing.T) {
 		router.ServeHTTP(resetW, resetReq)
 
 		// Should return validation error
-		core.AssertEqual(t, 400, resetW.Code, "Missing email should return 400")
+		core.AssertEqual(t, 422, resetW.Code, "Missing email should return 422")
 	})
 
 	t.Run("reset_password_with_invalid_token", func(t *testing.T) {
@@ -1408,7 +1417,7 @@ func TestAuthFlow_PasswordReset(t *testing.T) {
 
 		var response map[string]interface{}
 		json.Unmarshal(resetW.Body.Bytes(), &response)
-		errorMsg := response["error"].(string)
+		errorMsg := response["detail"].(string)
 		// Accept either "invalid" or "token" in the error message (API might say "token not found" or similar)
 		hasInvalid := strings.Contains(strings.ToLower(errorMsg), "invalid")
 		hasToken := strings.Contains(strings.ToLower(errorMsg), "token")
@@ -1432,7 +1441,7 @@ func TestAuthFlow_PasswordReset(t *testing.T) {
 
 		var response map[string]interface{}
 		json.Unmarshal(resetW.Body.Bytes(), &response)
-		errorMsg := response["error"].(string)
+		errorMsg := response["detail"].(string)
 		core.AssertTrue(t, strings.Contains(strings.ToLower(errorMsg), "password"), "Error should mention password validation")
 	})
 
@@ -1445,7 +1454,7 @@ func TestAuthFlow_PasswordReset(t *testing.T) {
 		resetW := httptest.NewRecorder()
 		router.ServeHTTP(resetW, resetReq)
 
-		core.AssertEqual(t, 400, resetW.Code, "Missing required fields should return 400")
+		core.AssertEqual(t, 422, resetW.Code, "Missing required fields should return 422")
 	})
 
 	t.Run("validate_reset_token_invalid", func(t *testing.T) {
@@ -1465,7 +1474,7 @@ func TestAuthFlow_PasswordReset(t *testing.T) {
 		router.ServeHTTP(validateW, validateReq)
 
 		// Should return 400 for missing token
-		core.AssertEqual(t, 400, validateW.Code, "Missing token should return 400")
+		core.AssertEqual(t, 422, validateW.Code, "Missing token should return 422")
 	})
 }
 
@@ -1611,7 +1620,7 @@ func TestAuthFlow_ChangePassword(t *testing.T) {
 		router.ServeHTTP(changeW, changeReq)
 
 		// Should return 400 for missing required field
-		core.AssertEqual(t, 400, changeW.Code, "Missing current password should return 400")
+		core.AssertEqual(t, 422, changeW.Code, "Missing current password should return 422")
 	})
 
 	t.Run("change_password_wrong_current_password", func(t *testing.T) {
@@ -1645,7 +1654,7 @@ func TestAuthFlow_ChangePassword(t *testing.T) {
 
 		var response map[string]interface{}
 		json.Unmarshal(changeW.Body.Bytes(), &response)
-		errorMsg := response["error"].(string)
+		errorMsg := response["detail"].(string)
 		hasCurrentPassword := strings.Contains(strings.ToLower(errorMsg), "current") || strings.Contains(strings.ToLower(errorMsg), "password")
 		core.AssertTrue(t, hasCurrentPassword, "Error should mention current password issue")
 	})
@@ -1681,7 +1690,7 @@ func TestAuthFlow_ChangePassword(t *testing.T) {
 
 		var response map[string]interface{}
 		json.Unmarshal(changeW.Body.Bytes(), &response)
-		errorMsg := response["error"].(string)
+		errorMsg := response["detail"].(string)
 		core.AssertTrue(t, strings.Contains(strings.ToLower(errorMsg), "password"), "Error should mention password validation")
 	})
 
@@ -1711,7 +1720,7 @@ func TestAuthFlow_ChangePassword(t *testing.T) {
 		router.ServeHTTP(changeW, changeReq)
 
 		// Should return 400 for missing confirm password
-		core.AssertEqual(t, 400, changeW.Code, "Missing confirm password should return 400")
+		core.AssertEqual(t, 422, changeW.Code, "Missing confirm password should return 422")
 	})
 }
 
@@ -1930,7 +1939,7 @@ func TestAuthFlow_UserPreferences(t *testing.T) {
 		router.ServeHTTP(updateW, updateReq)
 
 		// Should return 400 for missing required field
-		core.AssertEqual(t, 400, updateW.Code, "Missing preferences field should return 400")
+		core.AssertEqual(t, 422, updateW.Code, "Missing preferences field should return 422")
 	})
 
 	t.Run("update_preferences_with_invalid_token", func(t *testing.T) {
@@ -2114,9 +2123,9 @@ func TestAuthFlow_CompleteEmailChange(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		// Should return 400 or 500
-		core.AssertTrue(t, w.Code == 400 || w.Code == 500,
-			"Missing token should return 400 or 500, got: "+strconv.Itoa(w.Code))
+		// A missing required field is a validation failure, not a parse
+		// failure: the body is valid JSON, it just says nothing. 422.
+		core.AssertEqual(t, 422, w.Code, "Missing token should return 422")
 	})
 
 	t.Run("complete_email_change_with_malformed_json", func(t *testing.T) {

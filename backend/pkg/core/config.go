@@ -1,9 +1,11 @@
 package core
 
 import (
+	"actionphase/pkg/observability"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -65,6 +67,8 @@ type Config struct {
 	Storage   StorageConfig   `env:"STORAGE"`
 	Discord   DiscordConfig   `env:"DISCORD"`
 	Telemetry TelemetryConfig `env:"TELEMETRY"`
+
+	BotPrevention BotPreventionConfig `env:"BOT_PREVENTION"`
 }
 
 // DatabaseConfig contains database connection and behavior settings.
@@ -184,6 +188,43 @@ type AppConfig struct {
 	RequireRegistrationApproval bool `env:"REQUIRE_REGISTRATION_APPROVAL"`
 }
 
+// BotPreventionConfig contains registration bot-prevention settings.
+//
+// The thresholds are deliberately per-environment: rate limiting is skipped
+// entirely in development so E2E runs can register repeatedly, matching the
+// behavior the service had when it read ENVIRONMENT directly.
+type BotPreventionConfig struct {
+	// HCaptchaSecret is the server-side hCaptcha verification secret.
+	HCaptchaSecret string `env:"HCAPTCHA_SECRET"`
+
+	// HCaptchaEnabled turns hCaptcha verification on. When false, the captcha
+	// check is treated as passed rather than skipped, so downstream logging
+	// still records a captcha_passed value.
+	HCaptchaEnabled bool `env:"HCAPTCHA_ENABLED"`
+
+	// HCaptchaTimeout bounds the outbound call to hcaptcha.com. Without it a
+	// hung verification endpoint stalls registration indefinitely.
+	HCaptchaTimeout time.Duration `env:"HCAPTCHA_TIMEOUT"`
+
+	// IPAttemptLimit is the max registration attempts allowed per IP per hour.
+	IPAttemptLimit int `env:"BOT_PREVENTION_IP_ATTEMPT_LIMIT"`
+
+	// EmailAttemptLimit is the max registration attempts allowed per email per day.
+	EmailAttemptLimit int `env:"BOT_PREVENTION_EMAIL_ATTEMPT_LIMIT"`
+
+	// BlockDisposableEmails gates the disposable-email check.
+	BlockDisposableEmails bool `env:"BLOCK_DISPOSABLE_EMAILS"`
+
+	// DisposableEmailAllowlist force-allows specific domains that the embedded
+	// burner list flags. It exists because that list is maintained upstream:
+	// a false positive would otherwise block legitimate signups with no
+	// recourse. Empty by default.
+	DisposableEmailAllowlist []string `env:"DISPOSABLE_EMAIL_ALLOWLIST"`
+
+	// BlockSpammyUsernames gates the spammy-username pattern check.
+	BlockSpammyUsernames bool `env:"BLOCK_SPAMMY_USERNAMES"`
+}
+
 // StorageConfig contains file storage configuration.
 // Supports both local filesystem (dev/staging) and S3-compatible cloud storage (production).
 type StorageConfig struct {
@@ -284,6 +325,16 @@ func LoadConfig() (*Config, error) {
 			OTELEnabled:   getEnvBool("OTEL_ENABLED", false),
 			OTELEndpoint:  getEnvString("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
 			PrometheusURL: getEnvString("GRAFANA_PROMETHEUS_URL", ""),
+		},
+		BotPrevention: BotPreventionConfig{
+			HCaptchaSecret:           getEnvString("HCAPTCHA_SECRET", ""),
+			HCaptchaEnabled:          getEnvBool("HCAPTCHA_ENABLED", false),
+			HCaptchaTimeout:          getEnvDuration("HCAPTCHA_TIMEOUT", 10*time.Second),
+			IPAttemptLimit:           getEnvInt("BOT_PREVENTION_IP_ATTEMPT_LIMIT", 5),
+			EmailAttemptLimit:        getEnvInt("BOT_PREVENTION_EMAIL_ATTEMPT_LIMIT", 3),
+			BlockDisposableEmails:    getEnvBool("BLOCK_DISPOSABLE_EMAILS", true),
+			DisposableEmailAllowlist: getEnvStringSlice("DISPOSABLE_EMAIL_ALLOWLIST", nil),
+			BlockSpammyUsernames:     getEnvBool("BLOCK_SPAMMY_USERNAMES", true),
 		},
 	}
 
@@ -400,20 +451,28 @@ func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
 	return defaultValue
 }
 
+// getEnvStringSlice reads a comma-separated environment variable into a slice.
+//
+// Entries are trimmed and empties dropped, so "a, b," yields ["a", "b"]. A
+// variable that is unset, empty, or holds only separators falls back to
+// defaultValue rather than an empty slice, since an accidental blank should not
+// silently mean "no entries" for allow-list style settings.
 func getEnvStringSlice(key string, defaultValue []string) []string {
-	if value := os.Getenv(key); value != "" {
-		// Simple comma-separated parsing - could be enhanced
-		result := []string{}
-		for _, v := range []string{value} {
-			if v != "" {
-				result = append(result, v)
-			}
-		}
-		if len(result) > 0 {
-			return result
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	result := []string{}
+	for _, v := range strings.Split(value, ",") {
+		if trimmed := strings.TrimSpace(v); trimmed != "" {
+			result = append(result, trimmed)
 		}
 	}
-	return defaultValue
+	if len(result) == 0 {
+		return defaultValue
+	}
+	return result
 }
 
 func contains(slice []string, item string) bool {
@@ -446,5 +505,17 @@ func getPoolDefaults(environment string) (int, int) {
 	default:
 		// Unknown environment - use development defaults
 		return 5, 1
+	}
+}
+
+// CORSConfig translates the app's CORS settings into the shape the
+// observability middleware consumes.
+//
+// The middleware lives in observability, which cannot import core (core imports
+// it), so the config-to-middleware direction has to be spelled out here.
+func (c *Config) CORSConfig() observability.CORSConfig {
+	return observability.CORSConfig{
+		Enabled:        c.App.CORSEnabled,
+		AllowedOrigins: c.App.CORSOrigins,
 	}
 }

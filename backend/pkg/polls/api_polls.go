@@ -114,27 +114,7 @@ func (req *SubmitVoteRequest) Resolve(huma.Context) []error {
 	return nil
 }
 
-// PollResponse is the API response for a poll with options
-// Returns a flat structure with poll fields at top level and options array
-type PollResponse struct {
-	// Embed all poll fields at top level
-	db.CommonRoomPoll
-
-	// Additional response fields
-	Options               []db.PollOption `json:"options"`
-	HasVoted              bool            `json:"has_voted,omitempty"`
-	UserVoteOptionID      *int32          `json:"user_vote_option_id,omitempty"`
-	UserVoteOtherResponse *string         `json:"user_vote_other_response,omitempty"`
-}
-
-// PollResultsResponse is the API response for poll results
-type PollResultsResponse struct {
-	Poll                db.CommonRoomPoll `json:"poll"`
-	OptionResults       []OptionResult    `json:"option_results"`
-	OtherResponses      []OtherResponse   `json:"other_responses"` // Always include even if empty array
-	TotalVotes          int32             `json:"total_votes"`
-	ShowIndividualVotes bool              `json:"show_individual_votes"`
-}
+// PollResponse, PollResultsResponse and PollListItem live in responses.go.
 
 // OptionResult represents voting results for one option
 // Returns flattened structure matching frontend expectations
@@ -276,9 +256,3 @@ func (h *Handler) checkPollViewAccess(ctx context.Context, gameID int32, userID 
 }
 
 // API Handler Methods
-
-// PollListItem represents a poll in the list response with vote status
-type PollListItem struct {
-	db.CommonRoomPoll
-	UserHasVoted bool `json:"user_has_voted"`
-}

@@ -841,6 +841,18 @@ func NewTestConfig() *Config {
 			CORSEnabled:   true,
 			CORSOrigins:   []string{"http://localhost:5173"},
 		},
+		// Mirrors the production defaults. The limits matter even though
+		// Environment is "development" (which skips the rate-limit checks):
+		// leaving them zero would mean any test that flips the environment
+		// blocks on the very first attempt.
+		BotPrevention: BotPreventionConfig{
+			HCaptchaEnabled:       false,
+			HCaptchaTimeout:       10 * time.Second,
+			IPAttemptLimit:        5,
+			EmailAttemptLimit:     3,
+			BlockDisposableEmails: true,
+			BlockSpammyUsernames:  true,
+		},
 	}
 }
 

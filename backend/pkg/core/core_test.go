@@ -133,6 +133,40 @@ func TestGetEnvInt_Default(t *testing.T) {
 	assert.Equal(t, 5, getEnvInt("TEST_INT_VAR", 5))
 }
 
+// The production deployments pass CORS_ORIGINS as a comma-separated list
+// (docker-compose.prod.yml, PRODUCTION_ENV_CHECKLIST.md). An earlier version of
+// this helper never split on the comma, so the whole string became one
+// allow-list entry that no Origin header could ever equal -- denying every
+// cross-origin request in production.
+func TestGetEnvStringSlice_SplitsOnComma(t *testing.T) {
+	t.Setenv("TEST_SLICE_VAR", "https://action-phase.com,https://www.action-phase.com")
+	assert.Equal(t,
+		[]string{"https://action-phase.com", "https://www.action-phase.com"},
+		getEnvStringSlice("TEST_SLICE_VAR", nil))
+}
+
+func TestGetEnvStringSlice_SingleValue(t *testing.T) {
+	t.Setenv("TEST_SLICE_VAR", "https://action-phase.com")
+	assert.Equal(t, []string{"https://action-phase.com"}, getEnvStringSlice("TEST_SLICE_VAR", nil))
+}
+
+func TestGetEnvStringSlice_TrimsAndDropsEmpties(t *testing.T) {
+	t.Setenv("TEST_SLICE_VAR", " https://a.test , https://b.test ,")
+	assert.Equal(t, []string{"https://a.test", "https://b.test"}, getEnvStringSlice("TEST_SLICE_VAR", nil))
+}
+
+func TestGetEnvStringSlice_Default(t *testing.T) {
+	fallback := []string{"http://localhost:5173"}
+
+	t.Setenv("TEST_SLICE_VAR", "")
+	assert.Equal(t, fallback, getEnvStringSlice("TEST_SLICE_VAR", fallback))
+
+	// A value of only separators is a misconfiguration, not an instruction to
+	// use an empty allow-list.
+	t.Setenv("TEST_SLICE_VAR", " , ")
+	assert.Equal(t, fallback, getEnvStringSlice("TEST_SLICE_VAR", fallback))
+}
+
 func TestGetEnvDuration_Valid(t *testing.T) {
 	t.Setenv("TEST_DUR_VAR", "2h30m")
 	assert.Equal(t, 2*time.Hour+30*time.Minute, getEnvDuration("TEST_DUR_VAR", time.Second))

@@ -1,10 +1,13 @@
 package observability
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"path"
 	"runtime/debug"
 	"strconv"
@@ -140,16 +143,52 @@ func ErrorRecoveryMiddleware(logger *Logger) func(next http.Handler) http.Handle
 						"stack_trace", stackTrace,
 					)
 
-					// Return 500 error to client
-					w.Header().Set("Content-Type", "application/json")
+					// Answer with RFC 7807, like every other error path. This is
+					// the last emitter a client can hit and the one it is least
+					// able to anticipate, so a panic must not be the single
+					// response whose shape differs from the rest of the API.
+					//
+					// The body is assembled here rather than through
+					// core.ErrResponse because core imports this package;
+					// TestPanicResponseMatchesErrResponse pins the two together.
+					body := problemJSON{
+						Title:    http.StatusText(http.StatusInternalServerError),
+						Status:   http.StatusInternalServerError,
+						Detail:   "Internal server error",
+						Instance: CorrelationInstance(correlationIDForPanic(ctx, w)),
+					}
+					encoded, marshalErr := json.Marshal(body)
+					if marshalErr != nil {
+						// Marshalling a fixed struct cannot realistically fail,
+						// but a panic handler must never panic itself.
+						encoded = []byte(`{"title":"Internal Server Error","status":500}`)
+					}
+
+					w.Header().Set("Content-Type", ProblemContentType)
 					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(`{"error":"Internal server error","code":500}`))
+					w.Write(encoded)
 				}
 			}()
 
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// correlationIDForPanic finds the correlation ID for a panicking request.
+//
+// Recovery is deliberately the outermost middleware, so that it also catches a
+// panic inside tracing. The consequence is that the context it unwinds to is
+// the one from *before* RequestTracingMiddleware attached the ID, so reading
+// the context alone yields nothing on exactly the responses that most need to
+// be traceable. The response header is already set by then, so it is the
+// reliable source here; the context is still checked first for the case where
+// recovery is composed without tracing.
+func correlationIDForPanic(ctx context.Context, w http.ResponseWriter) string {
+	if id := GetCorrelationID(ctx); id != "" {
+		return id
+	}
+	return w.Header().Get("X-Correlation-ID")
 }
 
 // generateID creates a unique identifier with the given prefix
@@ -193,17 +232,71 @@ func HealthCheckMiddleware(path string) func(next http.Handler) http.Handler {
 	}
 }
 
-// CORSMiddleware adds CORS headers for cross-origin requests.
-// This is useful for frontend development and API consumption.
-func CORSMiddleware() func(next http.Handler) http.Handler {
+// CORSConfig describes which cross-origin requests the API answers.
+//
+// It is a plain value rather than *core.Config because core imports this
+// package; pkg/http translates the loaded config into one of these.
+type CORSConfig struct {
+	// Enabled reports whether CORS headers are emitted at all. When false the
+	// middleware is a pass-through, so a same-origin deployment (frontend
+	// served from the API host) advertises nothing.
+	Enabled bool
+
+	// AllowedOrigins is the allow-list matched against the request's Origin
+	// header. Entries are exact origins ("https://app.example.com"), the
+	// literal "*", or a wildcard subdomain pattern ("*.example.com").
+	AllowedOrigins []string
+}
+
+// CORSMiddleware adds CORS headers for cross-origin requests whose Origin is on
+// the allow-list.
+//
+// For a specific match, Access-Control-Allow-Origin echoes the matched origin
+// rather than "*" so the response stays specific to the caller, Vary: Origin is
+// set so a shared cache cannot serve one origin's response to another, and
+// Allow-Credentials is sent because the API authenticates via an HttpOnly jwt
+// cookie that a browser will not attach without it.
+//
+// A literal "*" entry is the exception: it emits "*" verbatim and no
+// Allow-Credentials. Reflecting the caller's origin instead would look
+// equivalent but would strip the browser's own guarantee that a public wildcard
+// can never carry credentials, quietly turning "public API" into "any site may
+// make authenticated requests".
+func CORSMiddleware(cfg CORSConfig) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-ID")
-			w.Header().Set("Access-Control-Expose-Headers", "X-Correlation-ID, X-Request-ID, X-Trace-ID")
+			if !cfg.Enabled {
+				next.ServeHTTP(w, r)
+				return
+			}
 
-			if r.Method == "OPTIONS" {
+			// Vary is set for every response, including the ones that get no
+			// Allow-Origin: whether the header appears at all depends on the
+			// request's Origin, so caches must key on it either way.
+			w.Header().Add("Vary", "Origin")
+
+			origin := r.Header.Get("Origin")
+			if match, ok := matchOrigin(origin, cfg.AllowedOrigins); ok {
+				w.Header().Set("Access-Control-Allow-Origin", match)
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-ID")
+				w.Header().Set("Access-Control-Expose-Headers", "X-Correlation-ID, X-Request-ID, X-Trace-ID")
+
+				// Credentials ride only on a specific origin. Pairing them with
+				// "*" is rejected by every browser anyway, so sending it there
+				// would be noise that invites someone to "fix" it by switching
+				// to reflection.
+				if match != "*" {
+					w.Header().Set("Access-Control-Allow-Credentials", "true")
+				}
+			}
+
+			// A preflight is answered here whether or not the origin passed.
+			// A disallowed origin gets a 200 with no CORS headers, which the
+			// browser rejects just as firmly as an error status would -- and
+			// unlike an error status, it does not route OPTIONS traffic into
+			// handlers that never expect it.
+			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -211,6 +304,59 @@ func CORSMiddleware() func(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// matchOrigin resolves origin against allowedOrigins, returning the value to put
+// in Access-Control-Allow-Origin and whether there was a match at all.
+//
+// The returned value is the origin itself for a specific match and "*" for a
+// literal wildcard entry, which is what lets the caller decide about
+// credentials. A request with no Origin header never matches: it is same-origin
+// and needs no CORS headers.
+//
+// A "*." entry matches only true subdomains: "*.example.com" allows
+// "https://app.example.com" but not "https://evilexample.com", which a bare
+// suffix comparison would wave through.
+func matchOrigin(origin string, allowedOrigins []string) (string, bool) {
+	if origin == "" {
+		return "", false
+	}
+
+	for _, allowed := range allowedOrigins {
+		if allowed == "*" {
+			return "*", true
+		}
+		if allowed == origin {
+			return origin, true
+		}
+
+		if !strings.HasPrefix(allowed, "*.") {
+			continue
+		}
+
+		// Compare hosts, not raw origin strings, so the scheme and any port
+		// cannot smuggle the pattern into an unrelated origin.
+		host := originHost(origin)
+		if host == "" {
+			continue
+		}
+		domain := allowed[len("*."):]
+		if host == domain || strings.HasSuffix(host, "."+domain) {
+			return origin, true
+		}
+	}
+	return "", false
+}
+
+// originHost extracts the hostname from an Origin header value, dropping the
+// scheme and any port. It returns "" for a value that is not a parseable
+// absolute URL, which then matches no wildcard pattern.
+func originHost(origin string) string {
+	u, err := url.Parse(origin)
+	if err != nil {
+		return ""
+	}
+	return u.Hostname()
 }
 
 // RouteTagMiddleware backfills the active OTEL span with the matched chi route

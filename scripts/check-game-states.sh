@@ -73,10 +73,16 @@ transition_states=$(
 # The state list routinely wraps across lines, so match from "CHECK (state IN"
 # through the closing paren rather than grepping single lines — a line-at-a-time
 # read silently sees only the first few states and reports a false mismatch.
+#
+# Read only the "-- +goose Up" half of each file. Under goose a migration holds
+# both directions, and a down migration that reverts a state addition contains
+# the OLD, narrower list; since we take the last match in the file, reading the
+# whole thing would extract the reverted list and report a false mismatch.
 constraint_block=""
-for f in $(ls "$ROOT/backend/pkg/db/migrations/"*.up.sql 2>/dev/null | sort); do
+for f in $(ls "$ROOT/backend/pkg/db/migrations/"*.sql 2>/dev/null | sort); do
     block=$(
-        tr '\n' ' ' < "$f" |
+        sed -n '/^-- +goose Up/,/^-- +goose Down/p' "$f" |
+        tr '\n' ' ' |
         sed -n 's/.*CHECK (state IN \(([^)]*)\).*/\1/p'
     )
     if [ -n "$block" ]; then

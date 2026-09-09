@@ -22,20 +22,20 @@ import (
 
 type conversationsListOutput struct {
 	Body struct {
-		Conversations any `json:"conversations" doc:"Conversations visible to the caller"`
+		Conversations []ConversationListItemResponse `json:"conversations" doc:"Conversations visible to the caller"`
 	}
 }
 
 type conversationDetailOutput struct {
 	Body struct {
-		Conversation *models.Conversation                    `json:"conversation"`
-		Participants []models.GetConversationParticipantsRow `json:"participants"`
+		Conversation *ConversationResponse             `json:"conversation"`
+		Participants []ConversationParticipantResponse `json:"participants"`
 	}
 }
 
 type messagesOutput struct {
 	Body struct {
-		Messages []models.GetConversationMessagesRow `json:"messages"`
+		Messages []ConversationMessageResponse `json:"messages"`
 	}
 }
 
@@ -62,7 +62,7 @@ type createConversationInput struct {
 }
 
 type createConversationOutput struct {
-	Body *models.Conversation
+	Body *ConversationResponse
 }
 
 type listConversationsInput struct {
@@ -92,7 +92,7 @@ type sendMessageInput struct {
 }
 
 type messageOutput struct {
-	Body *models.PrivateMessage
+	Body *PrivateMessageResponse
 }
 
 type addParticipantInput struct {
@@ -269,7 +269,7 @@ func (h *Handler) createConversation(ctx context.Context, in *createConversation
 	}
 
 	h.App.Logger.Info("Conversation created successfully", "conversation_id", conv.ID, "game_id", in.GameID, "user_id", userID)
-	return &createConversationOutput{Body: conv}, nil
+	return &createConversationOutput{Body: toConversationResponse(conv)}, nil
 }
 
 func (h *Handler) listConversations(ctx context.Context, in *listConversationsInput) (*conversationsListOutput, error) {
@@ -291,10 +291,7 @@ func (h *Handler) listConversations(ctx context.Context, in *listConversationsIn
 			h.App.Logger.Error("Failed to get unread conversations", "error", err, "game_id", in.GameID, "user_id", userID)
 			return nil, huma.Error500InternalServerError("Failed to get unread conversations")
 		}
-		if unread == nil {
-			unread = []models.GetUserUnreadConversationsRow{}
-		}
-		out.Body.Conversations = unread
+		out.Body.Conversations = toUnreadConversationListItems(unread)
 		return out, nil
 	}
 
@@ -303,10 +300,7 @@ func (h *Handler) listConversations(ctx context.Context, in *listConversationsIn
 		h.App.Logger.Error("Failed to get user conversations", "error", err, "game_id", in.GameID, "user_id", userID)
 		return nil, huma.Error500InternalServerError("Failed to get user conversations")
 	}
-	if conversations == nil {
-		conversations = []models.GetUserConversationsRow{}
-	}
-	out.Body.Conversations = conversations
+	out.Body.Conversations = toConversationListItems(conversations)
 	return out, nil
 }
 
@@ -334,8 +328,8 @@ func (h *Handler) getConversation(ctx context.Context, in *conversationIDInput) 
 	}
 
 	out := &conversationDetailOutput{}
-	out.Body.Conversation = conv
-	out.Body.Participants = participants
+	out.Body.Conversation = toConversationResponse(conv)
+	out.Body.Participants = toConversationParticipantResponses(participants)
 	return out, nil
 }
 
@@ -418,7 +412,7 @@ func (h *Handler) getConversationMessages(ctx context.Context, in *getMessagesIn
 	}
 
 	out := &messagesOutput{}
-	out.Body.Messages = messages
+	out.Body.Messages = toConversationMessageResponses(messages)
 	return out, nil
 }
 
@@ -485,7 +479,7 @@ func (h *Handler) sendMessage(ctx context.Context, in *sendMessageInput) (*messa
 	}
 
 	h.App.Logger.Info("Message sent successfully", "message_id", message.ID, "conversation_id", in.ConversationID, "author", authUser.Username)
-	return &messageOutput{Body: message}, nil
+	return &messageOutput{Body: toPrivateMessageResponse(message)}, nil
 }
 
 // requireConversationPhase enforces that private messages are only written
@@ -597,7 +591,7 @@ func (h *Handler) updateMessage(ctx context.Context, in *updateMessageInput) (*m
 	}
 
 	h.App.Logger.Info("Message updated successfully", "message_id", msg.ID, "conversation_id", in.ConversationID, "user_id", userID)
-	return &messageOutput{Body: updated}, nil
+	return &messageOutput{Body: toPrivateMessageResponse(updated)}, nil
 }
 
 func (h *Handler) deleteMessage(ctx context.Context, in *messageIDInput) (*deletedOutput, error) {

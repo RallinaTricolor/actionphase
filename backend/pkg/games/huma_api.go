@@ -34,14 +34,7 @@ import (
 // preserving the status and message the chi handlers produced.
 func humaErr(errResp any) error {
 	if resp, ok := errResp.(*core.ErrResponse); ok {
-		// The app code travels in the errs slice, which is the only channel
-		// huma.NewError offers; the shim unwraps it back onto the response.
-		// Without this, core.ErrWithCode's "code" field is silently dropped.
-		if resp.AppCode != 0 {
-			return huma.NewError(resp.HTTPStatusCode, resp.ErrorText,
-				&humaconfig.CodedError{Code: resp.AppCode, Msg: resp.ErrorText})
-		}
-		return huma.NewError(resp.HTTPStatusCode, resp.ErrorText)
+		return huma.NewError(resp.HTTPStatusCode, resp.Detail)
 	}
 	return huma.Error500InternalServerError("unexpected error")
 }
@@ -497,7 +490,7 @@ type myApplicationOutput struct {
 }
 
 type participantOutput struct {
-	Body *models.GameParticipant
+	Body *GameParticipantResponse
 }
 
 type audienceMembersOutput struct {
@@ -549,7 +542,7 @@ type lootTablesOutput struct {
 }
 
 type lootTableOutput struct {
-	Body *models.GameLootTable
+	Body *GameLootTableResponse
 }
 
 type lootContentsOutput struct {
@@ -557,7 +550,7 @@ type lootContentsOutput struct {
 }
 
 type lootContentOutput struct {
-	Body *models.GameLootTableContent
+	Body *GameLootTableContentResponse
 }
 
 type bannerOutput struct {
@@ -888,7 +881,7 @@ func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateIn
 		// answer 409 with the states involved rather than a bare 500.
 		if errors.Is(err, core.ErrInvalidStateTransition) {
 			return nil, h.logAndErr(ctx,
-				core.ErrWithCode(http.StatusConflict, core.ErrCodeInvalidGameState,
+				core.ErrWithStatus(http.StatusConflict,
 					fmt.Sprintf("cannot change game state from %s to %s", game.State.String, in.Body.State)),
 				"Invalid game state transition requested",
 				"game_id", game.ID, "from_state", game.State.String, "to_state", in.Body.State)
@@ -1376,7 +1369,7 @@ func (h *Handler) humaAddParticipantDirectly(ctx context.Context, in *addPartici
 	h.App.ObsLogger.Info(ctx, "Participant added directly to game",
 		"game_id", gameID, "added_user_id", in.Body.UserID, "role", in.Body.Role, "added_by", requestingUserID)
 
-	return &participantOutput{Body: participant}, nil
+	return &participantOutput{Body: toGameParticipantResponse(participant)}, nil
 }
 
 // humaPromoteToCoGM, humaDemoteFromCoGM and humaTransitionPlayerToAudience all
@@ -2373,7 +2366,7 @@ func (h *Handler) humaAddGameLootTable(ctx context.Context, in *addLootTableInpu
 		}
 	}
 
-	return &lootTableOutput{Body: newLootTable}, nil
+	return &lootTableOutput{Body: toGameLootTableResponse(newLootTable)}, nil
 }
 
 type updateLootTableInput struct {
@@ -2403,7 +2396,7 @@ func (h *Handler) humaUpdateGameLootTable(ctx context.Context, in *updateLootTab
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update loot table", "error", err, "table_id", in.TableID)
 	}
 
-	return &lootTableOutput{Body: lootTable}, nil
+	return &lootTableOutput{Body: toGameLootTableResponse(lootTable)}, nil
 }
 
 func (h *Handler) humaDeleteGameLootTable(ctx context.Context, in *tableScopedInput) (*emptyOKOutput, error) {
@@ -2573,7 +2566,7 @@ func (h *Handler) humaSetRandomLootForCharacter(ctx context.Context, in *randomL
 			"game_id", gameID, "character_id", in.CharacterID, "loot_table_id", in.TableID)
 	}
 
-	return &lootContentOutput{Body: &content}, nil
+	return &lootContentOutput{Body: toGameLootTableContentResponse(&content)}, nil
 }
 
 // Banner
@@ -2711,6 +2704,7 @@ func RegisterHumaGamesPublicApplicants(api huma.API, h *Handler) {
 		Description: "Usernames and roles of a recruiting game's applicants. No status or review information, and readable without authentication.",
 		Tags:        []string{"Game Applications"},
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"403": {Description: "The game is not recruiting"},
 			"404": {Description: "Game not found"},
 		},
@@ -2746,6 +2740,7 @@ func RegisterHumaGamesCollection(api huma.API, h *Handler) {
 		Security:      bearer,
 		DefaultStatus: http.StatusCreated,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid request body, or an incomplete common-room schedule"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Email address not verified"},
@@ -2798,6 +2793,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Games"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid request body, or an incomplete common-room schedule"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can update this game"},
@@ -2814,6 +2810,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Games"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "The game is not cancelled and so cannot be deleted"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can delete this game"},
@@ -2830,6 +2827,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Games"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid request body"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can update this game state"},
@@ -2846,6 +2844,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Games"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "Missing file, unsupported type, or larger than 5MB"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can update the game banner"},
@@ -2861,6 +2860,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Games"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can remove the game banner"},
 		},
@@ -2890,6 +2890,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Participants"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
 			"404": {Description: "The caller is neither a participant nor an applicant"},
 		},
@@ -2905,6 +2906,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Security:      bearer,
 		DefaultStatus: http.StatusCreated,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid request body"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can add participants directly"},
@@ -2921,6 +2923,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Participants"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can remove players"},
 			"409": {Description: "The GM cannot remove themselves"},
@@ -2936,6 +2939,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Participants"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "The user cannot be promoted from their current role"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the primary GM can promote users to co-GM"},
@@ -2951,6 +2955,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Participants"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "The user is not a co-GM"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the primary GM can demote co-GMs"},
@@ -2966,6 +2971,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Participants"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "The user is not a player"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the primary GM can transition players to audience"},
@@ -2984,6 +2990,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Security:      bearer,
 		DefaultStatus: http.StatusCreated,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "Already applied, already a participant, the game is not recruiting, or a previous application was rejected"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Email address not verified"},
@@ -3026,6 +3033,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Game Applications"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid action, or the application belongs to another game"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can review game applications"},
@@ -3041,6 +3049,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Game Applications"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "Only pending applications can be withdrawn"},
 			"401": {Description: "Not authenticated"},
 			"404": {Description: "No application found for this game"},
@@ -3084,6 +3093,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Audience"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid request body"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can update this setting"},
@@ -3129,6 +3139,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Audience"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "The caller cannot view this game's content"},
 		},
@@ -3203,6 +3214,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Loot Tables"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "Missing name, or an item with a blank name or invalid JSON data"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can see and edit loot tables"},
@@ -3218,6 +3230,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Loot Tables"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "Missing name, or an item with a blank name or invalid JSON data"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Not the GM, or the table belongs to another game"},
@@ -3233,6 +3246,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Loot Tables"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Not the GM, or the table belongs to another game"},
 		},
@@ -3247,6 +3261,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Loot Tables"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Not the GM, or the table belongs to another game"},
 		},
@@ -3261,6 +3276,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Loot Tables"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "An item with a blank name or invalid JSON data"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Not the GM, or the table belongs to another game"},
@@ -3276,6 +3292,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Loot Tables"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"400": {Description: "The loot table is empty"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Not the GM, the table belongs to another game, or the character cannot be edited"},

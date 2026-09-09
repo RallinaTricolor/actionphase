@@ -285,6 +285,10 @@ BE := "docker compose -f docker-compose.dev.yml exec -T backend"
 FE := "docker compose -f docker-compose.dev.yml exec -T frontend"
 DEV_DB_URL := "postgres://postgres:example@db:5432/actionphase?sslmode=disable"
 TEST_DB_URL := "postgres://postgres:example@db:5432/actionphase_test?sslmode=disable"
+
+# goose CLI inside the backend container. The migration directory is relative to
+# the container's WORKDIR (/app), which is the backend/ bind mount.
+GOOSE := BE + " goose -dir pkg/db/migrations"
 # Env overrides for the test process. The backend container sets
 # ENVIRONMENT=development (via .env), which flips on dev-mode bypasses in the
 # app (e.g. registration rate limiting / uniqueness checks are skipped). Tests
@@ -308,21 +312,28 @@ _migration-windows action="" name="":
         Usage: just migration create <name>"
         Return
       }
-      {{BE}} migrate create -ext sql -dir pkg/db/migrations {{name}}
-      # Seed both stubs with a guard — see the unix recipe for why. The command
-      # runs inside the Linux backend container, so it is identical on both hosts.
-      {{BE}} sh -c 'for f in $(ls -t pkg/db/migrations/*{{name}}*.sql | head -2); do \
+      {{GOOSE}} create {{name}} sql
+      # Overwrite goose's placeholder with a guard — see the unix recipe for why.
+      # The command runs inside the Linux backend container, so it is identical
+      # on both hosts.
+      {{BE}} sh -c 'for f in $(ls -t pkg/db/migrations/*{{name}}*.sql | head -1); do \
         printf "%s\n" \
+          "-- +goose Up" \
           "-- TODO: write this migration, then delete the guard below." \
           "-- The guard exists so an unwritten migration cannot be silently applied" \
           "-- and recorded as done by a backend restart." \
+          "-- +goose StatementBegin" \
           "DO \$do\$ BEGIN RAISE EXCEPTION '"'"'migration {{name}} is still a stub: write it, then remove this guard'"'"'; END \$do\$;" \
+          "-- +goose StatementEnd" \
+          "" \
+          "-- +goose Down" \
+          "-- TODO: write the rollback for this migration." \
           > "$f"; done'
-      Write-Host "✅ Created migration stubs for {{name}} (guarded — remove the guard as you write them)"
+      Write-Host "✅ Created migration stub for {{name}} (guarded — remove the guard as you write it)"
     }
-    "status" { {{BE}} migrate -source file://pkg/db/migrations -database "{{DEV_DB_URL}}" version }
-    "rollback" { {{BE}} migrate -source file://pkg/db/migrations -database "{{DEV_DB_URL}}" down }
-    "test" { {{BE}} migrate -source file://pkg/db/migrations -database "{{TEST_DB_URL}}" up }
+    "status" { {{GOOSE}} postgres "{{DEV_DB_URL}}" status }
+    "rollback" { {{GOOSE}} postgres "{{DEV_DB_URL}}" down }
+    "test" { {{GOOSE}} postgres "{{TEST_DB_URL}}" up }
     default {
       Write-Host "Usage: just migration [action]
       
@@ -344,32 +355,44 @@ _migration-unix action="" name="":
         echo "Usage: just migration create <name>"
         exit 1
       fi
-      {{BE}} migrate create -ext sql -dir pkg/db/migrations {{name}}
-      # Seed both stubs with a guard that fails if applied before it is written.
+      {{GOOSE}} create {{name}} sql
+      # Overwrite goose's placeholder with a guard that fails if applied before
+      # it is written.
       #
-      # Empty migration files are valid SQL, so a backend restart (Air rebuild,
-      # `just up`) between `create` and writing the real SQL would apply the empty
-      # file and record the version as done — after which the real SQL is never
-      # run and `just migrate` says "no change". The guard turns that silent
-      # success into a loud error naming the fix. Delete these lines as you write
-      # the migration.
-      {{BE}} sh -c 'for f in $(ls -t pkg/db/migrations/*{{name}}*.sql | head -2); do \
+      # goose seeds a new file with `SELECT 'up SQL query';` — valid SQL that
+      # applies cleanly. So a backend restart (Air rebuild, `just up`) between
+      # `create` and writing the real SQL would apply the placeholder and record
+      # the version as done, after which the real SQL is never run and
+      # `just migrate` reports nothing to do. The guard turns that silent success
+      # into a loud error naming the fix. Delete these lines as you write the
+      # migration, but keep the two `-- +goose` annotations: goose silently
+      # ignores a .sql file that has no `-- +goose Up`.
+      #
+      # goose create emits ONE file holding both directions (golang-migrate
+      # emitted a .up/.down pair), hence `head -1`.
+      {{BE}} sh -c 'for f in $(ls -t pkg/db/migrations/*{{name}}*.sql | head -1); do \
         printf "%s\n" \
+          "-- +goose Up" \
           "-- TODO: write this migration, then delete the guard below." \
           "-- The guard exists so an unwritten migration cannot be silently applied" \
           "-- and recorded as done by a backend restart." \
+          "-- +goose StatementBegin" \
           "DO \$do\$ BEGIN RAISE EXCEPTION '"'"'migration {{name}} is still a stub: write it, then remove this guard'"'"'; END \$do\$;" \
+          "-- +goose StatementEnd" \
+          "" \
+          "-- +goose Down" \
+          "-- TODO: write the rollback for this migration." \
           > "$f"; done'
-      echo "✅ Created migration stubs for {{name}} (guarded — remove the guard as you write them)"
+      echo "✅ Created migration stub for {{name}} (guarded — remove the guard as you write it)"
       ;;
     status)
-      {{BE}} migrate -source file://pkg/db/migrations -database "{{DEV_DB_URL}}" version
+      {{GOOSE}} postgres "{{DEV_DB_URL}}" status
       ;;
     rollback)
-      {{BE}} migrate -source file://pkg/db/migrations -database "{{DEV_DB_URL}}" down
+      {{GOOSE}} postgres "{{DEV_DB_URL}}" down
       ;;
     test)
-      {{BE}} migrate -source file://pkg/db/migrations -database "{{TEST_DB_URL}}" up
+      {{GOOSE}} postgres "{{TEST_DB_URL}}" up
       ;;
     help|*)
       echo "Usage: just migration [action]"
@@ -382,9 +405,66 @@ _migration-unix action="" name="":
       ;;
   esac
 
+# Adopt an existing golang-migrate database into goose's tracking table.
+#
+# Existing databases already have the schema but no goose_db_version, so goose
+# would try to apply migration 1 and fail on "relation already exists". This
+# records what golang-migrate already applied, guarded on its high-water mark so
+# a database that is legitimately behind stays behind.
+#
+# Runs in the backend container (psql + the migrations are both there) against
+# /repo, the read-only whole-repo mount. Defaults to the dev database; pass a
+# URL for another environment, e.g.
+#   just goose-backfill "{{TEST_TEMPLATE_URL}}"
+#
+# Safe to re-run. See scripts/goose-backfill.sh for the guards it enforces.
+goose-backfill db_url=DEV_DB_URL:
+  @{{BE}} env DB_URL="{{db_url}}" bash /repo/scripts/goose-backfill.sh
+
+# Apply migrations to development database (in backend container).
+#
+# Recovery from a refused out-of-order migration is `just migration-allow-missing`.
+#
+# No -allow-missing here: goose fails, naming the file, if a migration older than
+# the current version shows up (the merge collision golang-migrate applied
+# silently).
+#
 # Apply migrations to development database (in backend container)
 migrate:
-  {{BE}} migrate -source file://pkg/db/migrations -database "{{DEV_DB_URL}}" up
+  {{GOOSE}} postgres "{{DEV_DB_URL}}" up
+
+# Recovery for the out-of-order migration that `just migrate` refuses.
+#
+# When a branch merge lands a migration whose timestamp sorts below the current
+# version, goose stops and names the file rather than skipping it. That refusal
+# is the whole point of the swap, so it has no automatic override — this recipe
+# is the deliberate second step you take after reading the error and confirming
+# the straggler is safe to apply out of order.
+#
+# goose records it in APPLIED order, not version order, so a later `down`
+# reverses correctly.
+#
+# Apply an out-of-order migration that `just migrate` deliberately refused
+migration-allow-missing db_url=DEV_DB_URL:
+  {{GOOSE}} -allow-missing postgres "{{db_url}}" up
+
+# Check this branch's migrations for the out-of-order collision, the same way CI
+# does: apply the base branch's migrations to a scratch database, then this
+# branch's on top, with no -allow-missing.
+#
+# Run before opening a PR if someone else's migration may have merged while this
+# branch was open. Uses a throwaway database, dropped afterwards.
+#
+# Check this branch's migrations for the out-of-order collision (as CI does)
+check-migration-order base="origin/develop":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  URL="postgres://postgres:example@db:5432/migration_order_check?sslmode=disable"
+  {{BE}} sh -c 'PGPASSWORD=example psql -h db -U postgres -d postgres -q -c "DROP DATABASE IF EXISTS migration_order_check;" -c "CREATE DATABASE migration_order_check;"'
+  status=0
+  {{BE}} sh -c "cd /repo && bash scripts/check-migration-order.sh {{base}} '$URL'" || status=$?
+  {{BE}} sh -c 'PGPASSWORD=example psql -h db -U postgres -d postgres -q -c "DROP DATABASE IF EXISTS migration_order_check;"'
+  exit $status
 
 # Drop and recreate the test database from scratch, then apply all migrations.
 # Use when the test DB gets into a dirty/broken migration state.
@@ -419,7 +499,7 @@ _prepare-test-template-unix:
   DROP DATABASE IF EXISTS {{TEST_TEMPLATE_DB}} WITH (FORCE);
   CREATE DATABASE {{TEST_TEMPLATE_DB}};
   SQL'
-  {{BE}} migrate -source file://pkg/db/migrations -database "{{TEST_TEMPLATE_URL}}" up
+  {{GOOSE}} postgres "{{TEST_TEMPLATE_URL}}" up
   echo "✅ Test template ready ({{TEST_TEMPLATE_DB}})"
 
 _prepare-test-template-windows:
@@ -433,7 +513,7 @@ _prepare-test-template-windows:
     DROP DATABASE IF EXISTS {{TEST_TEMPLATE_DB}} WITH (FORCE);
     CREATE DATABASE {{TEST_TEMPLATE_DB}};"
     $sql | {{BE}} sh -c 'PGPASSWORD=example psql -h db -U postgres -d postgres -q -v ON_ERROR_STOP=1'
-    {{BE}} migrate -source file://pkg/db/migrations -database "{{TEST_TEMPLATE_URL}}" up
+    {{GOOSE}} postgres "{{TEST_TEMPLATE_URL}}" up
     Write-Host "✅ Test template ready ({{TEST_TEMPLATE_DB}})"
   }
 

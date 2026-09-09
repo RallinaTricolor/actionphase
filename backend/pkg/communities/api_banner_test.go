@@ -375,10 +375,8 @@ func TestCommunityBanner_PatchCannotSetBannerURL(t *testing.T) {
 		[]byte(`{"banner_url":"http://evil.test/x.png"}`), false)
 
 	// huma REJECTS the unknown property rather than dropping it, the same
-	// treatment that stops a moderator setting owner_user_id. 400 rather than
-	// huma's native 422 because InstallLegacyErrorFormat remaps it -- the
-	// frontend cannot parse RFC 7807.
-	assert.Equal(t, http.StatusBadRequest, rec.Code, "body: %s", rec.Body.String())
+	// treatment that stops a moderator setting owner_user_id.
+	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code, "body: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "banner_url",
 		"the rejection should name the offending property")
 	assert.Nil(t, h.bannerURLOf(t, h.community.ID), "PATCH must not write banner_url")

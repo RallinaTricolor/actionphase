@@ -737,7 +737,7 @@ func TestCharacterAPI_ValidationErrors(t *testing.T) {
 				Name:          "",
 				CharacterType: "player_character",
 			},
-			expectedStatus: 400,
+			expectedStatus: http.StatusUnprocessableEntity,
 			expectedError:  "character name is required",
 			description:    "Should reject empty character name",
 		},
@@ -748,7 +748,7 @@ func TestCharacterAPI_ValidationErrors(t *testing.T) {
 				Name:          "Test Character",
 				CharacterType: "invalid_type",
 			},
-			expectedStatus: 400,
+			expectedStatus: http.StatusUnprocessableEntity,
 			expectedError:  "invalid character type",
 			description:    "Should reject invalid character type",
 		},
@@ -793,7 +793,7 @@ func TestCharacterAPI_ValidationErrors(t *testing.T) {
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				core.AssertNoError(t, err, "Should decode error response")
 
-				if errorText, ok := response["error"].(string); ok {
+				if errorText, ok := response["detail"].(string); ok {
 					if len(errorText) == 0 {
 						t.Errorf("Expected error message to contain '%s', but error field was empty", tc.expectedError)
 					}

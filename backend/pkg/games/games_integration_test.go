@@ -564,7 +564,7 @@ func TestGameAPI_ErrorHandling(t *testing.T) {
 				Description: "Game without title",
 			},
 			requiresAuth:   true,
-			expectedStatus: 400,
+			expectedStatus: http.StatusUnprocessableEntity,
 			description:    "Creating game without title should fail",
 		},
 		{
@@ -632,7 +632,7 @@ func TestGameAPI_ErrorHandling(t *testing.T) {
 						t.Logf("Content-Type: %s", w.Header().Get("Content-Type"))
 					}
 					core.AssertNoError(t, err, "Error response should be valid JSON")
-					core.AssertNotEqual(t, "", response["status"], "Error response should have status field")
+					core.AssertNotEqual(t, "", response["title"], "Error response should have title field")
 				}
 			}
 		})
@@ -906,7 +906,7 @@ func TestGameAPI_GameApplications(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Should return 400 Bad Request for invalid role")
+		core.AssertEqual(t, 422, w.Code, "Should return 422 Bad Request for invalid role")
 	})
 
 	t.Run("apply_to_game_unauthorized", func(t *testing.T) {
@@ -1090,7 +1090,7 @@ func TestGameAPI_GameApplications(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Should return 400 Bad Request for invalid action")
+		core.AssertEqual(t, 422, w.Code, "Should return 422 Bad Request for invalid action")
 	})
 }
 

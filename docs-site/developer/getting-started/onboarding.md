@@ -481,7 +481,7 @@ docker compose -f docker-compose.dev.yml exec -T db \
 **Q: How do I modify the database schema?**
 ```bash
 just migration create add_new_column
-# Edit the generated .up.sql / .down.sql files
+# Edit the generated file's -- +goose Up / -- +goose Down sections
 just migrate
 ```
 

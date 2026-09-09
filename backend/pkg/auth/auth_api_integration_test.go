@@ -54,7 +54,7 @@ func TestAuthAPI_RegistrationEndpoint(t *testing.T) {
 				"email":    "test@example.com",
 				"password": "securepassword123",
 			},
-			expectedStatus: 400,
+			expectedStatus: http.StatusUnprocessableEntity,
 			description:    "Registration without username should fail",
 		},
 		{
@@ -63,7 +63,7 @@ func TestAuthAPI_RegistrationEndpoint(t *testing.T) {
 				"username": "testuser",
 				"password": "securepassword123",
 			},
-			expectedStatus: 400,
+			expectedStatus: http.StatusUnprocessableEntity,
 			description:    "Registration without email should fail",
 		},
 		{
@@ -72,7 +72,7 @@ func TestAuthAPI_RegistrationEndpoint(t *testing.T) {
 				"username": "testuser",
 				"email":    "test@example.com",
 			},
-			expectedStatus: 400,
+			expectedStatus: http.StatusUnprocessableEntity,
 			description:    "Registration without password should fail",
 		},
 		{
@@ -134,7 +134,7 @@ func TestAuthAPI_RegistrationEndpoint(t *testing.T) {
 				var response map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				core.AssertNoError(t, err, "Error response should be valid JSON")
-				core.AssertNotEqual(t, "", response["status"], "Error response should have status field")
+				core.AssertNotEqual(t, "", response["title"], "Error response should have title field")
 			}
 		})
 	}
@@ -267,7 +267,7 @@ func TestAuthAPI_LoginEndpoint(t *testing.T) {
 				var response map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				core.AssertNoError(t, err, "Error response should be valid JSON")
-				core.AssertNotEqual(t, "", response["status"], "Error response should have status field")
+				core.AssertNotEqual(t, "", response["title"], "Error response should have title field")
 			}
 		})
 	}
@@ -640,7 +640,7 @@ func TestAuthAPI_BannedUserLogin(t *testing.T) {
 	var response map[string]interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &response)
 	core.AssertNoError(t, err, "Response should be valid JSON")
-	core.AssertNotEqual(t, "", response["error"], "Response should contain error message")
+	core.AssertNotEqual(t, "", response["detail"], "Response should contain error message")
 }
 
 // TestAuthAPI_V1Me tests the /me endpoint
@@ -824,7 +824,7 @@ func TestAuthAPI_Preferences(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Should return 400 Bad Request for missing preferences field")
+		core.AssertEqual(t, 422, w.Code, "Should return 422 Bad Request for missing preferences field")
 	})
 
 	t.Run("unauthorized_access", func(t *testing.T) {
@@ -894,7 +894,7 @@ func TestAuthAPI_SearchUsers(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Should return 400 Bad Request for missing query")
+		core.AssertEqual(t, 422, w.Code, "Should return 422 Bad Request for missing query")
 	})
 
 	t.Run("search_empty_query", func(t *testing.T) {
@@ -904,7 +904,7 @@ func TestAuthAPI_SearchUsers(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		core.AssertEqual(t, 400, w.Code, "Should return 400 Bad Request for empty query")
+		core.AssertEqual(t, 422, w.Code, "Should return 422 Bad Request for empty query")
 	})
 
 	t.Run("search_no_results", func(t *testing.T) {

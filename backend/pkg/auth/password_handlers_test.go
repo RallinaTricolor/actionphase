@@ -64,6 +64,7 @@ func newTestHandler(pool *pgxpool.Pool) Handler {
 		IPBanService:           &dbsvc.IPBanService{DB: pool, Logger: app.ObsLogger},
 		FingerprintBanService:  &dbsvc.FingerprintBanService{DB: pool, Logger: app.ObsLogger},
 		DiscordService:         &dbsvc.DiscordAccountService{DB: pool, Logger: app.ObsLogger},
+		BotPreventionService:   NewBotPreventionService(pool, app.Config),
 	}
 }
 
@@ -216,7 +217,7 @@ func TestV1ChangePassword(t *testing.T) {
 				var response map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
-				assert.Contains(t, response["error"], tt.expectedError)
+				assert.Contains(t, response["detail"], tt.expectedError)
 			}
 
 			// Cleanup
@@ -434,7 +435,7 @@ func TestV1ResetPassword(t *testing.T) {
 				var response map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
-				assert.Contains(t, response["error"], tt.expectedError)
+				assert.Contains(t, response["detail"], tt.expectedError)
 			}
 
 			// Cleanup
@@ -519,7 +520,9 @@ func TestV1ValidateResetToken(t *testing.T) {
 			setupToken: func(userID int32) string {
 				return ""
 			},
-			expectedStatus: http.StatusBadRequest,
+			// Absent required query param: huma rejects at binding, so this is
+			// 422 while the invalid-token case above is the handler's own 400.
+			expectedStatus: http.StatusUnprocessableEntity,
 			expectedValid:  false,
 		},
 	}

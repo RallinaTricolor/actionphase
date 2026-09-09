@@ -104,7 +104,7 @@ func TestMiddlewareStack(t *testing.T) {
 		router := chi.NewRouter()
 
 		// Add observability middleware
-		observabilityMiddleware := app.Observability.MiddlewareStack()
+		observabilityMiddleware := app.Observability.MiddlewareStack(app.Config.CORSConfig())
 		for _, mw := range observabilityMiddleware {
 			router.Use(mw)
 		}

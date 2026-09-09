@@ -9,12 +9,10 @@ import (
 	"time"
 
 	"github.com/exaring/otelpgx"
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
+	"github.com/pressly/goose/v3"
 
 	authsvc "actionphase/pkg/auth"
 	"actionphase/pkg/cleanup"
@@ -310,7 +308,7 @@ func main() {
 		&authPruner{
 			password:      &authsvc.PasswordService{DB: pool, Logger: obs.Logger},
 			account:       &authsvc.AccountService{DB: pool, Logger: obs.Logger},
-			botPrevention: authsvc.NewBotPreventionService(pool),
+			botPrevention: authsvc.NewBotPreventionService(pool, config),
 		},
 		obs.Logger,
 		cleanup.DefaultInterval,
@@ -331,83 +329,62 @@ func main() {
 	httpHandler.Start()
 }
 
-// checkMigrationState rejects a dirty migration state.
-//
-// Split out from runMigrations so the decision is testable without a database:
-// everything else in that function is driver plumbing, and this is the only part
-// that makes a judgment call.
-func checkMigrationState(version uint, dirty bool) error {
-	if !dirty {
-		return nil
-	}
-	return fmt.Errorf(
-		"database is in a dirty migration state at version %d: migration %d failed partway "+
-			"and the schema may be half-applied. Inspect the schema, finish or revert %d by hand, "+
-			"then clear the flag with `migrate force <version>`. Refusing to continue: forcing it "+
-			"clean automatically would skip %d permanently",
-		version, version, version, version,
-	)
-}
+// migrationsDir is the migration set applied at boot, relative to the working
+// directory the server runs from (backend/).
+const migrationsDir = "pkg/db/migrations"
 
-// runMigrations applies database schema migrations
+// runMigrations applies database schema migrations.
+//
+// goose records one row per applied migration in goose_db_version, rather than
+// golang-migrate's single high-water mark. That difference is the reason for the
+// swap: under a high-water mark, a migration whose version sorts below the mark —
+// which is what a merge of two concurrently-written migrations produces — is
+// skipped permanently and silently, with the tool reporting success.
+//
+// There is deliberately no WithAllowMissing() here. goose's default is to fail
+// when it finds such a migration, naming the file, and that default is the entire
+// point: auto-applying an out-of-order migration during a production boot is
+// precisely the silent behaviour being removed. Recovery is a human running
+// `goose up -allow-missing` after reading the message.
+//
+// The old dirty-state check is gone with golang-migrate. goose has no dirty flag
+// and needs none: Postgres runs each migration in a transaction, so a failed
+// migration rolls back and is simply never recorded. The state that required an
+// operator to inspect the schema and manually clear a flag does not arise.
 func runMigrations(logger *slog.Logger, pool *pgxpool.Pool) error {
 	logger.Info("Running database migrations...")
 
-	// Convert pgx pool to database/sql for migrate library
+	// goose speaks database/sql; the app pools with pgx.
 	database := stdlib.OpenDBFromPool(pool)
 	defer database.Close()
 
-	driver, err := postgres.WithInstance(database, &postgres.Config{})
-	if err != nil {
-		return fmt.Errorf("failed to create migration driver: %w", err)
+	if err := goose.SetDialect("postgres"); err != nil {
+		return fmt.Errorf("failed to set migration dialect: %w", err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://pkg/db/migrations",
-		"postgres", // database name for migrate
-		driver,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create migration instance: %w", err)
-	}
-	defer m.Close()
+	// goose logs each applied migration through the standard logger by default,
+	// which would bypass the structured logger the rest of the process uses.
+	goose.SetLogger(goose.NopLogger())
 
-	// A dirty state is fatal. It means a migration failed partway and the schema
-	// may be half-applied, which is a question only a human can answer.
-	//
-	// This used to call m.Force(version) and carry on, described as an "auto-fix".
-	// Force does not repair anything: it writes dirty=false against the current
-	// version, asserting "this migration completed". When it did not, that
-	// assertion is permanent — the next Up() starts at version+1 and the failed
-	// migration's changes are skipped forever, with schema_migrations claiming
-	// success. Force is golang-migrate's manual escape hatch, for an operator who
-	// has inspected the schema and knows what actually landed; it is the one
-	// operation that requires judgment, so it is the one thing that must not be
-	// automatic.
-	//
-	// Postgres runs each migration in a transaction, so a dirty flag here means
-	// something unusual happened (a killed process mid-ALTER, a dropped
-	// connection). Every such case wants eyes on it.
-	version, dirty, err := m.Version()
-	if err != nil && err != migrate.ErrNilVersion {
-		// If we can't get version info, something is wrong
+	before, err := goose.GetDBVersion(database)
+	if err != nil {
 		return fmt.Errorf("failed to get migration version: %w", err)
 	}
 
-	if err := checkMigrationState(version, dirty); err != nil {
-		return err
-	}
-
-	// Apply migrations
-	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
+	if err := goose.Up(database, migrationsDir); err != nil {
 		return fmt.Errorf("migration failed: %w", err)
 	}
 
-	if err == migrate.ErrNoChange {
-		logger.Info("Database is up to date")
+	after, err := goose.GetDBVersion(database)
+	if err != nil {
+		return fmt.Errorf("failed to get migration version after applying: %w", err)
+	}
+
+	if before == after {
+		logger.Info("Database is up to date", "version", after)
 	} else {
-		logger.Info("Database migrations completed successfully")
+		logger.Info("Database migrations completed successfully",
+			"from_version", before, "to_version", after)
 	}
 
 	return nil

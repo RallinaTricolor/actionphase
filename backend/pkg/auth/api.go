@@ -17,6 +17,7 @@ type Handler struct {
 	IPBanService           core.IPBanServiceInterface
 	FingerprintBanService  core.FingerprintBanServiceInterface
 	DiscordService         core.DiscordAccountServiceInterface
+	BotPreventionService   core.BotPreventionServiceInterface
 }
 
 // UserSearchResult represents a single user in search results

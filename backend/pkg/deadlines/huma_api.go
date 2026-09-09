@@ -86,7 +86,7 @@ func humaErr(errResp render.Renderer) error {
 	if !ok {
 		return huma.Error500InternalServerError("request failed")
 	}
-	return huma.NewError(resp.HTTPStatusCode, resp.ErrorText)
+	return huma.NewError(resp.HTTPStatusCode, resp.Detail)
 }
 
 // requireGM resolves the caller and confirms they may manage this game's
@@ -247,6 +247,7 @@ func RegisterHumaGameDeadlines(api huma.API, h *Handler) {
 		DefaultStatus: http.StatusCreated,
 		Security:      []map[string][]string{{"BearerAuth": {}}},
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated, or not a GM of this game"},
 			"404": {Description: "Game not found"},
 		},
@@ -293,6 +294,7 @@ func RegisterHumaDeadlines(api huma.API, h *Handler) {
 		Tags:        []string{"Deadlines"},
 		Security:    []map[string][]string{{"BearerAuth": {}}},
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated, or not a GM of this game"},
 			"404": {Description: "Deadline not found"},
 		},
@@ -308,6 +310,7 @@ func RegisterHumaDeadlines(api huma.API, h *Handler) {
 		DefaultStatus: http.StatusNoContent,
 		Security:      []map[string][]string{{"BearerAuth": {}}},
 		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated, or not a GM of this game"},
 			"404": {Description: "Deadline not found"},
 		},
