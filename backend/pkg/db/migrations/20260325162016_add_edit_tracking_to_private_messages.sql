@@ -1,0 +1,11 @@
+-- +goose Up
+ALTER TABLE private_messages
+ADD COLUMN is_edited BOOLEAN NOT NULL DEFAULT FALSE,
+ADD COLUMN edited_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN edit_count INTEGER NOT NULL DEFAULT 0;
+
+-- +goose Down
+ALTER TABLE private_messages
+DROP COLUMN IF EXISTS is_edited,
+DROP COLUMN IF EXISTS edited_at,
+DROP COLUMN IF EXISTS edit_count;

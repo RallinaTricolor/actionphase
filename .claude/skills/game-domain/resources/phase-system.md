@@ -8,7 +8,7 @@ Source of truth: `backend/pkg/db/schema.sql`,
 ## Phase Types
 
 ```sql
--- Live constraint, migration 20260605174513_add_interlude_phase_type.up.sql
+-- Live constraint, migration 20260605174513_add_interlude_phase_type.sql
 CHECK (phase_type IN ('common_room', 'action', 'interlude'))
 ```
 

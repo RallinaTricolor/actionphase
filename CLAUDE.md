@@ -99,7 +99,7 @@ ActionPhase is a modern gaming platform with Clean Architecture principles:
 - **Observability-First** - Structured logging with correlation IDs
 
 ### Technology Stack
-- **Backend**: Go, Chi, PostgreSQL, sqlc, golang-migrate
+- **Backend**: Go, Chi, PostgreSQL, sqlc, goose
 - **Frontend**: React, TypeScript, Vite, React Query, Tailwind CSS
 - **Auth**: JWT + Refresh Tokens with server-side sessions
 
@@ -605,7 +605,7 @@ Key variables in `.env`:
 
 ### Updating Database Schema
 1. Create migration: `just migration create <name>`
-2. Write both `.up.sql` and `.down.sql`
+2. Write the `-- +goose Up` and `-- +goose Down` sections of the generated file
 3. Update queries in `backend/pkg/db/queries/`
 4. Regenerate code: `just sqlgen`
 5. Update tests
