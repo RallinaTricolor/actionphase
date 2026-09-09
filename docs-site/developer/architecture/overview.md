@@ -39,7 +39,7 @@ ActionPhase is a modern web application for hosting play-by-post RPG games with 
 
 ### Database (PostgreSQL)
 - **Primary Database**: PostgreSQL 15+ with ACID compliance
-- **Schema Management**: golang-migrate for version-controlled migrations
+- **Schema Management**: goose for version-controlled migrations
 - **Connection Management**: pgxpool for efficient connection pooling
 - **Data Types**: largely relational typed columns; JSONB in exactly two places (`games.character_sheet`, `user_preferences.preferences`); timestamps with timezone
 
@@ -171,7 +171,7 @@ Recovery         CORS           Handling    Domain Rules  Connection    Migratio
 ### Development Tools
 - **justfile**: Modern command runner for development tasks
 - **Docker Compose**: Local development environment with database
-- **golang-migrate**: Version-controlled database migrations
+- **goose**: Version-controlled database migrations
 - **Vitest**: Fast unit testing for frontend components
 - **ESLint**: Code quality and style enforcement
 

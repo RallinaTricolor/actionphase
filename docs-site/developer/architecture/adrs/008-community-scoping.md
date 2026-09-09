@@ -29,7 +29,7 @@ New games require a community, enforced in the application create path. The
 column itself stays **nullable**, and legacy rows keep `NULL` forever.
 
 ```sql
--- backend/pkg/db/migrations/20260831172428_create_communities.up.sql
+-- backend/pkg/db/migrations/20260831172428_create_communities.sql
 ALTER TABLE games ADD COLUMN community_id INTEGER
     REFERENCES communities(id) ON DELETE RESTRICT;
 ```
@@ -173,6 +173,6 @@ party's availability.
 - `backend/pkg/core/permissions.go` — `GetCommunityRole`,
   `CanModerateCommunity`, `CanAdministerCommunity`
 - `backend/pkg/db/services/webhook_dispatch.go` — detached dispatch
-- `backend/pkg/db/migrations/20260831172428_create_communities.up.sql` — the
+- `backend/pkg/db/migrations/20260831172428_create_communities.sql` — the
   nullable-column rationale, stated at the point of definition
 - ADR-003 (Authentication Strategy) — the admin-mode convention this reuses

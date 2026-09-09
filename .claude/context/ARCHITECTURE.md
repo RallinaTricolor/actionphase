@@ -22,7 +22,7 @@ ActionPhase follows **Clean Architecture** with clear separation of concerns:
 - **Database**: PostgreSQL with JSONB for flexible game data
 - **Query Builder**: sqlc (type-safe SQL → Go code generation)
 - **Authentication**: JWT bearer tokens backed by server-side sessions
-- **Migrations**: golang-migrate
+- **Migrations**: goose
 
 ### Frontend
 - **Framework**: React 19 + TypeScript 5.9

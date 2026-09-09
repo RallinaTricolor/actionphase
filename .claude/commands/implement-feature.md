@@ -33,7 +33,7 @@ Follow the test pyramid bottom-up. **Do not skip layers.**
 
 ### 1. Database (if schema changes needed)
 - Create migration: `just migration create <name>`
-- Write `.up.sql` and `.down.sql`
+- Write the `-- +goose Up` and `-- +goose Down` sections of the generated file
 - Add SQL queries to `backend/pkg/db/queries/`
 - Regenerate: `just sqlgen`
 
