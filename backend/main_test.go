@@ -1,46 +1,73 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// TestCheckMigrationState pins the behaviour that replaced the old "auto-fix".
+// TestMigrationsDirIsGooseFormat pins the file format the runner depends on.
 //
-// That code called m.Force(version) on a dirty state and carried on. Force does
-// not repair anything — it writes dirty=false, asserting the migration completed.
-// When it had not, the next Up() started at version+1 and the failed migration was
-// skipped permanently while schema_migrations claimed success. The whole point of
-// this function is that a dirty state stops the process instead.
-func TestCheckMigrationState(t *testing.T) {
-	t.Run("clean state proceeds", func(t *testing.T) {
-		if err := checkMigrationState(20260818224524, false); err != nil {
-			t.Fatalf("a clean state must not block startup: %v", err)
-		}
-	})
+// runMigrations calls goose.Up against migrationsDir. goose ignores a .sql file
+// with no "-- +goose Up" annotation rather than failing on it, so a migration
+// left in golang-migrate's format — a bare .up.sql/.down.sql pair, as every
+// migration in this repo was before the swap — would be silently skipped and
+// recorded as nothing. A branch written before the cutover and rebased after it
+// is the realistic way that happens.
+//
+// This runs without a database because it is a property of the files, not of any
+// particular schema state.
+func TestMigrationsDirIsGooseFormat(t *testing.T) {
+	entries, err := os.ReadDir(migrationsDir)
+	if err != nil {
+		t.Fatalf("cannot read %s: %v", migrationsDir, err)
+	}
 
-	t.Run("dirty state is refused", func(t *testing.T) {
-		err := checkMigrationState(20260818224524, true)
-		if err == nil {
-			t.Fatal("a dirty state must refuse to start; forcing it clean skips the failed migration permanently")
+	var sqlFiles []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".sql") {
+			sqlFiles = append(sqlFiles, e.Name())
 		}
+	}
+	if len(sqlFiles) == 0 {
+		t.Fatalf("no .sql migrations found in %s; this test would pass vacuously", migrationsDir)
+	}
 
-		// The operator has to know which migration to inspect, and what to run
-		// once they have. An error that only says "dirty" sends them to the source.
-		msg := err.Error()
-		if !strings.Contains(msg, "20260818224524") {
-			t.Errorf("error must name the offending version, got: %s", msg)
-		}
-		if !strings.Contains(msg, "migrate force") {
-			t.Errorf("error must name the recovery command, got: %s", msg)
-		}
-	})
+	for _, name := range sqlFiles {
+		t.Run(name, func(t *testing.T) {
+			// A leftover golang-migrate pair is the specific regression to catch,
+			// and its name is the clearest signal.
+			if strings.HasSuffix(name, ".up.sql") || strings.HasSuffix(name, ".down.sql") {
+				t.Fatalf("%s is in golang-migrate format; goose expects a single file "+
+					"with -- +goose Up and -- +goose Down sections, and silently ignores this one", name)
+			}
 
-	t.Run("reports version zero when nothing has been applied", func(t *testing.T) {
-		// A dirty flag at version 0 is still dirty. Nothing about the message
-		// should assume a prior successful migration exists.
-		if err := checkMigrationState(0, true); err == nil {
-			t.Error("dirty at version 0 must still be refused")
-		}
-	})
+			body, err := os.ReadFile(filepath.Join(migrationsDir, name))
+			if err != nil {
+				t.Fatalf("cannot read %s: %v", name, err)
+			}
+			content := string(body)
+
+			// goose requires the Up annotation to register the migration at all.
+			if !strings.Contains(content, "-- +goose Up") {
+				t.Errorf("%s has no '-- +goose Up' annotation; goose would skip it entirely", name)
+			}
+			// Down is not required by goose, but every migration in this repo has
+			// one, and rollback depends on it.
+			if !strings.Contains(content, "-- +goose Down") {
+				t.Errorf("%s has no '-- +goose Down' annotation; it cannot be rolled back", name)
+			}
+
+			// Dollar-quoted bodies must be wrapped, or goose splits them on the
+			// semicolons inside the function body and fails with "unterminated
+			// dollar-quoted string" at apply time.
+			if strings.Contains(content, "$$") || strings.Contains(content, "$do$") {
+				if !strings.Contains(content, "-- +goose StatementBegin") {
+					t.Errorf("%s contains a dollar-quoted block but no '-- +goose StatementBegin'; "+
+						"goose splits it on inner semicolons and fails to apply", name)
+				}
+			}
+		})
+	}
 }

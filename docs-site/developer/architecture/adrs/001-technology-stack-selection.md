@@ -38,7 +38,7 @@ We selected the following technology stack:
 
 **Database**: PostgreSQL
 - PostgreSQL 15+ as primary database
-- golang-migrate for schema migrations
+- golang-migrate for schema migrations (superseded 2026-09-09 by `pressly/goose`; see ADR-002)
 - JSONB columns for flexible game data storage
 
 ## Alternatives Considered

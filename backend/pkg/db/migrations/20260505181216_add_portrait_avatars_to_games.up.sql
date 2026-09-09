@@ -1,1 +1,0 @@
-ALTER TABLE games ADD COLUMN portrait_avatars BOOLEAN NOT NULL DEFAULT false;

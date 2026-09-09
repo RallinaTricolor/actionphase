@@ -1,1 +1,0 @@
-DROP INDEX IF EXISTS idx_game_phases_scheduled_activation;

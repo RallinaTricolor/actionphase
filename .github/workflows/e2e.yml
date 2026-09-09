@@ -46,14 +46,14 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.0'
+          go-version: '1.25.7'
           cache: true
           cache-dependency-path: backend/go.sum
 
-      - name: Install golang-migrate
+      - name: Install goose
         run: |
-          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz
-          sudo mv migrate /usr/local/bin/migrate
+          curl -fsSL -o /tmp/goose https://github.com/pressly/goose/releases/download/v3.27.3/goose_linux_x86_64
+          sudo install -m 0755 /tmp/goose /usr/local/bin/goose
 
       - name: Create databases
         env:
@@ -63,7 +63,7 @@ jobs:
 
       - name: Run migrations
         run: |
-          migrate -source file://backend/pkg/db/migrations -database "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable" up
+          goose -dir backend/pkg/db/migrations postgres "postgres://postgres:example@localhost:5432/actionphase?sslmode=disable" up
 
       - name: Load E2E test fixtures
         env:

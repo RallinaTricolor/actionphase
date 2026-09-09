@@ -36,6 +36,13 @@ We adopted a **Hybrid Relational-Document approach** using PostgreSQL with strat
 - Up/down migrations for rollback capability
 - Environment-specific migration control
 
+> ⚠️ **Superseded (2026-09-09): the tool is now `pressly/goose`.** golang-migrate
+> tracked only a single high-water mark, so a migration merged with an older
+> timestamp than one already applied was skipped silently and permanently. goose
+> records one row per applied migration and fails loudly on that gap. The
+> decision to use versioned up/down migration files is unchanged — only the tool
+> implementing it. See `.claude/planning/migration-library-swap.md`.
+
 ## Alternatives Considered
 
 ### 1. Pure Relational Approach
@@ -279,5 +286,5 @@ selective document storage — still holds.** Only the specific columns are wron
 ## References
 - [PostgreSQL JSONB Documentation](https://www.postgresql.org/docs/current/datatype-json.html)
 - [JSONB Indexing Strategies](https://www.postgresql.org/docs/current/datatype-json.html#JSON-INDEXING)
-- [golang-migrate Documentation](https://github.com/golang-migrate/migrate)
+- [goose Documentation](https://github.com/pressly/goose)
 - [sqlc JSONB Support](https://docs.sqlc.dev/en/latest/howto/query-json.html)
