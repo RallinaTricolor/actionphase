@@ -165,6 +165,61 @@ export interface RecentCommentsResponse {
   offset: number;
 }
 
+// A comment the user has privately starred, from the cross-game /favorites list.
+//
+// Deliberately NOT `extends CommentWithParent`. The favorites endpoint is its
+// own response type on the backend (see FavoriteCommentResponse) and sends
+// neither `updated_at` nor the flattened `parent_*` fields, so extending would
+// promise fields that never arrive. It carries the two things a card needs to
+// stand on its own outside its game: the game's title, and when it was starred.
+export interface FavoriteComment {
+  id: number;
+  game_id: number;
+  game_title: string;
+  parent_id?: number | null;
+  post_id?: number | null;
+  author_id: number;
+  character_id: number;
+  content: string;
+  created_at: string;
+  edited_at?: string | null;
+  edit_count: number;
+  deleted_at?: string | null;
+  is_deleted: boolean;
+  author_username: string;
+  character_name?: string | null;
+  character_avatar_url?: string | null;
+  favorited_at: string;
+
+  // Present only when the comment has a parent to show.
+  parent?: {
+    content?: string | null;
+    created_at?: string | null;
+    deleted_at?: string | null;
+    is_deleted?: boolean | null;
+    message_type?: string | null;
+    author_username?: string | null;
+    character_name?: string | null;
+    character_avatar_url?: string | null;
+  } | null;
+}
+
+// {limit, offset, total} envelope shared by the paginated comment feeds.
+export interface PaginationInfo {
+  limit: number;
+  offset: number;
+  total: number;
+}
+
+export interface FavoriteCommentsResponse {
+  favorites: FavoriteComment[];
+  pagination: PaginationInfo;
+}
+
+export interface FavoriteCommentIDsResponse {
+  favorite_comment_ids: number[];
+}
+
 // A post or comment by a specific character (for Character Page)
 export interface CharacterMessage {
   id: number;

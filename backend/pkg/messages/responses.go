@@ -211,6 +211,48 @@ type ManualReadCommentIDsResponse struct {
 	ReadCommentIDs []int32 `json:"read_comment_ids" doc:"Comments the caller explicitly marked read"`
 }
 
+// FavoriteCommentResponse is one entry of the cross-game favorites list.
+//
+// Same shape as CommentWithParentResponse plus the two things a card needs to
+// stand on its own outside its game: the game's title, and when the caller
+// starred it. Kept as its own type rather than embedding, matching the
+// deliberate choice CharacterMessageResponse documents -- the feeds are free
+// to diverge and a shared type would silently couple them.
+type FavoriteCommentResponse struct {
+	ID                 int32   `json:"id" doc:"Comment ID"`
+	GameID             int32   `json:"game_id"`
+	GameTitle          string  `json:"game_title" doc:"Title of the game this comment belongs to"`
+	ParentID           *int32  `json:"parent_id" doc:"Message being replied to"`
+	PostID             *int32  `json:"post_id" doc:"Top-level post at the head of this thread; the deep-link target"`
+	AuthorID           int32   `json:"author_id"`
+	CharacterID        int32   `json:"character_id"`
+	Content            string  `json:"content" doc:"Comment body, as markdown"`
+	CreatedAt          string  `json:"created_at" doc:"RFC3339 timestamp"`
+	EditedAt           *string `json:"edited_at" doc:"RFC3339 timestamp, null when never edited"`
+	EditCount          int32   `json:"edit_count"`
+	DeletedAt          *string `json:"deleted_at" doc:"RFC3339 timestamp, null when not deleted"`
+	IsDeleted          bool    `json:"is_deleted"`
+	AuthorUsername     string  `json:"author_username" doc:"Blank in an anonymous game when the caller may not see it"`
+	CharacterName      *string `json:"character_name"`
+	CharacterAvatarURL *string `json:"character_avatar_url"`
+	FavoritedAt        string  `json:"favorited_at" doc:"RFC3339 timestamp of when the caller starred this comment"`
+
+	// Present only when the comment has a parent to show.
+	Parent *ParentContextResponse `json:"parent,omitempty" required:"false" doc:"The message being replied to"`
+}
+
+// FavoriteCommentsResponse is the body of the /favorites/comments listing.
+type FavoriteCommentsResponse struct {
+	Favorites  []*FavoriteCommentResponse `json:"favorites"`
+	Pagination PaginationResponse         `json:"pagination"`
+}
+
+// FavoriteCommentIDsResponse is the flat set of comment IDs the caller has
+// starred, used to render star state without fetching the comments themselves.
+type FavoriteCommentIDsResponse struct {
+	FavoriteCommentIDs []int32 `json:"favorite_comment_ids" doc:"Comments the caller has starred"`
+}
+
 // DeletedResponse is the {"message": ...} / {"message": ..., "id": ...}
 // envelope the delete endpoints return. Note both are 200 with a body, not 204.
 type DeletedResponse struct {

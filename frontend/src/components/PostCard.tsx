@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import type { Message } from '../types/messages';
@@ -10,6 +10,7 @@ import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
 import { MarkdownPreview } from './MarkdownPreview';
 import { useMarkPostAsRead, usePostUnreadCommentIDs, usePostManualReadCommentIDs, useToggleCommentRead } from '../hooks/useReadTracking';
+import { useGameFavoriteCommentIDs, useSetCommentFavorite } from '../hooks/useFavorites';
 import { useCommentReadMode } from '../hooks/useUserPreferences';
 import { useUpdatePost } from '../hooks';
 import { Button, Select } from './ui';
@@ -50,6 +51,8 @@ const CommentList = memo(function CommentList({
   manualReadCommentIDs,
   commentReadMode,
   onToggleRead,
+  favoriteCommentIDs,
+  onToggleFavorite,
   onOpenThread,
   readOnly,
   allowReadTracking,
@@ -66,6 +69,8 @@ const CommentList = memo(function CommentList({
   manualReadCommentIDs: number[];
   commentReadMode: 'auto' | 'manual';
   onToggleRead: (commentId: number, currentlyRead: boolean) => void;
+  favoriteCommentIDs: number[];
+  onToggleFavorite: (commentId: number, currentlyFavorited: boolean) => void;
   onOpenThread: (comment: Message) => void;
   readOnly: boolean;
   allowReadTracking: boolean;
@@ -89,6 +94,8 @@ const CommentList = memo(function CommentList({
           manualReadCommentIDs={manualReadCommentIDs}
           commentReadMode={commentReadMode}
           onToggleRead={onToggleRead}
+          favoriteCommentIDs={favoriteCommentIDs}
+          onToggleFavorite={onToggleFavorite}
           onOpenThread={onOpenThread}
           readOnly={readOnly}
           allowReadTracking={allowReadTracking}
@@ -140,6 +147,13 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
   const manualReadCommentIDsRaw = usePostManualReadCommentIDs(gameId, post.id);
   const manualReadCommentIDs = allowReadTracking ? manualReadCommentIDsRaw : [];
   const toggleCommentReadMutation = useToggleCommentRead();
+  // Favorites are independent of both read tracking and readOnly: a star is
+  // the viewer's own private bookmark, so it stays available in the history
+  // view of a finished game -- which is precisely when someone goes back to
+  // collect the comments worth keeping.
+  const { favoriteIds } = useGameFavoriteCommentIDs(gameId);
+  const favoriteCommentIDs = useMemo(() => Array.from(favoriteIds), [favoriteIds]);
+  const setFavoriteMutation = useSetCommentFavorite();
 
   //Content autosave id for comment textbox
   const autosaveRefId = postCachingService.createAutosaveId('post-reply', post.id);
@@ -152,6 +166,10 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
       read: !currentlyRead,
     });
   }, [toggleCommentReadMutation, gameId, post.id]);
+
+  const handleToggleFavorite = useCallback((commentId: number, currentlyFavorited: boolean) => {
+    setFavoriteMutation.mutate({ commentId, favorite: !currentlyFavorited });
+  }, [setFavoriteMutation]);
 
   // Mutation for marking post as read
   const markAsReadMutation = useMarkPostAsRead();
@@ -734,6 +752,8 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                 manualReadCommentIDs={manualReadCommentIDs}
                 commentReadMode={commentReadMode}
                 onToggleRead={handleToggleRead}
+                favoriteCommentIDs={favoriteCommentIDs}
+                onToggleFavorite={handleToggleFavorite}
                 onOpenThread={handleOpenThread}
                 readOnly={readOnly}
                 allowReadTracking={allowReadTracking}
@@ -794,6 +814,8 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
           manualReadCommentIDs={manualReadCommentIDs}
           commentReadMode={commentReadMode}
           onToggleRead={handleToggleRead}
+          favoriteCommentIDs={favoriteCommentIDs}
+          onToggleFavorite={handleToggleFavorite}
           readOnly={readOnly}
           allowReadTracking={allowReadTracking}
         />

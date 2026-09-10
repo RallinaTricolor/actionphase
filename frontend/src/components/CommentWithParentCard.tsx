@@ -6,6 +6,7 @@ import { ParentCommentPreview } from './ParentCommentPreview';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
 import { Card, CardBody, Badge, Button, Select } from './ui';
+import { FavoriteButton } from './FavoriteButton';
 import CharacterAvatar from './CharacterAvatar';
 import { useGameContext } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,6 +28,8 @@ interface CommentWithParentCardProps {
   commentReadMode?: CommentReadMode;
   isRead?: boolean;
   onToggleRead?: (currentlyRead: boolean) => void;
+  isFavorited?: boolean;
+  onToggleFavorite?: (commentId: number, currentlyFavorited: boolean) => void;
 }
 
 /**
@@ -41,6 +44,8 @@ export function CommentWithParentCard({
   commentReadMode,
   isRead = false,
   onToggleRead,
+  isFavorited = false,
+  onToggleFavorite,
 }: CommentWithParentCardProps) {
   const { allGameCharacters, game, isGM, userCharacters } = useGameContext();
   const { currentUser } = useAuth();
@@ -210,7 +215,10 @@ export function CommentWithParentCard({
   const isFadedAsRead = commentReadMode === 'manual' && isRead;
 
   return (
-    <Card className={`hover:shadow-md transition-shadow${isFadedAsRead ? ' opacity-50' : ''}`}>
+    <Card
+      className={`hover:shadow-md transition-shadow${isFadedAsRead ? ' opacity-50' : ''}`}
+      data-testid="comment-with-parent-card"
+    >
       <CardBody>
         {/* Parent context preview */}
         <ParentCommentPreview
@@ -339,6 +347,16 @@ export function CommentWithParentCard({
                 </>
               )}
             </Button>
+
+            {/* Private to the viewer, so unlike Edit/Delete it stays visible in
+                screenshot mode. */}
+            {onToggleFavorite && !comment.is_deleted && (
+              <FavoriteButton
+                commentId={comment.id}
+                isFavorited={isFavorited}
+                onToggle={onToggleFavorite}
+              />
+            )}
 
             {showReadButton && (
               <Button

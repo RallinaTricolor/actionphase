@@ -19,6 +19,7 @@ import { useProvideGameUtilityContext } from '../contexts/UtilityDrawerContext';
 import { usePreviousPhaseResults } from '../hooks/usePreviousPhaseResults';
 import { usePollsByPhase, useDraftPost } from '../hooks';
 import { useToggleCommentRead, usePostManualReadCommentIDs } from '../hooks/useReadTracking';
+import { useGameFavoriteCommentIDs, useSetCommentFavorite } from '../hooks/useFavorites';
 import { useCommentReadMode } from '../hooks/useUserPreferences';
 import { logger } from '@/services/LoggingService';
 import { parentContextForViewport } from '@/config/comments';
@@ -49,6 +50,15 @@ function ThreadViewModalWithReadTracking(props: React.ComponentProps<typeof Thre
     },
     [gameId, postId, toggleMutation]
   );
+  const { favoriteIds } = useGameFavoriteCommentIDs(gameId);
+  const favoriteCommentIDs = useMemo(() => Array.from(favoriteIds), [favoriteIds]);
+  const setFavoriteMutation = useSetCommentFavorite();
+  const handleToggleFavorite = useCallback(
+    (commentId: number, currentlyFavorited: boolean) => {
+      setFavoriteMutation.mutate({ commentId, favorite: !currentlyFavorited });
+    },
+    [setFavoriteMutation]
+  );
 
   return (
     <ThreadViewModal
@@ -58,6 +68,8 @@ function ThreadViewModalWithReadTracking(props: React.ComponentProps<typeof Thre
       commentReadMode={commentReadMode}
       manualReadCommentIDs={manualReadCommentIDs}
       onToggleRead={handleToggleRead}
+      favoriteCommentIDs={favoriteCommentIDs}
+      onToggleFavorite={handleToggleFavorite}
     />
   );
 }

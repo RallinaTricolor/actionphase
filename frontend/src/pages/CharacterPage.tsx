@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
@@ -15,6 +15,8 @@ import { formatDistanceToNow } from 'date-fns';
 import type { CharacterMessage } from '../types/messages';
 import { CharacterActivityStats } from '../components/CharacterActivityStats';
 import { MessageCharacterButton } from '../components/MessageCharacterButton';
+import { FavoriteButton } from '../components/FavoriteButton';
+import { useFavoriteCommentIDs, useSetCommentFavorite } from '../hooks/useFavorites';
 
 /**
  * CharacterPage - Displays a character's profile and public activity feed
@@ -89,6 +91,14 @@ export function CharacterPage() {
     hasNextPage,
     isFetchingNextPage,
   } = useCharacterComments(characterIdNum);
+
+  // This page spans every game the character appears in, so it uses the
+  // cross-game favorite set rather than the per-game one.
+  const { favoriteIds } = useFavoriteCommentIDs();
+  const setFavoriteMutation = useSetCommentFavorite();
+  const handleToggleFavorite = useCallback((commentId: number, currentlyFavorited: boolean) => {
+    setFavoriteMutation.mutate({ commentId, favorite: !currentlyFavorited });
+  }, [setFavoriteMutation]);
 
   // Infinite scroll
   const sentinelRef = useInfiniteScrollSentinel({
@@ -223,6 +233,8 @@ export function CharacterPage() {
                   key={message.id}
                   message={message}
                   portraitAvatars={portraitAvatars}
+                  isFavorited={favoriteIds.has(message.id)}
+                  onToggleFavorite={handleToggleFavorite}
                   onNavigate={() => {
                     if (!characterData) return;
                     const url = `/games/${message.game_id}?tab=common-room&comment=${message.id}`;
@@ -250,9 +262,11 @@ interface CharacterMessageCardProps {
   message: CharacterMessage;
   onNavigate: () => void;
   portraitAvatars: boolean;
+  isFavorited: boolean;
+  onToggleFavorite: (commentId: number, currentlyFavorited: boolean) => void;
 }
 
-function CharacterMessageCard({ message, onNavigate, portraitAvatars }: CharacterMessageCardProps) {
+function CharacterMessageCard({ message, onNavigate, portraitAvatars, isFavorited, onToggleFavorite }: CharacterMessageCardProps) {
   const utcDateString = message.created_at.endsWith('Z')
     ? message.created_at
     : `${message.created_at}Z`;
@@ -310,7 +324,7 @@ function CharacterMessageCard({ message, onNavigate, portraitAvatars }: Characte
 
         {/* Link to view in context */}
         {!message.is_deleted && (
-          <div className="mt-3 pt-3 border-t border-theme-default">
+          <div className="mt-3 pt-3 border-t border-theme-default flex items-center justify-between gap-2">
             <a
               href={`/games/${message.game_id}?tab=common-room&comment=${message.id}`}
               onClick={(e) => {
@@ -321,6 +335,15 @@ function CharacterMessageCard({ message, onNavigate, portraitAvatars }: Characte
             >
               View in thread →
             </a>
+            {/* This feed carries posts as well as comments; only comments can be
+                favorited, so posts show no star. */}
+            {message.message_type === 'comment' && (
+              <FavoriteButton
+                commentId={message.id}
+                isFavorited={isFavorited}
+                onToggle={onToggleFavorite}
+              />
+            )}
           </div>
         )}
       </CardBody>

@@ -13,7 +13,9 @@ import type {
   PaginatedCommentsResponse,
   RecentCommentsResponse,
   CommentWithParent,
-  MessageThreadContext
+  MessageThreadContext,
+  FavoriteCommentsResponse,
+  FavoriteCommentIDsResponse
 } from '../../types/messages';
 import { COMMENT_MAX_DEPTH } from '@/config/comments';
 
@@ -155,6 +157,41 @@ export class MessagesApi extends BaseApiClient {
         })),
       },
     };
+  }
+
+  // Favorites (private, per-user starred comments)
+
+  // PUT, not POST: setting a favorite to a given state is idempotent, and the
+  // backend registers this as a PUT with a {favorite: bool} body.
+  async setCommentFavorite(commentId: number, favorite: boolean) {
+    return this.client.put<void>(`/api/v1/comments/${commentId}/favorite`, { favorite });
+  }
+
+  async getFavoriteComments(limit: number = 20, offset: number = 0) {
+    const queryParams = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    const response = await this.client.get<FavoriteCommentsResponse>(
+      `/api/v1/favorites/comments?${queryParams.toString()}`
+    );
+    return response.data;
+  }
+
+  // Every comment the caller has starred, across all games.
+  async getFavoriteCommentIDs() {
+    const response = await this.client.get<FavoriteCommentIDsResponse>(
+      '/api/v1/favorites/comment-ids'
+    );
+    return response.data.favorite_comment_ids;
+  }
+
+  // Narrowed to one game, so a common room only fetches what it can display.
+  async getGameFavoriteCommentIDs(gameId: number) {
+    const response = await this.client.get<FavoriteCommentIDsResponse>(
+      `/api/v1/games/${gameId}/favorite-comment-ids`
+    );
+    return response.data.favorite_comment_ids;
   }
 
   async getTotalCommentCount(gameId: number) {

@@ -2602,6 +2602,132 @@ components:
                 - game_id
                 - status
             type: object
+        FavoriteCommentIDsResponse:
+            additionalProperties: false
+            properties:
+                favorite_comment_ids:
+                    description: Comments the caller has starred
+                    items:
+                        format: int32
+                        type: integer
+                    type:
+                        - array
+                        - "null"
+            required:
+                - favorite_comment_ids
+            type: object
+        FavoriteCommentRequest:
+            additionalProperties: false
+            properties:
+                favorite:
+                    description: true stars the comment, false removes the star
+                    type: boolean
+            required:
+                - favorite
+            type: object
+        FavoriteCommentResponse:
+            additionalProperties: false
+            properties:
+                author_id:
+                    format: int32
+                    type: integer
+                author_username:
+                    description: Blank in an anonymous game when the caller may not see it
+                    type: string
+                character_avatar_url:
+                    type:
+                        - string
+                        - "null"
+                character_id:
+                    format: int32
+                    type: integer
+                character_name:
+                    type:
+                        - string
+                        - "null"
+                content:
+                    description: Comment body, as markdown
+                    type: string
+                created_at:
+                    description: RFC3339 timestamp
+                    type: string
+                deleted_at:
+                    description: RFC3339 timestamp, null when not deleted
+                    type:
+                        - string
+                        - "null"
+                edit_count:
+                    format: int32
+                    type: integer
+                edited_at:
+                    description: RFC3339 timestamp, null when never edited
+                    type:
+                        - string
+                        - "null"
+                favorited_at:
+                    description: RFC3339 timestamp of when the caller starred this comment
+                    type: string
+                game_id:
+                    format: int32
+                    type: integer
+                game_title:
+                    description: Title of the game this comment belongs to
+                    type: string
+                id:
+                    description: Comment ID
+                    format: int32
+                    type: integer
+                is_deleted:
+                    type: boolean
+                parent:
+                    $ref: '#/components/schemas/ParentContextResponse'
+                    description: The message being replied to
+                parent_id:
+                    description: Message being replied to
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
+                post_id:
+                    description: Top-level post at the head of this thread; the deep-link target
+                    format: int32
+                    type:
+                        - integer
+                        - "null"
+            required:
+                - id
+                - game_id
+                - game_title
+                - parent_id
+                - post_id
+                - author_id
+                - character_id
+                - content
+                - created_at
+                - edited_at
+                - edit_count
+                - deleted_at
+                - is_deleted
+                - author_username
+                - character_name
+                - character_avatar_url
+                - favorited_at
+            type: object
+        FavoriteCommentsResponse:
+            additionalProperties: false
+            properties:
+                favorites:
+                    items:
+                        $ref: '#/components/schemas/FavoriteCommentResponse'
+                    type:
+                        - array
+                        - "null"
+                pagination:
+                    $ref: '#/components/schemas/PaginationResponse'
+            required:
+                - favorites
+                - pagination
+            type: object
         FingerprintBan:
             additionalProperties: false
             properties:
@@ -6950,6 +7076,36 @@ paths:
             summary: List controllable characters across all the caller's games
             tags:
                 - Characters
+    /comments/{commentId}/favorite:
+        put:
+            description: 'Sets the caller''s private star on a comment. Idempotent: the body names the target state rather than flipping it. Comments only -- starring a post is a 422.'
+            operationId: setCommentFavorite
+            parameters:
+                - description: Comment to star or unstar
+                  in: path
+                  name: commentId
+                  required: true
+                  schema:
+                    description: Comment to star or unstar
+                    format: int32
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/FavoriteCommentRequest'
+            responses:
+                "204":
+                    description: No Content
+                "401":
+                    description: Not authenticated
+                "422":
+                    description: Request failed validation, or the target is not an existing comment
+            security:
+                - BearerAuth: []
+            summary: Star or unstar one comment
+            tags:
+                - Favorites
     /communities:
         get:
             description: Returns every active community. Inactive communities are omitted -- they accept no new games. Site admins see the full list via the admin endpoint.
@@ -7987,6 +8143,66 @@ paths:
             summary: Download a completed game archive
             tags:
                 - Exports
+    /favorites/comment-ids:
+        get:
+            description: Lists the caller's favorites across all games, for star state on surfaces that are not game-scoped.
+            operationId: getFavoriteCommentIDs
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/FavoriteCommentIDsResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+            security:
+                - BearerAuth: []
+            summary: Every comment ID the caller starred
+            tags:
+                - Favorites
+    /favorites/comments:
+        get:
+            description: Returns starred comments newest-starred first, across every game, each carrying the message it replies to and its game's title.
+            operationId: listFavoriteComments
+            parameters:
+                - description: Favorites to return
+                  explode: false
+                  in: query
+                  name: limit
+                  schema:
+                    default: 20
+                    description: Favorites to return
+                    format: int32
+                    maximum: 100
+                    minimum: 1
+                    type: integer
+                - description: Favorites to skip
+                  explode: false
+                  in: query
+                  name: offset
+                  schema:
+                    default: 0
+                    description: Favorites to skip
+                    format: int32
+                    minimum: 0
+                    type: integer
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/FavoriteCommentsResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "422":
+                    description: Invalid limit or offset
+            security:
+                - BearerAuth: []
+            summary: List the caller's starred comments
+            tags:
+                - Favorites
     /games:
         get:
             description: 'The main game listing, with filtering, sorting and pagination. Authentication is optional: a signed-in caller also gets their relationship to each game.'
@@ -9540,6 +9756,33 @@ paths:
             summary: Get the most recent export for a game
             tags:
                 - Exports
+    /games/{gameID}/favorite-comment-ids:
+        get:
+            description: Lists the caller's private favorites within one game, for star state in the common room.
+            operationId: getGameFavoriteCommentIDs
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    type: integer
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/FavoriteCommentIDsResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+            security:
+                - BearerAuth: []
+            summary: Comment IDs the caller starred in this game
+            tags:
+                - Common Room
     /games/{gameID}/handouts:
         get:
             description: Lists the game's handouts. GMs and Co-GMs also see drafts; everyone else sees only published ones.
@@ -13320,6 +13563,8 @@ tags:
       name: Draft Character Updates
     - description: Threaded discussion posts and comments in the common room
       name: Common Room
+    - description: Private, per-user starred comments, spanning every game
+      name: Favorites
     - description: Private in-character messaging between players
       name: Conversations
     - description: Game reference documents and lore provided by Game Masters

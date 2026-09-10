@@ -177,3 +177,58 @@ func commentsWithParentsToResponse(comments []core.CommentWithParent, showUserna
 	}
 	return result
 }
+
+// favoriteCommentsToResponse converts the favorites listing to its wire shape.
+//
+// showUsernames is resolved per game rather than once for the whole page: the
+// list is cross-game, so one response can mix an anonymous game (where a
+// player may not see who is behind a character) with a normal one. Callers
+// pass a lookup keyed by game ID, built once per request, so a page of N
+// favorites spanning M games costs M game reads rather than N.
+func favoriteCommentsToResponse(favorites []*core.FavoriteComment, showUsernamesByGame map[int32]bool) []*FavoriteCommentResponse {
+	result := make([]*FavoriteCommentResponse, len(favorites))
+	for i, f := range favorites {
+		showUsernames := showUsernamesByGame[f.GameID]
+
+		item := &FavoriteCommentResponse{
+			ID:                 f.ID,
+			GameID:             f.GameID,
+			GameTitle:          f.GameTitle,
+			ParentID:           f.ParentID,
+			PostID:             f.PostID,
+			AuthorID:           f.AuthorID,
+			CharacterID:        f.CharacterID,
+			Content:            f.Content,
+			CreatedAt:          f.CreatedAt.Format(time.RFC3339),
+			EditedAt:           formatTimePtr(f.EditedAt),
+			EditCount:          f.EditCount,
+			DeletedAt:          formatTimePtr(f.DeletedAt),
+			IsDeleted:          f.IsDeleted,
+			AuthorUsername:     blankIfHidden(f.AuthorUsername, showUsernames),
+			CharacterName:      f.CharacterName,
+			CharacterAvatarURL: f.CharacterAvatarUrl,
+			FavoritedAt:        f.FavoritedAt.Format(time.RFC3339),
+		}
+
+		if f.ParentContent != nil {
+			parentAuthor := f.ParentAuthorUsername
+			if !showUsernames {
+				empty := ""
+				parentAuthor = &empty
+			}
+			item.Parent = &ParentContextResponse{
+				Content:            f.ParentContent,
+				CreatedAt:          formatTimePtr(f.ParentCreatedAt),
+				DeletedAt:          formatTimePtr(f.ParentDeletedAt),
+				IsDeleted:          f.ParentIsDeleted,
+				MessageType:        f.ParentMessageType,
+				AuthorUsername:     parentAuthor,
+				CharacterName:      f.ParentCharacterName,
+				CharacterAvatarURL: f.ParentCharacterAvatarUrl,
+			}
+		}
+
+		result[i] = item
+	}
+	return result
+}
