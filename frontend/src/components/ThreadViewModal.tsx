@@ -23,6 +23,8 @@ interface ThreadViewModalProps {
   manualReadCommentIDs?: number[];
   commentReadMode?: 'auto' | 'manual';
   onToggleRead?: (commentId: number, currentlyRead: boolean) => void;
+  favoriteCommentIDs?: number[];
+  onToggleFavorite?: (commentId: number, currentlyFavorited: boolean) => void;
   // New props for parent chain context (deep-link enhancement)
   parentChain?: Message[]; // Array of parent messages (oldest → target)
   hasFullThread?: boolean; // Whether we fetched all the way to root
@@ -49,6 +51,8 @@ export function ThreadViewModal({
   manualReadCommentIDs = [],
   commentReadMode = 'auto',
   onToggleRead,
+  favoriteCommentIDs = [],
+  onToggleFavorite,
   parentChain,
   hasFullThread = true,
   targetCommentId,
@@ -212,6 +216,8 @@ export function ThreadViewModal({
                     manualReadCommentIDs={manualReadCommentIDs}
                     commentReadMode={commentReadMode}
                     onToggleRead={onToggleRead}
+                    favoriteCommentIDs={favoriteCommentIDs}
+                    onToggleFavorite={onToggleFavorite}
                     onOpenThread={(nestedComment) => setNestedModalComment(nestedComment)}
                     readOnly={readOnly}
                     allowReadTracking={allowReadTracking}
@@ -238,6 +244,8 @@ export function ThreadViewModal({
                 manualReadCommentIDs={manualReadCommentIDs}
                 commentReadMode={commentReadMode}
                 onToggleRead={onToggleRead}
+                favoriteCommentIDs={favoriteCommentIDs}
+                onToggleFavorite={onToggleFavorite}
                 onOpenThread={(nestedComment) => setNestedModalComment(nestedComment)}
                 onDirtyStateChange={handleDirtyStateChange}
               />
@@ -261,6 +269,8 @@ export function ThreadViewModal({
           manualReadCommentIDs={manualReadCommentIDs}
           commentReadMode={commentReadMode}
           onToggleRead={onToggleRead}
+          favoriteCommentIDs={favoriteCommentIDs}
+          onToggleFavorite={onToggleFavorite}
           readOnly={readOnly}
           allowReadTracking={allowReadTracking}
         />

@@ -98,6 +98,23 @@ describe('Layout', () => {
       expect(userButton).toHaveAttribute('aria-expanded', 'true')
     })
 
+    it('stays open when a real mouse hovers the trigger and then clicks it', async () => {
+      // Regression: the trigger's onClick was a toggle, but the wrapper's
+      // onMouseEnter had already opened the menu by the time a mouse click
+      // landed — so every click closed it again and the menu was reachable
+      // only by keyboard. The test above uses a bare fireEvent.click and so
+      // never emitted the hover that triggers this.
+      const user = userEvent.setup()
+      renderLayout(<div>Content</div>, '/dashboard')
+
+      const userButton = screen.getByRole('button', { name: /testuser/i })
+      await user.hover(userButton)
+      await user.click(userButton)
+
+      expect(userButton).toHaveAttribute('aria-expanded', 'true')
+      expect(screen.getByRole('button', { name: 'Logout' })).toBeInTheDocument()
+    })
+
     it('should highlight active dashboard link', () => {
       renderLayout(<div>Content</div>, '/dashboard')
 

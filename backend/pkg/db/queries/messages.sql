@@ -879,3 +879,176 @@ JOIN matching_convs mc ON ppc.conversation_id = mc.conversation_id
 CROSS JOIN LATERAL unnest(ppc.character_ids) AS pid(character_id)
 JOIN characters ch ON ch.id = pid.character_id
 ORDER BY ch.name;
+
+-- ============================================================================
+-- FAVORITES (per-comment, user-private)
+-- ============================================================================
+-- Favorites are private to the favoriting user and span every game. Unlike
+-- manual read tracking, the listing is NOT game-scoped -- do not add a game
+-- filter to ListFavoriteCommentsWithParents.
+
+-- name: AddCommentFavorite :exec
+-- Insert a favorite record; ignore if already exists (idempotent)
+INSERT INTO user_comment_favorites (user_id, comment_id, game_id)
+VALUES ($1, $2, $3)
+ON CONFLICT (user_id, comment_id) DO NOTHING;
+
+-- name: RemoveCommentFavorite :exec
+-- Remove a favorite record
+DELETE FROM user_comment_favorites
+WHERE user_id = $1 AND comment_id = $2;
+
+-- name: GetFavoriteCommentIDsForGame :many
+-- Returns favorited comment IDs for one user within one game.
+-- Powers star state in the common room and new-comments views.
+--
+-- Soft-deleted comments are excluded, matching ListFavoriteCommentsWithParents.
+-- The favorite row survives a delete, but every read path must agree on what
+-- "your favorites" contains: a star that fills on a comment absent from
+-- /favorites is a bug wherever it surfaces.
+SELECT f.comment_id
+FROM user_comment_favorites f
+JOIN messages m ON m.id = f.comment_id
+WHERE f.user_id = $1
+  AND f.game_id = $2
+  AND m.is_deleted = false
+  AND m.deleted_at IS NULL;
+
+-- name: GetFavoriteCommentIDsForUser :many
+-- Returns every favorited comment ID for a user, across all games.
+-- Powers star state on non-game-scoped surfaces (e.g. character profile).
+-- Excludes soft-deleted comments for the same reason as the per-game set.
+SELECT f.comment_id
+FROM user_comment_favorites f
+JOIN messages m ON m.id = f.comment_id
+WHERE f.user_id = $1
+  AND m.is_deleted = false
+  AND m.deleted_at IS NULL;
+
+-- name: ListFavoriteCommentsWithParents :many
+-- Favorited comments with parent context and root post, ordered by when they
+-- were favorited. Modeled on ListRecentCommentsWithParents (which lives in
+-- communications.sql, not this file), but the base set is the user's favorites
+-- (cross-game) rather than one game's comments, and each row carries its game
+-- title so a flat cross-game list can label cards without N+1 lookups.
+-- Avatars are pinned at authoring time (messages.character_avatar_url_at_post),
+-- so both the comment and its parent COALESCE to the live characters.avatar_url
+-- only for rows predating that column.
+--
+-- Keyset pagination, NOT offset. Unfavoriting from the list removes a row from
+-- the middle of the ordered set, so an OFFSET page boundary shifts up by one
+-- and silently skips a favorite. The cursor is the previous page's last
+-- (favorited_at, comment_id) and is stable under inserts and deletes.
+--
+-- The ordering carries an id tie-break because created_at defaults to NOW(),
+-- which is transaction time: favoriting several comments in one transaction,
+-- or fast enough to share a timestamp, otherwise leaves the order of equal
+-- rows up to the planner and lets a row repeat on one page and vanish from the
+-- next. The tie-break is also what makes the cursor comparison total.
+--
+-- $2/$3 are the cursor. Passing NULL for both starts at the newest favorite;
+-- the row comparison is skipped in that case rather than compared against
+-- NULL (which would match nothing).
+WITH RECURSIVE favorite_comments AS (
+    SELECT
+        m.id,
+        m.game_id,
+        m.parent_id,
+        m.author_id,
+        m.character_id,
+        m.content,
+        m.created_at,
+        m.edited_at,
+        m.edit_count,
+        m.deleted_at,
+        m.is_deleted,
+        u.username as author_username,
+        c.name as character_name,
+        COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
+        f.created_at as favorited_at,
+        g.title as game_title
+    FROM user_comment_favorites f
+    JOIN messages m ON m.id = f.comment_id
+    JOIN games g ON g.id = m.game_id
+    JOIN users u ON m.author_id = u.id
+    LEFT JOIN characters c ON m.character_id = c.id
+    WHERE f.user_id = $1
+      AND m.is_deleted = false
+      AND m.deleted_at IS NULL
+      AND (
+          sqlc.narg(cursor_favorited_at)::timestamptz IS NULL
+          OR (f.created_at, f.comment_id) < (sqlc.narg(cursor_favorited_at)::timestamptz, sqlc.narg(cursor_comment_id)::integer)
+      )
+    ORDER BY f.created_at DESC, f.comment_id DESC
+    LIMIT sqlc.arg(page_limit)
+),
+-- Walk up the message tree recursively to find the root post for each comment
+root_posts AS (
+    -- Base: walk up from each favorited comment, tracking the original comment's id
+    SELECT fc.id AS comment_id, fc.parent_id AS current_id
+    FROM favorite_comments fc
+    WHERE fc.parent_id IS NOT NULL
+    UNION ALL
+    -- Recursive step: keep walking up until we hit a post
+    SELECT rp.comment_id, m.parent_id AS current_id
+    FROM root_posts rp
+    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'comment'
+    WHERE m.parent_id IS NOT NULL
+),
+-- Pick the post at the top of each comment's chain
+root_post_ids AS (
+    SELECT rp.comment_id, rp.current_id AS post_id
+    FROM root_posts rp
+    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'post'
+),
+-- Immediate parent preview. Deliberately NOT filtered on is_deleted: the card
+-- renders a deleted parent as a stub.
+parent_messages AS (
+    SELECT
+        m.id,
+        m.content,
+        m.created_at,
+        m.deleted_at,
+        m.is_deleted,
+        m.message_type,
+        u.username as author_username,
+        c.name as character_name,
+        COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url
+    FROM messages m
+    JOIN users u ON m.author_id = u.id
+    LEFT JOIN characters c ON m.character_id = c.id
+    WHERE m.id IN (
+        SELECT parent_id FROM favorite_comments
+        WHERE parent_id IS NOT NULL
+    )
+)
+SELECT
+    fc.id,
+    fc.game_id,
+    fc.game_title,
+    fc.parent_id,
+    rp.post_id,
+    fc.author_id,
+    fc.character_id,
+    fc.content,
+    fc.created_at,
+    fc.edited_at,
+    fc.edit_count,
+    fc.deleted_at,
+    fc.is_deleted,
+    fc.author_username,
+    fc.character_name,
+    fc.character_avatar_url,
+    fc.favorited_at,
+    pm.content as parent_content,
+    pm.created_at as parent_created_at,
+    pm.deleted_at as parent_deleted_at,
+    pm.is_deleted as parent_is_deleted,
+    pm.message_type as parent_message_type,
+    pm.author_username as parent_author_username,
+    pm.character_name as parent_character_name,
+    pm.character_avatar_url as parent_character_avatar_url
+FROM favorite_comments fc
+LEFT JOIN root_post_ids rp ON rp.comment_id = fc.id
+LEFT JOIN parent_messages pm ON fc.parent_id = pm.id
+ORDER BY fc.favorited_at DESC, fc.id DESC;

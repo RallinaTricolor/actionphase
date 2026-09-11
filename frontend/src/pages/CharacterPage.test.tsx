@@ -28,7 +28,7 @@ vi.mock('@tanstack/react-query', async () => {
   };
 });
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock navigate
 const mockNavigate = vi.fn();
@@ -95,25 +95,36 @@ const mockComment: CharacterMessage = {
   },
 };
 
+// A real QueryClient, even though useQuery itself is mocked above: the page's
+// favorite mutation calls useQueryClient, which reads the provider rather than
+// the mocked hook and throws without one.
 function renderCharacterPage(characterId = '42') {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return render(
-    <MemoryRouter initialEntries={[`/characters/${characterId}`]}>
-      <Routes>
-        <Route path="/characters/:characterId" element={<CharacterPage />} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[`/characters/${characterId}`]}>
+        <Routes>
+          <Route path="/characters/:characterId" element={<CharacterPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
 /**
- * CharacterPage issues two useQuery calls: ['character', id] and
- * ['characterData', id]. Tests stub the character result per-case via
+ * CharacterPage issues three useQuery calls: ['character', id],
+ * ['characterData', id] and ['favoriteCommentIDs', 'all']. Tests stub the character result per-case via
  * mockCharacterQuery(); the characterData result defaults to [] and is set by
  * the bio tests. Routing on the query key keeps the array-shaped bio payload
  * from being answered with a character object.
  */
 let characterQueryResult: Partial<UseQueryResult<Character>>;
 let characterFieldsResult: CharacterData[] | undefined;
+// The favorite-id set the page's star state reads from; the id-array shape
+// matters, since the hook feeds it straight into `new Set(...)`.
+let favoriteCommentIDs: number[];
 
 function mockCharacterQuery(result: Partial<UseQueryResult<Character>>) {
   characterQueryResult = result;
@@ -124,11 +135,15 @@ describe('CharacterPage', () => {
     vi.clearAllMocks();
     characterQueryResult = { data: undefined, isLoading: false, isError: false };
     characterFieldsResult = [];
+    favoriteCommentIDs = [];
 
     vi.mocked(useQuery).mockImplementation((options: unknown) => {
       const key = (options as { queryKey?: unknown[] })?.queryKey;
       if (Array.isArray(key) && key[0] === 'characterData') {
         return { data: characterFieldsResult, isLoading: false, isError: false } as never;
+      }
+      if (Array.isArray(key) && key[0] === 'favoriteCommentIDs') {
+        return { data: favoriteCommentIDs, isLoading: false, isError: false } as never;
       }
       return characterQueryResult as never;
     });
@@ -264,6 +279,71 @@ describe('CharacterPage', () => {
 
     expect(screen.getByText(/failed to load activity/i)).toBeInTheDocument();
     expect(screen.getByText('Network error')).toBeInTheDocument();
+  });
+
+  describe('favorite star', () => {
+    function renderFeed(messages: CharacterMessage[]) {
+      mockCharacterQuery({
+        data: mockCharacter,
+        isLoading: false,
+        isError: false,
+      } as Partial<UseQueryResult<Character>>);
+
+      vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+        data: {
+          pages: [{
+            messages,
+            pagination: { total: messages.length, limit: 20, offset: 0 },
+          }],
+        },
+        isLoading: false,
+        isError: false,
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+
+      return renderCharacterPage();
+    }
+
+    // This feed carries posts as well as comments, and only comments can be
+    // favorited — so the star must key off message_type, not just render on
+    // every card.
+    it('shows a star on comments but not on posts', () => {
+      renderFeed([mockMessage, mockComment]);
+
+      expect(screen.getAllByTestId('favorite-button')).toHaveLength(1);
+    });
+
+    it('shows no star at all when the feed holds only posts', () => {
+      renderFeed([mockMessage]);
+
+      expect(screen.queryByTestId('favorite-button')).not.toBeInTheDocument();
+    });
+
+    // The page spans every game the character appears in, so star state comes
+    // from the cross-game id set rather than a per-game one.
+    it('shows the starred state for an id in the cross-game favorite set', () => {
+      favoriteCommentIDs = [mockComment.id];
+
+      renderFeed([mockMessage, mockComment]);
+
+      expect(screen.getByRole('button', { name: /remove from favorites/i })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    it('shows the unstarred state for a comment outside the favorite set', () => {
+      favoriteCommentIDs = [mockComment.id + 99];
+
+      renderFeed([mockMessage, mockComment]);
+
+      expect(screen.getByRole('button', { name: /favorite this comment/i })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+    });
   });
 
   it('shows "View in thread" link for non-deleted messages', () => {

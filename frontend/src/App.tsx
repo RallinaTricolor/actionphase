@@ -28,6 +28,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ de
 const GamesPage = lazy(() => import('./pages/GamesPage').then(m => ({ default: m.GamesPage })));
 const GameDetailsPage = lazy(() => import('./pages/GameDetailsPage').then(m => ({ default: m.GameDetailsPage })));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const FavoritesPage = lazy(() => import('./pages/FavoritesPage').then(m => ({ default: m.FavoritesPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
@@ -245,6 +246,10 @@ const router = createBrowserRouter([
       {
         path: '/notifications',
         element: <ProtectedRoute><NotificationsPage /></ProtectedRoute>,
+      },
+      {
+        path: '/favorites',
+        element: <ProtectedRoute><FavoritesPage /></ProtectedRoute>,
       },
       {
         path: '/settings',

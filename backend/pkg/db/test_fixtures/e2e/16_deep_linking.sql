@@ -25,6 +25,8 @@ DECLARE
   comment5_id INTEGER;
   comment6_id INTEGER;
   comment7_id INTEGER;
+  bulky_parent_id INTEGER;
+  i INTEGER;
 BEGIN
   -- Get user IDs
   SELECT id INTO gm_id FROM users WHERE email = 'test_gm@example.com';
@@ -292,6 +294,36 @@ This post has deeply nested comments (7 levels) to test deep linking functionali
     NOW() - INTERVAL '17 hours',
     NOW() - INTERVAL '17 hours'
   ) RETURNING id INTO comment7_id;
+
+  -- A comment with a TALL subtree beneath it. The 7-level chain above is a
+  -- single line of short replies, so a comment's own box and the box wrapping
+  -- it plus its descendants are nearly the same height there -- which is why
+  -- that chain cannot detect an anchor placed on the wrong one. Deep-link
+  -- scrolling centers the anchor box, so the bug only shows up when that box
+  -- is much taller than the comment: many siblings, each with real bulk.
+  INSERT INTO messages (
+    game_id, phase_id, author_id, character_id, parent_id,
+    content, message_type, created_at, edited_at
+  ) VALUES (
+    701, phase_id, p1_id, p1_char_id, post_id,
+    'Bulky parent comment - deep linking here must not scroll past it.',
+    'comment', NOW() - INTERVAL '16 hours', NOW() - INTERVAL '16 hours'
+  ) RETURNING id INTO bulky_parent_id;
+
+  -- Twelve replies, each several lines tall, so the parent's subtree runs to
+  -- thousands of pixels and centering it would push the parent off-screen.
+  FOR i IN 1..12 LOOP
+    INSERT INTO messages (
+      game_id, phase_id, author_id, character_id, parent_id,
+      content, message_type, created_at, edited_at
+    ) VALUES (
+      701, phase_id, p2_id, p2_char_id, bulky_parent_id,
+      'Bulky reply ' || i || ' - padding to give this thread real height.' || chr(10) || chr(10) ||
+      'Deep linking centers the scroll anchor, so the regression this fixture guards only appears when the subtree below a comment is far taller than the comment itself.' || chr(10) || chr(10) ||
+      'This paragraph exists purely to add vertical size to the reply so twelve of them cannot fit on one screen.',
+      'comment', NOW() - INTERVAL '15 hours' + (i || ' minutes')::INTERVAL, NOW() - INTERVAL '15 hours'
+    );
+  END LOOP;
 
   RAISE NOTICE 'Deep Linking fixture created: Game #701 with post ID % and 7 nested comments', post_id;
 END $$;

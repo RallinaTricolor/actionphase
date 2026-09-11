@@ -1000,6 +1000,24 @@ type MessageServiceInterface interface {
 	// MarkAllCommentsReadForPhase marks every comment in a phase as manually read by the current user
 	MarkAllCommentsReadForPhase(ctx context.Context, userID, gameID, phaseID int32) error
 
+	// Favorite methods — private, per-user starred comments spanning all games.
+	// Unlike read tracking these are not game-scoped: the comment ID is the
+	// whole address, and the game is resolved from the comment itself.
+
+	// SetCommentFavorite stars or unstars one comment for the current user (idempotent)
+	SetCommentFavorite(ctx context.Context, userID, commentID int32, favorite bool) error
+
+	// GetFavoriteCommentIDsForGame retrieves the user's favorited comment IDs within one game
+	GetFavoriteCommentIDsForGame(ctx context.Context, userID, gameID int32) ([]int32, error)
+
+	// GetFavoriteCommentIDsForUser retrieves all of the user's favorited comment IDs across games
+	GetFavoriteCommentIDsForUser(ctx context.Context, userID int32) ([]int32, error)
+
+	// ListFavoriteComments returns a page of favorited comments (newest-favorited
+	// first) and the cursor for the next page (nil when the list is exhausted).
+	// Keyset, not offset: see the implementation for why.
+	ListFavoriteComments(ctx context.Context, userID int32, limit int32, cursor *FavoriteCursor) ([]*FavoriteComment, *FavoriteCursor, error)
+
 	// Draft Post methods — posts stored before phase activation, visible to GM only
 
 	// GetDraftPostForPhase retrieves the draft post for a pending phase (returns nil if none exists)
@@ -1307,6 +1325,29 @@ type CommentWithParent struct {
 	ParentAuthorUsername     *string
 	ParentCharacterName      *string
 	ParentCharacterAvatarUrl *string
+}
+
+// FavoriteCursor is the keyset position in the favorites listing: the
+// (favorited_at, comment_id) of the last row of a page. The comment ID breaks
+// ties, because favorited_at defaults to transaction time and several
+// favorites can share one timestamp.
+type FavoriteCursor struct {
+	FavoritedAt time.Time
+	CommentID   int32
+}
+
+// FavoriteComment is one favorited comment with the context needed to render
+// it outside its own game. The favorites list is flat and cross-game, so each
+// entry carries its game title as the only thing telling the reader where the
+// comment came from.
+type FavoriteComment struct {
+	CommentWithParent
+
+	// GameTitle labels the source game on a cross-game card.
+	GameTitle string
+	// FavoritedAt is when the user starred the comment, which is the order
+	// the list is presented in (not the comment's creation time).
+	FavoritedAt time.Time
 }
 
 // ListAllPrivateConversationsParams represents parameters for listing private conversations
