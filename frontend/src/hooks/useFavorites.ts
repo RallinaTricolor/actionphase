@@ -54,20 +54,20 @@ export function useFavoriteCommentIDs() {
 
 /**
  * The /favorites page feed: starred comments newest-starred first, paginated.
+ *
+ * Cursor-paginated, not offset. Unfavoriting removes a row from the middle of
+ * the ordered set, so an offset page boundary shifts up by one and the next
+ * favorite is skipped for good. The server returns the cursor for the page
+ * after each one; a null cursor is the end of the list.
  */
 export function useFavoriteComments() {
   return useInfiniteQuery({
     queryKey: ['favoriteComments'],
-    queryFn: async ({ pageParam }: { pageParam?: number }) => {
-      return apiClient.messages.getFavoriteComments(FAVORITES_PER_PAGE, pageParam ?? 0);
+    queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
+      return apiClient.messages.getFavoriteComments(FAVORITES_PER_PAGE, pageParam);
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      if (lastPage.favorites.length < FAVORITES_PER_PAGE) {
-        return undefined;
-      }
-      return allPages.length * FAVORITES_PER_PAGE;
-    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.pagination.next_cursor ?? undefined,
   });
 }
 
@@ -113,8 +113,13 @@ export function useSetCommentFavorite() {
       });
     },
     onSettled: () => {
+      // Only the id caches are refetched. The /favorites listing is
+      // deliberately NOT invalidated: the page keeps an unfavorited card on
+      // screen, dimmed, so the star doubles as undo, and refetching would both
+      // yank that card away and re-page the cursor-paginated list mid-scroll.
+      // The listing refreshes on the next mount, which is when the user has
+      // actually left and come back.
       queryClient.invalidateQueries({ queryKey: [FAVORITE_IDS_KEY] });
-      queryClient.invalidateQueries({ queryKey: ['favoriteComments'] });
     },
   });
 }

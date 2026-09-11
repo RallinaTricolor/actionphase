@@ -2723,10 +2723,26 @@ components:
                         - array
                         - "null"
                 pagination:
-                    $ref: '#/components/schemas/PaginationResponse'
+                    $ref: '#/components/schemas/FavoritesPaginationResponse'
             required:
                 - favorites
                 - pagination
+            type: object
+        FavoritesPaginationResponse:
+            additionalProperties: false
+            properties:
+                limit:
+                    description: Rows requested
+                    format: int64
+                    type: integer
+                next_cursor:
+                    description: Opaque cursor for the next page; null when there are no more favorites
+                    type:
+                        - string
+                        - "null"
+            required:
+                - limit
+                - next_cursor
             type: object
         FingerprintBan:
             additionalProperties: false
@@ -8177,16 +8193,13 @@ paths:
                     maximum: 100
                     minimum: 1
                     type: integer
-                - description: Favorites to skip
+                - description: Opaque cursor from the previous page's next_cursor. Omit for the first page.
                   explode: false
                   in: query
-                  name: offset
+                  name: cursor
                   schema:
-                    default: 0
-                    description: Favorites to skip
-                    format: int32
-                    minimum: 0
-                    type: integer
+                    description: Opaque cursor from the previous page's next_cursor. Omit for the first page.
+                    type: string
             responses:
                 "200":
                     content:

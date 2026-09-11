@@ -9,14 +9,19 @@ package messages
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
+	dbmessages "actionphase/pkg/db/services/messages"
 )
 
 // Input types
@@ -218,8 +223,12 @@ type favoriteCommentInput struct {
 }
 
 type listFavoriteCommentsInput struct {
-	Limit  int32 `query:"limit" default:"20" minimum:"1" maximum:"100" doc:"Favorites to return"`
-	Offset int32 `query:"offset" default:"0" minimum:"0" doc:"Favorites to skip"`
+	Limit int32 `query:"limit" default:"20" minimum:"1" maximum:"100" doc:"Favorites to return"`
+	// Keyset cursor rather than an offset. Unfavoriting from the list removes a
+	// row from the middle of the ordered set, so an offset boundary shifts up
+	// and silently skips the next favorite. Omit for the first page; pass back
+	// the previous response's next_cursor for each page after it.
+	Cursor string `query:"cursor" required:"false" doc:"Opaque cursor from the previous page's next_cursor. Omit for the first page."`
 }
 
 type favoriteCommentsOutput struct {
@@ -1074,6 +1083,45 @@ func (h *Handler) humaGetManualReadCommentIDs(ctx context.Context, in *gameIDInp
 // make them stricter than the room they link back to, and a comment you
 // starred could vanish from your own list. See .claude/planning/FAVORITE_COMMENTS.md.
 
+// encodeFavoriteCursor renders a keyset position as an opaque token. The
+// contents are the caller's own favorites, so the encoding is base64 for
+// opacity and URL-safety rather than for secrecy -- it exists so clients treat
+// the cursor as a token to hand back rather than a shape to construct.
+func encodeFavoriteCursor(c *core.FavoriteCursor) *string {
+	if c == nil {
+		return nil
+	}
+	raw := fmt.Sprintf("%d|%d", c.FavoritedAt.UTC().UnixNano(), c.CommentID)
+	s := base64.RawURLEncoding.EncodeToString([]byte(raw))
+	return &s
+}
+
+// decodeFavoriteCursor parses a token from encodeFavoriteCursor. A malformed
+// cursor is the caller's error, not a reason to silently restart at page one:
+// resetting would loop an infinite-scroll client forever over the first page.
+func decodeFavoriteCursor(token string) (*core.FavoriteCursor, error) {
+	if token == "" {
+		return nil, nil
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(token)
+	if err != nil {
+		return nil, huma.Error422UnprocessableEntity("invalid cursor")
+	}
+	nanos, id, found := strings.Cut(string(decoded), "|")
+	if !found {
+		return nil, huma.Error422UnprocessableEntity("invalid cursor")
+	}
+	ns, err := strconv.ParseInt(nanos, 10, 64)
+	if err != nil {
+		return nil, huma.Error422UnprocessableEntity("invalid cursor")
+	}
+	cid, err := strconv.ParseInt(id, 10, 32)
+	if err != nil {
+		return nil, huma.Error422UnprocessableEntity("invalid cursor")
+	}
+	return &core.FavoriteCursor{FavoritedAt: time.Unix(0, ns).UTC(), CommentID: int32(cid)}, nil
+}
+
 // humaSetCommentFavorite stars or unstars one comment for the caller.
 //
 // PUT with the target state in the body, rather than a toggle: a double-click
@@ -1091,11 +1139,19 @@ func (h *Handler) humaSetCommentFavorite(ctx context.Context, in *favoriteCommen
 	}
 
 	if err := h.MessageService.SetCommentFavorite(ctx, userID, in.CommentID, in.Body.Favorite); err != nil {
+		// Only a bad target is the caller's fault. Anything else (a failed
+		// lookup, a failed insert) is a server fault and must surface as a 500
+		// so it trips alerting instead of being reported as "comment not
+		// found". The 422 text is a fixed string rather than err.Error() so an
+		// internal error message cannot reach the client through this path.
+		if errors.Is(err, dbmessages.ErrFavoriteTargetInvalid) {
+			h.App.ObsLogger.Warn(ctx, "Rejected favorite for invalid target", "error", err,
+				"comment_id", in.CommentID, "user_id", userID)
+			return nil, huma.Error422UnprocessableEntity("comment not found, or the target is not a comment")
+		}
 		h.App.ObsLogger.Error(ctx, "Failed to set comment favorite", "error", err,
 			"comment_id", in.CommentID, "user_id", userID, "favorite", in.Body.Favorite)
-		// The service rejects a missing comment and a non-comment message.
-		// Both are the caller naming a bad target, not a server fault.
-		return nil, huma.Error422UnprocessableEntity(err.Error())
+		return nil, huma.Error500InternalServerError("failed to set favorite")
 	}
 
 	return nil, nil
@@ -1111,10 +1167,15 @@ func (h *Handler) humaListFavoriteComments(ctx context.Context, in *listFavorite
 		return nil, err
 	}
 
-	favorites, total, err := h.MessageService.ListFavoriteComments(ctx, userID, in.Limit, in.Offset)
+	cursor, err := decodeFavoriteCursor(in.Cursor)
+	if err != nil {
+		return nil, err
+	}
+
+	favorites, next, err := h.MessageService.ListFavoriteComments(ctx, userID, in.Limit, cursor)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to list favorite comments", "error", err, "user_id", userID)
-		return nil, huma.Error500InternalServerError(err.Error())
+		return nil, huma.Error500InternalServerError("failed to list favorites")
 	}
 
 	// Anonymity is per game, and this list is cross-game: resolve the rule once
@@ -1133,10 +1194,9 @@ func (h *Handler) humaListFavoriteComments(ctx context.Context, in *listFavorite
 
 	return &favoriteCommentsOutput{Body: &FavoriteCommentsResponse{
 		Favorites: favoriteCommentsToResponse(favorites, showUsernamesByGame),
-		Pagination: PaginationResponse{
-			Limit:  int(in.Limit),
-			Offset: int(in.Offset),
-			Total:  total,
+		Pagination: FavoritesPaginationResponse{
+			Limit:      int(in.Limit),
+			NextCursor: encodeFavoriteCursor(next),
 		},
 	}}, nil
 }

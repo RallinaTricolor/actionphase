@@ -53,7 +53,7 @@ const mockMutate = vi.fn();
 function mockFavorites(favorites: FavoriteComment[], overrides = {}) {
   vi.mocked(useFavoritesModule.useFavoriteComments).mockReturnValue({
     data: {
-      pages: [{ favorites, pagination: { limit: 20, offset: 0, total: favorites.length } }],
+      pages: [{ favorites, pagination: { limit: 20, next_cursor: null } }],
       pageParams: [0],
     },
     isLoading: false,

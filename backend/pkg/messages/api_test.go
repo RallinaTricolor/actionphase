@@ -1694,7 +1694,8 @@ func TestMessageAPI_ListFavoriteComments(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 
 		require.Len(t, resp.Favorites, 1)
-		assert.Equal(t, int64(1), resp.Pagination.Total)
+		// One favorite, page size 20: a short page, so no cursor onward.
+		assert.Nil(t, resp.Pagination.NextCursor, "a short page ends the listing")
 
 		got := resp.Favorites[0]
 		assert.Equal(t, comment.ID, got.ID)
@@ -1737,7 +1738,7 @@ func TestMessageAPI_ListFavoriteComments(t *testing.T) {
 		var resp FavoriteCommentsResponse
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 		assert.Empty(t, resp.Favorites, "favorites are private to the user who set them")
-		assert.Equal(t, int64(0), resp.Pagination.Total)
+		assert.Nil(t, resp.Pagination.NextCursor)
 
 		idsRec := get(t, "/api/v1/favorites/comment-ids", otherToken)
 		require.Equal(t, http.StatusOK, idsRec.Code)
@@ -1751,6 +1752,35 @@ func TestMessageAPI_ListFavoriteComments(t *testing.T) {
 	t.Run("returns 422 for an out-of-range limit", func(t *testing.T) {
 		assert.Equal(t, http.StatusUnprocessableEntity, get(t, "/api/v1/favorites/comments?limit=0", playerToken).Code)
 		assert.Equal(t, http.StatusUnprocessableEntity, get(t, "/api/v1/favorites/comments?limit=500", playerToken).Code)
-		assert.Equal(t, http.StatusUnprocessableEntity, get(t, "/api/v1/favorites/comments?offset=-1", playerToken).Code)
+	})
+
+	// A malformed cursor must be rejected rather than silently restarting at
+	// page one, which would loop an infinite-scroll client over the first page
+	// forever.
+	t.Run("returns 422 for a malformed cursor", func(t *testing.T) {
+		assert.Equal(t, http.StatusUnprocessableEntity, get(t, "/api/v1/favorites/comments?cursor=not-base64!!", playerToken).Code)
+		assert.Equal(t, http.StatusUnprocessableEntity, get(t, "/api/v1/favorites/comments?cursor=bm90LWEtY3Vyc29y", playerToken).Code)
+	})
+
+	// The cursor round-trips: page one's next_cursor fetches the rows after it.
+	t.Run("cursor from one page fetches the next", func(t *testing.T) {
+		rec := get(t, "/api/v1/favorites/comments?limit=1", playerToken)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var page1 FavoriteCommentsResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page1))
+		require.Len(t, page1.Favorites, 1)
+		require.NotNil(t, page1.Pagination.NextCursor, "a full page yields a cursor")
+
+		rec2 := get(t, "/api/v1/favorites/comments?limit=1&cursor="+*page1.Pagination.NextCursor, playerToken)
+		require.Equal(t, http.StatusOK, rec2.Code)
+
+		var page2 FavoriteCommentsResponse
+		require.NoError(t, json.Unmarshal(rec2.Body.Bytes(), &page2))
+		// Only one favorite exists in this fixture, so page two is empty --
+		// what matters is that the cursor was accepted and did not repeat it.
+		for _, f := range page2.Favorites {
+			assert.NotEqual(t, page1.Favorites[0].ID, f.ID, "cursor must not repeat a row")
+		}
 	})
 }

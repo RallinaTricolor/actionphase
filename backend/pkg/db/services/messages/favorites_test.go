@@ -113,18 +113,16 @@ func TestMessageService_SetCommentFavorite(t *testing.T) {
 
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, comment.ID, true))
 
-		favorites, total, err := env.service.ListFavoriteComments(ctx, env.player, 50, 0)
+		favorites, _, err := env.service.ListFavoriteComments(ctx, env.player, 50, nil)
 		require.NoError(t, err)
-		assert.Equal(t, int64(1), total)
 		require.Len(t, favorites, 1)
 		assert.Equal(t, comment.ID, favorites[0].ID)
 		assert.Equal(t, "round trip", favorites[0].Content)
 
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, comment.ID, false))
 
-		favorites, total, err = env.service.ListFavoriteComments(ctx, env.player, 50, 0)
+		favorites, _, err = env.service.ListFavoriteComments(ctx, env.player, 50, nil)
 		require.NoError(t, err)
-		assert.Equal(t, int64(0), total)
 		assert.Empty(t, favorites)
 	})
 
@@ -134,10 +132,9 @@ func TestMessageService_SetCommentFavorite(t *testing.T) {
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, comment.ID, true))
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, comment.ID, true))
 
-		favorites, total, err := env.service.ListFavoriteComments(ctx, env.player, 50, 0)
+		favorites, _, err := env.service.ListFavoriteComments(ctx, env.player, 50, nil)
 		require.NoError(t, err)
-		assert.Equal(t, int64(1), total, "second favorite must not create a duplicate row")
-		assert.Len(t, favorites, 1)
+		assert.Len(t, favorites, 1, "second favorite must not create a duplicate row")
 
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, comment.ID, false))
 	})
@@ -147,9 +144,9 @@ func TestMessageService_SetCommentFavorite(t *testing.T) {
 
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, comment.ID, false))
 
-		_, total, err := env.service.ListFavoriteComments(ctx, env.player, 50, 0)
+		favorites, _, err := env.service.ListFavoriteComments(ctx, env.player, 50, nil)
 		require.NoError(t, err)
-		assert.Equal(t, int64(0), total)
+		assert.Empty(t, favorites)
 	})
 
 	t.Run("favoriting a post is rejected", func(t *testing.T) {
@@ -157,19 +154,22 @@ func TestMessageService_SetCommentFavorite(t *testing.T) {
 
 		err := env.service.SetCommentFavorite(ctx, env.player, post.ID, true)
 		require.Error(t, err, "posts are not favoritable")
+		assert.ErrorIs(t, err, ErrFavoriteTargetInvalid)
 
-		_, total, err := env.service.ListFavoriteComments(ctx, env.player, 50, 0)
+		favorites, _, err := env.service.ListFavoriteComments(ctx, env.player, 50, nil)
 		require.NoError(t, err)
-		assert.Equal(t, int64(0), total, "rejected favorite must not be persisted")
+		assert.Empty(t, favorites, "rejected favorite must not be persisted")
 	})
 
 	t.Run("favoriting a nonexistent comment is rejected", func(t *testing.T) {
 		err := env.service.SetCommentFavorite(ctx, env.player, 999999, true)
 		require.Error(t, err)
+		// Tagged as a bad target so the handler answers 422 rather than 500.
+		assert.ErrorIs(t, err, ErrFavoriteTargetInvalid)
 
-		_, total, err := env.service.ListFavoriteComments(ctx, env.player, 50, 0)
+		favorites, _, err := env.service.ListFavoriteComments(ctx, env.player, 50, nil)
 		require.NoError(t, err)
-		assert.Equal(t, int64(0), total)
+		assert.Empty(t, favorites)
 	})
 }
 
@@ -186,16 +186,28 @@ func TestMessageService_ListFavoriteComments(t *testing.T) {
 
 		require.NoError(t, env.service.DeleteComment(ctx, comment.ID, env.player))
 
-		favorites, total, err := env.service.ListFavoriteComments(ctx, env.player, 50, 0)
+		favorites, _, err := env.service.ListFavoriteComments(ctx, env.player, 50, nil)
 		require.NoError(t, err)
 		assert.Empty(t, favorites, "deleted comments are filtered at read time")
-		assert.Equal(t, int64(0), total, "count must apply the same deleted filter as the listing")
 
-		// The row itself is still there -- the ID set is not deleted-filtered,
-		// which is what proves this is a read-time filter and not a cascade.
-		ids, err := env.service.GetFavoriteCommentIDsForGame(ctx, env.player, env.gameA.ID)
+		// Every read path must agree on what "your favorites" contains: a star
+		// that fills on a comment absent from the listing is a bug. Both ID
+		// sets therefore apply the same deleted filter.
+		gameIDs, err := env.service.GetFavoriteCommentIDsForGame(ctx, env.player, env.gameA.ID)
 		require.NoError(t, err)
-		assert.Contains(t, ids, comment.ID)
+		assert.NotContains(t, gameIDs, comment.ID, "per-game set must hide a deleted comment")
+
+		allIDs, err := env.service.GetFavoriteCommentIDsForUser(ctx, env.player)
+		require.NoError(t, err)
+		assert.NotContains(t, allIDs, comment.ID, "cross-game set must hide a deleted comment")
+
+		// The favorite row itself survives the soft delete -- this is a
+		// read-time filter, not a cascade.
+		var rowCount int
+		require.NoError(t, env.service.DB.QueryRow(ctx,
+			"SELECT COUNT(*) FROM user_comment_favorites WHERE user_id = $1 AND comment_id = $2",
+			env.player, comment.ID).Scan(&rowCount))
+		assert.Equal(t, 1, rowCount, "favorite row survives; only reads filter it")
 
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, comment.ID, false))
 	})
@@ -209,9 +221,8 @@ func TestMessageService_ListFavoriteComments(t *testing.T) {
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, commentA.ID, true))
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, commentB.ID, true))
 
-		favorites, total, err := env.service.ListFavoriteComments(ctx, env.player, 50, 0)
+		favorites, _, err := env.service.ListFavoriteComments(ctx, env.player, 50, nil)
 		require.NoError(t, err)
-		assert.Equal(t, int64(2), total)
 		require.Len(t, favorites, 2)
 
 		assert.Equal(t, commentB.ID, favorites[0].ID, "most recently favorited comes first")
@@ -258,7 +269,7 @@ func TestMessageService_ListFavoriteComments(t *testing.T) {
 
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, deepest.ID, true))
 
-		favorites, _, err := env.service.ListFavoriteComments(ctx, env.player, 50, 0)
+		favorites, _, err := env.service.ListFavoriteComments(ctx, env.player, 50, nil)
 		require.NoError(t, err)
 		require.Len(t, favorites, 1)
 
@@ -278,10 +289,9 @@ func TestMessageService_ListFavoriteComments(t *testing.T) {
 		_, comment := env.createPostWithComment(t, env.gameA.ID, env.charA, "private to player")
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, comment.ID, true))
 
-		favorites, total, err := env.service.ListFavoriteComments(ctx, env.other, 50, 0)
+		favorites, _, err := env.service.ListFavoriteComments(ctx, env.other, 50, nil)
 		require.NoError(t, err)
 		assert.Empty(t, favorites)
-		assert.Equal(t, int64(0), total)
 
 		ids, err := env.service.GetFavoriteCommentIDsForUser(ctx, env.other)
 		require.NoError(t, err)
@@ -290,7 +300,7 @@ func TestMessageService_ListFavoriteComments(t *testing.T) {
 		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, comment.ID, false))
 	})
 
-	t.Run("pagination pages through in favorited order with a stable total", func(t *testing.T) {
+	t.Run("cursor pages through in favorited order", func(t *testing.T) {
 		var created []int32
 		for i := 0; i < 3; i++ {
 			_, comment := env.createPostWithComment(t, env.gameA.ID, env.charA, fmt.Sprintf("page %d", i))
@@ -298,20 +308,103 @@ func TestMessageService_ListFavoriteComments(t *testing.T) {
 			created = append(created, comment.ID)
 		}
 
-		first, total, err := env.service.ListFavoriteComments(ctx, env.player, 2, 0)
+		first, next, err := env.service.ListFavoriteComments(ctx, env.player, 2, nil)
 		require.NoError(t, err)
-		assert.Equal(t, int64(3), total, "total reflects all favorites, not the page size")
 		require.Len(t, first, 2)
+		require.NotNil(t, next, "a full page yields a cursor")
 
-		second, total, err := env.service.ListFavoriteComments(ctx, env.player, 2, 2)
+		second, last, err := env.service.ListFavoriteComments(ctx, env.player, 2, next)
 		require.NoError(t, err)
-		assert.Equal(t, int64(3), total)
 		require.Len(t, second, 1)
+		assert.Nil(t, last, "a short page is the end of the list")
 
 		// Newest-favorited first, so the pages walk the creation order backwards.
 		assert.Equal(t, created[2], first[0].ID)
 		assert.Equal(t, created[1], first[1].ID)
 		assert.Equal(t, created[0], second[0].ID)
+
+		for _, id := range created {
+			require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, id, false))
+		}
+	})
+
+	// The bug keyset pagination exists to prevent: with OFFSET, unfavoriting a
+	// row from page one shifts every later boundary up by one and the first
+	// comment of page two is skipped entirely.
+	t.Run("unfavoriting between pages does not skip a favorite", func(t *testing.T) {
+		var created []int32
+		for i := 0; i < 4; i++ {
+			_, comment := env.createPostWithComment(t, env.gameA.ID, env.charA, fmt.Sprintf("shift %d", i))
+			require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, comment.ID, true))
+			created = append(created, comment.ID)
+		}
+
+		first, next, err := env.service.ListFavoriteComments(ctx, env.player, 2, nil)
+		require.NoError(t, err)
+		require.Len(t, first, 2)
+		require.NotNil(t, next)
+
+		// Drop one of the rows the first page just returned, as the UI does
+		// when the user unstars a card before scrolling on.
+		require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, first[0].ID, false))
+
+		second, _, err := env.service.ListFavoriteComments(ctx, env.player, 2, next)
+		require.NoError(t, err)
+
+		// created[1] is the first row after the cursor and must still appear.
+		// Under offset pagination it would have been skipped.
+		var seen []int32
+		for _, f := range second {
+			seen = append(seen, f.ID)
+		}
+		assert.Contains(t, seen, created[1], "row after the cursor must not be skipped")
+		assert.Contains(t, seen, created[0])
+
+		for _, id := range created {
+			require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, id, false))
+		}
+	})
+
+	// created_at defaults to transaction time, so favorites made in one
+	// transaction share a timestamp. Without the id tie-break the planner may
+	// order equal rows differently per query, duplicating one row across pages
+	// and dropping another.
+	t.Run("favorites sharing a timestamp page without duplicates or gaps", func(t *testing.T) {
+		var created []int32
+		for i := 0; i < 4; i++ {
+			_, comment := env.createPostWithComment(t, env.gameA.ID, env.charA, fmt.Sprintf("tie %d", i))
+			created = append(created, comment.ID)
+		}
+
+		// One transaction, so every favorite row gets an identical NOW().
+		tx, err := env.service.DB.Begin(ctx)
+		require.NoError(t, err)
+		for _, id := range created {
+			_, err = tx.Exec(ctx,
+				"INSERT INTO user_comment_favorites (user_id, comment_id, game_id) VALUES ($1, $2, $3)",
+				env.player, id, env.gameA.ID)
+			require.NoError(t, err)
+		}
+		require.NoError(t, tx.Commit(ctx))
+
+		seen := map[int32]int{}
+		var cursor *core.FavoriteCursor
+		for page := 0; page < 4; page++ {
+			rows, next, err := env.service.ListFavoriteComments(ctx, env.player, 2, cursor)
+			require.NoError(t, err)
+			for _, r := range rows {
+				seen[r.ID]++
+			}
+			if next == nil {
+				break
+			}
+			cursor = next
+		}
+
+		require.Len(t, seen, len(created), "every favorite appears exactly once across pages")
+		for _, id := range created {
+			assert.Equal(t, 1, seen[id], "comment %d must appear on exactly one page", id)
+		}
 
 		for _, id := range created {
 			require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, id, false))

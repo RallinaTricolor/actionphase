@@ -167,11 +167,14 @@ export class MessagesApi extends BaseApiClient {
     return this.client.put<void>(`/api/v1/comments/${commentId}/favorite`, { favorite });
   }
 
-  async getFavoriteComments(limit: number = 20, offset: number = 0) {
-    const queryParams = new URLSearchParams({
-      limit: limit.toString(),
-      offset: offset.toString(),
-    });
+  // Cursor-paginated: pass the previous page's next_cursor, or omit it for the
+  // first page. Not an offset -- unfavoriting shifts an offset boundary and
+  // silently skips the next favorite.
+  async getFavoriteComments(limit: number = 20, cursor?: string | null) {
+    const queryParams = new URLSearchParams({ limit: limit.toString() });
+    if (cursor) {
+      queryParams.set('cursor', cursor);
+    }
     const response = await this.client.get<FavoriteCommentsResponse>(
       `/api/v1/favorites/comments?${queryParams.toString()}`
     );

@@ -242,9 +242,21 @@ type FavoriteCommentResponse struct {
 }
 
 // FavoriteCommentsResponse is the body of the /favorites/comments listing.
+//
+// Cursor-paginated rather than carrying the shared {limit, offset, total}
+// PaginationResponse: unfavoriting removes a row from the middle of the
+// ordered set, which shifts every later offset boundary and skips a favorite.
+// There is no total because nothing renders one.
 type FavoriteCommentsResponse struct {
-	Favorites  []*FavoriteCommentResponse `json:"favorites"`
-	Pagination PaginationResponse         `json:"pagination"`
+	Favorites  []*FavoriteCommentResponse  `json:"favorites"`
+	Pagination FavoritesPaginationResponse `json:"pagination"`
+}
+
+// FavoritesPaginationResponse carries the opaque cursor for the next page.
+// NextCursor is null on the last page.
+type FavoritesPaginationResponse struct {
+	Limit      int     `json:"limit" doc:"Rows requested"`
+	NextCursor *string `json:"next_cursor" doc:"Opaque cursor for the next page; null when there are no more favorites"`
 }
 
 // FavoriteCommentIDsResponse is the flat set of comment IDs the caller has

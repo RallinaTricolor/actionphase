@@ -1013,8 +1013,10 @@ type MessageServiceInterface interface {
 	// GetFavoriteCommentIDsForUser retrieves all of the user's favorited comment IDs across games
 	GetFavoriteCommentIDsForUser(ctx context.Context, userID int32) ([]int32, error)
 
-	// ListFavoriteComments returns a page of favorited comments (newest-favorited first) and the total count
-	ListFavoriteComments(ctx context.Context, userID int32, limit, offset int32) ([]*FavoriteComment, int64, error)
+	// ListFavoriteComments returns a page of favorited comments (newest-favorited
+	// first) and the cursor for the next page (nil when the list is exhausted).
+	// Keyset, not offset: see the implementation for why.
+	ListFavoriteComments(ctx context.Context, userID int32, limit int32, cursor *FavoriteCursor) ([]*FavoriteComment, *FavoriteCursor, error)
 
 	// Draft Post methods — posts stored before phase activation, visible to GM only
 
@@ -1323,6 +1325,15 @@ type CommentWithParent struct {
 	ParentAuthorUsername     *string
 	ParentCharacterName      *string
 	ParentCharacterAvatarUrl *string
+}
+
+// FavoriteCursor is the keyset position in the favorites listing: the
+// (favorited_at, comment_id) of the last row of a page. The comment ID breaks
+// ties, because favorited_at defaults to transaction time and several
+// favorites can share one timestamp.
+type FavoriteCursor struct {
+	FavoritedAt time.Time
+	CommentID   int32
 }
 
 // FavoriteComment is one favorited comment with the context needed to render

@@ -160,24 +160,6 @@ func (q *Queries) CountDraftPostsByPhase(ctx context.Context, phaseID pgtype.Int
 	return count, err
 }
 
-const countFavoriteComments = `-- name: CountFavoriteComments :one
-SELECT COUNT(*) as total
-FROM user_comment_favorites f
-JOIN messages m ON m.id = f.comment_id
-WHERE f.user_id = $1
-  AND m.is_deleted = false
-  AND m.deleted_at IS NULL
-`
-
-// Total favorited comments for a user, applying the same deleted filter as
-// the listing so pagination totals do not overcount.
-func (q *Queries) CountFavoriteComments(ctx context.Context, userID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, countFavoriteComments, userID)
-	var total int64
-	err := row.Scan(&total)
-	return total, err
-}
-
 const countMessagesByCharacter = `-- name: CountMessagesByCharacter :one
 SELECT COUNT(*)
 FROM messages
@@ -898,9 +880,13 @@ func (q *Queries) GetDraftPostForPhase(ctx context.Context, phaseID pgtype.Int4)
 }
 
 const getFavoriteCommentIDsForGame = `-- name: GetFavoriteCommentIDsForGame :many
-SELECT comment_id
-FROM user_comment_favorites
-WHERE user_id = $1 AND game_id = $2
+SELECT f.comment_id
+FROM user_comment_favorites f
+JOIN messages m ON m.id = f.comment_id
+WHERE f.user_id = $1
+  AND f.game_id = $2
+  AND m.is_deleted = false
+  AND m.deleted_at IS NULL
 `
 
 type GetFavoriteCommentIDsForGameParams struct {
@@ -910,6 +896,11 @@ type GetFavoriteCommentIDsForGameParams struct {
 
 // Returns favorited comment IDs for one user within one game.
 // Powers star state in the common room and new-comments views.
+//
+// Soft-deleted comments are excluded, matching ListFavoriteCommentsWithParents.
+// The favorite row survives a delete, but every read path must agree on what
+// "your favorites" contains: a star that fills on a comment absent from
+// /favorites is a bug wherever it surfaces.
 func (q *Queries) GetFavoriteCommentIDsForGame(ctx context.Context, arg GetFavoriteCommentIDsForGameParams) ([]int32, error) {
 	rows, err := q.db.Query(ctx, getFavoriteCommentIDsForGame, arg.UserID, arg.GameID)
 	if err != nil {
@@ -931,13 +922,17 @@ func (q *Queries) GetFavoriteCommentIDsForGame(ctx context.Context, arg GetFavor
 }
 
 const getFavoriteCommentIDsForUser = `-- name: GetFavoriteCommentIDsForUser :many
-SELECT comment_id
-FROM user_comment_favorites
-WHERE user_id = $1
+SELECT f.comment_id
+FROM user_comment_favorites f
+JOIN messages m ON m.id = f.comment_id
+WHERE f.user_id = $1
+  AND m.is_deleted = false
+  AND m.deleted_at IS NULL
 `
 
 // Returns every favorited comment ID for a user, across all games.
 // Powers star state on non-game-scoped surfaces (e.g. character profile).
+// Excludes soft-deleted comments for the same reason as the per-game set.
 func (q *Queries) GetFavoriteCommentIDsForUser(ctx context.Context, userID int32) ([]int32, error) {
 	rows, err := q.db.Query(ctx, getFavoriteCommentIDsForUser, userID)
 	if err != nil {
@@ -2271,8 +2266,12 @@ WITH RECURSIVE favorite_comments AS (
     WHERE f.user_id = $1
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
-    ORDER BY f.created_at DESC
-    LIMIT $2 OFFSET $3
+      AND (
+          $2::timestamptz IS NULL
+          OR (f.created_at, f.comment_id) < ($2::timestamptz, $3::integer)
+      )
+    ORDER BY f.created_at DESC, f.comment_id DESC
+    LIMIT $4
 ),
 root_posts AS (
     -- Base: walk up from each favorited comment, tracking the original comment's id
@@ -2339,13 +2338,14 @@ SELECT
 FROM favorite_comments fc
 LEFT JOIN root_post_ids rp ON rp.comment_id = fc.id
 LEFT JOIN parent_messages pm ON fc.parent_id = pm.id
-ORDER BY fc.favorited_at DESC
+ORDER BY fc.favorited_at DESC, fc.id DESC
 `
 
 type ListFavoriteCommentsWithParentsParams struct {
-	UserID int32 `json:"user_id"`
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	UserID            int32              `json:"user_id"`
+	CursorFavoritedAt pgtype.Timestamptz `json:"cursor_favorited_at"`
+	CursorCommentID   pgtype.Int4        `json:"cursor_comment_id"`
+	PageLimit         int32              `json:"page_limit"`
 }
 
 type ListFavoriteCommentsWithParentsRow struct {
@@ -2377,19 +2377,39 @@ type ListFavoriteCommentsWithParentsRow struct {
 }
 
 // Favorited comments with parent context and root post, ordered by when they
-// were favorited. Modeled on ListRecentCommentsWithParents, but the base set
-// is the user's favorites (cross-game) rather than one game's comments, and
-// each row carries its game title so a flat cross-game list can label cards
-// without N+1 lookups.
+// were favorited. Modeled on ListRecentCommentsWithParents (which lives in
+// communications.sql, not this file), but the base set is the user's favorites
+// (cross-game) rather than one game's comments, and each row carries its game
+// title so a flat cross-game list can label cards without N+1 lookups.
 // Avatars are pinned at authoring time (messages.character_avatar_url_at_post),
 // so both the comment and its parent COALESCE to the live characters.avatar_url
 // only for rows predating that column.
+//
+// Keyset pagination, NOT offset. Unfavoriting from the list removes a row from
+// the middle of the ordered set, so an OFFSET page boundary shifts up by one
+// and silently skips a favorite. The cursor is the previous page's last
+// (favorited_at, comment_id) and is stable under inserts and deletes.
+//
+// The ordering carries an id tie-break because created_at defaults to NOW(),
+// which is transaction time: favoriting several comments in one transaction,
+// or fast enough to share a timestamp, otherwise leaves the order of equal
+// rows up to the planner and lets a row repeat on one page and vanish from the
+// next. The tie-break is also what makes the cursor comparison total.
+//
+// $2/$3 are the cursor. Passing NULL for both starts at the newest favorite;
+// the row comparison is skipped in that case rather than compared against
+// NULL (which would match nothing).
 // Walk up the message tree recursively to find the root post for each comment
 // Pick the post at the top of each comment's chain
 // Immediate parent preview. Deliberately NOT filtered on is_deleted: the card
 // renders a deleted parent as a stub.
 func (q *Queries) ListFavoriteCommentsWithParents(ctx context.Context, arg ListFavoriteCommentsWithParentsParams) ([]ListFavoriteCommentsWithParentsRow, error) {
-	rows, err := q.db.Query(ctx, listFavoriteCommentsWithParents, arg.UserID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listFavoriteCommentsWithParents,
+		arg.UserID,
+		arg.CursorFavoritedAt,
+		arg.CursorCommentID,
+		arg.PageLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

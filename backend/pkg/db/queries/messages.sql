@@ -901,21 +901,24 @@ WHERE user_id = $1 AND comment_id = $2;
 -- name: GetFavoriteCommentIDsForGame :many
 -- Returns favorited comment IDs for one user within one game.
 -- Powers star state in the common room and new-comments views.
-SELECT comment_id
-FROM user_comment_favorites
-WHERE user_id = $1 AND game_id = $2;
+--
+-- Soft-deleted comments are excluded, matching ListFavoriteCommentsWithParents.
+-- The favorite row survives a delete, but every read path must agree on what
+-- "your favorites" contains: a star that fills on a comment absent from
+-- /favorites is a bug wherever it surfaces.
+SELECT f.comment_id
+FROM user_comment_favorites f
+JOIN messages m ON m.id = f.comment_id
+WHERE f.user_id = $1
+  AND f.game_id = $2
+  AND m.is_deleted = false
+  AND m.deleted_at IS NULL;
 
 -- name: GetFavoriteCommentIDsForUser :many
 -- Returns every favorited comment ID for a user, across all games.
 -- Powers star state on non-game-scoped surfaces (e.g. character profile).
-SELECT comment_id
-FROM user_comment_favorites
-WHERE user_id = $1;
-
--- name: CountFavoriteComments :one
--- Total favorited comments for a user, applying the same deleted filter as
--- the listing so pagination totals do not overcount.
-SELECT COUNT(*) as total
+-- Excludes soft-deleted comments for the same reason as the per-game set.
+SELECT f.comment_id
 FROM user_comment_favorites f
 JOIN messages m ON m.id = f.comment_id
 WHERE f.user_id = $1
@@ -924,13 +927,28 @@ WHERE f.user_id = $1
 
 -- name: ListFavoriteCommentsWithParents :many
 -- Favorited comments with parent context and root post, ordered by when they
--- were favorited. Modeled on ListRecentCommentsWithParents, but the base set
--- is the user's favorites (cross-game) rather than one game's comments, and
--- each row carries its game title so a flat cross-game list can label cards
--- without N+1 lookups.
+-- were favorited. Modeled on ListRecentCommentsWithParents (which lives in
+-- communications.sql, not this file), but the base set is the user's favorites
+-- (cross-game) rather than one game's comments, and each row carries its game
+-- title so a flat cross-game list can label cards without N+1 lookups.
 -- Avatars are pinned at authoring time (messages.character_avatar_url_at_post),
 -- so both the comment and its parent COALESCE to the live characters.avatar_url
 -- only for rows predating that column.
+--
+-- Keyset pagination, NOT offset. Unfavoriting from the list removes a row from
+-- the middle of the ordered set, so an OFFSET page boundary shifts up by one
+-- and silently skips a favorite. The cursor is the previous page's last
+-- (favorited_at, comment_id) and is stable under inserts and deletes.
+--
+-- The ordering carries an id tie-break because created_at defaults to NOW(),
+-- which is transaction time: favoriting several comments in one transaction,
+-- or fast enough to share a timestamp, otherwise leaves the order of equal
+-- rows up to the planner and lets a row repeat on one page and vanish from the
+-- next. The tie-break is also what makes the cursor comparison total.
+--
+-- $2/$3 are the cursor. Passing NULL for both starts at the newest favorite;
+-- the row comparison is skipped in that case rather than compared against
+-- NULL (which would match nothing).
 WITH RECURSIVE favorite_comments AS (
     SELECT
         m.id,
@@ -957,8 +975,12 @@ WITH RECURSIVE favorite_comments AS (
     WHERE f.user_id = $1
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
-    ORDER BY f.created_at DESC
-    LIMIT $2 OFFSET $3
+      AND (
+          sqlc.narg(cursor_favorited_at)::timestamptz IS NULL
+          OR (f.created_at, f.comment_id) < (sqlc.narg(cursor_favorited_at)::timestamptz, sqlc.narg(cursor_comment_id)::integer)
+      )
+    ORDER BY f.created_at DESC, f.comment_id DESC
+    LIMIT sqlc.arg(page_limit)
 ),
 -- Walk up the message tree recursively to find the root post for each comment
 root_posts AS (
@@ -1029,4 +1051,4 @@ SELECT
 FROM favorite_comments fc
 LEFT JOIN root_post_ids rp ON rp.comment_id = fc.id
 LEFT JOIN parent_messages pm ON fc.parent_id = pm.id
-ORDER BY fc.favorited_at DESC;
+ORDER BY fc.favorited_at DESC, fc.id DESC;

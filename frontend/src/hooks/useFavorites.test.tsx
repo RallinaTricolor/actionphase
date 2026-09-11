@@ -71,12 +71,15 @@ describe('useFavorites hooks', () => {
   });
 
   describe('useFavoriteComments', () => {
-    it('requests the first page and stops paging on a short page', async () => {
+    it('requests the first page without a cursor and stops when none comes back', async () => {
       server.use(
         http.get('/api/v1/favorites/comments', ({ request }) => {
           const url = new URL(request.url);
           expect(url.searchParams.get('limit')).toBe('20');
-          expect(url.searchParams.get('offset')).toBe('0');
+          // The first page is addressed by the absence of a cursor, not by
+          // offset=0.
+          expect(url.searchParams.has('cursor')).toBe(false);
+          expect(url.searchParams.has('offset')).toBe(false);
           return HttpResponse.json({
             favorites: [
               {
@@ -87,7 +90,7 @@ describe('useFavorites hooks', () => {
                 favorited_at: '2026-09-10T12:00:00Z',
               },
             ],
-            pagination: { limit: 20, offset: 0, total: 1 },
+            pagination: { limit: 20, next_cursor: null },
           });
         })
       );
@@ -98,7 +101,44 @@ describe('useFavorites hooks', () => {
 
       expect(result.current.data?.pages[0].favorites).toHaveLength(1);
       expect(result.current.data?.pages[0].favorites[0].game_title).toBe('Nightfall');
-      // A page shorter than the page size means there is nothing after it.
+      // A null next_cursor is the end of the list.
+      expect(result.current.hasNextPage).toBe(false);
+    });
+
+    it('sends the previous page cursor when fetching the next page', async () => {
+      const seenCursors: (string | null)[] = [];
+      server.use(
+        http.get('/api/v1/favorites/comments', ({ request }) => {
+          const url = new URL(request.url);
+          seenCursors.push(url.searchParams.get('cursor'));
+          const isFirst = !url.searchParams.get('cursor');
+          return HttpResponse.json({
+            favorites: [
+              {
+                id: isFirst ? 1 : 2,
+                game_id: 3,
+                game_title: 'Nightfall',
+                content: isFirst ? 'first' : 'second',
+                favorited_at: '2026-09-10T12:00:00Z',
+              },
+            ],
+            pagination: { limit: 20, next_cursor: isFirst ? 'CURSOR_ONE' : null },
+          });
+        })
+      );
+
+      const { result } = renderHook(() => useFavoriteComments(), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.hasNextPage).toBe(true);
+
+      result.current.fetchNextPage();
+
+      await waitFor(() => expect(result.current.data?.pages).toHaveLength(2));
+
+      // The second request carries the cursor the first response handed back.
+      expect(seenCursors).toEqual([null, 'CURSOR_ONE']);
+      expect(result.current.data?.pages[1].favorites[0].content).toBe('second');
       expect(result.current.hasNextPage).toBe(false);
     });
   });

@@ -2,11 +2,22 @@ package messages
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 )
+
+// ErrFavoriteTargetInvalid marks the two rejections that are the caller naming
+// a bad target rather than a server fault: a comment ID that does not exist,
+// and a message that is a post. The handler maps this to 422 and lets every
+// other error be a 500, so a database outage on the lookup cannot disguise
+// itself as "comment not found".
+var ErrFavoriteTargetInvalid = errors.New("invalid favorite target")
 
 // SetCommentFavorite stars or unstars a single comment for a user.
 //
@@ -40,10 +51,16 @@ func (s *MessageService) SetCommentFavorite(ctx context.Context, userID, comment
 
 	msg, err := queries.GetMessage(ctx, commentID)
 	if err != nil {
-		return fmt.Errorf("comment not found: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("%w: comment not found", ErrFavoriteTargetInvalid)
+		}
+		// A real lookup failure. Wrapped without the sentinel so it surfaces
+		// as a 500 and trips alerting, rather than telling the caller their
+		// comment does not exist.
+		return fmt.Errorf("failed to look up comment %d: %w", commentID, err)
 	}
 	if msg.MessageType != models.MessageTypeComment {
-		return fmt.Errorf("only comments can be favorited")
+		return fmt.Errorf("%w: only comments can be favorited", ErrFavoriteTargetInvalid)
 	}
 
 	return queries.AddCommentFavorite(ctx, models.AddCommentFavoriteParams{
@@ -88,7 +105,7 @@ func (s *MessageService) GetFavoriteCommentIDsForUser(ctx context.Context, userI
 }
 
 // ListFavoriteComments returns a page of the user's favorited comments,
-// newest-favorited first, along with the total count for pagination.
+// newest-favorited first, plus the cursor for the following page.
 //
 // The listing is deliberately cross-game and carries no permission filter:
 // any authenticated user can already read any game's common room, so filtering
@@ -97,21 +114,31 @@ func (s *MessageService) GetFavoriteCommentIDsForUser(ctx context.Context, userI
 //
 // Soft-deleted comments are excluded at read time (the favorite row survives,
 // matching every other comment read path).
-func (s *MessageService) ListFavoriteComments(ctx context.Context, userID int32, limit, offset int32) ([]*core.FavoriteComment, int64, error) {
+//
+// Pagination is keyset, not offset: unfavoriting from the list removes a row
+// from the middle of the ordered set, and an offset boundary would then shift
+// up and skip the next favorite entirely. Pass a nil cursor for the first
+// page; pass back the returned cursor for each page after it. A nil returned
+// cursor means this was the last page.
+//
+// There is deliberately no total. Nothing displays a favorites count, and
+// computing one cost an extra join-and-aggregate on every page request; add it
+// back only when something actually renders it.
+func (s *MessageService) ListFavoriteComments(ctx context.Context, userID int32, limit int32, cursor *core.FavoriteCursor) ([]*core.FavoriteComment, *core.FavoriteCursor, error) {
 	queries := models.New(s.DB)
 
-	total, err := queries.CountFavoriteComments(ctx, userID)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count favorite comments: %w", err)
+	params := models.ListFavoriteCommentsWithParentsParams{
+		UserID:    userID,
+		PageLimit: limit,
+	}
+	if cursor != nil {
+		params.CursorFavoritedAt = pgtype.Timestamptz{Time: cursor.FavoritedAt, Valid: true}
+		params.CursorCommentID = pgtype.Int4{Int32: cursor.CommentID, Valid: true}
 	}
 
-	rows, err := queries.ListFavoriteCommentsWithParents(ctx, models.ListFavoriteCommentsWithParentsParams{
-		UserID: userID,
-		Limit:  limit,
-		Offset: offset,
-	})
+	rows, err := queries.ListFavoriteCommentsWithParents(ctx, params)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to list favorite comments: %w", err)
+		return nil, nil, fmt.Errorf("failed to list favorite comments: %w", err)
 	}
 
 	favorites := make([]*core.FavoriteComment, len(rows))
@@ -119,15 +146,23 @@ func (s *MessageService) ListFavoriteComments(ctx context.Context, userID int32,
 		favorites[i] = favoriteCommentRowToDomain(row)
 	}
 
+	// A short page is the end of the list, so it yields no cursor. A full page
+	// yields the last row's key, which is where the next page resumes.
+	var next *core.FavoriteCursor
+	if int32(len(favorites)) == limit && limit > 0 {
+		last := favorites[len(favorites)-1]
+		next = &core.FavoriteCursor{FavoritedAt: last.FavoritedAt, CommentID: last.ID}
+	}
+
 	s.Logger.Info(ctx, "Listed favorite comments",
 		"user_id", userID,
 		"limit", limit,
-		"offset", offset,
+		"had_cursor", cursor != nil,
 		"returned", len(favorites),
-		"total", total,
+		"has_more", next != nil,
 	)
 
-	return favorites, total, nil
+	return favorites, next, nil
 }
 
 // favoriteCommentRowToDomain converts a favorites listing row to the domain model.

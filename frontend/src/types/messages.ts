@@ -204,16 +204,16 @@ export interface FavoriteComment {
   } | null;
 }
 
-// {limit, offset, total} envelope shared by the paginated comment feeds.
-export interface PaginationInfo {
-  limit: number;
-  offset: number;
-  total: number;
-}
-
 export interface FavoriteCommentsResponse {
   favorites: FavoriteComment[];
-  pagination: PaginationInfo;
+  // Cursor-paginated, not {limit, offset, total}: unfavoriting removes a row
+  // from the middle of the ordered set, which shifts every later offset
+  // boundary and skips a favorite. No total -- nothing renders one.
+  pagination: {
+    limit: number;
+    // Opaque -- hand it back verbatim. Null on the last page.
+    next_cursor: string | null;
+  };
 }
 
 export interface FavoriteCommentIDsResponse {
