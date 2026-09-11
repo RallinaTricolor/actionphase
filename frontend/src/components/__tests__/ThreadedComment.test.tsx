@@ -1256,6 +1256,71 @@ describe('ThreadedComment', () => {
       // without inspecting the DOM structure more deeply
     });
 
+    it('anchors the deep-link id to the comment itself, not its reply subtree', async () => {
+      // Regression: the anchor used to sit on the wrapper that also holds every
+      // nested reply. scrollIntoView({block: 'center'}) centers whatever box it
+      // is given, so on a comment with a long thread beneath it that box ran to
+      // thousands of pixels and centering it parked the comment itself far above
+      // the viewport -- worse the more replies it had. Asserting the anchor does
+      // not contain the replies is what pins the box to the comment's own size.
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockCommentWithReplies}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      // Wait for the replies to actually render, otherwise the assertion below
+      // passes trivially against a subtree that has not loaded yet.
+      await waitFor(() => {
+        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
+      });
+
+      const anchor = document.getElementById(`comment-${mockCommentWithReplies.id}`);
+      expect(anchor).not.toBeNull();
+
+      // The comment's own text is inside the anchor...
+      expect(anchor).toHaveTextContent('This is a test comment');
+      // ...and the replies are not, so the scroll box stays comment-sized.
+      expect(anchor).not.toHaveTextContent('This is a reply');
+      expect(
+        anchor!.querySelectorAll('[data-testid="threaded-comment"]').length
+      ).toBe(0);
+    });
+
+    it('gives each variant of a nested reply its own suffixed anchor', async () => {
+      // The dual desktop/mobile render means the same comment id appears twice,
+      // which is why the scroll code probes -desktop and -mobile. Those anchors
+      // have to move with the base one or deep-linking to a nested comment
+      // silently finds nothing.
+      renderWithProviders(
+        <ThreadedComment
+          comment={mockCommentWithReplies}
+          gameId={mockGameId}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+
+      await waitFor(() => {
+        expect(document.getElementById(`comment-${mockReplies[0].id}-desktop`)).not.toBeNull();
+      });
+
+      for (const variant of ['desktop', 'mobile']) {
+        const replyAnchor = document.getElementById(`comment-${mockReplies[0].id}-${variant}`);
+        expect(replyAnchor).toHaveTextContent('This is a reply');
+        expect(
+          replyAnchor!.querySelectorAll('[data-testid="threaded-comment"]').length
+        ).toBe(0);
+      }
+    });
+
     it('does not show nested replies when showReplies is false', async () => {
       const user = userEvent.setup();
 
@@ -2272,6 +2337,145 @@ describe('ThreadedComment', () => {
       );
 
       expect(screen.getByRole('button', { name: /mark as (read|unread)/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('Favorites', () => {
+    const favoriteProps = {
+      comment: mockComment,
+      gameId: mockGameId,
+      postId: 10,
+      characters: mockCharacters,
+      controllableCharacters: [],
+      onCreateReply: mockOnCreateReply,
+      currentUserId: mockCurrentUserId,
+    };
+
+    it('reports the comment id and current state when the star is clicked', async () => {
+      const onToggleFavorite = vi.fn();
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <ThreadedComment {...favoriteProps} favoriteCommentIDs={[]} onToggleFavorite={onToggleFavorite} />
+      );
+
+      await user.click(screen.getByTestId('favorite-button'));
+
+      expect(onToggleFavorite).toHaveBeenCalledWith(mockComment.id, false);
+    });
+
+    // Star state comes from the id list rather than a per-comment boolean, so
+    // that a nested reply can derive its own state from the same forwarded list.
+    it('shows the starred state when the comment id is in the favorite list', () => {
+      renderWithProviders(
+        <ThreadedComment
+          {...favoriteProps}
+          favoriteCommentIDs={[mockComment.id]}
+          onToggleFavorite={vi.fn()}
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /remove from favorites/i })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    it('shows the unstarred state when the list holds only other comments', () => {
+      renderWithProviders(
+        <ThreadedComment
+          {...favoriteProps}
+          favoriteCommentIDs={[mockComment.id + 1]}
+          onToggleFavorite={vi.fn()}
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /favorite this comment/i })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+    });
+
+    it('omits the star when no handler is supplied', () => {
+      renderWithProviders(<ThreadedComment {...favoriteProps} />);
+
+      expect(screen.queryByTestId('favorite-button')).not.toBeInTheDocument();
+    });
+
+    it('keeps the star in read-only mode', async () => {
+      // readOnly closes the *conversation* -- no replying, editing, deleting.
+      // A favorite is the viewer's own private row, and a finished game is
+      // exactly when someone goes back to collect the comments worth keeping,
+      // so the star has to survive into the history view.
+      const user = userEvent.setup();
+      const onToggleFavorite = vi.fn();
+
+      renderWithProviders(
+        <ThreadedComment
+          {...favoriteProps}
+          readOnly
+          favoriteCommentIDs={[]}
+          onToggleFavorite={onToggleFavorite}
+        />
+      );
+
+      // Present *and* wired up: rendering a star that does nothing when
+      // clicked would satisfy a existence-only assertion.
+      await user.click(screen.getByTestId('favorite-button'));
+
+      expect(onToggleFavorite).toHaveBeenCalledWith(mockComment.id, false);
+    });
+
+    it('propagates allowFavoriting={false} to nested replies', async () => {
+      // The opt-out has to reach the whole subtree: a star suppressed on the
+      // top-level comment but still rendered on its replies is the same leak.
+      server.use(
+        http.get(`/api/v1/games/${mockGameId}/messages/:messageId/children`, () => {
+          return HttpResponse.json(mockReplies);
+        })
+      );
+
+      renderWithProviders(
+        <ThreadedComment
+          {...favoriteProps}
+          comment={mockCommentWithReplies}
+          allowFavoriting={false}
+          favoriteCommentIDs={[]}
+          onToggleFavorite={vi.fn()}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.queryAllByText('This is a reply').length).toBeGreaterThanOrEqual(1);
+      });
+
+      expect(screen.queryAllByTestId('favorite-button')).toHaveLength(0);
+    });
+
+    it('omits the star when the caller opts out with allowFavoriting={false}', () => {
+      renderWithProviders(
+        <ThreadedComment
+          {...favoriteProps}
+          allowFavoriting={false}
+          favoriteCommentIDs={[]}
+          onToggleFavorite={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByTestId('favorite-button')).not.toBeInTheDocument();
+    });
+
+    it('omits the star on a deleted comment', () => {
+      renderWithProviders(
+        <ThreadedComment
+          {...favoriteProps}
+          comment={{ ...mockComment, is_deleted: true }}
+          favoriteCommentIDs={[]}
+          onToggleFavorite={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByTestId('favorite-button')).not.toBeInTheDocument();
     });
   });
 });

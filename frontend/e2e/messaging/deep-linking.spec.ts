@@ -66,13 +66,17 @@ test.describe('@mobile Deep Linking in Common Room', () => {
     await page.goto(`/games/${gameId}?tab=common-room`);
     await page.waitForLoadState('networkidle');
 
-    const { shallowCommentId, deepCommentId } = await getDeepLinkingCommentIds(page, gameId);
+    const { shallowCommentId, deepCommentId, bulkyCommentId } = await getDeepLinkingCommentIds(page, gameId);
 
     // Mobile renders fewer nesting levels — deepCommentId (depth 5) is beyond mobile's
     // render cutoff and never appears in the DOM, so only test shallowCommentId on mobile.
     const mobileSelect = page.locator('select#tab-select');
     const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
-    const commentIds = isMobile ? [shallowCommentId] : [shallowCommentId, deepCommentId];
+    // bulkyCommentId is the one that matters for the scroll-position assertion
+    // below: it is the only fixture comment whose subtree dwarfs the comment.
+    const commentIds = isMobile
+      ? [shallowCommentId, bulkyCommentId]
+      : [shallowCommentId, deepCommentId, bulkyCommentId];
 
     for (const commentId of commentIds) {
       await page.goto(`/games/${gameId}?tab=common-room&comment=${commentId}`);
@@ -87,6 +91,43 @@ test.describe('@mobile Deep Linking in Common Room', () => {
         .or(page.locator(`#comment-${commentId}-desktop`))
         .locator('visible=true').first();
       await expect(comment).toBeVisible();
+
+      // toBeVisible() is not enough on its own, and that gap is what let a real
+      // bug ship: an element scrolled hundreds of pixels outside the window is
+      // still "visible" to Playwright. The anchor used to wrap the comment *and*
+      // its whole reply subtree, so centering that box left the comment itself
+      // off-screen -- worst for shallow comments, which have the most
+      // descendants. Assert the geometry the user actually experiences.
+      //
+      // Wait for the smooth scroll to SETTLE, then assert once on where it came
+      // to rest. Polling the assertion itself would be wrong: it passes the
+      // moment the element is ever in frame, which a broken scroll can satisfy
+      // in passing, so the test would stop detecting the bug it exists for.
+      //
+      // Measure through the resolved locator, never a fresh getElementById:
+      // the dual desktop/mobile render means the same id appears twice, and a
+      // by-id lookup returns the hidden copy, silently measuring an element
+      // other than the visible one asserted on below.
+      const settledY = await comment.evaluate(async (el) => {
+        let last = NaN;
+        let stableFor = 0;
+        // ~3s ceiling; settled means two consecutive identical frames.
+        for (let i = 0; i < 180; i++) {
+          await new Promise(requestAnimationFrame);
+          const y = Math.round(el.getBoundingClientRect().y);
+          stableFor = y === last ? stableFor + 1 : 0;
+          last = y;
+          if (stableFor >= 2) break;
+        }
+        return last;
+      });
+
+      const viewportHeight = page.viewportSize()!.height;
+      // The comment's top edge must come to rest inside the viewport. A long
+      // comment may still run past the fold on a narrow screen, which is why
+      // this checks the top edge rather than requiring the whole box to fit.
+      expect(settledY).toBeGreaterThanOrEqual(0);
+      expect(settledY).toBeLessThan(viewportHeight);
     }
   });
 

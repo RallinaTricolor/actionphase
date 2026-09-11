@@ -109,6 +109,16 @@ type ToggleCommentReadRequest struct {
 	Read bool `json:"read" required:"false" doc:"true marks the comment read, false marks it unread"`
 }
 
+// FavoriteCommentRequest sets or clears the caller's private star on one comment.
+//
+// The body names the target state rather than flipping it, so a double-click
+// race converges instead of toggling back -- which is why the operation is a
+// PUT and why `favorite` is required here, unlike ToggleCommentReadRequest's
+// optional `read`. An omitted body is a 422, not a silent unfavorite.
+type FavoriteCommentRequest struct {
+	Favorite bool `json:"favorite" doc:"true stars the comment, false removes the star"`
+}
+
 // maxPostContentLength is validation.MaxPostLength, restated as the maxLength
 // tag value above. Kept as a compile-time check so the two cannot drift.
 const maxPostContentLength = 50000

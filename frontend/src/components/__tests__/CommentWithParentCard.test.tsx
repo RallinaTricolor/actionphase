@@ -577,5 +577,75 @@ describe('CommentWithParentCard', () => {
       // The comment itself still renders — only the authorship tells are hidden.
       expect(screen.getByText('This is a test comment')).toBeInTheDocument();
     });
+
+    // A favorite is private to the viewer, so unlike Edit/Delete the star
+    // reveals nothing about who plays the character and stays visible.
+    it('keeps the favorite star visible when enabled', () => {
+      vi.mocked(useScreenshotModeHook.useScreenshotMode).mockReturnValue({
+        screenshotModeEnabled: true,
+        toggleScreenshotMode: vi.fn(),
+      });
+
+      renderWithProviders(
+        <CommentWithParentCard comment={commentWithPostId} gameId={1} onToggleFavorite={vi.fn()} />,
+        { gameId: 1 }
+      );
+
+      expect(screen.getByTestId('favorite-button')).toBeInTheDocument();
+    });
+  });
+
+  describe('favorite star', () => {
+    it('reports the comment id and current state when clicked', async () => {
+      const onToggleFavorite = vi.fn();
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <CommentWithParentCard comment={mockComment} gameId={1} onToggleFavorite={onToggleFavorite} />,
+        { gameId: 1 }
+      );
+
+      await user.click(screen.getByTestId('favorite-button'));
+
+      expect(onToggleFavorite).toHaveBeenCalledWith(mockComment.id, false);
+    });
+
+    it('shows the starred state when the comment is favorited', () => {
+      renderWithProviders(
+        <CommentWithParentCard
+          comment={mockComment}
+          gameId={1}
+          isFavorited
+          onToggleFavorite={vi.fn()}
+        />,
+        { gameId: 1 }
+      );
+
+      expect(screen.getByRole('button', { name: /remove from favorites/i })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    // Without a handler there is nothing to favorite against, so the surface
+    // opts out rather than rendering an inert control.
+    it('omits the star when no handler is supplied', () => {
+      renderWithProviders(<CommentWithParentCard comment={mockComment} gameId={1} />, { gameId: 1 });
+
+      expect(screen.queryByTestId('favorite-button')).not.toBeInTheDocument();
+    });
+
+    it('omits the star on a deleted comment', () => {
+      renderWithProviders(
+        <CommentWithParentCard
+          comment={{ ...mockComment, is_deleted: true }}
+          gameId={1}
+          onToggleFavorite={vi.fn()}
+        />,
+        { gameId: 1 }
+      );
+
+      expect(screen.queryByTestId('favorite-button')).not.toBeInTheDocument();
+    });
   });
 });

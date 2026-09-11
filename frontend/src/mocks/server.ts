@@ -181,6 +181,13 @@ const handlers = [
     return HttpResponse.json([]);
   }),
 
+  // PostCard reads this to fill in star state. Safe to stub here despite the
+  // note above: useFavorites.test.tsx uses this shared server rather than an
+  // isolated one, so there is no local handler for this to shadow.
+  http.get('/api/v1/games/:gameId/favorite-comment-ids', () => {
+    return HttpResponse.json({ favorite_comment_ids: [] });
+  }),
+
   http.get('/api/v1/characters/:id/stats', () => {
     return HttpResponse.json({ stats: {} });
   }),

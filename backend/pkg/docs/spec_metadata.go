@@ -134,6 +134,7 @@ func specTags() []any {
 		{"Action Results", "GM responses to player actions"},
 		{"Draft Character Updates", "Character sheet changes staged against an unpublished action result"},
 		{"Common Room", "Threaded discussion posts and comments in the common room"},
+		{"Favorites", "Private, per-user starred comments, spanning every game"},
 		{"Conversations", "Private in-character messaging between players"},
 		{"Handouts", "Game reference documents and lore provided by Game Masters"},
 		{"Polls", "In-game polls and voting"},

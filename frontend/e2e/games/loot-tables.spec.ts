@@ -81,4 +81,58 @@ test.describe('Loot Tables', () => {
 
     await expect(page.getByRole('heading', { name: ROLLED_ITEM })).toBeVisible({ timeout: 10000 });
   });
+
+  /**
+   * Creating a table with an item is the write half of the loot feature, and
+   * nothing below E2E covered it: the component tests mock the API client, and
+   * the Go handler tests build their request bodies in Go, so neither could see
+   * that the browser was sending a body the API rejects.
+   *
+   * That gap let a real bug ship. The loot editor types its in-progress items as
+   * LootTableContent — the *response* shape — and stamps a placeholder `id: 0`
+   * on each one. The chi handler ignored the extra field; the huma handler
+   * rejects unknown properties, so every create-with-items returned 422
+   * "unexpected property" at body.items[0].id.
+   *
+   * So this test must add an item, not just name a table: a name-only create
+   * sends no items array and passes even with the bug present.
+   */
+  test('GM creates a loot table with an item', async ({ page }) => {
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_LOOT_TABLES');
+
+    // Unique per run so re-runs against a persistent dev database cannot collide
+    // with a table left behind by an earlier one.
+    const tableName = `E2E Created Table ${Date.now()}`;
+    const itemName = 'E2E Brass Lantern';
+
+    await page.goto(`/games/${gameId}?tab=loot_tables`);
+
+    await page.getByRole('button', { name: 'New Loot Table' }).click();
+    await page.getByLabel('Table Name').fill(tableName);
+
+    // The item is what carries the offending payload field.
+    await page.getByRole('button', { name: 'Add Loot Table Content' }).click();
+    await page.getByLabel('Name *').fill(itemName);
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+
+    // The item is staged in form state only until the table is submitted; the
+    // editor lists it as "<n> - <name>" text, not as an input.
+    await expect(page.getByText(`1 - ${itemName}`)).toBeVisible();
+
+    await page.getByRole('button', { name: 'Create Loot Table' }).click();
+
+    // Returning to the list means the mutation resolved. With the 422 present
+    // the mutation rejects, the form stays open, and this fails.
+    await expect(page.getByRole('button', { name: 'New Loot Table' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(tableName)).toBeVisible();
+
+    // Reload to prove the table was persisted server-side rather than only
+    // added to the client cache, and reopen it to confirm the item was written
+    // too — the table row alone would still appear if only the items had failed.
+    await page.reload();
+    await expect(page.getByText(tableName)).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', { name: `Edit ${tableName}` }).click();
+    await expect(page.getByText(`1 - ${itemName}`)).toBeVisible({ timeout: 10000 });
+  });
 });
