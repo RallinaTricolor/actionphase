@@ -141,6 +141,64 @@ describe('useFavorites hooks', () => {
       expect(result.current.data?.pages[1].favorites[0].content).toBe('second');
       expect(result.current.hasNextPage).toBe(false);
     });
+
+    // Regression: favoriting happens away from /favorites and deliberately
+    // does not invalidate this listing, so remounting the page is the only
+    // thing that picks the new star up. The app-wide default staleTime is 5
+    // minutes, which kept the cached pages fresh across that remount and left
+    // /favorites showing a stale list until a manual reload. This client
+    // mirrors the app default, so the hook's own staleTime: 0 is what makes it
+    // pass.
+    it('refetches on remount even under the app-wide staleTime', async () => {
+      const staleClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false, staleTime: 5 * 60 * 1000 },
+          mutations: { retry: false },
+        },
+      });
+      const staleWrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={staleClient}>{children}</QueryClientProvider>
+      );
+
+      let requestCount = 0;
+      server.use(
+        http.get('/api/v1/favorites/comments', () => {
+          requestCount += 1;
+          return HttpResponse.json({
+            favorites:
+              requestCount === 1
+                ? []
+                : [
+                    {
+                      id: 7,
+                      game_id: 3,
+                      game_title: 'Nightfall',
+                      content: 'starred while away',
+                      favorited_at: '2026-09-10T12:00:00Z',
+                    },
+                  ],
+            pagination: { limit: 20, next_cursor: null },
+          });
+        })
+      );
+
+      // Visit /favorites: nothing starred yet.
+      const first = renderHook(() => useFavoriteComments(), { wrapper: staleWrapper });
+      await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
+      expect(first.result.current.data?.pages[0].favorites).toHaveLength(0);
+
+      // Leave the page, star a comment elsewhere, come back.
+      first.unmount();
+      const second = renderHook(() => useFavoriteComments(), { wrapper: staleWrapper });
+
+      await waitFor(() =>
+        expect(second.result.current.data?.pages[0].favorites).toHaveLength(1)
+      );
+      expect(second.result.current.data?.pages[0].favorites[0].content).toBe(
+        'starred while away'
+      );
+      expect(requestCount).toBe(2);
+    });
   });
 
   describe('useSetCommentFavorite', () => {

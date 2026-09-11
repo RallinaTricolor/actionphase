@@ -68,6 +68,13 @@ export function useFavoriteComments() {
     },
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.pagination.next_cursor ?? undefined,
+    // Overrides the app-wide 5-minute staleTime. Favoriting happens away from
+    // this page (in a common room, on a character feed) and deliberately does
+    // not invalidate this listing -- see useSetCommentFavorite's onSettled --
+    // so a mount refetch is the only thing that picks those stars up. Under
+    // the inherited staleTime the cached pages stayed fresh and coming back to
+    // /favorites showed a stale list until a manual reload.
+    staleTime: 0,
   });
 }
 
@@ -117,7 +124,8 @@ export function useSetCommentFavorite() {
       // deliberately NOT invalidated: the page keeps an unfavorited card on
       // screen, dimmed, so the star doubles as undo, and refetching would both
       // yank that card away and re-page the cursor-paginated list mid-scroll.
-      // The listing refreshes on the next mount, which is when the user has
+      // The listing refreshes on the next mount instead (useFavoriteComments
+      // sets staleTime: 0 for exactly this), which is when the user has
       // actually left and come back.
       queryClient.invalidateQueries({ queryKey: [FAVORITE_IDS_KEY] });
     },
