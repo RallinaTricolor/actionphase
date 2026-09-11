@@ -142,7 +142,7 @@ func TestActionSubmissionService_SubmitAction(t *testing.T) {
 			UserID:        pgtype.Int4{Int32: int32(player1.ID), Valid: true},
 			Name:          "Player 1's Character",
 			CharacterType: "player_character",
-			Status:        pgtype.Text{String: "approved", Valid: true},
+			Status:        "approved",
 		})
 		require.NoError(t, err)
 
@@ -176,7 +176,7 @@ func TestActionSubmissionService_SubmitAction(t *testing.T) {
 			UserID:        pgtype.Int4{Int32: int32(player.ID), Valid: true},
 			Name:          "Character in Game 2",
 			CharacterType: "player_character",
-			Status:        pgtype.Text{String: "approved", Valid: true},
+			Status:        "approved",
 		})
 		require.NoError(t, err)
 

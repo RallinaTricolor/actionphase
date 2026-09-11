@@ -5,7 +5,7 @@ absence of detail as authoritative, and do not infer rules from it.
 
 For business-rules questions, read the source directly:
 
-- Schema: `backend/pkg/db/schema.sql`
+- Schema: `backend/pkg/db/migrations/`
 - Queries: `backend/pkg/db/queries/*.sql`
 - Services: `backend/pkg/db/services/`
 - Routes: `backend/pkg/http/root.go`

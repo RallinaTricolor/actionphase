@@ -45,14 +45,6 @@ func fmtTime(ts pgtype.Timestamptz) string {
 	return ts.Time.UTC().Format(timeFormat)
 }
 
-// fmtTimeNoTZ renders the timestamp columns declared without a timezone.
-func fmtTimeNoTZ(ts pgtype.Timestamp) string {
-	if !ts.Valid {
-		return "unknown"
-	}
-	return ts.Time.UTC().Format(timeFormat)
-}
-
 // text unwraps a nullable text column with a fallback for NULL/empty.
 func text(v pgtype.Text, fallback string) string {
 	if !v.Valid || v.String == "" {
@@ -157,14 +149,14 @@ func RenderPost(
 		{"phase", phaseTitle},
 		{"character", post.CharacterName},
 		{"author", post.AuthorUsername},
-		{"created", fmtTimeNoTZ(post.CreatedAt)},
+		{"created", fmtTime(post.CreatedAt)},
 		{"edited", fmt.Sprintf("%t", post.IsEdited)},
 		{"comment_count", fmt.Sprintf("%d", len(comments))},
 	}))
 
 	b.WriteString("# " + title + "\n\n")
 	b.WriteString(fmt.Sprintf("**%s** — %s\n\n",
-		speakerFromPost(post), fmtTimeNoTZ(post.CreatedAt)))
+		speakerFromPost(post), fmtTime(post.CreatedAt)))
 	b.WriteString(body(post.Content))
 	b.WriteString("\n")
 
@@ -211,7 +203,7 @@ func RenderPost(
 		// The id is always emitted: it is the anchor that every "replying to"
 		// backlink below points at, and without it those references resolve to
 		// nothing in the file.
-		header := fmt.Sprintf("**%s** · #%d — %s", label, c.ID, fmtTimeNoTZ(c.CreatedAt))
+		header := fmt.Sprintf("**%s** · #%d — %s", label, c.ID, fmtTime(c.CreatedAt))
 		if c.IsEdited {
 			header += " *(edited)*"
 		}
@@ -556,7 +548,7 @@ func RenderCharacter(
 ) string {
 	var b strings.Builder
 
-	status := text(ch.Status, "unknown")
+	status := ch.Status
 	state := "active"
 	if !ch.IsActive {
 		state = "inactive"

@@ -14,7 +14,7 @@ import (
 const createNotification = `-- name: CreateNotification :one
 INSERT INTO notifications (user_id, game_id, type, title, content, related_type, related_id, link_url, context_type, context_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, user_id, game_id, type, title, content, related_type, related_id, link_url, context_type, context_id, is_read, read_at, created_at
+RETURNING id, user_id, game_id, type, title, content, related_type, related_id, is_read, created_at, link_url, read_at, context_type, context_id
 `
 
 type CreateNotificationParams struct {
@@ -53,12 +53,12 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		&i.Content,
 		&i.RelatedType,
 		&i.RelatedID,
+		&i.IsRead,
+		&i.CreatedAt,
 		&i.LinkUrl,
+		&i.ReadAt,
 		&i.ContextType,
 		&i.ContextID,
-		&i.IsRead,
-		&i.ReadAt,
-		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -89,7 +89,7 @@ func (q *Queries) DeleteOldNotifications(ctx context.Context) error {
 }
 
 const getGameNotifications = `-- name: GetGameNotifications :many
-SELECT n.id, n.user_id, n.game_id, n.type, n.title, n.content, n.related_type, n.related_id, n.link_url, n.context_type, n.context_id, n.is_read, n.read_at, n.created_at, u.username
+SELECT n.id, n.user_id, n.game_id, n.type, n.title, n.content, n.related_type, n.related_id, n.is_read, n.created_at, n.link_url, n.read_at, n.context_type, n.context_id, u.username
 FROM notifications n
 JOIN users u ON n.user_id = u.id
 WHERE n.game_id = $1
@@ -112,12 +112,12 @@ type GetGameNotificationsRow struct {
 	Content     pgtype.Text        `json:"content"`
 	RelatedType pgtype.Text        `json:"related_type"`
 	RelatedID   pgtype.Int4        `json:"related_id"`
+	IsRead      pgtype.Bool        `json:"is_read"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	LinkUrl     pgtype.Text        `json:"link_url"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
 	ContextType pgtype.Text        `json:"context_type"`
 	ContextID   pgtype.Int4        `json:"context_id"`
-	IsRead      pgtype.Bool        `json:"is_read"`
-	ReadAt      pgtype.Timestamptz `json:"read_at"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	Username    string             `json:"username"`
 }
 
@@ -139,12 +139,12 @@ func (q *Queries) GetGameNotifications(ctx context.Context, arg GetGameNotificat
 			&i.Content,
 			&i.RelatedType,
 			&i.RelatedID,
+			&i.IsRead,
+			&i.CreatedAt,
 			&i.LinkUrl,
+			&i.ReadAt,
 			&i.ContextType,
 			&i.ContextID,
-			&i.IsRead,
-			&i.ReadAt,
-			&i.CreatedAt,
 			&i.Username,
 		); err != nil {
 			return nil, err
@@ -170,7 +170,7 @@ func (q *Queries) GetUnreadNotificationCount(ctx context.Context, userID int32) 
 }
 
 const getUnreadNotifications = `-- name: GetUnreadNotifications :many
-SELECT n.id, n.user_id, n.game_id, n.type, n.title, n.content, n.related_type, n.related_id, n.link_url, n.context_type, n.context_id, n.is_read, n.read_at, n.created_at, g.title as game_title
+SELECT n.id, n.user_id, n.game_id, n.type, n.title, n.content, n.related_type, n.related_id, n.is_read, n.created_at, n.link_url, n.read_at, n.context_type, n.context_id, g.title as game_title
 FROM notifications n
 LEFT JOIN games g ON n.game_id = g.id
 WHERE n.user_id = $1 AND n.is_read = false
@@ -186,12 +186,12 @@ type GetUnreadNotificationsRow struct {
 	Content     pgtype.Text        `json:"content"`
 	RelatedType pgtype.Text        `json:"related_type"`
 	RelatedID   pgtype.Int4        `json:"related_id"`
+	IsRead      pgtype.Bool        `json:"is_read"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	LinkUrl     pgtype.Text        `json:"link_url"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
 	ContextType pgtype.Text        `json:"context_type"`
 	ContextID   pgtype.Int4        `json:"context_id"`
-	IsRead      pgtype.Bool        `json:"is_read"`
-	ReadAt      pgtype.Timestamptz `json:"read_at"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	GameTitle   pgtype.Text        `json:"game_title"`
 }
 
@@ -213,12 +213,12 @@ func (q *Queries) GetUnreadNotifications(ctx context.Context, userID int32) ([]G
 			&i.Content,
 			&i.RelatedType,
 			&i.RelatedID,
+			&i.IsRead,
+			&i.CreatedAt,
 			&i.LinkUrl,
+			&i.ReadAt,
 			&i.ContextType,
 			&i.ContextID,
-			&i.IsRead,
-			&i.ReadAt,
-			&i.CreatedAt,
 			&i.GameTitle,
 		); err != nil {
 			return nil, err
@@ -232,7 +232,7 @@ func (q *Queries) GetUnreadNotifications(ctx context.Context, userID int32) ([]G
 }
 
 const getUserNotifications = `-- name: GetUserNotifications :many
-SELECT n.id, n.user_id, n.game_id, n.type, n.title, n.content, n.related_type, n.related_id, n.link_url, n.context_type, n.context_id, n.is_read, n.read_at, n.created_at, g.title as game_title
+SELECT n.id, n.user_id, n.game_id, n.type, n.title, n.content, n.related_type, n.related_id, n.is_read, n.created_at, n.link_url, n.read_at, n.context_type, n.context_id, g.title as game_title
 FROM notifications n
 LEFT JOIN games g ON n.game_id = g.id
 WHERE n.user_id = $1
@@ -255,12 +255,12 @@ type GetUserNotificationsRow struct {
 	Content     pgtype.Text        `json:"content"`
 	RelatedType pgtype.Text        `json:"related_type"`
 	RelatedID   pgtype.Int4        `json:"related_id"`
+	IsRead      pgtype.Bool        `json:"is_read"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	LinkUrl     pgtype.Text        `json:"link_url"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
 	ContextType pgtype.Text        `json:"context_type"`
 	ContextID   pgtype.Int4        `json:"context_id"`
-	IsRead      pgtype.Bool        `json:"is_read"`
-	ReadAt      pgtype.Timestamptz `json:"read_at"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	GameTitle   pgtype.Text        `json:"game_title"`
 }
 
@@ -282,12 +282,12 @@ func (q *Queries) GetUserNotifications(ctx context.Context, arg GetUserNotificat
 			&i.Content,
 			&i.RelatedType,
 			&i.RelatedID,
+			&i.IsRead,
+			&i.CreatedAt,
 			&i.LinkUrl,
+			&i.ReadAt,
 			&i.ContextType,
 			&i.ContextID,
-			&i.IsRead,
-			&i.ReadAt,
-			&i.CreatedAt,
 			&i.GameTitle,
 		); err != nil {
 			return nil, err
@@ -370,7 +370,7 @@ const markNotificationUnread = `-- name: MarkNotificationUnread :one
 UPDATE notifications
 SET is_read = false, read_at = NULL
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, game_id, type, title, content, related_type, related_id, link_url, context_type, context_id, is_read, read_at, created_at
+RETURNING id, user_id, game_id, type, title, content, related_type, related_id, is_read, created_at, link_url, read_at, context_type, context_id
 `
 
 type MarkNotificationUnreadParams struct {
@@ -390,12 +390,12 @@ func (q *Queries) MarkNotificationUnread(ctx context.Context, arg MarkNotificati
 		&i.Content,
 		&i.RelatedType,
 		&i.RelatedID,
+		&i.IsRead,
+		&i.CreatedAt,
 		&i.LinkUrl,
+		&i.ReadAt,
 		&i.ContextType,
 		&i.ContextID,
-		&i.IsRead,
-		&i.ReadAt,
-		&i.CreatedAt,
 	)
 	return i, err
 }

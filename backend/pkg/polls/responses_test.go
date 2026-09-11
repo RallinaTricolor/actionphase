@@ -60,6 +60,12 @@ func marshalToMap(t *testing.T, v any) map[string]any {
 	return m
 }
 
+// The wire-parity tests below compare decoded objects rather than raw JSON
+// bytes: the contract is the set of keys and values, not the order sqlc happens
+// to declare its struct fields in. (Field order shifted when sqlc moved to
+// generating from the migrations, which reordered columns without changing the
+// payload.)
+//
 // legacyPollResponse is the pre-DTO shape: the sqlc model embedded, with the
 // extra computed fields alongside it.
 type legacyPollResponse struct {
@@ -93,15 +99,12 @@ func TestPollResponseWireParity(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			want, err := json.Marshal(legacyPollResponse{
+			want := marshalToMap(t, legacyPollResponse{
 				CommonRoomPoll: samplePoll(), Options: tc.options,
 			})
-			require.NoError(t, err)
+			got := marshalToMap(t, toPollResponse(samplePoll(), tc.options))
 
-			got, err := json.Marshal(toPollResponse(samplePoll(), tc.options))
-			require.NoError(t, err)
-
-			assert.Equal(t, string(want), string(got),
+			assert.Equal(t, want, got,
 				"the DTO must emit the same JSON the embedded sqlc model did")
 		})
 	}
@@ -156,27 +159,21 @@ func TestPollResponseShape(t *testing.T) {
 
 func TestToPollListItemWireParity(t *testing.T) {
 	for _, hasVoted := range []bool{true, false} {
-		want, err := json.Marshal(legacyPollListItem{
+		want := marshalToMap(t, legacyPollListItem{
 			CommonRoomPoll: samplePoll(), UserHasVoted: hasVoted,
 		})
-		require.NoError(t, err)
+		got := marshalToMap(t, toPollListItem(samplePoll(), hasVoted))
 
-		got, err := json.Marshal(toPollListItem(samplePoll(), hasVoted))
-		require.NoError(t, err)
-
-		assert.Equal(t, string(want), string(got))
+		assert.Equal(t, want, got)
 	}
 }
 
 func TestToPollSummaryWireParity(t *testing.T) {
 	// Nested under poll results, the summary carried the bare sqlc model.
-	want, err := json.Marshal(samplePoll())
-	require.NoError(t, err)
+	want := marshalToMap(t, samplePoll())
+	got := marshalToMap(t, toPollSummary(samplePoll()))
 
-	got, err := json.Marshal(toPollSummary(samplePoll()))
-	require.NoError(t, err)
-
-	assert.Equal(t, string(want), string(got))
+	assert.Equal(t, want, got)
 }
 
 func TestToPollVoteResponse(t *testing.T) {

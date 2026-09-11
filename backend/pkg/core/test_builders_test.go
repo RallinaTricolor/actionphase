@@ -25,7 +25,7 @@ func TestCharacterBuilder(t *testing.T) {
 		AssertEqual(t, game.ID, character.GameID, "Game ID should match")
 		AssertEqual(t, user.ID, character.UserID.Int32, "User ID should match")
 		AssertEqual(t, "player_character", character.CharacterType, "Should be player character")
-		AssertEqual(t, "pending", character.Status.String, "Should be pending status")
+		AssertEqual(t, "pending", character.Status, "Should be pending status")
 	})
 
 	t.Run("creates NPC with GM control", func(t *testing.T) {
@@ -51,7 +51,7 @@ func TestCharacterBuilder(t *testing.T) {
 			Create()
 
 		AssertEqual(t, "Aragorn", character.Name, "Name should match")
-		AssertEqual(t, "approved", character.Status.String, "Should be approved")
+		AssertEqual(t, "approved", character.Status, "Should be approved")
 	})
 
 	t.Run("creates audience NPC", func(t *testing.T) {

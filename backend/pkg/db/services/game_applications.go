@@ -162,7 +162,7 @@ func (gas *GameApplicationService) GetGameApplicationsByStatus(ctx context.Conte
 
 	applications, err := queries.GetGameApplicationsByStatus(ctx, models.GetGameApplicationsByStatusParams{
 		GameID: gameID,
-		Status: pgtype.Text{String: status, Valid: true},
+		Status: status,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get game applications by status: %w", err)
@@ -211,7 +211,7 @@ func (gas *GameApplicationService) ApproveGameApplication(ctx context.Context, a
 	// Update application status
 	_, err = queries.UpdateGameApplicationStatus(ctx, models.UpdateGameApplicationStatusParams{
 		ID:               applicationID,
-		Status:           pgtype.Text{String: core.ApplicationStatusApproved, Valid: true},
+		Status:           core.ApplicationStatusApproved,
 		ReviewedByUserID: pgtype.Int4{Int32: reviewerID, Valid: true},
 	})
 	if err != nil {
@@ -273,7 +273,7 @@ func (gas *GameApplicationService) RejectGameApplication(ctx context.Context, ap
 
 	_, err = queries.UpdateGameApplicationStatus(ctx, models.UpdateGameApplicationStatusParams{
 		ID:               applicationID,
-		Status:           pgtype.Text{String: core.ApplicationStatusRejected, Valid: true},
+		Status:           core.ApplicationStatusRejected,
 		ReviewedByUserID: pgtype.Int4{Int32: reviewerID, Valid: true},
 	})
 	if err != nil {

@@ -458,10 +458,10 @@ ORDER BY ct.created_at DESC`
 			mentionedCharacterIds []int32
 			isEdited              bool
 			isDeleted             bool
-			createdAt             pgtype.Timestamp
+			createdAt             pgtype.Timestamptz
 			editedAt              pgtype.Timestamptz
 			editCount             int32
-			deletedAt             pgtype.Timestamp
+			deletedAt             pgtype.Timestamptz
 			deletedByUserID       pgtype.Int4
 			authorUsername        string
 			characterName         *string

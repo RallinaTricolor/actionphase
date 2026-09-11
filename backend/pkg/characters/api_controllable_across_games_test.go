@@ -28,7 +28,7 @@ func createCharacterFor(t *testing.T, testDB *core.TestDatabase, gameID int32, n
 		Name:          name,
 		CharacterType: charType,
 		UserID:        owner,
-		Status:        pgtype.Text{String: "approved", Valid: true},
+		Status:        "approved",
 	})
 	require.NoError(t, err)
 	return char

@@ -51,7 +51,7 @@ func (ps *PhaseService) CanUserSubmitActions(ctx context.Context, gameID, userID
 	}
 
 	for _, participant := range participants {
-		if participant.UserID == userID && participant.Status.String == "active" {
+		if participant.UserID == userID && participant.Status == "active" {
 			return true, nil
 		}
 	}

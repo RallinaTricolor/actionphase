@@ -53,7 +53,7 @@ INSERT INTO registration_attempts (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING id, email, username, ip_address, user_agent, honeypot_triggered, captcha_passed, blocked_reason, successful, created_at
+RETURNING id, email, username, ip_address, user_agent, captcha_passed, honeypot_triggered, blocked_reason, successful, created_at
 `
 
 type CreateRegistrationAttemptParams struct {
@@ -85,8 +85,8 @@ func (q *Queries) CreateRegistrationAttempt(ctx context.Context, arg CreateRegis
 		&i.Username,
 		&i.IpAddress,
 		&i.UserAgent,
-		&i.HoneypotTriggered,
 		&i.CaptchaPassed,
+		&i.HoneypotTriggered,
 		&i.BlockedReason,
 		&i.Successful,
 		&i.CreatedAt,
@@ -105,7 +105,7 @@ func (q *Queries) DeleteOldRegistrationAttempts(ctx context.Context, createdAt p
 }
 
 const getRecentSuccessfulRegistrationByIP = `-- name: GetRecentSuccessfulRegistrationByIP :one
-SELECT id, email, username, ip_address, user_agent, honeypot_triggered, captcha_passed, blocked_reason, successful, created_at FROM registration_attempts
+SELECT id, email, username, ip_address, user_agent, captcha_passed, honeypot_triggered, blocked_reason, successful, created_at FROM registration_attempts
 WHERE ip_address = $1
   AND successful = TRUE
   AND created_at > $2
@@ -127,8 +127,8 @@ func (q *Queries) GetRecentSuccessfulRegistrationByIP(ctx context.Context, arg G
 		&i.Username,
 		&i.IpAddress,
 		&i.UserAgent,
-		&i.HoneypotTriggered,
 		&i.CaptchaPassed,
+		&i.HoneypotTriggered,
 		&i.BlockedReason,
 		&i.Successful,
 		&i.CreatedAt,

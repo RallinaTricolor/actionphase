@@ -607,7 +607,7 @@ func TestGetCharacter_AnonymousMode(t *testing.T) {
 	// Create anonymous game directly (CreateTestGame doesn't set IsAnonymous)
 	anonGame, err := queries.CreateGame(ctx, dbmodels.CreateGameParams{
 		Title:       "Anonymous Test Game",
-		Description: pgtype.Text{String: "Test", Valid: true},
+		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
 		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
@@ -840,7 +840,7 @@ func TestGetCharacter_AudienceAssignedPendingNPC_InProgress(t *testing.T) {
 		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Creating pending NPC should succeed")
-	core.AssertEqual(t, "pending", pendingNPC.Status.String, "NPC should start as pending")
+	core.AssertEqual(t, "pending", pendingNPC.Status, "NPC should start as pending")
 
 	err = characterService.AssignNPCToUser(ctx, pendingNPC.ID, int32(audienceUser.ID), int32(gmUser.ID))
 	core.AssertNoError(t, err, "Assigning NPC to audience user should succeed")

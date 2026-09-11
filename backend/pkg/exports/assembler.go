@@ -91,9 +91,9 @@ func (a *Assembler) Assemble(ctx context.Context, gameID int32, w io.Writer, pro
 	if err != nil {
 		return nil, fmt.Errorf("load game %d: %w", gameID, err)
 	}
-	if !game.State.Valid || game.State.String != core.GameStateCompleted {
+	if game.State != core.GameStateCompleted {
 		return nil, fmt.Errorf("%w: game %d is %q",
-			ErrGameNotCompleted, gameID, stateOrUnknown(game.State))
+			ErrGameNotCompleted, gameID, game.State)
 	}
 
 	fpRow, err := a.Queries.GetGameContentFingerprint(ctx, gameID)
@@ -191,13 +191,6 @@ func (a *Assembler) FingerprintFor(ctx context.Context, gameID int32) (string, e
 		return "", fmt.Errorf("fingerprint game %d: %w", gameID, err)
 	}
 	return Fingerprint(row), nil
-}
-
-func stateOrUnknown(s pgtype.Text) string {
-	if !s.Valid {
-		return "unknown"
-	}
-	return s.String
 }
 
 // --- section writers -------------------------------------------------------
@@ -561,7 +554,7 @@ func (a *Assembler) writeGameReadme(
 		{"type", "game"},
 		{"id", fmt.Sprintf("%d", game.ID)},
 		{"title", game.Title},
-		{"state", stateOrUnknown(game.State)},
+		{"state", game.State},
 		{"genre", text(game.Genre, "")},
 		{"started", fmtTime(game.StartDate)},
 		{"ended", fmtTime(game.EndDate)},
@@ -569,12 +562,12 @@ func (a *Assembler) writeGameReadme(
 	}))
 
 	b.WriteString("# " + game.Title + "\n\n")
-	if d := text(game.Description, ""); d != "" {
+	if d := game.Description; d != "" {
 		b.WriteString(body(d) + "\n\n")
 	}
 
 	b.WriteString("## Overview\n\n")
-	b.WriteString(fmt.Sprintf("- **Status:** %s\n", stateOrUnknown(game.State)))
+	b.WriteString(fmt.Sprintf("- **Status:** %s\n", game.State))
 	if g := text(game.Genre, ""); g != "" {
 		b.WriteString(fmt.Sprintf("- **Genre:** %s\n", g))
 	}

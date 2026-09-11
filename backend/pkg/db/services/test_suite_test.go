@@ -59,10 +59,10 @@ func TestTestSuite_TransitionGameTo(t *testing.T) {
 	game := suite.Factory().NewGame().WithGM(user.ID).Create()
 
 	// Test transition helper
-	assert.Equal(t, "setup", game.State.String, "Initial state should be setup")
+	assert.Equal(t, "setup", game.State, "Initial state should be setup")
 
 	updatedGame := suite.TransitionGameTo(game, "recruitment")
-	assert.Equal(t, "recruitment", updatedGame.State.String, "State should be recruitment after transition")
+	assert.Equal(t, "recruitment", updatedGame.State, "State should be recruitment after transition")
 }
 
 func TestTestSuite_AddParticipant(t *testing.T) {

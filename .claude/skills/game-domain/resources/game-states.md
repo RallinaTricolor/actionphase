@@ -5,8 +5,7 @@ Complete reference for game state machine in ActionPhase.
 ## Game States
 
 ```sql
--- Live constraint (migration 20260825193725). NOTE: schema.sql is STALE and
--- omits it — trust the migrations, not schema.sql.
+-- Live constraint (migration 20260825193725).
 CHECK (state IN ('setup', 'recruitment', 'character_creation',
                  'in_progress', 'paused', 'epilogue', 'completed', 'cancelled'))
 ```

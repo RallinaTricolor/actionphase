@@ -115,7 +115,7 @@ func setupAvatarTestData(t *testing.T, testDB *core.TestDatabase, app *core.App)
 		Name:          "Test Character",
 		CharacterType: "player_character",
 		UserID:        pgtype.Int4{Int32: int32(owner.ID), Valid: true},
-		Status:        pgtype.Text{String: "approved", Valid: true},
+		Status:        "approved",
 	})
 	require.NoError(t, err)
 

@@ -31,7 +31,7 @@ func TestCreateGameNilCharacterSheet(t *testing.T) {
 
 	game, err := queries.CreateGame(context.Background(), models.CreateGameParams{
 		Title:       "Game Without A Sheet Config",
-		Description: pgtype.Text{String: "Built without setting CharacterSheet.", Valid: true},
+		Description: "Built without setting CharacterSheet.",
 		GmUserID:    int32(fixtures.TestUser.ID),
 		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 		// CharacterSheet deliberately left nil.
@@ -72,7 +72,7 @@ func TestUpdateGameNilCharacterSheetKeepsRawQuerySafe(t *testing.T) {
 
 	game, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:          "Game With Renamed Tabs",
-		Description:    pgtype.Text{String: "Has GM label overrides.", Valid: true},
+		Description:    "Has GM label overrides.",
 		GmUserID:       int32(fixtures.TestUser.ID),
 		IsPublic:       pgtype.Bool{Bool: true, Valid: true},
 		CharacterSheet: []byte(`{"labels":{"skills":"Approaches"}}`),
@@ -84,7 +84,7 @@ func TestUpdateGameNilCharacterSheetKeepsRawQuerySafe(t *testing.T) {
 	updated, err := queries.UpdateGame(ctx, models.UpdateGameParams{
 		ID:          game.ID,
 		Title:       "Game With Renamed Tabs",
-		Description: pgtype.Text{String: "Updated, but not for the sheet.", Valid: true},
+		Description: "Updated, but not for the sheet.",
 		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 		// CharacterSheet deliberately left nil.
 	})

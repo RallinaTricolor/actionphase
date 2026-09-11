@@ -69,7 +69,7 @@ func (cs *CharacterService) CreateCharacter(ctx context.Context, req CreateChara
 		UserID:        userID,
 		Name:          req.Name,
 		CharacterType: req.CharacterType,
-		Status:        pgtype.Text{String: "pending", Valid: true}, // Default status
+		Status:        "pending", // Default status
 	})
 
 	if err != nil {
@@ -85,7 +85,7 @@ func (cs *CharacterService) CreateCharacter(ctx context.Context, req CreateChara
 		"game_id", req.GameID,
 		"character_type", req.CharacterType,
 		"character_name", character.Name,
-		"status", character.Status.String,
+		"status", character.Status,
 	)
 
 	return &character, nil
@@ -124,7 +124,7 @@ func (cs *CharacterService) CreateGamemasterNPC(ctx context.Context, gameID int3
 		UserID:        pgtype.Int4{Valid: false}, // NULL for GM NPCs
 		Name:          "Gamemaster",
 		CharacterType: "npc",
-		Status:        pgtype.Text{String: "approved", Valid: true}, // Auto-approved
+		Status:        "approved", // Auto-approved
 	})
 
 	if err != nil {
@@ -136,7 +136,7 @@ func (cs *CharacterService) CreateGamemasterNPC(ctx context.Context, gameID int3
 		"game_id", gameID,
 		"character_id", character.ID,
 		"character_name", character.Name,
-		"status", character.Status.String,
+		"status", character.Status,
 	)
 
 	return nil
@@ -237,7 +237,7 @@ func (cs *CharacterService) ApproveCharacter(ctx context.Context, characterID in
 	queries := models.New(cs.DB)
 	character, err := queries.UpdateCharacterStatus(ctx, models.UpdateCharacterStatusParams{
 		ID:     characterID,
-		Status: pgtype.Text{String: "approved", Valid: true},
+		Status: "approved",
 	})
 
 	if err != nil {
@@ -249,7 +249,7 @@ func (cs *CharacterService) ApproveCharacter(ctx context.Context, characterID in
 		"character_id", character.ID,
 		"character_name", character.Name,
 		"game_id", character.GameID,
-		"status", character.Status.String,
+		"status", character.Status,
 	)
 
 	return &character, nil
@@ -316,7 +316,7 @@ func (cs *CharacterService) SetCharacterData(ctx context.Context, req CharacterD
 		ModuleType:  req.ModuleType,
 		FieldName:   req.FieldName,
 		FieldValue:  fieldValue,
-		FieldType:   pgtype.Text{String: req.FieldType, Valid: true},
+		FieldType:   req.FieldType,
 		IsPublic:    pgtype.Bool{Bool: req.IsPublic, Valid: true},
 	})
 	if err != nil {

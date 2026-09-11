@@ -8,8 +8,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // This file contains only mock-based tests that don't require a database
@@ -90,7 +88,7 @@ func TestMocks_GameService_CreateAndRetrieveGame(t *testing.T) {
 
 	gameParams := db.CreateGameParams{
 		Title:       "Test Adventure",
-		Description: pgtype.Text{String: "A test RPG game", Valid: true},
+		Description: "A test RPG game",
 		GmUserID:    1,
 	}
 

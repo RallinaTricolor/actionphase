@@ -19,7 +19,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // setupStatsTestRouter creates a test router for character stats
@@ -425,7 +424,7 @@ func TestGetCharacterStats_GMSeesPrivateCount(t *testing.T) {
 	queries := models.New(testDB.Pool)
 	_, err = queries.UpdateCharacterStatus(context.Background(), models.UpdateCharacterStatusParams{
 		ID:     character.ID,
-		Status: pgtype.Text{String: "approved", Valid: true},
+		Status: "approved",
 	})
 	core.AssertNoError(t, err, "Approving character should succeed")
 

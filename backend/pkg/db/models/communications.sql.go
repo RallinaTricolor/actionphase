@@ -94,7 +94,7 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 const createThread = `-- name: CreateThread :one
 INSERT INTO threads (game_id, phase_id, created_by_user_id, title, content)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, game_id, phase_id, title, content, created_by_user_id, is_pinned, created_at, updated_at
+RETURNING id, game_id, phase_id, created_by_user_id, title, content, is_pinned, created_at, updated_at
 `
 
 type CreateThreadParams struct {
@@ -102,7 +102,7 @@ type CreateThreadParams struct {
 	PhaseID         pgtype.Int4 `json:"phase_id"`
 	CreatedByUserID int32       `json:"created_by_user_id"`
 	Title           string      `json:"title"`
-	Content         pgtype.Text `json:"content"`
+	Content         string      `json:"content"`
 }
 
 func (q *Queries) CreateThread(ctx context.Context, arg CreateThreadParams) (Thread, error) {
@@ -118,9 +118,9 @@ func (q *Queries) CreateThread(ctx context.Context, arg CreateThreadParams) (Thr
 		&i.ID,
 		&i.GameID,
 		&i.PhaseID,
+		&i.CreatedByUserID,
 		&i.Title,
 		&i.Content,
-		&i.CreatedByUserID,
 		&i.IsPinned,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -131,7 +131,7 @@ func (q *Queries) CreateThread(ctx context.Context, arg CreateThreadParams) (Thr
 const createThreadPost = `-- name: CreateThreadPost :one
 INSERT INTO thread_posts (thread_id, parent_post_id, user_id, character_id, content)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, thread_id, parent_post_id, user_id, character_id, content, created_at, updated_at
+RETURNING id, thread_id, parent_post_id, user_id, character_id, content, is_edited, created_at, updated_at
 `
 
 type CreateThreadPostParams struct {
@@ -158,6 +158,7 @@ func (q *Queries) CreateThreadPost(ctx context.Context, arg CreateThreadPostPara
 		&i.UserID,
 		&i.CharacterID,
 		&i.Content,
+		&i.IsEdited,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -379,7 +380,7 @@ func (q *Queries) GetConversationParticipants(ctx context.Context, conversationI
 }
 
 const getGameThreads = `-- name: GetGameThreads :many
-SELECT t.id, t.game_id, t.phase_id, t.title, t.content, t.created_by_user_id, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username,
+SELECT t.id, t.game_id, t.phase_id, t.created_by_user_id, t.title, t.content, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username,
        (SELECT COUNT(*) FROM thread_posts WHERE thread_id = t.id) as post_count
 FROM threads t
 JOIN users u ON t.created_by_user_id = u.id
@@ -391,9 +392,9 @@ type GetGameThreadsRow struct {
 	ID              int32              `json:"id"`
 	GameID          int32              `json:"game_id"`
 	PhaseID         pgtype.Int4        `json:"phase_id"`
-	Title           string             `json:"title"`
-	Content         pgtype.Text        `json:"content"`
 	CreatedByUserID int32              `json:"created_by_user_id"`
+	Title           string             `json:"title"`
+	Content         string             `json:"content"`
 	IsPinned        pgtype.Bool        `json:"is_pinned"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
@@ -414,9 +415,9 @@ func (q *Queries) GetGameThreads(ctx context.Context, gameID int32) ([]GetGameTh
 			&i.ID,
 			&i.GameID,
 			&i.PhaseID,
+			&i.CreatedByUserID,
 			&i.Title,
 			&i.Content,
-			&i.CreatedByUserID,
 			&i.IsPinned,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -451,7 +452,7 @@ func (q *Queries) GetLastConversationMessageID(ctx context.Context, conversation
 }
 
 const getPhaseThreads = `-- name: GetPhaseThreads :many
-SELECT t.id, t.game_id, t.phase_id, t.title, t.content, t.created_by_user_id, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username,
+SELECT t.id, t.game_id, t.phase_id, t.created_by_user_id, t.title, t.content, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username,
        (SELECT COUNT(*) FROM thread_posts WHERE thread_id = t.id) as post_count
 FROM threads t
 JOIN users u ON t.created_by_user_id = u.id
@@ -463,9 +464,9 @@ type GetPhaseThreadsRow struct {
 	ID              int32              `json:"id"`
 	GameID          int32              `json:"game_id"`
 	PhaseID         pgtype.Int4        `json:"phase_id"`
-	Title           string             `json:"title"`
-	Content         pgtype.Text        `json:"content"`
 	CreatedByUserID int32              `json:"created_by_user_id"`
+	Title           string             `json:"title"`
+	Content         string             `json:"content"`
 	IsPinned        pgtype.Bool        `json:"is_pinned"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
@@ -486,9 +487,9 @@ func (q *Queries) GetPhaseThreads(ctx context.Context, phaseID pgtype.Int4) ([]G
 			&i.ID,
 			&i.GameID,
 			&i.PhaseID,
+			&i.CreatedByUserID,
 			&i.Title,
 			&i.Content,
-			&i.CreatedByUserID,
 			&i.IsPinned,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -530,7 +531,7 @@ func (q *Queries) GetPrivateMessage(ctx context.Context, id int32) (PrivateMessa
 }
 
 const getThread = `-- name: GetThread :one
-SELECT t.id, t.game_id, t.phase_id, t.title, t.content, t.created_by_user_id, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username
+SELECT t.id, t.game_id, t.phase_id, t.created_by_user_id, t.title, t.content, t.is_pinned, t.created_at, t.updated_at, u.username as creator_username
 FROM threads t
 JOIN users u ON t.created_by_user_id = u.id
 WHERE t.id = $1
@@ -540,9 +541,9 @@ type GetThreadRow struct {
 	ID              int32              `json:"id"`
 	GameID          int32              `json:"game_id"`
 	PhaseID         pgtype.Int4        `json:"phase_id"`
-	Title           string             `json:"title"`
-	Content         pgtype.Text        `json:"content"`
 	CreatedByUserID int32              `json:"created_by_user_id"`
+	Title           string             `json:"title"`
+	Content         string             `json:"content"`
 	IsPinned        pgtype.Bool        `json:"is_pinned"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
@@ -556,9 +557,9 @@ func (q *Queries) GetThread(ctx context.Context, id int32) (GetThreadRow, error)
 		&i.ID,
 		&i.GameID,
 		&i.PhaseID,
+		&i.CreatedByUserID,
 		&i.Title,
 		&i.Content,
-		&i.CreatedByUserID,
 		&i.IsPinned,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -568,7 +569,7 @@ func (q *Queries) GetThread(ctx context.Context, id int32) (GetThreadRow, error)
 }
 
 const getThreadPost = `-- name: GetThreadPost :one
-SELECT tp.id, tp.thread_id, tp.parent_post_id, tp.user_id, tp.character_id, tp.content, tp.created_at, tp.updated_at, u.username, c.name as character_name
+SELECT tp.id, tp.thread_id, tp.parent_post_id, tp.user_id, tp.character_id, tp.content, tp.is_edited, tp.created_at, tp.updated_at, u.username, c.name as character_name
 FROM thread_posts tp
 JOIN users u ON tp.user_id = u.id
 LEFT JOIN characters c ON tp.character_id = c.id
@@ -582,6 +583,7 @@ type GetThreadPostRow struct {
 	UserID        int32              `json:"user_id"`
 	CharacterID   pgtype.Int4        `json:"character_id"`
 	Content       string             `json:"content"`
+	IsEdited      pgtype.Bool        `json:"is_edited"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	Username      string             `json:"username"`
@@ -598,6 +600,7 @@ func (q *Queries) GetThreadPost(ctx context.Context, id int32) (GetThreadPostRow
 		&i.UserID,
 		&i.CharacterID,
 		&i.Content,
+		&i.IsEdited,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Username,
@@ -607,7 +610,7 @@ func (q *Queries) GetThreadPost(ctx context.Context, id int32) (GetThreadPostRow
 }
 
 const getThreadPosts = `-- name: GetThreadPosts :many
-SELECT tp.id, tp.thread_id, tp.parent_post_id, tp.user_id, tp.character_id, tp.content, tp.created_at, tp.updated_at, u.username, c.name as character_name
+SELECT tp.id, tp.thread_id, tp.parent_post_id, tp.user_id, tp.character_id, tp.content, tp.is_edited, tp.created_at, tp.updated_at, u.username, c.name as character_name
 FROM thread_posts tp
 JOIN users u ON tp.user_id = u.id
 LEFT JOIN characters c ON tp.character_id = c.id
@@ -622,6 +625,7 @@ type GetThreadPostsRow struct {
 	UserID        int32              `json:"user_id"`
 	CharacterID   pgtype.Int4        `json:"character_id"`
 	Content       string             `json:"content"`
+	IsEdited      pgtype.Bool        `json:"is_edited"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	Username      string             `json:"username"`
@@ -644,6 +648,7 @@ func (q *Queries) GetThreadPosts(ctx context.Context, threadID int32) ([]GetThre
 			&i.UserID,
 			&i.CharacterID,
 			&i.Content,
+			&i.IsEdited,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Username,
@@ -1061,17 +1066,17 @@ type ListCharacterPostsAndCommentsRow struct {
 	CharacterID              int32              `json:"character_id"`
 	Content                  string             `json:"content"`
 	MessageType              MessageType        `json:"message_type"`
-	CreatedAt                pgtype.Timestamp   `json:"created_at"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
 	EditedAt                 pgtype.Timestamptz `json:"edited_at"`
 	EditCount                int32              `json:"edit_count"`
-	DeletedAt                pgtype.Timestamp   `json:"deleted_at"`
+	DeletedAt                pgtype.Timestamptz `json:"deleted_at"`
 	IsDeleted                bool               `json:"is_deleted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            string             `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
 	ParentContent            pgtype.Text        `json:"parent_content"`
-	ParentCreatedAt          pgtype.Timestamp   `json:"parent_created_at"`
-	ParentDeletedAt          pgtype.Timestamp   `json:"parent_deleted_at"`
+	ParentCreatedAt          pgtype.Timestamptz `json:"parent_created_at"`
+	ParentDeletedAt          pgtype.Timestamptz `json:"parent_deleted_at"`
 	ParentIsDeleted          pgtype.Bool        `json:"parent_is_deleted"`
 	ParentMessageType        NullMessageType    `json:"parent_message_type"`
 	ParentAuthorUsername     pgtype.Text        `json:"parent_author_username"`
@@ -1236,17 +1241,17 @@ type ListRecentCommentsWithParentsRow struct {
 	AuthorID                 int32              `json:"author_id"`
 	CharacterID              int32              `json:"character_id"`
 	Content                  string             `json:"content"`
-	CreatedAt                pgtype.Timestamp   `json:"created_at"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
 	EditedAt                 pgtype.Timestamptz `json:"edited_at"`
 	EditCount                int32              `json:"edit_count"`
-	DeletedAt                pgtype.Timestamp   `json:"deleted_at"`
+	DeletedAt                pgtype.Timestamptz `json:"deleted_at"`
 	IsDeleted                bool               `json:"is_deleted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            pgtype.Text        `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
 	ParentContent            pgtype.Text        `json:"parent_content"`
-	ParentCreatedAt          pgtype.Timestamp   `json:"parent_created_at"`
-	ParentDeletedAt          pgtype.Timestamp   `json:"parent_deleted_at"`
+	ParentCreatedAt          pgtype.Timestamptz `json:"parent_created_at"`
+	ParentDeletedAt          pgtype.Timestamptz `json:"parent_deleted_at"`
 	ParentIsDeleted          pgtype.Bool        `json:"parent_is_deleted"`
 	ParentMessageType        NullMessageType    `json:"parent_message_type"`
 	ParentAuthorUsername     pgtype.Text        `json:"parent_author_username"`
@@ -1416,17 +1421,17 @@ type ListRecentUnreadCommentsWithParentsRow struct {
 	AuthorID                 int32              `json:"author_id"`
 	CharacterID              int32              `json:"character_id"`
 	Content                  string             `json:"content"`
-	CreatedAt                pgtype.Timestamp   `json:"created_at"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
 	EditedAt                 pgtype.Timestamptz `json:"edited_at"`
 	EditCount                int32              `json:"edit_count"`
-	DeletedAt                pgtype.Timestamp   `json:"deleted_at"`
+	DeletedAt                pgtype.Timestamptz `json:"deleted_at"`
 	IsDeleted                bool               `json:"is_deleted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            pgtype.Text        `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
 	ParentContent            pgtype.Text        `json:"parent_content"`
-	ParentCreatedAt          pgtype.Timestamp   `json:"parent_created_at"`
-	ParentDeletedAt          pgtype.Timestamp   `json:"parent_deleted_at"`
+	ParentCreatedAt          pgtype.Timestamptz `json:"parent_created_at"`
+	ParentDeletedAt          pgtype.Timestamptz `json:"parent_deleted_at"`
 	ParentIsDeleted          pgtype.Bool        `json:"parent_is_deleted"`
 	ParentMessageType        NullMessageType    `json:"parent_message_type"`
 	ParentAuthorUsername     pgtype.Text        `json:"parent_author_username"`
@@ -1575,7 +1580,7 @@ const toggleThreadPin = `-- name: ToggleThreadPin :one
 UPDATE threads
 SET is_pinned = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, phase_id, title, content, created_by_user_id, is_pinned, created_at, updated_at
+RETURNING id, game_id, phase_id, created_by_user_id, title, content, is_pinned, created_at, updated_at
 `
 
 type ToggleThreadPinParams struct {
@@ -1590,9 +1595,9 @@ func (q *Queries) ToggleThreadPin(ctx context.Context, arg ToggleThreadPinParams
 		&i.ID,
 		&i.GameID,
 		&i.PhaseID,
+		&i.CreatedByUserID,
 		&i.Title,
 		&i.Content,
-		&i.CreatedByUserID,
 		&i.IsPinned,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -1669,13 +1674,13 @@ const updateThread = `-- name: UpdateThread :one
 UPDATE threads
 SET title = $2, content = $3, updated_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, phase_id, title, content, created_by_user_id, is_pinned, created_at, updated_at
+RETURNING id, game_id, phase_id, created_by_user_id, title, content, is_pinned, created_at, updated_at
 `
 
 type UpdateThreadParams struct {
-	ID      int32       `json:"id"`
-	Title   string      `json:"title"`
-	Content pgtype.Text `json:"content"`
+	ID      int32  `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
 }
 
 func (q *Queries) UpdateThread(ctx context.Context, arg UpdateThreadParams) (Thread, error) {
@@ -1685,9 +1690,9 @@ func (q *Queries) UpdateThread(ctx context.Context, arg UpdateThreadParams) (Thr
 		&i.ID,
 		&i.GameID,
 		&i.PhaseID,
+		&i.CreatedByUserID,
 		&i.Title,
 		&i.Content,
-		&i.CreatedByUserID,
 		&i.IsPinned,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -1710,7 +1715,7 @@ const updateThreadPost = `-- name: UpdateThreadPost :one
 UPDATE thread_posts
 SET content = $2, is_edited = true, updated_at = NOW()
 WHERE id = $1
-RETURNING id, thread_id, parent_post_id, user_id, character_id, content, created_at, updated_at
+RETURNING id, thread_id, parent_post_id, user_id, character_id, content, is_edited, created_at, updated_at
 `
 
 type UpdateThreadPostParams struct {
@@ -1728,6 +1733,7 @@ func (q *Queries) UpdateThreadPost(ctx context.Context, arg UpdateThreadPostPara
 		&i.UserID,
 		&i.CharacterID,
 		&i.Content,
+		&i.IsEdited,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

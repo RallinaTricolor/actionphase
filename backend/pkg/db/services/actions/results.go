@@ -123,7 +123,7 @@ func (as *ActionSubmissionService) publishDraftUpdates(ctx context.Context, quer
 			ModuleType:  draft.ModuleType,
 			FieldName:   draft.FieldName,
 			FieldValue:  draft.FieldValue,
-			FieldType:   pgtype.Text{String: draft.FieldType, Valid: true},
+			FieldType:   draft.FieldType,
 			IsPublic:    pgtype.Bool{Bool: false, Valid: true},
 		})
 		if err != nil {

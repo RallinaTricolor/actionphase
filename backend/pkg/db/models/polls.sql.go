@@ -28,7 +28,7 @@ INSERT INTO common_room_polls (
     show_running_totals_to_players
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-RETURNING id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, hide_results_from_players, allow_audience_voting, show_running_totals_to_players, is_deleted, created_at, updated_at
+RETURNING id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at, hide_results_from_players, allow_audience_voting, show_running_totals_to_players
 `
 
 type CreatePollParams struct {
@@ -76,12 +76,12 @@ func (q *Queries) CreatePoll(ctx context.Context, arg CreatePollParams) (CommonR
 		&i.Deadline,
 		&i.ShowIndividualVotes,
 		&i.AllowOtherOption,
-		&i.HideResultsFromPlayers,
-		&i.AllowAudienceVoting,
-		&i.ShowRunningTotalsToPlayers,
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HideResultsFromPlayers,
+		&i.AllowAudienceVoting,
+		&i.ShowRunningTotalsToPlayers,
 	)
 	return i, err
 }
@@ -137,7 +137,7 @@ func (q *Queries) DeleteVote(ctx context.Context, id int32) error {
 
 const getActivePollsForGame = `-- name: GetActivePollsForGame :many
 
-SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, hide_results_from_players, allow_audience_voting, show_running_totals_to_players, is_deleted, created_at, updated_at FROM common_room_polls
+SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at, hide_results_from_players, allow_audience_voting, show_running_totals_to_players FROM common_room_polls
 WHERE game_id = $1
   AND is_deleted = FALSE
   AND deadline > NOW()
@@ -168,12 +168,12 @@ func (q *Queries) GetActivePollsForGame(ctx context.Context, gameID int32) ([]Co
 			&i.Deadline,
 			&i.ShowIndividualVotes,
 			&i.AllowOtherOption,
-			&i.HideResultsFromPlayers,
-			&i.AllowAudienceVoting,
-			&i.ShowRunningTotalsToPlayers,
 			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.HideResultsFromPlayers,
+			&i.AllowAudienceVoting,
+			&i.ShowRunningTotalsToPlayers,
 		); err != nil {
 			return nil, err
 		}
@@ -186,7 +186,7 @@ func (q *Queries) GetActivePollsForGame(ctx context.Context, gameID int32) ([]Co
 }
 
 const getExpiredPolls = `-- name: GetExpiredPolls :many
-SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, hide_results_from_players, allow_audience_voting, show_running_totals_to_players, is_deleted, created_at, updated_at FROM common_room_polls
+SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at, hide_results_from_players, allow_audience_voting, show_running_totals_to_players FROM common_room_polls
 WHERE is_deleted = FALSE
   AND deadline <= NOW()
 ORDER BY deadline DESC
@@ -213,12 +213,12 @@ func (q *Queries) GetExpiredPolls(ctx context.Context) ([]CommonRoomPoll, error)
 			&i.Deadline,
 			&i.ShowIndividualVotes,
 			&i.AllowOtherOption,
-			&i.HideResultsFromPlayers,
-			&i.AllowAudienceVoting,
-			&i.ShowRunningTotalsToPlayers,
 			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.HideResultsFromPlayers,
+			&i.AllowAudienceVoting,
+			&i.ShowRunningTotalsToPlayers,
 		); err != nil {
 			return nil, err
 		}
@@ -329,7 +329,7 @@ func (q *Queries) GetOtherVoteCount(ctx context.Context, pollID int32) (int64, e
 }
 
 const getPoll = `-- name: GetPoll :one
-SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, hide_results_from_players, allow_audience_voting, show_running_totals_to_players, is_deleted, created_at, updated_at FROM common_room_polls
+SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at, hide_results_from_players, allow_audience_voting, show_running_totals_to_players FROM common_room_polls
 WHERE id = $1 AND is_deleted = FALSE
 `
 
@@ -347,12 +347,12 @@ func (q *Queries) GetPoll(ctx context.Context, id int32) (CommonRoomPoll, error)
 		&i.Deadline,
 		&i.ShowIndividualVotes,
 		&i.AllowOtherOption,
-		&i.HideResultsFromPlayers,
-		&i.AllowAudienceVoting,
-		&i.ShowRunningTotalsToPlayers,
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HideResultsFromPlayers,
+		&i.AllowAudienceVoting,
+		&i.ShowRunningTotalsToPlayers,
 	)
 	return i, err
 }
@@ -567,7 +567,7 @@ func (q *Queries) HasUserVoted(ctx context.Context, arg HasUserVotedParams) (boo
 }
 
 const listPollsByGame = `-- name: ListPollsByGame :many
-SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, hide_results_from_players, allow_audience_voting, show_running_totals_to_players, is_deleted, created_at, updated_at FROM common_room_polls
+SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at, hide_results_from_players, allow_audience_voting, show_running_totals_to_players FROM common_room_polls
 WHERE game_id = $1
   AND is_deleted = FALSE
   AND (
@@ -602,12 +602,12 @@ func (q *Queries) ListPollsByGame(ctx context.Context, arg ListPollsByGameParams
 			&i.Deadline,
 			&i.ShowIndividualVotes,
 			&i.AllowOtherOption,
-			&i.HideResultsFromPlayers,
-			&i.AllowAudienceVoting,
-			&i.ShowRunningTotalsToPlayers,
 			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.HideResultsFromPlayers,
+			&i.AllowAudienceVoting,
+			&i.ShowRunningTotalsToPlayers,
 		); err != nil {
 			return nil, err
 		}
@@ -620,7 +620,7 @@ func (q *Queries) ListPollsByGame(ctx context.Context, arg ListPollsByGameParams
 }
 
 const listPollsByPhase = `-- name: ListPollsByPhase :many
-SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, hide_results_from_players, allow_audience_voting, show_running_totals_to_players, is_deleted, created_at, updated_at FROM common_room_polls
+SELECT id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at, hide_results_from_players, allow_audience_voting, show_running_totals_to_players FROM common_room_polls
 WHERE game_id = $1
   AND phase_id = $2
   AND is_deleted = FALSE
@@ -652,12 +652,12 @@ func (q *Queries) ListPollsByPhase(ctx context.Context, arg ListPollsByPhasePara
 			&i.Deadline,
 			&i.ShowIndividualVotes,
 			&i.AllowOtherOption,
-			&i.HideResultsFromPlayers,
-			&i.AllowAudienceVoting,
-			&i.ShowRunningTotalsToPlayers,
 			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.HideResultsFromPlayers,
+			&i.AllowAudienceVoting,
+			&i.ShowRunningTotalsToPlayers,
 		); err != nil {
 			return nil, err
 		}
@@ -734,7 +734,7 @@ SET question = $2,
     show_running_totals_to_players = $9,
     updated_at = NOW()
 WHERE id = $1 AND is_deleted = FALSE
-RETURNING id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, hide_results_from_players, allow_audience_voting, show_running_totals_to_players, is_deleted, created_at, updated_at
+RETURNING id, game_id, phase_id, created_by_user_id, created_by_character_id, question, description, deadline, show_individual_votes, allow_other_option, is_deleted, created_at, updated_at, hide_results_from_players, allow_audience_voting, show_running_totals_to_players
 `
 
 type UpdatePollParams struct {
@@ -773,12 +773,12 @@ func (q *Queries) UpdatePoll(ctx context.Context, arg UpdatePollParams) (CommonR
 		&i.Deadline,
 		&i.ShowIndividualVotes,
 		&i.AllowOtherOption,
-		&i.HideResultsFromPlayers,
-		&i.AllowAudienceVoting,
-		&i.ShowRunningTotalsToPlayers,
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.HideResultsFromPlayers,
+		&i.AllowAudienceVoting,
+		&i.ShowRunningTotalsToPlayers,
 	)
 	return i, err
 }

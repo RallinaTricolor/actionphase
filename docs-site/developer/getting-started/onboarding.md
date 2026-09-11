@@ -248,7 +248,7 @@ async error => {
 **Hybrid Relational-Document Design**: Core entities are relational, flexible data uses JSONB:
 
 ```sql
--- Structured data (abridged from backend/pkg/db/schema.sql)
+-- Structured data (abridged from backend/pkg/db/migrations/)
 CREATE TABLE games (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,

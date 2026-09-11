@@ -225,7 +225,7 @@ func TestWebhookDispatch_FailureDoesNotFailTransition(t *testing.T) {
 	updated, err := gs.UpdateGameState(context.Background(), game.ID, core.GameStateRecruitment)
 
 	require.NoError(t, err, "a Discord failure must never surface as a failed transition")
-	assert.Equal(t, core.GameStateRecruitment, updated.State.String)
+	assert.Equal(t, core.GameStateRecruitment, updated.State)
 
 	// And the change is committed, not merely returned.
 	var state string
@@ -248,7 +248,7 @@ func TestWebhookDispatch_NilNotifierNeverPanics(t *testing.T) {
 	updated, err := gs.UpdateGameState(context.Background(), game.ID, core.GameStateRecruitment)
 
 	require.NoError(t, err)
-	assert.Equal(t, core.GameStateRecruitment, updated.State.String)
+	assert.Equal(t, core.GameStateRecruitment, updated.State)
 
 }
 
@@ -282,7 +282,7 @@ func TestWebhookDispatch_NilNotifierSkipsDispatchEntirely(t *testing.T) {
 	// And the transition itself is unaffected.
 	updated, err := gs.UpdateGameState(context.Background(), game.ID, core.GameStateRecruitment)
 	require.NoError(t, err)
-	assert.Equal(t, core.GameStateRecruitment, updated.State.String)
+	assert.Equal(t, core.GameStateRecruitment, updated.State)
 
 	time.Sleep(200 * time.Millisecond)
 
