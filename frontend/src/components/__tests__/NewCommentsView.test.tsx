@@ -16,6 +16,11 @@ vi.mock('../../hooks/useReadTracking', () => ({
   useToggleCommentRead: () => ({ mutate: vi.fn() }),
 }));
 
+vi.mock('../../hooks/useFavorites', () => ({
+  useGameFavoriteCommentIDs: () => ({ favoriteIds: new Set<number>() }),
+  useSetCommentFavorite: () => ({ mutate: vi.fn() }),
+}));
+
 // Read mode is mutable per-test: the unread-only filter is manual-mode only.
 let mockReadMode: 'auto' | 'manual' = 'auto';
 vi.mock('../../hooks/useUserPreferences', () => ({

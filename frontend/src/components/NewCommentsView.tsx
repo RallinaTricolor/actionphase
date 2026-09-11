@@ -5,6 +5,7 @@ import { useRecentComments } from '../hooks/useRecentComments';
 import { CommentWithParentCard } from './CommentWithParentCard';
 import { Spinner, Alert, Button, Toggle } from './ui';
 import { useManualReadCommentIDs, useToggleCommentRead } from '../hooks/useReadTracking';
+import { useGameFavoriteCommentIDs, useSetCommentFavorite } from '../hooks/useFavorites';
 import { useInfiniteScrollSentinel } from '../hooks/useInfiniteScrollSentinel';
 import { useCommentReadMode } from '../hooks/useUserPreferences';
 import { useUnreadOnlyFilter } from '../hooks/useUnreadOnlyFilter';
@@ -41,6 +42,8 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
   } = useRecentComments(gameId, showUnreadOnly);
   const { data: manualReads = [], refetch: refetchManualReads } = useManualReadCommentIDs(gameId);
   const toggleReadMutation = useToggleCommentRead();
+  const { favoriteIds } = useGameFavoriteCommentIDs(gameId);
+  const setFavoriteMutation = useSetCommentFavorite();
 
   // Flatten all manually-read comment IDs across all posts into a single Set for O(1) lookup
   const readCommentIdSet = useMemo(() => {
@@ -61,6 +64,10 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
       read: !currentlyRead,
     });
   }, [gameId, toggleReadMutation]);
+
+  const handleToggleFavorite = useCallback((commentId: number, currentlyFavorited: boolean) => {
+    setFavoriteMutation.mutate({ commentId, favorite: !currentlyFavorited });
+  }, [setFavoriteMutation]);
 
   // Refresh state
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -188,6 +195,8 @@ export function NewCommentsView({ gameId }: NewCommentsViewProps) {
           commentReadMode={commentReadMode}
           isRead={readCommentIdSet.has(comment.id)}
           onToggleRead={comment.post_id ? (currentlyRead) => handleToggleRead(comment.id, comment.post_id!, currentlyRead) : undefined}
+          isFavorited={favoriteIds.has(comment.id)}
+          onToggleFavorite={handleToggleFavorite}
         />
       ))}
 

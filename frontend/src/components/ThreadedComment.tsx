@@ -9,6 +9,7 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
 import { Button, Select } from './ui';
+import { FavoriteButton } from './FavoriteButton';
 import { useAdminMode } from '../hooks/useAdminMode';
 import { useScreenshotMode } from '../hooks/useScreenshotMode';
 import { useUpdateComment, useDeleteComment } from '../hooks/useCommentMutations';
@@ -36,8 +37,11 @@ interface ThreadedCommentProps {
   manualReadCommentIDs?: number[]; // IDs of comments explicitly marked as read (manual mode)
   commentReadMode?: 'auto' | 'manual'; // Which read tracking mode is active
   onToggleRead?: (commentId: number, currentlyRead: boolean) => void; // Callback to toggle manual read state
+  favoriteCommentIDs?: number[]; // IDs of comments the viewer has privately starred
+  onToggleFavorite?: (commentId: number, currentlyFavorited: boolean) => void; // Callback to toggle favorite state
   onOpenThread?: (comment: Message) => void; // Callback to open thread modal with comment object
   readOnly?: boolean; // Disable all interactive features (for history view)
+  allowFavoriting?: boolean; // Show the star even when readOnly (default true)
   allowReadTracking?: boolean; // Show faded read state and toggle button (default true)
   parentComment?: Message | CommentTreeNode | null; // Parent comment for smart character defaulting in nested replies
   variant?: 'desktop' | 'mobile'; // Used to create unique IDs for desktop vs mobile rendering
@@ -59,8 +63,11 @@ export const ThreadedComment = memo(function ThreadedComment({
   manualReadCommentIDs = [],
   commentReadMode = 'auto',
   onToggleRead,
+  favoriteCommentIDs = [],
+  onToggleFavorite,
   onOpenThread,
   readOnly = false,
+  allowFavoriting = true,
   allowReadTracking = true,
   parentComment = null,
   variant,
@@ -138,6 +145,7 @@ export const ThreadedComment = memo(function ThreadedComment({
     [comment.mentioned_character_ids, characters]
   );
   const isManuallyRead = commentReadMode === 'manual' && manualReadCommentIDs.includes(comment.id);
+  const isFavorited = favoriteCommentIDs.includes(comment.id);
   const isUnread = commentReadMode !== 'manual' && unreadCommentIDs.includes(comment.id);
 
   // Update local comment state when prop changes (from cache invalidation)
@@ -509,12 +517,23 @@ export const ThreadedComment = memo(function ThreadedComment({
 
   return (
     <div
-      id={`comment-${comment.id}${variant ? `-${variant}` : ''}`}
       data-testid="threaded-comment"
       className={`${getIndentPadding()} ${depth > 0 ? 'border-l-2 ' + borderColor : 'border-t border-theme-strong'} ${bgColor} ${depth > 0 ? 'py-3 my-2' : 'py-2'} border-b border-theme-subtle`}
     >
-      {/* Comment Header and Content */}
-      <div className={`${portraitAvatars ? 'overflow-hidden' : ''}${isUnread ? ' border border-semantic-warning rounded-lg p-3' : ''}${isManuallyRead ? ' opacity-50' : ''}`}>
+      {/* Comment Header and Content.
+
+          The deep-link anchor lives here, on the comment's own header and body,
+          NOT on the wrapper above -- the wrapper also contains every nested
+          reply, so on a comment with a long thread under it the anchor box runs
+          to thousands of pixels. scrollIntoView({block: 'center'}) centers that
+          whole box, which parks the comment itself far above the viewport and
+          gets worse the more replies it has. Anchoring the comment proper keeps
+          the scroll target the size of the thing the user asked to see, and
+          scopes the highlight ring to it as well. */}
+      <div
+        id={`comment-${comment.id}${variant ? `-${variant}` : ''}`}
+        className={`${portraitAvatars ? 'overflow-hidden' : ''}${isUnread ? ' border border-semantic-warning rounded-lg p-3' : ''}${isManuallyRead ? ' opacity-50' : ''}`}
+      >
         {portraitAvatars && (
           <div className="float-left mr-2 mb-1">
             <CharacterAvatar
@@ -713,6 +732,25 @@ export const ThreadedComment = memo(function ThreadedComment({
               </>
             )}
           </Button>
+
+          {/* Deliberately NOT gated on screenshotModeEnabled, unlike Edit/Delete
+              below: a favorite is private to the viewer, so the star discloses
+              nothing about who is behind the character.
+
+              Nor is it gated on readOnly. readOnly means the phase no longer
+              accepts writes to the *conversation* -- no replying, editing or
+              deleting. Starring writes only to the viewer's own private row,
+              which stays theirs after a game ends, and a finished game is
+              exactly when someone goes back to collect the good bits. Callers
+              that genuinely cannot favorite (no viewer to own the row) pass
+              allowFavoriting={false}. */}
+          {onToggleFavorite && !comment.is_deleted && allowFavoriting && (
+            <FavoriteButton
+              commentId={comment.id}
+              isFavorited={isFavorited}
+              onToggle={onToggleFavorite}
+            />
+          )}
 
           {commentReadMode === 'manual' && allowReadTracking && !comment.is_deleted && (
             <Button
@@ -926,8 +964,11 @@ export const ThreadedComment = memo(function ThreadedComment({
                                 manualReadCommentIDs={manualReadCommentIDs}
                                 commentReadMode={commentReadMode}
                                 onToggleRead={onToggleRead}
+                                favoriteCommentIDs={favoriteCommentIDs}
+                                onToggleFavorite={onToggleFavorite}
                                 onOpenThread={onOpenThread}
                                 readOnly={readOnly}
+                                allowFavoriting={allowFavoriting}
                                 allowReadTracking={allowReadTracking}
                                 parentComment={comment}
                                 variant="desktop"
@@ -971,8 +1012,11 @@ export const ThreadedComment = memo(function ThreadedComment({
                                 manualReadCommentIDs={manualReadCommentIDs}
                                 commentReadMode={commentReadMode}
                                 onToggleRead={onToggleRead}
+                                favoriteCommentIDs={favoriteCommentIDs}
+                                onToggleFavorite={onToggleFavorite}
                                 onOpenThread={onOpenThread}
                                 readOnly={readOnly}
+                                allowFavoriting={allowFavoriting}
                                 allowReadTracking={allowReadTracking}
                                 parentComment={comment}
                                 variant="mobile"

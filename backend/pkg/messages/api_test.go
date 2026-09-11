@@ -83,6 +83,22 @@ func setupMessageAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mu
 				RegisterHumaCharacterMessages(humaconfig.New(r, "ActionPhase API", "1.0.0"), &messageHandler2)
 			})
 		})
+
+		// Favorites are grouped at the /api/v1 root rather than mounted under
+		// one prefix, because they span two (/comments/... and /favorites/...).
+		// Mirrors the arrangement in pkg/http/root.go.
+		r.Group(func(r chi.Router) {
+			favoritesHandler := Handler{
+				App:            app,
+				UserService:    &db.UserService{DB: testDB.Pool, Logger: app.ObsLogger},
+				MessageService: &messages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger, Metrics: app.Observability.OTELMetrics},
+			}
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator(tokenAuth))
+			r.Use(core.RequireAuthenticationMiddleware(userService))
+
+			RegisterHumaFavorites(humaconfig.New(r, "ActionPhase API", "1.0.0"), &favoritesHandler)
+		})
 	})
 
 	return r
@@ -1497,5 +1513,274 @@ func TestMessageAPI_GetCharacterComments_InvalidParams(t *testing.T) {
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	})
+}
+
+// TestMessageAPI_SetCommentFavorite covers PUT /api/v1/comments/{commentId}/favorite.
+func TestMessageAPI_SetCommentFavorite(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "user_comment_favorites", "messages", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupMessageAPITestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "fav_api_gm", "fav_api_gm@example.com")
+	player := testDB.CreateTestUser(t, "fav_api_player", "fav_api_player@example.com")
+
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Favorites API Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	messageService := &messages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	gmChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(gm.ID)), Name: "GM Char", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID: game.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Announcement.", Visibility: "game",
+	})
+	require.NoError(t, err)
+	comment, err := messageService.CreateComment(context.Background(), core.CreateCommentRequest{
+		GameID: game.ID, ParentID: post.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Response.", Visibility: "game",
+	})
+	require.NoError(t, err)
+
+	favoriteURL := fmt.Sprintf("/api/v1/comments/%d/favorite", comment.ID)
+
+	setFavorite := func(t *testing.T, url, token string, body any) *httptest.ResponseRecorder {
+		t.Helper()
+		var buf *bytes.Buffer
+		if body != nil {
+			bodyJSON, err := json.Marshal(body)
+			require.NoError(t, err)
+			buf = bytes.NewBuffer(bodyJSON)
+		} else {
+			buf = bytes.NewBuffer(nil)
+		}
+		req := httptest.NewRequest("PUT", url, buf)
+		req.Header.Set("Content-Type", "application/json")
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec
+	}
+
+	t.Run("returns 401 when unauthenticated", func(t *testing.T) {
+		rec := setFavorite(t, favoriteURL, "", map[string]bool{"favorite": true})
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	})
+
+	t.Run("stars a comment", func(t *testing.T) {
+		rec := setFavorite(t, favoriteURL, playerToken, map[string]bool{"favorite": true})
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+
+		ids, err := messageService.GetFavoriteCommentIDsForUser(context.Background(), int32(player.ID))
+		require.NoError(t, err)
+		assert.Equal(t, []int32{comment.ID}, ids)
+	})
+
+	t.Run("re-starring is idempotent", func(t *testing.T) {
+		rec := setFavorite(t, favoriteURL, playerToken, map[string]bool{"favorite": true})
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+
+		ids, err := messageService.GetFavoriteCommentIDsForUser(context.Background(), int32(player.ID))
+		require.NoError(t, err)
+		assert.Len(t, ids, 1, "PUT names the target state, so a repeat must not duplicate")
+	})
+
+	t.Run("unstars a comment", func(t *testing.T) {
+		rec := setFavorite(t, favoriteURL, playerToken, map[string]bool{"favorite": false})
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+
+		ids, err := messageService.GetFavoriteCommentIDsForUser(context.Background(), int32(player.ID))
+		require.NoError(t, err)
+		assert.Empty(t, ids)
+	})
+
+	t.Run("returns 422 when the body is missing", func(t *testing.T) {
+		rec := setFavorite(t, favoriteURL, playerToken, nil)
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code,
+			"an omitted body must not silently unfavorite")
+	})
+
+	t.Run("returns 422 when starring a post", func(t *testing.T) {
+		url := fmt.Sprintf("/api/v1/comments/%d/favorite", post.ID)
+		rec := setFavorite(t, url, playerToken, map[string]bool{"favorite": true})
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code, "posts are not favoritable")
+	})
+
+	t.Run("returns 422 for a nonexistent comment", func(t *testing.T) {
+		rec := setFavorite(t, "/api/v1/comments/999999/favorite", playerToken, map[string]bool{"favorite": true})
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	})
+}
+
+// TestMessageAPI_ListFavoriteComments covers the two listing endpoints and the
+// game-scoped ID set.
+func TestMessageAPI_ListFavoriteComments(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "user_comment_favorites", "messages", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupMessageAPITestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "fav_list_gm", "fav_list_gm@example.com")
+	player := testDB.CreateTestUser(t, "fav_list_player", "fav_list_player@example.com")
+	other := testDB.CreateTestUser(t, "fav_list_other", "fav_list_other@example.com")
+
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+	otherToken, err := core.CreateTestJWTTokenForUser(app, other)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Listing Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	messageService := &messages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	gmChar, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(gm.ID)), Name: "GM Char", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+
+	post, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
+		GameID: game.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Root post.", Visibility: "game",
+	})
+	require.NoError(t, err)
+	comment, err := messageService.CreateComment(context.Background(), core.CreateCommentRequest{
+		GameID: game.ID, ParentID: post.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Starred comment.", Visibility: "game",
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, messageService.SetCommentFavorite(context.Background(), int32(player.ID), comment.ID, true))
+
+	get := func(t *testing.T, url, token string) *httptest.ResponseRecorder {
+		t.Helper()
+		req := httptest.NewRequest("GET", url, nil)
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec
+	}
+
+	t.Run("returns 401 when unauthenticated", func(t *testing.T) {
+		assert.Equal(t, http.StatusUnauthorized, get(t, "/api/v1/favorites/comments", "").Code)
+		assert.Equal(t, http.StatusUnauthorized, get(t, "/api/v1/favorites/comment-ids", "").Code)
+	})
+
+	t.Run("lists the caller's favorites with game and parent context", func(t *testing.T) {
+		rec := get(t, "/api/v1/favorites/comments", playerToken)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var resp FavoriteCommentsResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+		require.Len(t, resp.Favorites, 1)
+		// One favorite, page size 20: a short page, so no cursor onward.
+		assert.Nil(t, resp.Pagination.NextCursor, "a short page ends the listing")
+
+		got := resp.Favorites[0]
+		assert.Equal(t, comment.ID, got.ID)
+		assert.Equal(t, "Starred comment.", got.Content)
+		// The card must stand on its own outside its game.
+		assert.Equal(t, game.ID, got.GameID)
+		assert.Equal(t, "Listing Game", got.GameTitle)
+		assert.NotEmpty(t, got.FavoritedAt)
+		// The deep-link target back into the common room.
+		require.NotNil(t, got.PostID)
+		assert.Equal(t, post.ID, *got.PostID)
+		// Parent preview.
+		require.NotNil(t, got.Parent)
+		require.NotNil(t, got.Parent.MessageType)
+		assert.Equal(t, "post", *got.Parent.MessageType)
+	})
+
+	t.Run("returns the caller's global ID set", func(t *testing.T) {
+		rec := get(t, "/api/v1/favorites/comment-ids", playerToken)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var resp FavoriteCommentIDsResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		assert.Equal(t, []int32{comment.ID}, resp.FavoriteCommentIDs)
+	})
+
+	t.Run("returns the game-scoped ID set", func(t *testing.T) {
+		rec := get(t, fmt.Sprintf("/api/v1/games/%d/favorite-comment-ids", game.ID), playerToken)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var resp FavoriteCommentIDsResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		assert.Equal(t, []int32{comment.ID}, resp.FavoriteCommentIDs)
+	})
+
+	t.Run("another user sees none of it", func(t *testing.T) {
+		rec := get(t, "/api/v1/favorites/comments", otherToken)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var resp FavoriteCommentsResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		assert.Empty(t, resp.Favorites, "favorites are private to the user who set them")
+		assert.Nil(t, resp.Pagination.NextCursor)
+
+		idsRec := get(t, "/api/v1/favorites/comment-ids", otherToken)
+		require.Equal(t, http.StatusOK, idsRec.Code)
+
+		var idsResp FavoriteCommentIDsResponse
+		require.NoError(t, json.Unmarshal(idsRec.Body.Bytes(), &idsResp))
+		assert.Empty(t, idsResp.FavoriteCommentIDs)
+		assert.NotNil(t, idsResp.FavoriteCommentIDs, "an empty set must serialize as [], not null")
+	})
+
+	t.Run("returns 422 for an out-of-range limit", func(t *testing.T) {
+		assert.Equal(t, http.StatusUnprocessableEntity, get(t, "/api/v1/favorites/comments?limit=0", playerToken).Code)
+		assert.Equal(t, http.StatusUnprocessableEntity, get(t, "/api/v1/favorites/comments?limit=500", playerToken).Code)
+	})
+
+	// A malformed cursor must be rejected rather than silently restarting at
+	// page one, which would loop an infinite-scroll client over the first page
+	// forever.
+	t.Run("returns 422 for a malformed cursor", func(t *testing.T) {
+		assert.Equal(t, http.StatusUnprocessableEntity, get(t, "/api/v1/favorites/comments?cursor=not-base64!!", playerToken).Code)
+		assert.Equal(t, http.StatusUnprocessableEntity, get(t, "/api/v1/favorites/comments?cursor=bm90LWEtY3Vyc29y", playerToken).Code)
+	})
+
+	// The cursor round-trips: page one's next_cursor fetches the rows after it.
+	t.Run("cursor from one page fetches the next", func(t *testing.T) {
+		rec := get(t, "/api/v1/favorites/comments?limit=1", playerToken)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var page1 FavoriteCommentsResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page1))
+		require.Len(t, page1.Favorites, 1)
+		require.NotNil(t, page1.Pagination.NextCursor, "a full page yields a cursor")
+
+		rec2 := get(t, "/api/v1/favorites/comments?limit=1&cursor="+*page1.Pagination.NextCursor, playerToken)
+		require.Equal(t, http.StatusOK, rec2.Code)
+
+		var page2 FavoriteCommentsResponse
+		require.NoError(t, json.Unmarshal(rec2.Body.Bytes(), &page2))
+		// Only one favorite exists in this fixture, so page two is empty --
+		// what matters is that the cursor was accepted and did not repeat it.
+		for _, f := range page2.Favorites {
+			assert.NotEqual(t, page1.Favorites[0].ID, f.ID, "cursor must not repeat a row")
+		}
 	})
 }

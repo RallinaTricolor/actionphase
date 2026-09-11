@@ -815,6 +815,20 @@ CREATE INDEX idx_user_comment_reads_user_game ON user_comment_reads(user_id, gam
 CREATE INDEX idx_user_comment_reads_user_post ON user_comment_reads(user_id, post_id);
 CREATE INDEX idx_user_comment_reads_comment   ON user_comment_reads(comment_id);
 
+-- Private, per-user favorited comments (cross-game)
+CREATE TABLE user_comment_favorites (
+    id         SERIAL PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    comment_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    game_id    INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, comment_id)
+);
+
+CREATE INDEX idx_user_comment_favorites_user      ON user_comment_favorites(user_id, created_at DESC);
+CREATE INDEX idx_user_comment_favorites_user_game ON user_comment_favorites(user_id, game_id);
+CREATE INDEX idx_user_comment_favorites_comment   ON user_comment_favorites(comment_id);
+
 -- Discord OAuth account linking
 CREATE TABLE user_discord_accounts (
   id               SERIAL PRIMARY KEY,

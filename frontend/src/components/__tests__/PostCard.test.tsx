@@ -1880,6 +1880,40 @@ describe('PostCard', () => {
       const toggleButtons = screen.queryAllByRole('button', { name: /mark as (read|unread)/i });
       expect(toggleButtons.length).toBeGreaterThan(0);
     });
+
+    it('still loads favorite state when readOnly=true', async () => {
+      // The history view is readOnly, and favoriting has to keep working
+      // there. This guards the query itself rather than the star's render
+      // gate: skipping the fetch would leave every comment looking unstarred
+      // in history even though the server says otherwise -- a failure the
+      // ThreadedComment tests cannot see, since they are handed the IDs.
+      server.use(
+        http.get('/api/v1/games/:gameId/favorite-comment-ids', () => {
+          return HttpResponse.json({ favorite_comment_ids: [mockComments[0].id] });
+        })
+      );
+
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={[]}
+          onCreateComment={mockOnCreateComment}
+          readOnly={true}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByText(/loading comments/i)).not.toBeInTheDocument();
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getAllByRole('button', { name: /remove from favorites/i }).length
+        ).toBeGreaterThan(0);
+      });
+    });
   });
 
 });

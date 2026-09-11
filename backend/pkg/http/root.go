@@ -642,6 +642,33 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 	})
 	apiV1Router.Mount("/notifications", notificationsRouter)
 
+	// Favorites API (huma / type-first).
+	//
+	// Grouped at the /api/v1 root rather than Mount-ed under one prefix,
+	// because these operations span two: PUT /comments/{commentId}/favorite
+	// and GET /favorites/*. They are deliberately not under /games/{gameID} --
+	// a favorite is the caller's own private row addressed solely by comment
+	// ID, and the listing is cross-game. See .claude/planning/FAVORITE_COMMENTS.md.
+	var favoritesAPI huma.API
+	apiV1Router.Group(func(r chi.Router) {
+		favoritesHandler := messages.Handler{
+			App:            h.App,
+			UserService:    &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger},
+			MessageService: &dbmessages.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger, Metrics: h.App.Observability.OTELMetrics},
+		}
+
+		// Every favorites route requires authentication; the row is per-user.
+		tokenAuth := h.getTokenAuth()
+		userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(core.Authenticator(tokenAuth))
+		r.Use(h.sessionValidateMW())
+		r.Use(core.RequireAuthenticationMiddleware(userService))
+
+		favoritesAPI = newHumaAPI(r, "ActionPhase API", "1.0.0")
+		messages.RegisterHumaFavorites(favoritesAPI, &favoritesHandler)
+	})
+
 	// Communities API — member- and moderator-facing routes (huma / type-first).
 	//
 	// Site-admin community routes (create, list-all, edit) live under
@@ -786,9 +813,14 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 				"/exports":     {exportDownloadsAPI},
 				// Registered on the /{gameID} subrouter, so the documented URL
 				// needs that segment added back.
-				"/deadlines":      {deadlinesAPI},
-				"/users":          {usersAPI},
-				"/notifications":  {notificationsAPI},
+				"/deadlines":     {deadlinesAPI},
+				"/users":         {usersAPI},
+				"/notifications": {notificationsAPI},
+				// Empty prefix: favorites are grouped at the /api/v1 root
+				// rather than mounted, so their registered paths
+				// (/comments/{commentId}/favorite, /favorites/*) are already
+				// absolute and need nothing added back.
+				"":                {favoritesAPI},
 				"/polls":          {pollsAPI},
 				"/handouts":       {handoutsAPI},
 				"/phases":         {phasesAPI},
