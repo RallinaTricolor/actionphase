@@ -247,8 +247,21 @@ export class GamesApi extends BaseApiClient {
     return this.client.get<LootTable[]>(`/api/v1/games/${gameId}/loot-tables${(excludeEmpty ? '?exclude-empty=true': '')}`);
   }
 
+  /**
+   * Narrow item payloads to the fields the API accepts.
+   *
+   * `LootTableContent` carries an `id` because that is the shape the server
+   * returns, and the loot editor reuses the type for items the GM has only just
+   * added, stamping a placeholder `id: 0`. The write endpoints reject unknown
+   * properties (422 "unexpected property"), so strip the id on the way out
+   * rather than leaking a read-only field into a request body.
+   */
+  private toLootItemPayload(contents: LootTableContent[] | undefined) {
+    return contents?.map(({ name, data }) => ({ name, data }));
+  }
+
   async createLootTable(gameId: number, data: CreateLootTableRequest) {
-    return this.client.post<LootTable>(`/api/v1/games/${gameId}/loot-tables`, { name: data.name, items: data.items });
+    return this.client.post<LootTable>(`/api/v1/games/${gameId}/loot-tables`, { name: data.name, items: this.toLootItemPayload(data.items) });
   }
 
   async updateLootTable(gameId: number, lootTableId: number, data: UpdateLootTableRequest) {
@@ -264,7 +277,7 @@ export class GamesApi extends BaseApiClient {
   }
 
   async setLootTableContents(gameId: number, tableId: number, contents: LootTableContent[]) {
-    return this.client.post(`/api/v1/games/${gameId}/loot-tables/${tableId}/contents`, { items: contents });
+    return this.client.post(`/api/v1/games/${gameId}/loot-tables/${tableId}/contents`, { items: this.toLootItemPayload(contents) });
   }
 
   async giveRandomLootTableContent(gameId: number, tableId: number, characterId: number) {
