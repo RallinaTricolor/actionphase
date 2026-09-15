@@ -701,7 +701,7 @@ func (s *NotificationService) getActiveParticipantIDs(ctx context.Context, gameI
 	}
 	var ids []int32
 	for _, p := range participants {
-		if p.UserID == excludeUserID || p.Status.String != "active" {
+		if p.UserID == excludeUserID || p.Status != "active" {
 			continue
 		}
 		if len(roleSet) > 0 && !roleSet[p.Role] {

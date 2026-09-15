@@ -99,19 +99,22 @@ func (ns NullMessageVisibility) Value() (driver.Value, error) {
 type ActionResult struct {
 	ID                 int32              `json:"id"`
 	GameID             int32              `json:"game_id"`
-	UserID             int32              `json:"user_id"`
 	PhaseID            int32              `json:"phase_id"`
-	CharacterID        pgtype.Int4        `json:"character_id"`
+	UserID             int32              `json:"user_id"`
 	ActionSubmissionID pgtype.Int4        `json:"action_submission_id"`
-	GmUserID           int32              `json:"gm_user_id"`
 	Content            string             `json:"content"`
 	IsPublished        pgtype.Bool        `json:"is_published"`
 	SentAt             pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	GmUserID           int32              `json:"gm_user_id"`
+	CharacterID        pgtype.Int4        `json:"character_id"`
 	ParentResultID     pgtype.Int4        `json:"parent_result_id"`
 	RevealDelayMinutes pgtype.Int4        `json:"reveal_delay_minutes"`
 	ReleasedAt         pgtype.Timestamptz `json:"released_at"`
 }
 
+// Draft character sheet updates tied to unpublished action results. Drafts are copied to character_data when the result publishes, then deleted.
 type ActionResultCharacterUpdate struct {
 	ID             int32              `json:"id"`
 	ActionResultID int32              `json:"action_result_id"`
@@ -128,26 +131,28 @@ type ActionResultCharacterUpdate struct {
 type ActionSubmission struct {
 	ID          int32              `json:"id"`
 	GameID      int32              `json:"game_id"`
-	UserID      int32              `json:"user_id"`
 	PhaseID     int32              `json:"phase_id"`
+	UserID      int32              `json:"user_id"`
 	CharacterID pgtype.Int4        `json:"character_id"`
 	Content     string             `json:"content"`
 	SubmittedAt pgtype.Timestamptz `json:"submitted_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Character struct {
-	ID                  int32              `json:"id"`
-	GameID              int32              `json:"game_id"`
+	ID     int32 `json:"id"`
+	GameID int32 `json:"game_id"`
+	// User who controls this character. For player_character: the player. For npc_gm: the GM. For npc_audience: the audience member who created it.
 	UserID              pgtype.Int4        `json:"user_id"`
 	Name                string             `json:"name"`
 	CharacterType       string             `json:"character_type"`
-	Status              pgtype.Text        `json:"status"`
+	Status              string             `json:"status"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	AvatarUrl           pgtype.Text        `json:"avatar_url"`
 	IsActive            bool               `json:"is_active"`
 	OriginalOwnerUserID pgtype.Int4        `json:"original_owner_user_id"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
 type CharacterDatum struct {
@@ -156,7 +161,7 @@ type CharacterDatum struct {
 	ModuleType  string             `json:"module_type"`
 	FieldName   string             `json:"field_name"`
 	FieldValue  pgtype.Text        `json:"field_value"`
-	FieldType   pgtype.Text        `json:"field_type"`
+	FieldType   string             `json:"field_type"`
 	IsPublic    pgtype.Bool        `json:"is_public"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
@@ -173,12 +178,12 @@ type CommonRoomPoll struct {
 	Deadline                   pgtype.Timestamptz `json:"deadline"`
 	ShowIndividualVotes        pgtype.Bool        `json:"show_individual_votes"`
 	AllowOtherOption           pgtype.Bool        `json:"allow_other_option"`
-	HideResultsFromPlayers     bool               `json:"hide_results_from_players"`
-	AllowAudienceVoting        bool               `json:"allow_audience_voting"`
-	ShowRunningTotalsToPlayers bool               `json:"show_running_totals_to_players"`
 	IsDeleted                  pgtype.Bool        `json:"is_deleted"`
 	CreatedAt                  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                  pgtype.Timestamptz `json:"updated_at"`
+	HideResultsFromPlayers     bool               `json:"hide_results_from_players"`
+	AllowAudienceVoting        bool               `json:"allow_audience_voting"`
+	ShowRunningTotalsToPlayers bool               `json:"show_running_totals_to_players"`
 }
 
 type Community struct {
@@ -267,14 +272,17 @@ type ConversationParticipant struct {
 	LastReadAt     pgtype.Timestamptz `json:"last_read_at"`
 }
 
+// Tracks which messages users have read in each conversation
 type ConversationRead struct {
-	ID                int32              `json:"id"`
-	UserID            int32              `json:"user_id"`
-	ConversationID    int32              `json:"conversation_id"`
-	LastReadMessageID pgtype.Int4        `json:"last_read_message_id"`
-	LastReadAt        pgtype.Timestamptz `json:"last_read_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ID             int32 `json:"id"`
+	UserID         int32 `json:"user_id"`
+	ConversationID int32 `json:"conversation_id"`
+	// Last message the user read in this conversation
+	LastReadMessageID pgtype.Int4 `json:"last_read_message_id"`
+	// Timestamp when user last read messages in this conversation
+	LastReadAt pgtype.Timestamptz `json:"last_read_at"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 }
 
 type EmailVerificationToken struct {
@@ -297,31 +305,32 @@ type FingerprintBan struct {
 }
 
 type Game struct {
-	ID                      int32              `json:"id"`
-	Title                   string             `json:"title"`
-	Description             pgtype.Text        `json:"description"`
-	GmUserID                int32              `json:"gm_user_id"`
-	State                   pgtype.Text        `json:"state"`
-	Genre                   pgtype.Text        `json:"genre"`
-	StartDate               pgtype.Timestamptz `json:"start_date"`
-	EndDate                 pgtype.Timestamptz `json:"end_date"`
-	RecruitmentDeadline     pgtype.Timestamptz `json:"recruitment_deadline"`
-	MaxPlayers              pgtype.Int4        `json:"max_players"`
-	IsPublic                pgtype.Bool        `json:"is_public"`
-	IsAnonymous             bool               `json:"is_anonymous"`
-	AutoAcceptAudience      bool               `json:"auto_accept_audience"`
-	AllowGroupConversations bool               `json:"allow_group_conversations"`
-	PortraitAvatars         bool               `json:"portrait_avatars"`
-	BannerUrl               pgtype.Text        `json:"banner_url"`
-	CommonRoomOpenDay       pgtype.Int2        `json:"common_room_open_day"`
-	CommonRoomOpenTime      pgtype.Time        `json:"common_room_open_time"`
-	CommonRoomCloseDay      pgtype.Int2        `json:"common_room_close_day"`
-	CommonRoomCloseTime     pgtype.Time        `json:"common_room_close_time"`
-	ScheduleTimezone        pgtype.Text        `json:"schedule_timezone"`
-	CharacterSheet          []byte             `json:"character_sheet"`
-	CommunityID             pgtype.Int4        `json:"community_id"`
-	CreatedAt               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	ID                  int32              `json:"id"`
+	Title               string             `json:"title"`
+	Description         string             `json:"description"`
+	GmUserID            int32              `json:"gm_user_id"`
+	State               string             `json:"state"`
+	Genre               pgtype.Text        `json:"genre"`
+	StartDate           pgtype.Timestamptz `json:"start_date"`
+	EndDate             pgtype.Timestamptz `json:"end_date"`
+	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
+	MaxPlayers          pgtype.Int4        `json:"max_players"`
+	IsPublic            pgtype.Bool        `json:"is_public"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	// When true, character ownership and NPC status are hidden from players
+	IsAnonymous             bool        `json:"is_anonymous"`
+	AutoAcceptAudience      bool        `json:"auto_accept_audience"`
+	AllowGroupConversations bool        `json:"allow_group_conversations"`
+	PortraitAvatars         bool        `json:"portrait_avatars"`
+	BannerUrl               pgtype.Text `json:"banner_url"`
+	CommonRoomOpenDay       pgtype.Int2 `json:"common_room_open_day"`
+	CommonRoomOpenTime      pgtype.Time `json:"common_room_open_time"`
+	CommonRoomCloseDay      pgtype.Int2 `json:"common_room_close_day"`
+	CommonRoomCloseTime     pgtype.Time `json:"common_room_close_time"`
+	ScheduleTimezone        pgtype.Text `json:"schedule_timezone"`
+	CharacterSheet          []byte      `json:"character_sheet"`
+	CommunityID             pgtype.Int4 `json:"community_id"`
 }
 
 type GameApplication struct {
@@ -330,13 +339,11 @@ type GameApplication struct {
 	UserID           int32              `json:"user_id"`
 	Role             string             `json:"role"`
 	Message          pgtype.Text        `json:"message"`
-	Status           pgtype.Text        `json:"status"`
-	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
-	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
+	Status           string             `json:"status"`
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
+	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
+	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
 	IsPublished      bool               `json:"is_published"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GameDeadline struct {
@@ -364,8 +371,8 @@ type GameExport struct {
 	ProgressNote       pgtype.Text        `json:"progress_note"`
 	StartedAt          pgtype.Timestamptz `json:"started_at"`
 	CompletedAt        pgtype.Timestamptz `json:"completed_at"`
-	ExpiresAt          pgtype.Timestamptz `json:"expires_at"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt          pgtype.Timestamptz `json:"expires_at"`
 }
 
 type GameLog struct {
@@ -396,7 +403,7 @@ type GameParticipant struct {
 	GameID          int32              `json:"game_id"`
 	UserID          int32              `json:"user_id"`
 	Role            string             `json:"role"`
-	Status          pgtype.Text        `json:"status"`
+	Status          string             `json:"status"`
 	JoinedAt        pgtype.Timestamptz `json:"joined_at"`
 	RemovedAt       pgtype.Timestamptz `json:"removed_at"`
 	RemovedByUserID pgtype.Int4        `json:"removed_by_user_id"`
@@ -414,9 +421,11 @@ type GamePhase struct {
 	EndTime     pgtype.Timestamptz `json:"end_time"`
 	Deadline    pgtype.Timestamptz `json:"deadline"`
 	IsActive    pgtype.Bool        `json:"is_active"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	// For action phases: indicates whether GM has published results. For common_room and interlude phases: always false.
 	IsPublished bool               `json:"is_published"`
 	ActivatedAt pgtype.Timestamptz `json:"activated_at"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type Handout struct {
@@ -454,43 +463,45 @@ type IpBan struct {
 }
 
 type Message struct {
-	ID                       int32              `json:"id"`
-	GameID                   int32              `json:"game_id"`
-	PhaseID                  pgtype.Int4        `json:"phase_id"`
-	AuthorID                 int32              `json:"author_id"`
-	CharacterID              int32              `json:"character_id"`
-	Content                  string             `json:"content"`
-	MessageType              MessageType        `json:"message_type"`
-	ParentID                 pgtype.Int4        `json:"parent_id"`
-	ThreadDepth              int32              `json:"thread_depth"`
-	Visibility               MessageVisibility  `json:"visibility"`
-	MentionedCharacterIds    []int32            `json:"mentioned_character_ids"`
-	IsEdited                 bool               `json:"is_edited"`
-	IsDeleted                bool               `json:"is_deleted"`
-	IsDraft                  bool               `json:"is_draft"`
-	CreatedAt                pgtype.Timestamp   `json:"created_at"`
-	DeletedAt                pgtype.Timestamp   `json:"deleted_at"`
-	DeletedByUserID          pgtype.Int4        `json:"deleted_by_user_id"`
-	EditedAt                 pgtype.Timestamptz `json:"edited_at"`
-	EditCount                int32              `json:"edit_count"`
-	CharacterAvatarUrlAtPost pgtype.Text        `json:"character_avatar_url_at_post"`
+	ID          int32              `json:"id"`
+	GameID      int32              `json:"game_id"`
+	PhaseID     pgtype.Int4        `json:"phase_id"`
+	AuthorID    int32              `json:"author_id"`
+	CharacterID int32              `json:"character_id"`
+	Content     string             `json:"content"`
+	MessageType MessageType        `json:"message_type"`
+	ParentID    pgtype.Int4        `json:"parent_id"`
+	ThreadDepth int32              `json:"thread_depth"`
+	Visibility  MessageVisibility  `json:"visibility"`
+	IsEdited    bool               `json:"is_edited"`
+	IsDeleted   bool               `json:"is_deleted"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	EditedAt    pgtype.Timestamptz `json:"edited_at"`
+	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+	// Array of character IDs mentioned in this message using @CharacterName syntax. Used for notifications.
+	MentionedCharacterIds []int32     `json:"mentioned_character_ids"`
+	DeletedByUserID       pgtype.Int4 `json:"deleted_by_user_id"`
+	EditCount             int32       `json:"edit_count"`
+	IsDraft               bool        `json:"is_draft"`
+	// Character avatar URL captured when this message was created. Written once at insert and never updated (editing a message does not repaint its avatar). NULL for messages authored before this column existed, or when the character had no avatar; readers COALESCE to characters.avatar_url.
+	CharacterAvatarUrlAtPost pgtype.Text `json:"character_avatar_url_at_post"`
 }
 
 type MessageReaction struct {
-	ID           int32            `json:"id"`
-	MessageID    int32            `json:"message_id"`
-	UserID       int32            `json:"user_id"`
-	ReactionType string           `json:"reaction_type"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	ID           int32              `json:"id"`
+	MessageID    int32              `json:"message_id"`
+	UserID       int32              `json:"user_id"`
+	ReactionType string             `json:"reaction_type"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 type MessageRecipient struct {
-	ID          int32            `json:"id"`
-	MessageID   int32            `json:"message_id"`
-	RecipientID int32            `json:"recipient_id"`
-	IsRead      bool             `json:"is_read"`
-	ReadAt      pgtype.Timestamp `json:"read_at"`
-	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	ID          int32              `json:"id"`
+	MessageID   int32              `json:"message_id"`
+	RecipientID int32              `json:"recipient_id"`
+	IsRead      bool               `json:"is_read"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type Notification struct {
@@ -502,12 +513,12 @@ type Notification struct {
 	Content     pgtype.Text        `json:"content"`
 	RelatedType pgtype.Text        `json:"related_type"`
 	RelatedID   pgtype.Int4        `json:"related_id"`
+	IsRead      pgtype.Bool        `json:"is_read"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	LinkUrl     pgtype.Text        `json:"link_url"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
 	ContextType pgtype.Text        `json:"context_type"`
 	ContextID   pgtype.Int4        `json:"context_id"`
-	IsRead      pgtype.Bool        `json:"is_read"`
-	ReadAt      pgtype.Timestamptz `json:"read_at"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type NpcAssignment struct {
@@ -576,8 +587,8 @@ type RegistrationAttempt struct {
 	Username          string             `json:"username"`
 	IpAddress         string             `json:"ip_address"`
 	UserAgent         pgtype.Text        `json:"user_agent"`
-	HoneypotTriggered bool               `json:"honeypot_triggered"`
 	CaptchaPassed     bool               `json:"captcha_passed"`
+	HoneypotTriggered bool               `json:"honeypot_triggered"`
 	BlockedReason     pgtype.Text        `json:"blocked_reason"`
 	Successful        bool               `json:"successful"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
@@ -599,9 +610,9 @@ type Thread struct {
 	ID              int32              `json:"id"`
 	GameID          int32              `json:"game_id"`
 	PhaseID         pgtype.Int4        `json:"phase_id"`
-	Title           string             `json:"title"`
-	Content         pgtype.Text        `json:"content"`
 	CreatedByUserID int32              `json:"created_by_user_id"`
+	Title           string             `json:"title"`
+	Content         string             `json:"content"`
 	IsPinned        pgtype.Bool        `json:"is_pinned"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
@@ -614,6 +625,7 @@ type ThreadPost struct {
 	UserID       int32              `json:"user_id"`
 	CharacterID  pgtype.Int4        `json:"character_id"`
 	Content      string             `json:"content"`
+	IsEdited     pgtype.Bool        `json:"is_edited"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
@@ -621,25 +633,25 @@ type ThreadPost struct {
 type User struct {
 	ID                   int32              `json:"id"`
 	Username             string             `json:"username"`
-	Email                string             `json:"email"`
 	Password             string             `json:"password"`
+	Email                string             `json:"email"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	IsAdmin              pgtype.Bool        `json:"is_admin"`
-	CreatedAt            pgtype.Timestamp   `json:"created_at"`
 	DisplayName          pgtype.Text        `json:"display_name"`
 	Bio                  pgtype.Text        `json:"bio"`
-	AvatarUrl            pgtype.Text        `json:"avatar_url"`
 	Timezone             pgtype.Text        `json:"timezone"`
 	EmailNotifications   pgtype.Bool        `json:"email_notifications"`
 	HighContrast         pgtype.Bool        `json:"high_contrast"`
 	IsBanned             bool               `json:"is_banned"`
-	BannedAt             pgtype.Timestamp   `json:"banned_at"`
+	BannedAt             pgtype.Timestamptz `json:"banned_at"`
 	BannedByUserID       pgtype.Int4        `json:"banned_by_user_id"`
 	EmailVerified        bool               `json:"email_verified"`
-	EmailChangePending   pgtype.Text        `json:"email_change_pending"`
-	PasswordChangedAt    pgtype.Timestamptz `json:"password_changed_at"`
-	UsernameChangedAt    pgtype.Timestamptz `json:"username_changed_at"`
 	DeletedAt            pgtype.Timestamptz `json:"deleted_at"`
 	DeletionScheduledFor pgtype.Timestamptz `json:"deletion_scheduled_for"`
+	PasswordChangedAt    pgtype.Timestamptz `json:"password_changed_at"`
+	UsernameChangedAt    pgtype.Timestamptz `json:"username_changed_at"`
+	EmailChangePending   pgtype.Text        `json:"email_change_pending"`
+	AvatarUrl            pgtype.Text        `json:"avatar_url"`
 	PendingApproval      bool               `json:"pending_approval"`
 	PendingApprovalSince pgtype.Timestamptz `json:"pending_approval_since"`
 }
@@ -661,15 +673,18 @@ type UserCommentRead struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+// Tracks which comments users have read in common room posts
 type UserCommonRoomRead struct {
-	ID                int32              `json:"id"`
-	UserID            int32              `json:"user_id"`
-	GameID            int32              `json:"game_id"`
-	PostID            int32              `json:"post_id"`
-	LastReadCommentID pgtype.Int4        `json:"last_read_comment_id"`
-	LastReadAt        pgtype.Timestamptz `json:"last_read_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ID     int32 `json:"id"`
+	UserID int32 `json:"user_id"`
+	GameID int32 `json:"game_id"`
+	PostID int32 `json:"post_id"`
+	// The most recent comment this user has read in this post thread
+	LastReadCommentID pgtype.Int4 `json:"last_read_comment_id"`
+	// When the user last viewed this thread
+	LastReadAt pgtype.Timestamptz `json:"last_read_at"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UserDiscordAccount struct {
@@ -684,9 +699,11 @@ type UserDiscordAccount struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+// Stores user-specific UI/UX preferences as JSONB for flexibility
 type UserPreference struct {
-	ID          int32              `json:"id"`
-	UserID      int32              `json:"user_id"`
+	ID     int32 `json:"id"`
+	UserID int32 `json:"user_id"`
+	// JSONB object containing preference key-value pairs (theme, timezone, notifications, etc.)
 	Preferences []byte             `json:"preferences"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`

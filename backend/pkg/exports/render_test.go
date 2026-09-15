@@ -14,11 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func ts(offsetSeconds int) pgtype.Timestamp {
-	base := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
-	return pgtype.Timestamp{Time: base.Add(time.Duration(offsetSeconds) * time.Second), Valid: true}
-}
-
 func tstz(offsetSeconds int) pgtype.Timestamptz {
 	base := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 	return pgtype.Timestamptz{Time: base.Add(time.Duration(offsetSeconds) * time.Second), Valid: true}
@@ -33,7 +28,7 @@ func samplePost() models.ListExportPostsRow {
 		ID:             100,
 		PhaseID:        i4(5),
 		Content:        "The body in the library.\n\nWho was there?",
-		CreatedAt:      ts(0),
+		CreatedAt:      tstz(0),
 		CharacterName:  "Ada Lovelace",
 		AuthorUsername: "ada_player",
 	}
@@ -45,7 +40,7 @@ func comment(id int32, parent int32, depth int32, name, user, content string, at
 		ID:             id,
 		ParentID:       i4(parent),
 		Content:        content,
-		CreatedAt:      ts(at),
+		CreatedAt:      tstz(at),
 		ThreadDepth:    depth,
 		CharacterName:  name,
 		AuthorUsername: user,
@@ -480,7 +475,7 @@ func TestRenderPoll_WriteInResponsesAttributed(t *testing.T) {
 func TestRenderCharacter(t *testing.T) {
 	ch := models.ListExportCharactersRow{
 		ID: 42, Name: "Ada Lovelace", CharacterType: "player_character",
-		Status: txt("approved"), IsActive: true, CreatedAt: tstz(0),
+		Status: "approved", IsActive: true, CreatedAt: tstz(0),
 		PlayerUsername: txt("ada_player"),
 	}
 	data := []models.ListExportCharacterDataRow{
@@ -508,7 +503,7 @@ func TestRenderCharacter(t *testing.T) {
 func TestRenderCharacter_InactiveAndUnassigned(t *testing.T) {
 	ch := models.ListExportCharactersRow{
 		ID: 43, Name: "Nameless NPC", CharacterType: "npc",
-		Status: txt("approved"), IsActive: false, CreatedAt: tstz(0),
+		Status: "approved", IsActive: false, CreatedAt: tstz(0),
 		PlayerUsername: nullText(),
 	}
 

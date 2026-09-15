@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -73,7 +72,7 @@ func TestValidateGameNotCompleted(t *testing.T) {
 			ctx := context.Background()
 			game := &db.Game{
 				ID:    1,
-				State: pgtype.Text{String: tt.gameState, Valid: true},
+				State: tt.gameState,
 			}
 
 			err := ValidateGameNotCompleted(ctx, game)
@@ -96,7 +95,7 @@ func TestValidateGameNotCompleted_ErrorMessage(t *testing.T) {
 	ctx := context.Background()
 	game := &db.Game{
 		ID:    42,
-		State: pgtype.Text{String: GameStateCompleted, Valid: true},
+		State: GameStateCompleted,
 	}
 
 	err := ValidateGameNotCompleted(ctx, game)

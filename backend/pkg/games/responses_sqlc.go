@@ -57,10 +57,8 @@ func toGameParticipantResponse(p *models.GameParticipant) *GameParticipantRespon
 		JoinedAt:       p.JoinedAt.Time,
 		IsFormerPlayer: p.IsFormerPlayer,
 	}
-	if p.Status.Valid {
-		status := p.Status.String
-		r.Status = &status
-	}
+	status := p.Status
+	r.Status = &status
 	if p.RemovedAt.Valid {
 		removedAt := p.RemovedAt.Time
 		r.RemovedAt = &removedAt

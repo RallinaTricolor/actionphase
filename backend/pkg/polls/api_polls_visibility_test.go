@@ -18,7 +18,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,7 +101,7 @@ func setupVisibilityFixture(
 	_, err = queries.CreateAudienceApplication(context.Background(), dbmodels.CreateAudienceApplicationParams{
 		GameID: gameRecord.ID,
 		UserID: int32(audience.ID),
-		Status: pgtype.Text{String: "active", Valid: true},
+		Status: "active",
 	})
 	require.NoError(t, err)
 

@@ -222,7 +222,7 @@ ORDER BY m.created_at;
 WITH RECURSIVE tree AS (
     SELECT m.id, m.parent_id, m.character_id, m.author_id, m.content,
            m.created_at, m.is_edited, m.edit_count, m.thread_depth,
-           ARRAY[m.created_at]::timestamp[] AS path
+           ARRAY[m.created_at]::timestamptz[] AS path
     FROM messages m
     WHERE m.parent_id = $1
       AND m.is_draft = FALSE

@@ -98,9 +98,9 @@ func (s *Service) RequestExport(ctx context.Context, gameID, userID int32) (*mod
 	if err != nil {
 		return nil, fmt.Errorf("load game %d: %w", gameID, err)
 	}
-	if !game.State.Valid || game.State.String != core.GameStateCompleted {
+	if game.State != core.GameStateCompleted {
 		return nil, fmt.Errorf("%w: game %d is %q",
-			ErrGameNotCompleted, gameID, stateOrUnknown(game.State))
+			ErrGameNotCompleted, gameID, game.State)
 	}
 
 	fingerprint, err := s.Assembler.FingerprintFor(ctx, gameID)

@@ -159,6 +159,12 @@ func ptrText(v pgtype.Text) *string {
 	return &s
 }
 
+// ptrOf returns a pointer to v. Used for NOT NULL columns that map to an
+// optional (*string) field in the API response contract.
+func ptrOf(v string) *string {
+	return &v
+}
+
 func ptrInt(v pgtype.Int4) *int32 {
 	if !v.Valid {
 		return nil
@@ -291,7 +297,7 @@ func (h *Handler) humaCreateCharacter(ctx context.Context, in *createCharacterIn
 		GameID:        character.GameID,
 		Name:          character.Name,
 		CharacterType: &charType,
-		Status:        character.Status.String,
+		Status:        character.Status,
 		CreatedAt:     character.CreatedAt.Time,
 		UpdatedAt:     character.UpdatedAt.Time,
 		UserID:        ptrInt(character.UserID),
@@ -330,8 +336,8 @@ func (h *Handler) humaGetCharacter(ctx context.Context, in *characterIDInput) (*
 	// Hide other players' unapproved characters once a game is running: their
 	// existence is itself information. Owners and assigned controllers still
 	// see their own.
-	if game.State.String == "in_progress" && !isGM && !isOwner && !isAssignedUser {
-		if character.Status.String == "pending" || character.Status.String == "rejected" {
+	if game.State == "in_progress" && !isGM && !isOwner && !isAssignedUser {
+		if character.Status == "pending" || character.Status == "rejected" {
 			h.App.ObsLogger.Warn(ctx, "Get character not found", "character_id", in.ID)
 			return nil, huma.Error404NotFound("character not found")
 		}
@@ -341,7 +347,7 @@ func (h *Handler) humaGetCharacter(ctx context.Context, in *characterIDInput) (*
 		ID:        character.ID,
 		GameID:    character.GameID,
 		Name:      character.Name,
-		Status:    character.Status.String,
+		Status:    character.Status,
 		CreatedAt: character.CreatedAt.Time,
 		UpdatedAt: character.UpdatedAt.Time,
 		UserID:    ptrInt(character.UserID),
@@ -389,7 +395,7 @@ func (h *Handler) humaGetGameCharacters(ctx context.Context, in *gameIDInput) (*
 	for _, char := range characters {
 		// Unapproved characters belonging to *other* players stay hidden from
 		// regular players; the caller's own are always included.
-		if !privileged && (char.Status.String == "pending" || char.Status.String == "rejected") {
+		if !privileged && (char.Status == "pending" || char.Status == "rejected") {
 			if !char.UserID.Valid || char.UserID.Int32 != authUser.ID {
 				continue
 			}
@@ -400,7 +406,7 @@ func (h *Handler) humaGetGameCharacters(ctx context.Context, in *gameIDInput) (*
 			GameID:        char.GameID,
 			Name:          char.Name,
 			CharacterType: char.CharacterType,
-			Status:        ptrText(char.Status),
+			Status:        ptrOf(char.Status),
 			IsActive:      char.IsActive,
 			CreatedAt:     char.CreatedAt.Time,
 			UpdatedAt:     char.UpdatedAt.Time,
@@ -446,7 +452,7 @@ func (h *Handler) humaGetUserControllableCharacters(ctx context.Context, in *gam
 			CreatedAt:     char.CreatedAt.Time,
 			UpdatedAt:     char.UpdatedAt.Time,
 			UserID:        ptrInt(char.UserID),
-			Status:        ptrText(char.Status),
+			Status:        ptrOf(char.Status),
 			AvatarURL:     ptrText(char.AvatarUrl),
 		})
 	}
@@ -488,11 +494,11 @@ func (h *Handler) humaGetUserControllableCharactersAcrossGames(ctx context.Conte
 				CreatedAt:     char.CreatedAt.Time,
 				UpdatedAt:     char.UpdatedAt.Time,
 				UserID:        ptrInt(char.UserID),
-				Status:        ptrText(char.Status),
+				Status:        ptrOf(char.Status),
 				AvatarURL:     ptrText(char.AvatarUrl),
 			},
 			GameTitle:           char.GameTitle,
-			GameState:           ptrText(char.GameState),
+			GameState:           ptrOf(char.GameState),
 			GameIsAnonymous:     char.GameIsAnonymous,
 			GamePortraitAvatars: char.GamePortraitAvatars,
 			// Absent means "all defaults", which the frontend owns. The drawer
@@ -743,7 +749,7 @@ func (h *Handler) humaListInactiveCharacters(ctx context.Context, in *gameIDInpu
 			GameID:                char.GameID,
 			Name:                  char.Name,
 			CharacterType:         char.CharacterType,
-			Status:                char.Status.String,
+			Status:                char.Status,
 			IsActive:              char.IsActive,
 			CreatedAt:             char.CreatedAt.Time,
 			UpdatedAt:             char.UpdatedAt.Time,
@@ -855,7 +861,7 @@ func (h *Handler) humaGetCharacterData(ctx context.Context, in *characterIDInput
 			CharacterID: data.CharacterID,
 			ModuleType:  data.ModuleType,
 			FieldName:   data.FieldName,
-			FieldType:   ptrText(data.FieldType),
+			FieldType:   ptrOf(data.FieldType),
 			CreatedAt:   data.CreatedAt.Time,
 			UpdatedAt:   data.UpdatedAt.Time,
 			FieldValue:  ptrText(data.FieldValue),
@@ -898,7 +904,7 @@ func (h *Handler) canViewPrivateCharacterData(ctx context.Context, characterID i
 	}
 
 	// Completed or epilogue: the archive is open to everyone who was there.
-	if gameErr == nil && game.State.Valid && core.IsPublicArchive(game.State.String) {
+	if gameErr == nil && core.IsPublicArchive(game.State) {
 		h.App.ObsLogger.Debug(ctx, "Participant viewing character data in completed game",
 			"character_id", characterID, "user_id", *userID, "game_id", character.GameID, "role", userRole)
 		return true
@@ -1055,7 +1061,7 @@ func (h *Handler) humaGetGameCharacterData(ctx context.Context, in *gameIDInput)
 				CharacterID: row.CharacterID,
 				ModuleType:  row.ModuleType,
 				FieldName:   row.FieldName,
-				FieldType:   ptrText(row.FieldType),
+				FieldType:   ptrOf(row.FieldType),
 				CreatedAt:   row.CreatedAt.Time,
 				UpdatedAt:   row.UpdatedAt.Time,
 				FieldValue:  ptrText(row.FieldValue),
@@ -1078,7 +1084,7 @@ func characterFromModel(c *models.Character) *CharacterResponse {
 		GameID:        c.GameID,
 		Name:          c.Name,
 		CharacterType: &charType,
-		Status:        c.Status.String,
+		Status:        c.Status,
 		CreatedAt:     c.CreatedAt.Time,
 		UpdatedAt:     c.UpdatedAt.Time,
 		UserID:        ptrInt(c.UserID),

@@ -33,7 +33,7 @@ func (m *SimpleMockUserRepository) CreateUser(ctx context.Context, params db.Cre
 		Username:  params.Username,
 		Email:     params.Email,
 		Password:  params.Password,
-		CreatedAt: pgtype.Timestamp{Time: time.Now(), Valid: true},
+		CreatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
 	}
 	m.users[m.nextID] = user
 	m.byUsername[params.Username] = user
@@ -111,7 +111,7 @@ func (m *SimpleMockGameRepository) CreateGame(ctx context.Context, params db.Cre
 		Title:       params.Title,
 		Description: params.Description,
 		GmUserID:    params.GmUserID,
-		State:       pgtype.Text{String: "setup", Valid: true},
+		State:       "setup",
 		Genre:       params.Genre,
 		MaxPlayers:  params.MaxPlayers,
 		IsPublic:    params.IsPublic,
@@ -277,7 +277,7 @@ func (m *SimpleMockGameParticipantRepository) AddGameParticipant(ctx context.Con
 		GameID:   params.GameID,
 		UserID:   params.UserID,
 		Role:     params.Role,
-		Status:   pgtype.Text{String: "active", Valid: true},
+		Status:   "active",
 		JoinedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
 	}
 	m.participants[m.nextID] = participant
@@ -301,7 +301,7 @@ func (m *SimpleMockGameParticipantRepository) RemoveGameParticipant(ctx context.
 
 func (m *SimpleMockGameParticipantRepository) IsUserInGame(ctx context.Context, params db.IsUserInGameParams) (bool, error) {
 	for _, participant := range m.participants {
-		if participant.GameID == params.GameID && participant.UserID == params.UserID && participant.Status.String == "active" {
+		if participant.GameID == params.GameID && participant.UserID == params.UserID && participant.Status == "active" {
 			return true, nil
 		}
 	}
@@ -314,7 +314,7 @@ func (m *SimpleMockGameParticipantRepository) CanUserJoinGame(ctx context.Contex
 
 func (m *SimpleMockGameParticipantRepository) GetParticipantRole(ctx context.Context, params db.GetParticipantRoleParams) (string, error) {
 	for _, participant := range m.participants {
-		if participant.GameID == params.GameID && participant.UserID == params.UserID && participant.Status.String == "active" {
+		if participant.GameID == params.GameID && participant.UserID == params.UserID && participant.Status == "active" {
 			return participant.Role, nil
 		}
 	}
@@ -335,7 +335,7 @@ func (m *SimpleMockGameParticipantRepository) UpdateParticipantStatus(ctx contex
 func (m *SimpleMockGameParticipantRepository) GetGameParticipantCount(ctx context.Context, gameID int32) (int64, error) {
 	count := int64(0)
 	for _, participant := range m.participants {
-		if participant.GameID == gameID && participant.Role == "player" && participant.Status.String == "active" {
+		if participant.GameID == gameID && participant.Role == "player" && participant.Status == "active" {
 			count++
 		}
 	}

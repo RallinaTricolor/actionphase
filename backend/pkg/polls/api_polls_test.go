@@ -21,7 +21,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // setupPollTestRouter creates a test router with auth middleware
@@ -84,7 +83,7 @@ func TestPollResultsAccess(t *testing.T) {
 	_, err = queries.CreateAudienceApplication(context.Background(), db.CreateAudienceApplicationParams{
 		GameID: game.ID,
 		UserID: int32(audienceUser.ID),
-		Status: pgtype.Text{String: "active", Valid: true},
+		Status: "active",
 	})
 	core.AssertNoError(t, err, "Adding audience member to game should succeed")
 
@@ -277,7 +276,7 @@ func TestPollResults_AnonymousGame(t *testing.T) {
 
 	anonGame, err := queries.CreateGame(ctx, db.CreateGameParams{
 		Title:       "Anonymous Poll Test Game",
-		Description: pgtype.Text{String: "Test", Valid: true},
+		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
 	})
@@ -1236,7 +1235,7 @@ func TestPollVisibilityByRole(t *testing.T) {
 	_, err = queries.CreateAudienceApplication(ctx, db.CreateAudienceApplicationParams{
 		GameID: game.ID,
 		UserID: int32(audienceUser.ID),
-		Status: pgtype.Text{String: "active", Valid: true},
+		Status: "active",
 	})
 	core.AssertNoError(t, err, "Adding audience member should succeed")
 

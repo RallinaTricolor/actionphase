@@ -118,7 +118,7 @@ func seedCompletedGame(t *testing.T, pool *pgxpool.Pool) int32 {
 
 	game, err := q.CreateGame(ctx, models.CreateGameParams{
 		Title:       "Export Integration Game",
-		Description: pgtype.Text{String: "Integration fixture", Valid: true},
+		Description: "Integration fixture",
 		GmUserID:    user.ID,
 		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
@@ -225,7 +225,7 @@ func TestService_ArchiveFilesContentUnderItsPhase(t *testing.T) {
 
 	done, err := svc.GetExport(ctx, job.ID)
 	require.NoError(t, err)
-	require.Equal(t, "complete", done.Status)
+	require.Equal(t, "complete", done.Status, "export error: %s", done.ErrorMessage.String)
 
 	data, ok := store.get(done.StoragePath.String)
 	require.True(t, ok)

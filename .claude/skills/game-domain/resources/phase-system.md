@@ -2,7 +2,7 @@
 
 Complete reference for the phase cycle in ActionPhase.
 
-Source of truth: `backend/pkg/db/schema.sql`,
+Source of truth: `backend/pkg/db/migrations/`,
 `backend/pkg/db/services/phases/`, `backend/pkg/http/root.go`.
 
 ## Phase Types
@@ -13,11 +13,6 @@ CHECK (phase_type IN ('common_room', 'action', 'interlude'))
 ```
 
 Canonical list: `core.ValidPhaseTypes` (`backend/pkg/core/constants.go:43`).
-
-⚠️ **`backend/pkg/db/schema.sql` is STALE.** Line 208 still shows only
-`('common_room', 'action')` and omits `interlude`. sqlc generates from
-`schema.sql`, but the live database is defined by the migrations. When they
-disagree, **the migrations win**.
 
 ⚠️ **There is no `results` phase type.** GM results are rows in the
 `action_results` table, which FKs to `game_phases` and `action_submissions`.

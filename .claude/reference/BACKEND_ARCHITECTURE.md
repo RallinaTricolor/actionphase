@@ -82,7 +82,6 @@ backend/
 │   │   │                           #   notifications, conversations, handouts,
 │   │   │                           #   dashboard, deadlines, polls, ...
 │   │   ├── test_fixtures/          # Seed SQL + apply scripts
-│   │   ├── schema.sql              # Full generated schema
 │   │   └── sqlc.yaml               # sqlc configuration
 │   ├── auth/                       # Authentication
 │   │   ├── api.go, jwt.go, login.go, registration.go, refresh_token.go

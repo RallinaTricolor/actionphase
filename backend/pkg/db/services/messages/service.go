@@ -43,13 +43,13 @@ func pgInt4ToInt32Ptr(val pgtype.Int4) *int32 {
 	return &val.Int32
 }
 
-// Helper function to convert pgtype.Timestamp to time.Time
-func pgTimestampToTime(val pgtype.Timestamp) time.Time {
+// Helper function to convert pgtype.Timestamptz to time.Time
+func pgTimestampToTime(val pgtype.Timestamptz) time.Time {
 	return val.Time
 }
 
-// Helper function to convert pgtype.Timestamp to *time.Time
-func pgTimestampToTimePtr(val pgtype.Timestamp) *time.Time {
+// Helper function to convert pgtype.Timestamptz to *time.Time
+func pgTimestampToTimePtr(val pgtype.Timestamptz) *time.Time {
 	if !val.Valid {
 		return nil
 	}

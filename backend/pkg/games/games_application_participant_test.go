@@ -710,7 +710,7 @@ func TestGameAPI_RemovePlayer_DeactivatesCharacters(t *testing.T) {
 		CharacterType: "player_character",
 	})
 	require.NoError(t, err)
-	assert.NotEqual(t, "inactive", char.Status.String, "character should not start as inactive")
+	assert.NotEqual(t, "inactive", char.Status, "character should not start as inactive")
 
 	// GM removes the player
 	req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d/participants/%d", game.ID, player.ID), nil)
@@ -788,7 +788,7 @@ func TestGameAPI_ReviewGameApplication_ApprovesAndRejects(t *testing.T) {
 		// Verify DB state
 		updated, err := appService.GetGameApplication(context.Background(), application.ID)
 		require.NoError(t, err)
-		assert.Equal(t, "approved", updated.Status.String)
+		assert.Equal(t, "approved", updated.Status)
 	})
 
 	t.Run("GM rejects application — status becomes rejected in response and DB", func(t *testing.T) {
@@ -816,7 +816,7 @@ func TestGameAPI_ReviewGameApplication_ApprovesAndRejects(t *testing.T) {
 		// Verify DB state
 		updated, err := appService.GetGameApplication(context.Background(), application.ID)
 		require.NoError(t, err)
-		assert.Equal(t, "rejected", updated.Status.String)
+		assert.Equal(t, "rejected", updated.Status)
 	})
 
 	t.Run("non-GM player cannot review applications", func(t *testing.T) {

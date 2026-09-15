@@ -103,8 +103,8 @@ func completedGame() *fakeQuerier {
 		game: models.Game{
 			ID:          164,
 			Title:       "The Hollow Crown",
-			Description: txt("A mystery."),
-			State:       txt(core.GameStateCompleted),
+			Description: "A mystery.",
+			State:       core.GameStateCompleted,
 			Genre:       txt("Gothic"),
 			StartDate:   tstz(0),
 			EndDate:     tstz(9000),
@@ -116,9 +116,9 @@ func completedGame() *fakeQuerier {
 		},
 		characters: []models.ListExportCharactersRow{
 			{ID: 10, Name: "Ada Lovelace", CharacterType: "player_character",
-				Status: txt("approved"), IsActive: true, PlayerUsername: txt("ada_player"), CreatedAt: tstz(0)},
+				Status: "approved", IsActive: true, PlayerUsername: txt("ada_player"), CreatedAt: tstz(0)},
 			{ID: 11, Name: "Charles Babbage", CharacterType: "player_character",
-				Status: txt("approved"), IsActive: false, PlayerUsername: txt("chuck"), CreatedAt: tstz(0)},
+				Status: "approved", IsActive: false, PlayerUsername: txt("chuck"), CreatedAt: tstz(0)},
 		},
 		characterData: []models.ListExportCharacterDataRow{
 			{CharacterID: 10, ModuleType: "basic_info", FieldName: "background", FieldValue: txt("Mathematician.")},
@@ -129,9 +129,9 @@ func completedGame() *fakeQuerier {
 			{UserID: 3, Role: "audience", Username: "watcher", JoinedAt: tstz(0)},
 		},
 		posts: []models.ListExportPostsRow{
-			{ID: 100, PhaseID: i4(1), Content: "The body in the library.", CreatedAt: ts(10),
+			{ID: 100, PhaseID: i4(1), Content: "The body in the library.", CreatedAt: tstz(10),
 				CharacterName: "Ada Lovelace", AuthorUsername: "ada_player"},
-			{ID: 200, PhaseID: i4(1), Content: "Second post.", CreatedAt: ts(20),
+			{ID: 200, PhaseID: i4(1), Content: "Second post.", CreatedAt: tstz(20),
 				CharacterName: "Charles Babbage", AuthorUsername: "chuck"},
 		},
 		comments: map[int32][]models.ListExportCommentTreeRow{
@@ -215,7 +215,7 @@ func TestAssemble_RefusesNonCompletedGame(t *testing.T) {
 	} {
 		t.Run(state, func(t *testing.T) {
 			q := completedGame()
-			q.game.State = txt(state)
+			q.game.State = state
 
 			var buf bytes.Buffer
 			a := &Assembler{Queries: q}
@@ -227,17 +227,6 @@ func TestAssemble_RefusesNonCompletedGame(t *testing.T) {
 			assert.Zero(t, buf.Len(), "nothing may be written for a refused export")
 		})
 	}
-}
-
-func TestAssemble_RefusesNullState(t *testing.T) {
-	q := completedGame()
-	q.game.State = pgtype.Text{Valid: false}
-
-	var buf bytes.Buffer
-	a := &Assembler{Queries: q}
-	_, err := a.Assemble(context.Background(), 164, &buf, nil)
-
-	assert.ErrorIs(t, err, ErrGameNotCompleted)
 }
 
 func TestAssemble_PropagatesQueryErrors(t *testing.T) {
@@ -496,9 +485,9 @@ func TestAssemble_OrphanResultStillWritten(t *testing.T) {
 func TestAssemble_UnfiledContentIsNotDropped(t *testing.T) {
 	q := completedGame()
 	q.posts = []models.ListExportPostsRow{
-		{ID: 100, PhaseID: pgtype.Int4{Valid: false}, Content: "Phaseless post.", CreatedAt: ts(10),
+		{ID: 100, PhaseID: pgtype.Int4{Valid: false}, Content: "Phaseless post.", CreatedAt: tstz(10),
 			CharacterName: "Ada Lovelace", AuthorUsername: "ada_player"},
-		{ID: 101, PhaseID: i4(999), Content: "Unpublished phase post.", CreatedAt: ts(11),
+		{ID: 101, PhaseID: i4(999), Content: "Unpublished phase post.", CreatedAt: tstz(11),
 			CharacterName: "Ada Lovelace", AuthorUsername: "ada_player"},
 	}
 
@@ -517,11 +506,11 @@ func TestAssemble_UnfiledContentIsNotDropped(t *testing.T) {
 func TestAssemble_DuplicateNamesGetUniquePaths(t *testing.T) {
 	q := completedGame()
 	q.characters = []models.ListExportCharactersRow{
-		{ID: 10, Name: "Ada", CharacterType: "player_character", Status: txt("approved"),
+		{ID: 10, Name: "Ada", CharacterType: "player_character", Status: "approved",
 			IsActive: true, PlayerUsername: txt("player_one"), CreatedAt: tstz(0)},
-		{ID: 11, Name: "Ada", CharacterType: "player_character", Status: txt("approved"),
+		{ID: 11, Name: "Ada", CharacterType: "player_character", Status: "approved",
 			IsActive: true, PlayerUsername: txt("player_two"), CreatedAt: tstz(0)},
-		{ID: 12, Name: "Ada", CharacterType: "npc", Status: txt("approved"),
+		{ID: 12, Name: "Ada", CharacterType: "npc", Status: "approved",
 			IsActive: true, PlayerUsername: nullText(), CreatedAt: tstz(0)},
 	}
 
@@ -638,7 +627,7 @@ func TestAssemble_EmptyConversationSkipped(t *testing.T) {
 func TestAssemble_EmptyGameStillProducesValidArchive(t *testing.T) {
 	q := &fakeQuerier{
 		game: models.Game{
-			ID: 5, Title: "Empty Game", State: txt(core.GameStateCompleted),
+			ID: 5, Title: "Empty Game", State: core.GameStateCompleted,
 		},
 	}
 

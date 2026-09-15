@@ -121,8 +121,8 @@ LIMIT 15
 type GetUserDashboardGamesRow struct {
 	ID                       int32              `json:"id"`
 	Title                    string             `json:"title"`
-	Description              pgtype.Text        `json:"description"`
-	State                    pgtype.Text        `json:"state"`
+	Description              string             `json:"description"`
+	State                    string             `json:"state"`
 	Genre                    pgtype.Text        `json:"genre"`
 	GmUserID                 int32              `json:"gm_user_id"`
 	UserRole                 string             `json:"user_role"`
@@ -214,17 +214,17 @@ type GetUserRecentMessagesParams struct {
 }
 
 type GetUserRecentMessagesRow struct {
-	MessageID     int32            `json:"message_id"`
-	GameID        int32            `json:"game_id"`
-	Content       string           `json:"content"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-	GameTitle     string           `json:"game_title"`
-	IsAnonymous   bool             `json:"is_anonymous"`
-	ViewerRole    string           `json:"viewer_role"`
-	AuthorName    string           `json:"author_name"`
-	CharacterName pgtype.Text      `json:"character_name"`
-	MessageType   MessageType      `json:"message_type"`
-	PhaseID       pgtype.Int4      `json:"phase_id"`
+	MessageID     int32              `json:"message_id"`
+	GameID        int32              `json:"game_id"`
+	Content       string             `json:"content"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	GameTitle     string             `json:"game_title"`
+	IsAnonymous   bool               `json:"is_anonymous"`
+	ViewerRole    string             `json:"viewer_role"`
+	AuthorName    string             `json:"author_name"`
+	CharacterName pgtype.Text        `json:"character_name"`
+	MessageType   MessageType        `json:"message_type"`
+	PhaseID       pgtype.Int4        `json:"phase_id"`
 }
 
 // Get recent messages from games user participates in OR is GM of (excluding their own messages)

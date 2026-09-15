@@ -91,7 +91,7 @@ func TestCreateGame_AllowGroupConversations(t *testing.T) {
 		// Disable group conversations
 		requestBody := UpdateGameRequest{
 			Title:                   game.Title,
-			Description:             game.Description.String,
+			Description:             game.Description,
 			IsPublic:                true,
 			AllowGroupConversations: false,
 		}
@@ -291,7 +291,7 @@ func TestUpdateGame_WithSettings(t *testing.T) {
 			// Create update request payload
 			requestBody := UpdateGameRequest{
 				Title:              game.Title,
-				Description:        game.Description.String,
+				Description:        game.Description,
 				IsPublic:           true,
 				IsAnonymous:        tt.isAnonymous,
 				AutoAcceptAudience: tt.autoAcceptAudience,
@@ -364,7 +364,7 @@ func TestCreateGame_SettingsPersistAfterRefresh(t *testing.T) {
 	_, err = gameService.UpdateGame(context.Background(), core.UpdateGameRequest{
 		ID:                 game.ID,
 		Title:              game.Title,
-		Description:        game.Description.String,
+		Description:        game.Description,
 		IsPublic:           true,
 		IsAnonymous:        false,
 		AutoAcceptAudience: false,
@@ -490,7 +490,7 @@ func TestUpdateGame_CommonRoomSchedule_PartialFill(t *testing.T) {
 	t.Run("rejects when only open fields present", func(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:              game.Title,
-			Description:        game.Description.String,
+			Description:        game.Description,
 			IsPublic:           true,
 			CommonRoomOpenDay:  &openDay,
 			CommonRoomOpenTime: &openTime,
@@ -507,7 +507,7 @@ func TestUpdateGame_CommonRoomSchedule_PartialFill(t *testing.T) {
 	t.Run("rejects when all day/time fields present but timezone missing", func(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:               game.Title,
-			Description:         game.Description.String,
+			Description:         game.Description,
 			IsPublic:            true,
 			CommonRoomOpenDay:   &openDay,
 			CommonRoomOpenTime:  &openTime,
@@ -558,7 +558,7 @@ func TestUpdateGame_CommonRoomSchedule(t *testing.T) {
 	t.Run("saves schedule fields", func(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:               game.Title,
-			Description:         game.Description.String,
+			Description:         game.Description,
 			IsPublic:            true,
 			CommonRoomOpenDay:   &openDay,
 			CommonRoomOpenTime:  &openTime,
@@ -593,7 +593,7 @@ func TestUpdateGame_CommonRoomSchedule(t *testing.T) {
 	t.Run("clears schedule when fields omitted", func(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:       game.Title,
-			Description: game.Description.String,
+			Description: game.Description,
 			IsPublic:    true,
 		}
 		bodyBytes, _ := json.Marshal(updateBody)
